@@ -509,7 +509,7 @@ export default function GenericNode({
                         if (buildStatus === BuildStatus.BUILDING || isBuilding)
                           return;
                         setValidationStatus(null);
-                        buildFlow({ nodeId: data.id });
+                        buildFlow({ stopNodeId: data.id });
                       }}
                       className="generic-node-status-position flex items-center justify-center"
                     >

@@ -8,7 +8,8 @@ import { VertexBuildTypeAPI } from "../types/api";
 type BuildVerticesParams = {
   flowId: string; // Assuming FlowType is the type for your flow
   input_value?: any; // Replace any with the actual type if it's not any
-  nodeId?: string | null; // Assuming nodeId is of type string, and it's optional
+  startNodeId?: string | null; // Assuming nodeId is of type string, and it's optional
+  stopNodeId?: string | null; // Assuming nodeId is of type string, and it's optional
   onGetOrderSuccess?: () => void;
   onBuildUpdate?: (
     data: VertexBuildTypeAPI,
@@ -43,7 +44,8 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
 
 export async function updateVerticesOrder(
   flowId: string,
-  nodeId: string | null
+  startNodeId?: string | null,
+  stopNodeId?: string | null
 ): Promise<{
   verticesLayers: string[][];
   verticesIds: string[];
@@ -53,7 +55,7 @@ export async function updateVerticesOrder(
     const setErrorData = useAlertStore.getState().setErrorData;
     let orderResponse;
     try {
-      orderResponse = await getVerticesOrder(flowId, nodeId);
+      orderResponse = await getVerticesOrder(flowId, startNodeId, stopNodeId);
     } catch (error: any) {
       console.log(error);
       setErrorData({
@@ -95,7 +97,8 @@ export async function updateVerticesOrder(
 export async function buildVertices({
   flowId,
   input_value,
-  nodeId = null,
+  startNodeId,
+  stopNodeId,
   onGetOrderSuccess,
   onBuildUpdate,
   onBuildComplete,
@@ -104,9 +107,13 @@ export async function buildVertices({
   validateNodes,
 }: BuildVerticesParams) {
   let verticesBuild = useFlowStore.getState().verticesBuild;
-
-  if (!verticesBuild || nodeId) {
-    verticesBuild = await updateVerticesOrder(flowId, nodeId);
+  // if startNodeId and stopNodeId are provided
+  // something is wrong
+  if (startNodeId && stopNodeId) {
+    return;
+  }
+  if (!verticesBuild || startNodeId || stopNodeId) {
+    verticesBuild = await updateVerticesOrder(flowId, startNodeId, stopNodeId);
   }
 
   const verticesIds = verticesBuild?.verticesIds!;
