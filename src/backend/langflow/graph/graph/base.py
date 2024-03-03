@@ -56,6 +56,7 @@ class Graph:
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
         self.vertices_layers = []
+        self.vertices_to_run = set()
         self.stop_vertex = None
 
         self.inactive_vertices: set = set()
