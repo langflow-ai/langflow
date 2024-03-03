@@ -192,11 +192,13 @@ export default function CodeTabsComponent({
                   dangerouslySetInnerHTML={{ __html: tab.description }}
                 ></div>
               )}
-              <code
+              <SyntaxHighlighter
+                language={tab.language}
+                style={oneDark}
                 className="mt-0 h-full overflow-auto custom-scroll rounded-sm text-left" 
               >
                 {tab.code}
-              </code>
+              </SyntaxHighlighter>
             </div>
           ) : idx === 4 ? (
             <>
