@@ -220,7 +220,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                                   >
                                     <div>
                                       <Badge variant="gray" size="md">
-                                        {output.displayName}
+                                        {node.data.node.display_name}
                                       </Badge>
                                     </div>
                                   </ShadTooltip>
