@@ -501,12 +501,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       onBuildError: (title, list, idList) => {
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
         setErrorData({ list, title });
+        get().setIsBuilding(false);
       },
       onBuildStart: (idList) => {
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
       validateNodes: validateSubgraph,
     });
+    get().setIsBuilding(false);
     get().revertBuiltStatusFromBuilding();
   },
   getFlow: () => {
