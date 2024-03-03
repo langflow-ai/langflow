@@ -31,6 +31,8 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
     id: vertexId,
     data: inactiveData,
     params: "Inactive",
+    run_id: "",
+    next_vertices_ids: [],
     inactive_vertices: null,
     valid: false,
     timestamp: new Date().toISOString(),
@@ -61,27 +63,26 @@ export async function updateVerticesOrder(
       useFlowStore.getState().setIsBuilding(false);
       throw new Error("Invalid nodes");
     }
-    let verticesOrder: Array<Array<string>> = orderResponse.data.ids;
-    let verticesLayers: Array<Array<string>> = [];
+    let verticesLayers: Array<Array<string>> = [orderResponse.data.ids];
     const runId = orderResponse.data.run_id;
-    if (nodeId) {
-      for (let i = 0; i < verticesOrder.length; i += 1) {
-        const innerArray = verticesOrder[i];
-        const idIndex = innerArray.indexOf(nodeId);
-        if (idIndex !== -1) {
-          // If there's a nodeId, we want to run just that component and not the entire layer
-          // because a layer contains dependencies for the next layer
-          // and we are stopping at the layer that contains the nodeId
-          verticesLayers.push([innerArray[idIndex]]);
-          break; // Stop searching after finding the first occurrence
-        }
-        // If the targetId is not found, include the entire inner array
-        verticesLayers.push(innerArray);
-      }
-    } else {
-      verticesLayers = verticesOrder;
-    }
-    const verticesIds = verticesOrder.flat();
+    // if (nodeId) {
+    //   for (let i = 0; i < verticesOrder.length; i += 1) {
+    //     const innerArray = verticesOrder[i];
+    //     const idIndex = innerArray.indexOf(nodeId);
+    //     if (idIndex !== -1) {
+    //       // If there's a nodeId, we want to run just that component and not the entire layer
+    //       // because a layer contains dependencies for the next layer
+    //       // and we are stopping at the layer that contains the nodeId
+    //       verticesLayers.push([innerArray[idIndex]]);
+    //       break; // Stop searching after finding the first occurrence
+    //     }
+    //     // If the targetId is not found, include the entire inner array
+    //     verticesLayers.push(innerArray);
+    //   }
+    // } else {
+    //   verticesLayers = verticesOrder;
+    // }
+    const verticesIds = orderResponse.data.ids;
     useFlowStore.getState().updateVerticesBuild({
       verticesLayers,
       verticesIds,
@@ -128,14 +129,36 @@ export async function buildVertices({
   let currentLayerIndex = 0; // Start with the first layer
   // Set each vertex state to building
   const buildResults: Array<boolean> = [];
-  console.log(verticesLayers);
-  while (currentLayerIndex < verticesLayers.length) {
-    const currentLayer = verticesLayers[currentLayerIndex];
+
+  // Build each layer
+  while (
+    currentLayerIndex <
+    (useFlowStore.getState().verticesBuild?.verticesLayers! || []).length
+  ) {
+    // Get the current layer
+    const currentLayer =
+      useFlowStore.getState().verticesBuild?.verticesLayers![currentLayerIndex];
+    // If there are no more layers, we are done
+    if (!currentLayer) {
+      if (onBuildComplete) {
+        const allNodesValid = buildResults.every((result) => result);
+        onBuildComplete(allNodesValid);
+        useFlowStore.getState().setIsBuilding(false);
+      }
+      return;
+    }
+    // If there is a callback for the start of the build, call it
     if (onBuildStart) onBuildStart(currentLayer);
+    // Build each vertex in the current layer
     await Promise.all(
       currentLayer.map(async (vertexId) => {
         // Check if id is in the list of inactive nodes
-        if (!verticesIds.includes(vertexId) && onBuildUpdate) {
+        if (
+          !useFlowStore
+            .getState()
+            .verticesBuild?.verticesIds.includes(vertexId) &&
+          onBuildUpdate
+        ) {
           // If it is, skip building and set the state to inactive
           onBuildUpdate(
             getInactiveVertexData(vertexId),
@@ -145,6 +168,7 @@ export async function buildVertices({
           buildResults.push(false);
           return;
         }
+        // Build the vertex
         await buildVertex({
           flowId,
           id: vertexId,
@@ -164,6 +188,9 @@ export async function buildVertices({
         }
       })
     );
+    // Once the current layer is built, move to the next layer
+    currentLayerIndex += 1;
+    console.log(useFlowStore.getState().verticesBuild?.verticesLayers);
 
     if (stop) {
       break;
