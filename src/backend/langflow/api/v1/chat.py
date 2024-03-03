@@ -128,6 +128,7 @@ async def build_vertex(
             next_vertices_ids = [
                 v for v in next_vertices_ids if graph.should_run_vertex(v)
             ]
+
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
         except Exception as exc:

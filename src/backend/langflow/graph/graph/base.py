@@ -787,7 +787,10 @@ class Graph:
 
     def should_run_vertex(self, vertex_id: str) -> bool:
         """Returns whether a component should be run."""
-        return vertex_id in self.vertices_to_run
+        should_run = vertex_id in self.vertices_to_run
+        if should_run:
+            self.vertices_to_run.remove(vertex_id)
+        return should_run
 
     def sort_interface_components_first(
         self, vertices_layers: List[List[str]]
