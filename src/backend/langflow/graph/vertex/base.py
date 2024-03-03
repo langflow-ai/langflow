@@ -609,11 +609,6 @@ class Vertex:
                 raise ValueError(
                     f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead."
                 )
-            if self.display_name in ["Chat Output"]:
-                return
-            raise ValueError(
-                f"{self.display_name}: You are trying to stream to a non-streamable component."
-            )
 
     def _reset(self, params_update: Optional[Dict[str, Any]] = None):
         self._built = False
