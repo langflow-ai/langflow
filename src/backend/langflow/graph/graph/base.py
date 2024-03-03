@@ -773,13 +773,20 @@ class Graph:
             vertices = self.vertices
         vertices_layers = self.layered_topological_sort(vertices)
         vertices_layers = self.sort_by_avg_build_time(vertices_layers)
-        vertices_layers = self.sort_chat_inputs_first(vertices_layers)
+        # vertices_layers = self.sort_chat_inputs_first(vertices_layers)
         self.increment_run_count()
         first_layer = vertices_layers[0]
         # save the only the rest
         self.vertices_layers = vertices_layers[1:]
+        self.vertices_to_run = {
+            vertex for vertex in chain.from_iterable(vertices_layers)
+        }
         # Return just the first layer
         return first_layer
+
+    def should_run_vertex(self, vertex_id: str) -> bool:
+        """Returns whether a component should be run."""
+        return vertex_id in self.vertices_to_run
 
     def sort_interface_components_first(
         self, vertices_layers: List[List[str]]
