@@ -304,7 +304,7 @@ export default function ParameterComponent({
       ref={ref}
       className={
         "relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
-        (name.includes("code") && type==="code" ? " hidden " : "")
+        ((name==="code" && type==="code") || (name.includes("code") && proxy) ? " hidden " : "")
       }
     >
       <>
