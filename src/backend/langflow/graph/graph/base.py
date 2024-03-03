@@ -12,8 +12,13 @@ from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import (ChatVertex, FileToolVertex, LLMVertex,
-                                         RoutingVertex, ToolkitVertex)
+from langflow.graph.vertex.types import (
+    ChatVertex,
+    FileToolVertex,
+    LLMVertex,
+    RoutingVertex,
+    ToolkitVertex,
+)
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
 
@@ -285,8 +290,13 @@ class Graph:
         # Add new vertices
         for vertex_id in new_vertex_ids:
             new_vertex = other.get_vertex(vertex_id)
-            new_vertex.graph = self
             self._add_vertex(new_vertex)
+
+        # Now update the edges
+        for vertex_id in new_vertex_ids:
+            new_vertex = other.get_vertex(vertex_id)
+            self._update_edges(new_vertex)
+            new_vertex.graph = self
 
         # Update existing vertices that have changed
         for vertex_id in existing_vertex_ids.intersection(other_vertex_ids):
@@ -334,12 +344,24 @@ class Graph:
                         _vertex._build_params()
 
     def _add_vertex(self, vertex: Vertex) -> None:
-        """Adds a new vertex to the graph."""
+        """Adds a vertex to the graph."""
         self.vertices.append(vertex)
         self.vertex_map[vertex.id] = vertex
+
+    def add_vertex(self, vertex: Vertex) -> None:
+        """Adds a new vertex to the graph."""
+        self._add_vertex(vertex)
+        self._update_edges(vertex)
+
+    def _update_edges(self, vertex: Vertex) -> None:
+        """Updates the edges of a vertex."""
         # Vertex has edges, so we need to update the edges
         for edge in vertex.edges:
-            if edge.source_id in self.vertex_map and edge.target_id in self.vertex_map:
+            if (
+                edge not in self.edges
+                and edge.source_id in self.vertex_map
+                and edge.target_id in self.vertex_map
+            ):
                 self.edges.append(edge)
 
     def _build_graph(self) -> None:
