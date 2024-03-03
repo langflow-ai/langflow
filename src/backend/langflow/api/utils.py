@@ -3,9 +3,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional
 
 from fastapi import HTTPException
-from langchain_core.documents import Document
 from platformdirs import user_cache_dir
-from pydantic import BaseModel
 from sqlmodel import Session
 
 from langflow.graph.graph.base import Graph
@@ -199,20 +197,6 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-def serialize_field(value):
-    """Unified serialization function for handling both BaseModel and Document types,
-    including handling lists of these types."""
-    if isinstance(value, (list, tuple)):
-        return [serialize_field(v) for v in value]
-    elif isinstance(value, Document):
-        return value.to_json()
-    elif isinstance(value, BaseModel):
-        return value.model_dump()
-    elif isinstance(value, str):
-        return {"result": value}
-    return value
-
-
 def build_and_cache_graph(
     flow_id: str,
     session: Session,
@@ -220,13 +204,37 @@ def build_and_cache_graph(
     graph: Optional[Graph] = None,
 ):
     """Build and cache the graph."""
-    flow: Flow = session.get(Flow, flow_id)
+    flow: Optional[Flow] = session.get(Flow, flow_id)
     if not flow or not flow.data:
         raise ValueError("Invalid flow ID")
-    other_graph = Graph.from_payload(flow.data)
+    other_graph = Graph.from_payload(flow.data, flow_id)
     if graph is None:
         graph = other_graph
     else:
         graph = graph.update(other_graph)
     chat_service.set_cache(flow_id, graph)
     return graph
+
+
+def format_syntax_error_message(exc: SyntaxError) -> str:
+    """Format a SyntaxError message for returning to the frontend."""
+    if exc.text is None:
+        return f"Syntax error in code. Error on line {exc.lineno}"
+    return f"Syntax error in code. Error on line {exc.lineno}: {exc.text.strip()}"
+
+
+def get_causing_exception(exc: BaseException) -> BaseException:
+    """Get the causing exception from an exception."""
+    if hasattr(exc, "__cause__") and exc.__cause__:
+        return get_causing_exception(exc.__cause__)
+    return exc
+
+
+def format_exception_message(exc: Exception) -> str:
+    """Format an exception message for returning to the frontend."""
+    # We need to check if the __cause__ is a SyntaxError
+    # If it is, we need to return the message of the SyntaxError
+    causing_exception = get_causing_exception(exc)
+    if isinstance(causing_exception, SyntaxError):
+        return format_syntax_error_message(causing_exception)
+    return str(exc)

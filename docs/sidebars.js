@@ -82,6 +82,7 @@ module.exports = {
         "examples/buffer-memory",
         "examples/midjourney-prompt-chain",
         "examples/csv-loader",
+        "examples/searchapi-tool",
         "examples/serp-api-tool",
         "examples/multiple-vectorstores",
         "examples/python-function",

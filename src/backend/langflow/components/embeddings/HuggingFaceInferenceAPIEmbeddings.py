@@ -9,6 +9,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(CustomComponent):
     display_name = "HuggingFaceInferenceAPIEmbeddings"
     description = "HuggingFace sentence_transformers embedding models, API version."
     documentation = "https://github.com/huggingface/text-embeddings-inference"
+    icon = "HuggingFace"
 
     def build_config(self):
         return {

@@ -25,10 +25,18 @@ export const INVALID_CHARACTERS = [
 
 /**
  * regex to highlight the variables in the text
- * @constant
+ * @constant regexHighlight
+ * @type {RegExp}
+ * @default
+ * @example
+ * {{variable}} or {variable}
+ * @returns {RegExp}
+ * @description
+ * This regex is used to highlight the variables in the text.
+ * It matches the variables in the text that are between {{}} or {}.
  */
 
-export const regexHighlight = /\{([^}]+)\}/g;
+export const regexHighlight = /\{\{(.*?)\}\}|\{([^{}]+)\}/g;
 export const specialCharsRegex = /[!@#$%^&*()\-_=+[\]{}|;:'",.<>/?\\`´]/;
 
 export const programmingLanguages: languageMap = {
@@ -681,4 +689,40 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
 export const priorityFields = new Set(["code", "template"]);
 
 export const INPUT_TYPES = new Set(["ChatInput", "TextInput"]);
-export const OUTPUT_TYPES = new Set(["ChatOutput"]);
+export const OUTPUT_TYPES = new Set(["ChatOutput", "TextOutput"]);
+
+export const chatFirstInitialText =
+  "Start a conversation and click the agent's thoughts";
+
+export const chatSecondInitialText = "to inspect the chaining process.";
+
+export const zeroNotifications = "No new notifications";
+
+export const successBuild = "Built sucessfully ✨";
+
+export const alertSaveWApi =
+  "Caution: Uncheck this box only removes API keys from fields specifically designated for API keys.";
+
+export const saveWApiCheckbox = "Save with my API keys";
+export const editTextModalTitle = "Edit Text";
+export const editTextPlaceholder = "Type message here.";
+export const inputHandleHover = "Avaliable input components:";
+export const outputHandleHover = "Avaliable output components:";
+export const textInputModalTitle = "Text Inputs";
+export const outputsModalTitle = "Text Outputs";
+export const langflowChatTitle = "Langflow Chat";
+export const chatInputPlaceholder =
+  "No chat input variables found. Click to run your flow.";
+export const chatInputPlaceholderSend = "Send a message...";
+export const editCodeTitle = "Edit Code";
+export const myCollectionDesc =
+  "Manage your personal projects. Download and upload entire collections.";
+export const storeDesc = "Explore community-shared flows and components.";
+export const storeTitle = "Langflow Store";
+export const noApi = "You don't have an API key. ";
+export const insertApi = "Insert your Langflow API key.";
+export const invalidApi = "Your API key is not valid. ";
+export const createApi = `Don’t have an API key? Sign up at`;
+export const statusBuild = "Build to validate status.";
+export const statusBuilding = "Building...";
+export const savedHover = "Last saved at ";

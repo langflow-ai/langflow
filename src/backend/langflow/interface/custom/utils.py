@@ -7,8 +7,6 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import HTTPException
-from loguru import logger
-
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.custom.attributes import ATTR_FUNC_MAPPING
 from langflow.interface.custom.code_parser.utils import extract_inner_type
@@ -25,20 +23,27 @@ from langflow.template.frontend_node.custom_components import (
 )
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
+from loguru import logger
 
 
-def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
+def add_output_types(
+    frontend_node: CustomComponentFrontendNode, return_types: List[str]
+):
     """Add output types to the frontend node"""
     for return_type in return_types:
         if return_type is None:
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": ("Invalid return type. Please check your code and try again."),
+                    "error": (
+                        "Invalid return type. Please check your code and try again."
+                    ),
                     "traceback": traceback.format_exc(),
                 },
             )
-        if hasattr(return_type, "__name__"):
+        if return_type == str:
+            return_type = "Text"
+        elif hasattr(return_type, "__name__"):
             return_type = return_type.__name__
         elif hasattr(return_type, "__class__"):
             return_type = return_type.__class__.__name__
@@ -63,19 +68,25 @@ def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: List
     frontend_node.template.fields = reordered_fields
 
 
-def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
+def add_base_classes(
+    frontend_node: CustomComponentFrontendNode, return_types: List[str]
+):
     """Add base classes to the frontend node"""
     for return_type_instance in return_types:
         if return_type_instance is None:
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": ("Invalid return type. Please check your code and try again."),
+                    "error": (
+                        "Invalid return type. Please check your code and try again."
+                    ),
                     "traceback": traceback.format_exc(),
                 },
             )
 
         base_classes = get_base_classes(return_type_instance)
+        if return_type_instance == str:
+            base_classes.append("Text")
 
         for base_class in base_classes:
             frontend_node.add_base_class(base_class)
@@ -145,10 +156,14 @@ def add_new_custom_field(
     # If options is a list, then it's a dropdown
     # If options is None, then it's a list of strings
     is_list = isinstance(field_config.get("options"), list)
-    field_config["is_list"] = is_list or field_config.get("is_list", False) or field_contains_list
+    field_config["is_list"] = (
+        is_list or field_config.get("is_list", False) or field_contains_list
+    )
 
     if "name" in field_config:
-        warnings.warn("The 'name' key in field_config is used to build the object and can't be changed.")
+        warnings.warn(
+            "The 'name' key in field_config is used to build the object and can't be changed."
+        )
     required = field_config.pop("required", field_required)
     placeholder = field_config.pop("placeholder", "")
 
@@ -179,7 +194,9 @@ def add_extra_fields(frontend_node, field_config, function_args):
         if "name" not in extra_field or extra_field["name"] == "self":
             continue
 
-        field_name, field_type, field_value, field_required = get_field_properties(extra_field)
+        field_name, field_type, field_value, field_required = get_field_properties(
+            extra_field
+        )
         config = field_config.get(field_name, {})
         frontend_node = add_new_custom_field(
             frontend_node,
@@ -217,7 +234,9 @@ def run_build_config(
         raise HTTPException(
             status_code=400,
             detail={
-                "error": ("Invalid type convertion. Please check your code and try again."),
+                "error": (
+                    "Invalid type convertion. Please check your code and try again."
+                ),
                 "traceback": traceback.format_exc(),
             },
         ) from exc
@@ -245,7 +264,9 @@ def run_build_config(
         raise HTTPException(
             status_code=400,
             detail={
-                "error": ("Invalid type convertion. Please check your code and try again."),
+                "error": (
+                    "Invalid type convertion. Please check your code and try again."
+                ),
                 "traceback": traceback.format_exc(),
             },
         ) from exc
@@ -296,21 +317,26 @@ def build_custom_component_template(
 ) -> Optional[Dict[str, Any]]:
     """Build a custom component template for the langchain"""
     try:
-        logger.debug("Building custom component template")
         frontend_node = build_frontend_node(custom_component.template_config)
 
-        logger.debug("Updated attributes")
-        field_config, custom_instance = run_build_config(custom_component, user_id=user_id, update_field=update_field)
-        logger.debug("Built field config")
+        field_config, custom_instance = run_build_config(
+            custom_component, user_id=user_id, update_field=update_field
+        )
+
         entrypoint_args = custom_component.get_function_entrypoint_args
 
         add_extra_fields(frontend_node, field_config, entrypoint_args)
 
-        frontend_node = add_code_field(frontend_node, custom_component.code, field_config.get("code", {}))
+        frontend_node = add_code_field(
+            frontend_node, custom_component.code, field_config.get("code", {})
+        )
 
-        add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type)
-        add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type)
-        logger.debug("Added base classes")
+        add_base_classes(
+            frontend_node, custom_component.get_function_entrypoint_return_type
+        )
+        add_output_types(
+            frontend_node, custom_component.get_function_entrypoint_return_type
+        )
 
         reorder_fields(frontend_node, custom_instance._get_field_order())
 
@@ -321,7 +347,9 @@ def build_custom_component_template(
         raise HTTPException(
             status_code=400,
             detail={
-                "error": ("Invalid type convertion. Please check your code and try again."),
+                "error": (
+                    "Invalid type convertion. Please check your code and try again."
+                ),
                 "traceback": traceback.format_exc(),
             },
         ) from exc
@@ -331,11 +359,13 @@ def create_component_template(component):
     """Create a template for a component."""
     component_code = component["code"]
     component_output_types = component["output_types"]
+    # remove
 
     component_extractor = CustomComponent(code=component_code)
 
     component_template = build_custom_component_template(component_extractor)
-    component_template["output_types"] = component_output_types
+    if not component_template["output_types"] and component_output_types:
+        component_template["output_types"] = component_output_types
 
     return component_template
 
@@ -345,7 +375,9 @@ def build_custom_components(settings_service):
     if not settings_service.settings.COMPONENTS_PATH:
         return {}
 
-    logger.info(f"Building custom components from {settings_service.settings.COMPONENTS_PATH}")
+    logger.info(
+        f"Building custom components from {settings_service.settings.COMPONENTS_PATH}"
+    )
     custom_components_from_file = {}
     processed_paths = set()
     for path in settings_service.settings.COMPONENTS_PATH:
@@ -356,7 +388,9 @@ def build_custom_components(settings_service):
         custom_component_dict = build_custom_component_list_from_path(path_str)
         if custom_component_dict:
             category = next(iter(custom_component_dict))
-            logger.info(f"Loading {len(custom_component_dict[category])} component(s) from category {category}")
+            logger.info(
+                f"Loading {len(custom_component_dict[category])} component(s) from category {category}"
+            )
             custom_components_from_file = merge_nested_dicts_with_renaming(
                 custom_components_from_file, custom_component_dict
             )
@@ -373,7 +407,7 @@ def update_field_dict(field_dict):
         field_dict["refresh"] = True
 
     if "value" in field_dict and callable(field_dict["value"]):
-        field_dict["value"] = field_dict["value"](field_dict.get("options", []))
+        field_dict["value"] = field_dict["value"]()
         field_dict["refresh"] = True
 
     # Let's check if "range_spec" is a RangeSpec object
@@ -401,7 +435,7 @@ def build_component(component):
     """Build a single component."""
     component_name = determine_component_name(component)
     component_template = create_component_template(component)
-    logger.debug(f"Building component: {component_name, component.get('output_types')}")
+
     return component_name, component_template
 
 

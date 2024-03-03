@@ -7,18 +7,14 @@ from langchain.schema import AgentAction, Document
 from langchain_community.vectorstores import VectorStore
 from langchain_core.messages import AIMessage
 from langchain_core.runnables.base import Runnable
+from loguru import logger
+from pydantic import BaseModel
+
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
 from langflow.interface.custom.custom_component import CustomComponent
-from langflow.interface.run import (
-    build_sorted_vertices,
-    get_memory_key,
-    update_memory_keys,
-)
-from langflow.services.deps import get_session_service
+from langflow.interface.run import get_memory_key, update_memory_keys
 from langflow.services.session.service import SessionService
-from loguru import logger
-from pydantic import BaseModel
 
 
 def fix_memory_inputs(langchain_object):
@@ -95,22 +91,6 @@ def get_result_and_thought(langchain_object: Any, inputs: dict):
 def get_input_str_if_only_one_input(inputs: dict) -> Optional[str]:
     """Get input string if only one input is provided"""
     return list(inputs.values())[0] if len(inputs) == 1 else None
-
-
-def get_build_result(data_graph, session_id):
-    # If session_id is provided, load the langchain_object from the session
-    # using build_sorted_vertices_with_caching.get_result_by_session_id
-    # if it returns something different than None, return it
-    # otherwise, build the graph and return the result
-    if session_id:
-        logger.debug(f"Loading LangChain object from session {session_id}")
-        result = build_sorted_vertices(data_graph=data_graph)
-        if result is not None:
-            logger.debug("Loaded LangChain object")
-            return result
-
-    logger.debug("Building langchain object")
-    return build_sorted_vertices(data_graph)
 
 
 def process_inputs(
@@ -212,50 +192,30 @@ class Result(BaseModel):
     session_id: str
 
 
-async def process_graph_cached(
-    data_graph: Dict[str, Any],
-    inputs: Optional[Union[dict, List[dict]]] = None,
-    clear_cache=False,
-    session_id=None,
-) -> Result:
-    session_service = get_session_service()
-    if clear_cache:
-        session_service.clear_session(session_id)
-    if session_id is None:
-        session_id = session_service.generate_key(session_id=session_id, data_graph=data_graph)
-    # Load the graph using SessionService
-    session = await session_service.load_session(session_id, data_graph)
-    graph, artifacts = session if session else (None, None)
-    if not graph:
-        raise ValueError("Graph not found in the session")
-
-    result = await build_graph_and_generate_result(
-        graph=graph,
-        session_id=session_id,
-        inputs=inputs,
-        artifacts=artifacts,
-        session_service=session_service,
-    )
-
-    return result
-
-
-async def build_graph_and_generate_result(
-    graph: "Graph",
-    session_id: str,
-    inputs: Optional[Union[dict, List[dict]]] = None,
+async def run_graph(
+    graph: Union["Graph", dict],
+    flow_id: str,
+    stream: bool,
+    session_id: Optional[str] = None,
+    inputs: Optional[dict[str, Union[List[str], str]]] = None,
     artifacts: Optional[Dict[str, Any]] = None,
     session_service: Optional[SessionService] = None,
 ):
-    """Build the graph and generate the result"""
-    built_object = await graph.build()
-    processed_inputs = process_inputs(inputs, artifacts or {})
-    result = await generate_result(built_object, processed_inputs)
-    # langchain_object is now updated with the new memory
-    # we need to update the cache with the updated langchain_object
+    """Run the graph and generate the result"""
+    if isinstance(graph, dict):
+        graph_data = graph
+        graph = Graph.from_payload(graph, flow_id=flow_id)
+    else:
+        graph_data = graph._graph_data
+    if not session_id and session_service is not None:
+        session_id = session_service.generate_key(session_id=flow_id, data_graph=graph_data)
+    if inputs is None:
+        inputs = {}
+
+    outputs = await graph.run(inputs, stream=stream)
     if session_id and session_service:
         session_service.update_session(session_id, (graph, artifacts))
-    return Result(result=result, session_id=session_id)
+    return outputs, session_id
 
 
 def validate_input(graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:

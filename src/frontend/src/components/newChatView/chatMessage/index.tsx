@@ -1,5 +1,5 @@
 import Convert from "ansi-to-html";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
@@ -9,6 +9,7 @@ import Robot from "../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
 import CodeTabsComponent from "../../../components/codeTabsComponent";
 import IconComponent from "../../../components/genericIconComponent";
+import useFlowStore from "../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
 import FileCard from "../fileComponent";
@@ -17,12 +18,78 @@ export default function ChatMessage({
   chat,
   lockChat,
   lastMessage,
+  updateChat,
+  setLockChat,
 }: chatMessagePropsType): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const template = chat.template;
   const [promptOpen, setPromptOpen] = useState(false);
-  const chat_message = chat.message.toString();
+  const [streamUrl, setStreamUrl] = useState(chat.stream_url);
+  // We need to check if message is not undefined because
+  // we need to run .toString() on it
+  const chatMessageString = chat.message ? chat.message.toString() : "";
+  const [chatMessage, setChatMessage] = useState(chatMessageString);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const eventSource = useRef<EventSource | undefined>(undefined);
+  const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
+  const chatMessageRef = useRef(chatMessage);
+
+  // Sync ref with state
+  useEffect(() => {
+    chatMessageRef.current = chatMessage;
+  }, [chatMessage]);
+
+  // The idea now is that chat.stream_url MAY be a URL if we should stream the output of the chat
+  // probably the message is empty when we have a stream_url
+  // what we need is to update the chat_message with the SSE data
+  const streamChunks = (url: string) => {
+    setIsStreaming(true); // Streaming starts
+    return new Promise<boolean>((resolve, reject) => {
+      eventSource.current = new EventSource(url);
+      eventSource.current.onmessage = (event) => {
+        let parsedData = JSON.parse(event.data);
+        if (parsedData.chunk) {
+          setChatMessage((prev) => prev + parsedData.chunk);
+        }
+      };
+      eventSource.current.onerror = (event) => {
+        setIsStreaming(false);
+        eventSource.current?.close();
+        setStreamUrl(undefined);
+        reject(new Error("Streaming failed"));
+      };
+      eventSource.current.addEventListener("close", (event) => {
+        setStreamUrl(undefined); // Update state to reflect the stream is closed
+        eventSource.current?.close();
+        setIsStreaming(false);
+        resolve(true);
+      });
+    });
+  };
+
+  useEffect(() => {
+    if (streamUrl && !isStreaming) {
+      setLockChat(true);
+      streamChunks(streamUrl)
+        .then(() => {
+          setLockChat(false);
+          if (updateChat) {
+            updateChat(chat, chatMessageRef.current);
+          }
+        })
+        .catch((error) => {
+          console.error(error);
+          setLockChat(false);
+        });
+    }
+  }, [streamUrl, chatMessage]);
+
+  useEffect(() => {
+    return () => {
+      eventSource.current?.close();
+    };
+  }, []);
 
   useEffect(() => {
     const element = document.getElementById("last-chat-message");
@@ -88,12 +155,12 @@ export default function ChatMessage({
                 />
               )}
               {chat.thought && chat.thought !== "" && !hidden && <br></br>}
-              <div className="w-full">
-                <div className="w-full dark:text-white">
-                  <div className="w-full">
+              <div className="w-full flex flex-col">
+                <div className="w-full flex flex-col dark:text-white">
+                  <div className="w-full flex flex-col">
                     {useMemo(
                       () =>
-                        chat.message.toString() === "" && lockChat ? (
+                        chatMessage === "" && lockChat ? (
                           <IconComponent
                             name="MoreHorizontal"
                             className="h-8 w-8 animate-pulse"
@@ -102,8 +169,8 @@ export default function ChatMessage({
                           <Markdown
                             remarkPlugins={[remarkGfm, remarkMath]}
                             rehypePlugins={[rehypeMathjax]}
-                            className="markdown prose min-w-full text-primary word-break-break-word
-                     dark:prose-invert"
+                            className="markdown flex flex-col prose text-primary word-break-break-word
+dark:prose-invert"
                             components={{
                               pre({ node, ...props }) {
                                 return <>{props.children}</>;
@@ -161,10 +228,10 @@ export default function ChatMessage({
                               },
                             }}
                           >
-                            {chat_message}
+                            {chatMessage}
                           </Markdown>
                         ),
-                      [chat.message, chat_message]
+                      [chat.message, chatMessage]
                     )}
                   </div>
                   {chat.files && (
@@ -235,11 +302,11 @@ export default function ChatMessage({
                         }
                         return <p>{parts}</p>;
                       })
-                    : chat.message.toString()}
+                    : chatMessage}
                 </span>
               </>
             ) : (
-              <span>{chat.message.toString()}</span>
+              <span>{chatMessage}</span>
             )}
           </div>
         )}

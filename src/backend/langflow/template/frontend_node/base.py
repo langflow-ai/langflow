@@ -47,6 +47,12 @@ class FrontendNode(BaseModel):
     """Description of the frontend node."""
     icon: Optional[str] = None
     """Icon of the frontend node."""
+    is_input: Optional[bool] = None
+    """Whether the frontend node is used as an input when processing the Graph.
+    If True, there should be a field named 'input_value'."""
+    is_output: Optional[bool] = None
+    """Whether the frontend node is used as an output when processing the Graph.
+    If True, there should be a field named 'input_value'."""
     is_composition: Optional[bool] = None
     """Whether the frontend node is used for composition."""
     base_classes: List[str]

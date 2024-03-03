@@ -17,26 +17,26 @@ class StorageService(Service):
         self.set_ready()
 
     def build_full_path(self, flow_id: str, file_name: str) -> str:
-        pass
+        raise NotImplementedError
 
     def set_ready(self):
         self.ready = True
 
     @abstractmethod
     async def save_file(self, flow_id: str, file_name: str, data) -> None:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     async def list_files(self, flow_id: str) -> list[str]:
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     async def delete_file(self, flow_id: str, file_name: str) -> bool:
-        pass
+        raise NotImplementedError
 
     def teardown(self):
-        pass
+        raise NotImplementedError

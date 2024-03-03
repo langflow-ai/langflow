@@ -12,6 +12,26 @@ Memory is a concept in chat-based applications that allows the system to remembe
 
 ---
 
+### MessageHistory
+
+This component is designed to retrieve stored messages based on various filters such as sender type, sender name, session ID, and a specific file path where messages are stored. It allows for a flexible retrieval of chat history, providing insights into past interactions.
+
+**Params**
+
+- **Sender Type:** (Optional) Specifies the type of the sender. Options are _`"Machine"`_, _`"User"`_, or _`"Machine and User"`_. Filters the messages by the type of the sender.
+
+- **Sender Name:** (Optional) Specifies the name of the sender. Filters the messages by the name of the sender.
+
+- **Session ID:** (Optional) Specifies the session ID of the chat history. Filters the messages belonging to a specific session.
+
+- **Number of Messages:** Specifies the number of messages to retrieve. Defaults to _`5`_. Determines how many recent messages from the chat history to fetch.
+
+<Admonition type="note" title="Note">
+    <p>
+        The component retrieves messages based on the provided criteria, including the specific file path for stored messages. If no specific criteria are provided, it will return the most recent messages up to the specified limit. This component can be used to review past interactions and analyze the flow of conversations.
+    </p>
+</Admonition>
+
 ### ConversationBufferMemory
 
 The `ConversationBufferMemory` component is a type of memory system that plainly stores the last few inputs and outputs of a conversation.
@@ -27,7 +47,7 @@ The `ConversationBufferMemory` component is a type of memory system that plainly
 
 ### ConversationBufferWindowMemory
 
-`ConversationBufferWindowMemory` is a variation of the `ConversationBufferMemory` that maintains a list of the recent interactions in a conversation. It only keeps the last K interactions in memory, which can be useful for maintaining a sliding window of the most recent interactions without letting the buffer get too large. 
+`ConversationBufferWindowMemory` is a variation of the `ConversationBufferMemory` that maintains a list of the recent interactions in a conversation. It only keeps the last K interactions in memory, which can be useful for maintaining a sliding window of the most recent interactions without letting the buffer get too large.
 
 **Params**
 
@@ -72,7 +92,7 @@ The `ConversationEntityMemory` component incorporates intricate memory structure
 
 ### ConversationSummaryMemory
 
-The `ConversationSummaryMemory` is a memory component that creates a summary of the conversation over time. It condenses information from the conversation and stores the current summary in memory. It is particularly useful for longer conversations where keeping the entire message history in the prompt would take up too many tokens. 
+The `ConversationSummaryMemory` is a memory component that creates a summary of the conversation over time. It condenses information from the conversation and stores the current summary in memory. It is particularly useful for longer conversations where keeping the entire message history in the prompt would take up too many tokens.
 
 **Params**
 

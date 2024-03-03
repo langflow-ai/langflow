@@ -27,6 +27,7 @@ export type ToggleComponentType = {
   disabled: boolean | undefined;
   size: "small" | "medium" | "large";
   id?: string;
+  editNode?: boolean;
 };
 export type DropDownComponentType = {
   value: string;
@@ -484,6 +485,7 @@ export type nodeToolbarPropsType = {
   name?: string;
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
+  selected: boolean;
 };
 
 export type parsedDataType = {
@@ -524,6 +526,12 @@ export type chatMessagePropsType = {
   chat: ChatMessageType;
   lockChat: boolean;
   lastMessage: boolean;
+  setLockChat: (lock: boolean) => void;
+  updateChat: (
+    chat: ChatMessageType,
+    message: string,
+    stream_url?: string
+  ) => void;
 };
 
 export type formModalPropsType = {
@@ -627,9 +635,9 @@ export type validationStatusType = {
   id: string;
   data: object | any;
   params: string;
-  progress: number;
+  progress?: number;
   valid: boolean;
-  duration: string;
+  duration?: string;
 };
 
 export type ApiKey = {

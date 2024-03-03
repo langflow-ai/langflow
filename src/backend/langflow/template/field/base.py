@@ -1,7 +1,15 @@
 from typing import Any, Callable, Optional, Union
 
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_serializer,
+)
+
 from langflow.field_typing.range_spec import RangeSpec
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_serializer
 
 
 class TemplateField(BaseModel):
@@ -28,7 +36,7 @@ class TemplateField(BaseModel):
     """The value of the field. Default is None."""
 
     file_types: list[str] = Field(default=[], serialization_alias="fileTypes")
-    """List of file types associated with the field. Default is an empty list. (duplicate)"""
+    """List of file types associated with the field . Default is an empty list."""
 
     file_path: Optional[str] = ""
     """The file path of the field if it is a file. Defaults to None."""
@@ -63,7 +71,7 @@ class TemplateField(BaseModel):
     range_spec: Optional[RangeSpec] = Field(default=None, serialization_alias="rangeSpec")
     """Range specification for the field. Defaults to None."""
 
-    title_case: bool = True
+    title_case: bool = False
     """Specifies if the field should be displayed in title case. Defaults to True."""
 
     def to_dict(self):
@@ -73,11 +81,13 @@ class TemplateField(BaseModel):
     def serialize_model(self, handler):
         result = handler(self)
         # If the field is str, we add the Text input type
-        if self.field_type == "str":
+        if self.field_type in ["str", "Text"]:
             if "input_types" not in result:
                 result["input_types"] = ["Text"]
             else:
                 result["input_types"].append("Text")
+        if self.field_type == "Text":
+            result["type"] = "str"
         return result
 
     @field_serializer("file_path")
@@ -101,3 +111,12 @@ class TemplateField(BaseModel):
             if self.title_case:
                 value = value.title()
         return value
+
+    @field_validator("file_types")
+    def validate_file_types(cls, value):
+        if not isinstance(value, list):
+            raise ValueError("file_types must be a list")
+        return [
+            (f".{file_type}" if isinstance(file_type, str) and not file_type.startswith(".") else file_type)
+            for file_type in value
+        ]

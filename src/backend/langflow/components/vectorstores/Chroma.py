@@ -5,6 +5,7 @@ from langchain.embeddings.base import Embeddings
 from langchain.schema import BaseRetriever, Document
 from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.chroma import Chroma
+
 from langflow import CustomComponent
 
 
@@ -67,7 +68,6 @@ class ChromaComponent(CustomComponent):
         - collection_name (str): The name of the collection.
         - index_directory (Optional[str]): The directory to persist the Vector Store to.
         - chroma_server_ssl_enabled (bool): Whether to enable SSL for the Chroma server.
-        - persist (bool): Whether to persist the Vector Store or not.
         - embedding (Optional[Embeddings]): The embeddings to use for the Vector Store.
         - documents (Optional[Document]): The documents to use for the Vector Store.
         - chroma_server_cors_allow_origins (Optional[str]): The CORS allow origins for the Chroma server.
@@ -94,8 +94,8 @@ class ChromaComponent(CustomComponent):
         # If documents, then we need to create a Chroma instance using .from_documents
 
         # Check index_directory and expand it if it is a relative path
-
-        index_directory = self.resolve_path(index_directory)
+        if index_directory is not None:
+            index_directory = self.resolve_path(index_directory)
 
         if documents is not None and embedding is not None:
             if len(documents) == 0:
@@ -108,5 +108,9 @@ class ChromaComponent(CustomComponent):
                 client_settings=chroma_settings,
             )
         else:
-            chroma = Chroma(persist_directory=index_directory, client_settings=chroma_settings)
+            chroma = Chroma(
+                persist_directory=index_directory,
+                client_settings=chroma_settings,
+                embedding_function=embedding,
+            )
         return chroma

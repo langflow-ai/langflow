@@ -1,12 +1,13 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type, Union
 
 import duckdb
-from langflow.services.deps import get_monitor_service
 from loguru import logger
 from pydantic import BaseModel
 
+from langflow.services.deps import get_monitor_service
+
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import ResultData
+    from langflow.api.v1.schemas import ResultDataResponse
 
 
 INDEX_KEY = "index"
@@ -22,7 +23,7 @@ def get_table_schema_as_dict(conn: duckdb.DuckDBPyConnection, table_name: str) -
 def model_to_sql_column_definitions(model: Type[BaseModel]) -> dict:
     columns = {}
     for field_name, field_type in model.model_fields.items():
-        if hasattr(field_type.annotation, "__args__"):
+        if hasattr(field_type.annotation, "__args__") and field_type.annotation is not None:
             field_args = field_type.annotation.__args__
         else:
             field_args = []
@@ -75,7 +76,7 @@ def drop_and_create_table_if_schema_mismatch(db_path: str, table_name: str, mode
 def add_row_to_table(
     conn: duckdb.DuckDBPyConnection,
     table_name: str,
-    model: Type[BaseModel],
+    model: Type,
     monitor_data: Union[Dict[str, Any], BaseModel],
 ):
     # Validate the data with the Pydantic model
@@ -138,7 +139,7 @@ async def log_vertex_build(
     vertex_id: str,
     valid: bool,
     params: Any,
-    data: "ResultData",
+    data: "ResultDataResponse",
     artifacts: Optional[dict] = None,
 ):
     try:

@@ -13,6 +13,12 @@ import ReactFlow, {
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import Chat from "../../../../components/chatComponent";
+import {
+  INVALID_SELECTION_ERROR_ALERT,
+  UPLOAD_ALERT_LIST,
+  UPLOAD_ERROR_ALERT,
+  WRONG_FILE_ERROR_ALERT,
+} from "../../../../constants/alerts_constants";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -24,6 +30,7 @@ import {
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
+  reconnectEdges,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
@@ -85,8 +92,41 @@ export default function Page({
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
 
+  const setNode = useFlowStore((state) => state.setNode);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const selectedNode = nodes.filter((obj) => obj.selected);
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "p" &&
+        selectedNode.length > 0
+      ) {
+        event.preventDefault();
+        setNode(selectedNode[0].id, (old) => ({
+          ...old,
+          data: {
+            ...old.data,
+            node: {
+              ...old.data.node,
+              pinned: old.data?.node?.pinned ? false : true,
+            },
+          },
+        }));
+      }
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "d" &&
+        selectedNode.length > 0
+      ) {
+        event.preventDefault();
+        paste(
+          { nodes: selectedNode, edges: [] },
+          {
+            x: position.current.x,
+            y: position.current.y,
+          }
+        );
+      }
       if (!isWrappedWithClass(event, "noundo")) {
         if (
           (event.key === "y" || (event.key === "z" && event.shiftKey)) &&
@@ -256,14 +296,14 @@ export default function Page({
             position: position,
           }).catch((error) => {
             setErrorData({
-              title: "Error uploading file",
+              title: UPLOAD_ERROR_ALERT,
               list: [error],
             });
           });
         } else {
           setErrorData({
-            title: "Invalid file type",
-            list: ["Please upload a JSON file"],
+            title: WRONG_FILE_ERROR_ALERT,
+            list: [UPLOAD_ALERT_LIST],
           });
         }
       }
@@ -394,7 +434,7 @@ export default function Page({
                       if (
                         validateSelection(lastSelection!, edges).length === 0
                       ) {
-                        const { newFlow } = generateFlow(
+                        const { newFlow, removedEdges } = generateFlow(
                           lastSelection!,
                           nodes,
                           edges,
@@ -403,6 +443,10 @@ export default function Page({
                         const newGroupNode = generateNodeFromFlow(
                           newFlow,
                           getNodeId
+                        );
+                        const newEdges = reconnectEdges(
+                          newGroupNode,
+                          removedEdges
                         );
                         setNodes((oldNodes) => [
                           ...oldNodes.filter(
@@ -414,19 +458,20 @@ export default function Page({
                           ),
                           newGroupNode,
                         ]);
-                        setEdges((oldEdges) =>
-                          oldEdges.filter(
+                        setEdges((oldEdges) => [
+                          ...oldEdges.filter(
                             (oldEdge) =>
                               !lastSelection!.nodes.some(
                                 (selectionNode) =>
                                   selectionNode.id === oldEdge.target ||
                                   selectionNode.id === oldEdge.source
                               )
-                          )
-                        );
+                          ),
+                          ...newEdges,
+                        ]);
                       } else {
                         setErrorData({
-                          title: "Invalid selection",
+                          title: INVALID_SELECTION_ERROR_ALERT,
                           list: validateSelection(lastSelection!, edges),
                         });
                       }

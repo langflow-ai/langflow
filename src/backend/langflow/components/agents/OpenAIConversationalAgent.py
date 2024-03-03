@@ -16,6 +16,7 @@ from langflow.field_typing.range_spec import RangeSpec
 class ConversationalAgent(CustomComponent):
     display_name: str = "OpenAI Conversational Agent"
     description: str = "Conversational Agent that can use OpenAI's function calling API"
+    icon = "OpenAI"
 
     def build_config(self):
         openai_function_models = [

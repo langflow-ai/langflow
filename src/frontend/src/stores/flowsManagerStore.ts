@@ -83,6 +83,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     if (saveTimeoutId) {
       clearTimeout(saveTimeoutId);
     }
+    set({ saveLoading: true });
     // Set up a new timeout.
     saveTimeoutId = setTimeout(() => {
       if (get().currentFlow) {
@@ -92,7 +93,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         );
       }
       set({ saveLoading: true });
-    }, 1000); // Delay of 1000ms.
+    }, 500); // Delay of 500ms because chat message depends on it.
   },
   saveFlow: (flow: FlowType, silent?: boolean) => {
     set({ saveLoading: true });

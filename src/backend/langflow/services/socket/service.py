@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any
 
-import socketio
+import socketio  # type: ignore
 from loguru import logger
 
 from langflow.services.base import Service
@@ -25,7 +25,7 @@ class SocketIOService(Service):
         self.sio.on("message")(self.message)
         self.sio.on("get_vertices")(self.on_get_vertices)
         self.sio.on("build_vertex")(self.on_build_vertex)
-        self.sessions = {}
+        self.sessions = {}  # type: dict[str, dict]
 
     async def emit_error(self, sid, error):
         await self.sio.emit("error", to=sid, data=error)

@@ -1,6 +1,6 @@
 import inspect
 import json
-from typing import TYPE_CHECKING, Any, Callable, Dict, Sequence, Type
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence, Type
 
 import orjson
 from langchain.agents import agent as agent_module
@@ -19,7 +19,11 @@ from langflow.interface.custom.utils import get_function
 from langflow.interface.custom_lists import CUSTOM_NODES
 from langflow.interface.importing.utils import import_by_type
 from langflow.interface.initialize.llm import initialize_vertexai
-from langflow.interface.initialize.utils import handle_format_kwargs, handle_node_type, handle_partial_variables
+from langflow.interface.initialize.utils import (
+    handle_format_kwargs,
+    handle_node_type,
+    handle_partial_variables,
+)
 from langflow.interface.initialize.vector_store import vecstore_initializer
 from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.retrievers.base import retriever_creator
@@ -30,16 +34,16 @@ from langflow.utils import validate
 
 if TYPE_CHECKING:
     from langflow import CustomComponent
-
-
-def build_vertex_in_params(params: Dict) -> Dict:
     from langflow.graph.vertex.base import Vertex
 
-    # If any of the values in params is a Vertex, we will build it
-    return {key: value.build() if isinstance(value, Vertex) else value for key, value in params.items()}
 
-
-async def instantiate_class(node_type: str, base_type: str, params: Dict, user_id=None) -> Any:
+async def instantiate_class(
+    node_type: str,
+    base_type: str,
+    params: Dict,
+    user_id=None,
+    vertex: Optional["Vertex"] = None,
+) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
@@ -51,7 +55,14 @@ async def instantiate_class(node_type: str, base_type: str, params: Dict, user_i
             return custom_node(**params)
     logger.debug(f"Instantiating {node_type} of type {base_type}")
     class_object = import_by_type(_type=base_type, name=node_type)
-    return await instantiate_based_on_type(class_object, base_type, node_type, params, user_id=user_id)
+    return await instantiate_based_on_type(
+        class_object=class_object,
+        base_type=base_type,
+        node_type=node_type,
+        params=params,
+        user_id=user_id,
+        vertex=vertex,
+    )
 
 
 def convert_params_to_sets(params):
@@ -78,7 +89,14 @@ def convert_kwargs(params):
     return params
 
 
-async def instantiate_based_on_type(class_object, base_type, node_type, params, user_id):
+async def instantiate_based_on_type(
+    class_object,
+    base_type,
+    node_type,
+    params,
+    user_id,
+    vertex,
+):
     if base_type == "agents":
         return instantiate_agent(node_type, class_object, params)
     elif base_type == "prompts":
@@ -105,24 +123,35 @@ async def instantiate_based_on_type(class_object, base_type, node_type, params, 
         return instantiate_chains(node_type, class_object, params)
     elif base_type == "output_parsers":
         return instantiate_output_parser(node_type, class_object, params)
-    elif base_type == "llms":
+    elif base_type == "models":
         return instantiate_llm(node_type, class_object, params)
     elif base_type == "retrievers":
         return instantiate_retriever(node_type, class_object, params)
     elif base_type == "memory":
         return instantiate_memory(node_type, class_object, params)
     elif base_type == "custom_components":
-        return await instantiate_custom_component(node_type, class_object, params, user_id)
+        return await instantiate_custom_component(
+            node_type,
+            class_object,
+            params,
+            user_id,
+            vertex,
+        )
     elif base_type == "wrappers":
         return instantiate_wrapper(node_type, class_object, params)
     else:
         return class_object(**params)
 
 
-async def instantiate_custom_component(node_type, class_object, params, user_id):
+async def instantiate_custom_component(node_type, class_object, params, user_id, vertex):
     params_copy = params.copy()
     class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
-    custom_component: "CustomComponent" = class_object(user_id=user_id)
+    custom_component: "CustomComponent" = class_object(
+        user_id=user_id,
+        parameters=params_copy,
+        vertex=vertex,
+        selected_output_type=vertex.selected_output_type,
+    )
 
     if "retriever" in params_copy and hasattr(params_copy["retriever"], "as_retriever"):
         params_copy["retriever"] = params_copy["retriever"].as_retriever()
@@ -137,7 +166,7 @@ async def instantiate_custom_component(node_type, class_object, params, user_id)
         # Call the build method directly if it's sync
         build_result = custom_component.build(**params_copy)
 
-    return build_result, {"repr": custom_component.custom_repr()}
+    return custom_component, build_result, {"repr": custom_component.custom_repr()}
 
 
 def instantiate_wrapper(node_type, class_object, params):
