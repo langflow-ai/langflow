@@ -125,6 +125,9 @@ async def build_vertex(
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
             next_vertices_ids = vertex.successors_ids
+            next_vertices_ids = [
+                v for v in next_vertices_ids if graph.should_run_vertex(v)
+            ]
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
         except Exception as exc:
