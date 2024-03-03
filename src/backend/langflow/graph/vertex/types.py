@@ -6,7 +6,7 @@ import yaml
 from langchain_core.messages import AIMessage
 from loguru import logger
 
-from langflow.graph.schema import INPUT_FIELD_NAME
+from langflow.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes
 from langflow.graph.utils import UnbuiltObject, flatten_list, serialize_field
 from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
 from langflow.interface.utils import extract_input_variables_from_prompt
@@ -454,6 +454,9 @@ class ChatVertex(StatelessVertex):
     async def consume_async_generator(self):
         async for _ in self.stream():
             pass
+
+    def _is_chat_input(self):
+        return self.vertex_type == InterfaceComponentTypes.ChatInput and self.is_input
 
 
 class RoutingVertex(StatelessVertex):

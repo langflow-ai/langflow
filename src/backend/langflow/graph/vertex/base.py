@@ -618,6 +618,9 @@ class Vertex:
         self.steps_ran = []
         self._build_params()
 
+    def _is_chat_input(self):
+        return False
+
     def build_inactive(self):
         # Just set the results to None
         self._built = True
@@ -640,7 +643,7 @@ class Vertex:
             return self.get_requester_result(requester)
         self._reset()
 
-        if self.is_input and inputs is not None:
+        if self._is_chat_input() and inputs is not None:
             self.update_raw_params(inputs)
 
         # Run steps
