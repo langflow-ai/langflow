@@ -216,7 +216,7 @@ class ApiKeyCreateRequest(BaseModel):
 
 
 class VerticesOrderResponse(BaseModel):
-    ids: List[List[str]]
+    ids: List[str]
     run_id: UUID
 
 
@@ -229,7 +229,7 @@ class ResultDataResponse(BaseModel):
 
 class VertexBuildResponse(BaseModel):
     id: Optional[str] = None
-    next_verteices_ids: Optional[List[str]] = None
+    next_vertices_ids: Optional[List[str]] = None
     inactive_vertices: Optional[List[str]] = None
     valid: bool
     params: Optional[str]
