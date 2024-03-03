@@ -1,5 +1,7 @@
-from langchain_core.documents import Document
+from typing import List
+
 from langflow import CustomComponent
+from langflow.schema import Record
 from langflow.utils.constants import LOADERS_INFO
 
 
@@ -9,7 +11,9 @@ class FileLoaderComponent(CustomComponent):
     beta = True
 
     def build_config(self):
-        loader_options = ["Automatic"] + [loader_info["name"] for loader_info in LOADERS_INFO]
+        loader_options = ["Automatic"] + [
+            loader_info["name"] for loader_info in LOADERS_INFO
+        ]
 
         file_types = []
         suffixes = []
@@ -38,6 +42,7 @@ class FileLoaderComponent(CustomComponent):
                     "srt",
                     "eml",
                     "md",
+                    "mdx",
                     "pptx",
                     "docx",
                 ],
@@ -55,6 +60,7 @@ class FileLoaderComponent(CustomComponent):
                     ".srt",
                     ".eml",
                     ".md",
+                    ".mdx",
                     ".pptx",
                     ".docx",
                 ],
@@ -71,10 +77,10 @@ class FileLoaderComponent(CustomComponent):
             "code": {"show": False},
         }
 
-    def build(self, file_path: str, loader: str) -> Document:
+    def build(self, file_path: str, loader: str) -> List[Record]:
         file_type = file_path.split(".")[-1]
 
-        # Mapeie o nome do loader selecionado para suas informações
+        # Map the loader to the correct loader class
         selected_loader_info = None
         for loader_info in LOADERS_INFO:
             if loader_info["name"] == loader:
@@ -85,7 +91,7 @@ class FileLoaderComponent(CustomComponent):
             raise ValueError(f"Loader {loader} not found in the loader info list")
 
         if loader == "Automatic":
-            # Determine o loader automaticamente com base na extensão do arquivo
+            # Determine the loader based on the file type
             default_loader_info = None
             for info in LOADERS_INFO:
                 if "defaultFor" in info and file_type in info["defaultFor"]:
@@ -99,15 +105,20 @@ class FileLoaderComponent(CustomComponent):
         if isinstance(selected_loader_info, dict):
             loader_import: str = selected_loader_info["import"]
         else:
-            raise ValueError(f"Loader info for {loader} is not a dict\nLoader info:\n{selected_loader_info}")
+            raise ValueError(
+                f"Loader info for {loader} is not a dict\nLoader info:\n{selected_loader_info}"
+            )
         module_name, class_name = loader_import.rsplit(".", 1)
 
         try:
-            # Importe o loader dinamicamente
+            # Import the loader class
             loader_module = __import__(module_name, fromlist=[class_name])
             loader_instance = getattr(loader_module, class_name)
         except ImportError as e:
-            raise ValueError(f"Loader {loader} could not be imported\nLoader info:\n{selected_loader_info}") from e
+            raise ValueError(
+                f"Loader {loader} could not be imported\nLoader info:\n{selected_loader_info}"
+            ) from e
 
         result = loader_instance(file_path=file_path)
-        return result.load()
+        docs = result.load()
+        return self.to_records(docs)

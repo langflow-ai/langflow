@@ -1,11 +1,13 @@
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowUpToLine,
   Bell,
   BookMarked,
   BookmarkPlus,
   Bot,
   Boxes,
+  Braces,
   Cable,
   Check,
   CheckCircle2,
@@ -18,13 +20,16 @@ import {
   ChevronsRight,
   ChevronsUpDown,
   Circle,
+  CircleDot,
   Clipboard,
   Code,
   Code2,
   Combine,
+  Command,
   Compass,
   Copy,
   Cpu,
+  Delete,
   Download,
   DownloadCloud,
   Edit,
@@ -37,6 +42,7 @@ import {
   FileSearch,
   FileSearch2,
   FileText,
+  FileType2,
   FileUp,
   Fingerprint,
   FlaskConical,
@@ -101,6 +107,7 @@ import {
   TextCursorInput,
   ToyBrick,
   Trash2,
+  Type,
   Undo,
   Ungroup,
   Unplug,
@@ -118,10 +125,11 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { FaApple, FaGithub } from "react-icons/fa";
+import { FaApple, FaGithub, FaRobot } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
+import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { CohereIcon } from "../icons/Cohere";
@@ -141,9 +149,12 @@ import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
 import { NotionIcon } from "../icons/Notion";
+import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
 import { PineconeIcon } from "../icons/Pinecone";
+import { PostgresIcon } from "../icons/Postgres";
 import { QDrantIcon } from "../icons/QDrant";
+import { RedisIcon } from "../icons/Redis";
 import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
@@ -194,7 +205,7 @@ export const gradients = [
 export const nodeColors: { [char: string]: string } = {
   prompts: "#4367BF",
   models: "#AA2411",
-  llms: "#6344BE",
+  model_specs: "#6344BE",
   chains: "#FE7500",
   Document: "#7AAE42",
   list: "#9AAE42",
@@ -213,7 +224,8 @@ export const nodeColors: { [char: string]: string } = {
   wrappers: "#E6277A",
   utilities: "#31A3CC",
   output_parsers: "#E6A627",
-  str: "#049524",
+  str: "#31a3cc",
+  Text: "#31a3cc",
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
@@ -223,7 +235,7 @@ export const nodeColors: { [char: string]: string } = {
 export const nodeNames: { [char: string]: string } = {
   prompts: "Prompts",
   models: "Language Models",
-  llms: "Model Settings",
+  model_specs: "Model Specs",
   chains: "Chains",
   agents: "Agents",
   tools: "Tools",
@@ -246,12 +258,27 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
+  AzureChatOpenAi: AzureIcon,
+  Ollama: OllamaIcon,
+  ChatOllama: OllamaIcon,
+  AzureOpenAiEmbeddings: AzureIcon,
+  Azure: AzureIcon,
+  OllamaEmbeddings: OllamaIcon,
+  ChatOllamaModel: OllamaIcon,
+  Faiss: MetaIcon,
+  FaissSearch: MetaIcon,
+  AzureOpenAiModel: AzureIcon,
+  Redis: RedisIcon,
+  RedisSearch: RedisIcon,
+  PostgresChatMessageHistory: PostgresIcon,
+  BaiduQianfan: FaRobot,
   Play,
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
+  Amazon: AWSIcon,
   Anthropic: AnthropicIcon,
   ChatAnthropic: AnthropicIcon,
   BingSearchAPIWrapper: BingIcon,
@@ -264,13 +291,17 @@ export const nodeIconsLucide: iconsType = {
   GoogleSearchAPIWrapper: GoogleIcon,
   GoogleSearchResults: GoogleIcon,
   GoogleSearchRun: GoogleIcon,
+  Google: GoogleIcon,
   HNLoader: HackerNewsIcon,
   HuggingFaceHub: HuggingFaceIcon,
+  HuggingFace: HuggingFaceIcon,
   HuggingFaceEmbeddings: HuggingFaceIcon,
   IFixitLoader: IFixIcon,
   Meta: MetaIcon,
   Midjorney: MidjourneyIcon,
   MongoDBAtlasVectorSearch: MongoDBIcon,
+  MongoDB: MongoDBIcon,
+  MongoDBChatMessageHistory: MongoDBIcon,
   NotionDirectoryLoader: NotionIcon,
   ChatOpenAI: OpenAiIcon,
   AzureChatOpenAI: OpenAiIcon,
@@ -283,6 +314,7 @@ export const nodeIconsLucide: iconsType = {
   Searx: SearxIcon,
   SlackDirectoryLoader: SvgSlackIcon,
   SupabaseVectorStore: SupabaseIcon,
+  Supabase: SupabaseIcon,
   VertexAI: VertexAIIcon,
   ChatVertexAI: VertexAIIcon,
   VertexAIEmbeddings: VertexAIIcon,
@@ -295,7 +327,7 @@ export const nodeIconsLucide: iconsType = {
   chains: Link,
   memories: Cpu,
   models: Bot,
-  llms: Lightbulb,
+  model_specs: Lightbulb,
   prompts: TerminalSquare,
   tools: Wrench,
   advanced: Laptop2,
@@ -336,14 +368,17 @@ export const nodeIconsLucide: iconsType = {
   Bell,
   ChevronLeft,
   ChevronDown,
+  ArrowLeft,
   Shield,
   Plus,
   Redo,
   Settings2,
+  FileType2,
   Undo,
   FileSearch2,
   ChevronRight,
   Circle,
+  CircleDot,
   Clipboard,
   Code2,
   Variable,
@@ -413,7 +448,11 @@ export const nodeIconsLucide: iconsType = {
   Sliders,
   ScreenShare,
   Code,
+  Type,
+  Braces,
   FlaskConical,
   AlertCircle,
   Bot,
+  Delete,
+  Command,
 };

@@ -1,9 +1,9 @@
-from typing import Callable, Optional, Union
+from typing import Optional
 
 from langchain.chains import ConversationChain
 
 from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel, BaseMemory, Chain, Text
+from langflow.field_typing import BaseLanguageModel, BaseMemory, Text
 
 
 class ConversationChainComponent(CustomComponent):
@@ -23,10 +23,10 @@ class ConversationChainComponent(CustomComponent):
 
     def build(
         self,
-        inputs: str,
+        input_value: Text,
         llm: BaseLanguageModel,
         memory: Optional[BaseMemory] = None,
-    ) -> Union[Chain, Callable, Text]:
+    ) -> Text:
         if memory is None:
             chain = ConversationChain(llm=llm)
         else:

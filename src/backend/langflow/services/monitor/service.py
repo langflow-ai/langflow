@@ -3,6 +3,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
 
 import duckdb
+from loguru import logger
+from platformdirs import user_cache_dir
+
 from langflow.services.base import Service
 from langflow.services.monitor.schema import (
     MessageModel,
@@ -13,8 +16,6 @@ from langflow.services.monitor.utils import (
     add_row_to_table,
     drop_and_create_table_if_schema_mismatch,
 )
-from loguru import logger
-from platformdirs import user_cache_dir
 
 if TYPE_CHECKING:
     from langflow.services.settings.manager import SettingsService

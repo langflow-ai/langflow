@@ -9,12 +9,13 @@ import {
 
 import { useNavigate } from "react-router-dom";
 import { Node } from "reactflow";
+import { savedHover } from "../../../../constants/constants";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { cn } from "../../../../utils/utils";
-import Tooltip from "../../../TooltipComponent";
+import ShadTooltip from "../../../ShadTooltipComponent";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 
@@ -125,17 +126,19 @@ export const MenuBar = ({
           setOpen={setOpenSettings}
         ></FlowSettingsModal>
       </div>
-      <Tooltip
-        title={
-          "Last saved at " +
+      <ShadTooltip
+        content={
+          savedHover +
           new Date(currentFlow.updated_at ?? "").toLocaleString("en-US", {
             hour: "numeric",
             minute: "numeric",
             second: "numeric",
           })
         }
+        side="bottom"
+        styleClasses="cursor-default"
       >
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <div className="flex cursor-default items-center gap-1.5 text-sm text-muted-foreground">
           <IconComponent
             name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
             className={cn(
@@ -145,7 +148,7 @@ export const MenuBar = ({
           />
           {printByBuildStatus()}
         </div>
-      </Tooltip>
+      </ShadTooltip>
     </div>
   ) : (
     <></>

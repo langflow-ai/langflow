@@ -1,5 +1,8 @@
 from typing import Any, Union
 
+from langchain_core.documents import Document
+from pydantic import BaseModel
+
 from langflow.interface.utils import extract_input_variables_from_prompt
 
 
@@ -33,3 +36,17 @@ def flatten_list(list_of_lists: list[Union[list, Any]]) -> list:
         else:
             new_list.append(item)
     return new_list
+
+
+def serialize_field(value):
+    """Unified serialization function for handling both BaseModel and Document types,
+    including handling lists of these types."""
+    if isinstance(value, (list, tuple)):
+        return [serialize_field(v) for v in value]
+    elif isinstance(value, Document):
+        return value.to_json()
+    elif isinstance(value, BaseModel):
+        return value.model_dump()
+    elif isinstance(value, str):
+        return {"result": value}
+    return value

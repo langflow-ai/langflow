@@ -6,6 +6,11 @@ import CardsWrapComponent from "../../../../components/cardsWrapComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
+import {
+  CONSOLE_ERROR_MSG,
+  UPLOAD_ALERT_LIST,
+  WRONG_FILE_ERROR_ALERT,
+} from "../../../../constants/alerts_constants";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { FlowType } from "../../../../types/flow";
@@ -22,7 +27,7 @@ export default function ComponentsComponent({
   const flows = useFlowsManagerStore((state) => state.flows);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
   const [loadingScreen, setLoadingScreen] = useState(true);
 
@@ -76,14 +81,14 @@ export default function ComponentsComponent({
           })
           .catch((error) => {
             setErrorData({
-              title: "Error uploading file",
+              title: CONSOLE_ERROR_MSG,
               list: [error],
             });
           });
       } else {
         setErrorData({
-          title: "Invalid file type",
-          list: ["Please upload a JSON file"],
+          title: WRONG_FILE_ERROR_ALERT,
+          list: [UPLOAD_ALERT_LIST],
         });
       }
     }
@@ -91,7 +96,7 @@ export default function ComponentsComponent({
 
   function resetFilter() {
     setPageIndex(1);
-    setPageSize(10);
+    setPageSize(20);
   }
 
   return (

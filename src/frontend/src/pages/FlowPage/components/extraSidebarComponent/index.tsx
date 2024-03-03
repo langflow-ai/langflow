@@ -4,6 +4,7 @@ import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
+import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
@@ -255,7 +256,7 @@ export default function ExtraSidebar(): JSX.Element {
                 uploadFlow({ newProject: false, isComponent: false }).catch(
                   (error) => {
                     setErrorData({
-                      title: "Error uploading file",
+                      title: UPLOAD_ERROR_ALERT,
                       list: [error],
                     });
                   }

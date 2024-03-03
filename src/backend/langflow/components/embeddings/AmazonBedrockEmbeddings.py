@@ -1,7 +1,9 @@
 from typing import Optional
 
-from langchain.embeddings import BedrockEmbeddings
 from langchain.embeddings.base import Embeddings
+from langchain_community.embeddings import BedrockEmbeddings
+
+
 from langflow import CustomComponent
 
 

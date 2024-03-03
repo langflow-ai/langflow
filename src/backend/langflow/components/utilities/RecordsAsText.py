@@ -1,5 +1,6 @@
 from langflow import CustomComponent
 from langflow.field_typing import Text
+from langflow.helpers.record import records_to_text
 from langflow.schema import Record
 
 
@@ -27,7 +28,6 @@ class RecordsAsTextComponent(CustomComponent):
         if isinstance(records, Record):
             records = [records]
 
-        formated_records = [template.format(text=record.text, **record.data) for record in records]
-        result_string = "\n".join(formated_records)
+        result_string = records_to_text(template, records)
         self.status = result_string
         return result_string
