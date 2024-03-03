@@ -70,7 +70,10 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
     setLockChat(true);
     setChatValue("");
     for (let i = 0; i < count; i++) {
-      await buildFlow({ input_value: chatValue }).catch((err) => {
+      await buildFlow({
+        input_value: chatValue,
+        startNodeId: chatInput?.id,
+      }).catch((err) => {
         console.error(err);
         setLockChat(false);
       });
@@ -273,7 +276,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
             )}
 
             {haveChat ? (
-              <div className="flex h-full flex-grow min-w-96">
+              <div className="flex h-full min-w-96 flex-grow">
                 {selectedViewField && (
                   <div
                     className={cn(

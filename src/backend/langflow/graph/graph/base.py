@@ -630,7 +630,7 @@ class Graph:
         )
         return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
 
-    def sort_up_to_vertex(self, vertex_id: str) -> List[Vertex]:
+    def sort_up_to_vertex(self, vertex_id: str, is_start: bool = False) -> List[Vertex]:
         """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
         # Initial setup
         visited = set()  # To keep track of visited vertices
@@ -664,11 +664,19 @@ class Graph:
                 if current_id == vertex_id:
                     # We should add to visited all the vertices that are successors of the current vertex
                     # and their successors and so on
+                    # if the vertex is a start, it means we are starting from the beginning
+                    # and getting successors
                     for successor in current_vertex.successors:
-                        excluded.add(successor.id)
+                        if is_start:
+                            stack.append(successor.id)
+                        else:
+                            excluded.add(successor.id)
                         all_successors = get_successors(successor)
                         for successor in all_successors:
-                            excluded.add(successor.id)
+                            if is_start:
+                                stack.append(successor.id)
+                            else:
+                                excluded.add(successor.id)
 
         # Filter the original graph's vertices and edges to keep only those in `visited`
         vertices_to_keep = [self.get_vertex(vid) for vid in visited]
@@ -764,12 +772,19 @@ class Graph:
 
         return vertices_layers
 
-    def sort_vertices(self, stop_component_id: Optional[str] = None) -> List[List[str]]:
+    def sort_vertices(
+        self,
+        stop_component_id: Optional[str] = None,
+        start_component_id: Optional[str] = None,
+    ) -> List[str]:
         """Sorts the vertices in the graph."""
         self.mark_all_vertices("ACTIVE")
         if stop_component_id:
             self.stop_vertex = stop_component_id
             vertices = self.sort_up_to_vertex(stop_component_id)
+        elif start_component_id:
+            vertices = self.sort_up_to_vertex(start_component_id)
+
         else:
             vertices = self.vertices
         vertices_layers = self.layered_topological_sort(vertices)

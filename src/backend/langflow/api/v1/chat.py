@@ -50,6 +50,7 @@ async def try_running_celery_task(vertex, user_id):
 async def get_vertices(
     flow_id: str,
     stop_component_id: Optional[str] = None,
+    start_component_id: Optional[str] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     session=Depends(get_session),
 ):
@@ -60,9 +61,9 @@ async def get_vertices(
         if cache := chat_service.get_cache(flow_id):
             graph = cache.get("result")
         graph = build_and_cache_graph(flow_id, session, chat_service, graph)
-        if stop_component_id:
+        if stop_component_id or start_component_id:
             try:
-                vertices = graph.sort_vertices(stop_component_id)
+                vertices = graph.sort_vertices(stop_component_id, start_component_id)
             except Exception as exc:
                 logger.error(exc)
                 vertices = graph.sort_vertices()

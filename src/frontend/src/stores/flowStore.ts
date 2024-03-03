@@ -416,10 +416,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   buildFlow: async ({
-    nodeId,
+    startNodeId,
+    stopNodeId,
     input_value,
   }: {
-    nodeId?: string;
+    startNodeId?: string;
+    stopNodeId?: string;
     input_value?: string;
   }) => {
     get().setIsBuilding(true);
@@ -480,11 +482,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     await buildVertices({
       input_value,
       flowId: currentFlow!.id,
-      nodeId,
+      startNodeId,
+      stopNodeId,
       onGetOrderSuccess: () => {
         setNoticeData({ title: "Running components" });
       },
       onBuildComplete: () => {
+        const nodeId = startNodeId || stopNodeId;
         if (nodeId) {
           setSuccessData({
             title: `${
