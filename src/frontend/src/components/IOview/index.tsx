@@ -18,6 +18,7 @@ import NewChatView from "../newChatView";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { NodeType } from "../../types/flow";
 
 export default function IOView({ children, open, setOpen }): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs).filter(
@@ -51,6 +52,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
   const [chatValue, setChatValue] = useState("");
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const setNode = useFlowStore((state) => state.setNode);
 
   async function updateVertices() {
     return updateVerticesOrder(currentFlow!.id, null);
@@ -74,6 +76,14 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
       });
     }
     setLockChat(false);
+    if(chatInput) {
+      setNode(chatInput.id, (node:NodeType)=>{
+        
+        const newNode = {...node}
+        newNode.data.node!.template["input_value"].value = chatValue;
+        return newNode;
+      });
+    }
   }
 
   useEffect(() => {
