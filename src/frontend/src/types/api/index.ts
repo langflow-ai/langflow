@@ -140,7 +140,9 @@ export type VerticesOrderTypeAPI = {
 
 export type VertexBuildTypeAPI = {
   id: string;
+  next_vertices_ids: Array<string>;
   inactive_vertices: Array<string> | null;
+  run_id: string;
   valid: boolean;
   params: string;
   data: VertexDataTypeAPI;
