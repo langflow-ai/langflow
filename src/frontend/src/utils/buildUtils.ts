@@ -125,50 +125,57 @@ export async function buildVertices({
 
   useFlowStore.getState().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
   useFlowStore.getState().setIsBuilding(true);
-
+  let currentLayerIndex = 0; // Start with the first layer
   // Set each vertex state to building
   const buildResults: Array<boolean> = [];
   console.log(verticesLayers);
-  for (const layer of verticesLayers) {
-    if (onBuildStart) onBuildStart(layer);
-    for (const id of layer) {
-      // Check if id is in the list of inactive nodes
-      if (!verticesIds.includes(id) && onBuildUpdate) {
-        // If it is, skip building and set the state to inactive
-        onBuildUpdate(getInactiveVertexData(id), BuildStatus.INACTIVE, runId);
-        buildResults.push(false);
-        continue;
-      }
-      await buildVertex({
-        flowId,
-        id,
-        input_value,
-        onBuildUpdate: (data: VertexBuildTypeAPI, status: BuildStatus) => {
-          if (onBuildUpdate) onBuildUpdate(data, status, runId);
-        },
-        onBuildError,
-        verticesIds,
-        buildResults,
-        stopBuild: () => {
-          stop = true;
-        },
-      });
-      if (stop) {
-        break;
-      }
-    }
+  while (currentLayerIndex < verticesLayers.length) {
+    const currentLayer = verticesLayers[currentLayerIndex];
+    if (onBuildStart) onBuildStart(currentLayer);
+    await Promise.all(
+      currentLayer.map(async (vertexId) => {
+        // Check if id is in the list of inactive nodes
+        if (!verticesIds.includes(vertexId) && onBuildUpdate) {
+          // If it is, skip building and set the state to inactive
+          onBuildUpdate(
+            getInactiveVertexData(vertexId),
+            BuildStatus.INACTIVE,
+            runId
+          );
+          buildResults.push(false);
+          return;
+        }
+        await buildVertex({
+          flowId,
+          id: vertexId,
+          input_value,
+          onBuildUpdate: (data: VertexBuildTypeAPI, status: BuildStatus) => {
+            if (onBuildUpdate) onBuildUpdate(data, status, runId);
+          },
+          onBuildError,
+          verticesIds,
+          buildResults,
+          stopBuild: () => {
+            stop = true;
+          },
+        });
+        if (stop) {
+          return;
+        }
+      })
+    );
+
     if (stop) {
       break;
     }
-  }
 
-  if (onBuildComplete) {
-    const allNodesValid = buildResults.every((result) => result);
-    onBuildComplete(allNodesValid);
-    useFlowStore.getState().setIsBuilding(false);
+    if (onBuildComplete) {
+      const allNodesValid = buildResults.every((result) => result);
+      onBuildComplete(allNodesValid);
+      useFlowStore.getState().setIsBuilding(false);
+    }
   }
 }
-
 async function buildVertex({
   flowId,
   id,
