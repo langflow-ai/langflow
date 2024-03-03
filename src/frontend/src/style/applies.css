@@ -845,13 +845,13 @@
   }
 
   .api-modal-tabs {
-    @apply flex h-full max-w-full flex-col overflow-hidden rounded-md border bg-muted text-center sm:w-[75vw] md:w-[75vw] lg:w-[75vw] xl:w-[76vw] 2xl:w-full;
+    @apply flex h-full flex-col overflow-hidden rounded-md border bg-muted text-center;
   }
   .api-modal-tablist-div {
     @apply flex items-center justify-between px-2 py-2;
   }
   .api-modal-tabs-content {
-    @apply -mt-1 h-full w-full  px-4 pb-4;
+    @apply -mt-1 h-full w-full px-4 pb-4;
   }
   .api-modal-accordion-display {
     @apply mt-2 flex h-full w-full;
@@ -902,7 +902,7 @@
     @apply flex-max-width px-2 py-6 pl-4 pr-9;
   }
   .form-modal-chatbot-icon {
-    @apply mb-3 ml-3 mr-6 mt-1;
+    @apply flex flex-col mb-3 ml-3 mr-6 mt-1;
   }
   .form-modal-chat-image {
     @apply flex flex-col items-center gap-1;

@@ -263,7 +263,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
             )}
 
             {haveChat ? (
-              <div className="flex h-full w-full">
+              <div className="flex h-full w-full flex-grow-0">
                 {selectedViewField && (
                   <div
                     className={cn(
