@@ -18,7 +18,7 @@ import {
 } from "../../constants/alerts_constants";
 import {
   CODE_PROMPT_DIALOG_SUBTITLE,
-  editCodeTitle,
+  EDIT_CODE_TITLE,
 } from "../../constants/constants";
 import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
@@ -35,9 +35,14 @@ export default function CodeAreaModal({
   children,
   dynamic,
   readonly = false,
-  openModal,
+  open: myOpen,
+  setOpen: mySetOpen,
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
+  const [open, setOpen] =
+    mySetOpen !== undefined && myOpen !== undefined
+      ? [myOpen, mySetOpen]
+      : useState(false);
   const dark = useDarkStore((state) => state.dark);
   const unselectAll = useFlowStore((state) => state.unselectAll);
 
@@ -55,10 +60,6 @@ export default function CodeAreaModal({
       return;
     }
   }, []);
-
-  useEffect(() => {
-    if (openModal) setOpen(true);
-  }, [openModal]);
 
   function processNonDynamicField() {
     postValidateCode(code)
@@ -143,8 +144,6 @@ export default function CodeAreaModal({
     };
   }, [error, setHeight]);
 
-  const [open, setOpen] = useState(false);
-
   useEffect(() => {
     setCode(value);
   }, [value, open]);
@@ -153,7 +152,7 @@ export default function CodeAreaModal({
     <BaseModal open={open} setOpen={setOpen}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Header description={CODE_PROMPT_DIALOG_SUBTITLE}>
-        <span className="pr-2"> {editCodeTitle} </span>
+        <span className="pr-2"> {EDIT_CODE_TITLE} </span>
         <IconComponent
           name="prompts"
           className="h-6 w-6 pl-1 text-primary "

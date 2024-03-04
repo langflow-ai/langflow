@@ -90,10 +90,13 @@ export type FlowStoreType = {
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
   buildFlow: ({
-    nodeId,
+    startNodeId,
+    stopNodeId,
     input_value,
   }: {
     nodeId?: string;
+    startNodeId?: string;
+    stopNodeId?: string;
     input_value?: string;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
@@ -113,7 +116,9 @@ export type FlowStoreType = {
   } | null;
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
   revertBuiltStatusFromBuilding: () => void;
-  flowBuildStatus: { [key: string]: BuildStatus };
+  flowBuildStatus: {
+    [key: string]: { status: BuildStatus; timestamp?: string };
+  };
   updateFlowPool: (
     nodeId: string,
     data: FlowPoolObjectType | ChatOutputType | chatInputType,

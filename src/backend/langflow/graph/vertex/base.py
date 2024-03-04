@@ -2,13 +2,26 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import (TYPE_CHECKING, Any, AsyncIterator, Callable, Coroutine,
-                    Dict, Iterator, List, Optional)
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Callable,
+    Coroutine,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+)
 
 from loguru import logger
 
-from langflow.graph.schema import (INPUT_COMPONENTS, OUTPUT_COMPONENTS,
-                                   InterfaceComponentTypes, ResultData)
+from langflow.graph.schema import (
+    INPUT_COMPONENTS,
+    OUTPUT_COMPONENTS,
+    InterfaceComponentTypes,
+    ResultData,
+)
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import generate_result
 from langflow.interface.initialize import loading
@@ -151,6 +164,10 @@ class Vertex:
     @property
     def successors(self) -> List["Vertex"]:
         return self.graph.get_successors(self)
+
+    @property
+    def successors_ids(self) -> List[str]:
+        return self.graph.successor_map.get(self.id, [])
 
     def __getstate__(self):
         return {
@@ -594,9 +611,6 @@ class Vertex:
                 raise ValueError(
                     f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead."
                 )
-            raise ValueError(
-                f"{self.display_name}: You are trying to stream to a non-streamable component."
-            )
 
     def _reset(self, params_update: Optional[Dict[str, Any]] = None):
         self._built = False
@@ -605,6 +619,9 @@ class Vertex:
         self.artifacts = {}
         self.steps_ran = []
         self._build_params()
+
+    def _is_chat_input(self):
+        return False
 
     def build_inactive(self):
         # Just set the results to None
@@ -632,7 +649,7 @@ class Vertex:
             return await self.get_requester_result(requester)
         self._reset()
 
-        if self.is_input and inputs is not None:
+        if self._is_chat_input() and inputs is not None:
             self.update_raw_params(inputs)
 
         # Run steps

@@ -193,9 +193,9 @@ export default function CodeTabsComponent({
                 ></div>
               )}
               <SyntaxHighlighter
-                className="mt-0 h-full w-full overflow-auto custom-scroll"
-                language={tab.mode}
+                language={tab.language}
                 style={oneDark}
+                className="mt-0 h-full overflow-auto custom-scroll rounded-sm text-left" 
               >
                 {tab.code}
               </SyntaxHighlighter>

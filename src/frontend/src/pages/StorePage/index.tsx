@@ -26,7 +26,7 @@ import {
   INVALID_API_ERROR_ALERT,
   NOAPI_ERROR_ALERT,
 } from "../../constants/alerts_constants";
-import { storeDesc, storeTitle } from "../../constants/constants";
+import { STORE_DESC, STORE_TITLE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { getStoreComponents, getStoreTags } from "../../controllers/API";
 import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
@@ -174,8 +174,8 @@ export default function StorePage(): JSX.Element {
   return (
     <PageLayout
       betaIcon
-      title={storeTitle}
-      description={storeDesc}
+      title={STORE_TITLE}
+      description={STORE_DESC}
       button={
         <>
           {StoreApiKeyModal && (

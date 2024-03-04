@@ -134,14 +134,15 @@ export type Component = {
 };
 
 export type VerticesOrderTypeAPI = {
-  ids: Array<Array<string>>;
+  ids: Array<string>;
   run_id: string;
 };
 
 export type VertexBuildTypeAPI = {
   id: string;
   inactivated_vertices: Array<string> | null;
-  activated_layers: Array<Array<string>> | null;
+  next_vertices_ids: Array<string>;
+  run_id: string;
   valid: boolean;
   params: string;
   data: VertexDataTypeAPI;
