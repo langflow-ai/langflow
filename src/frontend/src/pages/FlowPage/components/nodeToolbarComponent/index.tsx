@@ -37,6 +37,7 @@ export default function NodeToolbarComponent({
   showNode,
   name = "code",
   selected,
+  setShowState,
   onCloseAdvancedModal,
 }: nodeToolbarPropsType): JSX.Element {
   const nodeLength = Object.keys(data.node!.template).filter(
@@ -58,6 +59,7 @@ export default function NodeToolbarComponent({
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
+  const [updateMinimize, setUpdateMinimize] = useState(showNode);
 
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
@@ -243,8 +245,8 @@ export default function NodeToolbarComponent({
         event.key === "q"
       ) {
         event.preventDefault();
-        setShowNode(data.showNode ?? true ? false : true);
-        unselectAll();
+        setShowState(show => !show)
+        setShowNode(showNode);
       }
       if (
         selected &&
@@ -590,7 +592,7 @@ export default function NodeToolbarComponent({
                       className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                     ></IconComponent>
                     ) : (
-                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
+                      <span className="absolute right-[1.30rem] top-[0.40em] stroke-2">Ctrl + </span>
                     )}
                     <span className="absolute right-2 top-[0.43em]">U</span>
                   </div>
