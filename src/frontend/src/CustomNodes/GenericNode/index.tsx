@@ -9,6 +9,7 @@ import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
 import Xmark from "../../components/ui/xmark";
 import {
+  RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
   priorityFields,
@@ -105,7 +106,7 @@ export default function GenericNode({
     if (duration === undefined) {
       return "";
     } else {
-      return `Duration: ${duration}`;
+      return `${duration}`;
     }
   };
   const durationString = getDurationString(validationStatus?.data.duration);
@@ -493,14 +494,32 @@ export default function GenericNode({
                       ) : !validationStatus ? (
                         <span className="flex">{STATUS_BUILD}</span>
                       ) : (
-                        <div className="max-h-96 overflow-auto">
-                          {typeof validationStatus.params === "string"
-                            ? `${durationString}\n${validationStatus.params}`
-                                .split("\n")
-                                .map((line, index) => (
-                                  <div key={index}>{line}</div>
-                                ))
-                            : durationString}
+                        <div className="max-h-96 overflow-auto custom-scroll">
+                          <div>
+                            {lastRunTime && (
+                              <div className="justify-left flex text-muted-foreground">
+                                <div>{RUN_TIMESTAMP_PREFIX}</div>
+                                <div className="ml-1 text-status-blue">
+                                  {lastRunTime}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="justify-left flex text-muted-foreground">
+                            <div>Duration:</div>
+                            <div className="ml-1 text-status-blue">
+                              {validationStatus?.data.duration}
+                            </div>
+                          </div>
+                          <hr />
+                          <span className="flex justify-center text-muted-foreground">
+                            Output
+                          </span>
+                          {validationStatus?.params
+                            .split("\n")
+                            .map((line, index) => (
+                              <div key={index}>{line}</div>
+                            ))}
                         </div>
                       )
                     }
@@ -725,15 +744,6 @@ export default function GenericNode({
                   showNode={showNode}
                 />
               )}
-              <div>
-                {lastRunTime && (
-                  <div className="flex justify-center text-muted-foreground">
-                    {lastRunTime.split("\n").map((line, index) => (
-                      <div key={index}>{line}</div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </>
           </div>
         )}

@@ -13,7 +13,6 @@ import {
   FLOW_BUILD_SUCCESS_ALERT,
   MISSED_ERROR_ALERT,
 } from "../constants/alerts_constants";
-import { RUN_TIMESTAMP_PREFIX } from "../constants/constants";
 import { BuildStatus } from "../constants/enums";
 import { getFlowPool } from "../controllers/API";
 import { VertexBuildTypeAPI } from "../types/api";
@@ -558,9 +557,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       };
       if (status == BuildStatus.BUILT) {
         const timestamp_string = new Date(Date.now()).toLocaleString();
-        newFlowBuildStatus[
-          id
-        ].timestamp = `${RUN_TIMESTAMP_PREFIX} ${timestamp_string}`;
+        newFlowBuildStatus[id].timestamp = timestamp_string;
       }
       console.log("updateBuildStatus", newFlowBuildStatus);
     });
