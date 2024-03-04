@@ -60,6 +60,8 @@ export default function GenericNode({
     useState<validationStatusType | null>(null);
   const [handles, setHandles] = useState<number>(0);
 
+  const [validationString, setValidationString] = useState<string>("");
+
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   function countHandles(): void {
@@ -131,6 +133,18 @@ export default function GenericNode({
       setValidationStatus(null);
     }
   }, [flowPool[data.id], data.id]);
+
+  useEffect(() => {
+    if (validationStatus?.params) {
+      // if it is not a string turn it into a string
+      let newValidationString = validationStatus.params;
+      if (typeof newValidationString !== "string") {
+        newValidationString = JSON.stringify(validationStatus.params);
+      }
+
+      setValidationString(newValidationString);
+    }
+  }, [validationStatus, validationStatus?.params]);
 
   const showNode = data.showNode ?? true;
 
@@ -516,11 +530,9 @@ export default function GenericNode({
                             Output
                           </span>
                           <div className="max-h-96 overflow-auto custom-scroll">
-                            {validationStatus?.params
-                              .split("\n")
-                              .map((line, index) => (
-                                <div key={index}>{line}</div>
-                              ))}
+                            {validationString.split("\n").map((line, index) => (
+                              <div key={index}>{line}</div>
+                            ))}
                           </div>
                         </div>
                       )
