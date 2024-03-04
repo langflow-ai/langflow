@@ -109,10 +109,14 @@ export const MenuBar = ({
             >
               <IconComponent name="Undo" className="header-menu-options " />
               Undo
-              <IconComponent
-                name="Command"
-                className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-              ></IconComponent>
+              {navigator.userAgent.toUpperCase().includes("MAC") ? (
+                      <IconComponent
+                      name="Command"
+                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                    ></IconComponent>
+                    ) : (
+                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
+                    )}
               <span className="absolute right-2 top-[0.4em]">Z</span>
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -123,10 +127,14 @@ export const MenuBar = ({
             >
               <IconComponent name="Redo" className="header-menu-options " />
               Redo
-              <IconComponent
-                name="Command"
-                className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-              ></IconComponent>
+              {navigator.userAgent.toUpperCase().includes("MAC") ? (
+                      <IconComponent
+                      name="Command"
+                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                    ></IconComponent>
+                    ) : (
+                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
+                    )}
               <span className="absolute right-2 top-[0.4em]">Y</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
