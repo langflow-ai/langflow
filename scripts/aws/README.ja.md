@@ -27,7 +27,7 @@ Auroraのシークレットは [AWS Secrets Manager](https://aws.amazon.com/secr
 
 1. 以下のコマンドを実行します。
     ```shell
-    git clone -b aws-cdk https://github.com/logspace-ai/langflow.git
+    git clone https://github.com/logspace-ai/langflow.git
     cd langflow/scripts/aws
     cp .env.example .env # 環境設定を変える場合はこのファイル(.env)を編集してください。
     npm ci
