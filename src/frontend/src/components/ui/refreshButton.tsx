@@ -8,11 +8,15 @@ function RefreshButton({
   name,
   data,
   handleUpdateValues,
+  className,
+  id,
 }: {
   disabled: boolean;
   name: string;
   data: NodeDataType;
+  className?: string;
   handleUpdateValues: (name: string, data: NodeDataType) => void;
+  id: string;
 }) {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -37,8 +41,8 @@ function RefreshButton({
     }
   };
 
-  const className = cn(
-    "extra-side-bar-buttons ml-2 mt-1 w-1/6",
+  const classNames = cn(
+    className,
     disabled ? "cursor-not-allowed" : "cursor-pointer"
   );
 
@@ -51,10 +55,11 @@ function RefreshButton({
   );
 
   return (
-    <button className={className} onClick={handleClick}>
+    <button className={classNames} onClick={handleClick} id={id}>
       <IconComponent
         name={isLoading ? "Loader2" : "RefreshCcw"}
         className={iconClassName}
+        id={id + "-icon"}
       />
     </button>
   );
