@@ -341,7 +341,8 @@ class CustomComponent(Component):
     ) -> Any:
         if not flow_id and not flow_name:
             raise ValueError("Flow ID or Flow Name is required")
-
+        if not self._flows_records:
+            self.list_flows()
         if not flow_id and self._flows_records:
             flow_ids = [
                 flow.data["id"]
