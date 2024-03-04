@@ -699,7 +699,7 @@ class Graph:
             return ChatVertex
         elif node_name in ["ShouldRunNext"]:
             return RoutingVertex
-        elif node_name in ["SharedState"]:
+        elif node_name in ["SharedState", "Notify", "GetNotified"]:
             return StateVertex
         elif node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]
