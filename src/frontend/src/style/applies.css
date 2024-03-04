@@ -316,7 +316,7 @@
     @apply border-none ring ring-[#FF9090];
   }
   .built-invalid-status-dark {
-    @apply border-none ring ring-[#751C1C]
+    @apply border-none ring ring-[#751C1C];
   }
   .building-status {
     @apply border-none ring;
@@ -431,7 +431,9 @@
   .code-area-external-link:hover {
     @apply hover:text-accent-foreground;
   }
-
+  .dropdown-component-disabled {
+    @apply pointer-events-none cursor-not-allowed;
+  }
   .dropdown-component-outline {
     @apply input-edit-node relative pr-8;
   }
@@ -441,11 +443,17 @@
   .dropdown-component-display {
     @apply block w-full truncate bg-background;
   }
+  .dropdown-component-display-disabled {
+    @apply text-muted-foreground;
+  }
   .dropdown-component-arrow {
     @apply pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2;
   }
   .dropdown-component-arrow-color {
-    @apply extra-side-bar-save-disable h-5 w-5;
+    @apply h-5 w-5 text-accent-foreground;
+  }
+  .dropdown-component-arrow-color-disable {
+    @apply h-5 w-5 text-muted-foreground;
   }
   .dropdown-component-options {
     @apply z-10 mt-1 max-h-60 overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm;
@@ -902,7 +910,7 @@
     @apply flex-max-width px-2 py-6 pl-4 pr-9;
   }
   .form-modal-chatbot-icon {
-    @apply flex flex-col mb-3 ml-3 mr-6 mt-1;
+    @apply mb-3 ml-3 mr-6 mt-1 flex flex-col;
   }
   .form-modal-chat-image {
     @apply flex flex-col items-center gap-1;
