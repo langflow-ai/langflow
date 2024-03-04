@@ -109,7 +109,7 @@ export default function Page({
             ...old.data,
             node: {
               ...old.data.node,
-              pinned: old.data?.node?.pinned ? false : true,
+              frozen: old.data?.node?.frozen ? false : true,
             },
           },
         }));

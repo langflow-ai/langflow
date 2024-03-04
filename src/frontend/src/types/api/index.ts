@@ -27,7 +27,7 @@ export type APIClassType = {
   documentation: string;
   error?: string;
   official?: boolean;
-  pinned?: boolean;
+  frozen?: boolean;
   flow?: FlowType;
   [key: string]:
     | Array<string>

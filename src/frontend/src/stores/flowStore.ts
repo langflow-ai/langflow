@@ -190,8 +190,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     get().setNodes((oldNodes) =>
       oldNodes.map((node) => {
         if (node.id === id) {
-          if((node.data as NodeDataType).node?.pinned){
-            (newChange.data as NodeDataType).node!.pinned = false;
+          if ((node.data as NodeDataType).node?.frozen) {
+            (newChange.data as NodeDataType).node!.frozen = false;
           }
           return newChange;
         }
