@@ -361,15 +361,15 @@ export default function ParameterComponent({
         >
           {!left && data.node?.pinned  &&
             <div>
-              <IconComponent className="w-5 h-5 text-blue-400" name={"Snowflake"} />
+              <IconComponent className="w-5 h-5 text-ice" name={"Snowflake"} />
             </div>}
           {proxy ? (
             <ShadTooltip content={<span>{proxy.id}</span>}>
-              <span>{title}</span>
+              <span className={!left && data.node?.pinned?" text-ice":""}>{title}</span>
             </ShadTooltip>
           ) : (
-            title
-          )}
+            <span className={!left && data.node?.pinned?" text-ice":""}>{title}</span>
+            )}
           <span className={(info === "" ? "" : "ml-1 ") + " text-status-red"}>
             {required ? " *" : ""}
           </span>
