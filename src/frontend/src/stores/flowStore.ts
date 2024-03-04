@@ -453,9 +453,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       if (vertexBuildData && vertexBuildData.inactivated_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
       }
-      if (vertexBuildData && vertexBuildData.activated_layers) {
-        get().addToVerticesBuild(vertexBuildData.activated_layers.flat());
-      }
+
       if (vertexBuildData.next_vertices_ids) {
         // next_vertices_ids is a list of vertices that are going to be built next
         // verticesLayers is a list of list of vertices ids, where each list is a layer of vertices
