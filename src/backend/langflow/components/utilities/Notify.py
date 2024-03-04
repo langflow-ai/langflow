@@ -21,20 +21,21 @@ class NotifyComponent(CustomComponent):
     def build(
         self, name: str, record: Optional[Record] = None, append: bool = False
     ) -> Record:
-        if state and not isinstance(state, Record):
-            if isinstance(state, str):
-                state = Record(text=state)
-            elif isinstance(state, dict):
-                state = Record(data=state)
+        if record and not isinstance(record, Record):
+            if isinstance(record, str):
+                record = Record(text=record)
+            elif isinstance(record, dict):
+                record = Record(data=record)
             else:
-                state = Record(text=str(state))
-        elif not state:
-            state = Record(text="")
+                record = Record(text=str(record))
+        elif not record:
+            record = Record(text="")
         if record:
             if append:
                 self.append_state(name, record)
             else:
                 self.update_state(name, record)
         else:
-            state = "No record provided."
-        self.status = state
+            self.status = "No record provided."
+        self.status = record
+        return record
