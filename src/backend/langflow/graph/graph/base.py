@@ -296,6 +296,8 @@ class Graph:
         for vertex_id in new_vertex_ids:
             new_vertex = other.get_vertex(vertex_id)
             self._update_edges(new_vertex)
+            # Graph is set at the end because the edges come from the graph
+            # and the other graph is where the new edges and vertices come from
             new_vertex.graph = self
 
         # Update existing vertices that have changed
