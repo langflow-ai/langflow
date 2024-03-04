@@ -287,6 +287,11 @@ class Graph:
         for vertex_id in removed_vertex_ids:
             self.remove_vertex(vertex_id)
 
+        # The order here matters because adding the vertex is required
+        # if any of them have edges that point to any of the new vertices
+        # By adding them first, them adding the edges we ensure that the
+        # edges have valid vertices to point to
+
         # Add new vertices
         for vertex_id in new_vertex_ids:
             new_vertex = other.get_vertex(vertex_id)
