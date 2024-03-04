@@ -143,6 +143,8 @@ class Vertex:
             if not isinstance(result, (dict, str)) and hasattr(result, "content"):
                 return result.content
             return result
+        if isinstance(self._built_object, str):
+            self._built_result = self._built_object
 
         if isinstance(self._built_result, UnbuiltResult):
             return {}
