@@ -420,10 +420,14 @@ export default function NodeToolbarComponent({
                       className="relative top-0.5 mr-2 h-4 w-4 "
                     />{" "}
                     <span className="">Edit</span>{" "}
-                    <IconComponent
+                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
+                      <IconComponent
                       name="Command"
                       className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                     ></IconComponent>
+                    ) : (
+                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
+                    )}
                     <span className="absolute right-2 top-[0.46em]">E</span>
                   </div>
                 </SelectItem>
@@ -437,10 +441,14 @@ export default function NodeToolbarComponent({
                       className="relative top-0.5 mr-2 h-4 w-4 "
                     />{" "}
                     <span className="">Save</span>{" "}
-                    <IconComponent
+                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
+                      <IconComponent
                       name="Command"
                       className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                     ></IconComponent>
+                    ) : (
+                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
+                    )}
                     <span className="absolute right-2 top-[0.45em]">S</span>
                   </div>
                 </SelectItem>
@@ -453,10 +461,14 @@ export default function NodeToolbarComponent({
                         className="relative top-0.5 mr-2 h-4 w-4 "
                       />{" "}
                       <span className="">Save</span>{" "}
+                      {navigator.userAgent.toUpperCase().includes("MAC") ? (
                       <IconComponent
-                        name="Command"
-                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                      ></IconComponent>
+                      name="Command"
+                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                    ></IconComponent>
+                    ) : (
+                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
+                    )}
                       <span className="absolute right-2 top-[0.46em]">S</span>
                     </div>
                   </SelectItem>
@@ -469,10 +481,14 @@ export default function NodeToolbarComponent({
                     className="relative top-0.5 mr-2 h-4 w-4 "
                   />{" "}
                   <span className="">Copy</span>{" "}
-                  <IconComponent
-                    name="Command"
-                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                  ></IconComponent>
+                  {navigator.userAgent.toUpperCase().includes("MAC") ? (
+                      <IconComponent
+                      name="Command"
+                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                    ></IconComponent>
+                    ) : (
+                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
+                    )}
                   <span className="absolute right-2 top-[0.5em]">C</span>
                 </div>
               </SelectItem>
@@ -487,10 +503,15 @@ export default function NodeToolbarComponent({
                       className="relative top-0.5 -m-1 mr-1 h-6 w-6"
                     />{" "}
                     Share{" "}
-                    <IconComponent
+                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
+                      <IconComponent
                       name="Command"
-                      className="absolute right-[2rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                     ></IconComponent>
+                    ) : (
+                      <span className="absolute right-[2.10rem] top-[0.43em] stroke-2">Ctrl</span>
+                    )}
+                    
                     <IconComponent
                       name="ArrowBigUp"
                       className="absolute right-[1.09rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
@@ -520,10 +541,14 @@ export default function NodeToolbarComponent({
                     className="relative top-0.5 mr-2 h-4 w-4 "
                   />{" "}
                   <span className="">Docs</span>{" "}
-                  <IconComponent
-                    name="Command"
-                    className="absolute right-[2rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                  ></IconComponent>
+                  {navigator.userAgent.toUpperCase().includes("MAC") ? (
+                      <IconComponent
+                      name="Command"
+                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                    ></IconComponent>
+                    ) : (
+                      <span className="absolute right-[2.10rem] top-[0.43em] stroke-2">Ctrl</span>
+                    )}
                   <IconComponent
                     name="ArrowBigUp"
                     className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
@@ -539,10 +564,14 @@ export default function NodeToolbarComponent({
                       className="relative top-0.5 mr-2 h-4 w-4"
                     />
                     {showNode ? "Minimize" : "Expand"}
-                    <IconComponent
+                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
+                      <IconComponent
                       name="Command"
-                      className="absolute right-[1.25rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                     ></IconComponent>
+                    ) : (
+                      <span className="absolute right-[1.30rem] top-[0.40em] stroke-2">Ctrl + </span>
+                    )}
                     <span className="absolute right-2 top-[0.46em]">Q</span>
                   </div>
                 </SelectItem>
@@ -555,10 +584,14 @@ export default function NodeToolbarComponent({
                       className="relative top-0.5 mr-2 h-4 w-4 "
                     />{" "}
                     <span className="">Ungroup</span>{" "}
-                    <IconComponent
+                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
+                      <IconComponent
                       name="Command"
                       className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                     ></IconComponent>
+                    ) : (
+                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
+                    )}
                     <span className="absolute right-2 top-[0.43em]">U</span>
                   </div>
                 </SelectItem>
