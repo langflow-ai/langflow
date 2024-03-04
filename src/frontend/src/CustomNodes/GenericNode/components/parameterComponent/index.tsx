@@ -422,6 +422,7 @@ export default function ParameterComponent({
                 </div>
                 {data.node?.template[name].refresh && (
                   <RefreshButton
+                    disabled={disabled}
                     name={name}
                     data={data}
                     handleUpdateValues={handleUpdateValues}
