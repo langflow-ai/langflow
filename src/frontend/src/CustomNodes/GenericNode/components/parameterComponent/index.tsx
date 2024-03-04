@@ -134,14 +134,14 @@ export default function ParameterComponent({
 
   useEffect(() => {
     function fetchData() {
-      if (data.node?.template[name]?.refresh) {
+      if (
+        data.node?.template[name]?.refresh &&
+        Object.keys(data.node?.template[name]?.options ?? {}).length === 0
+      ) {
         handleUpdateValues(name, data, false);
       }
     }
     fetchData();
-    // I want this to run as soon as the component mounts
-    // but it is not updating the data
-    // the .refresh does not change
   }, []);
   const handleOnNewValue = (
     newValue: string | string[] | boolean | Object[]
