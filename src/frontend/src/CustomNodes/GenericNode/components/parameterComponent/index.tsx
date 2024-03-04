@@ -17,10 +17,10 @@ import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
 import {
+  INPUT_HANDLER_HOVER,
   LANGFLOW_SUPPORTED_TYPES,
+  OUTPUT_HANDLER_HOVER,
   TOOLTIP_EMPTY,
-  inputHandleHover,
-  outputHandleHover,
 } from "../../../../constants/constants";
 import { postCustomComponentUpdate } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
@@ -182,7 +182,7 @@ export default function ParameterComponent({
         return (
           <div key={index}>
             {index === 0 && (
-              <span>{left ? inputHandleHover : outputHandleHover}</span>
+              <span>{left ? INPUT_HANDLER_HOVER : OUTPUT_HANDLER_HOVER}</span>
             )}
             <span
               key={index}
@@ -304,7 +304,10 @@ export default function ParameterComponent({
       ref={ref}
       className={
         "relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
-        (name === "code" ? " hidden " : "")
+        ((name === "code" && type === "code") ||
+        (name.includes("code") && proxy)
+          ? " hidden "
+          : "")
       }
     >
       <>

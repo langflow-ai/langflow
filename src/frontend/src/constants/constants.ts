@@ -691,38 +691,39 @@ export const priorityFields = new Set(["code", "template"]);
 export const INPUT_TYPES = new Set(["ChatInput", "TextInput"]);
 export const OUTPUT_TYPES = new Set(["ChatOutput", "TextOutput"]);
 
-export const chatFirstInitialText =
+export const CHAT_FIRST_INITIAL_TEXT =
   "Start a conversation and click the agent's thoughts";
 
-export const chatSecondInitialText = "to inspect the chaining process.";
+export const CHAT_SECOND_INITIAL_TEXT = "to inspect the chaining process.";
 
-export const zeroNotifications = "No new notifications";
+export const ZERO_NOTIFICATIONS = "No new notifications";
 
-export const successBuild = "Built sucessfully ✨";
+export const SUCCESS_BUILD = "Built sucessfully ✨";
 
-export const alertSaveWApi =
+export const ALERT_SAVE_WITH_API =
   "Caution: Uncheck this box only removes API keys from fields specifically designated for API keys.";
 
-export const saveWApiCheckbox = "Save with my API keys";
-export const editTextModalTitle = "Edit Text";
-export const editTextPlaceholder = "Type message here.";
-export const inputHandleHover = "Avaliable input components:";
-export const outputHandleHover = "Avaliable output components:";
-export const textInputModalTitle = "Text Inputs";
-export const outputsModalTitle = "Text Outputs";
-export const langflowChatTitle = "Langflow Chat";
-export const chatInputPlaceholder =
+export const SAVE_WITH_API_CHECKBOX = "Save with my API keys";
+export const EDIT_TEXT_MODAL_TITLE = "Edit Text";
+export const EDIT_TEXT_PLACEHOLDER = "Type message here.";
+export const INPUT_HANDLER_HOVER = "Avaliable input components:";
+export const OUTPUT_HANDLER_HOVER = "Avaliable output components:";
+export const TEXT_INPUT_MODAL_TITLE = "Text Inputs";
+export const OUTPUTS_MODAL_TITLE = "Text Outputs";
+export const LANGFLOW_CHAT_TITLE = "Langflow Chat";
+export const CHAT_INPUT_PLACEHOLDER =
   "No chat input variables found. Click to run your flow.";
-export const chatInputPlaceholderSend = "Send a message...";
-export const editCodeTitle = "Edit Code";
-export const myCollectionDesc =
+export const CHAT_INPUT_PLACEHOLDER_SEND = "Send a message...";
+export const EDIT_CODE_TITLE = "Edit Code";
+export const MY_COLLECTION_DESC =
   "Manage your personal projects. Download and upload entire collections.";
-export const storeDesc = "Explore community-shared flows and components.";
-export const storeTitle = "Langflow Store";
-export const noApi = "You don't have an API key. ";
-export const insertApi = "Insert your Langflow API key.";
-export const invalidApi = "Your API key is not valid. ";
-export const createApi = `Don’t have an API key? Sign up at`;
-export const statusBuild = "Build to validate status.";
-export const statusBuilding = "Building...";
-export const savedHover = "Last saved at ";
+export const STORE_DESC = "Explore community-shared flows and components.";
+export const STORE_TITLE = "Langflow Store";
+export const NO_API_KEY = "You don't have an API key. ";
+export const INSERT_API_KEY = "Insert your Langflow API key.";
+export const INVALID_API_KEY = "Your API key is not valid. ";
+export const CREATE_API_KEY = `Don’t have an API key? Sign up at`;
+export const STATUS_BUILD = "Build to validate status.";
+export const STATUS_BUILDING = "Building...";
+export const SAVED_HOVER = "Last saved at ";
+export const RUN_TIMESTAMP_PREFIX = "Last Run: ";

@@ -6,7 +6,7 @@ import yaml
 from langchain_core.messages import AIMessage
 from loguru import logger
 
-from langflow.graph.schema import INPUT_FIELD_NAME
+from langflow.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes
 from langflow.graph.utils import UnbuiltObject, flatten_list, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.interface.utils import extract_input_variables_from_prompt
@@ -455,17 +455,29 @@ class ChatVertex(Vertex):
         async for _ in self.stream():
             pass
 
+    def _is_chat_input(self):
+        return self.vertex_type == InterfaceComponentTypes.ChatInput and self.is_input
+
 
 class RoutingVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="custom_components")
         self.use_result = True
-        self.steps = [self._build, self._run]
+        self.steps = [self._build]
 
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()
         return super()._built_object_repr()
+
+    @property
+    def successors_ids(self):
+        if isinstance(self._built_object, bool):
+            ids = super().successors_ids
+            if self._built_object:
+                return ids
+            return []
+        raise ValueError("RoutingVertex should return a boolean value.")
 
     def _run(self, *args, **kwargs):
         if self._built_object:

@@ -8,10 +8,10 @@ import {
   API_SUCCESS_ALERT,
 } from "../../constants/alerts_constants";
 import {
-  createApi,
-  insertApi,
-  invalidApi,
-  noApi,
+  CREATE_API_KEY,
+  INSERT_API_KEY,
+  INVALID_API_KEY,
+  NO_API_KEY,
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { addApiKeyStore } from "../../controllers/API";
@@ -68,8 +68,11 @@ export default function StoreApiKeyModal({
       <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
       <BaseModal.Header
         description={
-          (hasApiKey && !validApiKey ? invalidApi : !hasApiKey ? noApi : "") +
-          insertApi
+          (hasApiKey && !validApiKey
+            ? INVALID_API_KEY
+            : !hasApiKey
+            ? NO_API_KEY
+            : "") + INSERT_API_KEY
         }
       >
         <span className="pr-2">API Key</span>
@@ -104,7 +107,7 @@ export default function StoreApiKeyModal({
           </div>
           <div className="flex items-end justify-between">
             <span className="pr-1 text-xs text-muted-foreground">
-              {createApi}{" "}
+              {CREATE_API_KEY}{" "}
               <a
                 className="text-high-indigo underline"
                 href="https://langflow.store/"

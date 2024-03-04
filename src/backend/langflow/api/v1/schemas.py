@@ -216,7 +216,7 @@ class ApiKeyCreateRequest(BaseModel):
 
 
 class VerticesOrderResponse(BaseModel):
-    ids: List[List[str]]
+    ids: List[str]
     run_id: UUID
 
 
@@ -230,7 +230,7 @@ class ResultDataResponse(BaseModel):
 class VertexBuildResponse(BaseModel):
     id: Optional[str] = None
     inactivated_vertices: Optional[List[str]] = None
-    activated_layers: Optional[List[List[str]]] = None
+    next_vertices_ids: Optional[List[str]] = None
     valid: bool
     params: Optional[str]
     """JSON string of the params."""

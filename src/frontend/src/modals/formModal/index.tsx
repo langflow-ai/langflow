@@ -26,10 +26,10 @@ import {
   MSG_ERROR_ALERT,
 } from "../../constants/alerts_constants";
 import {
+  CHAT_FIRST_INITIAL_TEXT,
   CHAT_FORM_DIALOG_SUBTITLE,
-  chatFirstInitialText,
-  chatSecondInitialText,
-  langflowChatTitle,
+  CHAT_SECOND_INITIAL_TEXT,
+  LANGFLOW_CHAT_TITLE,
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { getBuildStatus } from "../../controllers/API";
@@ -594,20 +594,20 @@ export default function FormModal({
                       <span>
                         👋{" "}
                         <span className="langflow-chat-span">
-                          {langflowChatTitle}
+                          {LANGFLOW_CHAT_TITLE}
                         </span>
                       </span>
                       <br />
                       <div className="langflow-chat-desc">
                         <span className="langflow-chat-desc-span">
-                          {chatFirstInitialText}{" "}
+                          {CHAT_FIRST_INITIAL_TEXT}{" "}
                           <span>
                             <IconComponent
                               name="MessageSquare"
                               className="mx-1 inline h-5 w-5 animate-bounce "
                             />
                           </span>{" "}
-                          {chatSecondInitialText}
+                          {CHAT_SECOND_INITIAL_TEXT}
                         </span>
                       </div>
                     </div>

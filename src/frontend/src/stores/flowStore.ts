@@ -13,6 +13,7 @@ import {
   FLOW_BUILD_SUCCESS_ALERT,
   MISSED_ERROR_ALERT,
 } from "../constants/alerts_constants";
+import { RUN_TIMESTAMP_PREFIX } from "../constants/constants";
 import { BuildStatus } from "../constants/enums";
 import { getFlowPool } from "../controllers/API";
 import { VertexBuildTypeAPI } from "../types/api";
@@ -416,10 +417,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   buildFlow: async ({
-    nodeId,
+    startNodeId,
+    stopNodeId,
     input_value,
   }: {
-    nodeId?: string;
+    startNodeId?: string;
+    stopNodeId?: string;
     input_value?: string;
   }) => {
     get().setIsBuilding(true);
@@ -444,7 +447,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
       status: BuildStatus,
-      buildId: string
+      runId: string
     ) {
       if (vertexBuildData && vertexBuildData.inactivated_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
@@ -452,20 +455,47 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       if (vertexBuildData && vertexBuildData.activated_layers) {
         get().addToVerticesBuild(vertexBuildData.activated_layers.flat());
       }
+      if (vertexBuildData.next_vertices_ids) {
+        // next_vertices_ids is a list of vertices that are going to be built next
+        // verticesLayers is a list of list of vertices ids, where each list is a layer of vertices
+        // we want to add a new layer (next_vertices_ids) to the list of layers (verticesLayers)
+        // and the values of next_vertices_ids to the list of vertices ids (verticesIds)
+        const newLayers = [
+          ...get().verticesBuild!.verticesLayers,
+          vertexBuildData.next_vertices_ids,
+        ];
+        const newIds = [
+          ...get().verticesBuild!.verticesIds,
+          ...vertexBuildData.next_vertices_ids,
+        ];
+        get().updateVerticesBuild({
+          verticesIds: newIds,
+          verticesLayers: newLayers,
+          runId: runId,
+        });
+        get().updateBuildStatus(
+          vertexBuildData.next_vertices_ids,
+          BuildStatus.TO_BUILD
+        );
+      }
+
       get().addDataToFlowPool(
-        { ...vertexBuildData, buildId },
+        { ...vertexBuildData, buildId: runId },
         vertexBuildData.id
       );
+
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
     }
     await buildVertices({
       input_value,
       flowId: currentFlow!.id,
-      nodeId,
+      startNodeId,
+      stopNodeId,
       onGetOrderSuccess: () => {
         setNoticeData({ title: "Running components" });
       },
       onBuildComplete: () => {
+        const nodeId = startNodeId || stopNodeId;
         if (nodeId) {
           setSuccessData({
             title: `${
@@ -482,6 +512,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       onBuildError: (title, list, idList) => {
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
         setErrorData({ list, title });
+        get().setIsBuilding(false);
       },
       onBuildStart: (idList) => {
         console.log("onBuildStart", idList);
@@ -489,6 +520,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       },
       validateNodes: validateSubgraph,
     });
+    get().setIsBuilding(false);
     get().revertBuiltStatusFromBuilding();
   },
   getFlow: () => {
@@ -505,6 +537,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       runId: string;
     } | null
   ) => {
+    console.log("updateVerticesBuild", vertices);
     set({ verticesBuild: vertices });
   },
   verticesBuild: null,
@@ -531,17 +564,27 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
+    console.log("updateBuildStatus", nodeIdList, status);
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     nodeIdList.forEach((id) => {
-      newFlowBuildStatus[id] = status;
+      newFlowBuildStatus[id] = {
+        status,
+      };
+      if (status == BuildStatus.BUILT) {
+        const timestamp_string = new Date(Date.now()).toLocaleString();
+        newFlowBuildStatus[
+          id
+        ].timestamp = `${RUN_TIMESTAMP_PREFIX} ${timestamp_string}`;
+      }
+      console.log("updateBuildStatus", newFlowBuildStatus);
     });
     set({ flowBuildStatus: newFlowBuildStatus });
   },
   revertBuiltStatusFromBuilding: () => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     Object.keys(newFlowBuildStatus).forEach((id) => {
-      if (newFlowBuildStatus[id] === BuildStatus.BUILDING) {
-        newFlowBuildStatus[id] = BuildStatus.BUILT;
+      if (newFlowBuildStatus[id].status === BuildStatus.BUILDING) {
+        newFlowBuildStatus[id].status = BuildStatus.BUILT;
       }
     });
   },

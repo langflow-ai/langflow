@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import {
   CHAT_FORM_DIALOG_SUBTITLE,
-  outputsModalTitle,
-  textInputModalTitle,
+  OUTPUTS_MODAL_TITLE,
+  TEXT_INPUT_MODAL_TITLE,
 } from "../../constants/constants";
 import BaseModal from "../../modals/baseModal";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { NodeType } from "../../types/flow";
 import { updateVerticesOrder } from "../../utils/buildUtils";
 import { cn } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
@@ -51,6 +52,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
   const [chatValue, setChatValue] = useState("");
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const setNode = useFlowStore((state) => state.setNode);
 
   async function updateVertices() {
     return updateVerticesOrder(currentFlow!.id, null);
@@ -68,12 +70,22 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
     setLockChat(true);
     setChatValue("");
     for (let i = 0; i < count; i++) {
-      await buildFlow({ input_value: chatValue }).catch((err) => {
+      await buildFlow({
+        input_value: chatValue,
+        startNodeId: chatInput?.id,
+      }).catch((err) => {
         console.error(err);
         setLockChat(false);
       });
     }
     setLockChat(false);
+    if (chatInput) {
+      setNode(chatInput.id, (node: NodeType) => {
+        const newNode = { ...node };
+        newNode.data.node!.template["input_value"].value = chatValue;
+        return newNode;
+      });
+    }
   }
 
   useEffect(() => {
@@ -135,7 +147,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                   >
                     <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
                       <IconComponent className="h-4 w-4" name={"Type"} />
-                      {textInputModalTitle}
+                      {TEXT_INPUT_MODAL_TITLE}
                     </div>
                     {nodes
                       .filter((node) =>
@@ -196,7 +208,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                   >
                     <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
                       <IconComponent className="h-4 w-4" name={"FileType2"} />
-                      {outputsModalTitle}
+                      {OUTPUTS_MODAL_TITLE}
                     </div>
                     {nodes
                       .filter((node) =>
@@ -220,7 +232,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                                   >
                                     <div>
                                       <Badge variant="gray" size="md">
-                                        {output.displayName}
+                                        {node.data.node.display_name}
                                       </Badge>
                                     </div>
                                   </ShadTooltip>
@@ -263,7 +275,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
             )}
 
             {haveChat ? (
-              <div className="flex h-full w-full">
+              <div className="flex h-full min-w-96 flex-grow">
                 {selectedViewField && (
                   <div
                     className={cn(

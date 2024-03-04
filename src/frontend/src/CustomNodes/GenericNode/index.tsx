@@ -9,9 +9,9 @@ import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
 import Xmark from "../../components/ui/xmark";
 import {
+  STATUS_BUILD,
+  STATUS_BUILDING,
   priorityFields,
-  statusBuild,
-  statusBuilding,
 } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
@@ -49,7 +49,12 @@ export default function GenericNode({
   const [nodeDescription, setNodeDescription] = useState(
     data.node?.description!
   );
-  const buildStatus = useFlowStore((state) => state.flowBuildStatus[data.id]);
+  const buildStatus = useFlowStore(
+    (state) => state.flowBuildStatus[data.id]?.status
+  );
+  const lastRunTime = useFlowStore(
+    (state) => state.flowBuildStatus[data.id]?.timestamp
+  );
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
   const [handles, setHandles] = useState<number>(0);
@@ -332,8 +337,8 @@ export default function GenericNode({
                       />
                     </div>
                   ) : (
-                    <div className="group flex items-center gap-2.5">
-                      <ShadTooltip content={data.id}>
+                    <div className="group flex items-start gap-1.5">
+                      <ShadTooltip content={data.node?.display_name}>
                         <div
                           onDoubleClick={(event) => {
                             if (nameEditable) {
@@ -359,8 +364,8 @@ export default function GenericNode({
                           }}
                         >
                           <IconComponent
-                            name="Pencil"
-                            className="hidden h-4 w-4 animate-pulse text-status-blue group-hover:block"
+                            name="PencilLine"
+                            className="hidden h-3 w-3 text-status-blue group-hover:block"
                           />
                         </div>
                       )}
@@ -390,13 +395,34 @@ export default function GenericNode({
                             })}
                             data={data}
                             color={
-                              nodeColors[
-                                types[data.node?.template[templateField].type!]
-                              ] ??
-                              nodeColors[
-                                data.node?.template[templateField].type!
-                              ] ??
-                              nodeColors.unknown
+                              data.node?.template[templateField].input_types &&
+                              data.node?.template[templateField].input_types!
+                                .length > 0
+                                ? nodeColors[
+                                    data.node?.template[templateField]
+                                      .input_types![
+                                      data.node?.template[templateField]
+                                        .input_types!.length - 1
+                                    ]
+                                  ] ??
+                                  nodeColors[
+                                    types[
+                                      data.node?.template[templateField]
+                                        .input_types![
+                                        data.node?.template[templateField]
+                                          .input_types!.length - 1
+                                      ]
+                                    ]
+                                  ]
+                                : nodeColors[
+                                    data.node?.template[templateField].type!
+                                  ] ??
+                                  nodeColors[
+                                    types[
+                                      data.node?.template[templateField].type!
+                                    ]
+                                  ] ??
+                                  nodeColors.unknown
                             }
                             title={getFieldTitle(
                               data.node?.template!,
@@ -458,23 +484,14 @@ export default function GenericNode({
               )}
             </div>
             {showNode && (
-              <Button
-                variant="secondary"
-                className={"group h-9 px-1.5"}
-                onClick={() => {
-                  if (buildStatus === BuildStatus.BUILDING || isBuilding)
-                    return;
-                  setValidationStatus(null);
-                  buildFlow({ nodeId: data.id });
-                }}
-              >
+              <Button variant="secondary" className={"group h-9 px-1.5"}>
                 <div>
                   <ShadTooltip
                     content={
                       buildStatus === BuildStatus.BUILDING ? (
-                        <span> {statusBuilding} </span>
+                        <span> {STATUS_BUILDING} </span>
                       ) : !validationStatus ? (
-                        <span className="flex">{statusBuild}</span>
+                        <span className="flex">{STATUS_BUILD}</span>
                       ) : (
                         <div className="max-h-96 overflow-auto">
                           {typeof validationStatus.params === "string"
@@ -489,7 +506,15 @@ export default function GenericNode({
                     }
                     side="bottom"
                   >
-                    <div className="generic-node-status-position flex items-center justify-center">
+                    <div
+                      onClick={() => {
+                        if (buildStatus === BuildStatus.BUILDING || isBuilding)
+                          return;
+                        setValidationStatus(null);
+                        buildFlow({ stopNodeId: data.id });
+                      }}
+                      className="generic-node-status-position flex items-center justify-center"
+                    >
                       {renderIconStatus(buildStatus, validationStatus)}
                     </div>
                   </ShadTooltip>
@@ -607,13 +632,18 @@ export default function GenericNode({
                           data.node?.template[templateField].input_types!
                             .length > 0
                             ? nodeColors[
-                                data.node?.template[templateField]
-                                  .input_types![0]
+                                data.node?.template[templateField].input_types![
+                                  data.node?.template[templateField]
+                                    .input_types!.length - 1
+                                ]
                               ] ??
                               nodeColors[
                                 types[
                                   data.node?.template[templateField]
-                                    .input_types![0]
+                                    .input_types![
+                                    data.node?.template[templateField]
+                                      .input_types!.length - 1
+                                  ]
                                 ]
                               ]
                             : nodeColors[
@@ -695,6 +725,15 @@ export default function GenericNode({
                   showNode={showNode}
                 />
               )}
+              <div>
+                {lastRunTime && (
+                  <div className="flex justify-center text-muted-foreground">
+                    {lastRunTime.split("\n").map((line, index) => (
+                      <div key={index}>{line}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           </div>
         )}

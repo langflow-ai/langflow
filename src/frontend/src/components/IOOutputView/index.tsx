@@ -17,7 +17,7 @@ export default function IOOutputView({
       case "TextOutput":
         return (
           <Textarea
-            className="w-full h-full custom-scroll"
+            className="w-full custom-scroll"
             placeholder={"Empty"}
             // update to real value on flowPool
             value={
@@ -31,7 +31,7 @@ export default function IOOutputView({
       default:
         return (
           <Textarea
-            className="w-full h-full custom-scroll"
+            className="w-full custom-scroll"
             placeholder={"Enter text..."}
             value={node.data.node!.template["input_value"]}
             onChange={(e) => {

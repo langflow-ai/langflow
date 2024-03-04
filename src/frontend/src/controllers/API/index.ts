@@ -856,13 +856,16 @@ export async function requestLogout() {
 
 export async function getVerticesOrder(
   flowId: string,
-  nodeId?: string | null
+  startNodeId?: string | null,
+  stopNodeId?: string | null
 ): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
   // nodeId is optional and is a query parameter
   // if nodeId is not provided, the API will return all vertices
   const config = {};
-  if (nodeId) {
-    config["params"] = { component_id: nodeId };
+  if (stopNodeId) {
+    config["params"] = { stop_component_id: stopNodeId };
+  } else if (startNodeId) {
+    config["params"] = { start_component_id: startNodeId };
   }
   return await api.get(`${BASE_URL_API}build/${flowId}/vertices`, config);
 }
@@ -872,6 +875,7 @@ export async function postBuildVertex(
   vertexId: string,
   input_value: string
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
+  // input_value is optional and is a query parameter
   return await api.post(
     `${BASE_URL_API}build/${flowId}/vertices/${vertexId}`,
     input_value ? { inputs: { input_value: input_value } } : undefined
