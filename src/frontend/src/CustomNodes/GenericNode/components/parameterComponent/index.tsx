@@ -253,15 +253,15 @@ export default function ParameterComponent({
                     {item.display_name === "" ? "" : " - "}
                     {item.display_name.split(", ").length > 2
                       ? item.display_name.split(", ").map((el, index) => (
-                          <React.Fragment key={el + name}>
-                            <span>
-                              {index ===
+                        <React.Fragment key={el + name}>
+                          <span>
+                            {index ===
                               item.display_name.split(", ").length - 1
-                                ? el
-                                : (el += `, `)}
-                            </span>
-                          </React.Fragment>
-                        ))
+                              ? el
+                              : (el += `, `)}
+                          </span>
+                        </React.Fragment>
+                      ))
                       : item.display_name}
                   </span>
                 ) : (
@@ -270,14 +270,14 @@ export default function ParameterComponent({
                     {item.type === "" ? "" : " - "}
                     {item.type.split(", ").length > 2
                       ? item.type.split(", ").map((el, index) => (
-                          <React.Fragment key={el + name}>
-                            <span>
-                              {index === item.type.split(", ").length - 1
-                                ? el
-                                : (el += `, `)}
-                            </span>
-                          </React.Fragment>
-                        ))
+                        <React.Fragment key={el + name}>
+                          <span>
+                            {index === item.type.split(", ").length - 1
+                              ? el
+                              : (el += `, `)}
+                          </span>
+                        </React.Fragment>
+                      ))
                       : item.type}
                   </span>
                 )}
@@ -346,7 +346,7 @@ export default function ParameterComponent({
       className={
         "relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
         ((name === "code" && type === "code") ||
-        (name.includes("code") && proxy)
+          (name.includes("code") && proxy)
           ? " hidden "
           : "")
       }
@@ -355,10 +355,14 @@ export default function ParameterComponent({
         <div
           className={
             "w-full truncate text-sm" +
-            (left ? "" : " text-end") +
+            (left ? "" : " gap-2 flex justify-end items-center") +
             (info !== "" ? " flex items-center" : "")
           }
         >
+          {!left && data.node?.pinned  &&
+            <div>
+              <IconComponent className="w-5 h-5 text-blue-400" name={"Snowflake"} />
+            </div>}
           {proxy ? (
             <ShadTooltip content={<span>{proxy.id}</span>}>
               <span>{title}</span>
@@ -427,8 +431,8 @@ export default function ParameterComponent({
         )}
 
         {left === true &&
-        type === "str" &&
-        !data.node?.template[name].options ? (
+          type === "str" &&
+          !data.node?.template[name].options ? (
           <div className="mt-2 w-full">
             {data.node?.template[name].list ? (
               <div className="w-5/6 flex-grow">
@@ -436,7 +440,7 @@ export default function ParameterComponent({
                   disabled={disabled}
                   value={
                     !data.node.template[name].value ||
-                    data.node.template[name].value === ""
+                      data.node.template[name].value === ""
                       ? [""]
                       : data.node.template[name].value
                   }
@@ -599,10 +603,10 @@ export default function ParameterComponent({
               editNode={false}
               value={
                 !data.node!.template[name].value ||
-                data.node!.template[name].value?.toString() === "{}"
+                  data.node!.template[name].value?.toString() === "{}"
                   ? {
-                      yourkey: "value",
-                    }
+                    yourkey: "value",
+                  }
                   : data.node!.template[name].value
               }
               onChange={handleOnNewValue}
@@ -616,7 +620,7 @@ export default function ParameterComponent({
               editNode={false}
               value={
                 data.node!.template[name].value?.length === 0 ||
-                !data.node!.template[name].value
+                  !data.node!.template[name].value
                   ? [{ "": "" }]
                   : convertObjToArray(data.node!.template[name].value)
               }
