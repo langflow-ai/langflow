@@ -125,7 +125,8 @@ export async function buildVertices({
 
   if (validateNodes) {
     try {
-      validateNodes(verticesIds);
+      const nodes = useFlowStore.getState().nodes;
+      validateNodes(nodes.map((node) => node.id));
     } catch (e) {
       return;
     }
