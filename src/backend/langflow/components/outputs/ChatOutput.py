@@ -1,6 +1,6 @@
 from typing import Optional, Union
 
-from langflow.components.io.base.chat import ChatComponent
+from langflow.base.io.chat import ChatComponent
 from langflow.field_typing import Text
 from langflow.schema import Record
 
