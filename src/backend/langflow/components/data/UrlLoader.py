@@ -40,7 +40,9 @@ class UrlLoaderComponent(CustomComponent):
         except Exception as e:
             raise ValueError(f"No loader found for: {web_path}") from e
         docs = loader_instance.load()
-        avg_length = sum(len(doc.page_content) for doc in docs if hasattr(doc, "page_content")) / len(docs)
+        avg_length = sum(
+            len(doc.page_content) for doc in docs if hasattr(doc, "page_content")
+        ) / len(docs)
         self.status = f"""{len(docs)} documents)
         \nAvg. Document Length (characters): {int(avg_length)}
         Documents: {docs[:3]}..."""
