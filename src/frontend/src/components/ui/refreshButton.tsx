@@ -3,10 +3,12 @@ import IconComponent from "../../components/genericIconComponent";
 import { NodeDataType } from "../../types/flow";
 import { cn } from "../../utils/utils";
 function RefreshButton({
+  disabled,
   name,
   data,
   handleUpdateValues,
 }: {
+  disabled: boolean;
   name: string;
   data: NodeDataType;
   handleUpdateValues: (name: string, data: NodeDataType) => void;
@@ -14,6 +16,7 @@ function RefreshButton({
   const [isLoading, setIsLoading] = useState(false);
 
   const handleClick = async () => {
+    if (disabled) return;
     setIsLoading(true);
     console.log("refreshing");
     handleUpdateValues(name, data);
@@ -28,15 +31,23 @@ function RefreshButton({
       setIsLoading(false);
     }
   };
+  const className = cn(
+    "extra-side-bar-buttons ml-2 mt-1 w-1/6",
+    disabled ? "cursor-not-allowed" : "cursor-pointer"
+  );
+  // icon class name should take into account the disabled state and the loading state
+  const disabledIconTextClass = disabled ? "text-muted-foreground" : "";
+  const iconClassName = cn(
+    "h-4 w-4",
+    isLoading ? "animate-spin" : "animate-wiggle",
+    disabledIconTextClass
+  );
 
   return (
-    <button
-      className="extra-side-bar-buttons ml-2 mt-1 w-1/6"
-      onClick={handleClick}
-    >
+    <button className={className} onClick={handleClick}>
       <IconComponent
         name={isLoading ? "Loader2" : "RefreshCcw"}
-        className={cn("h-4 w-4", isLoading ? "animate-spin" : "animate-wiggle")}
+        className={iconClassName}
       />
     </button>
   );
