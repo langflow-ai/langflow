@@ -132,7 +132,7 @@ class CustomComponent(Component):
             return yaml.dump(self.repr_value)
         if isinstance(self.repr_value, str):
             return self.repr_value
-        return str(self.repr_value)
+        return self.repr_value
 
     def build_config(self):
         return self.field_config
