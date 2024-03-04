@@ -31,6 +31,7 @@ import {
   getNodeId,
   isValidConnection,
   reconnectEdges,
+  scapeJSONParse,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
@@ -108,7 +109,7 @@ export default function Page({
             ...old.data,
             node: {
               ...old.data.node,
-              pinned: old.data?.node?.pinned ? false : true,
+              frozen: old.data?.node?.frozen ? false : true,
             },
           },
         }));
@@ -320,6 +321,8 @@ export default function Page({
     (oldEdge: Edge, newConnection: Connection) => {
       if (isValidConnection(newConnection, nodes, edges)) {
         edgeUpdateSuccessful.current = true;
+        oldEdge.data.targetHandle = scapeJSONParse(newConnection.targetHandle!);
+        oldEdge.data.sourceHandle = scapeJSONParse(newConnection.sourceHandle!);
         setEdges((els) => updateEdge(oldEdge, newConnection, els));
       }
     },

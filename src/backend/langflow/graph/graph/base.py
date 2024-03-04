@@ -357,6 +357,11 @@ class Graph:
         for vertex_id in removed_vertex_ids:
             self.remove_vertex(vertex_id)
 
+        # The order here matters because adding the vertex is required
+        # if any of them have edges that point to any of the new vertices
+        # By adding them first, them adding the edges we ensure that the
+        # edges have valid vertices to point to
+
         # Add new vertices
         for vertex_id in new_vertex_ids:
             new_vertex = other.get_vertex(vertex_id)
@@ -366,6 +371,8 @@ class Graph:
         for vertex_id in new_vertex_ids:
             new_vertex = other.get_vertex(vertex_id)
             self._update_edges(new_vertex)
+            # Graph is set at the end because the edges come from the graph
+            # and the other graph is where the new edges and vertices come from
             new_vertex.graph = self
 
         # Update existing vertices that have changed
@@ -395,9 +402,9 @@ class Graph:
         vertex.params = {}
         vertex._build_params()
         vertex.graph = self
-        # If the vertex is pinned, we don't want
+        # If the vertex is frozen, we don't want
         # to reset the results nor the _built attribute
-        if not vertex.pinned:
+        if not vertex.frozen:
             vertex._built = False
             vertex.result = None
             vertex.artifacts = {}
@@ -410,7 +417,7 @@ class Graph:
             for vid in [edge.source_id, edge.target_id]:
                 if vid in self.vertex_map:
                     _vertex = self.vertex_map[vid]
-                    if not _vertex.pinned:
+                    if not _vertex.frozen:
                         _vertex._build_params()
 
     def _add_vertex(self, vertex: Vertex) -> None:

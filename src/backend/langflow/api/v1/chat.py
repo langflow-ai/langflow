@@ -114,7 +114,7 @@ async def build_vertex(
 
         vertex = graph.get_vertex(vertex_id)
         try:
-            if not vertex.pinned or not vertex._built:
+            if not vertex.frozen or not vertex._built:
                 inputs_dict = inputs.model_dump() if inputs else {}
                 await vertex.build(user_id=current_user.id, inputs=inputs_dict)
 
@@ -233,7 +233,7 @@ async def build_vertex_stream(
                     )
                     yield str(stream_data)
 
-                elif not vertex.pinned or not vertex._built:
+                elif not vertex.frozen or not vertex._built:
                     logger.debug(f"Streaming vertex {vertex_id}")
                     stream_data = StreamData(
                         event="message",

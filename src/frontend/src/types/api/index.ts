@@ -27,7 +27,7 @@ export type APIClassType = {
   documentation: string;
   error?: string;
   official?: boolean;
-  pinned?: boolean;
+  frozen?: boolean;
   flow?: FlowType;
   [key: string]:
     | Array<string>
@@ -54,6 +54,7 @@ export type TemplateVariableType = {
   input_types?: Array<string>;
   display_name?: string;
   name?: string;
+  refresh?: boolean;
   [key: string]: any;
 };
 export type sendAllProps = {

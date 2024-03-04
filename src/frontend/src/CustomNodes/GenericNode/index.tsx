@@ -108,7 +108,7 @@ export default function GenericNode({
     if (duration === undefined) {
       return "";
     } else {
-      return `Duration: ${duration}`;
+      return `${duration}`;
     }
   };
   const durationString = getDurationString(validationStatus?.data.duration);
@@ -758,15 +758,6 @@ export default function GenericNode({
                   showNode={showNode}
                 />
               )}
-              <div>
-                {lastRunTime && (
-                  <div className="flex justify-center text-muted-foreground">
-                    {lastRunTime.split("\n").map((line, index) => (
-                      <div key={index}>{line}</div>
-                    ))}
-                  </div>
-                )}
-              </div>
             </>
           </div>
         )}

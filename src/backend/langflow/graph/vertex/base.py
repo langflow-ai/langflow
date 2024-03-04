@@ -191,7 +191,7 @@ class Vertex:
         self.base_type = state["base_type"]
         self.is_task = state["is_task"]
         self.id = state["id"]
-        self.pinned = state.get("pinned", False)
+        self.frozen = state.get("frozen", False)
         self._parse_data()
         if "_built_object" in state:
             self._built_object = state["_built_object"]
@@ -217,7 +217,7 @@ class Vertex:
         self.data = self._data["data"]
         self.output = self.data["node"]["base_classes"]
         self.display_name = self.data["node"].get("display_name", self.id.split("-")[0])
-        self.pinned = self.data["node"].get("pinned", False)
+        self.frozen = self.data["node"].get("frozen", False)
         self.selected_output_type = self.data["node"].get("selected_output_type")
         self.is_input = self.data["node"].get("is_input") or self.is_input
         self.is_output = self.data["node"].get("is_output") or self.is_output
@@ -676,7 +676,7 @@ class Vertex:
             self.build_inactive()
             return
 
-        if self.pinned and self._built:
+        if self.frozen and self._built:
             return self.get_requester_result(requester)
         elif self._built and requester is not None:
             # This means that the vertex has already been built

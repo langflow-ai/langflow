@@ -58,8 +58,8 @@ class CustomComponent(Component):
     """The field configuration of the component. Defaults to an empty dictionary."""
     field_order: Optional[List[str]] = None
     """The field order of the component. Defaults to an empty list."""
-    pinned: Optional[bool] = False
-    """The default pinned state of the component. Defaults to False."""
+    frozen: Optional[bool] = False
+    """The default frozen state of the component. Defaults to False."""
     build_parameters: Optional[dict] = None
     """The build parameters of the component. Defaults to None."""
     selected_output_type: Optional[str] = None
@@ -73,6 +73,7 @@ class CustomComponent(Component):
     user_id: Optional[Union[UUID, str]] = None
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
+    _flows_records: Optional[List[Record]] = None
 
     def update_state(self, name: str, value: Any):
         try:
@@ -344,14 +345,34 @@ class CustomComponent(Component):
     async def run_flow(
         self,
         input_value: Union[str, list[str]],
-        flow_id: str,
+        flow_id: Optional[str] = None,
+        flow_name: Optional[str] = None,
         tweaks: Optional[dict] = None,
     ) -> Any:
+        if not flow_id and not flow_name:
+            raise ValueError("Flow ID or Flow Name is required")
+        if not self._flows_records:
+            self.list_flows()
+        if not flow_id and self._flows_records:
+            flow_ids = [
+                flow.data["id"]
+                for flow in self._flows_records
+                if flow.data["name"] == flow_name
+            ]
+            if not flow_ids:
+                raise ValueError(f"Flow {flow_name} not found")
+            elif len(flow_ids) > 1:
+                raise ValueError(f"Multiple flows found with the name {flow_name}")
+            flow_id = flow_ids[0]
+
+        if not flow_id:
+            raise ValueError(f"Flow {flow_name} not found")
+
         graph = await self.load_flow(flow_id, tweaks)
         input_value_dict = {"input_value": input_value}
         return await graph.run(input_value_dict, stream=False)
 
-    def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
+    def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Record]:
         if not self._user_id:
             raise ValueError("Session is invalid")
         try:
@@ -359,11 +380,16 @@ class CustomComponent(Component):
             db_service = get_db_service()
             with get_session(db_service) as session:
                 flows = session.exec(
-                    select(Flow).where(Flow.user_id == self._user_id)
+                    select(Flow)
+                    .where(Flow.user_id == self._user_id)
+                    .where(Flow.is_component == False)
                 ).all()
-            return flows
+
+            flows_records = [flow.to_record() for flow in flows]
+            self._flows_records = flows_records
+            return flows_records
         except Exception as e:
-            raise ValueError("Session is invalid") from e
+            raise ValueError(f"Error listing flows: {e}")
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
