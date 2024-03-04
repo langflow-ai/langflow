@@ -30,6 +30,7 @@ export type ToggleComponentType = {
   editNode?: boolean;
 };
 export type DropDownComponentType = {
+  isLoading?: boolean;
   value: string;
   options: string[];
   onSelect: (value: string) => void;
