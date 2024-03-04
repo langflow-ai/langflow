@@ -341,7 +341,7 @@ class CustomComponent(Component):
         input_value_dict = {"input_value": input_value}
         return await graph.run(input_value_dict, stream=False)
 
-    def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Flow]:
+    def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Record]:
         if not self._user_id:
             raise ValueError("Session is invalid")
         try:
@@ -349,11 +349,15 @@ class CustomComponent(Component):
             db_service = get_db_service()
             with get_session(db_service) as session:
                 flows = session.exec(
-                    select(Flow).where(Flow.user_id == self._user_id)
+                    select(Flow)
+                    .where(Flow.user_id == self._user_id)
+                    .where(Flow.is_component == False)
                 ).all()
-            return flows
+
+            flows_records = [flow.to_record() for flow in flows]
+            return flows_records
         except Exception as e:
-            raise ValueError("Session is invalid") from e
+            raise ValueError(f"Error listing flows: {e}")
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
