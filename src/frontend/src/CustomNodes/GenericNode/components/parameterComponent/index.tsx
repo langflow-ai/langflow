@@ -391,16 +391,30 @@ export default function ParameterComponent({
         !data.node?.template[name].options ? (
           <div className="mt-2 w-full">
             {data.node?.template[name].list ? (
-              <InputListComponent
-                disabled={disabled}
-                value={
-                  !data.node.template[name].value ||
-                  data.node.template[name].value === ""
-                    ? [""]
-                    : data.node.template[name].value
-                }
-                onChange={handleOnNewValue}
-              />
+              <div className="w-5/6 flex-grow">
+                <InputListComponent
+                  disabled={disabled}
+                  value={
+                    !data.node.template[name].value ||
+                    data.node.template[name].value === ""
+                      ? [""]
+                      : data.node.template[name].value
+                  }
+                  onChange={handleOnNewValue}
+                />
+                {data.node?.template[name].refresh && (
+                  <div className="w-1/6">
+                    <RefreshButton
+                      disabled={disabled}
+                      name={name}
+                      data={data}
+                      className="extra-side-bar-buttons ml-2 mt-1"
+                      handleUpdateValues={handleUpdateValues}
+                      id={"refresh-button-" + name}
+                    />
+                  </div>
+                )}
+              </div>
             ) : data.node?.template[name].multiline ? (
               <TextAreaComponent
                 disabled={disabled}
@@ -421,12 +435,16 @@ export default function ParameterComponent({
                   />
                 </div>
                 {data.node?.template[name].refresh && (
-                  <RefreshButton
-                    disabled={disabled}
-                    name={name}
-                    data={data}
-                    handleUpdateValues={handleUpdateValues}
-                  />
+                  <div className="w-1/6">
+                    <RefreshButton
+                      disabled={disabled}
+                      name={name}
+                      data={data}
+                      className="extra-side-bar-buttons ml-2 mt-1"
+                      handleUpdateValues={handleUpdateValues}
+                      id={"refresh-button-" + name}
+                    />
+                  </div>
                 )}
               </div>
             )}
@@ -453,7 +471,8 @@ export default function ParameterComponent({
           </div>
         ) : left === true &&
           type === "str" &&
-          data.node?.template[name].options ? (
+          (data.node?.template[name].options ||
+            data.node?.template[name]?.refresh) ? (
           // TODO: Improve CSS
           <div className="mt-2 flex w-full items-center">
             <div className="w-5/6 flex-grow">
@@ -465,11 +484,16 @@ export default function ParameterComponent({
               />
             </div>
             {data.node?.template[name].refresh && (
-              <RefreshButton
-                name={name}
-                data={data}
-                handleUpdateValues={handleUpdateValues}
-              />
+              <div className="w-1/6">
+                <RefreshButton
+                  disabled={disabled}
+                  name={name}
+                  data={data}
+                  className="extra-side-bar-buttons ml-2 mt-1"
+                  handleUpdateValues={handleUpdateValues}
+                  id={"refresh-button-" + name}
+                />
+              </div>
             )}
           </div>
         ) : left === true && type === "code" ? (
