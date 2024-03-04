@@ -16,6 +16,7 @@ import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
+import { RefreshButton } from "../../../../components/ui/refreshButton";
 import {
   INPUT_HANDLER_HOVER,
   LANGFLOW_SUPPORTED_TYPES,
@@ -68,6 +69,7 @@ export default function ParameterComponent({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
+  const [isLoading, setIsLoading] = useState(false);
 
   const flow = currentFlow?.data?.nodes ?? null;
 
@@ -420,14 +422,11 @@ export default function ParameterComponent({
                   />
                 </div>
                 {data.node?.template[name].refresh && (
-                  <button
-                    className="extra-side-bar-buttons ml-2 mt-1 w-1/6"
-                    onClick={() => {
-                      handleUpdateValues(name, data);
-                    }}
-                  >
-                    <IconComponent name="RefreshCcw" />
-                  </button>
+                  <RefreshButton
+                    name={name}
+                    data={data}
+                    handleUpdateValues={handleUpdateValues}
+                  />
                 )}
               </div>
             )}
@@ -466,14 +465,11 @@ export default function ParameterComponent({
               />
             </div>
             {data.node?.template[name].refresh && (
-              <button
-                className="extra-side-bar-buttons ml-2 mt-1 w-1/6"
-                onClick={() => {
-                  handleUpdateValues(name, data);
-                }}
-              >
-                <IconComponent name="RefreshCcw" />
-              </button>
+              <RefreshButton
+                name={name}
+                data={data}
+                handleUpdateValues={handleUpdateValues}
+              />
             )}
           </div>
         ) : left === true && type === "code" ? (
