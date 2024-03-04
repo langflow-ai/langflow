@@ -13,13 +13,20 @@ function RefreshButton({
 }) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleClick = () => {
+  const handleClick = async () => {
     setIsLoading(true);
     console.log("refreshing");
     handleUpdateValues(name, data);
-    setInterval(() => {
+    try {
+      // Wait for at least 500 milliseconds
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Continue with the request
+      // If the request takes longer than 500 milliseconds, it will not wait an additional 500 milliseconds
+    } catch (error) {
+      console.error("Error occurred while waiting for refresh:", error);
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   return (
