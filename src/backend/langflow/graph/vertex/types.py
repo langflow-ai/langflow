@@ -500,6 +500,11 @@ class StateVertex(Vertex):
         self.steps = [self._build]
         self.is_state = True
 
+    @property
+    def successors_ids(self) -> List[str]:
+        successors = self.graph.successor_map.get(self.id, [])
+        return successors + self.graph.activated_vertices
+
 
 def dict_to_codeblock(d: dict) -> str:
     serialized = {key: serialize_field(val) for key, val in d.items()}
