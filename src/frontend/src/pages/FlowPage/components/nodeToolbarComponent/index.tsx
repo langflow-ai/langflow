@@ -291,7 +291,7 @@ export default function NodeToolbarComponent({
                 className={cn(
                   "h-4 w-4 transition-all",
                   // TODO UPDATE THIS COLOR TO BE A VARIABLE
-                  pinned ? "animate-wiggle text-blue-400" : ""
+                  pinned ? "animate-wiggle text-ice" : ""
                 )}
               />
             </button>
