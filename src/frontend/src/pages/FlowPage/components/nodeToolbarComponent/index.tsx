@@ -27,6 +27,7 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn } from "../../../../utils/utils";
+import useAlertStore from "../../../../stores/alertStore";
 
 export default function NodeToolbarComponent({
   data,
@@ -95,6 +96,9 @@ export default function NodeToolbarComponent({
   const setLastCopiedSelection = useFlowStore(
     (state) => state.setLastCopiedSelection
   );
+
+  const setSuccessData = useAlertStore(state => state.setSuccessData);
+
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
   }, [
@@ -283,6 +287,7 @@ export default function NodeToolbarComponent({
       ) {
         event.preventDefault();
         saveComponent(cloneDeep(data), false);
+        setSuccessData({title: `${data.id} saved successfully`})
         unselectAll();
       }
       if (
