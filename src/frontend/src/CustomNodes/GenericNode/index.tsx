@@ -146,7 +146,9 @@ export default function GenericNode({
     }
   }, [validationStatus, validationStatus?.params]);
 
-  const showNode = data.showNode ?? true;
+  // const showNode = data.showNode ?? true;
+
+  const [showNode, setShowNode] = useState(data.showNode ?? true);
 
   const nameEditable = true;
 
@@ -285,6 +287,7 @@ export default function GenericNode({
               data: { ...old.data, showNode: show },
             }));
           }}
+          setShowState={setShowNode}
           numberOfHandles={handles}
           showNode={showNode}
           openAdvancedModal={false}
