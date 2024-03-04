@@ -5,6 +5,7 @@ import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 
 export default function Dropdown({
+  isLoading,
   value,
   options,
   onSelect,
@@ -129,11 +130,17 @@ export default function Dropdown({
         </>
       ) : (
         <>
-          <div>
-            <span className="text-sm italic">
-              No parameters are available for display.
-            </span>
-          </div>
+          {(!isLoading && (
+            <div>
+              <span className="text-sm italic">
+                No parameters are available for display.
+              </span>
+            </div>
+          )) || (
+            <div>
+              <span className="text-sm italic">Loading...</span>
+            </div>
+          )}
         </>
       )}
     </>

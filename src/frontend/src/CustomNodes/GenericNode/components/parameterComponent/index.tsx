@@ -69,7 +69,7 @@ export default function ParameterComponent({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
-
+  const [isLoading, setIsLoading] = useState(false);
   const flow = currentFlow?.data?.nodes ?? null;
 
   const groupedEdge = useRef(null);
@@ -87,6 +87,7 @@ export default function ParameterComponent({
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   const handleUpdateValues = async (name: string, data: NodeDataType) => {
+    setIsLoading(true);
     const code = data.node?.template["code"]?.value;
     if (!code) {
       console.error("Code not found in the template");
@@ -96,13 +97,46 @@ export default function ParameterComponent({
     try {
       const res = await postCustomComponentUpdate(code, name);
       if (res.status === 200 && data.node?.template) {
-        data.node!.template[name] = res.data.template[name];
+        setNode(data.id, (oldNode) => {
+          let newNode = cloneDeep(oldNode);
+
+          newNode.data = {
+            ...newNode.data,
+          };
+
+          newNode.data.node.template[name] = res.data.template[name];
+
+          return newNode;
+        });
       }
     } catch (err) {
       setErrorData(err as { title: string; list?: Array<string> });
     }
+
+    renderTooltips();
+    try {
+      // Wait for at least 500 milliseconds
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Continue with the request
+      // If the request takes longer than 500 milliseconds, it will not wait an additional 500 milliseconds
+    } catch (error) {
+      console.error("Error occurred while waiting for refresh:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  useEffect(() => {
+    function fetchData() {
+      if (data.node?.template[name]?.refresh) {
+        handleUpdateValues(name, data);
+      }
+    }
+    fetchData();
+    // I want this to run as soon as the component mounts
+    // but it is not updating the data
+    // the .refresh does not change
+  }, [data.node?.template[name]?.refresh]);
   const handleOnNewValue = (
     newValue: string | string[] | boolean | Object[]
   ): void => {
@@ -405,6 +439,7 @@ export default function ParameterComponent({
                 {data.node?.template[name].refresh && (
                   <div className="w-1/6">
                     <RefreshButton
+                      isLoading={isLoading}
                       disabled={disabled}
                       name={name}
                       data={data}
@@ -437,6 +472,7 @@ export default function ParameterComponent({
                 {data.node?.template[name].refresh && (
                   <div className="w-1/6">
                     <RefreshButton
+                      isLoading={isLoading}
                       disabled={disabled}
                       name={name}
                       data={data}
@@ -477,6 +513,7 @@ export default function ParameterComponent({
           <div className="mt-2 flex w-full items-center">
             <div className="w-5/6 flex-grow">
               <Dropdown
+                isLoading={isLoading}
                 options={data.node.template[name].options}
                 onSelect={handleOnNewValue}
                 value={data.node.template[name].value ?? "Choose an option"}
@@ -486,6 +523,7 @@ export default function ParameterComponent({
             {data.node?.template[name].refresh && (
               <div className="w-1/6">
                 <RefreshButton
+                  isLoading={isLoading}
                   disabled={disabled}
                   name={name}
                   data={data}
