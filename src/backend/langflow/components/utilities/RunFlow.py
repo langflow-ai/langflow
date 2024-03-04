@@ -31,14 +31,28 @@ class RunFlowComponent(CustomComponent):
             },
         }
 
+    def build_records_from_result_data(self, result_data: ResultData) -> Record:
+        messages = result_data.messages
+        records = []
+        for message in messages:
+            record = Record(text=message.get("text", ""), data={"result": result_data})
+            records.append(record)
+        return records
+
     async def build(
         self, input_value: Text, flow_name: str, tweaks: NestedDict
     ) -> Record:
-        input_dict = {"input_value": input_value}
 
-        result: List[Optional[ResultData]] = await self.run_flow(
-            input_value=input_dict, flow_name=flow_name, tweaks=tweaks
+        results: List[Optional[ResultData]] = await self.run_flow(
+            input_value=input_value, flow_name=flow_name, tweaks=tweaks
         )
-        record = Record(data=result)
-        self.status = record
-        return record
+        if isinstance(results, list):
+            records = []
+            for result in results:
+                if result:
+                    records.extend(self.build_records_from_result_data(result))
+        else:
+            records = self.build_records_from_result_data(results)
+
+        self.status = records
+        return records
