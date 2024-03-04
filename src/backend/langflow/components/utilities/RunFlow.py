@@ -21,8 +21,8 @@ class RunFlowComponent(CustomComponent):
                 "multiline": True,
             },
             "flow_name": {
-                "display_name": "Flow ID",
-                "info": "The ID of the flow to run.",
+                "display_name": "Flow Name",
+                "info": "The name of the flow to run.",
                 "options": self.get_flow_names,
             },
             "tweaks": {

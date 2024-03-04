@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { NodeDataType } from "../../types/flow";
 import { cn } from "../../utils/utils";
+
 function RefreshButton({
   disabled,
   name,
@@ -14,6 +15,10 @@ function RefreshButton({
   handleUpdateValues: (name: string, data: NodeDataType) => void;
 }) {
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    handleUpdateValues(name, data);
+  }, []); // Empty dependency array to run only once
 
   const handleClick = async () => {
     if (disabled) return;
@@ -31,10 +36,12 @@ function RefreshButton({
       setIsLoading(false);
     }
   };
+
   const className = cn(
     "extra-side-bar-buttons ml-2 mt-1 w-1/6",
     disabled ? "cursor-not-allowed" : "cursor-pointer"
   );
+
   // icon class name should take into account the disabled state and the loading state
   const disabledIconTextClass = disabled ? "text-muted-foreground" : "";
   const iconClassName = cn(
