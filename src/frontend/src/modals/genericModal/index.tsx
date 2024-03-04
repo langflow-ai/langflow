@@ -12,11 +12,11 @@ import {
   TEMP_NOTICE_ALERT,
 } from "../../constants/alerts_constants";
 import {
+  EDIT_TEXT_PLACEHOLDER,
   INVALID_CHARACTERS,
   MAX_WORDS_HIGHLIGHT,
   PROMPT_DIALOG_SUBTITLE,
   TEXT_DIALOG_SUBTITLE,
-  editTextPlaceholder,
   regexHighlight,
 } from "../../constants/constants";
 import { TypeModal } from "../../constants/enums";
@@ -227,7 +227,7 @@ export default function GenericModal({
                   setInputValue(event.target.value);
                   checkVariables(event.target.value);
                 }}
-                placeholder={editTextPlaceholder}
+                placeholder={EDIT_TEXT_PLACEHOLDER}
                 onKeyDown={(e) => {
                   handleKeyDown(e, inputValue, "");
                 }}
@@ -249,7 +249,7 @@ export default function GenericModal({
                 onChange={(event) => {
                   setInputValue(event.target.value);
                 }}
-                placeholder={editTextPlaceholder}
+                placeholder={EDIT_TEXT_PLACEHOLDER}
                 onKeyDown={(e) => {
                   handleKeyDown(e, value, "");
                 }}

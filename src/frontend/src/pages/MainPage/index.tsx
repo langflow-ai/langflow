@@ -8,8 +8,8 @@ import SidebarNav from "../../components/sidebarComponent";
 import { Button } from "../../components/ui/button";
 import { CONSOLE_ERROR_MSG } from "../../constants/alerts_constants";
 import {
+  MY_COLLECTION_DESC,
   USER_PROJECTS_HEADER,
-  myCollectionDesc,
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -75,7 +75,7 @@ export default function HomePage(): JSX.Element {
   return (
     <PageLayout
       title={USER_PROJECTS_HEADER}
-      description={myCollectionDesc}
+      description={MY_COLLECTION_DESC}
       button={
         <div className="flex gap-2">
           <Button

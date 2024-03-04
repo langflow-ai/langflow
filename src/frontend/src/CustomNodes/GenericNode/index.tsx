@@ -9,9 +9,9 @@ import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
 import Xmark from "../../components/ui/xmark";
 import {
+  STATUS_BUILD,
+  STATUS_BUILDING,
   priorityFields,
-  statusBuild,
-  statusBuilding,
 } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
@@ -49,7 +49,12 @@ export default function GenericNode({
   const [nodeDescription, setNodeDescription] = useState(
     data.node?.description!
   );
-  const buildStatus = useFlowStore((state) => state.flowBuildStatus[data.id]);
+  const buildStatus = useFlowStore(
+    (state) => state.flowBuildStatus[data.id]?.status
+  );
+  const lastRunTime = useFlowStore(
+    (state) => state.flowBuildStatus[data.id]?.timestamp
+  );
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
   const [handles, setHandles] = useState<number>(0);
@@ -100,10 +105,7 @@ export default function GenericNode({
     if (duration === undefined) {
       return "";
     } else {
-      const nowTimestamp = new Date(Date.now());
-      // readable last run time like YYYY-MM-DD HH:MM:SS
-      const last_run_datetime = nowTimestamp.toLocaleString();
-      return `Last run: ${last_run_datetime}\nDuration: ${duration}`;
+      return `Duration: ${duration}`;
     }
   };
   const durationString = getDurationString(validationStatus?.data.duration);
@@ -487,9 +489,9 @@ export default function GenericNode({
                   <ShadTooltip
                     content={
                       buildStatus === BuildStatus.BUILDING ? (
-                        <span> {statusBuilding} </span>
+                        <span> {STATUS_BUILDING} </span>
                       ) : !validationStatus ? (
-                        <span className="flex">{statusBuild}</span>
+                        <span className="flex">{STATUS_BUILD}</span>
                       ) : (
                         <div className="max-h-96 overflow-auto">
                           {typeof validationStatus.params === "string"
@@ -723,6 +725,15 @@ export default function GenericNode({
                   showNode={showNode}
                 />
               )}
+              <div>
+                {lastRunTime && (
+                  <div className="flex justify-center text-muted-foreground">
+                    {lastRunTime.split("\n").map((line, index) => (
+                      <div key={index}>{line}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           </div>
         )}

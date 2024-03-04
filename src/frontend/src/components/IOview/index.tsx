@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import {
   CHAT_FORM_DIALOG_SUBTITLE,
-  outputsModalTitle,
-  textInputModalTitle,
+  OUTPUTS_MODAL_TITLE,
+  TEXT_INPUT_MODAL_TITLE,
 } from "../../constants/constants";
 import BaseModal from "../../modals/baseModal";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { NodeType } from "../../types/flow";
 import { updateVerticesOrder } from "../../utils/buildUtils";
 import { cn } from "../../utils/utils";
 import AccordionComponent from "../AccordionComponent";
@@ -18,7 +19,6 @@ import NewChatView from "../newChatView";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { NodeType } from "../../types/flow";
 
 export default function IOView({ children, open, setOpen }): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs).filter(
@@ -79,10 +79,9 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
       });
     }
     setLockChat(false);
-    if(chatInput) {
-      setNode(chatInput.id, (node:NodeType)=>{
-        
-        const newNode = {...node}
+    if (chatInput) {
+      setNode(chatInput.id, (node: NodeType) => {
+        const newNode = { ...node };
         newNode.data.node!.template["input_value"].value = chatValue;
         return newNode;
       });
@@ -148,7 +147,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                   >
                     <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
                       <IconComponent className="h-4 w-4" name={"Type"} />
-                      {textInputModalTitle}
+                      {TEXT_INPUT_MODAL_TITLE}
                     </div>
                     {nodes
                       .filter((node) =>
@@ -209,7 +208,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                   >
                     <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
                       <IconComponent className="h-4 w-4" name={"FileType2"} />
-                      {outputsModalTitle}
+                      {OUTPUTS_MODAL_TITLE}
                     </div>
                     {nodes
                       .filter((node) =>
