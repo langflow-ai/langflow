@@ -1,16 +1,6 @@
 import { expect, test } from "@playwright/test";
 
 test("ToggleComponent", async ({ page }) => {
-  await page.routeFromHAR("harFiles/langflow.har", {
-    url: "**/api/v1/**",
-    update: false,
-  });
-  await page.route("**/api/v1/flows/", async (route) => {
-    const json = {
-      id: "e9ac1bdc-429b-475d-ac03-d26f9a2a3210",
-    };
-    await route.fulfill({ json, status: 201 });
-  });
   await page.goto("http://localhost:3000/");
   await page.waitForTimeout(2000);
 
@@ -38,29 +28,27 @@ test("ToggleComponent", async ({ page }) => {
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
-  await page.locator('//*[@id="toggle-1"]').click();
-  expect(await page.locator('//*[@id="toggle-1"]').isChecked()).toBeFalsy();
+  await page.getByTestId("toggle-load_hidden").click();
+  expect(await page.getByTestId("toggle-load_hidden").isChecked()).toBeFalsy();
 
-  await page.locator('//*[@id="toggle-1"]').click();
-  expect(await page.locator('//*[@id="toggle-1"]').isChecked()).toBeTruthy();
+  await page.getByTestId("toggle-load_hidden").click();
+  expect(await page.getByTestId("toggle-load_hidden").isChecked()).toBeTruthy();
 
-  await page.locator('//*[@id="toggle-1"]').click();
-  expect(await page.locator('//*[@id="toggle-1"]').isChecked()).toBeFalsy();
+  await page.getByTestId("toggle-load_hidden").click();
+  expect(await page.getByTestId("toggle-load_hidden").isChecked()).toBeFalsy();
 
-  await page.locator('//*[@id="toggle-1"]').click();
-  expect(await page.locator('//*[@id="toggle-1"]').isChecked()).toBeTruthy();
+  await page.getByTestId("toggle-load_hidden").click();
+  expect(await page.getByTestId("toggle-load_hidden").isChecked()).toBeTruthy();
 
-  await page.locator('//*[@id="toggle-1"]').click();
-  expect(await page.locator('//*[@id="toggle-1"]').isChecked()).toBeFalsy();
+  await page.getByTestId("toggle-load_hidden").click();
+  expect(await page.getByTestId("toggle-load_hidden").isChecked()).toBeFalsy();
 
   await page.getByTestId("div-generic-node").click();
 
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  expect(
-    await page.locator('//*[@id="toggle-edit-1"]').isChecked()
-  ).toBeFalsy();
+  expect(await page.getByTestId("toggle-load_hidden").isChecked()).toBeFalsy();
 
   await page.locator('//*[@id="showglob"]').click();
   expect(await page.locator('//*[@id="showglob"]').isChecked()).toBeFalsy();
@@ -129,7 +117,7 @@ test("ToggleComponent", async ({ page }) => {
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
-  const plusButtonLocator = page.locator('//*[@id="toggle-1"]');
+  const plusButtonLocator = page.getByTestId("toggle-load_hidden");
   const elementCount = await plusButtonLocator.count();
   if (elementCount === 0) {
     expect(true).toBeTruthy();
@@ -145,24 +133,34 @@ test("ToggleComponent", async ({ page }) => {
     ).toBeTruthy();
 
     expect(
-      await page.locator('//*[@id="toggle-edit-1"]').isChecked()
+      await page.getByTestId("toggle-edit-load_hidden").isChecked()
     ).toBeFalsy();
 
     await page.locator('//*[@id="saveChangesBtn"]').click();
 
-    await page.locator('//*[@id="toggle-1"]').click();
-    expect(await page.locator('//*[@id="toggle-1"]').isChecked()).toBeTruthy();
+    await page.getByTestId("toggle-load_hidden").click();
+    expect(
+      await page.getByTestId("toggle-load_hidden").isChecked()
+    ).toBeTruthy();
 
-    await page.locator('//*[@id="toggle-1"]').click();
-    expect(await page.locator('//*[@id="toggle-1"]').isChecked()).toBeFalsy();
+    await page.getByTestId("toggle-load_hidden").click();
+    expect(
+      await page.getByTestId("toggle-load_hidden").isChecked()
+    ).toBeFalsy();
 
-    await page.locator('//*[@id="toggle-1"]').click();
-    expect(await page.locator('//*[@id="toggle-1"]').isChecked()).toBeTruthy();
+    await page.getByTestId("toggle-load_hidden").click();
+    expect(
+      await page.getByTestId("toggle-load_hidden").isChecked()
+    ).toBeTruthy();
 
-    await page.locator('//*[@id="toggle-1"]').click();
-    expect(await page.locator('//*[@id="toggle-1"]').isChecked()).toBeFalsy();
+    await page.getByTestId("toggle-load_hidden").click();
+    expect(
+      await page.getByTestId("toggle-load_hidden").isChecked()
+    ).toBeFalsy();
 
-    await page.locator('//*[@id="toggle-1"]').click();
-    expect(await page.locator('//*[@id="toggle-1"]').isChecked()).toBeTruthy();
+    await page.getByTestId("toggle-load_hidden").click();
+    expect(
+      await page.getByTestId("toggle-load_hidden").isChecked()
+    ).toBeTruthy();
   }
 });

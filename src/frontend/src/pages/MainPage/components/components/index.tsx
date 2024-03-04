@@ -27,7 +27,7 @@ export default function ComponentsComponent({
   const flows = useFlowsManagerStore((state) => state.flows);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
   const [loadingScreen, setLoadingScreen] = useState(true);
 
@@ -96,7 +96,7 @@ export default function ComponentsComponent({
 
   function resetFilter() {
     setPageIndex(1);
-    setPageSize(10);
+    setPageSize(20);
   }
 
   return (

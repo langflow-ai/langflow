@@ -41,8 +41,8 @@ export type FlowPoolType = {
 
 export type FlowStoreType = {
   flowPool: FlowPoolType;
-  inputs: Array<{ type: string; id: string }>;
-  outputs: Array<{ type: string; id: string }>;
+  inputs: Array<{ type: string; id: string; displayName: string }>;
+  outputs: Array<{ type: string; id: string; displayName: string }>;
   hasIO: boolean;
   setFlowPool: (flowPool: FlowPoolType) => void;
   addDataToFlowPool: (data: FlowPoolObjectType, nodeId: string) => void;
@@ -90,10 +90,13 @@ export type FlowStoreType = {
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
   buildFlow: ({
-    nodeId,
+    startNodeId,
+    stopNodeId,
     input_value,
   }: {
     nodeId?: string;
+    startNodeId?: string;
+    stopNodeId?: string;
     input_value?: string;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
@@ -101,7 +104,6 @@ export type FlowStoreType = {
     vertices: {
       verticesIds: string[];
       verticesLayers: string[][];
-      verticesOrder: string[][];
       runId: string;
     } | null
   ) => void;
@@ -109,12 +111,13 @@ export type FlowStoreType = {
   verticesBuild: {
     verticesIds: string[];
     verticesLayers: string[][];
-    verticesOrder: string[][];
     runId: string;
   } | null;
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
   revertBuiltStatusFromBuilding: () => void;
-  flowBuildStatus: { [key: string]: BuildStatus };
+  flowBuildStatus: {
+    [key: string]: { status: BuildStatus; timestamp?: string };
+  };
   updateFlowPool: (
     nodeId: string,
     data: FlowPoolObjectType | ChatOutputType | chatInputType,

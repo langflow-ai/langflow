@@ -12,11 +12,11 @@ import {
   TEMP_NOTICE_ALERT,
 } from "../../constants/alerts_constants";
 import {
+  EDIT_TEXT_PLACEHOLDER,
   INVALID_CHARACTERS,
   MAX_WORDS_HIGHLIGHT,
   PROMPT_DIALOG_SUBTITLE,
   TEXT_DIALOG_SUBTITLE,
-  editTextPlaceholder,
   regexHighlight,
 } from "../../constants/constants";
 import { TypeModal } from "../../constants/enums";
@@ -97,13 +97,23 @@ export default function GenericModal({
   useEffect(() => {
     setInputValue(value);
   }, [value, modalOpen]);
-
   const coloredContent = (inputValue || "")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(regexHighlight, varHighlightHTML({ name: "$1" }))
-    .replace(/\n/g, "<br />");
+    .replace(regexHighlight, (match, p1, p2) => {
+      // Decide which group was matched. If p1 is not undefined, do nothing
+      // we don't want to change the text. If p2 is not undefined, then we
+      // have a variable, so we should highlight it.
+      // ! This will not work with multiline or indented json yet
+      if (p1 !== undefined) {
+        return match;
+      } else if (p2 !== undefined) {
+        return varHighlightHTML({ name: p2 });
+      }
 
+      return match;
+    })
+    .replace(/\n/g, "<br />");
   function getClassByNumberLength(): string {
     let sumOfCaracteres: number = 0;
     wordsHighlight.forEach((element) => {
@@ -159,7 +169,7 @@ export default function GenericModal({
         setIsEdit(true);
         return setErrorData({
           title: PROMPT_ERROR_ALERT,
-          list: [error.toString()],
+          list: [error.response.data.detail ?? ""],
         });
       });
   }
@@ -217,7 +227,7 @@ export default function GenericModal({
                   setInputValue(event.target.value);
                   checkVariables(event.target.value);
                 }}
-                placeholder={editTextPlaceholder}
+                placeholder={EDIT_TEXT_PLACEHOLDER}
                 onKeyDown={(e) => {
                   handleKeyDown(e, inputValue, "");
                 }}
@@ -239,7 +249,7 @@ export default function GenericModal({
                 onChange={(event) => {
                   setInputValue(event.target.value);
                 }}
-                placeholder={editTextPlaceholder}
+                placeholder={EDIT_TEXT_PLACEHOLDER}
                 onKeyDown={(e) => {
                   handleKeyDown(e, value, "");
                 }}

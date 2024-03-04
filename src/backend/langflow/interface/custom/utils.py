@@ -78,6 +78,8 @@ def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: L
             )
 
         base_classes = get_base_classes(return_type_instance)
+        if return_type_instance == str:
+            base_classes.append("Text")
 
         for base_class in base_classes:
             frontend_node.add_base_class(base_class)
@@ -232,10 +234,12 @@ def run_build_config(
             # Allow user to build TemplateField as well
             # as a dict with the same keys as TemplateField
             field_dict = get_field_dict(field)
+            # This has to be done to set refresh if options or value are callable
+            update_field_dict(field_dict)
             if update_field is not None and field_name != update_field:
                 continue
             try:
-                update_field_dict(field_dict)
+                update_field_dict(field_dict, call=True)
                 build_config[field_name] = field_dict
             except Exception as exc:
                 logger.error(f"Error while getting build_config: {str(exc)}")
@@ -330,11 +334,13 @@ def create_component_template(component):
     """Create a template for a component."""
     component_code = component["code"]
     component_output_types = component["output_types"]
+    # remove
 
     component_extractor = CustomComponent(code=component_code)
 
     component_template = build_custom_component_template(component_extractor)
-    component_template["output_types"] = component_output_types
+    if not component_template["output_types"] and component_output_types:
+        component_template["output_types"] = component_output_types
 
     return component_template
 
@@ -364,15 +370,17 @@ def build_custom_components(settings_service):
     return custom_components_from_file
 
 
-def update_field_dict(field_dict):
+def update_field_dict(field_dict, call=False):
     """Update the field dictionary by calling options() or value() if they are callable"""
     if "options" in field_dict and callable(field_dict["options"]):
-        field_dict["options"] = field_dict["options"]()
+        if call:
+            field_dict["options"] = field_dict["options"]()
         # Also update the "refresh" key
         field_dict["refresh"] = True
 
     if "value" in field_dict and callable(field_dict["value"]):
-        field_dict["value"] = field_dict["value"]()
+        if call:
+            field_dict["value"] = field_dict["value"]()
         field_dict["refresh"] = True
 
     # Let's check if "range_spec" is a RangeSpec object
