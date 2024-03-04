@@ -16,6 +16,7 @@ import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
+import { RefreshButton } from "../../../../components/ui/refreshButton";
 import {
   INPUT_HANDLER_HOVER,
   LANGFLOW_SUPPORTED_TYPES,
@@ -68,7 +69,7 @@ export default function ParameterComponent({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
-
+  const [isLoading, setIsLoading] = useState(false);
   const flow = currentFlow?.data?.nodes ?? null;
 
   const groupedEdge = useRef(null);
@@ -85,7 +86,12 @@ export default function ParameterComponent({
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
-  const handleUpdateValues = async (name: string, data: NodeDataType) => {
+  const handleUpdateValues = async (
+    name: string,
+    data: NodeDataType,
+    delayAnimation: boolean = true
+  ) => {
+    setIsLoading(true);
     const code = data.node?.template["code"]?.value;
     if (!code) {
       console.error("Code not found in the template");
@@ -95,13 +101,48 @@ export default function ParameterComponent({
     try {
       const res = await postCustomComponentUpdate(code, name);
       if (res.status === 200 && data.node?.template) {
-        data.node!.template[name] = res.data.template[name];
+        setNode(data.id, (oldNode) => {
+          let newNode = cloneDeep(oldNode);
+
+          newNode.data = {
+            ...newNode.data,
+          };
+
+          newNode.data.node.template[name] = res.data.template[name];
+
+          return newNode;
+        });
       }
     } catch (err) {
       setErrorData(err as { title: string; list?: Array<string> });
     }
+
+    renderTooltips();
+    if (delayAnimation) {
+      try {
+        // Wait for at least 500 milliseconds
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        // Continue with the request
+        // If the request takes longer than 500 milliseconds, it will not wait an additional 500 milliseconds
+      } catch (error) {
+        console.error("Error occurred while waiting for refresh:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    } else setIsLoading(false);
   };
 
+  useEffect(() => {
+    function fetchData() {
+      if (
+        data.node?.template[name]?.refresh &&
+        Object.keys(data.node?.template[name]?.options ?? {}).length === 0
+      ) {
+        handleUpdateValues(name, data, false);
+      }
+    }
+    fetchData();
+  }, []);
   const handleOnNewValue = (
     newValue: string | string[] | boolean | Object[]
   ): void => {
@@ -314,16 +355,25 @@ export default function ParameterComponent({
         <div
           className={
             "w-full truncate text-sm" +
-            (left ? "" : " text-end") +
+            (left ? "" : " flex items-center justify-end gap-2") +
             (info !== "" ? " flex items-center" : "")
           }
         >
+          {!left && data.node?.frozen && (
+            <div>
+              <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
+            </div>
+          )}
           {proxy ? (
             <ShadTooltip content={<span>{proxy.id}</span>}>
-              <span>{title}</span>
+              <span className={!left && data.node?.frozen ? " text-ice" : ""}>
+                {title}
+              </span>
             </ShadTooltip>
           ) : (
-            title
+            <span className={!left && data.node?.frozen ? " text-ice" : ""}>
+              {title}
+            </span>
           )}
           <span className={(info === "" ? "" : "ml-1 ") + " text-status-red"}>
             {required ? " *" : ""}
@@ -390,16 +440,31 @@ export default function ParameterComponent({
         !data.node?.template[name].options ? (
           <div className="mt-2 w-full">
             {data.node?.template[name].list ? (
-              <InputListComponent
-                disabled={disabled}
-                value={
-                  !data.node.template[name].value ||
-                  data.node.template[name].value === ""
-                    ? [""]
-                    : data.node.template[name].value
-                }
-                onChange={handleOnNewValue}
-              />
+              <div className="w-5/6 flex-grow">
+                <InputListComponent
+                  disabled={disabled}
+                  value={
+                    !data.node.template[name].value ||
+                    data.node.template[name].value === ""
+                      ? [""]
+                      : data.node.template[name].value
+                  }
+                  onChange={handleOnNewValue}
+                />
+                {data.node?.template[name].refresh && (
+                  <div className="w-1/6">
+                    <RefreshButton
+                      isLoading={isLoading}
+                      disabled={disabled}
+                      name={name}
+                      data={data}
+                      className="extra-side-bar-buttons ml-2 mt-1"
+                      handleUpdateValues={handleUpdateValues}
+                      id={"refresh-button-" + name}
+                    />
+                  </div>
+                )}
+              </div>
             ) : data.node?.template[name].multiline ? (
               <TextAreaComponent
                 disabled={disabled}
@@ -420,14 +485,17 @@ export default function ParameterComponent({
                   />
                 </div>
                 {data.node?.template[name].refresh && (
-                  <button
-                    className="extra-side-bar-buttons ml-2 mt-1 w-1/6"
-                    onClick={() => {
-                      handleUpdateValues(name, data);
-                    }}
-                  >
-                    <IconComponent name="RefreshCcw" />
-                  </button>
+                  <div className="w-1/6">
+                    <RefreshButton
+                      isLoading={isLoading}
+                      disabled={disabled}
+                      name={name}
+                      data={data}
+                      className="extra-side-bar-buttons ml-2 mt-1"
+                      handleUpdateValues={handleUpdateValues}
+                      id={"refresh-button-" + name}
+                    />
+                  </div>
                 )}
               </div>
             )}
@@ -454,11 +522,14 @@ export default function ParameterComponent({
           </div>
         ) : left === true &&
           type === "str" &&
-          data.node?.template[name].options ? (
+          (data.node?.template[name].options ||
+            data.node?.template[name]?.refresh) ? (
           // TODO: Improve CSS
           <div className="mt-2 flex w-full items-center">
             <div className="w-5/6 flex-grow">
               <Dropdown
+                disabled={disabled}
+                isLoading={isLoading}
                 options={data.node.template[name].options}
                 onSelect={handleOnNewValue}
                 value={data.node.template[name].value ?? "Choose an option"}
@@ -466,14 +537,17 @@ export default function ParameterComponent({
               />
             </div>
             {data.node?.template[name].refresh && (
-              <button
-                className="extra-side-bar-buttons ml-2 mt-1 w-1/6"
-                onClick={() => {
-                  handleUpdateValues(name, data);
-                }}
-              >
-                <IconComponent name="RefreshCcw" />
-              </button>
+              <div className="w-1/6">
+                <RefreshButton
+                  isLoading={isLoading}
+                  disabled={disabled}
+                  name={name}
+                  data={data}
+                  className="extra-side-bar-buttons ml-2 mt-1"
+                  handleUpdateValues={handleUpdateValues}
+                  id={"refresh-button-" + name}
+                />
+              </div>
             )}
           </div>
         ) : left === true && type === "code" ? (

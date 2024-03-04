@@ -4,6 +4,7 @@ from langflow.field_typing import Data
 
 class Component(CustomComponent):
     documentation: str = "http://docs.langflow.org/components/custom"
+    icon = "custom_components"
 
     def build_config(self):
         return {"param": {"display_name": "Parameter"}}

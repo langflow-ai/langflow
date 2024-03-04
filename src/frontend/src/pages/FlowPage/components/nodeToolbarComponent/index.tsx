@@ -62,7 +62,7 @@ export default function NodeToolbarComponent({
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
-  const pinned = data.node?.pinned ?? false;
+  const frozen = data.node?.frozen ?? false;
   const paste = useFlowStore((state) => state.paste);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -267,7 +267,7 @@ export default function NodeToolbarComponent({
             </button>
           </ShadTooltip>
 
-          <ShadTooltip content="Pin" side="top">
+          <ShadTooltip content="Freeze" side="top">
             <button
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
@@ -280,17 +280,18 @@ export default function NodeToolbarComponent({
                     ...old.data,
                     node: {
                       ...old.data.node,
-                      pinned: old.data?.node?.pinned ? false : true,
+                      frozen: old.data?.node?.frozen ? false : true,
                     },
                   },
                 }));
               }}
             >
               <IconComponent
-                name="Pin"
+                name="Snowflake"
                 className={cn(
                   "h-4 w-4 transition-all",
-                  pinned ? "animate-wiggle fill-current" : ""
+                  // TODO UPDATE THIS COLOR TO BE A VARIABLE
+                  frozen ? "animate-wiggle text-ice" : ""
                 )}
               />
             </button>

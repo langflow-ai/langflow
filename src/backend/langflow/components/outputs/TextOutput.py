@@ -1,6 +1,6 @@
 from typing import Optional
 
-from langflow.components.io.base.text import TextComponent
+from langflow.base.io.text import TextComponent
 from langflow.field_typing import Text
 
 

@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import HTTPException
+from loguru import logger
+
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.custom.attributes import ATTR_FUNC_MAPPING
 from langflow.interface.custom.code_parser.utils import extract_inner_type
@@ -23,7 +25,6 @@ from langflow.template.frontend_node.custom_components import (
 )
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
-from loguru import logger
 
 
 def add_output_types(
@@ -249,10 +250,12 @@ def run_build_config(
             # Allow user to build TemplateField as well
             # as a dict with the same keys as TemplateField
             field_dict = get_field_dict(field)
+            # This has to be done to set refresh if options or value are callable
+            update_field_dict(field_dict)
             if update_field is not None and field_name != update_field:
                 continue
             try:
-                update_field_dict(field_dict)
+                update_field_dict(field_dict, call=True)
                 build_config[field_name] = field_dict
             except Exception as exc:
                 logger.error(f"Error while getting build_config: {str(exc)}")
@@ -399,15 +402,17 @@ def build_custom_components(settings_service):
     return custom_components_from_file
 
 
-def update_field_dict(field_dict):
+def update_field_dict(field_dict, call=False):
     """Update the field dictionary by calling options() or value() if they are callable"""
     if "options" in field_dict and callable(field_dict["options"]):
-        field_dict["options"] = field_dict["options"]()
+        if call:
+            field_dict["options"] = field_dict["options"]()
         # Also update the "refresh" key
         field_dict["refresh"] = True
 
     if "value" in field_dict and callable(field_dict["value"]):
-        field_dict["value"] = field_dict["value"]()
+        if call:
+            field_dict["value"] = field_dict["value"]()
         field_dict["refresh"] = True
 
     # Let's check if "range_spec" is a RangeSpec object
