@@ -9,6 +9,7 @@ import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
 import Xmark from "../../components/ui/xmark";
 import {
+  RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
   priorityFields,
@@ -58,6 +59,8 @@ export default function GenericNode({
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
   const [handles, setHandles] = useState<number>(0);
+
+  const [validationString, setValidationString] = useState<string>("");
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
@@ -130,6 +133,18 @@ export default function GenericNode({
       setValidationStatus(null);
     }
   }, [flowPool[data.id], data.id]);
+
+  useEffect(() => {
+    if (validationStatus?.params) {
+      // if it is not a string turn it into a string
+      let newValidationString = validationStatus.params;
+      if (typeof newValidationString !== "string") {
+        newValidationString = JSON.stringify(validationStatus.params);
+      }
+
+      setValidationString(newValidationString);
+    }
+  }, [validationStatus, validationStatus?.params]);
 
   const showNode = data.showNode ?? true;
 
@@ -493,14 +508,32 @@ export default function GenericNode({
                       ) : !validationStatus ? (
                         <span className="flex">{STATUS_BUILD}</span>
                       ) : (
-                        <div className="max-h-96 overflow-auto">
-                          {typeof validationStatus.params === "string"
-                            ? `${durationString}\n${validationStatus.params}`
-                                .split("\n")
-                                .map((line, index) => (
-                                  <div key={index}>{line}</div>
-                                ))
-                            : durationString}
+                        <div className="max-h-100">
+                          <div>
+                            {lastRunTime && (
+                              <div className="justify-left flex text-muted-foreground">
+                                <div>{RUN_TIMESTAMP_PREFIX}</div>
+                                <div className="ml-1 text-status-blue">
+                                  {lastRunTime}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="justify-left flex text-muted-foreground">
+                            <div>Duration:</div>
+                            <div className="ml-1 text-status-blue">
+                              {validationStatus?.data.duration}
+                            </div>
+                          </div>
+                          <hr />
+                          <span className="flex justify-center   text-muted-foreground ">
+                            Output
+                          </span>
+                          <div className="max-h-96 overflow-auto custom-scroll">
+                            {validationString.split("\n").map((line, index) => (
+                              <div key={index}>{line}</div>
+                            ))}
+                          </div>
                         </div>
                       )
                     }

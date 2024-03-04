@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from langchain_core.documents import Document
 from pydantic import BaseModel
@@ -13,7 +13,7 @@ class Record(BaseModel):
         data (dict, optional): Additional data associated with the record.
     """
 
-    text: str
+    text: Optional[str] = ""
     data: dict = {}
 
     @classmethod
@@ -52,8 +52,6 @@ class Record(BaseModel):
         Returns the text of the record.
 
         Returns:
-            str: The text of the record.
+            str: The text and data of the record.
         """
-        return self.text
-
-
+        return self.model_dump_json(indent=2)
