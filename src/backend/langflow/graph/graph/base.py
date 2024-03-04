@@ -151,14 +151,20 @@ class Graph:
                     getattr(self, f"_{attribute}_vertices").append(vertex.id)
 
     async def _run(
-        self, inputs: Dict[str, str], stream: bool
+        self, inputs: Dict[str, str], stream: bool, session_id: str
     ) -> List[Optional["ResultData"]]:
         """Runs the graph with the given inputs."""
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
-            vertex.update_raw_params(inputs)
+            vertex.update_raw_params(inputs, overwrite=True)
+        # Update all the vertices with the session_id
+        for vertex_id in self._has_session_id_vertices:
+            vertex = self.get_vertex(vertex_id)
+            if vertex is None:
+                raise ValueError(f"Vertex {vertex_id} not found")
+            vertex.update_raw_params({"session_id": session_id})
         try:
             await self.process()
             self.increment_run_count()
@@ -181,7 +187,7 @@ class Graph:
         return outputs
 
     async def run(
-        self, inputs: Dict[str, Union[str, list[str]]], stream: bool
+        self, inputs: Dict[str, Union[str, list[str]]], stream: bool, session_id: str
     ) -> List[Optional["ResultData"]]:
         """Runs the graph with the given inputs."""
 
@@ -195,7 +201,7 @@ class Graph:
             inputs_values = [inputs_values]
         for input_value in inputs_values:
             run_outputs = await self._run(
-                {INPUT_FIELD_NAME: input_value}, stream=stream
+                {INPUT_FIELD_NAME: input_value}, stream=stream, session_id=session_id
             )
             logger.debug(f"Run outputs: {run_outputs}")
             outputs.extend(run_outputs)
