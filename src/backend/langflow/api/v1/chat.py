@@ -22,10 +22,10 @@ from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session, get_session_service
 from langflow.services.monitor.utils import log_vertex_build
-from langflow.services.session.service import SessionService
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.types import ChatVertex
+    from langflow.services.session.service import SessionService
 
 router = APIRouter(tags=["Chat"])
 
@@ -49,7 +49,8 @@ async def try_running_celery_task(vertex, user_id):
 @router.get("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
 async def get_vertices(
     flow_id: str,
-    component_id: Optional[str] = None,
+    stop_component_id: Optional[str] = None,
+    start_component_id: Optional[str] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     session=Depends(get_session),
 ):
@@ -60,9 +61,9 @@ async def get_vertices(
         if cache := chat_service.get_cache(flow_id):
             graph = cache.get("result")
         graph = build_and_cache_graph(flow_id, session, chat_service, graph)
-        if component_id:
+        if stop_component_id or start_component_id:
             try:
-                vertices = graph.sort_vertices(component_id)
+                vertices = graph.sort_vertices(stop_component_id, start_component_id)
             except Exception as exc:
                 logger.error(exc)
                 vertices = graph.sort_vertices()
@@ -94,6 +95,7 @@ async def build_vertex(
     """Build a vertex instead of the entire graph."""
     {"inputs": {"input_value": "some value"}}
     start_time = time.perf_counter()
+    next_vertices_ids = []
     try:
         start_time = time.perf_counter()
         cache = chat_service.get_cache(flow_id)
@@ -119,6 +121,10 @@ async def build_vertex(
                 artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
+            next_vertices_ids = vertex.successors_ids
+            next_vertices_ids = [
+                v for v in next_vertices_ids if graph.should_run_vertex(v)
+            ]
 
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
@@ -155,7 +161,15 @@ async def build_vertex(
             graph.reset_inactive_vertices()
         chat_service.set_cache(flow_id, graph)
 
+        # graph.stop_vertex tells us if the user asked
+        # to stop the build of the graph at a certain vertex
+        # if it is in next_vertices_ids, we need to remove other
+        # vertices from next_vertices_ids
+        if graph.stop_vertex and graph.stop_vertex in next_vertices_ids:
+            next_vertices_ids = [graph.stop_vertex]
+
         build_response = VertexBuildResponse(
+            next_vertices_ids=next_vertices_ids,
             inactive_vertices=inactive_vertices,
             valid=valid,
             params=params,

@@ -21,7 +21,9 @@ class ComponentFunctionEntrypointNameNullError(HTTPException):
 
 class Component:
     ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
-    ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = "The name of the entrypoint function must be provided."
+    ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = (
+        "The name of the entrypoint function must be provided."
+    )
 
     code: Optional[str] = None
     _function_entrypoint_name: str = "build"
@@ -39,7 +41,8 @@ class Component:
     def __setattr__(self, key, value):
         if key == "_user_id" and hasattr(self, "_user_id"):
             warnings.warn("user_id is immutable and cannot be changed.")
-        super().__setattr__(key, value)
+        else:
+            super().__setattr__(key, value)
 
     @cachedmethod(cache=operator.attrgetter("cache"))
     def get_code_tree(self, code: str):

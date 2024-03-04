@@ -54,6 +54,7 @@ export type TemplateVariableType = {
   input_types?: Array<string>;
   display_name?: string;
   name?: string;
+  refresh?: boolean;
   [key: string]: any;
 };
 export type sendAllProps = {
@@ -134,13 +135,15 @@ export type Component = {
 };
 
 export type VerticesOrderTypeAPI = {
-  ids: Array<Array<string>>;
+  ids: Array<string>;
   run_id: string;
 };
 
 export type VertexBuildTypeAPI = {
   id: string;
+  next_vertices_ids: Array<string>;
   inactive_vertices: Array<string> | null;
+  run_id: string;
   valid: boolean;
   params: string;
   data: VertexDataTypeAPI;

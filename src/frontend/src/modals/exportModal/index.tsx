@@ -5,9 +5,9 @@ import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { API_WARNING_NOTICE_ALERT } from "../../constants/alerts_constants";
 import {
+  ALERT_SAVE_WITH_API,
   EXPORT_DIALOG_SUBTITLE,
-  alertSaveWApi,
-  saveWApiCheckbox,
+  SAVE_WITH_API_CHECKBOX,
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
@@ -56,10 +56,12 @@ const ExportModal = forwardRef(
               }}
             />
             <label htmlFor="terms" className="export-modal-save-api text-sm ">
-              {saveWApiCheckbox}
+              {SAVE_WITH_API_CHECKBOX}
             </label>
           </div>
-          <span className=" text-xs text-destructive ">{alertSaveWApi}</span>
+          <span className=" text-xs text-destructive ">
+            {ALERT_SAVE_WITH_API}
+          </span>
         </BaseModal.Content>
 
         <BaseModal.Footer>

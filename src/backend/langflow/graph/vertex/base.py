@@ -2,7 +2,17 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Callable,
+    Coroutine,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+)
 
 from loguru import logger
 
@@ -18,6 +28,7 @@ from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.services.deps import get_storage_service
 from langflow.utils.constants import DIRECT_TYPES
+from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async
 
 if TYPE_CHECKING:
@@ -120,6 +131,8 @@ class Vertex:
             if not isinstance(result, (dict, str)) and hasattr(result, "content"):
                 return result.content
             return result
+        if isinstance(self._built_object, str):
+            self._built_result = self._built_object
 
         if isinstance(self._built_result, UnbuiltResult):
             return {}
@@ -139,6 +152,10 @@ class Vertex:
     @property
     def successors(self) -> List["Vertex"]:
         return self.graph.get_successors(self)
+
+    @property
+    def successors_ids(self) -> List[str]:
+        return self.graph.successor_map.get(self.id, [])
 
     def __getstate__(self):
         return {
@@ -360,15 +377,43 @@ class Vertex:
 
         self._built = True
 
+    def extract_messages_from_artifacts(self, artifacts: Dict[str, Any]) -> List[str]:
+        """
+        Extracts messages from the artifacts.
+
+        Args:
+            artifacts (Dict[str, Any]): The artifacts to extract messages from.
+
+        Returns:
+            List[str]: The extracted messages.
+        """
+        messages = []
+        for key, artifact in artifacts.items():
+            if not isinstance(artifact, dict):
+                continue
+            if "message" in artifact:
+                chat_output_response = ChatOutputResponse(
+                    message=artifact["message"],
+                    sender=artifact.get("sender"),
+                    sender_name=artifact.get("sender_name"),
+                    session_id=artifact.get("session_id"),
+                    component_id=self.id,
+                )
+                messages.append(chat_output_response.model_dump(exclude_none=True))
+
+        return messages
+
     def _finalize_build(self):
         result_dict = self.get_built_result()
         # We need to set the artifacts to pass information
         # to the frontend
         self.set_artifacts()
         artifacts = self.artifacts
+        messages = self.extract_messages_from_artifacts(artifacts)
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,
+            messages=messages,
         )
         self.set_result(result_dict)
 
@@ -463,12 +508,21 @@ class Vertex:
         self.params[key] = []
         for node in nodes:
             built = await node.get_result(requester=self, user_id=user_id)
+            # Weird check to see if the params[key] is a list
+            # because sometimes it is a Record and breaks the code
+            if not isinstance(self.params[key], list):
+                self.params[key] = [self.params[key]]
+
             if isinstance(built, list):
-                if key not in self.params:
-                    self.params[key] = []
                 self.params[key].extend(built)
             else:
-                self.params[key].append(built)
+                try:
+                    self.params[key].append(built)
+                except AttributeError as e:
+                    logger.exception(e)
+                    raise ValueError(
+                        f"Error building node {self.display_name}: {str(e)}"
+                    ) from e
 
     def _handle_func(self, key, result):
         """
@@ -536,6 +590,11 @@ class Vertex:
                 message += " Make sure your build method returns a component."
 
             logger.warning(message)
+        elif isinstance(self._built_object, (Iterator, AsyncIterator)):
+            if self.display_name in ["Text Output"]:
+                raise ValueError(
+                    f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead."
+                )
 
     def _reset(self, params_update: Optional[Dict[str, Any]] = None):
         self._built = False
@@ -544,6 +603,9 @@ class Vertex:
         self.artifacts = {}
         self.steps_ran = []
         self._build_params()
+
+    def _is_chat_input(self):
+        return False
 
     def build_inactive(self):
         # Just set the results to None
@@ -567,7 +629,7 @@ class Vertex:
             return self.get_requester_result(requester)
         self._reset()
 
-        if self.is_input and inputs is not None:
+        if self._is_chat_input() and inputs is not None:
             self.update_raw_params(inputs)
 
         # Run steps
@@ -603,7 +665,15 @@ class Vertex:
 
     def __eq__(self, __o: object) -> bool:
         try:
-            return self.id == __o.id if isinstance(__o, Vertex) else False
+            if not isinstance(__o, Vertex):
+                return False
+            # We should create a more robust comparison
+            # for the Vertex class
+            ids_are_equal = self.id == __o.id
+            # self._data is a dict and we need to compare them
+            # to check if they are equal
+            data_are_equal = self.data == __o.data
+            return ids_are_equal and data_are_equal
         except AttributeError:
             return False
 

@@ -35,9 +35,9 @@ export default function DeleteConfirmationModal({
           </DialogTitle>
         </DialogHeader>
         <span>
-          Are you sure you want to delete this {description ?? "component"}?
+        Confirm deletion of {description ?? "component"}?
           <br></br>
-          This action cannot be undone.
+          Note: This action is irreversible.
         </span>
         <DialogFooter>
           <DialogClose>

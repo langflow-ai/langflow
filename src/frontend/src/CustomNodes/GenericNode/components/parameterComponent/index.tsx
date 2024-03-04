@@ -16,11 +16,12 @@ import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
+import { RefreshButton } from "../../../../components/ui/refreshButton";
 import {
+  INPUT_HANDLER_HOVER,
   LANGFLOW_SUPPORTED_TYPES,
+  OUTPUT_HANDLER_HOVER,
   TOOLTIP_EMPTY,
-  inputHandleHover,
-  outputHandleHover,
 } from "../../../../constants/constants";
 import { postCustomComponentUpdate } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
@@ -68,7 +69,7 @@ export default function ParameterComponent({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
-
+  const [isLoading, setIsLoading] = useState(false);
   const flow = currentFlow?.data?.nodes ?? null;
 
   const groupedEdge = useRef(null);
@@ -85,7 +86,12 @@ export default function ParameterComponent({
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
-  const handleUpdateValues = async (name: string, data: NodeDataType) => {
+  const handleUpdateValues = async (
+    name: string,
+    data: NodeDataType,
+    delayAnimation: boolean = true
+  ) => {
+    setIsLoading(true);
     const code = data.node?.template["code"]?.value;
     if (!code) {
       console.error("Code not found in the template");
@@ -95,13 +101,48 @@ export default function ParameterComponent({
     try {
       const res = await postCustomComponentUpdate(code, name);
       if (res.status === 200 && data.node?.template) {
-        data.node!.template[name] = res.data.template[name];
+        setNode(data.id, (oldNode) => {
+          let newNode = cloneDeep(oldNode);
+
+          newNode.data = {
+            ...newNode.data,
+          };
+
+          newNode.data.node.template[name] = res.data.template[name];
+
+          return newNode;
+        });
       }
     } catch (err) {
       setErrorData(err as { title: string; list?: Array<string> });
     }
+
+    renderTooltips();
+    if (delayAnimation) {
+      try {
+        // Wait for at least 500 milliseconds
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        // Continue with the request
+        // If the request takes longer than 500 milliseconds, it will not wait an additional 500 milliseconds
+      } catch (error) {
+        console.error("Error occurred while waiting for refresh:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    } else setIsLoading(false);
   };
 
+  useEffect(() => {
+    function fetchData() {
+      if (
+        data.node?.template[name]?.refresh &&
+        Object.keys(data.node?.template[name]?.options ?? {}).length === 0
+      ) {
+        handleUpdateValues(name, data, false);
+      }
+    }
+    fetchData();
+  }, []);
   const handleOnNewValue = (
     newValue: string | string[] | boolean | Object[]
   ): void => {
@@ -182,7 +223,7 @@ export default function ParameterComponent({
         return (
           <div key={index}>
             {index === 0 && (
-              <span>{left ? inputHandleHover : outputHandleHover}</span>
+              <span>{left ? INPUT_HANDLER_HOVER : OUTPUT_HANDLER_HOVER}</span>
             )}
             <span
               key={index}
@@ -212,15 +253,15 @@ export default function ParameterComponent({
                     {item.display_name === "" ? "" : " - "}
                     {item.display_name.split(", ").length > 2
                       ? item.display_name.split(", ").map((el, index) => (
-                          <React.Fragment key={el + index}>
-                            <span>
-                              {index ===
+                        <React.Fragment key={el + name}>
+                          <span>
+                            {index ===
                               item.display_name.split(", ").length - 1
-                                ? el
-                                : (el += `, `)}
-                            </span>
-                          </React.Fragment>
-                        ))
+                              ? el
+                              : (el += `, `)}
+                          </span>
+                        </React.Fragment>
+                      ))
                       : item.display_name}
                   </span>
                 ) : (
@@ -229,14 +270,14 @@ export default function ParameterComponent({
                     {item.type === "" ? "" : " - "}
                     {item.type.split(", ").length > 2
                       ? item.type.split(", ").map((el, index) => (
-                          <React.Fragment key={el + index}>
-                            <span>
-                              {index === item.type.split(", ").length - 1
-                                ? el
-                                : (el += `, `)}
-                            </span>
-                          </React.Fragment>
-                        ))
+                        <React.Fragment key={el + name}>
+                          <span>
+                            {index === item.type.split(", ").length - 1
+                              ? el
+                              : (el += `, `)}
+                          </span>
+                        </React.Fragment>
+                      ))
                       : item.type}
                   </span>
                 )}
@@ -304,24 +345,31 @@ export default function ParameterComponent({
       ref={ref}
       className={
         "relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
-        (name === "code" ? " hidden " : "")
+        ((name === "code" && type === "code") ||
+          (name.includes("code") && proxy)
+          ? " hidden "
+          : "")
       }
     >
       <>
         <div
           className={
             "w-full truncate text-sm" +
-            (left ? "" : " text-end") +
+            (left ? "" : " gap-2 flex justify-end items-center") +
             (info !== "" ? " flex items-center" : "")
           }
         >
+          {!left && data.node?.pinned  &&
+            <div>
+              <IconComponent className="w-5 h-5 text-ice" name={"Snowflake"} />
+            </div>}
           {proxy ? (
             <ShadTooltip content={<span>{proxy.id}</span>}>
-              <span>{title}</span>
+              <span className={!left && data.node?.pinned?" text-ice":""}>{title}</span>
             </ShadTooltip>
           ) : (
-            title
-          )}
+            <span className={!left && data.node?.pinned?" text-ice":""}>{title}</span>
+            )}
           <span className={(info === "" ? "" : "ml-1 ") + " text-status-red"}>
             {required ? " *" : ""}
           </span>
@@ -383,20 +431,35 @@ export default function ParameterComponent({
         )}
 
         {left === true &&
-        type === "str" &&
-        !data.node?.template[name].options ? (
+          type === "str" &&
+          !data.node?.template[name].options ? (
           <div className="mt-2 w-full">
             {data.node?.template[name].list ? (
-              <InputListComponent
-                disabled={disabled}
-                value={
-                  !data.node.template[name].value ||
-                  data.node.template[name].value === ""
-                    ? [""]
-                    : data.node.template[name].value
-                }
-                onChange={handleOnNewValue}
-              />
+              <div className="w-5/6 flex-grow">
+                <InputListComponent
+                  disabled={disabled}
+                  value={
+                    !data.node.template[name].value ||
+                      data.node.template[name].value === ""
+                      ? [""]
+                      : data.node.template[name].value
+                  }
+                  onChange={handleOnNewValue}
+                />
+                {data.node?.template[name].refresh && (
+                  <div className="w-1/6">
+                    <RefreshButton
+                      isLoading={isLoading}
+                      disabled={disabled}
+                      name={name}
+                      data={data}
+                      className="extra-side-bar-buttons ml-2 mt-1"
+                      handleUpdateValues={handleUpdateValues}
+                      id={"refresh-button-" + name}
+                    />
+                  </div>
+                )}
+              </div>
             ) : data.node?.template[name].multiline ? (
               <TextAreaComponent
                 disabled={disabled}
@@ -409,7 +472,7 @@ export default function ParameterComponent({
               <div className="mt-2 flex w-full items-center">
                 <div className="w-5/6 flex-grow">
                   <InputComponent
-                    id={"input-" + index}
+                    id={"input-" + name}
                     disabled={disabled}
                     password={data.node?.template[name].password ?? false}
                     value={data.node?.template[name].value ?? ""}
@@ -417,14 +480,17 @@ export default function ParameterComponent({
                   />
                 </div>
                 {data.node?.template[name].refresh && (
-                  <button
-                    className="extra-side-bar-buttons ml-2 mt-1 w-1/6"
-                    onClick={() => {
-                      handleUpdateValues(name, data);
-                    }}
-                  >
-                    <IconComponent name="RefreshCcw" />
-                  </button>
+                  <div className="w-1/6">
+                    <RefreshButton
+                      isLoading={isLoading}
+                      disabled={disabled}
+                      name={name}
+                      data={data}
+                      className="extra-side-bar-buttons ml-2 mt-1"
+                      handleUpdateValues={handleUpdateValues}
+                      id={"refresh-button-" + name}
+                    />
+                  </div>
                 )}
               </div>
             )}
@@ -432,11 +498,12 @@ export default function ParameterComponent({
         ) : left === true && type === "bool" ? (
           <div className="mt-2 w-full">
             <ToggleShadComponent
-              id={"toggle-" + index}
+              id={"toggle-" + name}
               disabled={disabled}
               enabled={data.node?.template[name].value ?? false}
               setEnabled={handleOnNewValue}
               size="large"
+              editNode={false}
             />
           </div>
         ) : left === true && type === "float" ? (
@@ -450,26 +517,31 @@ export default function ParameterComponent({
           </div>
         ) : left === true &&
           type === "str" &&
-          data.node?.template[name].options ? (
+          (data.node?.template[name].options ||
+            data.node?.template[name]?.refresh) ? (
           // TODO: Improve CSS
           <div className="mt-2 flex w-full items-center">
             <div className="w-5/6 flex-grow">
               <Dropdown
+                isLoading={isLoading}
                 options={data.node.template[name].options}
                 onSelect={handleOnNewValue}
                 value={data.node.template[name].value ?? "Choose an option"}
-                id={"dropdown-" + index}
+                id={"dropdown-" + name}
               />
             </div>
             {data.node?.template[name].refresh && (
-              <button
-                className="extra-side-bar-buttons ml-2 mt-1 w-1/6"
-                onClick={() => {
-                  handleUpdateValues(name, data);
-                }}
-              >
-                <IconComponent name="RefreshCcw" />
-              </button>
+              <div className="w-1/6">
+                <RefreshButton
+                  isLoading={isLoading}
+                  disabled={disabled}
+                  name={name}
+                  data={data}
+                  className="extra-side-bar-buttons ml-2 mt-1"
+                  handleUpdateValues={handleUpdateValues}
+                  id={"refresh-button-" + name}
+                />
+              </div>
             )}
           </div>
         ) : left === true && type === "code" ? (
@@ -486,7 +558,7 @@ export default function ParameterComponent({
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
-              id={"code-input-" + index}
+              id={"code-input-" + name}
             />
           </div>
         ) : left === true && type === "file" ? (
@@ -507,7 +579,7 @@ export default function ParameterComponent({
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
-              id={"int-input-" + index}
+              id={"int-input-" + name}
             />
           </div>
         ) : left === true && type === "prompt" ? (
@@ -520,8 +592,8 @@ export default function ParameterComponent({
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
-              id={"prompt-input-" + index}
-              data-testid={"prompt-input-" + index}
+              id={"prompt-input-" + name}
+              data-testid={"prompt-input-" + name}
             />
           </div>
         ) : left === true && type === "NestedDict" ? (
@@ -531,10 +603,10 @@ export default function ParameterComponent({
               editNode={false}
               value={
                 !data.node!.template[name].value ||
-                data.node!.template[name].value?.toString() === "{}"
+                  data.node!.template[name].value?.toString() === "{}"
                   ? {
-                      yourkey: "value",
-                    }
+                    yourkey: "value",
+                  }
                   : data.node!.template[name].value
               }
               onChange={handleOnNewValue}
@@ -548,7 +620,7 @@ export default function ParameterComponent({
               editNode={false}
               value={
                 data.node!.template[name].value?.length === 0 ||
-                !data.node!.template[name].value
+                  !data.node!.template[name].value
                   ? [{ "": "" }]
                   : convertObjToArray(data.node!.template[name].value)
               }
