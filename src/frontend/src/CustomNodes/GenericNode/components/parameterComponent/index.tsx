@@ -69,7 +69,6 @@ export default function ParameterComponent({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
-  const [isLoading, setIsLoading] = useState(false);
 
   const flow = currentFlow?.data?.nodes ?? null;
 
