@@ -86,7 +86,11 @@ export default function ParameterComponent({
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
-  const handleUpdateValues = async (name: string, data: NodeDataType) => {
+  const handleUpdateValues = async (
+    name: string,
+    data: NodeDataType,
+    delayAnimation: boolean = true
+  ) => {
     setIsLoading(true);
     const code = data.node?.template["code"]?.value;
     if (!code) {
@@ -114,29 +118,31 @@ export default function ParameterComponent({
     }
 
     renderTooltips();
-    try {
-      // Wait for at least 500 milliseconds
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      // Continue with the request
-      // If the request takes longer than 500 milliseconds, it will not wait an additional 500 milliseconds
-    } catch (error) {
-      console.error("Error occurred while waiting for refresh:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    if (delayAnimation) {
+      try {
+        // Wait for at least 500 milliseconds
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        // Continue with the request
+        // If the request takes longer than 500 milliseconds, it will not wait an additional 500 milliseconds
+      } catch (error) {
+        console.error("Error occurred while waiting for refresh:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    } else setIsLoading(false);
   };
 
   useEffect(() => {
     function fetchData() {
       if (data.node?.template[name]?.refresh) {
-        handleUpdateValues(name, data);
+        handleUpdateValues(name, data, false);
       }
     }
     fetchData();
     // I want this to run as soon as the component mounts
     // but it is not updating the data
     // the .refresh does not change
-  }, [data.node?.template[name]?.refresh]);
+  }, []);
   const handleOnNewValue = (
     newValue: string | string[] | boolean | Object[]
   ): void => {
