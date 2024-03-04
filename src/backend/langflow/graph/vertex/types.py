@@ -1,6 +1,7 @@
 import ast
 import json
-from typing import AsyncIterator, Callable, Dict, Iterator, List, Optional, Union
+from typing import (AsyncIterator, Callable, Dict, Iterator, List, Optional,
+                    Union)
 
 import yaml
 from langchain_core.messages import AIMessage
@@ -124,13 +125,13 @@ class DocumentLoaderVertex(Vertex):
 
         if not isinstance(self._built_object, UnbuiltObject):
             avg_length = sum(
-                len(doc.page_content)
-                for doc in self._built_object
-                if hasattr(doc, "page_content")
+                len(record.text)
+                for record in self._built_object
+                if hasattr(record, "text")
             ) / len(self._built_object)
-            return f"""{self.display_name}({len(self._built_object)} documents)
-            \nAvg. Document Length (characters): {int(avg_length)}
-            Documents: {self._built_object[:3]}..."""
+            return f"""{self.display_name}({len(self._built_object)} records)
+            \nAvg. Record Length (characters): {int(avg_length)}
+            Records: {self._built_object[:3]}..."""
         return f"{self.vertex_type}()"
 
 
