@@ -383,7 +383,7 @@ class Vertex:
         self.params = params
         self._raw_params = params.copy()
 
-    def update_raw_params(self, new_params: Dict[str, str]):
+    def update_raw_params(self, new_params: Dict[str, str], overwrite: bool = False):
         """
         Update the raw parameters of the vertex with the given new parameters.
 
@@ -398,6 +398,10 @@ class Vertex:
             return
         if any(isinstance(self._raw_params.get(key), Vertex) for key in new_params):
             return
+        if not overwrite:
+            for key in new_params.copy():
+                if key not in self._raw_params:
+                    new_params.pop(key)
         self._raw_params.update(new_params)
         self.updated_raw_params = True
 
