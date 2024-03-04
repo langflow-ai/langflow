@@ -59,8 +59,8 @@ class CustomComponent(Component):
     """The field configuration of the component. Defaults to an empty dictionary."""
     field_order: Optional[List[str]] = None
     """The field order of the component. Defaults to an empty list."""
-    pinned: Optional[bool] = False
-    """The default pinned state of the component. Defaults to False."""
+    frozen: Optional[bool] = False
+    """The default frozen state of the component. Defaults to False."""
     build_parameters: Optional[dict] = None
     """The build parameters of the component. Defaults to None."""
     selected_output_type: Optional[str] = None

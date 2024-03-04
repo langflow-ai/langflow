@@ -337,9 +337,9 @@ class Graph:
         vertex.params = {}
         vertex._build_params()
         vertex.graph = self
-        # If the vertex is pinned, we don't want
+        # If the vertex is frozen, we don't want
         # to reset the results nor the _built attribute
-        if not vertex.pinned:
+        if not vertex.frozen:
             vertex._built = False
             vertex.result = None
             vertex.artifacts = {}
@@ -352,7 +352,7 @@ class Graph:
             for vid in [edge.source_id, edge.target_id]:
                 if vid in self.vertex_map:
                     _vertex = self.vertex_map[vid]
-                    if not _vertex.pinned:
+                    if not _vertex.frozen:
                         _vertex._build_params()
 
     def _add_vertex(self, vertex: Vertex) -> None:

@@ -359,19 +359,19 @@ export default function ParameterComponent({
             (info !== "" ? " flex items-center" : "")
           }
         >
-          {!left && data.node?.pinned && (
+          {!left && data.node?.frozen && (
             <div>
               <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
             </div>
           )}
           {proxy ? (
             <ShadTooltip content={<span>{proxy.id}</span>}>
-              <span className={!left && data.node?.pinned ? " text-ice" : ""}>
+              <span className={!left && data.node?.frozen ? " text-ice" : ""}>
                 {title}
               </span>
             </ShadTooltip>
           ) : (
-            <span className={!left && data.node?.pinned ? " text-ice" : ""}>
+            <span className={!left && data.node?.frozen ? " text-ice" : ""}>
               {title}
             </span>
           )}

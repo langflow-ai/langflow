@@ -1,7 +1,6 @@
 import ast
 import json
-from typing import (AsyncIterator, Callable, Dict, Iterator, List, Optional,
-                    Union)
+from typing import AsyncIterator, Callable, Dict, Iterator, List, Optional, Union
 
 import yaml
 from langchain_core.messages import AIMessage
@@ -224,7 +223,7 @@ class ChainVertex(StatelessVertex):
             if isinstance(value, PromptVertex):
                 # Build the PromptVertex, passing the tools if available
                 tools = kwargs.get("tools", None)
-                self.params[key] = value.build(tools=tools, pinned=force)
+                self.params[key] = value.build(tools=tools, frozen=force)
 
         await self._build(user_id=user_id)
 
