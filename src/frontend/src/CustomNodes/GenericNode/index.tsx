@@ -494,7 +494,7 @@ export default function GenericNode({
                       ) : !validationStatus ? (
                         <span className="flex">{STATUS_BUILD}</span>
                       ) : (
-                        <div className="max-h-96 overflow-auto custom-scroll">
+                        <div className="max-h-100">
                           <div>
                             {lastRunTime && (
                               <div className="justify-left flex text-muted-foreground">
@@ -512,14 +512,16 @@ export default function GenericNode({
                             </div>
                           </div>
                           <hr />
-                          <span className="flex justify-center text-muted-foreground">
+                          <span className="flex justify-center   text-muted-foreground ">
                             Output
                           </span>
-                          {validationStatus?.params
-                            .split("\n")
-                            .map((line, index) => (
-                              <div key={index}>{line}</div>
-                            ))}
+                          <div className="max-h-96 overflow-auto custom-scroll">
+                            {validationStatus?.params
+                              .split("\n")
+                              .map((line, index) => (
+                                <div key={index}>{line}</div>
+                              ))}
+                          </div>
                         </div>
                       )
                     }
