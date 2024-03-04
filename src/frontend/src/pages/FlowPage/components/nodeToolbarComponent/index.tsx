@@ -173,15 +173,25 @@ export default function NodeToolbarComponent({
             </button>
           </ShadTooltip>
           {hasStore && (
-            <ShadTooltip content="Share" side="top">
+            <ShadTooltip
+              content={
+                !hasApiKey || !validApiKey
+                  ? "Set a valid API key to share this component."
+                  : "Share"
+              }
+              side="top"
+            >
               <button
                 className={classNames(
                   "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
-                  !hasApiKey || !validApiKey ? " text-muted-foreground" : ""
+                  !hasApiKey || !validApiKey
+                    ? " cursor-not-allowed text-muted-foreground"
+                    : ""
                 )}
                 onClick={(event) => {
                   event.preventDefault();
-                  if (hasApiKey || hasStore) setShowconfirmShare(true);
+                  if (hasApiKey && hasStore && validApiKey)
+                    setShowconfirmShare(true);
                 }}
               >
                 <IconComponent name="Share3" className="-m-1 h-6 w-6" />
