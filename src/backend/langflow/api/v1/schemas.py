@@ -232,7 +232,7 @@ class VertexBuildResponse(BaseModel):
     next_vertices_ids: Optional[List[str]] = None
     inactive_vertices: Optional[List[str]] = None
     valid: bool
-    params: Optional[str]
+    params: Optional[Any] = Field(default_factory=dict)
     """JSON string of the params."""
     data: ResultDataResponse
     """Mapping of vertex ids to result dict containing the param name and result value."""

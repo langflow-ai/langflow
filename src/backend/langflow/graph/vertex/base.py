@@ -28,6 +28,7 @@ from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.services.deps import get_storage_service
 from langflow.utils.constants import DIRECT_TYPES
+from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async
 
 if TYPE_CHECKING:
@@ -413,15 +414,43 @@ class Vertex:
 
         self._built = True
 
+    def extract_messages_from_artifacts(self, artifacts: Dict[str, Any]) -> List[str]:
+        """
+        Extracts messages from the artifacts.
+
+        Args:
+            artifacts (Dict[str, Any]): The artifacts to extract messages from.
+
+        Returns:
+            List[str]: The extracted messages.
+        """
+        messages = []
+        for key, artifact in artifacts.items():
+            if not isinstance(artifact, dict):
+                continue
+            if "message" in artifact:
+                chat_output_response = ChatOutputResponse(
+                    message=artifact["message"],
+                    sender=artifact.get("sender"),
+                    sender_name=artifact.get("sender_name"),
+                    session_id=artifact.get("session_id"),
+                    component_id=self.id,
+                )
+                messages.append(chat_output_response.model_dump(exclude_none=True))
+
+        return messages
+
     def _finalize_build(self):
         result_dict = self.get_built_result()
         # We need to set the artifacts to pass information
         # to the frontend
         self.set_artifacts()
         artifacts = self.artifacts
+        messages = self.extract_messages_from_artifacts(artifacts)
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,
+            messages=messages,
         )
         self.set_result(result_dict)
 
