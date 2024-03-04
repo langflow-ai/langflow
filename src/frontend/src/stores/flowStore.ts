@@ -13,6 +13,7 @@ import {
   FLOW_BUILD_SUCCESS_ALERT,
   MISSED_ERROR_ALERT,
 } from "../constants/alerts_constants";
+import { RUN_TIMESTAMP_PREFIX } from "../constants/constants";
 import { BuildStatus } from "../constants/enums";
 import { getFlowPool } from "../controllers/API";
 import { VertexBuildTypeAPI } from "../types/api";
@@ -469,7 +470,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           verticesLayers: newLayers,
           runId: runId,
         });
-        get().updateBuildStatus(newIds, BuildStatus.TO_BUILD);
+        get().updateBuildStatus(
+          vertexBuildData.next_vertices_ids,
+          BuildStatus.TO_BUILD
+        );
       }
 
       get().addDataToFlowPool(
@@ -546,17 +550,27 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
+    console.log("updateBuildStatus", nodeIdList, status);
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     nodeIdList.forEach((id) => {
-      newFlowBuildStatus[id] = status;
+      newFlowBuildStatus[id] = {
+        status,
+      };
+      if (status == BuildStatus.BUILT) {
+        const timestamp_string = new Date(Date.now()).toLocaleString();
+        newFlowBuildStatus[
+          id
+        ].timestamp = `${RUN_TIMESTAMP_PREFIX} ${timestamp_string}`;
+      }
+      console.log("updateBuildStatus", newFlowBuildStatus);
     });
     set({ flowBuildStatus: newFlowBuildStatus });
   },
   revertBuiltStatusFromBuilding: () => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     Object.keys(newFlowBuildStatus).forEach((id) => {
-      if (newFlowBuildStatus[id] === BuildStatus.BUILDING) {
-        newFlowBuildStatus[id] = BuildStatus.BUILT;
+      if (newFlowBuildStatus[id].status === BuildStatus.BUILDING) {
+        newFlowBuildStatus[id].status = BuildStatus.BUILT;
       }
     });
   },

@@ -115,7 +115,9 @@ export type FlowStoreType = {
   } | null;
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
   revertBuiltStatusFromBuilding: () => void;
-  flowBuildStatus: { [key: string]: BuildStatus };
+  flowBuildStatus: {
+    [key: string]: { status: BuildStatus; timestamp?: string };
+  };
   updateFlowPool: (
     nodeId: string,
     data: FlowPoolObjectType | ChatOutputType | chatInputType,
