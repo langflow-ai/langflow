@@ -7,6 +7,8 @@ from uuid import UUID, uuid4
 from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
+from langflow.schema.schema import Record
+
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
 
@@ -16,7 +18,9 @@ class FlowBase(SQLModel):
     description: Optional[str] = Field(index=True, nullable=True, default=None)
     data: Optional[Dict] = Field(default=None, nullable=True)
     is_component: Optional[bool] = Field(default=False, nullable=True)
-    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow, nullable=True)
+    updated_at: Optional[datetime] = Field(
+        default_factory=datetime.utcnow, nullable=True
+    )
     folder: Optional[str] = Field(default=None, nullable=True)
 
     @field_validator("data")
@@ -56,6 +60,18 @@ class Flow(FlowBase, table=True):
     data: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
     user_id: UUID = Field(index=True, foreign_key="user.id", nullable=True)
     user: "User" = Relationship(back_populates="flows")
+
+    def to_record(self):
+        serialized = self.model_dump()
+        data = {
+            "id": serialized.pop("id"),
+            "data": serialized.pop("data"),
+            "name": serialized.pop("name"),
+            "description": serialized.pop("description"),
+            "updated_at": serialized.pop("updated_at"),
+        }
+        record = Record(text=data.get("name"), data=data)
+        return record
 
 
 class FlowCreate(FlowBase):

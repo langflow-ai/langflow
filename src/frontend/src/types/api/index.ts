@@ -27,7 +27,7 @@ export type APIClassType = {
   documentation: string;
   error?: string;
   official?: boolean;
-  pinned?: boolean;
+  frozen?: boolean;
   flow?: FlowType;
   [key: string]:
     | Array<string>
@@ -54,6 +54,7 @@ export type TemplateVariableType = {
   input_types?: Array<string>;
   display_name?: string;
   name?: string;
+  refresh?: boolean;
   [key: string]: any;
 };
 export type sendAllProps = {
@@ -134,13 +135,15 @@ export type Component = {
 };
 
 export type VerticesOrderTypeAPI = {
-  ids: Array<Array<string>>;
+  ids: Array<string>;
   run_id: string;
 };
 
 export type VertexBuildTypeAPI = {
   id: string;
-  inactive_vertices: Array<string> | null;
+  inactivated_vertices: Array<string> | null;
+  next_vertices_ids: Array<string>;
+  run_id: string;
   valid: boolean;
   params: string;
   data: VertexDataTypeAPI;

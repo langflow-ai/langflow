@@ -1,11 +1,14 @@
-from typing import Any, Callable, Coroutine, Union
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Union
+
+from loguru import logger
 
 from langflow.services.base import Service
 from langflow.services.task.backends.anyio import AnyIOBackend
 from langflow.services.task.backends.base import TaskBackend
 from langflow.services.task.utils import get_celery_worker_status
-from langflow.utils.logger import configure
-from loguru import logger
+
+if TYPE_CHECKING:
+    from langflow.services.settings.service import SettingsService
 
 
 def check_celery_availability():
@@ -20,28 +23,31 @@ def check_celery_availability():
     return status
 
 
-try:
-    configure()
-    status = check_celery_availability()
-
-    USE_CELERY = status.get("availability") is not None
-except ImportError:
-    USE_CELERY = False
-
-
 class TaskService(Service):
     name = "task_service"
 
-    def __init__(self):
-        self.backend = self.get_backend()
+    def __init__(self, settings_service: "SettingsService"):
+        self.settings_service = settings_service
+        try:
+            if self.settings_service.settings.CELERY_ENABLED:
+                USE_CELERY = True
+                status = check_celery_availability()
+
+                USE_CELERY = status.get("availability") is not None
+            else:
+                USE_CELERY = False
+        except ImportError:
+            USE_CELERY = False
+
         self.use_celery = USE_CELERY
+        self.backend = self.get_backend()
 
     @property
     def backend_name(self) -> str:
         return self.backend.name
 
     def get_backend(self) -> TaskBackend:
-        if USE_CELERY:
+        if self.use_celery:
             from langflow.services.task.backends.celery import CeleryBackend
 
             logger.debug("Using Celery backend")
@@ -68,7 +74,9 @@ class TaskService(Service):
             result = await result
         return task.id, result
 
-    async def launch_task(self, task_func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+    async def launch_task(
+        self, task_func: Callable[..., Any], *args: Any, **kwargs: Any
+    ) -> Any:
         logger.debug(f"Launching task {task_func} with args {args} and kwargs {kwargs}")
         logger.debug(f"Using backend {self.backend}")
         task = self.backend.launch_task(task_func, *args, **kwargs)

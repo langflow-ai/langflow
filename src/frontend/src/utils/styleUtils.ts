@@ -8,7 +8,6 @@ import {
   Bot,
   Boxes,
   Braces,
-  Cable,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -42,9 +41,11 @@ import {
   FileSearch,
   FileSearch2,
   FileText,
+  FileType2,
   FileUp,
   Fingerprint,
   FlaskConical,
+  FolderOpen,
   FolderPlus,
   FormInput,
   Forward,
@@ -80,6 +81,7 @@ import {
   Network,
   Paperclip,
   Pencil,
+  PencilLine,
   Pin,
   Play,
   Plus,
@@ -97,6 +99,7 @@ import {
   Share2,
   Shield,
   Sliders,
+  Snowflake,
   Sparkles,
   Square,
   Store,
@@ -124,10 +127,11 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { FaApple, FaGithub } from "react-icons/fa";
+import { FaApple, FaGithub, FaRobot } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
+import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { CohereIcon } from "../icons/Cohere";
@@ -147,9 +151,12 @@ import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
 import { NotionIcon } from "../icons/Notion";
+import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
 import { PineconeIcon } from "../icons/Pinecone";
+import { PostgresIcon } from "../icons/Postgres";
 import { QDrantIcon } from "../icons/QDrant";
+import { RedisIcon } from "../icons/Redis";
 import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
@@ -198,6 +205,9 @@ export const gradients = [
 ];
 
 export const nodeColors: { [char: string]: string } = {
+  inputs: "#9AAE42",
+  outputs: "#AA2411",
+  data: "#6344BE",
   prompts: "#4367BF",
   models: "#AA2411",
   model_specs: "#6344BE",
@@ -218,16 +228,19 @@ export const nodeColors: { [char: string]: string } = {
   toolkits: "#DB2C2C",
   wrappers: "#E6277A",
   utilities: "#31A3CC",
+  langchain_utilities: "#31A3CC",
   output_parsers: "#E6A627",
   str: "#31a3cc",
   Text: "#31a3cc",
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
-  io: "#e6b25a",
 };
 
 export const nodeNames: { [char: string]: string } = {
+  inputs: "Inputs",
+  outputs: "Outputs",
+  data: "Data",
   prompts: "Prompts",
   models: "Language Models",
   model_specs: "Model Specs",
@@ -246,13 +259,30 @@ export const nodeNames: { [char: string]: string } = {
   textsplitters: "Text Splitters",
   retrievers: "Retrievers",
   utilities: "Utilities",
+  langchain_utilities: "Langchain Utilities",
   output_parsers: "Output Parsers",
   custom_components: "Custom",
-  io: "I/O",
   unknown: "Other",
 };
 
 export const nodeIconsLucide: iconsType = {
+  inputs: Download,
+  outputs: Upload,
+  data: FolderOpen,
+  AzureChatOpenAi: AzureIcon,
+  Ollama: OllamaIcon,
+  ChatOllama: OllamaIcon,
+  AzureOpenAiEmbeddings: AzureIcon,
+  Azure: AzureIcon,
+  OllamaEmbeddings: OllamaIcon,
+  ChatOllamaModel: OllamaIcon,
+  Faiss: MetaIcon,
+  FaissSearch: MetaIcon,
+  AzureOpenAiModel: AzureIcon,
+  Redis: RedisIcon,
+  RedisSearch: RedisIcon,
+  PostgresChatMessageHistory: PostgresIcon,
+  BaiduQianfan: FaRobot,
   Play,
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
@@ -321,6 +351,7 @@ export const nodeIconsLucide: iconsType = {
   textsplitters: Scissors,
   wrappers: Gift,
   utilities: Wand2,
+  langchain_utilities: Wand2,
   WolframAlphaAPIWrapper: SvgWolfram,
   output_parsers: Compass,
   retrievers: FileSearch,
@@ -354,6 +385,7 @@ export const nodeIconsLucide: iconsType = {
   Plus,
   Redo,
   Settings2,
+  FileType2,
   Undo,
   FileSearch2,
   ChevronRight,
@@ -362,6 +394,7 @@ export const nodeIconsLucide: iconsType = {
   Clipboard,
   Code2,
   Variable,
+  Snowflake,
   Store,
   Download,
   Eraser,
@@ -398,6 +431,7 @@ export const nodeIconsLucide: iconsType = {
   Group,
   LogIn,
   ChevronUp,
+  PencilLine,
   Ungroup,
   BookMarked,
   Minus,
@@ -424,7 +458,6 @@ export const nodeIconsLucide: iconsType = {
   TerminalSquare,
   TextCursorInput,
   Repeat,
-  io: Cable,
   Sliders,
   ScreenShare,
   Code,

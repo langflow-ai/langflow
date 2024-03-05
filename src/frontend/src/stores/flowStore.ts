@@ -30,6 +30,7 @@ import {
 } from "../types/zustand/flow";
 import { buildVertices } from "../utils/buildUtils";
 import {
+  checkChatInput,
   cleanEdges,
   getHandleId,
   getNodeId,
@@ -56,16 +57,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   flowPool: {},
   inputs: [],
   outputs: [],
-  openCodeModalWShortcut: false,
-  handleModalWShortcut: (modal) => {
-    switch (modal) {
-      case "code":
-        set((state) => ({
-          openCodeModalWShortcut: !state.openCodeModalWShortcut,
-        }));
-        break;
-    }
-  },
   setFlowPool: (flowPool) => {
     set({ flowPool });
   },
@@ -196,10 +187,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       typeof change === "function"
         ? change(get().nodes.find((node) => node.id === id)!)
         : change;
-
     get().setNodes((oldNodes) =>
       oldNodes.map((node) => {
         if (node.id === id) {
+          if ((node.data as NodeDataType).node?.frozen) {
+            (newChange.data as NodeDataType).node!.frozen = false;
+          }
           return newChange;
         }
         return node;
@@ -228,6 +221,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
   },
   paste: (selection, position) => {
+    if (
+      selection.nodes.some((node) => node.data.type === "ChatInput") &&
+      checkChatInput(get().nodes)
+    ) {
+      useAlertStore.getState().setErrorData({
+        title: "Error pasting components",
+        list: ["You can only have one ChatInput component in the flow"],
+      });
+      return;
+    }
     let minimumX = Infinity;
     let minimumY = Infinity;
     let idsMap = {};
@@ -415,10 +418,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   buildFlow: async ({
-    nodeId,
+    startNodeId,
+    stopNodeId,
     input_value,
   }: {
-    nodeId?: string;
+    startNodeId?: string;
+    stopNodeId?: string;
     input_value?: string;
   }) => {
     get().setIsBuilding(true);
@@ -443,25 +448,53 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
       status: BuildStatus,
-      buildId: string
+      runId: string
     ) {
-      if (vertexBuildData && vertexBuildData.inactive_vertices) {
-        get().removeFromVerticesBuild(vertexBuildData.inactive_vertices);
+      if (vertexBuildData && vertexBuildData.inactivated_vertices) {
+        get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
       }
+
+      if (vertexBuildData.next_vertices_ids) {
+        // next_vertices_ids is a list of vertices that are going to be built next
+        // verticesLayers is a list of list of vertices ids, where each list is a layer of vertices
+        // we want to add a new layer (next_vertices_ids) to the list of layers (verticesLayers)
+        // and the values of next_vertices_ids to the list of vertices ids (verticesIds)
+        const newLayers = [
+          ...get().verticesBuild!.verticesLayers,
+          vertexBuildData.next_vertices_ids,
+        ];
+        const newIds = [
+          ...get().verticesBuild!.verticesIds,
+          ...vertexBuildData.next_vertices_ids,
+        ];
+        get().updateVerticesBuild({
+          verticesIds: newIds,
+          verticesLayers: newLayers,
+          runId: runId,
+        });
+        get().updateBuildStatus(
+          vertexBuildData.next_vertices_ids,
+          BuildStatus.TO_BUILD
+        );
+      }
+
       get().addDataToFlowPool(
-        { ...vertexBuildData, buildId },
+        { ...vertexBuildData, buildId: runId },
         vertexBuildData.id
       );
+
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
     }
     await buildVertices({
       input_value,
       flowId: currentFlow!.id,
-      nodeId,
+      startNodeId,
+      stopNodeId,
       onGetOrderSuccess: () => {
         setNoticeData({ title: "Running components" });
       },
       onBuildComplete: () => {
+        const nodeId = startNodeId || stopNodeId;
         if (nodeId) {
           setSuccessData({
             title: `${
@@ -478,12 +511,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       onBuildError: (title, list, idList) => {
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
         setErrorData({ list, title });
+        get().setIsBuilding(false);
       },
       onBuildStart: (idList) => {
+        console.log("onBuildStart", idList);
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
       validateNodes: validateSubgraph,
     });
+    get().setIsBuilding(false);
     get().revertBuiltStatusFromBuilding();
   },
   getFlow: () => {
@@ -496,14 +532,24 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateVerticesBuild: (
     vertices: {
       verticesIds: string[];
-      verticesOrder: string[][];
       verticesLayers: string[][];
       runId: string;
     } | null
   ) => {
+    console.log("updateVerticesBuild", vertices);
     set({ verticesBuild: vertices });
   },
   verticesBuild: null,
+  addToVerticesBuild: (vertices: string[]) => {
+    const verticesBuild = get().verticesBuild;
+    if (!verticesBuild) return;
+    set({
+      verticesBuild: {
+        ...verticesBuild,
+        verticesIds: [...verticesBuild.verticesIds, ...vertices],
+      },
+    });
+  },
   removeFromVerticesBuild: (vertices: string[]) => {
     const verticesBuild = get().verticesBuild;
     if (!verticesBuild) return;
@@ -517,17 +563,25 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
+    console.log("updateBuildStatus", nodeIdList, status);
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     nodeIdList.forEach((id) => {
-      newFlowBuildStatus[id] = status;
+      newFlowBuildStatus[id] = {
+        status,
+      };
+      if (status == BuildStatus.BUILT) {
+        const timestamp_string = new Date(Date.now()).toLocaleString();
+        newFlowBuildStatus[id].timestamp = timestamp_string;
+      }
+      console.log("updateBuildStatus", newFlowBuildStatus);
     });
     set({ flowBuildStatus: newFlowBuildStatus });
   },
   revertBuiltStatusFromBuilding: () => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     Object.keys(newFlowBuildStatus).forEach((id) => {
-      if (newFlowBuildStatus[id] === BuildStatus.BUILDING) {
-        newFlowBuildStatus[id] = BuildStatus.BUILT;
+      if (newFlowBuildStatus[id].status === BuildStatus.BUILDING) {
+        newFlowBuildStatus[id].status = BuildStatus.BUILT;
       }
     });
   },

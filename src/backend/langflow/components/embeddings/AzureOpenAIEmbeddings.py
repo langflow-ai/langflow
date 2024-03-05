@@ -9,6 +9,7 @@ class AzureOpenAIEmbeddingsComponent(CustomComponent):
     description: str = "Embeddings model from Azure OpenAI."
     documentation: str = "https://python.langchain.com/docs/integrations/text_embedding/azureopenai"
     beta = False
+    icon = "Azure"
 
     API_VERSION_OPTIONS = [
         "2022-12-01",

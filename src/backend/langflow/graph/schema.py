@@ -4,12 +4,13 @@ from typing import Any, Optional
 from pydantic import BaseModel, Field, field_serializer
 
 from langflow.graph.utils import serialize_field
-from langflow.utils.schemas import ContainsEnumMeta
+from langflow.utils.schemas import ChatOutputResponse, ContainsEnumMeta
 
 
 class ResultData(BaseModel):
     results: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
+    messages: Optional[list[ChatOutputResponse]] = Field(default_factory=list)
     timedelta: Optional[float] = None
     duration: Optional[str] = None
 

@@ -62,7 +62,7 @@ export default function NodeToolbarComponent({
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
-  const pinned = data.node?.pinned ?? false;
+  const frozen = data.node?.frozen ?? false;
   const paste = useFlowStore((state) => state.paste);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -89,17 +89,6 @@ export default function NodeToolbarComponent({
     }
   }, [showModalAdvanced]);
   const updateNodeInternals = useUpdateNodeInternals();
-
-  const openCodeModalWShortcut = useFlowStore(
-    (state) => state.openCodeModalWShortcut
-  );
-  const handleModalWShortcut = useFlowStore(
-    (state) => state.handleModalWShortcut
-  );
-
-  useEffect(() => {
-    setOpenModal(openCodeModalWShortcut);
-  }, [openCodeModalWShortcut, handleModalWShortcut]);
 
   const setLastCopiedSelection = useFlowStore(
     (state) => state.setLastCopiedSelection
@@ -230,23 +219,6 @@ export default function NodeToolbarComponent({
                 }}
                 data-testid="code-button-modal"
               >
-                <div className="hidden">
-                  <CodeAreaComponent
-                    openModal={openModal}
-                    readonly={
-                      data.node?.flow && data.node.template[name].dynamic
-                        ? true
-                        : false
-                    }
-                    dynamic={data.node?.template[name].dynamic ?? false}
-                    setNodeClass={handleNodeClass}
-                    nodeClass={data.node}
-                    disabled={false}
-                    value={data.node?.template[name].value ?? ""}
-                    onChange={handleOnNewValue}
-                    id={"code-input-node-toolbar-" + name}
-                  />
-                </div>
                 <IconComponent name="TerminalSquare" className="h-4 w-4" />
               </button>
             </ShadTooltip>
@@ -295,7 +267,7 @@ export default function NodeToolbarComponent({
             </button>
           </ShadTooltip>
 
-          <ShadTooltip content="Pin" side="top">
+          <ShadTooltip content="Freeze" side="top">
             <button
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
@@ -308,17 +280,18 @@ export default function NodeToolbarComponent({
                     ...old.data,
                     node: {
                       ...old.data.node,
-                      pinned: old.data?.node?.pinned ? false : true,
+                      frozen: old.data?.node?.frozen ? false : true,
                     },
                   },
                 }));
               }}
             >
               <IconComponent
-                name="Pin"
+                name="Snowflake"
                 className={cn(
                   "h-4 w-4 transition-all",
-                  pinned ? "animate-wiggle fill-current" : ""
+                  // TODO UPDATE THIS COLOR TO BE A VARIABLE
+                  frozen ? "animate-wiggle text-ice" : ""
                 )}
               />
             </button>
@@ -397,7 +370,7 @@ export default function NodeToolbarComponent({
                   value={"Share"}
                   disabled={!hasApiKey || !validApiKey}
                 >
-                  <div className="flex" data-testid="save-button-modal">
+                  <div className="flex" data-testid="share-button-modal">
                     <IconComponent
                       name="Share3"
                       className="relative top-0.5 -m-1 mr-1 h-6 w-6"
@@ -503,6 +476,26 @@ export default function NodeToolbarComponent({
             is_component={true}
             component={flowComponent!}
           />
+          {hasCode && (
+            <div className="hidden">
+              <CodeAreaComponent
+                open={openModal}
+                setOpen={setOpenModal}
+                readonly={
+                  data.node?.flow && data.node.template[name].dynamic
+                    ? true
+                    : false
+                }
+                dynamic={data.node?.template[name].dynamic ?? false}
+                setNodeClass={handleNodeClass}
+                nodeClass={data.node}
+                disabled={false}
+                value={data.node?.template[name].value ?? ""}
+                onChange={handleOnNewValue}
+                id={"code-input-node-toolbar-" + name}
+              />
+            </div>
+          )}
         </span>
       </div>
     </>

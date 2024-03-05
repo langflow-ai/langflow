@@ -1,4 +1,5 @@
-import { forwardRef } from "react";
+import dynamicIconImports from "lucide-react/dynamicIconImports";
+import { Suspense, forwardRef, lazy } from "react";
 import { IconComponentProps } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
 
@@ -14,7 +15,13 @@ const ForwardedIconComponent = forwardRef(
     }: IconComponentProps,
     ref
   ) => {
-    const TargetIcon = nodeIconsLucide[name] ?? nodeIconsLucide["unknown"];
+    let TargetIcon = nodeIconsLucide[name];
+    if (!TargetIcon) {
+      // check if name exists in dynamicIconImports
+      if (!dynamicIconImports[name]) {
+        TargetIcon = nodeIconsLucide["unknown"];
+      } else TargetIcon = lazy(dynamicIconImports[name]);
+    }
 
     const style = {
       strokeWidth: strokeWidth ?? 1.5,
@@ -22,13 +29,21 @@ const ForwardedIconComponent = forwardRef(
       ...(iconColor && { color: iconColor, stroke: stroke }),
     };
 
+    if (!TargetIcon) {
+      return null; // Render nothing until the icon is loaded
+    }
+    const fallback = (
+      <div style={{ background: "#ddd", width: 24, height: 24 }} />
+    );
     return (
-      <TargetIcon
-        className={className}
-        style={style}
-        ref={ref}
-        data-testid={id ? `${id}-${name}` : `icon-${name}`}
-      />
+      <Suspense fallback={fallback}>
+        <TargetIcon
+          className={className}
+          style={style}
+          ref={ref}
+          data-testid={id ? `${id}-${name}` : `icon-${name}`}
+        />
+      </Suspense>
     );
   }
 );

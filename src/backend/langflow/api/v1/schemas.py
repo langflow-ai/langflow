@@ -158,7 +158,9 @@ class StreamData(BaseModel):
     data: dict
 
     def __str__(self) -> str:
-        return f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
+        return (
+            f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
+        )
 
 
 class CustomComponentCode(BaseModel):
@@ -214,7 +216,7 @@ class ApiKeyCreateRequest(BaseModel):
 
 
 class VerticesOrderResponse(BaseModel):
-    ids: List[List[str]]
+    ids: List[str]
     run_id: UUID
 
 
@@ -227,9 +229,10 @@ class ResultDataResponse(BaseModel):
 
 class VertexBuildResponse(BaseModel):
     id: Optional[str] = None
-    inactive_vertices: Optional[List[str]] = None
+    inactivated_vertices: Optional[List[str]] = None
+    next_vertices_ids: Optional[List[str]] = None
     valid: bool
-    params: Optional[str]
+    params: Optional[Any] = Field(default_factory=dict)
     """JSON string of the params."""
     data: ResultDataResponse
     """Mapping of vertex ids to result dict containing the param name and result value."""
@@ -242,4 +245,22 @@ class VerticesBuiltResponse(BaseModel):
 
 
 class InputValueRequest(BaseModel):
-    input_value: str
+    components: Optional[List[str]] = None
+    input_value: Optional[List[str]] = None
+
+    # add an example
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "components": ["components_id", "Component Name"],
+                    "input_value": ["input_value"],
+                },
+                {"components": ["Component Name"], "input_value": ["input_value"]},
+                {"input_value": ["input_value"]},
+                {
+                    "input_value": ["input_value1", "input_value2"],
+                },
+            ]
+        }
+    }

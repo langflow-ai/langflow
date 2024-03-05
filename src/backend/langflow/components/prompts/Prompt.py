@@ -23,7 +23,7 @@ class PromptComponent(CustomComponent):
         prompt_template = PromptTemplate.from_template(Text(template))
 
         attributes_to_check = ["text", "page_content"]
-        for key, value in kwargs.items():
+        for key, value in kwargs.copy().items():
             for attribute in attributes_to_check:
                 if hasattr(value, attribute):
                     kwargs[key] = getattr(value, attribute)

@@ -26,6 +26,7 @@ import {
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
+import { sortKeys } from "./utils";
 
 export default function ExtraSidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
@@ -320,19 +321,7 @@ export default function ExtraSidebar(): JSX.Element {
 
       <div className="side-bar-components-div-arrangement">
         {Object.keys(dataFilter)
-          .sort((a, b) => {
-            if (a.toLowerCase() === "saved_components") {
-              return -1;
-            } else if (b.toLowerCase() === "saved_components") {
-              return 1;
-            } else if (a.toLowerCase() === "custom_components") {
-              return -2;
-            } else if (b.toLowerCase() === "custom_components") {
-              return 2;
-            } else {
-              return a.localeCompare(b);
-            }
-          })
+          .sort(sortKeys)
           .map((SBSectionName: keyof APIObjectType, index) =>
             Object.keys(dataFilter[SBSectionName]).length > 0 ? (
               <DisclosureComponent

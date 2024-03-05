@@ -1,5 +1,6 @@
 import asyncio
 from collections import defaultdict, deque
+from itertools import chain
 from typing import TYPE_CHECKING, Dict, Generator, List, Optional, Type, Union
 
 from langchain.chains.base import Chain
@@ -16,9 +17,11 @@ from langflow.graph.vertex.types import (
     FileToolVertex,
     LLMVertex,
     RoutingVertex,
+    StateVertex,
     ToolkitVertex,
 )
 from langflow.interface.tools.constants import FILE_TOOLS
+from langflow.schema import Record
 from langflow.utils import payload
 
 if TYPE_CHECKING:
@@ -42,9 +45,10 @@ class Graph:
         self.flow_id = flow_id
         self._is_input_vertices: List[str] = []
         self._is_output_vertices: List[str] = []
+        self._is_state_vertices: List[str] = []
         self._has_session_id_vertices: List[str] = []
         self._sorted_vertices_layers: List[List[str]] = []
-        self.run_id = None
+        self._run_id = None
 
         self.top_level_vertices = []
         for vertex in self._vertices:
@@ -54,6 +58,12 @@ class Graph:
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
+        self.inactivated_vertices: set = set()
+        self.activated_vertices: List[str] = []
+        self.vertices_layers = []
+        self.vertices_to_run = set()
+        self.stop_vertex = None
+
         self.inactive_vertices: set = set()
         self.edges: List[ContractEdge] = []
         self.vertices: List[Vertex] = []
@@ -62,13 +72,67 @@ class Graph:
         self.define_vertices_lists()
         self.state_manager = GraphStateManager()
 
+    def get_state(self, name: str) -> Optional[Record]:
+        """Returns the state of the graph."""
+        return self.state_manager.get_state(name, run_id=self._run_id)
+
+    def update_state(
+        self, name: str, record: Union[str, Record], caller: Optional[str] = None
+    ) -> None:
+        """Updates the state of the graph."""
+        if caller:
+            # If there is a caller which is a vertex_id, I want to activate
+            # all StateVertex in self.vertices that are not the caller
+            # essentially notifying all the other vertices that the state has changed
+            # This also has to activate their successors
+            self.activate_state_vertices(name, caller)
+
+        self.state_manager.update_state(name, record, run_id=self._run_id)
+
+    def activate_state_vertices(self, name: str, caller: str):
+        vertices_ids = []
+        for vertex_id in self._is_state_vertices:
+            if vertex_id == caller:
+                continue
+            vertex = self.get_vertex(vertex_id)
+            if (
+                isinstance(vertex._raw_params["name"], str)
+                and name in vertex._raw_params["name"]
+                and vertex_id != caller
+                and isinstance(vertex, StateVertex)
+            ):
+                vertices_ids.append(vertex_id)
+                successors = self.get_all_successors(vertex, flat=True)
+                self.vertices_to_run.update(list(map(lambda x: x.id, successors)))
+        self.activated_vertices = vertices_ids
+        self.vertices_to_run.update(vertices_ids)
+
+    def reset_activated_vertices(self):
+        self.activated_vertices = []
+
+    def append_state(
+        self, name: str, record: Union[str, Record], caller: Optional[str] = None
+    ) -> None:
+        """Appends the state of the graph."""
+        if caller:
+
+            self.activate_state_vertices(name, caller)
+
+        self.state_manager.append_state(name, record, run_id=self._run_id)
+
+    @property
+    def run_id(self):
+        if not self._run_id:
+            raise ValueError("Run ID not set")
+        return self._run_id
+
     def set_run_id(self, run_id: str):
         for vertex in self.vertices:
             self.state_manager.subscribe(run_id, vertex.update_graph_state)
-        self.run_id = run_id
+        self._run_id = run_id
 
     def add_state(self, state: str):
-        self.state_manager.append_state(self.run_id, state)
+        self.state_manager.append_state(self._run_id, state)
 
     @property
     def sorted_vertices_layers(self) -> List[List[str]]:
@@ -80,39 +144,65 @@ class Graph:
         """
         Defines the lists of vertices that are inputs, outputs, and have session_id.
         """
-        attributes = ["is_input", "is_output", "has_session_id"]
+        attributes = ["is_input", "is_output", "has_session_id", "is_state"]
         for vertex in self.vertices:
             for attribute in attributes:
                 if getattr(vertex, attribute):
                     getattr(self, f"_{attribute}_vertices").append(vertex.id)
 
     async def _run(
-        self, inputs: Dict[str, str], stream: bool
+        self,
+        inputs: Dict[str, str],
+        input_components: list[str],
+        outputs: list[str],
+        stream: bool,
+        session_id: str,
     ) -> List[Optional["ResultData"]]:
         """Runs the graph with the given inputs."""
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
+            if input_components and (
+                vertex_id not in input_components
+                or vertex.display_name not in input_components
+            ):
+                continue
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
-            vertex.update_raw_params(inputs)
+            vertex.update_raw_params(inputs, overwrite=True)
+        # Update all the vertices with the session_id
+        for vertex_id in self._has_session_id_vertices:
+            vertex = self.get_vertex(vertex_id)
+            if vertex is None:
+                raise ValueError(f"Vertex {vertex_id} not found")
+            vertex.update_raw_params({"session_id": session_id})
         try:
             await self.process()
             self.increment_run_count()
         except Exception as exc:
             logger.exception(exc)
             raise ValueError(f"Error running graph: {exc}") from exc
-        outputs = []
+        vertex_outputs = []
         for vertex_id in self._is_output_vertices:
             vertex = self.get_vertex(vertex_id)
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
-            if not stream and hasattr(vertex, "consume_async_generator"):
+
+            if (
+                not vertex.result
+                and not stream
+                and hasattr(vertex, "consume_async_generator")
+            ):
                 await vertex.consume_async_generator()
-            outputs.append(vertex.result)
-        return outputs
+            if vertex.display_name in outputs or vertex.id in outputs:
+                vertex_outputs.append(vertex.result)
+        return vertex_outputs
 
     async def run(
-        self, inputs: Dict[str, Union[str, list[str]]], stream: bool
+        self,
+        inputs: Dict[str, Union[str, list[str]]],
+        outputs: list[str],
+        stream: bool,
+        session_id: str,
     ) -> List[Optional["ResultData"]]:
         """Runs the graph with the given inputs."""
 
@@ -120,24 +210,36 @@ class Graph:
         # we need to go through self.inputs and update the self._raw_params
         # of the vertices that are inputs
         # if the value is a list, we need to run multiple times
-        outputs = []
+        vertex_outputs = []
         inputs_values = inputs.get(INPUT_FIELD_NAME, "")
         if not isinstance(inputs_values, list):
             inputs_values = [inputs_values]
         for input_value in inputs_values:
             run_outputs = await self._run(
-                {INPUT_FIELD_NAME: input_value}, stream=stream
+                inputs={INPUT_FIELD_NAME: input_value},
+                input_components=inputs.get("components", []),
+                outputs=outputs,
+                stream=stream,
+                session_id=session_id,
             )
             logger.debug(f"Run outputs: {run_outputs}")
-            outputs.extend(run_outputs)
-        return outputs
+            vertex_outputs.append(run_outputs)
+        return vertex_outputs
+
+    # vertices_layers is a list of lists ordered by the order the vertices
+    # should be built.
+    # We need to create a new method that will take the vertices_layers
+    # and return the next vertex to be built.
+    def next_vertex_to_build(self):
+        """Returns the next vertex to be built."""
+        yield from chain.from_iterable(self.vertices_layers)
 
     @property
     def metadata(self):
         return {
             "runs": self._runs,
             "updates": self._updates,
-            "inactive_vertices": self.inactive_vertices,
+            "inactivated_vertices": self.inactivated_vertices,
         }
 
     def build_graph_maps(self):
@@ -145,8 +247,8 @@ class Graph:
         self.in_degree_map = self.build_in_degree()
         self.parent_child_map = self.build_parent_child_map()
 
-    def reset_inactive_vertices(self):
-        self.inactive_vertices = set()
+    def reset_inactivated_vertices(self):
+        self.inactivated_vertices = set()
 
     def mark_all_vertices(self, state: str):
         """Marks all vertices in the graph."""
@@ -244,7 +346,7 @@ class Graph:
         self.edges = new_edges
 
     def vertex_data_is_identical(self, vertex: Vertex, other_vertex: Vertex) -> bool:
-        data_is_equivalent = vertex.__repr__() == other_vertex.__repr__()
+        data_is_equivalent = vertex == other_vertex
         if not data_is_equivalent:
             return False
         return self.vertex_edges_are_identical(vertex, other_vertex)
@@ -270,39 +372,63 @@ class Graph:
         # Find vertices that are in self but not in other (removed vertices)
         removed_vertex_ids = existing_vertex_ids - other_vertex_ids
 
-        # Update existing vertices that have changed
-        for vertex_id in existing_vertex_ids.intersection(other_vertex_ids):
-            self_vertex = self.get_vertex(vertex_id)
-            other_vertex = other.get_vertex(vertex_id)
-            if not self.vertex_data_is_identical(self_vertex, other_vertex):
-                self_vertex._data = other_vertex._data
-                self_vertex._parse_data()
-                # Now we update the edges of the vertex
-                self.update_edges_from_vertex(self_vertex, other_vertex)
-                self_vertex.params = {}
-                self_vertex._build_params()
-                self_vertex.graph = self
-                # If the vertex is pinned, we don't want
-                # to reset the results nor the _built attribute
-                if not self_vertex.pinned:
-                    self_vertex._built = False
-                    self_vertex.result = None
-                    self_vertex.artifacts = {}
-                    self_vertex.set_top_level(self.top_level_vertices)
-                self.reset_all_edges_of_vertex(self_vertex)
-
-        # Remove vertices
+        # Remove vertices that are not in the other graph
         for vertex_id in removed_vertex_ids:
             self.remove_vertex(vertex_id)
+
+        # The order here matters because adding the vertex is required
+        # if any of them have edges that point to any of the new vertices
+        # By adding them first, them adding the edges we ensure that the
+        # edges have valid vertices to point to
 
         # Add new vertices
         for vertex_id in new_vertex_ids:
             new_vertex = other.get_vertex(vertex_id)
             self._add_vertex(new_vertex)
 
+        # Now update the edges
+        for vertex_id in new_vertex_ids:
+            new_vertex = other.get_vertex(vertex_id)
+            self._update_edges(new_vertex)
+            # Graph is set at the end because the edges come from the graph
+            # and the other graph is where the new edges and vertices come from
+            new_vertex.graph = self
+
+        # Update existing vertices that have changed
+        for vertex_id in existing_vertex_ids.intersection(other_vertex_ids):
+            self_vertex = self.get_vertex(vertex_id)
+            other_vertex = other.get_vertex(vertex_id)
+            # If the vertices are not identical, update the vertex
+            if not self.vertex_data_is_identical(self_vertex, other_vertex):
+                self.update_vertex_from_another(self_vertex, other_vertex)
+
         self.build_graph_maps()
         self.increment_update_count()
         return self
+
+    def update_vertex_from_another(self, vertex: Vertex, other_vertex: Vertex) -> None:
+        """
+        Updates a vertex from another vertex.
+
+        Args:
+            vertex (Vertex): The vertex to be updated.
+            other_vertex (Vertex): The vertex to update from.
+        """
+        vertex._data = other_vertex._data
+        vertex._parse_data()
+        # Now we update the edges of the vertex
+        self.update_edges_from_vertex(vertex, other_vertex)
+        vertex.params = {}
+        vertex._build_params()
+        vertex.graph = self
+        # If the vertex is frozen, we don't want
+        # to reset the results nor the _built attribute
+        if not vertex.frozen:
+            vertex._built = False
+            vertex.result = None
+            vertex.artifacts = {}
+            vertex.set_top_level(self.top_level_vertices)
+        self.reset_all_edges_of_vertex(vertex)
 
     def reset_all_edges_of_vertex(self, vertex: Vertex) -> None:
         """Resets all the edges of a vertex."""
@@ -310,16 +436,28 @@ class Graph:
             for vid in [edge.source_id, edge.target_id]:
                 if vid in self.vertex_map:
                     _vertex = self.vertex_map[vid]
-                    if not _vertex.pinned:
+                    if not _vertex.frozen:
                         _vertex._build_params()
 
     def _add_vertex(self, vertex: Vertex) -> None:
-        """Adds a new vertex to the graph."""
+        """Adds a vertex to the graph."""
         self.vertices.append(vertex)
         self.vertex_map[vertex.id] = vertex
+
+    def add_vertex(self, vertex: Vertex) -> None:
+        """Adds a new vertex to the graph."""
+        self._add_vertex(vertex)
+        self._update_edges(vertex)
+
+    def _update_edges(self, vertex: Vertex) -> None:
+        """Updates the edges of a vertex."""
         # Vertex has edges, so we need to update the edges
         for edge in vertex.edges:
-            if edge.source_id in self.vertex_map and edge.target_id in self.vertex_map:
+            if (
+                edge not in self.edges
+                and edge.source_id in self.vertex_map
+                and edge.target_id in self.vertex_map
+            ):
                 self.edges.append(edge)
 
     def _build_graph(self) -> None:
@@ -423,15 +561,19 @@ class Graph:
     async def process(self) -> "Graph":
         """Processes the graph with vertices in each layer run in parallel."""
         vertices_layers = self.sorted_vertices_layers
-
+        vertex_task_run_count = {}
         for layer_index, layer in enumerate(vertices_layers):
             tasks = []
             for vertex_id in layer:
                 vertex = self.get_vertex(vertex_id)
                 task = asyncio.create_task(
-                    vertex.build(), name=f"layer-{layer_index}-vertex-{vertex_id}"
+                    vertex.build(),
+                    name=f"{vertex.display_name} Run {vertex_task_run_count.get(vertex_id, 0)}",
                 )
                 tasks.append(task)
+                vertex_task_run_count[vertex_id] = (
+                    vertex_task_run_count.get(vertex_id, 0) + 1
+                )
             logger.debug(f"Running layer {layer_index} with {len(tasks)} tasks")
             await self._execute_tasks(tasks)
         logger.debug("Graph processing complete")
@@ -450,6 +592,10 @@ class Graph:
                 # coroutine has not attribute get_name
                 task_name = tasks[i].get_name()
                 logger.error(f"Task {task_name} failed with exception: {e}")
+                # Cancel all remaining tasks
+                for t in tasks[i:]:
+                    t.cancel()
+                raise e
         return results
 
     def topological_sort(self) -> List[Vertex]:
@@ -500,6 +646,43 @@ class Graph:
             for source_id in self.predecessor_map.get(vertex.id, [])
         ]
 
+    def get_all_successors(self, vertex, recursive=True, flat=True):
+        # Recursively get the successors of the current vertex
+        # successors = vertex.successors
+        # if not successors:
+        #     return []
+        # successors_result = []
+        # for successor in successors:
+        #     # Just return a list of successors
+        #     if recursive:
+        #         next_successors = self.get_all_successors(successor)
+        #         successors_result.extend(next_successors)
+        #     successors_result.append(successor)
+        # return successors_result
+        # The above is the version without the flat parameter
+        # The below is the version with the flat parameter
+        # the flat parameter will define if each layer of successors
+        # becomes one list or if the result is a list of lists
+        # if flat is True, the result will be a list of vertices
+        # if flat is False, the result will be a list of lists of vertices
+        # each list will represent a layer of successors
+        successors = vertex.successors
+        if not successors:
+            return []
+        successors_result = []
+        for successor in successors:
+            if recursive:
+                next_successors = self.get_all_successors(successor)
+                if flat:
+                    successors_result.extend(next_successors)
+                else:
+                    successors_result.append(next_successors)
+            if flat:
+                successors_result.append(successor)
+            else:
+                successors_result.append([successor])
+        return successors_result
+
     def get_successors(self, vertex):
         """Returns the successors of a vertex."""
         return [
@@ -534,14 +717,21 @@ class Graph:
         # if we can't find a vertex, we raise an error
 
         edges: List[ContractEdge] = []
+        edges_added = set()
         for edge in self._edges:
             source = self.get_vertex(edge["source"])
             target = self.get_vertex(edge["target"])
+
             if source is None:
                 raise ValueError(f"Source vertex {edge['source']} not found")
             if target is None:
                 raise ValueError(f"Target vertex {edge['target']} not found")
+
+            if (source.id, target.id) in edges_added:
+                continue
+
             edges.append(ContractEdge(source, target, edge))
+            edges_added.add((source.id, target.id))
         return edges
 
     def _get_vertex_class(
@@ -554,6 +744,8 @@ class Graph:
             return ChatVertex
         elif node_name in ["ShouldRunNext"]:
             return RoutingVertex
+        elif node_name in ["SharedState", "Notify", "GetNotified"]:
+            return StateVertex
         elif node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]
         elif node_name in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
@@ -605,21 +797,53 @@ class Graph:
         )
         return f"Graph:\nNodes: {vertex_ids}\nConnections:\n{edges_repr}"
 
-    def sort_up_to_vertex(self, vertex_id: str) -> List[Vertex]:
+    def sort_up_to_vertex(self, vertex_id: str, is_start: bool = False) -> List[Vertex]:
         """Cuts the graph up to a given vertex and sorts the resulting subgraph."""
         # Initial setup
         visited = set()  # To keep track of visited vertices
+        excluded = set()  # To keep track of vertices that should be excluded
         stack = [vertex_id]  # Use a list as a stack for DFS
+
+        def get_successors(vertex, recursive=True):
+            # Recursively get the successors of the current vertex
+            successors = vertex.successors
+            if not successors:
+                return []
+            successors_result = []
+            for successor in successors:
+                # Just return a list of successors
+                if recursive:
+                    next_successors = get_successors(successor)
+                    successors_result.extend(next_successors)
+                successors_result.append(successor)
+            return successors_result
 
         # DFS to collect all vertices that can reach the specified vertex
         while stack:
             current_id = stack.pop()
-            if current_id not in visited:
+            if current_id not in visited and current_id not in excluded:
                 visited.add(current_id)
                 current_vertex = self.get_vertex(current_id)
                 # Assuming get_predecessors is a method that returns all vertices with edges to current_vertex
                 for predecessor in current_vertex.predecessors:
                     stack.append(predecessor.id)
+
+                if current_id == vertex_id:
+                    # We should add to visited all the vertices that are successors of the current vertex
+                    # and their successors and so on
+                    # if the vertex is a start, it means we are starting from the beginning
+                    # and getting successors
+                    for successor in current_vertex.successors:
+                        if is_start:
+                            stack.append(successor.id)
+                        else:
+                            excluded.add(successor.id)
+                        all_successors = get_successors(successor)
+                        for successor in all_successors:
+                            if is_start:
+                                stack.append(successor.id)
+                            else:
+                                excluded.add(successor.id)
 
         # Filter the original graph's vertices and edges to keep only those in `visited`
         vertices_to_keep = [self.get_vertex(vid) for vid in visited]
@@ -629,26 +853,48 @@ class Graph:
     def layered_topological_sort(
         self,
         vertices: List[Vertex],
+        filter_graphs: bool = False,
     ) -> List[List[str]]:
         """Performs a layered topological sort of the vertices in the graph."""
-
+        vertices_ids = {vertex.id for vertex in vertices}
         # Queue for vertices with no incoming edges
         queue = deque(
-            vertex.id for vertex in vertices if self.in_degree_map[vertex.id] == 0
+            vertex.id
+            for vertex in vertices
+            # if filter_graphs then only vertex.is_input will be considered
+            if self.in_degree_map[vertex.id] == 0
+            and (not filter_graphs or vertex.is_input)
         )
         layers: List[List[str]] = []
-
+        visited = set(queue)
         current_layer = 0
         while queue:
             layers.append([])  # Start a new layer
             layer_size = len(queue)
             for _ in range(layer_size):
                 vertex_id = queue.popleft()
+                visited.add(vertex_id)
+
                 layers[current_layer].append(vertex_id)
                 for neighbor in self.successor_map[vertex_id]:
+                    # only vertices in `vertices_ids` should be considered
+                    # because vertices by have been filtered out
+                    # in a previous step. All dependencies of theirs
+                    # will be built automatically if required
+                    if neighbor not in vertices_ids:
+                        continue
+
                     self.in_degree_map[neighbor] -= 1  # 'remove' edge
-                    if self.in_degree_map[neighbor] == 0:
+                    if self.in_degree_map[neighbor] == 0 and neighbor not in visited:
                         queue.append(neighbor)
+
+                    # if > 0 it might mean not all predecessors have added to the queue
+                    # so we should process the neighbors predecessors
+                    elif self.in_degree_map[neighbor] > 0:
+                        for predecessor in self.predecessor_map[neighbor]:
+                            if predecessor not in queue and predecessor not in visited:
+                                queue.append(predecessor)
+
             current_layer += 1  # Next layer
         new_layers = self.refine_layers(layers)
         return new_layers
@@ -708,19 +954,44 @@ class Graph:
 
         return vertices_layers
 
-    def sort_vertices(self, component_id: Optional[str] = None) -> List[List[str]]:
+    def sort_vertices(
+        self,
+        stop_component_id: Optional[str] = None,
+        start_component_id: Optional[str] = None,
+    ) -> List[str]:
         """Sorts the vertices in the graph."""
         self.mark_all_vertices("ACTIVE")
-        if component_id:
-            vertices = self.sort_up_to_vertex(component_id)
+        if stop_component_id:
+            self.stop_vertex = stop_component_id
+            vertices = self.sort_up_to_vertex(stop_component_id)
+        elif start_component_id:
+            vertices = self.sort_up_to_vertex(start_component_id, is_start=True)
         else:
             vertices = self.vertices
+            # without component_id we are probably running in the chat
+            # so we want to pick only graphs that start with ChatInput or
+            # TextInput
+
         vertices_layers = self.layered_topological_sort(vertices)
         vertices_layers = self.sort_by_avg_build_time(vertices_layers)
-        vertices_layers = self.sort_chat_inputs_first(vertices_layers)
+        # vertices_layers = self.sort_chat_inputs_first(vertices_layers)
         self.increment_run_count()
         self._sorted_vertices_layers = vertices_layers
-        return vertices_layers
+        first_layer = vertices_layers[0]
+        # save the only the rest
+        self.vertices_layers = vertices_layers[1:]
+        self.vertices_to_run = {
+            vertex_id for vertex_id in chain.from_iterable(vertices_layers)
+        }
+        # Return just the first layer
+        return first_layer
+
+    def should_run_vertex(self, vertex_id: str) -> bool:
+        """Returns whether a component should be run."""
+        should_run = vertex_id in self.vertices_to_run
+        if should_run:
+            self.vertices_to_run.remove(vertex_id)
+        return should_run
 
     def sort_interface_components_first(
         self, vertices_layers: List[List[str]]

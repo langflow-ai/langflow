@@ -9,7 +9,7 @@ import {
 
 import { useNavigate } from "react-router-dom";
 import { Node } from "reactflow";
-import { savedHover } from "../../../../constants/constants";
+import { SAVED_HOVER } from "../../../../constants/constants";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -128,7 +128,7 @@ export const MenuBar = ({
       </div>
       <ShadTooltip
         content={
-          savedHover +
+          SAVED_HOVER +
           new Date(currentFlow.updated_at ?? "").toLocaleString("en-US", {
             hour: "numeric",
             minute: "numeric",

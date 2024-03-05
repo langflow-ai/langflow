@@ -2,7 +2,17 @@ import ast
 import inspect
 import types
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, List, Optional
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Callable,
+    Coroutine,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+)
 
 from loguru import logger
 
@@ -18,6 +28,7 @@ from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.services.deps import get_storage_service
 from langflow.utils.constants import DIRECT_TYPES
+from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async
 
 if TYPE_CHECKING:
@@ -47,6 +58,7 @@ class Vertex:
         self.will_stream = False
         self.updated_raw_params = False
         self.id: str = data["id"]
+        self.is_state = False
         self.is_input = any(
             input_component_name in self.id for input_component_name in INPUT_COMPONENTS
         )
@@ -88,12 +100,9 @@ class Vertex:
 
     def update_graph_state(self, key, new_state, append: bool):
         if append:
-            if key in self.graph_state:
-                self.graph_state[key].append(new_state)
-            else:
-                self.graph_state[key] = [new_state]
+            self.graph.append_state(key, new_state, caller=self.id)
         else:
-            self.graph_state[key] = new_state
+            self.graph.update_state(key, new_state, caller=self.id)
 
     def set_state(self, state: str):
         self.state = VertexStates[state]
@@ -103,12 +112,12 @@ class Vertex:
         ):
             # If the vertex is inactive and has only one in degree
             # it means that it is not a merge point in the graph
-            self.graph.inactive_vertices.add(self.id)
+            self.graph.inactivated_vertices.add(self.id)
         elif (
             self.state == VertexStates.ACTIVE
-            and self.id in self.graph.inactive_vertices
+            and self.id in self.graph.inactivated_vertices
         ):
-            self.graph.inactive_vertices.remove(self.id)
+            self.graph.inactivated_vertices.remove(self.id)
 
     @property
     def avg_build_time(self):
@@ -133,6 +142,8 @@ class Vertex:
             if not isinstance(result, (dict, str)) and hasattr(result, "content"):
                 return result.content
             return result
+        if isinstance(self._built_object, str):
+            self._built_result = self._built_object
 
         if isinstance(self._built_result, UnbuiltResult):
             return {}
@@ -157,6 +168,10 @@ class Vertex:
     def successors(self) -> List["Vertex"]:
         return self.graph.get_successors(self)
 
+    @property
+    def successors_ids(self) -> List[str]:
+        return self.graph.successor_map.get(self.id, [])
+
     def __getstate__(self):
         return {
             "_data": self._data,
@@ -176,7 +191,7 @@ class Vertex:
         self.base_type = state["base_type"]
         self.is_task = state["is_task"]
         self.id = state["id"]
-        self.pinned = state.get("pinned", False)
+        self.frozen = state.get("frozen", False)
         self._parse_data()
         if "_built_object" in state:
             self._built_object = state["_built_object"]
@@ -202,7 +217,7 @@ class Vertex:
         self.data = self._data["data"]
         self.output = self.data["node"]["base_classes"]
         self.display_name = self.data["node"].get("display_name", self.id.split("-")[0])
-        self.pinned = self.data["node"].get("pinned", False)
+        self.frozen = self.data["node"].get("frozen", False)
         self.selected_output_type = self.data["node"].get("selected_output_type")
         self.is_input = self.data["node"].get("is_input") or self.is_input
         self.is_output = self.data["node"].get("is_output") or self.is_output
@@ -368,7 +383,7 @@ class Vertex:
         self.params = params
         self._raw_params = params.copy()
 
-    def update_raw_params(self, new_params: Dict[str, str]):
+    def update_raw_params(self, new_params: Dict[str, str], overwrite: bool = False):
         """
         Update the raw parameters of the vertex with the given new parameters.
 
@@ -383,6 +398,10 @@ class Vertex:
             return
         if any(isinstance(self._raw_params.get(key), Vertex) for key in new_params):
             return
+        if not overwrite:
+            for key in new_params.copy():
+                if key not in self._raw_params:
+                    new_params.pop(key)
         self._raw_params.update(new_params)
         self.updated_raw_params = True
 
@@ -397,15 +416,43 @@ class Vertex:
 
         self._built = True
 
+    def extract_messages_from_artifacts(self, artifacts: Dict[str, Any]) -> List[str]:
+        """
+        Extracts messages from the artifacts.
+
+        Args:
+            artifacts (Dict[str, Any]): The artifacts to extract messages from.
+
+        Returns:
+            List[str]: The extracted messages.
+        """
+        messages = []
+        for key, artifact in artifacts.items():
+            if not isinstance(artifact, dict):
+                continue
+            if "message" in artifact:
+                chat_output_response = ChatOutputResponse(
+                    message=artifact["message"],
+                    sender=artifact.get("sender"),
+                    sender_name=artifact.get("sender_name"),
+                    session_id=artifact.get("session_id"),
+                    component_id=self.id,
+                )
+                messages.append(chat_output_response.model_dump(exclude_none=True))
+
+        return messages
+
     def _finalize_build(self):
         result_dict = self.get_built_result()
         # We need to set the artifacts to pass information
         # to the frontend
         self.set_artifacts()
         artifacts = self.artifacts
+        messages = self.extract_messages_from_artifacts(artifacts)
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,
+            messages=messages,
         )
         self.set_result(result_dict)
 
@@ -506,12 +553,25 @@ class Vertex:
         self.params[key] = []
         for node in nodes:
             built = await node.get_result(requester=self, user_id=user_id)
+            # Weird check to see if the params[key] is a list
+            # because sometimes it is a Record and breaks the code
+            if not isinstance(self.params[key], list):
+                self.params[key] = [self.params[key]]
+
             if isinstance(built, list):
-                if key not in self.params:
-                    self.params[key] = []
                 self.params[key].extend(built)
             else:
-                self.params[key].append(built)
+                try:
+                    if self.params[key] == built:
+                        continue
+
+                    self.params[key].append(built)
+                except AttributeError as e:
+                    logger.exception(e)
+                    raise ValueError(
+                        f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {built}"
+                        f"Error building node {self.display_name}: {str(e)}"
+                    ) from e
 
     def _handle_func(self, key, result):
         """
@@ -581,6 +641,11 @@ class Vertex:
                 message += " Make sure your build method returns a component."
 
             logger.warning(message)
+        elif isinstance(self._built_object, (Iterator, AsyncIterator)):
+            if self.display_name in ["Text Output"]:
+                raise ValueError(
+                    f"You are trying to stream to a {self.display_name}. Try using a Chat Output instead."
+                )
 
     def _reset(self, params_update: Optional[Dict[str, Any]] = None):
         self._built = False
@@ -589,6 +654,9 @@ class Vertex:
         self.artifacts = {}
         self.steps_ran = []
         self._build_params()
+
+    def _is_chat_input(self):
+        return False
 
     def build_inactive(self):
         # Just set the results to None
@@ -608,11 +676,15 @@ class Vertex:
             self.build_inactive()
             return
 
-        if self.pinned and self._built:
+        if self.frozen and self._built:
             return self.get_requester_result(requester)
+        elif self._built and requester is not None:
+            # This means that the vertex has already been built
+            # and we are just getting the result for the requester
+            return await self.get_requester_result(requester)
         self._reset()
 
-        if self.is_input and inputs is not None:
+        if self._is_chat_input() and inputs is not None:
             self.update_raw_params(inputs)
 
         # Run steps
@@ -656,7 +728,15 @@ class Vertex:
 
     def __eq__(self, __o: object) -> bool:
         try:
-            return self.id == __o.id if isinstance(__o, Vertex) else False
+            if not isinstance(__o, Vertex):
+                return False
+            # We should create a more robust comparison
+            # for the Vertex class
+            ids_are_equal = self.id == __o.id
+            # self._data is a dict and we need to compare them
+            # to check if they are equal
+            data_are_equal = self.data == __o.data
+            return ids_are_equal and data_are_equal
         except AttributeError:
             return False
 
@@ -670,11 +750,3 @@ class Vertex:
             if self._built_object is not None
             else "Failed to build 😵‍💫"
         )
-
-
-class StatefulVertex(Vertex):
-    pass
-
-
-class StatelessVertex(Vertex):
-    pass

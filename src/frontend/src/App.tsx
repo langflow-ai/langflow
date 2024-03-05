@@ -18,7 +18,6 @@ import { getHealth } from "./controllers/API";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
-import useFlowStore from "./stores/flowStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
@@ -45,32 +44,6 @@ export default function App() {
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
 
-  const handleModalWShortcut = useFlowStore(
-    (state) => state.handleModalWShortcut
-  );
-  const nodes = useFlowStore((state) => state.nodes);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const selectedNode = nodes.filter((obj) => obj.selected);
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key === "C" &&
-        selectedNode.length > 0
-      ) {
-        event.preventDefault();
-        handleModalWShortcut("code");
-      }
-    };
-
-    document.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [handleModalWShortcut, nodes]);
-
   useEffect(() => {
     refreshStars();
     refreshVersion();
@@ -96,7 +69,7 @@ export default function App() {
         .catch(() => {
           setFetchError(true);
         });
-    }, 20000);
+    }, 20000); // 20 seconds
 
     // Clean up the timer on component unmount
     return () => {

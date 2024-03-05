@@ -25,15 +25,23 @@ export function getTagsIds(
 }
 
 export function getInputsAndOutputs(nodes: Node[]) {
-  let inputs: { type: string; id: string }[] = [];
-  let outputs: { type: string; id: string }[] = [];
+  let inputs: { type: string; id: string; displayName: string }[] = [];
+  let outputs: { type: string; id: string; displayName: string }[] = [];
   nodes.forEach((node) => {
     const nodeData: NodeDataType = node.data as NodeDataType;
     if (isOutputNode(nodeData)) {
-      outputs.push({ type: nodeData.type, id: nodeData.id });
+      outputs.push({
+        type: nodeData.type,
+        id: nodeData.id,
+        displayName: nodeData.node?.display_name ?? nodeData.id,
+      });
     }
     if (isInputNode(nodeData)) {
-      inputs.push({ type: nodeData.type, id: nodeData.id });
+      inputs.push({
+        type: nodeData.type,
+        id: nodeData.id,
+        displayName: nodeData.node?.display_name ?? nodeData.id,
+      });
     }
   });
   return { inputs, outputs };
