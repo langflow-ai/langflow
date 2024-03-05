@@ -1,8 +1,9 @@
 from cachetools import LRUCache, cached
-
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
-from langflow.interface.custom.directory_reader.utils import merge_nested_dicts_with_renaming
+from langflow.interface.custom.directory_reader.utils import (
+    merge_nested_dicts_with_renaming,
+)
 from langflow.interface.custom.utils import build_custom_components
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
@@ -13,7 +14,6 @@ from langflow.interface.retrievers.base import retriever_creator
 from langflow.interface.text_splitters.base import textsplitter_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
-from langflow.interface.utilities.base import utility_creator
 from langflow.interface.wrappers.base import wrapper_creator
 
 
@@ -48,7 +48,7 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
         # vectorstore_creator,
         documentloader_creator,
         textsplitter_creator,
-        utility_creator,
+        # utility_creator,
         output_parser_creator,
         retriever_creator,
     ]
@@ -66,4 +66,6 @@ def get_all_types_dict(settings_service):
     """Get all types dictionary combining native and custom components."""
     native_components = build_langchain_types_dict()
     custom_components_from_file = build_custom_components(settings_service)
-    return merge_nested_dicts_with_renaming(native_components, custom_components_from_file)
+    return merge_nested_dicts_with_renaming(
+        native_components, custom_components_from_file
+    )
