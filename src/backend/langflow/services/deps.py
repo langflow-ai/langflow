@@ -3,7 +3,9 @@ from typing import TYPE_CHECKING, Generator
 from langflow.services import ServiceType, service_manager
 
 if TYPE_CHECKING:
-    from langflow.services.cache.service import BaseCacheService
+    from sqlmodel import Session
+
+    from langflow.services.cache.service import CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.credentials.service import CredentialService
     from langflow.services.database.service import DatabaseService
@@ -15,11 +17,10 @@ if TYPE_CHECKING:
     from langflow.services.storage.service import StorageService
     from langflow.services.store.service import StoreService
     from langflow.services.task.service import TaskService
-    from sqlmodel import Session
 
 
 def get_socket_service() -> "SocketIOService":
-    return service_manager.get(ServiceType.SOCKET_IO_SERVICE)  # type: ignore
+    return service_manager.get(ServiceType.SOCKETIO_SERVICE)  # type: ignore
 
 
 def get_storage_service() -> "StorageService":
@@ -54,7 +55,7 @@ def get_session() -> Generator["Session", None, None]:
     yield from db_service.get_session()
 
 
-def get_cache_service() -> "BaseCacheService":
+def get_cache_service() -> "CacheService":
     return service_manager.get(ServiceType.CACHE_SERVICE)  # type: ignore
 
 

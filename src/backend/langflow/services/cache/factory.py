@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from langflow.services.cache.service import BaseCacheService, InMemoryCache, RedisCache
+from langflow.services.cache.service import CacheService, InMemoryCache, RedisCache
 from langflow.services.factory import ServiceFactory
 from langflow.utils.logger import logger
 
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 class CacheServiceFactory(ServiceFactory):
     def __init__(self):
-        super().__init__(BaseCacheService)
+        super().__init__(CacheService)
 
     def create(self, settings_service: "SettingsService"):
         # Here you would have logic to create and configure a CacheService
@@ -28,7 +28,9 @@ class CacheServiceFactory(ServiceFactory):
             if redis_cache.is_connected():
                 logger.debug("Redis cache is connected")
                 return redis_cache
-            logger.warning("Redis cache is not connected, falling back to in-memory cache")
+            logger.warning(
+                "Redis cache is not connected, falling back to in-memory cache"
+            )
             return InMemoryCache()
 
         elif settings_service.settings.CACHE_TYPE == "memory":
