@@ -19,7 +19,7 @@ test.describe("Flow Page tests", () => {
     await page.waitForTimeout(2000);
 
     await page
-      .locator('//*[@id="custom_componentsCustomComponent"]')
+      .locator('//*[@id="utilitiesCustomComponent"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
