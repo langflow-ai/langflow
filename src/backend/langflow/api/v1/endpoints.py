@@ -7,20 +7,29 @@ from loguru import logger
 from sqlmodel import Session, select
 
 from langflow.api.utils import update_frontend_node_with_template_values
-from langflow.api.v1.schemas import (CustomComponentCode, InputValueRequest,
-                                     ProcessResponse, RunResponse,
-                                     TaskStatusResponse, UploadFileResponse)
+from langflow.api.v1.schemas import (
+    CustomComponentCode,
+    InputValueRequest,
+    ProcessResponse,
+    RunResponse,
+    TaskStatusResponse,
+    Tweaks,
+    UploadFileResponse,
+)
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import build_custom_component_template
 from langflow.processing.process import process_tweaks, run_graph
-from langflow.services.auth.utils import (api_key_security,
-                                          get_current_active_user)
+from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import (get_session, get_session_service,
-                                    get_settings_service, get_task_service)
+from langflow.services.deps import (
+    get_session,
+    get_session_service,
+    get_settings_service,
+    get_task_service,
+)
 from langflow.services.session.service import SessionService
 from langflow.services.task.service import TaskService
 
@@ -50,12 +59,49 @@ async def run_flow_with_caching(
     flow_id: str,
     inputs: Optional[List[InputValueRequest]] = None,
     outputs: Optional[List[str]] = None,
-    tweaks: Optional[dict] = None,
+    tweaks: Annotated[Optional[Tweaks], Body(embed=True)] = None,  # noqa: F821
     stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
     api_key_user: User = Depends(api_key_security),
     session_service: SessionService = Depends(get_session_service),
 ):
+    """
+    Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.
+    This endpoint supports running flows with caching to enhance performance and efficiency.
+
+    ### Parameters:
+    - `flow_id` (str): The unique identifier of the flow to be executed.
+    - `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components for the flow. Each input can target specific components and provide custom values.
+    - `outputs` (List[str], optional): A list of output names to retrieve from the executed flow. If not provided, all outputs are returned.
+    - `tweaks` (Optional[Tweaks], optional): A dictionary of tweaks to customize the flow execution. The tweaks can be used to modify the flow's parameters and components. Tweaks can be overridden by the input values.
+    - `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.
+    - `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow execution.
+    - `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.
+    - `session_service` (SessionService): The session service object for managing flow sessions.
+
+    ### Returns:
+    A `RunResponse` object containing the selected outputs (or all if not specified) of the executed flow and the session ID. The structure of the response accommodates multiple inputs, providing a nested list of outputs for each input.
+
+    ### Raises:
+    HTTPException: Indicates issues with finding the specified flow, invalid input formats, or internal errors during flow execution.
+
+    ### Example usage:
+    ```json
+    POST /run/{flow_id}
+    Payload:
+    {
+        "inputs": [
+            {"components": ["component1"], "input_value": "value1"},
+            {"components": ["component3"], "input_value": "value2"}
+        ],
+        "outputs": ["Component Name", "component_id"],
+        "tweaks": {"parameter_name": "value", "Component Name": {"parameter_name": "value"}, "component_id": {"parameter_name": "value"}}
+        "stream": false
+    }
+    ```
+
+    This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations, catering to diverse application requirements.
+    """
     try:
         if inputs is not None:
             input_values_dict: dict[str, Union[str, list[str]]] = inputs.model_dump()

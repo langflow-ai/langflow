@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator, model_serializer
+from pydantic import BaseModel, Field, RootModel, field_validator, model_serializer
 
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
@@ -246,7 +246,7 @@ class VerticesBuiltResponse(BaseModel):
 
 class InputValueRequest(BaseModel):
     components: Optional[List[str]] = None
-    input_value: Optional[List[str]] = None
+    input_value: Optional[str] = None
 
     # add an example
     model_config = {
@@ -254,13 +254,40 @@ class InputValueRequest(BaseModel):
             "examples": [
                 {
                     "components": ["components_id", "Component Name"],
-                    "input_value": ["input_value"],
+                    "input_value": "input_value",
                 },
-                {"components": ["Component Name"], "input_value": ["input_value"]},
-                {"input_value": ["input_value"]},
-                {
-                    "input_value": ["input_value1", "input_value2"],
-                },
+                {"components": ["Component Name"], "input_value": "input_value"},
+                {"input_value": "input_value"},
             ]
         }
     }
+
+
+class Tweaks(RootModel):
+    root: dict[str, Union[str, dict[str, str]]] = Field(
+        description="A dictionary of tweaks to adjust the flow's execution. Allows customizing flow behavior dynamically. All tweaks are overridden by the input values.",
+    )
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "parameter_name": "value",
+                    "Component Name": {"parameter_name": "value"},
+                    "component_id": {"parameter_name": "value"},
+                }
+            ]
+        }
+    }
+
+    # This should behave like a dict
+    def __getitem__(self, key):
+        return self.root[key]
+
+    def __setitem__(self, key, value):
+        self.root[key] = value
+
+    def __delitem__(self, key):
+        del self.root[key]
+
+    def items(self):
+        return self.root.items()
