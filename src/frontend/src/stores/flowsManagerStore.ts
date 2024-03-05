@@ -37,6 +37,10 @@ const past = {};
 const future = {};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
+  examples:[],
+  setExamples: (examples: FlowType[]) => {
+    set({ examples });
+  },
   currentFlowId: "",
   setCurrentFlowId: (currentFlowId: string) => {
     set((state) => ({

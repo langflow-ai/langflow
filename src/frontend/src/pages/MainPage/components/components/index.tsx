@@ -14,6 +14,7 @@ import {
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { FlowType } from "../../../../types/flow";
+import { STARTER_FOLDER_NAME } from "../../../../constants/constants";
 
 export default function ComponentsComponent({
   is_component = true,
@@ -24,6 +25,7 @@ export default function ComponentsComponent({
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const removeFlow = useFlowsManagerStore((state) => state.removeFlow);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
+  const setExamples = useFlowsManagerStore((state) => state.setExamples);
   const flows = useFlowsManagerStore((state) => state.flows);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -35,7 +37,7 @@ export default function ComponentsComponent({
 
   useEffect(() => {
     if (isLoading) return;
-    const all = flows
+    let all = flows
       .filter((f) => (f.is_component ?? false) === is_component)
       .sort((a, b) => {
         if (a?.updated_at && b?.updated_at) {
@@ -56,6 +58,10 @@ export default function ComponentsComponent({
       });
     const start = (pageIndex - 1) * pageSize;
     const end = start + pageSize;
+    const examples = all.filter(f=>(f.folder===STARTER_FOLDER_NAME && !f.user_id));
+    console.log(examples);
+    setExamples(examples);
+    all = all.filter(f=>!(f.folder===STARTER_FOLDER_NAME && !f.user_id));;
     setData(all.slice(start, end));
   }, [flows, isLoading, pageIndex, pageSize]);
 

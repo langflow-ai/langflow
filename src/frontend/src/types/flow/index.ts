@@ -13,6 +13,8 @@ export type FlowType = {
   updated_at?: string;
   date_created?: string;
   parent?: string;
+  folder?: string;
+  user_id?: string;
 };
 
 export type NodeType = {

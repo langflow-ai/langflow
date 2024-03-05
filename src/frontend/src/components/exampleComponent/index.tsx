@@ -19,6 +19,7 @@ import {
     CardTitle,
 } from "../ui/card";
 import { FlowType } from "../../types/flow";
+import { Link } from "react-router-dom";
 
 export default function CollectionCardComponent({
     data,
@@ -58,6 +59,7 @@ export default function CollectionCardComponent({
             <CardFooter>
                 <div className="flex w-full items-center justify-between gap-2">
                     <div className="flex w-full justify-end flex-wrap gap-2">
+                    <Link to={"/flow/" + data.id}>
                         <Button
                             tabIndex={-1}
                             variant="outline"
@@ -70,6 +72,7 @@ export default function CollectionCardComponent({
                             />
                             Select Flow
                         </Button>
+                        </Link>
                     </div>
                 </div>
             </CardFooter>
