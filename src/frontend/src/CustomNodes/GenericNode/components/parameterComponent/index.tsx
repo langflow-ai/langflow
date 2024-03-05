@@ -296,17 +296,6 @@ export default function ParameterComponent({
     renderTooltips();
   }, [tooltipTitle, flow]);
 
-  const hasInputOutput =
-    type != "str" &&
-    type != "dict" &&
-    type != "Document" &&
-    type != "float" &&
-    type != "bool" &&
-    type != "int" &&
-    type != "NestedDict" &&
-    type != "prompt" &&
-    type != "file";
-
   const changeConnectionValidColor = (connection: any) => {
     const targetHandle = connection.targetHandle; //left
     const targetElement = document.querySelector<HTMLElement>(
@@ -325,12 +314,6 @@ export default function ParameterComponent({
     left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
       <></>
     ) : (
-      // <ShadTooltip
-      //   styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-      //   delayDuration={0}
-      //   content={refHtml.current}
-      //   side={"bottom"}
-      // >
       <Handle
         type={left ? "target" : "source"}
         position={left ? Position.Left : Position.Right}
@@ -362,13 +345,12 @@ export default function ParameterComponent({
           setFilterEdge(groupedEdge.current);
         }}
       ></Handle>
-      // </ShadTooltip>
     )
   ) : (
     <div
       ref={ref}
       className={
-        "relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
+        "relative  mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
         ((name === "code" && type === "code") ||
         (name.includes("code") && proxy)
           ? " hidden "
@@ -378,7 +360,7 @@ export default function ParameterComponent({
       <>
         <div
           className={
-            "w-full truncate text-sm" +
+            "pointer-events-none z-50 w-full truncate text-sm" +
             (left ? "" : " flex items-center justify-end gap-2") +
             (info !== "" ? " flex items-center" : "")
           }
