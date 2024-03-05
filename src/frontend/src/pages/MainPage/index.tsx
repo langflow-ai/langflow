@@ -29,6 +29,7 @@ export default function HomePage(): JSX.Element {
   const location = useLocation();
   const pathname = location.pathname;
   const [openModal, setOpenModal] = useState(false);
+  const examples = useFlowsManagerStore((state) => state.examples);
   const is_component = pathname === "/components";
   const dropdownOptions = [
     {
@@ -128,10 +129,10 @@ export default function HomePage(): JSX.Element {
         </BaseModal.Header>
         <BaseModal.Content>
           <div className="flex flex-wrap w-full h-full p-4 gap-3">
-            <ExampleCardComponent data={
-              { data: { edges: [], nodes: [], viewport: { x: 0, y: 0, zoom: 1 } }, 
-            description: "test description",id:"teste",name:"test name",}
-            } />
+            {examples.map((example, idx) => {
+              return( 
+              <ExampleCardComponent data={example} />)
+            })}
             <NewFlowCardComponent/>
             </div>
         </BaseModal.Content>
