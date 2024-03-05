@@ -1,5 +1,5 @@
 import { Group, ToyBrick } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../components/DropdownButtonComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -14,6 +14,9 @@ import {
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { downloadFlows } from "../../utils/reactflowUtils";
+import BaseModal from "../../modals/baseModal";
+import ExampleCardComponent from "../../components/exampleComponent";
+import NewFlowCardComponent from "../../components/NewFlowCardComponent";
 export default function HomePage(): JSX.Element {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
@@ -25,6 +28,7 @@ export default function HomePage(): JSX.Element {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const location = useLocation();
   const pathname = location.pathname;
+  const [openModal, setOpenModal] = useState(false);
   const is_component = pathname === "/components";
   const dropdownOptions = [
     {
@@ -36,9 +40,8 @@ export default function HomePage(): JSX.Element {
         })
           .then((id) => {
             setSuccessData({
-              title: `${
-                is_component ? "Component" : "Flow"
-              } uploaded successfully`,
+              title: `${is_component ? "Component" : "Flow"
+                } uploaded successfully`,
             });
             if (!is_component) navigate("/flow/" + id);
           })
@@ -98,11 +101,7 @@ export default function HomePage(): JSX.Element {
           </Button>
           <DropdownButton
             firstButtonName="New Project"
-            onFirstBtnClick={() => {
-              addFlow(true).then((id) => {
-                navigate("/flow/" + id);
-              });
-            }}
+            onFirstBtnClick={() => setOpenModal(true)}
             options={dropdownOptions}
           />
         </div>
@@ -116,6 +115,27 @@ export default function HomePage(): JSX.Element {
           <Outlet />
         </div>
       </div>
+      <BaseModal open={openModal} setOpen={setOpenModal}>
+        <BaseModal.Header description={"Select a template or start from scratch"}>
+          <span className="pr-2" data-testid="modal-title">
+            Create a New Flow
+          </span>
+          <IconComponent
+            name="Group"
+            className="h-6 w-6 text-primary stroke-2 "
+            aria-hidden="true"
+          />
+        </BaseModal.Header>
+        <BaseModal.Content>
+          <div className="flex flex-wrap w-full h-full p-4 gap-3">
+            <ExampleCardComponent data={
+              { data: { edges: [], nodes: [], viewport: { x: 0, y: 0, zoom: 1 } }, 
+            description: "test description",id:"teste",name:"test name",}
+            } />
+            <NewFlowCardComponent/>
+            </div>
+        </BaseModal.Content>
+      </BaseModal>
     </PageLayout>
   );
 }

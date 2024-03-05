@@ -5,8 +5,11 @@ import {
   Bell,
   BookMarked,
   BookmarkPlus,
+  PlusCircle,
+  PlusSquare,
   Bot,
   Boxes,
+  GitCompare,
   Braces,
   Check,
   CheckCircle2,
@@ -392,6 +395,8 @@ export const nodeIconsLucide: iconsType = {
   Circle,
   CircleDot,
   Clipboard,
+  PlusCircle,
+  PlusSquare,
   Code2,
   Variable,
   Snowflake,
@@ -469,3 +474,4 @@ export const nodeIconsLucide: iconsType = {
   Delete,
   Command,
 };
+
