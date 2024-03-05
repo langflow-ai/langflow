@@ -211,7 +211,7 @@ export default function NodeToolbarComponent({
 
   const [openModal, setOpenModal] = useState(false);
   const hasCode = Object.keys(data.node!.template).includes("code");
-
+  
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (
@@ -273,22 +273,17 @@ export default function NodeToolbarComponent({
       if (
         selected &&
         (event.ctrlKey || event.metaKey) &&
-        event.key === "s" &&
-        isSaved
+        event.key === "s"
       ) {
-        event.preventDefault();
-        return setShowOverrideModal((state) => !state);
-      }
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "s" &&
-        hasCode
-      ) {
-        event.preventDefault();
-        saveComponent(cloneDeep(data), false);
-        setSuccessData({title: `${data.id} saved successfully`})
-        unselectAll();
+        if (isSaved) {
+          event.preventDefault();
+          return setShowOverrideModal((state) => !state);
+        }
+        if (hasCode) {
+          event.preventDefault();
+          saveComponent(cloneDeep(data), false);
+          setSuccessData({title: `${data.id} saved successfully`})
+        }
       }
       if (
         selected &&
@@ -307,7 +302,7 @@ export default function NodeToolbarComponent({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, []);
+  }, [isSaved]);
 
   return (
     <>
