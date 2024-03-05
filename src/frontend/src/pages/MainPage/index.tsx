@@ -131,7 +131,7 @@ export default function HomePage(): JSX.Element {
           <div className="flex flex-wrap w-full h-full p-4 gap-3">
             {examples.map((example, idx) => {
               return( 
-              <ExampleCardComponent data={example} />)
+              <ExampleCardComponent flow={example} />)
             })}
             <NewFlowCardComponent/>
             </div>

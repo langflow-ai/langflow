@@ -19,15 +19,17 @@ import {
     CardTitle,
 } from "../ui/card";
 import { FlowType } from "../../types/flow";
-import { Link } from "react-router-dom";
+import { updateIds } from "../../utils/reactflowUtils";
+import { useNavigate } from "react-router-dom";
 
 export default function CollectionCardComponent({
-    data,
+    flow,
 }: {
-    data: FlowType;
+    flow: FlowType;
     authorized?: boolean;
 }) {
     const addFlow = useFlowsManagerStore((state) => state.addFlow);
+    const navigate = useNavigate();
 
     return (
         <Card
@@ -45,13 +47,13 @@ export default function CollectionCardComponent({
                                 )}
                                 name="Group"
                             />
-                            <ShadTooltip content={data.name}>
-                                <div className="w-full truncate">{data.name}</div>
+                            <ShadTooltip content={flow.name}>
+                                <div className="w-full truncate">{flow.name}</div>
                             </ShadTooltip>
                         </CardTitle>
                     </div>
                     <CardDescription className="pb-2 pt-2">
-                        <div className="truncate-doubleline">{data.description}</div>
+                        <div className="truncate-doubleline">{flow.description}</div>
                     </CardDescription>
                 </CardHeader>
             </div>
@@ -59,20 +61,25 @@ export default function CollectionCardComponent({
             <CardFooter>
                 <div className="flex w-full items-center justify-between gap-2">
                     <div className="flex w-full justify-end flex-wrap gap-2">
-                    <Link to={"/flow/" + data.id}>
-                        <Button
-                            tabIndex={-1}
-                            variant="outline"
-                            size="sm"
-                            className="whitespace-nowrap "
-                        >
-                            <IconComponent
-                                name="ExternalLink"
-                                className="main-page-nav-button select-none"
-                            />
-                            Select Flow
-                        </Button>
-                        </Link>
+                            <Button
+                                onClick={() => {
+                                    updateIds(flow.data!)
+                                    addFlow(true, flow).then((id) => {
+
+                                        navigate("/flow/" + id);
+                                    });
+                                }}
+                                tabIndex={-1}
+                                variant="outline"
+                                size="sm"
+                                className="whitespace-nowrap "
+                            >
+                                <IconComponent
+                                    name="ExternalLink"
+                                    className="main-page-nav-button select-none"
+                                />
+                                Select Flow
+                            </Button>
                     </div>
                 </div>
             </CardFooter>
