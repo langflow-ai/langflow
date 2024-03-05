@@ -126,7 +126,7 @@ export default function CodeTabsComponent({
     <Tabs
       value={activeTab}
       className={
-        "api-modal-tabs " +
+        "api-modal-tabs m-0 inset-0 " +
         (isMessage ? "dark " : "") +
         (dark && isMessage ? "bg-background" : "")
       }
@@ -166,7 +166,7 @@ export default function CodeTabsComponent({
               ) : (
                 <IconComponent name="Clipboard" className="h-4 w-4" />
               )}
-              {isCopied ? "Copied!" : "Copy code"}
+              {isCopied ? "Copied!" : "Copy Code"}
             </button>
             <button
               className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
@@ -181,7 +181,7 @@ export default function CodeTabsComponent({
       {tabs.map((tab, idx) => (
         <TabsContent
           value={idx.toString()}
-          className="api-modal-tabs-content"
+          className="api-modal-tabs-content overflow-hidden"
           key={idx} // Remember to add a unique key prop
         >
           {idx < 4 ? (
@@ -193,9 +193,9 @@ export default function CodeTabsComponent({
                 ></div>
               )}
               <SyntaxHighlighter
-                className="mt-0 h-full w-full overflow-auto custom-scroll"
-                language={tab.mode}
+                language={tab.language}
                 style={oneDark}
+                className="mt-0 h-full overflow-auto custom-scroll rounded-sm text-left" 
               >
                 {tab.code}
               </SyntaxHighlighter>

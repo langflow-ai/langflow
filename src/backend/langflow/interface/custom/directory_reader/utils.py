@@ -1,6 +1,9 @@
-from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from loguru import logger
+
+from langflow.interface.custom.directory_reader import DirectoryReader
+from langflow.template.frontend_node.custom_components import (
+    CustomComponentFrontendNode,
+)
 
 
 def merge_nested_dicts_with_renaming(dict1, dict2):
@@ -136,12 +139,12 @@ def determine_component_name(component):
 def build_menu_items(menu_item):
     """Build menu items for a given menu."""
     menu_items = {}
+    logger.debug(f"Building menu items for {menu_item['name']}")
+    logger.debug(f"Loading {len(menu_item['components'])} components")
     for component_name, component_template, component in menu_item["components"]:
         try:
             menu_items[component_name] = component_template
-            logger.debug(f"Added {component_name} to valid menu.")
         except Exception as exc:
             logger.error(f"Error loading Component: {component['output_types']}")
             logger.exception(f"Error while building custom component {component['output_types']}: {exc}")
-    return menu_items
     return menu_items

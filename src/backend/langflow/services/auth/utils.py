@@ -11,7 +11,11 @@ from starlette.websockets import WebSocket
 
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.api_key.crud import check_key
-from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
+from langflow.services.database.models.user.crud import (
+    get_user_by_id,
+    get_user_by_username,
+    update_user_last_login_at,
+)
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
 
@@ -323,7 +327,7 @@ def add_padding(s):
 
 def get_fernet(settings_service=Depends(get_settings_service)):
     SECRET_KEY = settings_service.auth_settings.SECRET_KEY
-    # It's important that your secret key is 32 url-safe base64-encoded bytes
+    # It's important that your secret key is 32 url-safe base64-encoded byte
     padded_secret_key = add_padding(SECRET_KEY)
     fernet = Fernet(padded_secret_key)
     return fernet

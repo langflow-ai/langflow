@@ -1,5 +1,4 @@
 import { Edge, Node, Viewport } from "reactflow";
-import { BuildStatus } from "../../constants/enums";
 import { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
@@ -19,6 +18,8 @@ export type APIClassType = {
   template: APITemplateType;
   display_name: string;
   icon?: string;
+  is_input?: boolean;
+  is_output?: boolean;
   input_types?: Array<string>;
   output_types?: Array<string>;
   custom_fields?: CustomFieldsType;
@@ -26,7 +27,7 @@ export type APIClassType = {
   documentation: string;
   error?: string;
   official?: boolean;
-  pinned?: boolean;
+  frozen?: boolean;
   flow?: FlowType;
   [key: string]:
     | Array<string>
@@ -37,7 +38,6 @@ export type APIClassType = {
     | CustomFieldsType
     | boolean
     | undefined;
-  build_status?: BuildStatus;
 };
 
 export type TemplateVariableType = {
@@ -54,6 +54,7 @@ export type TemplateVariableType = {
   input_types?: Array<string>;
   display_name?: string;
   name?: string;
+  refresh?: boolean;
   [key: string]: any;
 };
 export type sendAllProps = {
@@ -134,13 +135,26 @@ export type Component = {
 };
 
 export type VerticesOrderTypeAPI = {
-  ids: Array<Array<string>>;
+  ids: Array<string>;
+  run_id: string;
 };
 
 export type VertexBuildTypeAPI = {
   id: string;
+  inactivated_vertices: Array<string> | null;
+  next_vertices_ids: Array<string>;
+  run_id: string;
   valid: boolean;
   params: string;
+  data: VertexDataTypeAPI;
+  timestamp: string;
+};
+
+// data is the object received by the API
+// it has results, artifacts, timedelta, duration
+export type VertexDataTypeAPI = {
   results: { [key: string]: { [key: string]: string } };
   artifacts: { [key: string]: string };
+  timedelta?: number;
+  duration?: string;
 };

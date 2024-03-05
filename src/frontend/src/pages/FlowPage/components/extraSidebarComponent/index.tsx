@@ -4,6 +4,7 @@ import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
+import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
@@ -25,6 +26,7 @@ import {
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
+import { sortKeys } from "./utils";
 
 export default function ExtraSidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
@@ -255,7 +257,7 @@ export default function ExtraSidebar(): JSX.Element {
                 uploadFlow({ newProject: false, isComponent: false }).catch(
                   (error) => {
                     setErrorData({
-                      title: "Error uploading file",
+                      title: UPLOAD_ERROR_ALERT,
                       list: [error],
                     });
                   }
@@ -319,19 +321,7 @@ export default function ExtraSidebar(): JSX.Element {
 
       <div className="side-bar-components-div-arrangement">
         {Object.keys(dataFilter)
-          .sort((a, b) => {
-            if (a.toLowerCase() === "saved_components") {
-              return -1;
-            } else if (b.toLowerCase() === "saved_components") {
-              return 1;
-            } else if (a.toLowerCase() === "custom_components") {
-              return -2;
-            } else if (b.toLowerCase() === "custom_components") {
-              return 2;
-            } else {
-              return a.localeCompare(b);
-            }
-          })
+          .sort(sortKeys)
           .map((SBSectionName: keyof APIObjectType, index) =>
             Object.keys(dataFilter[SBSectionName]).length > 0 ? (
               <DisclosureComponent

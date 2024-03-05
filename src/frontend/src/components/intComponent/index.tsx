@@ -45,6 +45,7 @@ export default function IntComponent({
         onChange={(event) => {
           onChange(event.target.value);
         }}
+        data-testid={id}
       />
     </div>
   );

@@ -1,5 +1,6 @@
-import { cloneDeep } from "lodash";
+import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
+import { useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -25,7 +26,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { classNames } from "../../../../utils/utils";
+import { classNames, cn } from "../../../../utils/utils";
 
 export default function NodeToolbarComponent({
   data,
@@ -35,6 +36,7 @@ export default function NodeToolbarComponent({
   numberOfHandles,
   showNode,
   name = "code",
+  selected,
   onCloseAdvancedModal,
 }: nodeToolbarPropsType): JSX.Element {
   const nodeLength = Object.keys(data.node!.template).filter(
@@ -60,6 +62,7 @@ export default function NodeToolbarComponent({
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
+  const frozen = data.node?.frozen ?? false;
   const paste = useFlowStore((state) => state.paste);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -80,13 +83,16 @@ export default function NodeToolbarComponent({
     window.open(url, "_blank", "noreferrer");
   };
 
-
   useEffect(() => {
     if (!showModalAdvanced) {
       onCloseAdvancedModal!(false);
     }
   }, [showModalAdvanced]);
+  const updateNodeInternals = useUpdateNodeInternals();
 
+  const setLastCopiedSelection = useFlowStore(
+    (state) => state.setLastCopiedSelection
+  );
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
   }, [
@@ -107,6 +113,9 @@ export default function NodeToolbarComponent({
       case "show":
         takeSnapshot();
         setShowNode(data.showNode ?? true ? false : true);
+        break;
+      case "Share":
+        if (hasApiKey || hasStore) setShowconfirmShare(true);
         break;
       case "Download":
         downloadNode(flowComponent!);
@@ -137,6 +146,9 @@ export default function NodeToolbarComponent({
       case "delete":
         deleteNode(data.id);
         break;
+      case "copy":
+        const node = nodes.filter((node) => node.id === data.id);
+        setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
     }
   };
 
@@ -188,6 +200,7 @@ export default function NodeToolbarComponent({
 
       return newNode;
     });
+    updateNodeInternals(data.id);
   };
 
   const [openModal, setOpenModal] = useState(false);
@@ -206,24 +219,7 @@ export default function NodeToolbarComponent({
                 }}
                 data-testid="code-button-modal"
               >
-                <div className="hidden">
-                  <CodeAreaComponent
-                    openModal={openModal}
-                    readonly={
-                      data.node?.flow && data.node.template[name].dynamic
-                        ? true
-                        : false
-                    }
-                    dynamic={data.node?.template[name].dynamic ?? false}
-                    setNodeClass={handleNodeClass}
-                    nodeClass={data.node}
-                    disabled={false}
-                    value={data.node?.template[name].value ?? ""}
-                    onChange={handleOnNewValue}
-                    id={"code-input-node-toolbar-" + name}
-                  />
-                </div>
-                <IconComponent name="Code2" className="h-4 w-4" />
+                <IconComponent name="TerminalSquare" className="h-4 w-4" />
               </button>
             </ShadTooltip>
           ) : (
@@ -270,22 +266,36 @@ export default function NodeToolbarComponent({
               <IconComponent name="Copy" className="h-4 w-4" />
             </button>
           </ShadTooltip>
-          {hasStore && (
-            <ShadTooltip content="Share" side="top">
-              <button
-                className={classNames(
-                  "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
-                  !hasApiKey || !validApiKey ? " text-muted-foreground" : ""
+
+          <ShadTooltip content="Freeze" side="top">
+            <button
+              className={classNames(
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+              )}
+              onClick={(event) => {
+                event.preventDefault();
+                setNode(data.id, (old) => ({
+                  ...old,
+                  data: {
+                    ...old.data,
+                    node: {
+                      ...old.data.node,
+                      frozen: old.data?.node?.frozen ? false : true,
+                    },
+                  },
+                }));
+              }}
+            >
+              <IconComponent
+                name="Snowflake"
+                className={cn(
+                  "h-4 w-4 transition-all",
+                  // TODO UPDATE THIS COLOR TO BE A VARIABLE
+                  frozen ? "animate-wiggle text-ice" : ""
                 )}
-                onClick={(event) => {
-                  event.preventDefault();
-                  if (hasApiKey || hasStore) setShowconfirmShare(true);
-                }}
-              >
-                <IconComponent name="Share3" className="-m-1 h-6 w-6" />
-              </button>
-            </ShadTooltip>
-          )}
+              />
+            </button>
+          </ShadTooltip>
 
           <Select onValueChange={handleSelectChange} value="">
             <ShadTooltip content="More" side="top">
@@ -341,6 +351,34 @@ export default function NodeToolbarComponent({
                   </SelectItem>
                 )
               )}
+              <SelectItem value={"copy"}>
+                <div className="flex">
+                  <IconComponent
+                    name="Copy"
+                    className="relative top-0.5 mr-2 h-4 w-4 "
+                  />{" "}
+                  <span className="">Copy</span>{" "}
+                  <IconComponent
+                    name="Command"
+                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                  ></IconComponent>
+                  <span className="absolute right-2 top-[0.5em]">C</span>
+                </div>
+              </SelectItem>
+              {hasStore && (
+                <SelectItem
+                  value={"Share"}
+                  disabled={!hasApiKey || !validApiKey}
+                >
+                  <div className="flex" data-testid="share-button-modal">
+                    <IconComponent
+                      name="Share3"
+                      className="relative top-0.5 -m-1 mr-1 h-6 w-6"
+                    />{" "}
+                    Share{" "}
+                  </div>{" "}
+                </SelectItem>
+              )}
               {!hasStore && (
                 <SelectItem value={"Download"}>
                   <div className="flex">
@@ -361,9 +399,7 @@ export default function NodeToolbarComponent({
                     name="FileText"
                     className="relative top-0.5 mr-2 h-4 w-4"
                   />{" "}
-                  {data.node?.documentation === ""
-                    ? "Coming Soon"
-                    : "Documentation"}
+                  Docs
                 </div>{" "}
               </SelectItem>
               {isMinimal && (
@@ -389,13 +425,19 @@ export default function NodeToolbarComponent({
                 </SelectItem>
               )}
 
-              <SelectItem value={"delete"}>
-                <div className="font-red flex text-red-500 hover:text-red-500">
+              <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
+                <div className="font-red flex text-status-red">
                   <IconComponent
                     name="Trash2"
                     className="relative top-0.5 mr-2 h-4 w-4 "
                   />{" "}
-                  Delete{" "}
+                  <span className="">Delete</span>{" "}
+                  <span>
+                    <IconComponent
+                      name="Delete"
+                      className="absolute right-2 top-2 h-4 w-4 stroke-2 text-red-400"
+                    ></IconComponent>
+                  </span>
                 </div>
               </SelectItem>
             </SelectContent>
@@ -434,6 +476,26 @@ export default function NodeToolbarComponent({
             is_component={true}
             component={flowComponent!}
           />
+          {hasCode && (
+            <div className="hidden">
+              <CodeAreaComponent
+                open={openModal}
+                setOpen={setOpenModal}
+                readonly={
+                  data.node?.flow && data.node.template[name].dynamic
+                    ? true
+                    : false
+                }
+                dynamic={data.node?.template[name].dynamic ?? false}
+                setNodeClass={handleNodeClass}
+                nodeClass={data.node}
+                disabled={false}
+                value={data.node?.template[name].value ?? ""}
+                onChange={handleOnNewValue}
+                id={"code-input-node-toolbar-" + name}
+              />
+            </div>
+          )}
         </span>
       </div>
     </>

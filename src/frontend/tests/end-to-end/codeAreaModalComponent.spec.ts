@@ -18,7 +18,8 @@ test("CodeAreaModalComponent", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.locator('//*[@id="code-input-0"]').click();
+  await page.getByTestId("div-generic-node").click();
+  await page.getByTestId("code-button-modal").click();
 
   let value = await page.locator('//*[@id="codeValue"]').inputValue();
 
@@ -31,12 +32,11 @@ test("CodeAreaModalComponent", async ({ page }) => {
 
   await page.locator('//*[@id="checkAndSaveBtn"]').click();
 
+  await page.getByTestId("div-generic-node").click();
+
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  await page.locator('//*[@id="showcode"]').click();
-  expect(await page.locator('//*[@id="showcode"]').isChecked()).toBeFalsy();
-
   await page.locator('//*[@id="showdescription"]').click();
   expect(
     await page.locator('//*[@id="showdescription"]').isChecked()
@@ -49,9 +49,6 @@ test("CodeAreaModalComponent", async ({ page }) => {
   expect(
     await page.locator('//*[@id="showreturn_direct"]').isChecked()
   ).toBeFalsy();
-
-  await page.locator('//*[@id="showcode"]').click();
-  expect(await page.locator('//*[@id="showcode"]').isChecked()).toBeTruthy();
 
   await page.locator('//*[@id="showdescription"]').click();
   expect(
@@ -66,9 +63,6 @@ test("CodeAreaModalComponent", async ({ page }) => {
     await page.locator('//*[@id="showreturn_direct"]').isChecked()
   ).toBeTruthy();
 
-  await page.locator('//*[@id="showcode"]').click();
-  expect(await page.locator('//*[@id="showcode"]').isChecked()).toBeFalsy();
-
   await page.locator('//*[@id="showdescription"]').click();
   expect(
     await page.locator('//*[@id="showdescription"]').isChecked()
@@ -82,9 +76,6 @@ test("CodeAreaModalComponent", async ({ page }) => {
     await page.locator('//*[@id="showreturn_direct"]').isChecked()
   ).toBeFalsy();
 
-  await page.locator('//*[@id="showcode"]').click();
-  expect(await page.locator('//*[@id="showcode"]').isChecked()).toBeTruthy();
-
   await page.locator('//*[@id="showdescription"]').click();
   expect(
     await page.locator('//*[@id="showdescription"]').isChecked()
@@ -97,9 +88,6 @@ test("CodeAreaModalComponent", async ({ page }) => {
   expect(
     await page.locator('//*[@id="showreturn_direct"]').isChecked()
   ).toBeTruthy();
-
-  await page.locator('//*[@id="showcode"]').click();
-  expect(await page.locator('//*[@id="showcode"]').isChecked()).toBeFalsy();
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
@@ -111,24 +99,9 @@ test("CodeAreaModalComponent", async ({ page }) => {
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("edit-button-modal").click();
 
-    await page.locator('//*[@id="showcode"]').click();
-    expect(await page.locator('//*[@id="showcode"]').isChecked()).toBeTruthy();
-
-    await page.locator('//*[@id="code-area-edit0"]').click();
-
-    let value = await page.locator('//*[@id="codeValue"]').inputValue();
-
-    if (
-      value !=
-      'def python_function(text: str) -> str:    """This is a default python function that returns the input text"""    return text'
-    ) {
-      expect(false).toBeTruthy();
-    }
-
-    await page.locator('//*[@id="checkAndSaveBtn"]').click();
-
     await page.locator('//*[@id="saveChangesBtn"]').click();
 
-    await page.locator('//*[@id="code-input-0"]').click();
+    await page.getByTestId("div-generic-node").click();
+    await page.getByTestId("code-button-modal").click();
   }
 });

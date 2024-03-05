@@ -92,10 +92,10 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           true
         );
       }
-    }, 300); // Delay of 300ms.
+    }, 500); // Delay of 500ms because chat message depends on it.
   },
   saveFlow: (flow: FlowType, silent?: boolean) => {
-    set({ saveLoading: true })
+    set({ saveLoading: true });
     return new Promise<void>((resolve, reject) => {
       updateFlowInDatabase(flow)
         .then((updatedFlow) => {
@@ -117,7 +117,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
             //update tabs state
 
             resolve();
-            set({ saveLoading: false })
+            set({ saveLoading: false });
           }
         })
         .catch((err) => {

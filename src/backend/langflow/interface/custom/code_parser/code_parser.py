@@ -6,6 +6,9 @@ from typing import Any, Dict, List, Type, Union
 
 from cachetools import TTLCache, cachedmethod, keys
 from fastapi import HTTPException
+from loguru import logger
+
+from langflow.interface.custom.eval import eval_custom_component_code
 from langflow.interface.custom.schema import CallableCodeDetails, ClassCodeDetails
 
 
@@ -268,15 +271,28 @@ class CodeParser:
         method = self.parse_callable_details(stmt)
         return (method, True) if stmt.name == "__init__" else (method, False)
 
+    def get_base_classes(self):
+        """
+        Returns the base classes of the custom component class.
+        """
+        try:
+            bases = self.execute_and_inspect_classes(self.code)
+        except Exception as e:
+            # If the code cannot be executed, return an empty list
+            logger.exception(e)
+            bases = []
+            raise e
+        return bases
+
     def parse_classes(self, node: ast.ClassDef) -> None:
         """
         Extracts "classes" from the code, including inheritance and init methods.
         """
-
+        bases = self.get_base_classes() or [ast.unparse(b) for b in node.bases]
         class_details = ClassCodeDetails(
             name=node.name,
             doc=ast.get_docstring(node),
-            bases=[ast.unparse(base) for base in node.bases],
+            bases=bases,
             attributes=[],
             methods=[],
             init=None,
@@ -307,6 +323,18 @@ class CodeParser:
             "value": ast.unparse(node.value),
         }
         self.data["global_vars"].append(global_var)
+
+    def execute_and_inspect_classes(self, code: str):
+        custom_component_class = eval_custom_component_code(code)
+        custom_component = custom_component_class()
+        dunder_class = custom_component.__class__
+        # Get the base classes at two levels of inheritance
+        bases = []
+        for base in dunder_class.__bases__:
+            bases.append(base.__name__)
+            for bases_base in base.__bases__:
+                bases.append(bases_base.__name__)
+        return bases
 
     def parse_code(self) -> Dict[str, Any]:
         """

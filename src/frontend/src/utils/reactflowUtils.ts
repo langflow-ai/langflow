@@ -12,6 +12,7 @@ import {
   INPUT_TYPES,
   LANGFLOW_SUPPORTED_TYPES,
   OUTPUT_TYPES,
+  SUCCESS_BUILD,
   specialCharsRegex,
 } from "../constants/constants";
 import { downloadFlowsFromDatabase } from "../controllers/API";
@@ -42,6 +43,10 @@ import {
   toTitleCase,
 } from "./utils";
 const uid = new ShortUniqueId({ length: 5 });
+
+export function checkChatInput(nodes: Node[]) {
+  return nodes.some((node) => node.data.type === "ChatInput");
+}
 
 export function cleanEdges(nodes: Node[], edges: Edge[]) {
   let newEdges = cloneDeep(edges);
@@ -620,8 +625,7 @@ export function generateFlow(
   const newFlowData = { nodes, edges, viewport: { zoom: 1, x: 0, y: 0 } };
   const uid = new ShortUniqueId({ length: 5 });
   /*	remove edges that are not connected to selected nodes on both ends
-		in future we can save this edges to when ungrouping reconect to the old nodes
-	*/
+   */
   newFlowData.edges = selection.edges.filter(
     (edge) =>
       selection.nodes.some((node) => node.id === edge.target) &&
@@ -642,10 +646,46 @@ export function generateFlow(
   // in the future we can use a better aproach using a set
   return {
     newFlow,
-    removedEdges: selection.edges.filter(
-      (edge) => !newFlowData.edges.includes(edge)
+    removedEdges: edges.filter(
+      (edge) =>
+        (selection.nodes.some((node) => node.id === edge.target) ||
+          selection.nodes.some((node) => node.id === edge.source)) &&
+        newFlowData.edges.every((e) => e.id !== edge.id)
     ),
   };
+}
+
+export function reconnectEdges(groupNode: NodeType, excludedEdges: Edge[]) {
+  let newEdges = cloneDeep(excludedEdges);
+  if (!groupNode.data.node!.flow) return [];
+  const { nodes, edges } = groupNode.data.node!.flow!.data!;
+  const lastNode = findLastNode(groupNode.data.node!.flow!.data!);
+  newEdges.forEach((edge) => {
+    if (lastNode && edge.source === lastNode.id) {
+      edge.source = groupNode.id;
+      let newSourceHandle: sourceHandleType = scapeJSONParse(
+        edge.sourceHandle!
+      );
+      newSourceHandle.id = groupNode.id;
+      edge.sourceHandle = scapedJSONStringfy(newSourceHandle);
+      edge.data.sourceHandle = newSourceHandle;
+    }
+    if (nodes.some((node) => node.id === edge.target)) {
+      const targetNode = nodes.find((node) => node.id === edge.target)!;
+      console.log("targetNode", targetNode);
+      const targetHandle: targetHandleType = scapeJSONParse(edge.targetHandle!);
+      console.log("targetHandle", targetHandle);
+      const proxy = { id: targetNode.id, field: targetHandle.fieldName };
+      let newTargetHandle: targetHandleType = cloneDeep(targetHandle);
+      newTargetHandle.id = groupNode.id;
+      newTargetHandle.proxy = proxy;
+      edge.target = groupNode.id;
+      newTargetHandle.fieldName = targetHandle.fieldName + "_" + targetNode.id;
+      edge.targetHandle = scapedJSONStringfy(newTargetHandle);
+      edge.data.targetHandle = newTargetHandle;
+    }
+  });
+  return newEdges;
 }
 
 export function filterFlow(
@@ -766,7 +806,7 @@ function updateGroupNodeTemplate(template: APITemplateType) {
       template[key].advanced = true;
     }
     //prevent code fields from showing on the group node
-    if (type === "code") {
+    if (type === "code" && key === "code") {
       template[key].show = false;
     }
   });
@@ -1114,7 +1154,7 @@ export function getGroupStatus(
   flow: FlowType,
   ssData: { [key: string]: { valid: boolean; params: string } }
 ) {
-  let status = { valid: true, params: "Built sucessfully ✨" };
+  let status = { valid: true, params: SUCCESS_BUILD };
   const { nodes } = flow.data!;
   const ids = nodes.map((n: NodeType) => n.data.id);
   ids.forEach((id) => {

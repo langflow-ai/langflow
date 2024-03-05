@@ -1,14 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
 import { NodeToolbar } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
-import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
+import Checkmark from "../../components/ui/checkmark";
+import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
-import { priorityFields } from "../../constants/constants";
+import Xmark from "../../components/ui/xmark";
+import {
+  RUN_TIMESTAMP_PREFIX,
+  STATUS_BUILD,
+  STATUS_BUILDING,
+  priorityFields,
+} from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useTypesStore } from "../../stores/typesStore";
@@ -42,9 +50,17 @@ export default function GenericNode({
   const [nodeDescription, setNodeDescription] = useState(
     data.node?.description!
   );
+  const buildStatus = useFlowStore(
+    (state) => state.flowBuildStatus[data.id]?.status
+  );
+  const lastRunTime = useFlowStore(
+    (state) => state.flowBuildStatus[data.id]?.timestamp
+  );
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
   const [handles, setHandles] = useState<number>(0);
+
+  const [validationString, setValidationString] = useState<string>("");
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
@@ -88,14 +104,13 @@ export default function GenericNode({
 
   // should be empty string if no duration
   // else should be `Duration: ${duration}`
-  const getDurationString = (duration: number | null): string => {
-    if (duration === null) {
+  const getDurationString = (duration: number | undefined): string => {
+    if (duration === undefined) {
       return "";
     } else {
-      return `Duration: ${duration}`;
+      return `${duration}`;
     }
   };
-
   const durationString = getDurationString(validationStatus?.data.duration);
 
   useEffect(() => {
@@ -117,12 +132,23 @@ export default function GenericNode({
     } else {
       setValidationStatus(null);
     }
-  }, [flowPool, data.id]);
+  }, [flowPool[data.id], data.id]);
+
+  useEffect(() => {
+    if (validationStatus?.params) {
+      // if it is not a string turn it into a string
+      let newValidationString = validationStatus.params;
+      if (typeof newValidationString !== "string") {
+        newValidationString = JSON.stringify(validationStatus.params);
+      }
+
+      setValidationString(newValidationString);
+    }
+  }, [validationStatus, validationStatus?.params]);
 
   const showNode = data.showNode ?? true;
-  const pinned = data.node?.pinned ?? false;
 
-  const nameEditable = data.node?.flow || data.type === "CustomComponent";
+  const nameEditable = true;
 
   const emojiRegex = /\p{Emoji}/u;
   const isEmoji = emojiRegex.test(data?.node?.icon!);
@@ -133,9 +159,8 @@ export default function GenericNode({
     const iconName =
       iconElement || (data.node?.flow ? "group_components" : name);
     const iconClassName = `generic-node-icon ${
-      !showNode ? "absolute inset-x-6 h-12 w-12" : ""
+      !showNode ? " absolute inset-x-6 h-12 w-12 " : ""
     }`;
-
     if (iconElement && isEmoji) {
       return nodeIconFragment(iconElement);
     } else {
@@ -157,38 +182,45 @@ export default function GenericNode({
     );
   };
 
-  const getIconPlayOrPauseComponent = (name, className) => (
-    <IconComponent
-      name={name}
-      className={`absolute h-5 stroke-2 ${className} ml-0.5`}
-    />
-  );
-
-  const getStatusClassName = (
-    validationStatus: validationStatusType | null,
-    isBuilding: boolean
-  ) => {
-    if (validationStatus && validationStatus.valid) {
-      return "green-status";
-    } else if (validationStatus && !validationStatus.valid) {
-      return "red-status";
-    } else if (!validationStatus || isBuilding) {
-      return "yellow-status";
-    } else {
-      return "status-build-animation";
-    }
-  };
-
-  const renderIconPlayOrPauseComponents = (
+  const isDark = useDarkStore((state) => state.dark);
+  const renderIconStatus = (
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null,
-    isBuilding: boolean
+    validationStatus: validationStatusType | null
   ) => {
     if (buildStatus === BuildStatus.BUILDING) {
-      return getIconPlayOrPauseComponent("Square", "red-status");
+      return <Loading className="text-medium-indigo" />;
     } else {
-      const className = getStatusClassName(validationStatus, isBuilding);
-      return <>{getIconPlayOrPauseComponent("Play", className)}</>;
+      return (
+        <>
+          <IconComponent
+            name="Play"
+            className="absolute ml-0.5 h-5 fill-current stroke-2 text-medium-indigo opacity-0 transition-all group-hover:opacity-100"
+          />
+          {validationStatus && validationStatus.valid ? (
+            <Checkmark
+              className="absolute ml-0.5 h-5 stroke-2 text-status-green opacity-100 transition-all group-hover:opacity-0"
+              isVisible={true}
+            />
+          ) : validationStatus &&
+            !validationStatus.valid &&
+            buildStatus === BuildStatus.INACTIVE ? (
+            <IconComponent
+              name="Play"
+              className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-green opacity-30 transition-all group-hover:opacity-0"
+            />
+          ) : validationStatus && !validationStatus.valid ? (
+            <Xmark
+              isVisible={true}
+              className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-red opacity-100 transition-all group-hover:opacity-0"
+            />
+          ) : (
+            <IconComponent
+              name="Play"
+              className="absolute ml-0.5 h-5 fill-current stroke-2 text-muted-foreground opacity-100 transition-all group-hover:opacity-0"
+            />
+          )}
+        </>
+      );
     }
   };
 
@@ -196,14 +228,16 @@ export default function GenericNode({
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
   ) => {
-    if (
-      buildStatus === BuildStatus.BUILT &&
-      validationStatus &&
-      !validationStatus.valid
-    ) {
-      return "border-none ring ring-red-300";
+    let isInvalid = validationStatus && !validationStatus.valid;
+
+    if (buildStatus === BuildStatus.INACTIVE && isInvalid) {
+      // INACTIVE should have its own class
+      return "inactive-status";
+    }
+    if (buildStatus === BuildStatus.BUILT && isInvalid) {
+      return isDark ? "built-invalid-status-dark" : "built-invalid-status";
     } else if (buildStatus === BuildStatus.BUILDING) {
-      return "border-none ring";
+      return "building-status";
     } else {
       return "";
     }
@@ -215,11 +249,17 @@ export default function GenericNode({
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
   ) => {
+    const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
+      buildStatus,
+      validationStatus
+    );
+    const baseBorderClass = getBaseBorderClass(selected);
+    const nodeSizeClass = getNodeSizeClass(showNode);
     return classNames(
-      getBaseBorderClass(selected),
-      getNodeSizeClass(showNode),
+      baseBorderClass,
+      nodeSizeClass,
       "generic-node-div",
-      getSpecificClassFromBuildStatus(buildStatus, validationStatus)
+      specificClassFromBuildStatus
     );
   };
 
@@ -249,14 +289,14 @@ export default function GenericNode({
           showNode={showNode}
           openAdvancedModal={false}
           onCloseAdvancedModal={() => {}}
+          selected={selected}
         ></NodeToolbarComponent>
       </NodeToolbar>
-
       <div
         className={getNodeBorderClassName(
           selected,
           showNode,
-          data?.build_status,
+          buildStatus,
           validationStatus
         )}
       >
@@ -278,7 +318,7 @@ export default function GenericNode({
             <div
               className={
                 "generic-node-title-arrangement rounded-full" +
-                (!showNode && "justify-center")
+                (!showNode && " justify-center ")
               }
             >
               {iconNodeRender()}
@@ -370,13 +410,34 @@ export default function GenericNode({
                             })}
                             data={data}
                             color={
-                              nodeColors[
-                                types[data.node?.template[templateField].type!]
-                              ] ??
-                              nodeColors[
-                                data.node?.template[templateField].type!
-                              ] ??
-                              nodeColors.unknown
+                              data.node?.template[templateField].input_types &&
+                              data.node?.template[templateField].input_types!
+                                .length > 0
+                                ? nodeColors[
+                                    data.node?.template[templateField]
+                                      .input_types![
+                                      data.node?.template[templateField]
+                                        .input_types!.length - 1
+                                    ]
+                                  ] ??
+                                  nodeColors[
+                                    types[
+                                      data.node?.template[templateField]
+                                        .input_types![
+                                        data.node?.template[templateField]
+                                          .input_types!.length - 1
+                                      ]
+                                    ]
+                                  ]
+                                : nodeColors[
+                                    data.node?.template[templateField].type!
+                                  ] ??
+                                  nodeColors[
+                                    types[
+                                      data.node?.template[templateField].type!
+                                    ]
+                                  ] ??
+                                  nodeColors.unknown
                             }
                             title={[
                               getFieldTitle(
@@ -440,80 +501,58 @@ export default function GenericNode({
               )}
             </div>
             {showNode && (
-              <Button
-                variant="outline"
-                className="h-9 px-1.5"
-                onClick={() => {
-                  setNode(data.id, (old) => ({
-                    ...old,
-                    data: {
-                      ...old.data,
-                      node: {
-                        ...old.data.node,
-                        pinned: old.data?.node?.pinned ? false : true,
-                      },
-                    },
-                  }));
-                }}
-              >
-                <Tooltip title={<span>{pinned ? "Pinned" : "Unpinned"}</span>}>
-                  <div className="generic-node-status-position flex items-center">
-                    <IconComponent
-                      name={"Pin"}
-                      className={cn(
-                        "h-5 fill-transparent stroke-status-blue stroke-2 transition-all",
-                        pinned ? "animate-wiggle fill-status-blue" : ""
-                      )}
-                    />
-                  </div>
-                </Tooltip>
-              </Button>
-            )}
-            {showNode && (
-              <Button
-                variant="outline"
-                className={cn(
-                  "group h-9 px-1.5",
-                  isBuilding ? "hover:border-status-red" : ""
-                )}
-                onClick={() => buildFlow(data.id)}
-              >
+              <Button variant="secondary" className={"group h-9 px-1.5"}>
                 <div>
-                  <Tooltip
-                    title={
-                      isBuilding ||
-                      data?.build_status === BuildStatus.BUILDING ? (
-                        <span>Building...</span>
+                  <ShadTooltip
+                    content={
+                      buildStatus === BuildStatus.BUILDING ? (
+                        <span> {STATUS_BUILDING} </span>
                       ) : !validationStatus ? (
-                        <span className="flex">
-                          Build{" "}
-                          <IconComponent
-                            name="Play"
-                            className=" h-5 stroke-build-trigger stroke-2"
-                          />{" "}
-                          flow to validate status.
-                        </span>
+                        <span className="flex">{STATUS_BUILD}</span>
                       ) : (
-                        <div className="max-h-96 overflow-auto">
-                          {typeof validationStatus.params === "string"
-                            ? `${durationString}\n${validationStatus.params}`
-                                .split("\n")
-                                .map((line, index) => (
-                                  <div key={index}>{line}</div>
-                                ))
-                            : durationString}
+                        <div className="max-h-100">
+                          <div>
+                            {lastRunTime && (
+                              <div className="justify-left flex text-muted-foreground">
+                                <div>{RUN_TIMESTAMP_PREFIX}</div>
+                                <div className="ml-1 text-status-blue">
+                                  {lastRunTime}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="justify-left flex text-muted-foreground">
+                            <div>Duration:</div>
+                            <div className="ml-1 text-status-blue">
+                              {validationStatus?.data.duration}
+                            </div>
+                          </div>
+                          <hr />
+                          <span className="flex justify-center   text-muted-foreground ">
+                            Output
+                          </span>
+                          <div className="max-h-96 overflow-auto custom-scroll">
+                            {validationString.split("\n").map((line, index) => (
+                              <div key={index}>{line}</div>
+                            ))}
+                          </div>
                         </div>
                       )
                     }
+                    side="bottom"
                   >
-                    <div className="generic-node-status-position flex items-center justify-center">
-                      {renderIconPlayOrPauseComponents(
-                        data?.build_status,
-                        validationStatus,
-                        isBuilding
-                      )}
+                    <div
+                      onClick={() => {
+                        if (buildStatus === BuildStatus.BUILDING || isBuilding)
+                          return;
+                        setValidationStatus(null);
+                        buildFlow({ stopNodeId: data.id });
+                      }}
+                      className="generic-node-status-position flex items-center justify-center"
+                    >
+                      {renderIconStatus(buildStatus, validationStatus)}
                     </div>
-                  </Tooltip>
+                  </ShadTooltip>
                 </div>
               </Button>
             )}
@@ -628,13 +667,18 @@ export default function GenericNode({
                           data.node?.template[templateField].input_types!
                             .length > 0
                             ? nodeColors[
-                                data.node?.template[templateField]
-                                  .input_types![0]
+                                data.node?.template[templateField].input_types![
+                                  data.node?.template[templateField]
+                                    .input_types!.length - 1
+                                ]
                               ] ??
                               nodeColors[
                                 types[
                                   data.node?.template[templateField]
-                                    .input_types![0]
+                                    .input_types![
+                                    data.node?.template[templateField]
+                                      .input_types!.length - 1
+                                  ]
                                 ]
                               ]
                             : nodeColors[

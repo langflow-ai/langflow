@@ -59,7 +59,7 @@ class ChainFrontendNode(FrontendNode):
             field.required = False
 
         field.advanced = False
-        if "key" in field.name:
+        if "key" in str(field.name):
             field.password = False
             field.show = False
         if field.name in ["input_key", "output_key"]:
