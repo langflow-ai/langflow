@@ -252,7 +252,10 @@ class InputValueRequest(BaseModel):
     model_config = {
         "json_schema_extra": {
             "examples": [
-                {"components": ["components_id"], "input_value": ["input_value"]},
+                {
+                    "components": ["components_id", "Component Name"],
+                    "input_value": ["input_value"],
+                },
                 {"components": ["Component Name"], "input_value": ["input_value"]},
                 {"input_value": ["input_value"]},
                 {
