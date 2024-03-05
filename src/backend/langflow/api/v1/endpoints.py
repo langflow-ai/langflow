@@ -57,6 +57,7 @@ async def run_flow_with_caching(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
     inputs: Optional[InputValueRequest] = None,
+    outputs: Optional[List[str]] = None,
     tweaks: Optional[dict] = None,
     stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
@@ -68,6 +69,9 @@ async def run_flow_with_caching(
             input_values_dict: dict[str, Union[str, list[str]]] = inputs.model_dump()
         else:
             input_values_dict = {}
+
+        if outputs is None:
+            outputs = []
 
         if session_id:
             session_data = await session_service.load_session(
@@ -82,6 +86,7 @@ async def run_flow_with_caching(
                 flow_id=flow_id,
                 session_id=session_id,
                 inputs=input_values_dict,
+                outputs=outputs,
                 artifacts=artifacts,
                 session_service=session_service,
                 stream=stream,
@@ -107,6 +112,7 @@ async def run_flow_with_caching(
                 flow_id=flow_id,
                 session_id=session_id,
                 inputs=input_values_dict,
+                outputs=outputs,
                 artifacts={},
                 session_service=session_service,
                 stream=stream,

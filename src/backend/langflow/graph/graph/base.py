@@ -151,7 +151,7 @@ class Graph:
                     getattr(self, f"_{attribute}_vertices").append(vertex.id)
 
     async def _run(
-        self, inputs: Dict[str, str], stream: bool, session_id: str
+        self, inputs: Dict[str, str], outputs: list[str], stream: bool, session_id: str
     ) -> List[Optional["ResultData"]]:
         """Runs the graph with the given inputs."""
         for vertex_id in self._is_input_vertices:
@@ -171,7 +171,7 @@ class Graph:
         except Exception as exc:
             logger.exception(exc)
             raise ValueError(f"Error running graph: {exc}") from exc
-        outputs = []
+        vertex_outputs = []
         for vertex_id in self._is_output_vertices:
             vertex = self.get_vertex(vertex_id)
             if vertex is None:
@@ -183,11 +183,16 @@ class Graph:
                 and hasattr(vertex, "consume_async_generator")
             ):
                 await vertex.consume_async_generator()
-            outputs.append(vertex.result)
-        return outputs
+            if vertex.display_name in outputs or vertex.id in outputs:
+                vertex_outputs.append(vertex.result)
+        return vertex_outputs
 
     async def run(
-        self, inputs: Dict[str, Union[str, list[str]]], stream: bool, session_id: str
+        self,
+        inputs: Dict[str, Union[str, list[str]]],
+        outputs: list[str],
+        stream: bool,
+        session_id: str,
     ) -> List[Optional["ResultData"]]:
         """Runs the graph with the given inputs."""
 
@@ -195,17 +200,20 @@ class Graph:
         # we need to go through self.inputs and update the self._raw_params
         # of the vertices that are inputs
         # if the value is a list, we need to run multiple times
-        outputs = []
+        vertex_outputs = []
         inputs_values = inputs.get(INPUT_FIELD_NAME, "")
         if not isinstance(inputs_values, list):
             inputs_values = [inputs_values]
         for input_value in inputs_values:
             run_outputs = await self._run(
-                {INPUT_FIELD_NAME: input_value}, stream=stream, session_id=session_id
+                {INPUT_FIELD_NAME: input_value},
+                outputs,
+                stream=stream,
+                session_id=session_id,
             )
             logger.debug(f"Run outputs: {run_outputs}")
-            outputs.extend(run_outputs)
-        return outputs
+            vertex_outputs.append(run_outputs)
+        return vertex_outputs
 
     # vertices_layers is a list of lists ordered by the order the vertices
     # should be built.
