@@ -25,6 +25,7 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowStore from "./flowStore";
 import { useTypesStore } from "./typesStore";
+import { STARTER_FOLDER_NAME } from "../constants/constants";
 
 let saveTimeoutId: NodeJS.Timeout | null = null;
 
@@ -66,7 +67,8 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         .then((dbData) => {
           if (dbData) {
             const { data, flows } = processFlows(dbData, false);
-            get().setFlows(flows);
+            get().setExamples(flows.filter(f=>(f.folder===STARTER_FOLDER_NAME && !f.user_id)));
+            get().setFlows(flows.filter(f=>!(f.folder===STARTER_FOLDER_NAME && !f.user_id)));
             useTypesStore.setState((state) => ({
               data: { ...state.data, ["saved_components"]: data },
             }));

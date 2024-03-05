@@ -58,10 +58,6 @@ export default function ComponentsComponent({
       });
     const start = (pageIndex - 1) * pageSize;
     const end = start + pageSize;
-    const examples = all.filter(f=>(f.folder===STARTER_FOLDER_NAME && !f.user_id));
-    console.log(examples);
-    setExamples(examples);
-    all = all.filter(f=>!(f.folder===STARTER_FOLDER_NAME && !f.user_id));;
     setData(all.slice(start, end));
   }, [flows, isLoading, pageIndex, pageSize]);
 
