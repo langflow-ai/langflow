@@ -2,11 +2,12 @@ from typing import List, Optional, Union
 
 import chromadb  # type: ignore
 from langchain.embeddings.base import Embeddings
-from langchain.schema import BaseRetriever, Document
+from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.chroma import Chroma
 
 from langflow import CustomComponent
+from langflow.schema.schema import Record
 
 
 class ChromaComponent(CustomComponent):
@@ -55,7 +56,7 @@ class ChromaComponent(CustomComponent):
         embedding: Embeddings,
         chroma_server_ssl_enabled: bool,
         index_directory: Optional[str] = None,
-        documents: Optional[List[Document]] = None,
+        inputs: Optional[List[Record]] = None,
         chroma_server_cors_allow_origins: Optional[str] = None,
         chroma_server_host: Optional[str] = None,
         chroma_server_port: Optional[int] = None,
@@ -98,6 +99,12 @@ class ChromaComponent(CustomComponent):
         if index_directory is not None:
             index_directory = self.resolve_path(index_directory)
 
+        documents = []
+        for _input in inputs:
+            if isinstance(_input, Record):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
         if documents is not None and embedding is not None:
             if len(documents) == 0:
                 raise ValueError(
