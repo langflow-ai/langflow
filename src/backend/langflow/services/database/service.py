@@ -174,7 +174,7 @@ class DatabaseService(Service):
             if not fix:
                 raise RuntimeError(
                     "Something went wrong running migrations. Please, run `langflow migration --fix`"
-                ) from e
+                ) from exc
 
         if fix:
             self.try_downgrade_upgrade_until_success(alembic_cfg)
