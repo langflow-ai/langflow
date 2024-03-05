@@ -204,6 +204,7 @@ async def run_graph(
     stream: bool,
     session_id: Optional[str] = None,
     inputs: Optional[dict[str, Union[List[str], str]]] = None,
+    outputs: Optional[List[str]] = None,
     artifacts: Optional[Dict[str, Any]] = None,
     session_service: Optional[SessionService] = None,
 ):
@@ -220,7 +221,12 @@ async def run_graph(
     if inputs is None:
         inputs = {}
 
-    outputs = await graph.run(inputs, stream=stream, session_id=session_id)
+    outputs = await graph.run(
+        inputs,
+        outputs,
+        stream=stream,
+        session_id=session_id,
+    )
     if session_id and session_service:
         session_service.update_session(session_id, (graph, artifacts))
     return outputs, session_id
