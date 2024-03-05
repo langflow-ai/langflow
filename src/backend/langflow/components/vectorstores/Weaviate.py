@@ -2,16 +2,19 @@ from typing import Optional, Union
 
 import weaviate  # type: ignore
 from langchain.embeddings.base import Embeddings
-from langchain.schema import BaseRetriever, Document
+from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import VectorStore, Weaviate
 
 from langflow import CustomComponent
+from langflow.schema.schema import Record
 
 
 class WeaviateVectorStoreComponent(CustomComponent):
     display_name: str = "Weaviate"
     description: str = "Implementation of Vector Store using Weaviate"
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/weaviate"
+    documentation = (
+        "https://python.langchain.com/docs/integrations/vectorstores/weaviate"
+    )
     beta = True
     field_config = {
         "url": {"display_name": "Weaviate URL", "value": "http://localhost:8080"},
@@ -30,7 +33,7 @@ class WeaviateVectorStoreComponent(CustomComponent):
             "advanced": True,
             "value": "text",
         },
-        "documents": {"display_name": "Documents", "is_list": True},
+        "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
         "embedding": {"display_name": "Embedding"},
         "attributes": {
             "display_name": "Attributes",
@@ -55,7 +58,7 @@ class WeaviateVectorStoreComponent(CustomComponent):
         index_name: Optional[str] = None,
         text_key: str = "text",
         embedding: Optional[Embeddings] = None,
-        documents: Optional[Document] = None,
+        inputs: Optional[Record] = None,
         attributes: Optional[list] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         if api_key:
@@ -78,8 +81,14 @@ class WeaviateVectorStoreComponent(CustomComponent):
             return pascal_case_word
 
         index_name = _to_pascal_case(index_name) if index_name else None
+        documents = []
+        for _input in inputs:
+            if isinstance(_input, Record):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
 
-        if documents is not None and embedding is not None:
+        if documents and embedding is not None:
             return Weaviate.from_documents(
                 client=client,
                 index_name=index_name,
