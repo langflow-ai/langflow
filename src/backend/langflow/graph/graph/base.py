@@ -151,11 +151,21 @@ class Graph:
                     getattr(self, f"_{attribute}_vertices").append(vertex.id)
 
     async def _run(
-        self, inputs: Dict[str, str], outputs: list[str], stream: bool, session_id: str
+        self,
+        inputs: Dict[str, str],
+        input_components: list[str],
+        outputs: list[str],
+        stream: bool,
+        session_id: str,
     ) -> List[Optional["ResultData"]]:
         """Runs the graph with the given inputs."""
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
+            if input_components and (
+                vertex_id not in input_components
+                or vertex.display_name not in input_components
+            ):
+                continue
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
             vertex.update_raw_params(inputs, overwrite=True)
@@ -206,8 +216,9 @@ class Graph:
             inputs_values = [inputs_values]
         for input_value in inputs_values:
             run_outputs = await self._run(
-                {INPUT_FIELD_NAME: input_value},
-                outputs,
+                inputs={INPUT_FIELD_NAME: input_value},
+                input_components=inputs.get("components", []),
+                outputs=outputs,
                 stream=stream,
                 session_id=session_id,
             )

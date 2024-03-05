@@ -245,4 +245,19 @@ class VerticesBuiltResponse(BaseModel):
 
 
 class InputValueRequest(BaseModel):
-    input_value: str
+    components: Optional[List[str]] = None
+    input_value: Optional[List[str]] = None
+
+    # add an example
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {"components": ["components_id"], "input_value": ["input_value"]},
+                {"components": ["Component Name"], "input_value": ["input_value"]},
+                {"input_value": ["input_value"]},
+                {
+                    "input_value": ["input_value1", "input_value2"],
+                },
+            ]
+        }
+    }

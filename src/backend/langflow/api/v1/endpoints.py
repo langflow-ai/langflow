@@ -7,28 +7,20 @@ from loguru import logger
 from sqlmodel import Session, select
 
 from langflow.api.utils import update_frontend_node_with_template_values
-from langflow.api.v1.schemas import (
-    CustomComponentCode,
-    InputValueRequest,
-    ProcessResponse,
-    RunResponse,
-    TaskStatusResponse,
-    UploadFileResponse,
-)
+from langflow.api.v1.schemas import (CustomComponentCode, InputValueRequest,
+                                     ProcessResponse, RunResponse,
+                                     TaskStatusResponse, UploadFileResponse)
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import build_custom_component_template
 from langflow.processing.process import process_tweaks, run_graph
-from langflow.services.auth.utils import api_key_security, get_current_active_user
+from langflow.services.auth.utils import (api_key_security,
+                                          get_current_active_user)
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import (
-    get_session,
-    get_session_service,
-    get_settings_service,
-    get_task_service,
-)
+from langflow.services.deps import (get_session, get_session_service,
+                                    get_settings_service, get_task_service)
 from langflow.services.session.service import SessionService
 from langflow.services.task.service import TaskService
 
@@ -56,7 +48,7 @@ def get_all(
 async def run_flow_with_caching(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
-    inputs: Optional[InputValueRequest] = None,
+    inputs: Optional[List[InputValueRequest]] = None,
     outputs: Optional[List[str]] = None,
     tweaks: Optional[dict] = None,
     stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
