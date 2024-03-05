@@ -5,6 +5,7 @@ from uuid import UUID
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
+from loguru import logger
 from sqlmodel import Session, select
 
 from langflow.api.utils import remove_api_keys, validate_is_component
@@ -54,8 +55,11 @@ def read_flows(
         flows = current_user.flows
         flows = validate_is_component(flows)
         # with the session get the flows that DO NOT have a user_id
-        example_flows = session.exec(select(Flow).where(Flow.user_id == None)).all()
-        flows.extend(example_flows)
+        try:
+            example_flows = session.exec(select(Flow).where(Flow.user_id == None)).all()
+            flows.extend(example_flows)
+        except Exception as e:
+            logger.error(e)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     return [jsonable_encoder(flow) for flow in flows]
