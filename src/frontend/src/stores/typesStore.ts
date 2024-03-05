@@ -16,7 +16,7 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
       setLoading(true);
       getAll()
         .then((response) => {
-          const data = response.data;
+          const data = response?.data;
           useAlertStore.setState({ loading: false });
           set((old) => ({
             types: typesGenerator(data),

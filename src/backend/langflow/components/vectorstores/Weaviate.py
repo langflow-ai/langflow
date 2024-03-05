@@ -8,7 +8,7 @@ from langchain_community.vectorstores import VectorStore, Weaviate
 from langflow import CustomComponent
 
 
-class WeaviateVectorStore(CustomComponent):
+class WeaviateVectorStoreComponent(CustomComponent):
     display_name: str = "Weaviate"
     description: str = "Implementation of Vector Store using Weaviate"
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/weaviate"
@@ -24,7 +24,12 @@ class WeaviateVectorStore(CustomComponent):
             "display_name": "Index name",
             "required": False,
         },
-        "text_key": {"display_name": "Text Key", "required": False, "advanced": True, "value": "text"},
+        "text_key": {
+            "display_name": "Text Key",
+            "required": False,
+            "advanced": True,
+            "value": "text",
+        },
         "documents": {"display_name": "Documents", "is_list": True},
         "embedding": {"display_name": "Embedding"},
         "attributes": {
@@ -34,7 +39,11 @@ class WeaviateVectorStore(CustomComponent):
             "field_type": "str",
             "advanced": True,
         },
-        "search_by_text": {"display_name": "Search By Text", "field_type": "bool", "advanced": True},
+        "search_by_text": {
+            "display_name": "Search By Text",
+            "field_type": "bool",
+            "advanced": True,
+        },
         "code": {"show": False},
     }
 

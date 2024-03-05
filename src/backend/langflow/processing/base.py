@@ -4,7 +4,6 @@ from langchain.agents.agent import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
 from loguru import logger
 
-from langflow.api.v1.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler
 from langflow.processing.process import fix_memory_inputs, format_actions
 from langflow.services.deps import get_plugins_service
 
@@ -15,11 +14,6 @@ if TYPE_CHECKING:
 def setup_callbacks(sync, trace_id, **kwargs):
     """Setup callbacks for langchain object"""
     callbacks = []
-    if sync:
-        callbacks.append(StreamingLLMCallbackHandler(**kwargs))
-    else:
-        callbacks.append(AsyncStreamingLLMCallbackHandler(**kwargs))
-
     plugin_service = get_plugins_service()
     plugin_callbacks = plugin_service.get_callbacks(_id=trace_id)
     if plugin_callbacks:

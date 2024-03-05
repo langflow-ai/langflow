@@ -3,6 +3,7 @@ import { useState } from "react";
 import Loading from "../../../components/ui/loading";
 import { FlowType } from "../../../types/flow";
 
+import { MISSED_ERROR_ALERT } from "../../../constants/alerts_constants";
 import useAlertStore from "../../../stores/alertStore";
 import useFlowStore from "../../../stores/flowStore";
 import { validateNodes } from "../../../utils/reactflowUtils";
@@ -22,8 +23,6 @@ export default function BuildTrigger({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const setFlowState = useFlowStore((state) => state.setFlowState);
 
   const eventClick = isBuilding ? "pointer-events-none" : "";
   const [progress, setProgress] = useState(0);
@@ -36,7 +35,7 @@ export default function BuildTrigger({
       const errors = validateNodes(nodes, edges);
       if (errors.length > 0) {
         setErrorData({
-          title: "Oops! Looks like you missed something",
+          title: MISSED_ERROR_ALERT,
           list: errors,
         });
         return;
@@ -46,7 +45,7 @@ export default function BuildTrigger({
       setIsBuilding(true);
 
       await enforceMinimumLoadingTime(startTime, minimumLoadingTime);
-      await buildFlow();
+      await buildFlow({});
     } catch (error) {
       console.error("Error:", error);
     } finally {

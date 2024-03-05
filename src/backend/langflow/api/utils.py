@@ -3,14 +3,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional
 
 from fastapi import HTTPException
-from langchain_core.documents import Document
+from platformdirs import user_cache_dir
+from sqlmodel import Session
+
 from langflow.graph.graph.base import Graph
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow import Flow
 from langflow.services.store.schema import StoreComponentCreate
-from platformdirs import user_cache_dir
-from pydantic import BaseModel
-from sqlmodel import Session
+from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
@@ -20,9 +20,7 @@ API_WORDS = ["api", "key", "token"]
 
 
 def has_api_terms(word: str):
-    return "api" in word and (
-        "key" in word or ("token" in word and "tokens" not in word)
-    )
+    return "api" in word and ("key" in word or ("token" in word and "tokens" not in word))
 
 
 def remove_api_keys(flow: dict):
@@ -32,11 +30,7 @@ def remove_api_keys(flow: dict):
             node_data = node.get("data").get("node")
             template = node_data.get("template")
             for value in template.values():
-                if (
-                    isinstance(value, dict)
-                    and has_api_terms(value["name"])
-                    and value.get("password")
-                ):
+                if isinstance(value, dict) and has_api_terms(value["name"]) and value.get("password"):
                     value["value"] = None
 
     return flow
@@ -57,9 +51,7 @@ def build_input_keys_response(langchain_object, artifacts):
             input_keys_response["input_keys"][key] = value
     # If the object has memory, that memory will have a memory_variables attribute
     # memory variables should be removed from the input keys
-    if hasattr(langchain_object, "memory") and hasattr(
-        langchain_object.memory, "memory_variables"
-    ):
+    if hasattr(langchain_object, "memory") and hasattr(langchain_object.memory, "memory_variables"):
         # Remove memory variables from input keys
         input_keys_response["input_keys"] = {
             key: value
@@ -69,9 +61,7 @@ def build_input_keys_response(langchain_object, artifacts):
         # Add memory variables to memory_keys
         input_keys_response["memory_keys"] = langchain_object.memory.memory_variables
 
-    if hasattr(langchain_object, "prompt") and hasattr(
-        langchain_object.prompt, "template"
-    ):
+    if hasattr(langchain_object, "prompt") and hasattr(langchain_object.prompt, "template"):
         input_keys_response["template"] = langchain_object.prompt.template
 
     return input_keys_response
@@ -106,11 +96,7 @@ def raw_frontend_data_is_valid(raw_frontend_data):
 def is_valid_data(frontend_node, raw_frontend_data):
     """Check if the data is valid for processing."""
 
-    return (
-        frontend_node
-        and "template" in frontend_node
-        and raw_frontend_data_is_valid(raw_frontend_data)
-    )
+    return frontend_node and "template" in frontend_node and raw_frontend_data_is_valid(raw_frontend_data)
 
 
 def update_template_values(frontend_template, raw_template):
@@ -150,9 +136,7 @@ def get_file_path_value(file_path):
     # If the path is not in the cache dir, return empty string
     # This is to prevent access to files outside the cache dir
     # If the path is not a file, return empty string
-    if not path.exists() or not str(path).startswith(
-        user_cache_dir("langflow", "langflow")
-    ):
+    if not path.exists() or not str(path).startswith(user_cache_dir("langflow", "langflow")):
         return ""
     return file_path
 
@@ -183,9 +167,7 @@ async def check_langflow_version(component: StoreComponentCreate):
 
     langflow_version = get_lf_version_from_pypi()
     if langflow_version is None:
-        raise HTTPException(
-            status_code=500, detail="Unable to verify the latest version of Langflow"
-        )
+        raise HTTPException(status_code=500, detail="Unable to verify the latest version of Langflow")
     elif langflow_version != component.last_tested_version:
         warnings.warn(
             f"Your version of Langflow ({component.last_tested_version}) is outdated. "
@@ -215,20 +197,6 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-def serialize_field(value):
-    """Unified serialization function for handling both BaseModel and Document types,
-    including handling lists of these types."""
-    if isinstance(value, (list, tuple)):
-        return [serialize_field(v) for v in value]
-    elif isinstance(value, Document):
-        return value.to_json()
-    elif isinstance(value, BaseModel):
-        return value.model_dump()
-    elif isinstance(value, str):
-        return {"result": value}
-    return value
-
-
 def build_and_cache_graph(
     flow_id: str,
     session: Session,
@@ -236,13 +204,37 @@ def build_and_cache_graph(
     graph: Optional[Graph] = None,
 ):
     """Build and cache the graph."""
-    flow: Flow = session.get(Flow, flow_id)
+    flow: Optional[Flow] = session.get(Flow, flow_id)
     if not flow or not flow.data:
         raise ValueError("Invalid flow ID")
-    other_graph = Graph.from_payload(flow.data)
+    other_graph = Graph.from_payload(flow.data, flow_id)
     if graph is None:
         graph = other_graph
     else:
         graph = graph.update(other_graph)
     chat_service.set_cache(flow_id, graph)
     return graph
+
+
+def format_syntax_error_message(exc: SyntaxError) -> str:
+    """Format a SyntaxError message for returning to the frontend."""
+    if exc.text is None:
+        return f"Syntax error in code. Error on line {exc.lineno}"
+    return f"Syntax error in code. Error on line {exc.lineno}: {exc.text.strip()}"
+
+
+def get_causing_exception(exc: BaseException) -> BaseException:
+    """Get the causing exception from an exception."""
+    if hasattr(exc, "__cause__") and exc.__cause__:
+        return get_causing_exception(exc.__cause__)
+    return exc
+
+
+def format_exception_message(exc: Exception) -> str:
+    """Format an exception message for returning to the frontend."""
+    # We need to check if the __cause__ is a SyntaxError
+    # If it is, we need to return the message of the SyntaxError
+    causing_exception = get_causing_exception(exc)
+    if isinstance(causing_exception, SyntaxError):
+        return format_syntax_error_message(causing_exception)
+    return str(exc)

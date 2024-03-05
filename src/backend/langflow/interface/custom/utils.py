@@ -7,7 +7,10 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from fastapi import HTTPException
+from loguru import logger
+
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.interface.custom.attributes import ATTR_FUNC_MAPPING
 from langflow.interface.custom.code_parser.utils import extract_inner_type
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader.utils import (
@@ -22,7 +25,6 @@ from langflow.template.frontend_node.custom_components import (
 )
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
-from loguru import logger
 
 
 def add_output_types(
@@ -40,7 +42,9 @@ def add_output_types(
                     "traceback": traceback.format_exc(),
                 },
             )
-        if hasattr(return_type, "__name__"):
+        if return_type == str:
+            return_type = "Text"
+        elif hasattr(return_type, "__name__"):
             return_type = return_type.__name__
         elif hasattr(return_type, "__class__"):
             return_type = return_type.__class__.__name__
@@ -82,6 +86,8 @@ def add_base_classes(
             )
 
         base_classes = get_base_classes(return_type_instance)
+        if return_type_instance == str:
+            base_classes.append("Text")
 
         for base_class in base_classes:
             frontend_node.add_base_class(base_class)
@@ -119,7 +125,13 @@ def get_field_properties(extra_field):
 def process_type(field_type: str):
     if field_type.startswith("list") or field_type.startswith("List"):
         return extract_inner_type(field_type)
-    return "prompt" if field_type == "Prompt" else field_type
+
+    # field_type is a string can be Prompt or Code too
+    # so we just need to lower if it is the case
+    lowercase_type = field_type.lower()
+    if lowercase_type in ["prompt", "code"]:
+        return lowercase_type
+    return field_type
 
 
 def add_new_custom_field(
@@ -238,10 +250,12 @@ def run_build_config(
             # Allow user to build TemplateField as well
             # as a dict with the same keys as TemplateField
             field_dict = get_field_dict(field)
+            # This has to be done to set refresh if options or value are callable
+            update_field_dict(field_dict)
             if update_field is not None and field_name != update_field:
                 continue
             try:
-                update_field_dict(field_dict)
+                update_field_dict(field_dict, call=True)
                 build_config[field_name] = field_dict
             except Exception as exc:
                 logger.error(f"Error while getting build_config: {str(exc)}")
@@ -263,16 +277,9 @@ def run_build_config(
 
 def sanitize_template_config(template_config):
     """Sanitize the template config"""
-    attributes = {
-        "display_name",
-        "description",
-        "beta",
-        "documentation",
-        "output_types",
-        "icon",
-    }
+
     for key in template_config.copy():
-        if key not in attributes:
+        if key not in ATTR_FUNC_MAPPING.keys():
             template_config.pop(key, None)
 
     return template_config
@@ -313,14 +320,12 @@ def build_custom_component_template(
 ) -> Optional[Dict[str, Any]]:
     """Build a custom component template for the langchain"""
     try:
-        logger.debug("Building custom component template")
         frontend_node = build_frontend_node(custom_component.template_config)
 
-        logger.debug("Updated attributes")
         field_config, custom_instance = run_build_config(
             custom_component, user_id=user_id, update_field=update_field
         )
-        logger.debug("Built field config")
+
         entrypoint_args = custom_component.get_function_entrypoint_args
 
         add_extra_fields(frontend_node, field_config, entrypoint_args)
@@ -335,7 +340,6 @@ def build_custom_component_template(
         add_output_types(
             frontend_node, custom_component.get_function_entrypoint_return_type
         )
-        logger.debug("Added base classes")
 
         reorder_fields(frontend_node, custom_instance._get_field_order())
 
@@ -358,11 +362,14 @@ def create_component_template(component):
     """Create a template for a component."""
     component_code = component["code"]
     component_output_types = component["output_types"]
+    # remove
 
     component_extractor = CustomComponent(code=component_code)
 
     component_template = build_custom_component_template(component_extractor)
-    component_template["output_types"] = component_output_types
+    if not component_template["output_types"] and component_output_types:
+        component_template["output_types"] = component_output_types
+
     return component_template
 
 
@@ -395,15 +402,17 @@ def build_custom_components(settings_service):
     return custom_components_from_file
 
 
-def update_field_dict(field_dict):
+def update_field_dict(field_dict, call=False):
     """Update the field dictionary by calling options() or value() if they are callable"""
     if "options" in field_dict and callable(field_dict["options"]):
-        field_dict["options"] = field_dict["options"]()
+        if call:
+            field_dict["options"] = field_dict["options"]()
         # Also update the "refresh" key
         field_dict["refresh"] = True
 
     if "value" in field_dict and callable(field_dict["value"]):
-        field_dict["value"] = field_dict["value"](field_dict.get("options", []))
+        if call:
+            field_dict["value"] = field_dict["value"]()
         field_dict["refresh"] = True
 
     # Let's check if "range_spec" is a RangeSpec object
@@ -431,7 +440,7 @@ def build_component(component):
     """Build a single component."""
     component_name = determine_component_name(component)
     component_template = create_component_template(component)
-    logger.debug(f"Building component: {component_name, component.get('output_types')}")
+
     return component_name, component_template
 
 

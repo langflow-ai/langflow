@@ -1,4 +1,5 @@
 from langchain_core.prompts import PromptTemplate
+
 from langflow import CustomComponent
 from langflow.field_typing import Prompt, TemplateField, Text
 
@@ -19,7 +20,13 @@ class PromptComponent(CustomComponent):
         template: Prompt,
         **kwargs,
     ) -> Text:
-        prompt_template = PromptTemplate.from_template(template)
+        prompt_template = PromptTemplate.from_template(Text(template))
+
+        attributes_to_check = ["text", "page_content"]
+        for key, value in kwargs.copy().items():
+            for attribute in attributes_to_check:
+                if hasattr(value, attribute):
+                    kwargs[key] = getattr(value, attribute)
 
         try:
             formated_prompt = prompt_template.format(**kwargs)

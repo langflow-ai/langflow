@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { SIGNIN_ERROR_ALERT } from "../../constants/alerts_constants";
 import { CONTROL_LOGIN_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { onLogin } from "../../controllers/API";
@@ -42,7 +43,7 @@ export default function LoginPage(): JSX.Element {
       })
       .catch((error) => {
         setErrorData({
-          title: "Error signing in",
+          title: SIGNIN_ERROR_ALERT,
           list: [error["response"]["data"]["detail"]],
         });
       });

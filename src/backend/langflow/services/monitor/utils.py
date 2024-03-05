@@ -1,12 +1,13 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type, Union
 
 import duckdb
-from langflow.services.deps import get_monitor_service
 from loguru import logger
 from pydantic import BaseModel
 
+from langflow.services.deps import get_monitor_service
+
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import ResultData
+    from langflow.api.v1.schemas import ResultDataResponse
 
 
 INDEX_KEY = "index"
@@ -14,13 +15,15 @@ INDEX_KEY = "index"
 
 def get_table_schema_as_dict(conn: duckdb.DuckDBPyConnection, table_name: str) -> dict:
     result = conn.execute(f"PRAGMA table_info('{table_name}')").fetchall()
-    return {row[1]: row[2].upper() for row in result}
+    schema = {row[1]: row[2].upper() for row in result}
+    schema.pop(INDEX_KEY, None)
+    return schema
 
 
 def model_to_sql_column_definitions(model: Type[BaseModel]) -> dict:
     columns = {}
     for field_name, field_type in model.model_fields.items():
-        if hasattr(field_type.annotation, "__args__"):
+        if hasattr(field_type.annotation, "__args__") and field_type.annotation is not None:
             field_args = field_type.annotation.__args__
         else:
             field_args = []
@@ -43,9 +46,7 @@ def model_to_sql_column_definitions(model: Type[BaseModel]) -> dict:
     return columns
 
 
-def drop_and_create_table_if_schema_mismatch(
-    db_path: str, table_name: str, model: Type[BaseModel]
-):
+def drop_and_create_table_if_schema_mismatch(db_path: str, table_name: str, model: Type[BaseModel]):
     with duckdb.connect(db_path) as conn:
         # Get the current schema from the database
         try:
@@ -56,6 +57,7 @@ def drop_and_create_table_if_schema_mismatch(
         desired_schema = model_to_sql_column_definitions(model)
 
         # Compare the current and desired schemas
+
         if current_schema != desired_schema:
             # If they don't match, drop the existing table and create a new one
             conn.execute(f"DROP TABLE IF EXISTS {table_name}")
@@ -65,12 +67,8 @@ def drop_and_create_table_if_schema_mismatch(
                     conn.execute(f"CREATE SEQUENCE seq_{table_name} START 1;")
                 except duckdb.CatalogException:
                     pass
-                desired_schema[INDEX_KEY] = (
-                    f"INTEGER PRIMARY KEY DEFAULT NEXTVAL('seq_{table_name}')"
-                )
-            columns_sql = ", ".join(
-                f"{name} {data_type}" for name, data_type in desired_schema.items()
-            )
+                desired_schema[INDEX_KEY] = f"INTEGER PRIMARY KEY DEFAULT NEXTVAL('seq_{table_name}')"
+            columns_sql = ", ".join(f"{name} {data_type}" for name, data_type in desired_schema.items())
             create_table_sql = f"CREATE TABLE {table_name} ({columns_sql})"
             conn.execute(create_table_sql)
 
@@ -78,11 +76,14 @@ def drop_and_create_table_if_schema_mismatch(
 def add_row_to_table(
     conn: duckdb.DuckDBPyConnection,
     table_name: str,
-    model: Type[BaseModel],
-    monitor_data: Dict[str, Any],
+    model: Type,
+    monitor_data: Union[Dict[str, Any], BaseModel],
 ):
     # Validate the data with the Pydantic model
-    validated_data = model(**monitor_data)
+    if isinstance(monitor_data, model):
+        validated_data = monitor_data
+    else:
+        validated_data = model(**monitor_data)
 
     # Extract data for the insert statement
     validated_dict = validated_data.model_dump(exclude_unset=True)
@@ -107,7 +108,7 @@ def add_row_to_table(
 
 
 async def log_message(
-    sender_type: str,
+    sender: str,
     sender_name: str,
     message: str,
     session_id: str,
@@ -121,7 +122,7 @@ async def log_message(
 
         monitor_service = get_monitor_service()
         row = {
-            "sender_type": sender_type,
+            "sender": sender,
             "sender_name": sender_name,
             "message": message,
             "artifacts": artifacts or {},
@@ -138,7 +139,7 @@ async def log_vertex_build(
     vertex_id: str,
     valid: bool,
     params: Any,
-    data: "ResultData",
+    data: "ResultDataResponse",
     artifacts: Optional[dict] = None,
 ):
     try:

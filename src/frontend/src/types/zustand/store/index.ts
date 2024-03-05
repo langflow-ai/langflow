@@ -3,8 +3,9 @@ export type StoreStoreType = {
   validApiKey: boolean;
   hasApiKey: boolean;
   loadingApiKey: boolean;
-  updateHasStore: (hasStore: boolean) => void;
+  checkHasStore: () => void;
   updateValidApiKey: (validApiKey: boolean) => void;
   updateHasApiKey: (hasApiKey: boolean) => void;
   updateLoadingApiKey: (loadingApiKey: boolean) => void;
+  fetchApiData: () => Promise<void>;
 };

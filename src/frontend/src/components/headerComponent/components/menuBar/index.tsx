@@ -10,12 +10,13 @@ import {
 import _ from "lodash";
 import { useNavigate } from "react-router-dom";
 import { Node } from "reactflow";
+import { SAVED_HOVER } from "../../../../constants/constants";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { cn } from "../../../../utils/utils";
-import Tooltip from "../../../TooltipComponent";
+import ShadTooltip from "../../../ShadTooltipComponent";
 import IconComponent from "../../../genericIconComponent";
 
 export const MenuBar = ({
@@ -38,6 +39,7 @@ export const MenuBar = ({
   const n = useFlowStore((state) => state.nodes);
 
   const navigate = useNavigate();
+  const isBuilding = useFlowStore((state) => state.isBuilding);
 
   function handleAddFlow() {
     try {
@@ -48,6 +50,15 @@ export const MenuBar = ({
     } catch (err) {
       setErrorData(err as { title: string; list?: Array<string> });
     }
+  }
+
+  function printByBuildStatus() {
+    if (isBuilding) {
+      return "Building...";
+    } else if (saveLoading) {
+      return "Saving...";
+    }
+    return "Saved";
   }
 
   return currentFlow ? (
@@ -158,27 +169,29 @@ export const MenuBar = ({
           setOpen={setOpenSettings}
         ></FlowSettingsModal>
       </div>
-      <Tooltip
-        title={
-          "Last saved at " +
+      <ShadTooltip
+        content={
+          SAVED_HOVER +
           new Date(currentFlow.updated_at ?? "").toLocaleString("en-US", {
             hour: "numeric",
             minute: "numeric",
             second: "numeric",
           })
         }
+        side="bottom"
+        styleClasses="cursor-default"
       >
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <div className="flex cursor-default items-center gap-1.5 text-sm text-muted-foreground">
           <IconComponent
-            name={saveLoading ? "Loader2" : "CheckCircle2"}
+            name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
             className={cn(
               "h-4 w-4",
-              saveLoading ? "animate-spin" : "animate-wiggle"
+              isBuilding || saveLoading ? "animate-spin" : "animate-wiggle"
             )}
           />
-          {saveLoading ? "Saving..." : "Saved"}
+          {printByBuildStatus()}
         </div>
-      </Tooltip>
+      </ShadTooltip>
     </div>
   ) : (
     <></>

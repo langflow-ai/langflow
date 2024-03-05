@@ -1,9 +1,9 @@
-from typing import Callable, Optional, Union
+from typing import Optional
 
 from langchain.chains import ConversationChain
 
 from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel, BaseMemory, Chain, Text
+from langflow.field_typing import BaseLanguageModel, BaseMemory, Text
 
 
 class ConversationChainComponent(CustomComponent):
@@ -23,19 +23,20 @@ class ConversationChainComponent(CustomComponent):
 
     def build(
         self,
+        input_value: Text,
         llm: BaseLanguageModel,
         memory: Optional[BaseMemory] = None,
-        inputs: dict = {},
-    ) -> Union[Chain, Callable, Text]:
+    ) -> Text:
         if memory is None:
             chain = ConversationChain(llm=llm)
-        chain = ConversationChain(llm=llm, memory=memory)
+        else:
+            chain = ConversationChain(llm=llm, memory=memory)
         result = chain.invoke(inputs)
-        # result is an AIMessage which is a subclass of BaseMessage
-        # We need to check if it is a string or a BaseMessage
         if hasattr(result, "content") and isinstance(result.content, str):
-            return result.content
+            result = result.content
         elif isinstance(result, str):
-            return result
-
-        return str(result)
+            result = result
+        else:
+            result = result.get("response")
+        self.status = result
+        return result

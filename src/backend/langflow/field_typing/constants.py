@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Union
+from typing import Callable, Dict, Text, Union
 
 from langchain.agents.agent import AgentExecutor
 from langchain.chains.base import Chain
@@ -22,15 +22,15 @@ class Object:
     pass
 
 
-class Text:
-    pass
-
-
 class Data:
     pass
 
 
 class Prompt:
+    pass
+
+
+class Code:
     pass
 
 

@@ -27,8 +27,11 @@ export type ToggleComponentType = {
   disabled: boolean | undefined;
   size: "small" | "medium" | "large";
   id?: string;
+  editNode?: boolean;
 };
 export type DropDownComponentType = {
+  disabled?: boolean;
+  isLoading?: boolean;
   value: string;
   options: string[];
   onSelect: (value: string) => void;
@@ -112,7 +115,8 @@ export type CodeAreaComponentType = {
   dynamic?: boolean;
   id?: string;
   readonly?: boolean;
-  openModal?: boolean;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
 };
 
 export type FileComponentType = {
@@ -484,6 +488,7 @@ export type nodeToolbarPropsType = {
   name?: string;
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
+  selected: boolean;
 };
 
 export type parsedDataType = {
@@ -517,13 +522,20 @@ export type codeAreaModalPropsType = {
   children: ReactNode;
   dynamic?: boolean;
   readonly?: boolean;
-  openModal?: boolean;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
 };
 
 export type chatMessagePropsType = {
   chat: ChatMessageType;
   lockChat: boolean;
   lastMessage: boolean;
+  setLockChat: (lock: boolean) => void;
+  updateChat: (
+    chat: ChatMessageType,
+    message: string,
+    stream_url?: string
+  ) => void;
 };
 
 export type formModalPropsType = {
@@ -627,9 +639,9 @@ export type validationStatusType = {
   id: string;
   data: object | any;
   params: string;
-  progress: number;
+  progress?: number;
   valid: boolean;
-  duration: string;
+  duration?: string;
 };
 
 export type ApiKey = {
