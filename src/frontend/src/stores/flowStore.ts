@@ -450,9 +450,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       status: BuildStatus,
       runId: string
     ) {
-      if (vertexBuildData && vertexBuildData.inactive_vertices) {
-        get().removeFromVerticesBuild(vertexBuildData.inactive_vertices);
+      if (vertexBuildData && vertexBuildData.inactivated_vertices) {
+        get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
       }
+
       if (vertexBuildData.next_vertices_ids) {
         // next_vertices_ids is a list of vertices that are going to be built next
         // verticesLayers is a list of list of vertices ids, where each list is a layer of vertices
@@ -513,6 +514,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().setIsBuilding(false);
       },
       onBuildStart: (idList) => {
+        console.log("onBuildStart", idList);
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
       validateNodes: validateSubgraph,
@@ -538,6 +540,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ verticesBuild: vertices });
   },
   verticesBuild: null,
+  addToVerticesBuild: (vertices: string[]) => {
+    const verticesBuild = get().verticesBuild;
+    if (!verticesBuild) return;
+    set({
+      verticesBuild: {
+        ...verticesBuild,
+        verticesIds: [...verticesBuild.verticesIds, ...vertices],
+      },
+    });
+  },
   removeFromVerticesBuild: (vertices: string[]) => {
     const verticesBuild = get().verticesBuild;
     if (!verticesBuild) return;

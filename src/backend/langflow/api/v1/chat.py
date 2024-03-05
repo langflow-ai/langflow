@@ -159,10 +159,10 @@ async def build_vertex(
         result_data_response.duration = duration
         result_data_response.timedelta = timedelta
         vertex.add_build_time(timedelta)
-        inactive_vertices = None
-        if graph.inactive_vertices:
-            inactive_vertices = list(graph.inactive_vertices)
-            graph.reset_inactive_vertices()
+        inactivated_vertices = None
+        inactivated_vertices = list(graph.inactivated_vertices)
+        graph.reset_inactivated_vertices()
+        graph.reset_activated_vertices()
         chat_service.set_cache(flow_id, graph)
 
         # graph.stop_vertex tells us if the user asked
@@ -173,8 +173,8 @@ async def build_vertex(
             next_vertices_ids = [graph.stop_vertex]
 
         build_response = VertexBuildResponse(
+            inactivated_vertices=inactivated_vertices,
             next_vertices_ids=next_vertices_ids,
-            inactive_vertices=inactive_vertices,
             valid=valid,
             params=params,
             id=vertex.id,

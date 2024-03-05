@@ -14,7 +14,6 @@ from uuid import UUID
 
 import yaml
 from cachetools import TTLCache, cachedmethod
-from fastapi import HTTPException
 from langchain_core.documents import Document
 from pydantic import BaseModel
 from sqlmodel import select
@@ -75,6 +74,28 @@ class CustomComponent(Component):
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_records: Optional[List[Record]] = None
+
+    def update_state(self, name: str, value: Any):
+        try:
+            self.vertex.graph.update_state(
+                name=name, record=value, caller=self.vertex.id
+            )
+        except Exception as e:
+            raise ValueError(f"Error updating state: {e}")
+
+    def append_state(self, name: str, value: Any):
+        try:
+            self.vertex.graph.append_state(
+                name=name, record=value, caller=self.vertex.id
+            )
+        except Exception as e:
+            raise ValueError(f"Error appending state: {e}")
+
+    def get_state(self, name: str):
+        try:
+            return self.vertex.graph.get_state(name=name)
+        except Exception as e:
+            raise ValueError(f"Error getting state: {e}")
 
     _tree: Optional[dict] = None
 
@@ -200,18 +221,7 @@ class CustomComponent(Component):
 
         args = build_method["args"]
         for arg in args:
-            if arg.get("type") == "prompt":
-                raise HTTPException(
-                    status_code=400,
-                    detail={
-                        "error": "Type hint Error",
-                        "traceback": (
-                            "Prompt type is not supported in the build method."
-                            " Try using PromptTemplate instead."
-                        ),
-                    },
-                )
-            elif not arg.get("type") and arg.get("name") != "self":
+            if not arg.get("type") and arg.get("name") != "self":
                 # Set the type to Data
                 arg["type"] = "Data"
         return args
