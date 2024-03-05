@@ -5,12 +5,18 @@ from uuid import UUID
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
+from loguru import logger
 from sqlmodel import Session, select
 
 from langflow.api.utils import remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate, FlowListRead
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
+from langflow.services.database.models.flow import (
+    Flow,
+    FlowCreate,
+    FlowRead,
+    FlowUpdate,
+)
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
 
@@ -42,11 +48,18 @@ def create_flow(
 def read_flows(
     *,
     current_user: User = Depends(get_current_active_user),
+    session: Session = Depends(get_session),
 ):
     """Read all flows."""
     try:
         flows = current_user.flows
         flows = validate_is_component(flows)
+        # with the session get the flows that DO NOT have a user_id
+        try:
+            example_flows = session.exec(select(Flow).where(Flow.user_id == None)).all()
+            flows.extend(example_flows)
+        except Exception as e:
+            logger.error(e)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     return [jsonable_encoder(flow) for flow in flows]
@@ -60,7 +73,11 @@ def read_flow(
     current_user: User = Depends(get_current_active_user),
 ):
     """Read a flow."""
-    if user_flow := (session.exec(select(Flow).where(Flow.id == flow_id, Flow.user_id == current_user.id)).first()):
+    if user_flow := (
+        session.exec(
+            select(Flow).where(Flow.id == flow_id, Flow.user_id == current_user.id)
+        ).first()
+    ):
         return user_flow
     else:
         raise HTTPException(status_code=404, detail="Flow not found")
@@ -107,9 +124,6 @@ def delete_flow(
     session.delete(flow)
     session.commit()
     return {"message": "Flow deleted successfully"}
-
-
-# Define a new model to handle multiple flows
 
 
 @router.post("/batch/", response_model=List[FlowRead], status_code=201)
