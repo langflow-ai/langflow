@@ -80,7 +80,7 @@ class FlowCreate(FlowBase):
 
 class FlowRead(FlowBase):
     id: UUID
-    user_id: UUID = Field()
+    user_id: Optional[UUID] = Field()
 
 
 class FlowUpdate(SQLModel):
