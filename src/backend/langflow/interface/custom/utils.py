@@ -8,6 +8,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from loguru import logger
+from pydantic import BaseModel
 
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.custom.attributes import ATTR_FUNC_MAPPING
@@ -25,6 +26,10 @@ from langflow.template.frontend_node.custom_components import (
 )
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
+
+
+class UpdateBuildConfigError(Exception):
+    pass
 
 
 def add_output_types(
@@ -190,15 +195,23 @@ def add_extra_fields(frontend_node, field_config, function_args):
     """Add extra fields to the frontend node"""
     if not function_args:
         return
+    _field_config = field_config.copy()
+    function_args_names = [arg["name"] for arg in function_args]
+    # If kwargs is in the function_args and not all field_config keys are in function_args
+    # then we need to add the extra fields
 
     for extra_field in function_args:
-        if "name" not in extra_field or extra_field["name"] == "self":
+        if "name" not in extra_field or extra_field["name"] in [
+            "self",
+            "kwargs",
+            "args",
+        ]:
             continue
 
         field_name, field_type, field_value, field_required = get_field_properties(
             extra_field
         )
-        config = field_config.get(field_name, {})
+        config = _field_config.pop(field_name, {})
         frontend_node = add_new_custom_field(
             frontend_node,
             field_name,
@@ -207,6 +220,23 @@ def add_extra_fields(frontend_node, field_config, function_args):
             field_required,
             config,
         )
+    if "kwargs" in function_args_names and not all(
+        key in function_args_names for key in field_config.keys()
+    ):
+        for field_name, field_config in _field_config.copy().items():
+            config = _field_config.get(field_name, {})
+            config = config.model_dump() if isinstance(config, BaseModel) else config
+            field_name, field_type, field_value, field_required = get_field_properties(
+                extra_field=config
+            )
+            frontend_node = add_new_custom_field(
+                frontend_node,
+                field_name,
+                field_type,
+                field_value,
+                field_required,
+                config,
+            )
 
 
 def get_field_dict(field: Union[TemplateField, dict]):
@@ -220,6 +250,7 @@ def run_build_config(
     custom_component: CustomComponent,
     user_id: Optional[Union[str, UUID]] = None,
     update_field=None,
+    update_field_value=None,
 ):
     """Build the field configuration for a custom component"""
 
@@ -246,33 +277,48 @@ def run_build_config(
         custom_instance = custom_class(user_id=user_id)
         build_config: Dict = custom_instance.build_config()
 
-        for field_name, field in build_config.items():
+        for field_name, field in build_config.copy().items():
             # Allow user to build TemplateField as well
             # as a dict with the same keys as TemplateField
             field_dict = get_field_dict(field)
             # This has to be done to set refresh if options or value are callable
-            update_field_dict(field_dict)
             if update_field is not None and field_name != update_field:
+                build_config = update_field_dict(
+                    custom_component_instance=custom_instance,
+                    field_dict=field_dict,
+                    build_config=build_config,
+                    call=False,
+                )
                 continue
             try:
-                update_field_dict(field_dict, call=True)
+                build_config = update_field_dict(
+                    custom_component_instance=custom_instance,
+                    field_dict=field_dict,
+                    build_config=build_config,
+                    update_field=update_field,
+                    update_field_value=update_field_value,
+                    call=True,
+                )
                 build_config[field_name] = field_dict
             except Exception as exc:
                 logger.error(f"Error while getting build_config: {str(exc)}")
+                if isinstance(exc, UpdateBuildConfigError):
+                    message = str(exc)
+                else:
+                    message = f"Error while getting build_config: {str(exc)}"
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": message,
+                        "traceback": traceback.format_exc(),
+                    },
+                ) from exc
 
         return build_config, custom_instance
 
     except Exception as exc:
         logger.error(f"Error while building field config: {str(exc)}")
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": (
-                    "Invalid type convertion. Please check your code and try again."
-                ),
-                "traceback": traceback.format_exc(),
-            },
-        ) from exc
+        raise exc
 
 
 def sanitize_template_config(template_config):
@@ -317,13 +363,17 @@ def build_custom_component_template(
     custom_component: CustomComponent,
     user_id: Optional[Union[str, UUID]] = None,
     update_field: Optional[str] = None,
+    update_field_value: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """Build a custom component template for the langchain"""
     try:
         frontend_node = build_frontend_node(custom_component.template_config)
 
         field_config, custom_instance = run_build_config(
-            custom_component, user_id=user_id, update_field=update_field
+            custom_component,
+            user_id=user_id,
+            update_field=update_field,
+            update_field_value=update_field_value,
         )
 
         entrypoint_args = custom_component.get_function_entrypoint_args
@@ -402,22 +452,32 @@ def build_custom_components(settings_service):
     return custom_components_from_file
 
 
-def update_field_dict(field_dict, call=False):
+def update_field_dict(
+    custom_component_instance: "CustomComponent",
+    field_dict: Dict,
+    build_config: Dict,
+    update_field: Optional[str] = None,
+    update_field_value: Optional[Any] = None,
+    call: bool = False,
+):
     """Update the field dictionary by calling options() or value() if they are callable"""
-    if "options" in field_dict and callable(field_dict["options"]):
+    if "refresh" in field_dict:
         if call:
-            field_dict["options"] = field_dict["options"]()
-        # Also update the "refresh" key
-        field_dict["refresh"] = True
-
-    if "value" in field_dict and callable(field_dict["value"]):
-        if call:
-            field_dict["value"] = field_dict["value"]()
+            try:
+                custom_component_instance.update_build_config(
+                    build_config, update_field, update_field_value
+                )
+            except Exception as exc:
+                logger.error(f"Error while running update_build_config: {str(exc)}")
+                raise UpdateBuildConfigError(
+                    f"Error while running update_build_config: {str(exc)}"
+                ) from exc
         field_dict["refresh"] = True
 
     # Let's check if "range_spec" is a RangeSpec object
     if "rangeSpec" in field_dict and isinstance(field_dict["rangeSpec"], RangeSpec):
         field_dict["rangeSpec"] = field_dict["rangeSpec"].model_dump()
+    return build_config
 
 
 def sanitize_field_config(field_config: Dict):
