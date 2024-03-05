@@ -15,7 +15,6 @@ import KeypairListComponent from "../../../../components/keypairListComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
-import { Badge } from "../../../../components/ui/badge";
 import {
   LANGFLOW_SUPPORTED_TYPES,
   TOOLTIP_EMPTY,
@@ -398,44 +397,18 @@ export default function ParameterComponent({
                 <ShadTooltip content="Required" styleClasses="text-red-500">
                   {/* put div to avoid bug that does not display tooltip */}
                   <div>
-                    <Badge
-                      variant="nonebg"
-                      size="md"
-                      className="font-normal"
-                      style={{
-                        backgroundColor: String(
-                          (!left
-                            ? nodeColors[t] ?? nodeColors[types[t]]
-                            : nodeColors[types[data.type]] ??
-                              nodeColors.unknown) + "35"
-                        ),
-                      }}
-                    >
-                      {t}{" "}
-                      <span className="ml-1 text-red-500">
-                        {" "}
-                        {required ? "*" : ""}{" "}
-                      </span>
-                    </Badge>
+                    {t}{" "}
+                    <span className="ml-1 text-red-500">
+                      {" "}
+                      {required ? "*" : ""}{" "}
+                    </span>
                   </div>
                 </ShadTooltip>
               ) : (
-                <Badge
-                  variant="nonebg"
-                  size="md"
-                  className="font-normal"
-                  style={{
-                    backgroundColor: String(
-                      (!left
-                        ? nodeColors[t] ?? nodeColors[types[t]]
-                        : nodeColors[types[data.type]] ?? nodeColors.unknown) +
-                        "35"
-                    ),
-                  }}
-                >
+                <>
                   {t}{" "}
                   <span className="text-red-500"> {required ? "*" : ""} </span>
-                </Badge>
+                </>
               )
             )}
             {info !== "" && (
@@ -520,7 +493,7 @@ export default function ParameterComponent({
           data.node?.template[name].options ? (
           // TODO: Improve CSS
           <div className="mt-2 flex w-full items-center">
-            <div className="w-5/6 flex-grow">
+            <div className="w-5/6 flex-grow ">
               <Dropdown
                 options={data.node.template[name].options}
                 onSelect={handleOnNewValue}

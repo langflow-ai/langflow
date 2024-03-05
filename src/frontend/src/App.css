@@ -121,7 +121,7 @@ body {
 
 .react-flow__edge path {
   stroke: #5d00ff !important;
-  stroke-width: 3.5px !important;
+  stroke-width: 1.5px !important;
 }
 
 .react-flow__handle {
@@ -137,11 +137,11 @@ body {
 }
 
 .gradient-border-input-connected {
-  border-left: 5px solid #5d00ff !important;
+  border-left: 3px solid #5d00ff !important;
 }
 
 .gradient-border-output-connected {
-  border-right: 5px solid #5d00ff !important;
+  border-right: 3px solid #5d00ff !important;
 }
 
 .gradient-border-input {
