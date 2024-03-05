@@ -44,6 +44,7 @@ export default function GenericNode({
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setNode = useFlowStore((state) => state.setNode);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
+  console.log(types[data.type])
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);
   const [inputDescription, setInputDescription] = useState(false);
@@ -157,7 +158,7 @@ export default function GenericNode({
     const iconElement = data?.node?.icon;
     const iconColor = nodeColors[types[data.type]];
     const iconName =
-      iconElement || (data.node?.flow ? "group_components" : name);
+    iconElement || (data.node?.flow ? "group_components" : name);
     const iconClassName = `generic-node-icon ${
       !showNode ? " absolute inset-x-6 h-12 w-12 " : ""
     }`;
