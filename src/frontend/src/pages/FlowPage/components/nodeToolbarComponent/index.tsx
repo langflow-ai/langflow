@@ -250,7 +250,7 @@ export default function NodeToolbarComponent({
       ) {
         event.preventDefault();
         setShowState(show => !show)
-        setShowNode(showNode);
+        setShowNode(data.showNode ?? true ? false : true);
       }
       if (
         selected &&
@@ -302,7 +302,7 @@ export default function NodeToolbarComponent({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [isSaved]);
+  }, [isSaved, showNode, data.showNode]);
 
   return (
     <>
@@ -459,7 +459,7 @@ export default function NodeToolbarComponent({
                   <SelectItem value={"SaveAll"}>
                     <div className="flex">
                       <IconComponent
-                        name="Settings2"
+                        name="SaveAll"
                         className="relative top-0.5 mr-2 h-4 w-4 "
                       />{" "}
                       <span className="">Save</span>{" "}
