@@ -106,6 +106,12 @@ python-socketio = "^5.11.0"
 llama-index = "^0.10.13"
 langchain-openai = "^0.0.6"
 unstructured = { extras = ["md"], version = "^0.12.4" }
+opentelemetry-api = "^1.23.0"
+opentelemetry-sdk = "^1.23.0"
+opentelemetry-exporter-otlp = "^1.23.0"
+opentelemetry-instrumentation-fastapi = "^0.44b0"
+opentelemetry-instrumentation-httpx = "^0.44b0"
+opentelemetry-instrumentation-asgi = "^0.44b0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.1"
