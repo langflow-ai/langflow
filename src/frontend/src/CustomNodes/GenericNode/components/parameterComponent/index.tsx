@@ -98,24 +98,33 @@ export default function ParameterComponent({
       return;
     }
 
-    try {
-      const res = await postCustomComponentUpdate(code, name);
-      if (res.status === 200 && data.node?.template) {
-        setNode(data.id, (oldNode) => {
-          let newNode = cloneDeep(oldNode);
+    await postCustomComponentUpdate(
+      code,
+      name,
+      data.node?.template[name]?.value
+    )
+      .then((res) => {
+        if (res.status === 200 && data.node?.template) {
+          setNode(data.id, (oldNode) => {
+            let newNode = cloneDeep(oldNode);
 
-          newNode.data = {
-            ...newNode.data,
-          };
+            newNode.data = {
+              ...newNode.data,
+            };
 
-          newNode.data.node.template[name] = res.data.template[name];
+            newNode.data.node.template = res.data.template;
 
-          return newNode;
+            return newNode;
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Error occurred while updating the node:", error);
+        setErrorData({
+          title: "Error while updating the Component",
+          list: [error.response.data.detail.error ?? "Unknown error"],
         });
-      }
-    } catch (err) {
-      setErrorData(err as { title: string; list?: Array<string> });
-    }
+      });
 
     renderTooltips();
     if (delayAnimation) {
