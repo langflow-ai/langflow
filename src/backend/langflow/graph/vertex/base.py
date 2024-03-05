@@ -58,6 +58,7 @@ class Vertex:
         self.will_stream = False
         self.updated_raw_params = False
         self.id: str = data["id"]
+        self.is_state = False
         self.is_input = any(
             input_component_name in self.id for input_component_name in INPUT_COMPONENTS
         )
@@ -99,12 +100,9 @@ class Vertex:
 
     def update_graph_state(self, key, new_state, append: bool):
         if append:
-            if key in self.graph_state:
-                self.graph_state[key].append(new_state)
-            else:
-                self.graph_state[key] = [new_state]
+            self.graph.append_state(key, new_state, caller=self.id)
         else:
-            self.graph_state[key] = new_state
+            self.graph.update_state(key, new_state, caller=self.id)
 
     def set_state(self, state: str):
         self.state = VertexStates[state]
@@ -114,12 +112,12 @@ class Vertex:
         ):
             # If the vertex is inactive and has only one in degree
             # it means that it is not a merge point in the graph
-            self.graph.inactive_vertices.add(self.id)
+            self.graph.inactivated_vertices.add(self.id)
         elif (
             self.state == VertexStates.ACTIVE
-            and self.id in self.graph.inactive_vertices
+            and self.id in self.graph.inactivated_vertices
         ):
-            self.graph.inactive_vertices.remove(self.id)
+            self.graph.inactivated_vertices.remove(self.id)
 
     @property
     def avg_build_time(self):
@@ -385,7 +383,7 @@ class Vertex:
         self.params = params
         self._raw_params = params.copy()
 
-    def update_raw_params(self, new_params: Dict[str, str]):
+    def update_raw_params(self, new_params: Dict[str, str], overwrite: bool = False):
         """
         Update the raw parameters of the vertex with the given new parameters.
 
@@ -400,6 +398,10 @@ class Vertex:
             return
         if any(isinstance(self._raw_params.get(key), Vertex) for key in new_params):
             return
+        if not overwrite:
+            for key in new_params.copy():
+                if key not in self._raw_params:
+                    new_params.pop(key)
         self._raw_params.update(new_params)
         self.updated_raw_params = True
 
@@ -560,10 +562,14 @@ class Vertex:
                 self.params[key].extend(built)
             else:
                 try:
+                    if self.params[key] == built:
+                        continue
+
                     self.params[key].append(built)
                 except AttributeError as e:
                     logger.exception(e)
                     raise ValueError(
+                        f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {built}"
                         f"Error building node {self.display_name}: {str(e)}"
                     ) from e
 
@@ -672,6 +678,10 @@ class Vertex:
 
         if self.frozen and self._built:
             return self.get_requester_result(requester)
+        elif self._built and requester is not None:
+            # This means that the vertex has already been built
+            # and we are just getting the result for the requester
+            return await self.get_requester_result(requester)
         self._reset()
 
         if self._is_chat_input() and inputs is not None:
@@ -740,11 +750,3 @@ class Vertex:
             if self._built_object is not None
             else "Failed to build 😵‍💫"
         )
-
-
-class StatefulVertex(Vertex):
-    pass
-
-
-class StatelessVertex(Vertex):
-    pass

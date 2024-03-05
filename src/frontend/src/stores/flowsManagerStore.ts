@@ -92,7 +92,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           true
         );
       }
-      set({ saveLoading: true });
     }, 500); // Delay of 500ms because chat message depends on it.
   },
   saveFlow: (flow: FlowType, silent?: boolean) => {
