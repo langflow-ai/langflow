@@ -39,7 +39,6 @@ class WeaviateSearchVectorStore(WeaviateVectorStoreComponent, LCVectorStoreCompo
             "advanced": True,
             "value": "text",
         },
-        "documents": {"display_name": "Documents", "is_list": True},
         "embedding": {"display_name": "Embedding"},
         "attributes": {
             "display_name": "Attributes",

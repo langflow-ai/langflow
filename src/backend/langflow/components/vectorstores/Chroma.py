@@ -31,7 +31,7 @@ class ChromaComponent(CustomComponent):
             "collection_name": {"display_name": "Collection Name", "value": "langflow"},
             "index_directory": {"display_name": "Persist Directory"},
             "code": {"advanced": True, "display_name": "Code"},
-            "documents": {"display_name": "Documents", "is_list": True},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
             "embedding": {"display_name": "Embedding"},
             "chroma_server_cors_allow_origins": {
                 "display_name": "Server CORS Allow Origins",
@@ -84,7 +84,8 @@ class ChromaComponent(CustomComponent):
 
         if chroma_server_host is not None:
             chroma_settings = chromadb.config.Settings(
-                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or None,
+                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins
+                or None,
                 chroma_server_host=chroma_server_host,
                 chroma_server_port=chroma_server_port or None,
                 chroma_server_grpc_port=chroma_server_grpc_port or None,
@@ -99,7 +100,9 @@ class ChromaComponent(CustomComponent):
 
         if documents is not None and embedding is not None:
             if len(documents) == 0:
-                raise ValueError("If documents are provided, there must be at least one document.")
+                raise ValueError(
+                    "If documents are provided, there must be at least one document."
+                )
             chroma = Chroma.from_documents(
                 documents=documents,  # type: ignore
                 persist_directory=index_directory,

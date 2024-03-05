@@ -1,23 +1,22 @@
-from typing import Optional
+from typing import List, Optional
 
 from langchain.text_splitter import Language
-from langchain_core.documents import Document
 
 from langflow import CustomComponent
+from langflow.schema.schema import Record
 
 
 class LanguageRecursiveTextSplitterComponent(CustomComponent):
     display_name: str = "Language Recursive Text Splitter"
     description: str = "Split text into chunks of a specified length based on language."
-    documentation: str = "https://docs.langflow.org/components/text-splitters#languagerecursivetextsplitter"
+    documentation: str = (
+        "https://docs.langflow.org/components/text-splitters#languagerecursivetextsplitter"
+    )
 
     def build_config(self):
         options = [x.value for x in Language]
         return {
-            "documents": {
-                "display_name": "Documents",
-                "info": "The documents to split.",
-            },
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
             "separator_type": {
                 "display_name": "Separator Type",
                 "info": "The type of separator to use.",
@@ -47,11 +46,11 @@ class LanguageRecursiveTextSplitterComponent(CustomComponent):
 
     def build(
         self,
-        documents: list[Document],
+        inputs: List[Record],
         chunk_size: Optional[int] = 1000,
         chunk_overlap: Optional[int] = 200,
         separator_type: str = "Python",
-    ) -> list[Document]:
+    ) -> list[Record]:
         """
         Split text into chunks of a specified length.
 
@@ -77,6 +76,12 @@ class LanguageRecursiveTextSplitterComponent(CustomComponent):
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
         )
-
+        documents = []
+        for _input in inputs:
+            if isinstance(_input, Record):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
         docs = splitter.split_documents(documents)
-        return docs
+        records = self.to_records(docs)
+        return records

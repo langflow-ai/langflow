@@ -33,10 +33,6 @@ class VectaraSearchComponent(VectaraComponent, LCVectorStoreComponent):
             "display_name": "Vectara API Key",
             "password": True,
         },
-        "documents": {
-            "display_name": "Documents",
-            "info": "If provided, will be upserted to corpus (optional)",
-        },
         "files_url": {
             "display_name": "Files Url",
             "info": "Make vectara object using url of files (optional)",
