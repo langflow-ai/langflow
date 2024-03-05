@@ -727,3 +727,4 @@ export const STATUS_BUILD = "Build to validate status.";
 export const STATUS_BUILDING = "Building...";
 export const SAVED_HOVER = "Last saved at ";
 export const RUN_TIMESTAMP_PREFIX = "Last Run: ";
+export const STARTER_FOLDER_NAME = "Starter Projects";
