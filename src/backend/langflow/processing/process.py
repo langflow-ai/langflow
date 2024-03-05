@@ -271,24 +271,25 @@ def process_tweaks(
 
     :param graph_data: The dictionary containing the graph data. It must contain a 'data' key with
                        'nodes' as its child or directly contain 'nodes' key. Each node should have an 'id' and 'data'.
-    :param tweaks: A dictionary where the key is the node id and the value is a dictionary of the tweaks.
-                   The inner dictionary contains the name of a certain parameter as the key and the value to be tweaked.
-
+    :param tweaks: The dictionary containing the tweaks. The keys can be the node id or the name of the tweak.
+                     The values can be a dictionary containing the tweaks for the node or the value of the tweak.
     :return: The modified graph_data dictionary.
 
     :raises ValueError: If the input is not in the expected format.
     """
     nodes = validate_input(graph_data, tweaks)
+    nodes_map = {node.get("id"): node for node in nodes}
+
+    all_nodes_tweaks = {}
+    for key, value in tweaks.items():
+        if isinstance(value, dict):
+            if node := nodes_map.get(key):
+                apply_tweaks(node, value)
+        else:
+            all_nodes_tweaks[key] = value
 
     for node in nodes:
-        if isinstance(node, dict) and isinstance(node.get("id"), str):
-            node_id = node["id"]
-            if node_tweaks := tweaks.get(node_id):
-                apply_tweaks(node, node_tweaks)
-        else:
-            logger.warning(
-                "Each node should be a dictionary with an 'id' key of type str"
-            )
+        apply_tweaks(node, all_nodes_tweaks)
 
     return graph_data
 
