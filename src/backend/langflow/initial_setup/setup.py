@@ -32,9 +32,9 @@ def get_project_data(project):
     project_description = project.get("description")
     project_is_component = project.get("is_component")
     project_updated_at = project.get("updated_at")
-    updated_at_datetime = datetime.strptime(
-        project_updated_at or datetime.now(), "%Y-%m-%dT%H:%M:%S.%f"
-    )
+    if not project_updated_at:
+        project_updated_at = datetime.utcnow().isoformat()
+    updated_at_datetime = datetime.strptime(project_updated_at, "%Y-%m-%dT%H:%M:%S.%f")
     project_data = project.get("data")
     project_icon = project.get("icon")
     project_icon_bg_color = project.get("icon_bg_color")
