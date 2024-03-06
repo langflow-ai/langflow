@@ -1,14 +1,14 @@
 from typing import Callable, Union
 
+from pydantic import BaseModel, model_serializer
+
 from langflow.template.field.base import TemplateField
 from langflow.utils.constants import DIRECT_TYPES
-from pydantic import BaseModel, model_serializer
 
 
 class Template(BaseModel):
     type_name: str
     fields: list[TemplateField]
-    field_order: list[str] = []
 
     def process_fields(
         self,
@@ -30,7 +30,6 @@ class Template(BaseModel):
         for field in self.fields:
             result[field.name] = field.model_dump(by_alias=True, exclude_none=True)
         result["_type"] = result.pop("type_name")
-        result.pop("field_order", None)
         return result
 
     # For backwards compatibility
@@ -46,7 +45,9 @@ class Template(BaseModel):
         """Returns the field with the given name."""
         field = next((field for field in self.fields if field.name == field_name), None)
         if field is None:
-            raise ValueError(f"Field {field_name} not found in template {self.type_name}")
+            raise ValueError(
+                f"Field {field_name} not found in template {self.type_name}"
+            )
         return field
 
     def update_field(self, field_name: str, field: TemplateField) -> None:
