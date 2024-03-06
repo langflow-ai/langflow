@@ -24,9 +24,9 @@ import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
+import { CodeErrorDataTypeAPI } from "../../types/api";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
-import { CodeErrorDataTypeAPI } from "../../types/api";
 
 export default function CodeAreaModal({
   value,

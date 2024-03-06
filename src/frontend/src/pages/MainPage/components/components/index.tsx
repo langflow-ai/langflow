@@ -14,7 +14,6 @@ import {
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { FlowType } from "../../../../types/flow";
-import { STARTER_FOLDER_NAME } from "../../../../constants/constants";
 
 export default function ComponentsComponent({
   is_component = true,
