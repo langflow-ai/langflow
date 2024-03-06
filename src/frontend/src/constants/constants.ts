@@ -737,4 +737,5 @@ export const PRIORITY_SIDEBAR_ORDER = [
   "prompt",
   "models",
   "helpers",
+  "experimental",
 ];
