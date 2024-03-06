@@ -74,6 +74,9 @@ class FrontendNode(BaseModel):
     frozen: bool = False
     """Whether the frontend node is frozen."""
 
+    field_order: list[str] = []
+    """Order of the fields in the frontend node."""
+
     beta: bool = False
     error: Optional[str] = None
 
