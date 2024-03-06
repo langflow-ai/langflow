@@ -27,9 +27,9 @@ class APIRequest(CustomComponent):
             "display_name": "Headers",
             "info": "The headers to send with the request.",
         },
-        "record": {
-            "display_name": "Record",
-            "info": "The record to send with the request (for POST, PATCH, PUT).",
+        "body": {
+            "display_name": "Body",
+            "info": "The body to send with the request (for POST, PATCH, PUT).",
         },
         "timeout": {
             "display_name": "Timeout",
@@ -45,14 +45,14 @@ class APIRequest(CustomComponent):
         method: str,
         url: str,
         headers: Optional[dict] = None,
-        record: Optional[Record] = None,
+        body: Optional[dict] = None,
         timeout: int = 5,
     ) -> Record:
         method = method.upper()
         if method not in ["GET", "POST", "PATCH", "PUT"]:
             raise ValueError(f"Unsupported method: {method}")
 
-        data = record.data if record else None
+        data = body if body else None
         try:
             response = await client.request(
                 method, url, headers=headers, content=data, timeout=timeout
@@ -86,22 +86,22 @@ class APIRequest(CustomComponent):
         method: str,
         url: List[str],
         headers: Optional[dict] = None,
-        record: Optional[Record] = None,
+        body: Optional[dict] = None,
         timeout: int = 5,
     ) -> List[Record]:
         if headers is None:
             headers = {}
         urls = url if isinstance(url, list) else [url]
-        records = (
-            record
-            if isinstance(record, list)
-            else [record] if record else [None] * len(urls)
+        bodies = (
+            body
+            if isinstance(body, list)
+            else [body] if body else [None] * len(urls)
         )
         async with httpx.AsyncClient() as client:
             results = await asyncio.gather(
                 *[
                     self.make_request(client, method, u, headers, rec, timeout)
-                    for u, rec in zip(urls, records)
+                    for u, rec in zip(urls, bodies)
                 ]
             )
         return results
