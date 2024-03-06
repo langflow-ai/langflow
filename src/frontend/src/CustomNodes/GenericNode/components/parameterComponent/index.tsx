@@ -449,7 +449,12 @@ export default function ParameterComponent({
         !data.node?.template[name].options ? (
           <div className="mt-2 w-full">
             {data.node?.template[name].list ? (
-              <div className="w-5/6 flex-grow">
+              <div
+                className={
+                  (data.node?.template[name].refresh ? "w-5/6 " : "") +
+                  "flex-grow"
+                }
+              >
                 <InputListComponent
                   disabled={disabled}
                   value={
