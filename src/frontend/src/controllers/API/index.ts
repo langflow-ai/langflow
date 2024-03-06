@@ -370,7 +370,7 @@ export async function postCustomComponent(
 export async function postCustomComponentUpdate(
   code: string,
   field: string,
-  field_value: string
+  field_value: any
 ): Promise<AxiosResponse<APIClassType>> {
   return await api.post(`${BASE_URL_API}custom_component/update`, {
     code,
