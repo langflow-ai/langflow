@@ -15,10 +15,10 @@ import {
 } from "../ui/card";
 
 export default function CollectionCardComponent({
-  flow,
+    flow,
 }: {
-  flow: FlowType;
-  authorized?: boolean;
+    flow: FlowType;
+    authorized?: boolean;
 }) {
     const addFlow = useFlowsManagerStore((state) => state.addFlow);
     const navigate = useNavigate();
@@ -35,18 +35,25 @@ export default function CollectionCardComponent({
                 <CardHeader>
                     <div>
                         <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
-                            {flow.icon && (
-                                <div className="flex-shrink-0 h-7 w-7">
-                                    {flow.icon}
+                            {flow.icon && isEmoji(flow.icon) && (
+                                <div className="p-2 rounded-md flex align-middle items-center justify-center" style={{ backgroundColor: flow.icon_bg_color }}>
+
+                                    <div className="pl-0.5 h-7 w-7">
+                                        {flow.icon}
+                                    </div>
                                 </div>
 
                             )}
-                            {!flow.icon && <IconComponent
-                                className={cn(
-                                    "flex-shrink-0 h-7 w-7 text-flow-icon",
-                                )}
-                                name="Group"
-                            />}
+                            {(!flow.icon || !isEmoji(flow.icon)) &&
+                                <div className="p-2 rounded-md flex align-middle items-center justify-center" style={{ backgroundColor: flow.icon_bg_color }}>
+                                    <IconComponent
+                                        className={cn(
+                                            "flex-shrink-0 h-7 w-7 text-flow-icon",
+                                        )}
+                                        name={flow.icon || "Group"}
+                                    />
+                                </div>
+                            }
                             <ShadTooltip content={flow.name}>
                                 <div className="w-full truncate">{flow.name}</div>
                             </ShadTooltip>
