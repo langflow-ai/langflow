@@ -51,9 +51,9 @@ export default function FlowToolbar({ flow }: ChatType): JSX.Element {
         <button
           disabled={!hasApiKey || !validApiKey || !hasStore}
           className={classNames(
-            "relative inline-flex w-full h-full items-center justify-center hover:bg-hover bg-muted hover:bg-background px-5 py-3 text-foreground transition-all duration-500 ease-in-out gap-[4px] text-sm font-semibold",
+            "relative inline-flex w-full h-full items-center justify-center hover:bg-hover bg-muted hover:bg-background px-5 py-3 text-foreground transition-all duration-500 ease-in-out gap-[4px] text-sm font-semibold ",
             !hasApiKey || !validApiKey || !hasStore
-              ? "button-disable  cursor-default text-muted-foreground"
+              ? " button-disable text-muted-foreground  "
               : ""
           )}
         >
@@ -87,14 +87,14 @@ export default function FlowToolbar({ flow }: ChatType): JSX.Element {
       >
       <div
         className={
-          "shadow-round-btn-shadow hover:shadow-round-btn-shadow message-button-position flex items-center justify-center rounded-sm bg-muted  shadow-md transition-all cursor-pointer gap-7 border"
+          "shadow-round-btn-shadow hover:shadow-round-btn-shadow message-button-position flex items-center justify-center rounded-sm bg-muted  shadow-md transition-all gap-7 border"
         }
       >
         <div className="flex">
           <div className="flex gap-1 text-medium-indigo  rounded-sm transition-all w-full h-full">
-          {hasIO && (
-          <IOView open={open} setOpen={setOpen}>
-            <div className="relative inline-flex w-full items-center justify-center   hover:bg-hover transition-all duration-500 ease-in-out px-5 py-3 text-medium-indigo ease-in-out gap-1 text-sm font-semibold">
+          {hasIO ? (
+          <IOView open={open} setOpen={setOpen} disable={!hasIO}>
+            <div className="relative inline-flex w-full items-center justify-center   hover:bg-hover transition-all duration-500 ease-in-out px-5 py-3 text-medium-indigo ease-in-out gap-1 text-sm font-semibold transition-all">
               <ForwardedIconComponent
                 name="Zap"
                 className={"message-button-icon h-5 w-5 transition-all"}
@@ -102,14 +102,20 @@ export default function FlowToolbar({ flow }: ChatType): JSX.Element {
               Run
             </div>
           </IOView>
+        ) : (
+          <div className={`relative inline-flex w-full items-center justify-center transition-all duration-500 ease-in-out px-5 py-3 text-muted-foreground ease-in-out gap-1 text-sm font-semibold cursor-not-allowed`}>
+              <ForwardedIconComponent
+                name="Zap"
+                className={"message-button-icon h-5 w-5 transition-all fill-muted-foreground stroke-muted-foreground"}
+              />
+              Run
+          </div>
         )}
           </div>
-          {hasIO && (
-            <div>
-              <Separator orientation="vertical" />
-            </div>
-          )}
-          <div className="flex items-center gap-2">
+          <div>
+            <Separator orientation="vertical" />
+          </div>
+          <div className="flex items-center gap-2 cursor-pointer">
             {currentFlow && currentFlow.data && (
               <ApiModal flow={currentFlow}>
                   <div className={classNames("relative inline-flex w-full items-center justify-center hover:bg-hover px-5 py-3 text-foreground transition-all duration-500 ease-in-out gap-1 text-sm font-semibold")}>
@@ -122,15 +128,11 @@ export default function FlowToolbar({ flow }: ChatType): JSX.Element {
               </ApiModal>
             )}
           </div>
-          {hasStore && validApiKey && (
-            <div>
-              <Separator orientation="vertical" />
-            </div>
-          )}
+          <div>
+            <Separator orientation="vertical" />
+          </div>
           <div className="flex items-center gap-2">
-            {hasStore && validApiKey && (
-              <div className="side-bar-button">{ModalMemo}</div>
-            )}
+            <div className={`side-bar-button ${!hasApiKey || !validApiKey || !hasStore ? " cursor-not-allowed" : " cursor-pointer"}`}>{ModalMemo}</div>
           </div>
         </div>
       </div>
