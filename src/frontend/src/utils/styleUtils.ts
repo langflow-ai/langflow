@@ -351,7 +351,7 @@ export const nodeIconsLucide: iconsType = {
   toolkits: Package2,
   textsplitters: Scissors,
   wrappers: Gift,
-  utilities: Wand2,
+  helpers: Wand2,
   langchain_utilities: PocketKnife,
   WolframAlphaAPIWrapper: SvgWolfram,
   output_parsers: Compass,
