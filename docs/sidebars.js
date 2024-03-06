@@ -44,7 +44,6 @@ module.exports = {
         "components/chains",
         "components/custom",
         "components/embeddings",
-        "components/io",
         "components/model_specs",
         "components/loaders",
         "components/memories",
