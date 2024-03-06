@@ -35,7 +35,6 @@ class ChromaSearchComponent(LCVectorStoreComponent):
             # "persist": {"display_name": "Persist"},
             "index_directory": {"display_name": "Index Directory"},
             "code": {"show": False, "display_name": "Code"},
-            "documents": {"display_name": "Documents", "is_list": True},
             "embedding": {
                 "display_name": "Embedding",
                 "info": "Embedding model to vectorize inputs (make sure to use same as index)",

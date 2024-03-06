@@ -14,7 +14,6 @@ class FAISSSearchComponent(LCVectorStoreComponent):
 
     def build_config(self):
         return {
-            "documents": {"display_name": "Documents"},
             "embedding": {"display_name": "Embedding"},
             "folder_path": {
                 "display_name": "Folder Path",

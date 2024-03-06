@@ -1,22 +1,26 @@
 from typing import Optional
 
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
 from langflow import CustomComponent
+from langflow.schema import Record
 from langflow.utils.util import build_loader_repr_from_documents
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 
 class RecursiveCharacterTextSplitterComponent(CustomComponent):
     display_name: str = "Recursive Character Text Splitter"
     description: str = "Split text into chunks of a specified length."
-    documentation: str = "https://docs.langflow.org/components/text-splitters#recursivecharactertextsplitter"
+    documentation: str = (
+        "https://docs.langflow.org/components/text-splitters#recursivecharactertextsplitter"
+    )
 
     def build_config(self):
         return {
-            "documents": {
-                "display_name": "Documents",
-                "info": "The documents to split.",
+            "inputs": {
+                "display_name": "Input",
+                "info": "The texts to split.",
+                "input_types": ["Document", "Record"],
             },
             "separators": {
                 "display_name": "Separators",
@@ -40,11 +44,11 @@ class RecursiveCharacterTextSplitterComponent(CustomComponent):
 
     def build(
         self,
-        documents: list[Document],
+        inputs: list[Document],
         separators: Optional[list[str]] = None,
         chunk_size: Optional[int] = 1000,
         chunk_overlap: Optional[int] = 200,
-    ) -> list[Document]:
+    ) -> list[Record]:
         """
         Split text into chunks of a specified length.
 
@@ -75,7 +79,12 @@ class RecursiveCharacterTextSplitterComponent(CustomComponent):
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
         )
-
+        documents = []
+        for _input in inputs:
+            if isinstance(_input, Record):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
         docs = splitter.split_documents(documents)
         self.repr_value = build_loader_repr_from_documents(docs)
-        return docs
+        return self.to_records(docs)
