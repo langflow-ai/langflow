@@ -2,6 +2,7 @@ import asyncio
 from typing import List, Optional
 
 import httpx
+import json
 
 from langflow import CustomComponent
 from langflow.schema import Record
@@ -26,10 +27,12 @@ class APIRequest(CustomComponent):
         "headers": {
             "display_name": "Headers",
             "info": "The headers to send with the request.",
+            "input_types": ["dict"]
         },
         "body": {
             "display_name": "Body",
             "info": "The body to send with the request (for POST, PATCH, PUT).",
+            "input_types": ["dict"]
         },
         "timeout": {
             "display_name": "Timeout",
@@ -53,6 +56,7 @@ class APIRequest(CustomComponent):
             raise ValueError(f"Unsupported method: {method}")
 
         data = body if body else None
+        data = json.dumps(data)
         try:
             response = await client.request(
                 method, url, headers=headers, content=data, timeout=timeout
