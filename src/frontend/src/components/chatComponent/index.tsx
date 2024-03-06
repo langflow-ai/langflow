@@ -12,7 +12,7 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { classNames } from "../../utils/utils";
 import ApiModal from "../../modals/ApiModal";
 
-export default function Chat({ flow }: ChatType): JSX.Element {
+export default function FlowToolbar({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
   const flowState = useFlowStore((state) => state.flowState);
   const nodes = useFlowStore((state) => state.nodes);
