@@ -1,8 +1,7 @@
 import asyncio
-from typing import List, Optional, Union
-import httpx
+from typing import List, Optional
 
-import requests
+import httpx
 
 from langflow import CustomComponent
 from langflow.schema import Record
@@ -42,7 +41,7 @@ class APIRequest(CustomComponent):
 
     async def make_request(
         self,
-        session: requests.Session,
+        client: httpx.AsyncClient,
         method: str,
         url: str,
         headers: Optional[dict] = None,
@@ -55,23 +54,22 @@ class APIRequest(CustomComponent):
 
         data = record.text if record else None
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.request(
-                    method, url, headers=headers, content=data, timeout=timeout
-                )
-                try:
-                    response_json = response.json()
-                    result = orjson_dumps(response_json, indent_2=False)
-                except Exception:
-                    result = response.text
-                return Record(
-                    text=result,
-                    data={
-                        "source": url,
-                        "headers": headers,
-                        "status_code": response.status_code,
-                    },
-                )
+            response = await client.request(
+                method, url, headers=headers, content=data, timeout=timeout
+            )
+            try:
+                response_json = response.json()
+                result = orjson_dumps(response_json, indent_2=False)
+            except Exception:
+                result = response.text
+            return Record(
+                text=result,
+                data={
+                    "source": url,
+                    "headers": headers,
+                    "status_code": response.status_code,
+                },
+            )
         except httpx.TimeoutException:
             return Record(
                 text="Request Timed Out",
@@ -88,7 +86,7 @@ class APIRequest(CustomComponent):
         method: str,
         url: List[str],
         headers: Optional[dict] = None,
-        record: Optional[Union[Record, List[Record]]] = None,
+        record: Optional[Record] = None,
         timeout: int = 5,
     ) -> List[Record]:
         if headers is None:
@@ -99,11 +97,11 @@ class APIRequest(CustomComponent):
             if isinstance(record, list)
             else [record] if record else [None] * len(urls)
         )
-
-        results = await asyncio.gather(
-            *[
-                self.make_request(method, u, headers, doc, timeout)
-                for u, doc in zip(urls, records)
-            ]
-        )
+        async with httpx.AsyncClient() as client:
+            results = await asyncio.gather(
+                *[
+                    self.make_request(client, method, u, headers, rec, timeout)
+                    for u, rec in zip(urls, records)
+                ]
+            )
         return results
