@@ -130,12 +130,7 @@ export default function ParameterComponent({
     const shouldUpdate =
       data.node?.template[name].refresh &&
       data.node!.template[name].value !== newValue;
-    console.log("shouldUpdate", shouldUpdate);
-    console.log(
-      "data.node!.template[name].value",
-      data.node!.template[name].value
-    );
-    console.log("newValue", newValue);
+
     data.node!.template[name].value = newValue; // necessary to enable ctrl+z inside the input
     let newTemplate;
     if (shouldUpdate) {
