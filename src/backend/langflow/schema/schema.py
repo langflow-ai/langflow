@@ -108,3 +108,7 @@ class Record(BaseModel):
         suffix = ")"
         text = ", ".join([f"{k}={v}" for k, v in self.data.items()])
         return prefix + text + suffix
+
+    # check which attributes the Record has by checking the keys in the data dictionary
+    def __dir__(self):
+        return super().__dir__() + list(self.data.keys())
