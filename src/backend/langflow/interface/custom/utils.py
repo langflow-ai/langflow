@@ -32,14 +32,18 @@ class UpdateBuildConfigError(Exception):
     pass
 
 
-def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
+def add_output_types(
+    frontend_node: CustomComponentFrontendNode, return_types: List[str]
+):
     """Add output types to the frontend node"""
     for return_type in return_types:
         if return_type is None:
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": ("Invalid return type. Please check your code and try again."),
+                    "error": (
+                        "Invalid return type. Please check your code and try again."
+                    ),
                     "traceback": traceback.format_exc(),
                 },
             )
@@ -71,14 +75,18 @@ def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: List
     frontend_node.field_order = field_order
 
 
-def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
+def add_base_classes(
+    frontend_node: CustomComponentFrontendNode, return_types: List[str]
+):
     """Add base classes to the frontend node"""
     for return_type_instance in return_types:
         if return_type_instance is None:
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": ("Invalid return type. Please check your code and try again."),
+                    "error": (
+                        "Invalid return type. Please check your code and try again."
+                    ),
                     "traceback": traceback.format_exc(),
                 },
             )
@@ -155,10 +163,14 @@ def add_new_custom_field(
     # If options is a list, then it's a dropdown
     # If options is None, then it's a list of strings
     is_list = isinstance(field_config.get("options"), list)
-    field_config["is_list"] = is_list or field_config.get("is_list", False) or field_contains_list
+    field_config["is_list"] = (
+        is_list or field_config.get("list", False) or field_contains_list
+    )
 
     if "name" in field_config:
-        warnings.warn("The 'name' key in field_config is used to build the object and can't be changed.")
+        warnings.warn(
+            "The 'name' key in field_config is used to build the object and can't be changed."
+        )
     required = field_config.pop("required", field_required)
     placeholder = field_config.pop("placeholder", "")
 
@@ -197,7 +209,9 @@ def add_extra_fields(frontend_node, field_config, function_args):
         ]:
             continue
 
-        field_name, field_type, field_value, field_required = get_field_properties(extra_field)
+        field_name, field_type, field_value, field_required = get_field_properties(
+            extra_field
+        )
         config = _field_config.pop(field_name, {})
         frontend_node = add_new_custom_field(
             frontend_node,
@@ -207,13 +221,17 @@ def add_extra_fields(frontend_node, field_config, function_args):
             field_required,
             config,
         )
-    if "kwargs" in function_args_names and not all(key in function_args_names for key in field_config.keys()):
+    if "kwargs" in function_args_names and not all(
+        key in function_args_names for key in field_config.keys()
+    ):
         for field_name, field_config in _field_config.copy().items():
             if "name" not in field_config or field_name == "code":
                 continue
             config = _field_config.get(field_name, {})
             config = config.model_dump() if isinstance(config, BaseModel) else config
-            field_name, field_type, field_value, field_required = get_field_properties(extra_field=config)
+            field_name, field_type, field_value, field_required = get_field_properties(
+                extra_field=config
+            )
             frontend_node = add_new_custom_field(
                 frontend_node,
                 field_name,
@@ -251,7 +269,9 @@ def run_build_config(
         raise HTTPException(
             status_code=400,
             detail={
-                "error": ("Invalid type convertion. Please check your code and try again."),
+                "error": (
+                    "Invalid type convertion. Please check your code and try again."
+                ),
                 "traceback": traceback.format_exc(),
             },
         ) from exc
@@ -363,10 +383,16 @@ def build_custom_component_template(
 
         add_extra_fields(frontend_node, field_config, entrypoint_args)
 
-        frontend_node = add_code_field(frontend_node, custom_component.code, field_config.get("code", {}))
+        frontend_node = add_code_field(
+            frontend_node, custom_component.code, field_config.get("code", {})
+        )
 
-        add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type)
-        add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type)
+        add_base_classes(
+            frontend_node, custom_component.get_function_entrypoint_return_type
+        )
+        add_output_types(
+            frontend_node, custom_component.get_function_entrypoint_return_type
+        )
 
         reorder_fields(frontend_node, custom_instance._get_field_order())
 
@@ -377,7 +403,9 @@ def build_custom_component_template(
         raise HTTPException(
             status_code=400,
             detail={
-                "error": ("Invalid type convertion. Please check your code and try again."),
+                "error": (
+                    "Invalid type convertion. Please check your code and try again."
+                ),
                 "traceback": traceback.format_exc(),
             },
         ) from exc
@@ -403,7 +431,9 @@ def build_custom_components(settings_service):
     if not settings_service.settings.COMPONENTS_PATH:
         return {}
 
-    logger.info(f"Building custom components from {settings_service.settings.COMPONENTS_PATH}")
+    logger.info(
+        f"Building custom components from {settings_service.settings.COMPONENTS_PATH}"
+    )
     custom_components_from_file = {}
     processed_paths = set()
     for path in settings_service.settings.COMPONENTS_PATH:
@@ -414,7 +444,9 @@ def build_custom_components(settings_service):
         custom_component_dict = build_custom_component_list_from_path(path_str)
         if custom_component_dict:
             category = next(iter(custom_component_dict))
-            logger.info(f"Loading {len(custom_component_dict[category])} component(s) from category {category}")
+            logger.info(
+                f"Loading {len(custom_component_dict[category])} component(s) from category {category}"
+            )
             custom_components_from_file = merge_nested_dicts_with_renaming(
                 custom_components_from_file, custom_component_dict
             )
@@ -435,10 +467,14 @@ def update_field_dict(
     if "refresh" in field_dict:
         if call:
             try:
-                custom_component_instance.update_build_config(build_config, update_field, update_field_value)
+                custom_component_instance.update_build_config(
+                    build_config, update_field, update_field_value
+                )
             except Exception as exc:
                 logger.error(f"Error while running update_build_config: {str(exc)}")
-                raise UpdateBuildConfigError(f"Error while running update_build_config: {str(exc)}") from exc
+                raise UpdateBuildConfigError(
+                    f"Error while running update_build_config: {str(exc)}"
+                ) from exc
         field_dict["refresh"] = True
 
     # Let's check if "range_spec" is a RangeSpec object
