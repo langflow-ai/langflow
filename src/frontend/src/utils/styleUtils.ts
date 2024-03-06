@@ -32,6 +32,7 @@ import {
   Cpu,
   Database,
   Delete,
+  Dot,
   Download,
   DownloadCloud,
   Edit,
@@ -478,4 +479,5 @@ export const nodeIconsLucide: iconsType = {
   Bot,
   Delete,
   Command,
+  Dot,
 };

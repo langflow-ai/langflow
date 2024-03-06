@@ -235,66 +235,6 @@ export default function ExtraSidebar(): JSX.Element {
 
   return (
     <div className="side-bar-arrangement">
-      <div className="side-bar-buttons-arrangement">
-        {hasStore && validApiKey && (
-          <ShadTooltip
-            content={
-              !hasApiKey || !validApiKey
-                ? "Please review your API key."
-                : "Share"
-            }
-            side="top"
-            styleClasses="cursor-default"
-          >
-            <div className="side-bar-button">{ModalMemo}</div>
-          </ShadTooltip>
-        )}
-        <div className="side-bar-button">
-          <ShadTooltip content="Import" side="top">
-            <button
-              className="extra-side-bar-buttons"
-              onClick={() => {
-                uploadFlow({ newProject: false, isComponent: false }).catch(
-                  (error) => {
-                    setErrorData({
-                      title: UPLOAD_ERROR_ALERT,
-                      list: [error],
-                    });
-                  }
-                );
-              }}
-            >
-              <IconComponent name="FileUp" className="side-bar-button-size " />
-            </button>
-          </ShadTooltip>
-        </div>
-        {(!hasApiKey || !validApiKey) && (
-          <ShadTooltip
-            content="Export"
-            side="top"
-            styleClasses="cursor-default"
-          >
-            <div className="side-bar-button">{ExportMemo}</div>
-          </ShadTooltip>
-        )}
-        <ShadTooltip content={"Code"} side="top">
-          <div className="side-bar-button">
-            {currentFlow && currentFlow.data && (
-              <ApiModal flow={currentFlow}>
-                <button className={"w-full "}>
-                  <div className={classNames("extra-side-bar-buttons")}>
-                    <IconComponent
-                      name="Code2"
-                      className={"side-bar-button-size"}
-                    />
-                  </div>
-                </button>
-              </ApiModal>
-            )}
-          </div>
-        </ShadTooltip>
-      </div>
-      <Separator />
       <div className="side-bar-search-div-placement">
         <Input
           onFocusCapture={() => handleBlur()}
@@ -318,7 +258,7 @@ export default function ExtraSidebar(): JSX.Element {
           />
         </div>
       </div>
-
+      <Separator />
       <div className="side-bar-components-div-arrangement">
         {Object.keys(dataFilter)
           .sort(sortKeys)
