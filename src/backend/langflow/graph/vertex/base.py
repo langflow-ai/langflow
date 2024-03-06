@@ -313,7 +313,16 @@ class Vertex:
                         params[param_key] = []
                     params[param_key].append(self.graph.get_vertex(edge.source_id))
                 elif edge.target_id == self.id:
-                    params[param_key] = self.graph.get_vertex(edge.source_id)
+                    if isinstance(template_dict[param_key]["value"], dict):
+                        # we don't know the key of the dict but we need to set the value
+                        # to the vertex that is the source of the edge
+                        param_dict = template_dict[param_key]["value"]
+                        params[param_key] = {
+                            key: self.graph.get_vertex(edge.source_id)
+                            for key in param_dict.keys()
+                        }
+                    else:
+                        params[param_key] = self.graph.get_vertex(edge.source_id)
 
         for key, value in template_dict.items():
             if key in params:
@@ -493,8 +502,20 @@ class Vertex:
                 await self._build_node_and_update_params(key, value, user_id)
             elif isinstance(value, list) and self._is_list_of_nodes(value):
                 await self._build_list_of_nodes_and_update_params(key, value, user_id)
+            elif isinstance(value, dict):
+                await self._build_dict_of_nodes_and_update_params(key, value, user_id)
             elif key not in self.params or self.updated_raw_params:
                 self.params[key] = value
+
+    async def _build_dict_of_nodes_and_update_params(
+        self, key, nodes: Dict[str, "Vertex"], user_id=None
+    ):
+        """
+        Iterates over a dictionary of nodes, builds each and updates the params dictionary.
+        """
+        for sub_key, node in nodes.items():
+            built = await node.get_result(requester=self, user_id=user_id)
+            self.params[key][sub_key] = built
 
     def _is_node(self, value):
         """
