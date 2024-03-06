@@ -11,9 +11,7 @@ from langflow.schema import Record
 class WeaviateSearchVectorStore(WeaviateVectorStoreComponent, LCVectorStoreComponent):
     display_name: str = "Weaviate Search"
     description: str = "Search a Weaviate Vector Store for similar documents."
-    documentation = (
-        "https://python.langchain.com/docs/integrations/vectorstores/weaviate"
-    )
+    documentation = "https://python.langchain.com/docs/integrations/vectorstores/weaviate"
     beta = True
     icon = "Weaviate"
 

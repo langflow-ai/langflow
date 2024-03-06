@@ -66,6 +66,4 @@ def get_all_types_dict(settings_service):
     """Get all types dictionary combining native and custom components."""
     native_components = build_langchain_types_dict()
     custom_components_from_file = build_custom_components(settings_service)
-    return merge_nested_dicts_with_renaming(
-        native_components, custom_components_from_file
-    )
+    return merge_nested_dicts_with_renaming(native_components, custom_components_from_file)

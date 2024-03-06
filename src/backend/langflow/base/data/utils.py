@@ -35,9 +35,7 @@ def retrieve_file_paths(
 
     glob = "**/*" if recursive else "*"
     paths = walk_level(path_obj, depth) if depth else path_obj.glob(glob)
-    file_paths = [
-        Text(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)
-    ]
+    file_paths = [Text(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
 
     return file_paths
 
@@ -70,16 +68,12 @@ def get_elements(
     if use_multithreading:
         records = parallel_load_records(file_paths, silent_errors, max_concurrency)
     else:
-        records = [
-            parse_file_to_record(file_path, silent_errors) for file_path in file_paths
-        ]
+        records = [parse_file_to_record(file_path, silent_errors) for file_path in file_paths]
     records = list(filter(None, records))
     return records
 
 
-def parallel_load_records(
-    file_paths: List[str], silent_errors: bool, max_concurrency: int
-) -> List[Optional[Record]]:
+def parallel_load_records(file_paths: List[str], silent_errors: bool, max_concurrency: int) -> List[Optional[Record]]:
     with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
         loaded_files = executor.map(
             lambda file_path: parse_file_to_record(file_path, silent_errors),

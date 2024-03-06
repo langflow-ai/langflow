@@ -45,9 +45,7 @@ class Template(BaseModel):
         """Returns the field with the given name."""
         field = next((field for field in self.fields if field.name == field_name), None)
         if field is None:
-            raise ValueError(
-                f"Field {field_name} not found in template {self.type_name}"
-            )
+            raise ValueError(f"Field {field_name} not found in template {self.type_name}")
         return field
 
     def update_field(self, field_name: str, field: TemplateField) -> None:
