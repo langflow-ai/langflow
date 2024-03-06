@@ -15,9 +15,7 @@ class PGVectorSearchComponent(PGVectorComponent, LCVectorStoreComponent):
 
     display_name: str = "PGVector Search"
     description: str = "Search a PGVector Store for similar documents."
-    documentation = (
-        "https://python.langchain.com/docs/integrations/vectorstores/pgvector"
-    )
+    documentation = "https://python.langchain.com/docs/integrations/vectorstores/pgvector"
 
     def build_config(self):
         """

@@ -22,9 +22,7 @@ async def process_graph(
 
     if build_result is None:
         # Raise user facing error
-        raise ValueError(
-            "There was an error loading the langchain_object. Please, check all the nodes and try again."
-        )
+        raise ValueError("There was an error loading the langchain_object. Please, check all the nodes and try again.")
 
     # Generate result and thought
     try:
@@ -50,7 +48,5 @@ async def process_graph(
         raise e
 
 
-async def run_build_result(
-    build_result: Any, chat_inputs: ChatMessage, client_id: str, session_id: str
-):
+async def run_build_result(build_result: Any, chat_inputs: ChatMessage, client_id: str, session_id: str):
     return build_result(inputs=chat_inputs.message)

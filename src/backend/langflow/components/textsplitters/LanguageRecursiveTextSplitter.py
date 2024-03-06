@@ -9,9 +9,7 @@ from langflow.schema.schema import Record
 class LanguageRecursiveTextSplitterComponent(CustomComponent):
     display_name: str = "Language Recursive Text Splitter"
     description: str = "Split text into chunks of a specified length based on language."
-    documentation: str = (
-        "https://docs.langflow.org/components/text-splitters#languagerecursivetextsplitter"
-    )
+    documentation: str = "https://docs.langflow.org/components/text-splitters#languagerecursivetextsplitter"
 
     def build_config(self):
         options = [x.value for x in Language]

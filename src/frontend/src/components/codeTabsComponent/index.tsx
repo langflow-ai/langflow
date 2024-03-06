@@ -126,7 +126,7 @@ export default function CodeTabsComponent({
     <Tabs
       value={activeTab}
       className={
-        "api-modal-tabs m-0 inset-0 " +
+        "api-modal-tabs inset-0 m-0 " +
         (isMessage ? "dark " : "") +
         (dark && isMessage ? "bg-background" : "")
       }
@@ -195,7 +195,7 @@ export default function CodeTabsComponent({
               <SyntaxHighlighter
                 language={tab.language}
                 style={oneDark}
-                className="mt-0 h-full overflow-auto custom-scroll rounded-sm text-left" 
+                className="mt-0 h-full overflow-auto rounded-sm text-left custom-scroll"
               >
                 {tab.code}
               </SyntaxHighlighter>

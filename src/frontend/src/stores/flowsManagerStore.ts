@@ -2,6 +2,7 @@ import { AxiosError } from "axios";
 import { cloneDeep } from "lodash";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
+import { STARTER_FOLDER_NAME } from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   readFlowsFromDatabase,
@@ -25,7 +26,6 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowStore from "./flowStore";
 import { useTypesStore } from "./typesStore";
-import { STARTER_FOLDER_NAME } from "../constants/constants";
 
 let saveTimeoutId: NodeJS.Timeout | null = null;
 
@@ -38,7 +38,7 @@ const past = {};
 const future = {};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
-  examples:[],
+  examples: [],
   setExamples: (examples: FlowType[]) => {
     set({ examples });
   },
@@ -67,8 +67,16 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         .then((dbData) => {
           if (dbData) {
             const { data, flows } = processFlows(dbData, false);
-            get().setExamples(flows.filter(f=>(f.folder===STARTER_FOLDER_NAME && !f.user_id)));
-            get().setFlows(flows.filter(f=>!(f.folder===STARTER_FOLDER_NAME && !f.user_id)));
+            get().setExamples(
+              flows.filter(
+                (f) => f.folder === STARTER_FOLDER_NAME && !f.user_id
+              )
+            );
+            get().setFlows(
+              flows.filter(
+                (f) => !(f.folder === STARTER_FOLDER_NAME && !f.user_id)
+              )
+            );
             useTypesStore.setState((state) => ({
               data: { ...state.data, ["saved_components"]: data },
             }));

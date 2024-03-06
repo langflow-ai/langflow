@@ -24,6 +24,7 @@ import { postCustomComponent, postValidateCode } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
+import { CodeErrorDataTypeAPI } from "../../types/api";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 
@@ -50,7 +51,7 @@ export default function CodeAreaModal({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [error, setError] = useState<{
-    detail: { error: string | undefined; traceback: string | undefined };
+    detail: CodeErrorDataTypeAPI;
   } | null>(null);
 
   useEffect(() => {
