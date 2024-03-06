@@ -89,14 +89,14 @@ def read_flow(
     settings_service: "SettingsService" = Depends(get_settings_service),
 ):
     """Read a flow."""
-    auth_settings = settings_service.auth_settings
-    if auth_settings.AUTO_LOGIN:
-        user_id = None
-    else:
-        user_id = current_user.id
+    # auth_settings = settings_service.auth_settings
+    # if auth_settings.AUTO_LOGIN:
+    #     user_id = None
+    # else:
+    #     user_id = current_user.id
     if user_flow := (
         session.exec(
-            select(Flow).where(Flow.id == flow_id, Flow.user_id == user_id)
+            select(Flow).where(Flow.id == flow_id, Flow.user_id == current_user.id)
         ).first()
     ):
         return user_flow
