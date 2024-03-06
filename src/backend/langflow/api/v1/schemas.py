@@ -158,15 +158,13 @@ class StreamData(BaseModel):
     data: dict
 
     def __str__(self) -> str:
-        return (
-            f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
-        )
+        return f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
 
 
 class CustomComponentCode(BaseModel):
     code: str
     field: Optional[str] = None
-    field_value: Optional[str] = None
+    field_value: Optional[Any] = None
     frontend_node: Optional[dict] = None
 
 

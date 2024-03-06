@@ -57,20 +57,13 @@ class DirectoryComponent(CustomComponent):
         if types is None:
             types = []
         resolved_path = self.resolve_path(path)
-        file_paths = retrieve_file_paths(
-            resolved_path, types, load_hidden, recursive, depth
-        )
+        file_paths = retrieve_file_paths(resolved_path, types, load_hidden, recursive, depth)
         loaded_records = []
 
         if use_multithreading:
-            loaded_records = parallel_load_records(
-                file_paths, silent_errors, max_concurrency
-            )
+            loaded_records = parallel_load_records(file_paths, silent_errors, max_concurrency)
         else:
-            loaded_records = [
-                parse_file_to_record(file_path, silent_errors)
-                for file_path in file_paths
-            ]
+            loaded_records = [parse_file_to_record(file_path, silent_errors) for file_path in file_paths]
         loaded_records = list(filter(None, loaded_records))
         self.status = loaded_records
         return loaded_records

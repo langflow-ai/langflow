@@ -44,6 +44,8 @@ export type FlowsManagerStoreType = {
   undo: () => void;
   redo: () => void;
   takeSnapshot: () => void;
+  examples: Array<FlowType>;
+  setExamples: (examples: FlowType[]) => void;
 };
 
 export type UseUndoRedoOptions = {

@@ -18,9 +18,7 @@ class NotifyComponent(CustomComponent):
             },
         }
 
-    def build(
-        self, name: str, record: Optional[Record] = None, append: bool = False
-    ) -> Record:
+    def build(self, name: str, record: Optional[Record] = None, append: bool = False) -> Record:
         if record and not isinstance(record, Record):
             if isinstance(record, str):
                 record = Record(text=record)

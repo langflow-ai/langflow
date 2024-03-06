@@ -14,7 +14,6 @@ class FAISSSearchComponent(LCVectorStoreComponent):
 
     def build_config(self):
         return {
-            "documents": {"display_name": "Documents"},
             "embedding": {"display_name": "Embedding"},
             "folder_path": {
                 "display_name": "Folder Path",
@@ -34,9 +33,7 @@ class FAISSSearchComponent(LCVectorStoreComponent):
         if not folder_path:
             raise ValueError("Folder path is required to save the FAISS index.")
         path = self.resolve_path(folder_path)
-        vector_store = FAISS.load_local(
-            folder_path=Text(path), embeddings=embedding, index_name=index_name
-        )
+        vector_store = FAISS.load_local(folder_path=Text(path), embeddings=embedding, index_name=index_name)
         if not vector_store:
             raise ValueError("Failed to load the FAISS index.")
 

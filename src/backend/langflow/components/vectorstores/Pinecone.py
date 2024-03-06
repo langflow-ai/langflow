@@ -7,7 +7,8 @@ from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.pinecone import Pinecone
 
 from langflow import CustomComponent
-from langflow.field_typing import Document, Embeddings
+from langflow.field_typing import Embeddings
+from langflow.schema.schema import Record
 
 
 class PineconeComponent(CustomComponent):
@@ -17,7 +18,7 @@ class PineconeComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "documents": {"display_name": "Documents"},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
             "embedding": {"display_name": "Embedding"},
             "index_name": {"display_name": "Index Name"},
             "namespace": {"display_name": "Namespace"},
@@ -44,7 +45,7 @@ class PineconeComponent(CustomComponent):
         self,
         embedding: Embeddings,
         pinecone_env: str,
-        documents: List[Document],
+        inputs: List[Record],
         text_key: str = "text",
         pool_threads: int = 4,
         index_name: Optional[str] = None,
@@ -59,6 +60,12 @@ class PineconeComponent(CustomComponent):
         pinecone.init(api_key=pinecone_api_key, environment=pinecone_env)  # type: ignore
         if not index_name:
             raise ValueError("Index Name is required.")
+        documents = []
+        for _input in inputs:
+            if isinstance(_input, Record):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
         if documents:
             return Pinecone.from_documents(
                 documents=documents,

@@ -23,14 +23,16 @@ import {
   OUTPUT_HANDLER_HOVER,
   TOOLTIP_EMPTY,
 } from "../../../../constants/constants";
-import { postCustomComponentUpdate } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { APIClassType } from "../../../../types/api";
+import { APIClassType, ResponseErrorTypeAPI } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
-import { NodeDataType } from "../../../../types/flow";
+import {
+  handleUpdateValues,
+  throttledHandleUpdateValues,
+} from "../../../../utils/parameterUtils";
 import {
   convertObjToArray,
   convertValuesToNumbers,
@@ -86,81 +88,65 @@ export default function ParameterComponent({
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
-  const handleUpdateValues = async (
-    name: string,
-    data: NodeDataType,
-    delayAnimation: boolean = true
-  ) => {
-    setIsLoading(true);
-    const code = data.node?.template["code"]?.value;
-    if (!code) {
-      console.error("Code not found in the template");
-      return;
-    }
-
-    await postCustomComponentUpdate(
-      code,
-      name,
-      data.node?.template[name]?.value
-    )
-      .then((res) => {
-        if (res.status === 200 && data.node?.template) {
-          setNode(data.id, (oldNode) => {
-            let newNode = cloneDeep(oldNode);
-
-            newNode.data = {
-              ...newNode.data,
-            };
-
-            newNode.data.node.template = res.data.template;
-
-            return newNode;
-          });
-        }
-      })
-      .catch((error) => {
-        console.error("Error occurred while updating the node:", error);
-        setErrorData({
-          title: "Error while updating the Component",
-          list: [error.response.data.detail.error ?? "Unknown error"],
-        });
-      });
-
-    renderTooltips();
-    if (delayAnimation) {
-      try {
-        // Wait for at least 500 milliseconds
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        // Continue with the request
-        // If the request takes longer than 500 milliseconds, it will not wait an additional 500 milliseconds
-      } catch (error) {
-        console.error("Error occurred while waiting for refresh:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    } else setIsLoading(false);
-  };
-
   useEffect(() => {
-    function fetchData() {
+    async function fetchData() {
       if (
         data.node?.template[name]?.refresh &&
-        Object.keys(data.node?.template[name]?.options ?? {}).length === 0
+        // options can be undefined but not an empty array
+        (data.node?.template[name]?.options?.length ?? 0) === 0
       ) {
-        handleUpdateValues(name, data, false);
+        setIsLoading(true);
+        try {
+          let newTemplate = await handleUpdateValues(name, data);
+          if (newTemplate) {
+            setNode(data.id, (oldNode) => {
+              let newNode = cloneDeep(oldNode);
+              newNode.data = {
+                ...newNode.data,
+              };
+              newNode.data.node.template = newTemplate;
+              return newNode;
+            });
+          }
+        } catch (error) {
+          let responseError = error as ResponseErrorTypeAPI;
+          setErrorData({
+            title: "Error while updating the Component",
+            list: [responseError.response.data.detail.error ?? "Unknown error"],
+          });
+        }
+        setIsLoading(false);
+        renderTooltips();
       }
     }
     fetchData();
   }, []);
-  const handleOnNewValue = (
+  const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[]
-  ): void => {
+  ): Promise<void> => {
     if (data.node!.template[name].value !== newValue) {
       takeSnapshot();
     }
+    const shouldUpdate =
+      data.node?.template[name].refresh &&
+      data.node!.template[name].value !== newValue;
 
     data.node!.template[name].value = newValue; // necessary to enable ctrl+z inside the input
-
+    let newTemplate;
+    if (shouldUpdate) {
+      setIsLoading(true);
+      try {
+        newTemplate = await throttledHandleUpdateValues(name, data);
+      } catch (error) {
+        let responseError = error as ResponseErrorTypeAPI;
+        setErrorData({
+          title: "Error while updating the Component",
+          list: [responseError.response.data.detail.error ?? "Unknown error"],
+        });
+      }
+      setIsLoading(false);
+      // this de
+    }
     setNode(data.id, (oldNode) => {
       let newNode = cloneDeep(oldNode);
 
@@ -168,7 +154,9 @@ export default function ParameterComponent({
         ...newNode.data,
       };
 
-      newNode.data.node.template[name].value = newValue;
+      if (data.node?.template[name].refresh && newTemplate) {
+        newNode.data.node.template = newTemplate;
+      } else newNode.data.node.template[name].value = newValue;
 
       return newNode;
     });
@@ -300,11 +288,14 @@ export default function ParameterComponent({
       refHtml.current = <span>{TOOLTIP_EMPTY}</span>;
     }
   }
+  // If optionalHandle is an empty list, then it is not an optional handle
+  if (optionalHandle && optionalHandle.length === 0) {
+    optionalHandle = null;
+  }
 
   useEffect(() => {
     renderTooltips();
   }, [tooltipTitle, flow]);
-
   return !showNode ? (
     left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
       <></>
@@ -449,7 +440,14 @@ export default function ParameterComponent({
         !data.node?.template[name].options ? (
           <div className="mt-2 w-full">
             {data.node?.template[name].list ? (
-              <div className="w-5/6 flex-grow">
+              <div
+                className={
+                  // Commenting this out until we have a better
+                  // way to display
+                  // (data.node?.template[name].refresh ? "w-5/6 " : "") +
+                  "flex-grow"
+                }
+              >
                 <InputListComponent
                   disabled={disabled}
                   value={
@@ -460,7 +458,7 @@ export default function ParameterComponent({
                   }
                   onChange={handleOnNewValue}
                 />
-                {data.node?.template[name].refresh && (
+                {/* {data.node?.template[name].refresh && (
                   <div className="w-1/6">
                     <RefreshButton
                       isLoading={isLoading}
@@ -472,7 +470,7 @@ export default function ParameterComponent({
                       id={"refresh-button-" + name}
                     />
                   </div>
-                )}
+                )} */}
               </div>
             ) : data.node?.template[name].multiline ? (
               <TextAreaComponent
@@ -484,7 +482,12 @@ export default function ParameterComponent({
               />
             ) : (
               <div className="mt-2 flex w-full items-center">
-                <div className="w-5/6 flex-grow">
+                <div
+                  className={
+                    "flex-grow " +
+                    (data.node?.template[name].refresh ? "w-5/6" : "")
+                  }
+                >
                   <InputComponent
                     id={"input-" + name}
                     disabled={disabled}
@@ -643,8 +646,14 @@ export default function ParameterComponent({
               onChange={(newValue) => {
                 const valueToNumbers = convertValuesToNumbers(newValue);
                 setErrorDuplicateKey(hasDuplicateKeys(valueToNumbers));
-                handleOnNewValue(valueToNumbers);
+                // if data.node?.template[name].list is true, then the value is an array of objects
+                // else we need to get the first object of the array
+
+                if (data.node?.template[name].list) {
+                  handleOnNewValue(valueToNumbers);
+                } else handleOnNewValue(valueToNumbers[0]);
               }}
+              isList={data.node?.template[name].list ?? false}
             />
           </div>
         ) : (

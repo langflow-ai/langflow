@@ -1,8 +1,8 @@
 import asyncio
-from typing import List, Optional, Union
-import httpx
+from typing import List, Optional
 
-import requests
+import httpx
+import json
 
 from langflow import CustomComponent
 from langflow.schema import Record
@@ -27,10 +27,12 @@ class APIRequest(CustomComponent):
         "headers": {
             "display_name": "Headers",
             "info": "The headers to send with the request.",
+            "input_types": ["dict"],
         },
-        "record": {
-            "display_name": "Record",
-            "info": "The record to send with the request (for POST, PATCH, PUT).",
+        "body": {
+            "display_name": "Body",
+            "info": "The body to send with the request (for POST, PATCH, PUT).",
+            "input_types": ["dict"],
         },
         "timeout": {
             "display_name": "Timeout",
@@ -42,36 +44,34 @@ class APIRequest(CustomComponent):
 
     async def make_request(
         self,
-        session: requests.Session,
+        client: httpx.AsyncClient,
         method: str,
         url: str,
         headers: Optional[dict] = None,
-        record: Optional[Record] = None,
+        body: Optional[dict] = None,
         timeout: int = 5,
     ) -> Record:
         method = method.upper()
         if method not in ["GET", "POST", "PATCH", "PUT"]:
             raise ValueError(f"Unsupported method: {method}")
 
-        data = record.text if record else None
+        data = body if body else None
+        data = json.dumps(data)
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.request(
-                    method, url, headers=headers, content=data, timeout=timeout
-                )
-                try:
-                    response_json = response.json()
-                    result = orjson_dumps(response_json, indent_2=False)
-                except Exception:
-                    result = response.text
-                return Record(
-                    text=result,
-                    data={
-                        "source": url,
-                        "headers": headers,
-                        "status_code": response.status_code,
-                    },
-                )
+            response = await client.request(method, url, headers=headers, content=data, timeout=timeout)
+            try:
+                response_json = response.json()
+                result = orjson_dumps(response_json, indent_2=False)
+            except Exception:
+                result = response.text
+            return Record(
+                text=result,
+                data={
+                    "source": url,
+                    "headers": headers,
+                    "status_code": response.status_code,
+                },
+            )
         except httpx.TimeoutException:
             return Record(
                 text="Request Timed Out",
@@ -88,22 +88,15 @@ class APIRequest(CustomComponent):
         method: str,
         url: List[str],
         headers: Optional[dict] = None,
-        record: Optional[Union[Record, List[Record]]] = None,
+        body: Optional[dict] = None,
         timeout: int = 5,
     ) -> List[Record]:
         if headers is None:
             headers = {}
         urls = url if isinstance(url, list) else [url]
-        records = (
-            record
-            if isinstance(record, list)
-            else [record] if record else [None] * len(urls)
-        )
-
-        results = await asyncio.gather(
-            *[
-                self.make_request(method, u, headers, doc, timeout)
-                for u, doc in zip(urls, records)
-            ]
-        )
+        bodies = body if isinstance(body, list) else [body] if body else [None] * len(urls)
+        async with httpx.AsyncClient() as client:
+            results = await asyncio.gather(
+                *[self.make_request(client, method, u, headers, rec, timeout) for u, rec in zip(urls, bodies)]
+            )
         return results

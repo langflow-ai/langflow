@@ -11,7 +11,10 @@ class SQLExecutorComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "database": {"display_name": "Database"},
+            "database_url": {
+                "display_name": "Database URL",
+                "info": "The URL of the database.",
+            },
             "include_columns": {
                 "display_name": "Include Columns",
                 "info": "Include columns in the result.",
@@ -26,15 +29,24 @@ class SQLExecutorComponent(CustomComponent):
             },
         }
 
+    def clean_up_uri(self, uri: str) -> str:
+        if uri.startswith("postgresql://"):
+            uri = uri.replace("postgresql://", "postgres://")
+        return uri.strip()
+
     def build(
         self,
         query: str,
-        database: SQLDatabase,
+        database_url: str,
         include_columns: bool = False,
         passthrough: bool = False,
         add_error: bool = False,
     ) -> Text:
         error = None
+        try:
+            database = SQLDatabase.from_uri(database_url)
+        except Exception as e:
+            raise ValueError(f"An error occurred while connecting to the database: {e}")
         try:
             tool = QuerySQLDataBaseTool(db=database)
             result = tool.run(query, include_columns=include_columns)
