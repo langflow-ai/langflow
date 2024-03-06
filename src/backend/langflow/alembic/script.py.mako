@@ -23,10 +23,12 @@ depends_on: Union[str, Sequence[str], None] = ${repr(depends_on)}
 def upgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)  # type: ignore
+    table_names = inspector.get_table_names()
     ${upgrades if upgrades else "pass"}
 
 
 def downgrade() -> None:
     conn = op.get_bind()
     inspector = Inspector.from_engine(conn)  # type: ignore
+    table_names = inspector.get_table_names()
     ${downgrades if downgrades else "pass"}
