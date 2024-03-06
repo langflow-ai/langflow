@@ -30,6 +30,8 @@ export default function CollectionCardComponent({
 }) {
     const addFlow = useFlowsManagerStore((state) => state.addFlow);
     const navigate = useNavigate();
+    const emojiRegex = /\p{Emoji}/u;
+    const isEmoji= (str:string)=> emojiRegex.test(str);
 
     return (
         <Card
@@ -41,17 +43,20 @@ export default function CollectionCardComponent({
                 <CardHeader>
                     <div>
                         <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
-                            {flow.icon && (
-                                <div className="flex-shrink-0 h-7 w-7">
-                                    {flow.icon}
+                            {flow.icon && isEmoji(flow.icon) && (
+                                <div className="rounded-md p-2 flex align-middle items-center justify-center" style={{backgroundColor:flow.icon_bg_color}}>
+
+                                    <div className="pl-0.5 h-7 w-7">
+                                        {flow.icon}
+                                    </div>
+
                                 </div>
-                            
                             )}
-                            {!flow.icon && <IconComponent
+                            {(!flow.icon || !isEmoji(flow.icon)) && <IconComponent
                                 className={cn(
                                     "flex-shrink-0 h-7 w-7 text-flow-icon",
                                 )}
-                                name="Group"
+                                name={flow.icon || "Group"}
                             />}
                             <ShadTooltip content={flow.name}>
                                 <div className="w-full truncate">{flow.name}</div>
