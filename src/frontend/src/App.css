@@ -120,7 +120,7 @@ body {
 }
 
 .react-flow__edge path {
-  stroke: #5d00ff !important;
+  stroke: #07950a !important;
   stroke-width: 1.5px !important;
 }
 
@@ -137,19 +137,19 @@ body {
 }
 
 .gradient-border-input-connected {
-  border-left: 3px solid #5d00ff !important;
+  border-left: 3px solid #07950a !important;
 }
 
 .gradient-border-output-connected {
-  border-right: 3px solid #5d00ff !important;
+  border-right: 3px solid #07950a !important;
 }
 
 .gradient-border-input {
-  border-left: none !important;
+  border-left: 3px solid #5d00ff !important;
 }
 
 .gradient-border-output {
-  border-right: none !important;
+  border-right: 3px solid #5d00ff !important;
 }
 
 .gradient-border-input:hover {
