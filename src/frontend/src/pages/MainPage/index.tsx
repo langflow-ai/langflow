@@ -128,7 +128,7 @@ export default function HomePage(): JSX.Element {
           />
         </BaseModal.Header>
         <BaseModal.Content>
-          <div className="flex flex-wrap w-full h-full p-4 gap-3">
+          <div className="flex flex-wrap w-full h-full p-4 gap-3 overflow-auto custom-scroll">
             {examples.map((example, idx) => {
               return( 
               <ExampleCardComponent key={idx} flow={example} />)

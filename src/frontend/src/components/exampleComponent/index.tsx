@@ -53,7 +53,9 @@ export default function CollectionCardComponent({
                         </CardTitle>
                     </div>
                     <CardDescription className="pb-2 pt-2">
-                        <div className="truncate-doubleline">{flow.description}</div>
+                        <ShadTooltip side="bottom" styleClasses="z-50" content={flow.description}>
+                            <div className="truncate-doubleline">{flow.description}</div>
+                        </ShadTooltip>
                     </CardDescription>
                 </CardHeader>
             </div>
@@ -61,25 +63,25 @@ export default function CollectionCardComponent({
             <CardFooter>
                 <div className="flex w-full items-center justify-between gap-2">
                     <div className="flex w-full justify-end flex-wrap gap-2">
-                            <Button
-                                onClick={() => {
-                                    updateIds(flow.data!)
-                                    addFlow(true, flow).then((id) => {
+                        <Button
+                            onClick={() => {
+                                updateIds(flow.data!)
+                                addFlow(true, flow).then((id) => {
 
-                                        navigate("/flow/" + id);
-                                    });
-                                }}
-                                tabIndex={-1}
-                                variant="outline"
-                                size="sm"
-                                className="whitespace-nowrap "
-                            >
-                                <IconComponent
-                                    name="ExternalLink"
-                                    className="main-page-nav-button select-none"
-                                />
-                                Select Flow
-                            </Button>
+                                    navigate("/flow/" + id);
+                                });
+                            }}
+                            tabIndex={-1}
+                            variant="outline"
+                            size="sm"
+                            className="whitespace-nowrap "
+                        >
+                            <IconComponent
+                                name="ExternalLink"
+                                className="main-page-nav-button select-none"
+                            />
+                            Select Flow
+                        </Button>
                     </div>
                 </div>
             </CardFooter>
