@@ -52,7 +52,7 @@ class APIRequest(CustomComponent):
         if method not in ["GET", "POST", "PATCH", "PUT"]:
             raise ValueError(f"Unsupported method: {method}")
 
-        data = record.text if record else None
+        data = record.data if record else None
         try:
             response = await client.request(
                 method, url, headers=headers, content=data, timeout=timeout
