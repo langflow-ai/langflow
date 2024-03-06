@@ -320,9 +320,12 @@ class Graph:
             return cls(vertices, edges, flow_id)
         except KeyError as exc:
             logger.exception(exc)
-            raise ValueError(
-                f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
-            ) from exc
+            if "nodes" not in payload and "edges" not in payload:
+                logger.exception(exc)
+                raise ValueError(
+                    f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
+                ) from exc
+            raise ValueError(f"Error while creating graph from payload: {exc}") from exc
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Graph):
