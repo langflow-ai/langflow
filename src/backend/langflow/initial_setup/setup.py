@@ -5,7 +5,7 @@ import orjson
 from loguru import logger
 from sqlmodel import select
 
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.deps import session_scope
 
 STARTER_FOLDER_NAME = "Starter Projects"
@@ -77,22 +77,50 @@ def create_new_project(
     project_icon_bg_color,
 ):
     logger.info(f"Creating starter project {project_name}")
-    new_project = Flow(
+    new_project = FlowCreate(
         name=project_name,
         description=project_description,
+        icon=project_icon,
+        icon_bg_color=project_icon_bg_color,
+        data=project_data,
         is_component=project_is_component,
         updated_at=updated_at_datetime,
         folder=STARTER_FOLDER_NAME,
-        data=project_data,
-        icon=project_icon,
-        icon_bg_color=project_icon_bg_color,
     )
-    session.add(new_project)
+    db_flow = Flow.model_validate(new_project, from_attributes=True)
+    session.add(db_flow)
+    flows = session.exec(
+        select(Flow).where(
+            Flow.name == project_name,
+        )
+    ).all()
+
+
+def get_all_flows_similar_to_project(session, project_name):
+    flows = session.exec(
+        select(Flow).where(
+            Flow.name == project_name,
+            Flow.folder == STARTER_FOLDER_NAME,
+        )
+    ).all()
+    return flows
+
+
+def delete_start_projects(session):
+    flows = session.exec(
+        select(Flow).where(
+            Flow.folder == STARTER_FOLDER_NAME,
+        )
+    ).all()
+    for flow in flows:
+        session.delete(flow)
 
 
 def create_or_update_starter_projects():
+
     with session_scope() as session:
         starter_projects = load_starter_projects()
+        delete_start_projects(session)
         for project in starter_projects:
             (
                 project_name,
@@ -104,30 +132,18 @@ def create_or_update_starter_projects():
                 project_icon_bg_color,
             ) = get_project_data(project)
             if project_name and project_data:
-                existing_project = session.exec(
-                    select(Flow).where(
-                        Flow.name == project_name, Flow.folder == STARTER_FOLDER_NAME
-                    )
-                ).first()
-                if existing_project:
-                    update_existing_project(
-                        existing_project,
-                        project_name,
-                        project_description,
-                        project_is_component,
-                        updated_at_datetime,
-                        project_data,
-                        project_icon,
-                        project_icon_bg_color,
-                    )
-                else:
-                    create_new_project(
-                        session,
-                        project_name,
-                        project_description,
-                        project_is_component,
-                        updated_at_datetime,
-                        project_data,
-                        project_icon,
-                        project_icon_bg_color,
-                    )
+                for existing_project in get_all_flows_similar_to_project(
+                    session, project_name
+                ):
+                    session.delete(existing_project)
+
+                create_new_project(
+                    session,
+                    project_name,
+                    project_description,
+                    project_is_component,
+                    updated_at_datetime,
+                    project_data,
+                    project_icon,
+                    project_icon_bg_color,
+                )
