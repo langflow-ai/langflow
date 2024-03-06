@@ -20,6 +20,7 @@ from langflow.services.database.models.flow import (
 )
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
+from langflow.services.settings.service import SettingsService
 
 # build router
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -50,10 +51,16 @@ def read_flows(
     *,
     current_user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session),
+    settings_service: "SettingsService" = Depends(get_settings_service),
 ):
     """Read all flows."""
     try:
-        flows = current_user.flows
+        auth_settings = settings_service.auth_settings
+        if auth_settings.AUTO_LOGIN:
+            flows = session.exec(select(Flow).where(Flow.user_id == None)).all()
+        else:
+            flows = current_user.flows
+
         flows = validate_is_component(flows)
         # with the session get the flows that DO NOT have a user_id
         try:
@@ -76,11 +83,17 @@ def read_flow(
     session: Session = Depends(get_session),
     flow_id: UUID,
     current_user: User = Depends(get_current_active_user),
+    settings_service: "SettingsService" = Depends(get_settings_service),
 ):
     """Read a flow."""
+    auth_settings = settings_service.auth_settings
+    if auth_settings.AUTO_LOGIN:
+        user_id = None
+    else:
+        user_id = current_user.id
     if user_flow := (
         session.exec(
-            select(Flow).where(Flow.id == flow_id, Flow.user_id == current_user.id)
+            select(Flow).where(Flow.id == flow_id, Flow.user_id == user_id)
         ).first()
     ):
         return user_flow
@@ -99,7 +112,12 @@ def update_flow(
 ):
     """Update a flow."""
 
-    db_flow = read_flow(session=session, flow_id=flow_id, current_user=current_user)
+    db_flow = read_flow(
+        session=session,
+        flow_id=flow_id,
+        current_user=current_user,
+        settings_service=settings_service,
+    )
     if not db_flow:
         raise HTTPException(status_code=404, detail="Flow not found")
     flow_data = flow.model_dump(exclude_unset=True)
