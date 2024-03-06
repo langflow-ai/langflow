@@ -50,6 +50,9 @@
 
     --component-icon: #d8598a;
     --flow-icon: #2f67d0;
+    --hover: #F2F4F5;
+
+    
 
     /* Colors that are shared in dark and light mode */
     --blur-shared: #151923de;
@@ -69,6 +72,7 @@
     --background: 224 35% 7.5%; /* hsl(224 40% 10%) */
     --foreground: 213 31% 80%; /* hsl(213 31% 91%) */
     --ice: #60A5FA;
+    --hover: #1A202E;
 
     --muted: 223 27% 11%; /* hsl(223 27% 11%) */
     --muted-foreground: 215.4 16.3% 56.9%; /* hsl(215 16% 56%) */

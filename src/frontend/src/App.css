@@ -90,3 +90,11 @@ body {
 .jv-indent::-webkit-scrollbar-thumb:hover {
   background-color: #bbb !important;
 }
+
+.custom-hover {
+  transition: background-color 0.5s ease;
+}
+
+.custom-hover:hover {
+  background-color: rgba(99, 102, 241, 0.1); /* Medium indigo color with 20% opacity */
+}
