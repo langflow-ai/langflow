@@ -27,12 +27,12 @@ class APIRequest(CustomComponent):
         "headers": {
             "display_name": "Headers",
             "info": "The headers to send with the request.",
-            "input_types": ["dict"]
+            "input_types": ["dict"],
         },
         "body": {
             "display_name": "Body",
             "info": "The body to send with the request (for POST, PATCH, PUT).",
-            "input_types": ["dict"]
+            "input_types": ["dict"],
         },
         "timeout": {
             "display_name": "Timeout",
@@ -58,9 +58,7 @@ class APIRequest(CustomComponent):
         data = body if body else None
         data = json.dumps(data)
         try:
-            response = await client.request(
-                method, url, headers=headers, content=data, timeout=timeout
-            )
+            response = await client.request(method, url, headers=headers, content=data, timeout=timeout)
             try:
                 response_json = response.json()
                 result = orjson_dumps(response_json, indent_2=False)
@@ -96,16 +94,9 @@ class APIRequest(CustomComponent):
         if headers is None:
             headers = {}
         urls = url if isinstance(url, list) else [url]
-        bodies = (
-            body
-            if isinstance(body, list)
-            else [body] if body else [None] * len(urls)
-        )
+        bodies = body if isinstance(body, list) else [body] if body else [None] * len(urls)
         async with httpx.AsyncClient() as client:
             results = await asyncio.gather(
-                *[
-                    self.make_request(client, method, u, headers, rec, timeout)
-                    for u, rec in zip(urls, bodies)
-                ]
+                *[self.make_request(client, method, u, headers, rec, timeout) for u, rec in zip(urls, bodies)]
             )
         return results

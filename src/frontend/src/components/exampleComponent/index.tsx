@@ -1,15 +1,10 @@
-import { useEffect, useState } from "react";
-import { getComponent, postLikeComponent } from "../../controllers/API";
-import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
-import useAlertStore from "../../stores/alertStore";
+import { useNavigate } from "react-router-dom";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { useStoreStore } from "../../stores/storeStore";
-import { storeComponent } from "../../types/store";
-import cloneFLowWithParent from "../../utils/storeUtils";
+import { FlowType } from "../../types/flow";
+import { updateIds } from "../../utils/reactflowUtils";
 import { cn } from "../../utils/utils";
 import ShadTooltip from "../ShadTooltipComponent";
 import IconComponent from "../genericIconComponent";
-import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import {
     Card,
@@ -18,20 +13,17 @@ import {
     CardHeader,
     CardTitle,
 } from "../ui/card";
-import { FlowType } from "../../types/flow";
-import { updateIds } from "../../utils/reactflowUtils";
-import { useNavigate } from "react-router-dom";
 
 export default function CollectionCardComponent({
-    flow,
+  flow,
 }: {
-    flow: FlowType;
-    authorized?: boolean;
+  flow: FlowType;
+  authorized?: boolean;
 }) {
     const addFlow = useFlowsManagerStore((state) => state.addFlow);
     const navigate = useNavigate();
     const emojiRegex = /\p{Emoji}/u;
-    const isEmoji= (str:string)=> emojiRegex.test(str);
+    const isEmoji = (str: string) => emojiRegex.test(str);
 
     return (
         <Card
@@ -43,20 +35,17 @@ export default function CollectionCardComponent({
                 <CardHeader>
                     <div>
                         <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
-                            {flow.icon && isEmoji(flow.icon) && (
-                                <div className="rounded-md p-2 flex align-middle items-center justify-center" style={{backgroundColor:flow.icon_bg_color}}>
-
-                                    <div className="pl-0.5 h-7 w-7">
-                                        {flow.icon}
-                                    </div>
-
+                            {flow.icon && (
+                                <div className="flex-shrink-0 h-7 w-7">
+                                    {flow.icon}
                                 </div>
+
                             )}
-                            {(!flow.icon || !isEmoji(flow.icon)) && <IconComponent
+                            {!flow.icon && <IconComponent
                                 className={cn(
                                     "flex-shrink-0 h-7 w-7 text-flow-icon",
                                 )}
-                                name={flow.icon || "Group"}
+                                name="Group"
                             />}
                             <ShadTooltip content={flow.name}>
                                 <div className="w-full truncate">{flow.name}</div>
@@ -73,12 +62,11 @@ export default function CollectionCardComponent({
 
             <CardFooter>
                 <div className="flex w-full items-center justify-between gap-2">
-                    <div className="flex w-full justify-end flex-wrap gap-2">
+                    <div className="flex w-full flex-wrap justify-end gap-2">
                         <Button
                             onClick={() => {
-                                updateIds(flow.data!)
+                                updateIds(flow.data!);
                                 addFlow(true, flow).then((id) => {
-
                                     navigate("/flow/" + id);
                                 });
                             }}

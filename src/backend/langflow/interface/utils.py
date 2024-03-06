@@ -43,9 +43,7 @@ def try_setting_streaming_options(langchain_object):
     llm = None
     if hasattr(langchain_object, "llm"):
         llm = langchain_object.llm
-    elif hasattr(langchain_object, "llm_chain") and hasattr(
-        langchain_object.llm_chain, "llm"
-    ):
+    elif hasattr(langchain_object, "llm_chain") and hasattr(langchain_object.llm_chain, "llm"):
         llm = langchain_object.llm_chain.llm
 
     if isinstance(llm, BaseLanguageModel):
@@ -71,9 +69,7 @@ def extract_input_variables_from_prompt(prompt: str) -> list[str]:
 
         # Extract the variable name from either the single or double brace match
         if match.group(1):  # Match found in double braces
-            variable_name = (
-                "{{" + match.group(1) + "}}"
-            )  # Re-add single braces for JSON strings
+            variable_name = "{{" + match.group(1) + "}}"  # Re-add single braces for JSON strings
         else:  # Match found in single braces
             variable_name = match.group(2)
         if variable_name is not None:
@@ -109,9 +105,7 @@ def set_langchain_cache(settings):
 
     if cache_type := os.getenv("LANGFLOW_LANGCHAIN_CACHE"):
         try:
-            cache_class = import_class(
-                f"langchain.cache.{cache_type or settings.LANGCHAIN_CACHE}"
-            )
+            cache_class = import_class(f"langchain.cache.{cache_type or settings.LANGCHAIN_CACHE}")
 
             logger.debug(f"Setting up LLM caching with {cache_class.__name__}")
             set_llm_cache(cache_class())

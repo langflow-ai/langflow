@@ -57,20 +57,22 @@ def read_flows(
     try:
         auth_settings = settings_service.auth_settings
         if auth_settings.AUTO_LOGIN:
-            flows = session.exec(select(Flow).where(Flow.user_id == None)).all()
+            flows = session.exec(select(Flow).where(Flow.user_id == None | Flow.user_id == current_user.id)).all()  # noqa
         else:
             flows = current_user.flows
 
         flows = validate_is_component(flows)
+        flow_ids = [flow.id for flow in flows]
         # with the session get the flows that DO NOT have a user_id
         try:
             example_flows = session.exec(
                 select(Flow).where(
-                    Flow.user_id == None, Flow.folder == STARTER_FOLDER_NAME
+                    Flow.user_id == None,
+                    Flow.folder == STARTER_FOLDER_NAME,  # noqa
                 )
             ).all()  # noqa
             for example_flow in example_flows:
-                if example_flow not in flows:
+                if example_flow.id not in flow_ids:
                     flows.append(example_flow)
         except Exception as e:
             logger.error(e)
@@ -89,15 +91,14 @@ def read_flow(
 ):
     """Read a flow."""
     auth_settings = settings_service.auth_settings
+    stmt = select(Flow).where(Flow.id == flow_id)
     if auth_settings.AUTO_LOGIN:
-        user_id = None
-    else:
-        user_id = current_user.id
-    if user_flow := (
-        session.exec(
-            select(Flow).where(Flow.id == flow_id, Flow.user_id == user_id)
-        ).first()
-    ):
+        # If auto login is enable user_id can be current_user.id or None
+        # so write an OR
+        stmt = stmt.where(
+            (Flow.user_id == current_user.id) | (Flow.user_id == None)  # noqa
+        )  # noqa
+    if user_flow := session.exec(stmt).first():
         return user_flow
     else:
         raise HTTPException(status_code=404, detail="Flow not found")

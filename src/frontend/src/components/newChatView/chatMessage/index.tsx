@@ -134,7 +134,7 @@ export default function ChatMessage({
           )}
         </div>
         {!chat.isSend ? (
-          <div className="form-modal-chat-text-position flex-grow min-w-96">
+          <div className="form-modal-chat-text-position min-w-96 flex-grow">
             <div className="form-modal-chat-text">
               {hidden && chat.thought && chat.thought !== "" && (
                 <div
@@ -155,9 +155,9 @@ export default function ChatMessage({
                 />
               )}
               {chat.thought && chat.thought !== "" && !hidden && <br></br>}
-              <div className="w-full flex flex-col">
-                <div className="w-full flex flex-col dark:text-white">
-                  <div className="w-full flex flex-col">
+              <div className="flex w-full flex-col">
+                <div className="flex w-full flex-col dark:text-white">
+                  <div className="flex w-full flex-col">
                     {useMemo(
                       () =>
                         chatMessage === "" && lockChat ? (
@@ -169,7 +169,7 @@ export default function ChatMessage({
                           <Markdown
                             remarkPlugins={[remarkGfm, remarkMath]}
                             rehypePlugins={[rehypeMathjax]}
-                            className="markdown flex flex-col prose text-primary word-break-break-word
+                            className="markdown prose flex flex-col text-primary word-break-break-word
 dark:prose-invert"
                             components={{
                               pre({ node, ...props }) {

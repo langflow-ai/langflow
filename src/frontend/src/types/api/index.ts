@@ -159,3 +159,17 @@ export type VertexDataTypeAPI = {
   timedelta?: number;
   duration?: string;
 };
+
+export type CodeErrorDataTypeAPI = {
+  error: string | undefined;
+  traceback: string | undefined;
+};
+
+// the error above is inside this error.response.data.detail.error
+// which comes from a request to the API
+// to type the error we need to know the structure of the object
+
+// error that has a response, that has a data, that has a detail, that has an error
+export type ResponseErrorTypeAPI = {
+  response: { data: { detail: CodeErrorDataTypeAPI } };
+};

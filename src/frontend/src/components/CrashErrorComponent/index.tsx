@@ -26,7 +26,7 @@ export default function CrashErrorComponent({
             <CardContent className="grid">
               <div>
                 <p>
-                Please report errors with detailed tracebacks on the{" "}
+                  Please report errors with detailed tracebacks on the{" "}
                   <a
                     href="https://github.com/logspace-ai/langflow/issues"
                     target="_blank"
@@ -37,7 +37,7 @@ export default function CrashErrorComponent({
                   </a>{" "}
                   page.
                   <br></br>
-                   Thank you!
+                  Thank you!
                 </p>
               </div>
             </CardContent>
