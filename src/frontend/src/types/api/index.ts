@@ -29,6 +29,7 @@ export type APIClassType = {
   official?: boolean;
   frozen?: boolean;
   flow?: FlowType;
+  field_order?: string[];
   [key: string]:
     | Array<string>
     | string
