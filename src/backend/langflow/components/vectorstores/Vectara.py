@@ -8,13 +8,16 @@ from langchain_community.vectorstores.vectara import Vectara
 from langchain_core.vectorstores import VectorStore
 
 from langflow import CustomComponent
-from langflow.field_typing import BaseRetriever, Document
+from langflow.field_typing import BaseRetriever
+from langflow.schema.schema import Record
 
 
 class VectaraComponent(CustomComponent):
     display_name: str = "Vectara"
     description: str = "Implementation of Vector Store using Vectara"
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/vectara"
+    documentation = (
+        "https://python.langchain.com/docs/integrations/vectorstores/vectara"
+    )
     beta = True
     icon = "Vectara"
     field_config = {
@@ -28,8 +31,9 @@ class VectaraComponent(CustomComponent):
             "display_name": "Vectara API Key",
             "password": True,
         },
-        "documents": {
-            "display_name": "Documents",
+        "inputs": {
+            "display_name": "Input",
+            "input_types": ["Document", "Record"],
             "info": "If provided, will be upserted to corpus (optional)",
         },
         "files_url": {
@@ -44,11 +48,18 @@ class VectaraComponent(CustomComponent):
         vectara_corpus_id: str,
         vectara_api_key: str,
         files_url: Optional[List[str]] = None,
-        documents: Optional[Document] = None,
+        inputs: Optional[Record] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         source = "Langflow"
 
-        if documents is not None:
+        documents = []
+        for _input in inputs:
+            if isinstance(_input, Record):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
+
+        if documents:
             return Vectara.from_documents(
                 documents=documents,  # type: ignore
                 embedding=FakeEmbeddings(size=768),
