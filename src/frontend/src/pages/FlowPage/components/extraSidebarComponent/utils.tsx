@@ -6,8 +6,9 @@ export function sortKeys(a: string, b: string) {
     "outputs",
     "prompts",
     "data",
+    "prompts",
     "models",
-    "utilities",
+    "helpers",
   ];
   const indexA = order.indexOf(a.toLowerCase());
   const indexB = order.indexOf(b.toLowerCase());
