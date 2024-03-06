@@ -219,7 +219,7 @@ export default function NodeToolbarComponent({
                 }}
                 data-testid="code-button-modal"
               >
-                <IconComponent name="TerminalSquare" className="h-4 w-4" />
+                <IconComponent name="Code" className="h-4 w-4" />
               </button>
             </ShadTooltip>
           ) : (
