@@ -166,7 +166,7 @@ class StreamData(BaseModel):
 class CustomComponentCode(BaseModel):
     code: str
     field: Optional[str] = None
-    field_value: Optional[str] = None
+    field_value: Optional[Any] = None
     frontend_node: Optional[dict] = None
 
 
