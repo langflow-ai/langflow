@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,7 @@ import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { classNames, cn } from "../../../../utils/utils";
+import { cn } from "../../../../utils/utils";
 import ShadTooltip from "../../../ShadTooltipComponent";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
@@ -40,22 +40,6 @@ export const MenuBar = ({
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
-  const [myOpen, mySetOpen] = useState<boolean>(false)
-
-  const ExportMemo = useMemo(
-    () => (
-      <ExportModal
-        myOpen={myOpen}
-        mySetOpen={mySetOpen}
-      >
-        <div className="flex items-center">
-          <IconComponent name="FileDown" className="header-menu-options" />
-          Export
-        </div>
-      </ExportModal>
-    ),
-    []
-  );
 
   function handleAddFlow() {
     try {
