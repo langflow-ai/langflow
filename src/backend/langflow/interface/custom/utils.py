@@ -15,12 +15,15 @@ from langflow.interface.custom.attributes import ATTR_FUNC_MAPPING
 from langflow.interface.custom.code_parser.utils import extract_inner_type
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader.utils import (
-    build_custom_component_list_from_path, determine_component_name,
-    merge_nested_dicts_with_renaming)
+    build_custom_component_list_from_path,
+    determine_component_name,
+    merge_nested_dicts_with_renaming,
+)
 from langflow.interface.custom.eval import eval_custom_component_code
 from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.custom_components import \
-    CustomComponentFrontendNode
+from langflow.template.frontend_node.custom_components import (
+    CustomComponentFrontendNode,
+)
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
 
@@ -221,7 +224,7 @@ def add_extra_fields(frontend_node, field_config, function_args):
         key in function_args_names for key in field_config.keys()
     ):
         for field_name, field_config in _field_config.copy().items():
-            if "name" not in extra_field:
+            if "name" not in field_config or field_name == "code":
                 continue
             config = _field_config.get(field_name, {})
             config = config.model_dump() if isinstance(config, BaseModel) else config
