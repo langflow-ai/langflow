@@ -1,10 +1,10 @@
 # Path: src/backend/langflow/database/models/flow.py
 
-import re
 from datetime import datetime
 from typing import TYPE_CHECKING, Dict, Optional
 from uuid import UUID, uuid4
 
+from emoji import purely_emoji
 from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
@@ -47,10 +47,10 @@ class FlowBase(SQLModel):
         # emoji pattern in Python
         if v is None:
             return v
-        pattern = r"\p{Emoji}"
+
         emoji = validate_icon(v)
-        is_emoji = re.search(pattern, emoji)
-        if is_emoji:
+
+        if purely_emoji(emoji):
             # this is indeed an emoji
             return emoji
         # otherwise it should be a valid lucide icon
