@@ -69,7 +69,9 @@ def read_flows(
                     Flow.user_id == None, Flow.folder == STARTER_FOLDER_NAME
                 )
             ).all()  # noqa
-            flows.extend(example_flows)
+            for example_flow in example_flows:
+                if example_flow not in flows:
+                    flows.append(example_flow)
         except Exception as e:
             logger.error(e)
     except Exception as e:
@@ -139,9 +141,15 @@ def delete_flow(
     session: Session = Depends(get_session),
     flow_id: UUID,
     current_user: User = Depends(get_current_active_user),
+    settings_service=Depends(get_settings_service),
 ):
     """Delete a flow."""
-    flow = read_flow(session=session, flow_id=flow_id, current_user=current_user)
+    flow = read_flow(
+        session=session,
+        flow_id=flow_id,
+        current_user=current_user,
+        settings_service=settings_service,
+    )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
     session.delete(flow)
