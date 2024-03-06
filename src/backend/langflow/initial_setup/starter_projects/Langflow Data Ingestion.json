@@ -1,5 +1,7 @@
 {
     "name": "Data Ingestion",
+    "icon": ":inbox_tray:",
+    "icon_bg_color": "#FFD700",
     "description": "This project is the starting point to insert data into a Vector Store. \n\nWe use the Vector Store Chroma but you can replace it with any other Vector Store. \n\nYou start by deciding what type of data you want to load, then you pick a place where you want to store the vectors and run it.\n\nThis will create a vector store in your local environment which you can query using the Chroma Search component.",
     "data": {
         "nodes": [
