@@ -6,7 +6,7 @@ from langflow.schema import Record
 
 class RecordsAsTextComponent(CustomComponent):
     display_name = "Records to Text"
-    description = "Converts Records a list of Records to text using a template."
+    description = "Converts Records into single piece of text using a template."
 
     def build_config(self):
         return {
@@ -16,7 +16,7 @@ class RecordsAsTextComponent(CustomComponent):
             },
             "template": {
                 "display_name": "Template",
-                "info": "The template to use for formatting the records. It must contain the keys {text} and {data}.",
+                "info": "The template to use for formatting the records. It can contain the keys {text}, {data} or any other key in the Record.",
             },
         }
 
