@@ -228,7 +228,7 @@ export const nodeColors: { [char: string]: string } = {
   textsplitters: "#B47CB5",
   toolkits: "#DB2C2C",
   wrappers: "#E6277A",
-  utilities: "#31A3CC",
+  helpers: "#31A3CC",
   langchain_utilities: "#31A3CC",
   output_parsers: "#E6A627",
   str: "#31a3cc",
