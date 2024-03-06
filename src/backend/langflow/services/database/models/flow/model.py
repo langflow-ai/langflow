@@ -45,6 +45,8 @@ class FlowBase(SQLModel):
         #   const emojiRegex = /\p{Emoji}/u;
         # const isEmoji = emojiRegex.test(data?.node?.icon!);
         # emoji pattern in Python
+        if v is None:
+            return v
         pattern = r"\p{Emoji}"
         emoji = validate_icon(v)
         is_emoji = re.search(pattern, emoji)
