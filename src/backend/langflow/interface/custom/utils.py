@@ -224,6 +224,8 @@ def add_extra_fields(frontend_node, field_config, function_args):
         key in function_args_names for key in field_config.keys()
     ):
         for field_name, field_config in _field_config.copy().items():
+            if "name" not in field_config or field_name == "code":
+                continue
             config = _field_config.get(field_name, {})
             config = config.model_dump() if isinstance(config, BaseModel) else config
             field_name, field_type, field_value, field_required = get_field_properties(
