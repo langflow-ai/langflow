@@ -88,7 +88,7 @@ module.exports = {
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
         "ice": "var(--ice)",
-
+        hover: "var(--hover)",
         white: "var(--white)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

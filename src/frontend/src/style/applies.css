@@ -114,7 +114,7 @@
     @apply pointer-events-none;
   }
   .extra-side-bar-buttons {
-    @apply relative inline-flex w-full items-center justify-center rounded-md bg-background px-2 py-2 text-foreground shadow-sm ring-1 ring-inset ring-input transition-all duration-500 ease-in-out;
+    @apply relative inline-flex w-full items-center justify-center rounded-md bg-background px-2 py-2 text-foreground transition-all duration-500 ease-in-out;
   }
   .extra-side-bar-buttons:hover {
     @apply hover:bg-muted;

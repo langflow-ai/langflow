@@ -16,7 +16,7 @@ import { downloadFlow, removeApiKeys } from "../../utils/reactflowUtils";
 import BaseModal from "../baseModal";
 
 const ExportModal = forwardRef(
-  (props: { children: ReactNode }, ref): JSX.Element => {
+  (props: { children: ReactNode, myOpen?: boolean, mySetOpen?: (open: boolean) => void }, ref): JSX.Element => {
     const version = useDarkStore((state) => state.version);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
     const [checked, setChecked] = useState(true);
@@ -28,6 +28,10 @@ const ExportModal = forwardRef(
     const [name, setName] = useState(currentFlow!.name);
     const [description, setDescription] = useState(currentFlow!.description);
     const [open, setOpen] = useState(false);
+
+    useEffect(() => {
+      console.log(open)
+    }, [open])
 
     return (
       <BaseModal size="smaller-h-full" open={open} setOpen={setOpen}>
