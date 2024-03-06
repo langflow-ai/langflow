@@ -313,7 +313,7 @@ class Vertex:
                         params[param_key] = []
                     params[param_key].append(self.graph.get_vertex(edge.source_id))
                 elif edge.target_id == self.id:
-                    if isinstance(template_dict[param_key]["value"], dict):
+                    if isinstance(template_dict[param_key].get("value"), dict):
                         # we don't know the key of the dict but we need to set the value
                         # to the vertex that is the source of the edge
                         param_dict = template_dict[param_key]["value"]
