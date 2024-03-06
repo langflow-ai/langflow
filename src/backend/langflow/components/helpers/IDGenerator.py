@@ -1,5 +1,5 @@
 import uuid
-from typing import Text
+from typing import Any, Text
 
 from langflow import CustomComponent
 
@@ -9,11 +9,20 @@ class UUIDGeneratorComponent(CustomComponent):
     display_name = "Unique ID Generator"
     description = "Generates a unique ID."
 
-    def generate(self, *args, **kwargs):
-        return Text(uuid.uuid4().hex)
+    def update_build_config(
+        self, build_config: dict, field_name: Text, field_value: Any
+    ):
+        if field_name == "unique_id":
+            build_config[field_name]["value"] = str(uuid.uuid4())
+        return build_config
 
     def build_config(self):
-        return {"unique_id": {"display_name": "Value", "value": self.generate}}
+        return {
+            "unique_id": {
+                "display_name": "Value",
+                "refresh": True,
+            }
+        }
 
     def build(self, unique_id: str) -> str:
         return unique_id
