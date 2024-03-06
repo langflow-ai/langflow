@@ -33,12 +33,16 @@ def get_project_data(project):
     project_updated_at = project.get("updated_at")
     updated_at_datetime = datetime.strptime(project_updated_at, "%Y-%m-%dT%H:%M:%S.%f")
     project_data = project.get("data")
+    project_icon = project.get("icon")
+    project_icon_bg_color = project.get("icon_bg_color")
     return (
         project_name,
         project_description,
         project_is_component,
         updated_at_datetime,
         project_data,
+        project_icon,
+        project_icon_bg_color,
     )
 
 
@@ -49,6 +53,8 @@ def update_existing_project(
     project_is_component,
     updated_at_datetime,
     project_data,
+    project_icon,
+    project_icon_bg_color,
 ):
     logger.info(f"Updating starter project {project_name}")
     existing_project.data = project_data
@@ -56,6 +62,8 @@ def update_existing_project(
     existing_project.description = project_description
     existing_project.is_component = project_is_component
     existing_project.updated_at = updated_at_datetime
+    existing_project.icon = project_icon
+    existing_project.icon_bg_color = project_icon_bg_color
 
 
 def create_new_project(
@@ -65,6 +73,8 @@ def create_new_project(
     project_is_component,
     updated_at_datetime,
     project_data,
+    project_icon,
+    project_icon_bg_color,
 ):
     logger.info(f"Creating starter project {project_name}")
     new_project = Flow(
@@ -74,6 +84,8 @@ def create_new_project(
         updated_at=updated_at_datetime,
         folder=STARTER_FOLDER_NAME,
         data=project_data,
+        icon=project_icon,
+        icon_bg_color=project_icon_bg_color,
     )
     session.add(new_project)
 
@@ -88,6 +100,8 @@ def create_or_update_starter_projects():
                 project_is_component,
                 updated_at_datetime,
                 project_data,
+                project_icon,
+                project_icon_bg_color,
             ) = get_project_data(project)
             if project_name and project_data:
                 existing_project = session.exec(
@@ -103,6 +117,8 @@ def create_or_update_starter_projects():
                         project_is_component,
                         updated_at_datetime,
                         project_data,
+                        project_icon,
+                        project_icon_bg_color,
                     )
                 else:
                     create_new_project(
@@ -112,4 +128,6 @@ def create_or_update_starter_projects():
                         project_is_component,
                         updated_at_datetime,
                         project_data,
+                        project_icon,
+                        project_icon_bg_color,
                     )
