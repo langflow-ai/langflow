@@ -89,16 +89,13 @@ def read_flow(
     settings_service: "SettingsService" = Depends(get_settings_service),
 ):
     """Read a flow."""
-    # auth_settings = settings_service.auth_settings
-    # if auth_settings.AUTO_LOGIN:
-    #     user_id = None
-    # else:
-    #     user_id = current_user.id
-    if user_flow := (
-        session.exec(
-            select(Flow).where(Flow.id == flow_id, Flow.user_id == current_user.id)
-        ).first()
-    ):
+    auth_settings = settings_service.auth_settings
+    stmt = select(Flow).where(Flow.id == flow_id)
+    if auth_settings.AUTO_LOGIN:
+        # If auto login is enable user_id can be current_user.id or None
+        # so write an OR
+        stmt = stmt.where((Flow.user_id == current_user.id) | (Flow.user_id == None))
+    if user_flow := session.exec(stmt).first():
         return user_flow
     else:
         raise HTTPException(status_code=404, detail="Flow not found")
