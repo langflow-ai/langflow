@@ -469,6 +469,16 @@ def add_options_to_field(
 
 
 def build_loader_repr_from_records(records: List[Record]) -> str:
+    """
+    Builds a string representation of the loader based on the given records.
+
+    Args:
+        records (List[Record]): A list of records.
+
+    Returns:
+        str: A string representation of the loader.
+
+    """
     if records:
         avg_length = sum(len(doc.text) for doc in records) / len(records)
         return f"""{len(records)} records
