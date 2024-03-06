@@ -2,7 +2,7 @@ import { Group, ToyBrick } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../components/DropdownButtonComponent";
-import NewFlowCardComponent from "../../components/NewFlowCardComponent";
+import NewFlowCardComponent from "../../components/NewFLowCard2";;
 import ExampleCardComponent from "../../components/exampleComponent";
 import IconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
@@ -17,6 +17,7 @@ import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { downloadFlows } from "../../utils/reactflowUtils";
+import UndrawCardComponent from "../../components/undrawCards";
 export default function HomePage(): JSX.Element {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
@@ -119,21 +120,21 @@ export default function HomePage(): JSX.Element {
       </div>
       <BaseModal open={openModal} setOpen={setOpenModal}>
         <BaseModal.Header
-          description={"Select a template or start from scratch"}
+          description={"Select a template below"}
         >
           <span className="pr-2" data-testid="modal-title">
-            Create a New Flow
+            Get Started
           </span>
-          <IconComponent
+          {/* <IconComponent
             name="Group"
             className="h-6 w-6 stroke-2 text-primary "
             aria-hidden="true"
-          />
+          /> */}
         </BaseModal.Header>
         <BaseModal.Content>
           <div className="flex h-full w-full flex-wrap gap-3 overflow-auto p-4 custom-scroll">
             {examples.map((example, idx) => {
-              return <ExampleCardComponent key={idx} flow={example} />;
+              return <UndrawCardComponent key={idx} flow={example} />;
             })}
             <NewFlowCardComponent />
           </div>
