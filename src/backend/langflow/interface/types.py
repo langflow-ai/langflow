@@ -1,4 +1,5 @@
 from cachetools import LRUCache, cached
+
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.chains.base import chain_creator
 from langflow.interface.custom.directory_reader.utils import (
@@ -62,8 +63,12 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
     return all_types
 
 
-def get_all_types_dict(settings_service):
+def get_all_types_dict(components_paths):
     """Get all types dictionary combining native and custom components."""
     native_components = build_langchain_types_dict()
-    custom_components_from_file = build_custom_components(settings_service)
-    return merge_nested_dicts_with_renaming(native_components, custom_components_from_file)
+    custom_components_from_file = build_custom_components(
+        components_paths=components_paths
+    )
+    return merge_nested_dicts_with_renaming(
+        native_components, custom_components_from_file
+    )
