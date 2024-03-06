@@ -41,12 +41,18 @@ export default function CollectionCardComponent({
                 <CardHeader>
                     <div>
                         <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
-                            <IconComponent
+                            {flow.icon && (
+                                <div className="flex-shrink-0 h-7 w-7">
+                                    {flow.icon}
+                                </div>
+                            
+                            )}
+                            {!flow.icon && <IconComponent
                                 className={cn(
                                     "flex-shrink-0 h-7 w-7 text-flow-icon",
                                 )}
                                 name="Group"
-                            />
+                            />}
                             <ShadTooltip content={flow.name}>
                                 <div className="w-full truncate">{flow.name}</div>
                             </ShadTooltip>

@@ -15,6 +15,8 @@ export type FlowType = {
   parent?: string;
   folder?: string;
   user_id?: string;
+  icon?:string;
+  icon_bg_color?:string;
 };
 
 export type NodeType = {
