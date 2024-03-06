@@ -48,6 +48,7 @@ def get_all(
         all_types_dict = get_all_types_dict(settings_service)
         return all_types_dict
     except Exception as exc:
+        logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
