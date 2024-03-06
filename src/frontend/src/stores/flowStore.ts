@@ -514,7 +514,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().setIsBuilding(false);
       },
       onBuildStart: (idList) => {
-        console.log("onBuildStart", idList);
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
       validateNodes: validateSubgraph,
@@ -536,7 +535,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       runId: string;
     } | null
   ) => {
-    console.log("updateVerticesBuild", vertices);
     set({ verticesBuild: vertices });
   },
   verticesBuild: null,
