@@ -4,9 +4,10 @@ export function sortKeys(a: string, b: string) {
     "saved_components",
     "inputs",
     "outputs",
+    "prompts",
     "data",
-    "utilities",
     "models",
+    "utilities",
   ];
   const indexA = order.indexOf(a.toLowerCase());
   const indexB = order.indexOf(b.toLowerCase());
