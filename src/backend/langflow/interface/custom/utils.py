@@ -426,17 +426,17 @@ def create_component_template(component):
     return component_template
 
 
-def build_custom_components(settings_service):
+def build_custom_components(components_paths: List[str]):
     """Build custom components from the specified paths."""
-    if not settings_service.settings.COMPONENTS_PATH:
+    if not components_paths:
         return {}
 
     logger.info(
-        f"Building custom components from {settings_service.settings.COMPONENTS_PATH}"
+        f"Building custom components from {components_paths}"
     )
     custom_components_from_file = {}
     processed_paths = set()
-    for path in settings_service.settings.COMPONENTS_PATH:
+    for path in components_paths:
         path_str = str(path)
         if path_str in processed_paths:
             continue
