@@ -72,6 +72,7 @@ def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: List
         if field.name not in field_order:
             reordered_fields.append(field)
     frontend_node.template.fields = reordered_fields
+    frontend_node.field_order = field_order
 
 
 def add_base_classes(
