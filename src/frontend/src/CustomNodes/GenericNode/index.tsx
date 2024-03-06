@@ -521,10 +521,10 @@ export default function GenericNode({
                       ) : !validationStatus ? (
                         <span className="flex">{STATUS_BUILD}</span>
                       ) : (
-                        <div className="max-h-100">
+                        <div className="max-h-100 p-2">
                           <div>
                             {lastRunTime && (
-                              <div className="justify-left flex text-muted-foreground">
+                              <div className="justify-left flex text-muted-foreground font-normal">
                                 <div>{RUN_TIMESTAMP_PREFIX}</div>
                                 <div className="ml-1 text-status-blue">
                                   {lastRunTime}
@@ -532,19 +532,19 @@ export default function GenericNode({
                               </div>
                             )}
                           </div>
-                          <div className="justify-left flex text-muted-foreground">
+                          <div className="justify-left flex text-muted-foreground font-normal">
                             <div>Duration:</div>
-                            <div className="ml-1 text-status-blue">
+                            <div className="ml-1 text-status-blue mb-3">
                               {validationStatus?.data.duration}
                             </div>
                           </div>
                           <hr />
-                          <span className="flex justify-center   text-muted-foreground ">
+                          <span className="flex justify-center   text-muted-foreground mt-2 mb-2 font-semibold">
                             Output
                           </span>
-                          <div className="max-h-96 overflow-auto custom-scroll">
+                          <div className="max-h-96 overflow-auto custom-scroll font-normal">
                             {validationString.split("\n").map((line, index) => (
-                              <div key={index}>{line}</div>
+                              <div className="font-normal" key={index}>{line}</div>
                             ))}
                           </div>
                         </div>

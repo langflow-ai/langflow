@@ -69,7 +69,7 @@
     @apply flex h-full w-[14.5rem] flex-col overflow-hidden border-r scrollbar-hide;
   }
   .side-bar-search-div-placement {
-    @apply relative mx-auto mb-2 mt-2 flex items-center;
+    @apply relative mx-auto mb-2 mt-2 flex items-center py-3;
   }
   .side-bar-components-icon {
     @apply h-6 w-4 text-ring;
@@ -114,7 +114,10 @@
     @apply pointer-events-none;
   }
   .extra-side-bar-buttons {
-    @apply relative inline-flex w-full items-center justify-center rounded-md bg-background px-2 py-2 text-foreground shadow-sm ring-1 ring-inset ring-input transition-all duration-500 ease-in-out;
+    @apply relative inline-flex w-full items-center justify-center rounded-md bg-background px-2 py-2 text-foreground transition-all duration-500 ease-in-out;
+  }
+  .header-menubar-item {
+    @apply relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer;
   }
   .extra-side-bar-buttons:hover {
     @apply hover:bg-muted;
@@ -495,7 +498,7 @@
     @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium;
   }
   .header-menu-bar-display {
-    @apply flex max-w-[120px] cursor-pointer items-center gap-2 lg:max-w-[200px];
+    @apply flex max-w-[115px] cursor-pointer items-center gap-2 lg:max-w-[145px];
   }
   .header-menu-flow-name {
     @apply flex-1 truncate;
