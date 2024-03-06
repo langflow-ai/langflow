@@ -10,7 +10,9 @@ if TYPE_CHECKING:
 
 class TransactionModel(BaseModel):
     id: Optional[int] = Field(default=None, alias="id")
-    timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
+    timestamp: Optional[datetime] = Field(
+        default_factory=datetime.now, alias="timestamp"
+    )
     source: str
     target: str
     target_args: dict
@@ -51,14 +53,18 @@ class MessageModel(BaseModel):
     @classmethod
     def from_record(cls, record: "Record"):
         # first check if the record has all the required fields
-        if not record.data or ("sender" not in record.data and "sender_name" not in record.data):
-            raise ValueError("The record does not have the required fields 'sender' and 'sender_name' in the data.")
+        if not record.data or (
+            "sender" not in record.data and "sender_name" not in record.data
+        ):
+            raise ValueError(
+                "The record does not have the required fields 'sender' and 'sender_name' in the data."
+            )
         return cls(
-            sender=record.data["sender"],
-            sender_name=record.data["sender_name"],
+            sender=record.sender,
+            sender_name=record.sender_name,
             message=record.text,
-            session_id=record.data.get("session_id", ""),
-            artifacts=record.data.get("artifacts", {}),
+            session_id=record.session_id,
+            artifacts=record.artifacts or {},
         )
 
 
