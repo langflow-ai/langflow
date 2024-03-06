@@ -1,7 +1,7 @@
 from langchain_core.prompts import PromptTemplate
 
 from langflow import CustomComponent
-from langflow.components.prompts.base.utils import dict_values_to_string
+from langflow.base.prompts.utils import dict_values_to_string
 from langflow.field_typing import Prompt, TemplateField, Text
 
 
