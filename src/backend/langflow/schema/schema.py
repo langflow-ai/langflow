@@ -13,7 +13,7 @@ class Record(BaseModel):
     """
 
     data: dict = {}
-    _default_value = None
+    _default_value: str = ""
 
     @classmethod
     def from_document(cls, document: Document) -> "Record":
@@ -63,7 +63,9 @@ class Record(BaseModel):
             return self.data.get(key, self._default_value)
         except KeyError:
             # Fallback to default behavior to raise AttributeError for undefined attributes
-            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{key}'")
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{key}'"
+            )
 
     def __setattr__(self, key, value):
         """
