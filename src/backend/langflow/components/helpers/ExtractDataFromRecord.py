@@ -11,7 +11,6 @@ class ExtractKeyFromRecordComponent(CustomComponent):
     }
 
     def build(self, record: Record, key: str, silent_error: bool = True) -> dict:
-
         data = getattr(record, key)
         self.status = data
         return data

@@ -52,9 +52,7 @@ def get_all(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.post(
-    "/run/{flow_id}", response_model=RunResponse, response_model_exclude_none=True
-)
+@router.post("/run/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
 async def run_flow_with_caching(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
@@ -113,9 +111,7 @@ async def run_flow_with_caching(
             outputs = []
 
         if session_id:
-            session_data = await session_service.load_session(
-                session_id, flow_id=flow_id
-            )
+            session_data = await session_service.load_session(session_id, flow_id=flow_id)
             graph, artifacts = session_data if session_data else (None, None)
             task_result: Any = None
             if not graph:
@@ -134,11 +130,7 @@ async def run_flow_with_caching(
         else:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            flow = session.exec(
-                select(Flow)
-                .where(Flow.id == flow_id)
-                .where(Flow.user_id == api_key_user.id)
-            ).first()
+            flow = session.exec(select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)).first()
             if flow is None:
                 raise ValueError(f"Flow {flow_id} not found")
 
@@ -162,18 +154,12 @@ async def run_flow_with_caching(
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
         if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-            ) from exc
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
         if f"Flow {flow_id} not found" in str(exc):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-            ) from exc
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
-            ) from exc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
 @router.post(
@@ -202,8 +188,7 @@ async def process(
     """
     # Raise a depreciation warning
     logger.warning(
-        "The /process endpoint is deprecated and will be removed in a future version. "
-        "Please use /run instead."
+        "The /process endpoint is deprecated and will be removed in a future version. " "Please use /run instead."
     )
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -275,16 +260,12 @@ async def custom_component(
 
     built_frontend_node = build_custom_component_template(component, user_id=user.id)
 
-    built_frontend_node = update_frontend_node_with_template_values(
-        built_frontend_node, raw_code.frontend_node
-    )
+    built_frontend_node = update_frontend_node_with_template_values(built_frontend_node, raw_code.frontend_node)
     return built_frontend_node
 
 
 @router.post("/custom_component/reload", status_code=HTTPStatus.OK)
-async def reload_custom_component(
-    path: str, user: User = Depends(get_current_active_user)
-):
+async def reload_custom_component(path: str, user: User = Depends(get_current_active_user)):
     from langflow.interface.custom.utils import build_custom_component_template
 
     try:

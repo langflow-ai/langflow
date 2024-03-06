@@ -89,11 +89,6 @@ def create_new_project(
     )
     db_flow = Flow.model_validate(new_project, from_attributes=True)
     session.add(db_flow)
-    flows = session.exec(
-        select(Flow).where(
-            Flow.name == project_name,
-        )
-    ).all()
 
 
 def get_all_flows_similar_to_project(session, project_name):
@@ -117,7 +112,6 @@ def delete_start_projects(session):
 
 
 def create_or_update_starter_projects():
-
     with session_scope() as session:
         starter_projects = load_starter_projects()
         delete_start_projects(session)
@@ -132,9 +126,7 @@ def create_or_update_starter_projects():
                 project_icon_bg_color,
             ) = get_project_data(project)
             if project_name and project_data:
-                for existing_project in get_all_flows_similar_to_project(
-                    session, project_name
-                ):
+                for existing_project in get_all_flows_similar_to_project(session, project_name):
                     session.delete(existing_project)
 
                 create_new_project(

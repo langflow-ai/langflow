@@ -57,11 +57,7 @@ def read_flows(
     try:
         auth_settings = settings_service.auth_settings
         if auth_settings.AUTO_LOGIN:
-            flows = session.exec(
-                select(Flow).where(
-                    Flow.user_id == None | Flow.user_id == current_user.id
-                )
-            ).all()  # noqa
+            flows = session.exec(select(Flow).where(Flow.user_id == None | Flow.user_id == current_user.id)).all()  # noqa
         else:
             flows = current_user.flows
 
@@ -71,7 +67,8 @@ def read_flows(
         try:
             example_flows = session.exec(
                 select(Flow).where(
-                    Flow.user_id == None, Flow.folder == STARTER_FOLDER_NAME  # noqa
+                    Flow.user_id == None,
+                    Flow.folder == STARTER_FOLDER_NAME,  # noqa
                 )
             ).all()  # noqa
             for example_flow in example_flows:
@@ -98,7 +95,9 @@ def read_flow(
     if auth_settings.AUTO_LOGIN:
         # If auto login is enable user_id can be current_user.id or None
         # so write an OR
-        stmt = stmt.where((Flow.user_id == current_user.id) | (Flow.user_id == None))
+        stmt = stmt.where(
+            (Flow.user_id == current_user.id) | (Flow.user_id == None)  # noqa
+        )  # noqa
     if user_flow := session.exec(stmt).first():
         return user_flow
     else:

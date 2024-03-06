@@ -33,7 +33,6 @@ class RedisSearchComponent(RedisComponent, LCVectorStoreComponent):
             "input_value": {"display_name": "Input"},
             "index_name": {"display_name": "Index Name", "value": "your_index"},
             "code": {"show": False, "display_name": "Code"},
-
             "embedding": {"display_name": "Embedding"},
             "schema": {"display_name": "Schema", "file_types": [".yaml"]},
             "redis_server_url": {

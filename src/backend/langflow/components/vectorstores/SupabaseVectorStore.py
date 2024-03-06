@@ -35,9 +35,7 @@ class SupabaseComponent(CustomComponent):
         supabase_url: str = "",
         table_name: str = "",
     ) -> Union[VectorStore, SupabaseVectorStore, BaseRetriever]:
-        supabase: Client = create_client(
-            supabase_url, supabase_key=supabase_service_key
-        )
+        supabase: Client = create_client(supabase_url, supabase_key=supabase_service_key)
         documents = []
         for _input in inputs:
             if isinstance(_input, Record):
