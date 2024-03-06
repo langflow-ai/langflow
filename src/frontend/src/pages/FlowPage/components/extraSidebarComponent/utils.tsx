@@ -1,17 +1,10 @@
+import { PRIORITY_SIDEBAR_ORDER } from "../../../../constants/constants";
+
 export function sortKeys(a: string, b: string) {
   // Define the order of specific keys
-  const order = [
-    "saved_components",
-    "inputs",
-    "outputs",
-    "prompts",
-    "data",
-    "prompts",
-    "models",
-    "helpers",
-  ];
-  const indexA = order.indexOf(a.toLowerCase());
-  const indexB = order.indexOf(b.toLowerCase());
+
+  const indexA = PRIORITY_SIDEBAR_ORDER.indexOf(a.toLowerCase());
+  const indexB = PRIORITY_SIDEBAR_ORDER.indexOf(b.toLowerCase());
 
   // Check if both keys are in the predefined order
   if (indexA !== -1 && indexB !== -1) {
