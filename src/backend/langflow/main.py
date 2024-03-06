@@ -8,7 +8,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
 from langflow.api import router
+from langflow.initial_setup.setup import create_or_update_starter_projects
 from langflow.interface.utils import setup_llm_caching
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
@@ -21,6 +23,7 @@ def get_lifespan(fix_migration=False, socketio_server=None):
         initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
         setup_llm_caching()
         LangfuseInstance.update()
+        create_or_update_starter_projects()
         yield
         teardown_services()
 
@@ -114,6 +117,7 @@ def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = Fals
 
 if __name__ == "__main__":
     import uvicorn
+
     from langflow.__main__ import get_number_of_workers
 
     configure()

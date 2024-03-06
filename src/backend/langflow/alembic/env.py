@@ -62,12 +62,26 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    from langflow.services.deps import get_db_service
 
     try:
+        from langflow.services.database.factory import DatabaseServiceFactory
+        from langflow.services.deps import get_db_service
+        from langflow.services.manager import (
+            initialize_settings_service,
+            service_manager,
+        )
+        from langflow.services.schema import ServiceType
+
+        initialize_settings_service()
+        service_manager.register_factory(
+            DatabaseServiceFactory(), [ServiceType.SETTINGS_SERVICE]
+        )
         connectable = get_db_service().engine
     except Exception as e:
         logger.error(f"Error getting database engine: {e}")
+        url = os.getenv("LANGFLOW_DATABASE_URL")
+        url = url or config.get_main_option("sqlalchemy.url")
+        config.set_main_option("sqlalchemy.url", url)
         connectable = engine_from_config(
             config.get_section(config.config_ini_section, {}),
             prefix="sqlalchemy.",

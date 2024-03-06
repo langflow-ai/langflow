@@ -12,10 +12,10 @@ import {
   RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
-  priorityFields,
 } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -24,7 +24,7 @@ import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
-import { classNames, cn, getFieldTitle } from "../../utils/utils";
+import { classNames, cn, getFieldTitle, sortFields } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
@@ -43,6 +43,7 @@ export default function GenericNode({
   const flowPool = useFlowStore((state) => state.flowPool);
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setNode = useFlowStore((state) => state.setNode);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);
@@ -63,6 +64,18 @@ export default function GenericNode({
   const [validationString, setValidationString] = useState<string>("");
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+
+  if (!data.node!.template) {
+    setErrorData({
+      title: `Error in component ${data.node!.display_name}`,
+      list: [
+        `The component ${data.node!.display_name} has no template.`,
+        `Please contact the developer of the component to fix this issue.`,
+      ],
+    });
+    takeSnapshot();
+    deleteNode(data.id);
+  }
 
   function countHandles(): void {
     let count = Object.keys(data.node!.template)
@@ -157,7 +170,7 @@ export default function GenericNode({
     const iconElement = data?.node?.icon;
     const iconColor = nodeColors[types[data.type]];
     const iconName =
-    iconElement || (data.node?.flow ? "group_components" : name);
+      iconElement || (data.node?.flow ? "group_components" : name);
     const iconClassName = `generic-node-icon ${
       !showNode ? " absolute inset-x-6 h-12 w-12 " : ""
     }`;
@@ -636,15 +649,7 @@ export default function GenericNode({
             <>
               {Object.keys(data.node!.template)
                 .filter((templateField) => templateField.charAt(0) !== "_")
-                .sort((a, b) => {
-                  if (priorityFields.has(a.toLowerCase())) {
-                    return -1;
-                  } else if (priorityFields.has(b.toLowerCase())) {
-                    return 1;
-                  } else {
-                    return a.localeCompare(b);
-                  }
-                })
+                .sort((a, b) => sortFields(a, b, data.node?.field_order ?? []))
                 .map((templateField: string, idx) => (
                   <div key={idx}>
                     {data.node!.template[templateField].show &&

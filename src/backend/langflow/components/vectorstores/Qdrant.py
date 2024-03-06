@@ -3,8 +3,10 @@ from typing import Optional, Union
 from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.qdrant import Qdrant
+
 from langflow import CustomComponent
-from langflow.field_typing import Document, Embeddings, NestedDict
+from langflow.field_typing import Embeddings, NestedDict
+from langflow.schema.schema import Record
 
 
 class QdrantComponent(CustomComponent):
@@ -14,17 +16,23 @@ class QdrantComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "documents": {"display_name": "Documents"},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
             "embedding": {"display_name": "Embedding"},
             "api_key": {"display_name": "API Key", "password": True, "advanced": True},
             "collection_name": {"display_name": "Collection Name"},
-            "content_payload_key": {"display_name": "Content Payload Key", "advanced": True},
+            "content_payload_key": {
+                "display_name": "Content Payload Key",
+                "advanced": True,
+            },
             "distance_func": {"display_name": "Distance Function", "advanced": True},
             "grpc_port": {"display_name": "gRPC Port", "advanced": True},
             "host": {"display_name": "Host", "advanced": True},
             "https": {"display_name": "HTTPS", "advanced": True},
             "location": {"display_name": "Location", "advanced": True},
-            "metadata_payload_key": {"display_name": "Metadata Payload Key", "advanced": True},
+            "metadata_payload_key": {
+                "display_name": "Metadata Payload Key",
+                "advanced": True,
+            },
             "path": {"display_name": "Path", "advanced": True},
             "port": {"display_name": "Port", "advanced": True},
             "prefer_grpc": {"display_name": "Prefer gRPC", "advanced": True},
@@ -38,7 +46,7 @@ class QdrantComponent(CustomComponent):
         self,
         embedding: Embeddings,
         collection_name: str,
-        documents: Optional[Document] = None,
+        inputs: Optional[Record] = None,
         api_key: Optional[str] = None,
         content_payload_key: str = "page_content",
         distance_func: str = "Cosine",
@@ -55,6 +63,12 @@ class QdrantComponent(CustomComponent):
         timeout: Optional[int] = None,
         url: Optional[str] = None,
     ) -> Union[VectorStore, Qdrant, BaseRetriever]:
+        documents = []
+        for _input in inputs:
+            if isinstance(_input, Record):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
         if documents is None:
             from qdrant_client import QdrantClient
 

@@ -60,11 +60,11 @@ class MessageModel(BaseModel):
                 "The record does not have the required fields 'sender' and 'sender_name' in the data."
             )
         return cls(
-            sender=record.data["sender"],
-            sender_name=record.data["sender_name"],
+            sender=record.sender,
+            sender_name=record.sender_name,
             message=record.text,
-            session_id=record.data.get("session_id", ""),
-            artifacts=record.data.get("artifacts", {}),
+            session_id=record.session_id,
+            artifacts=record.artifacts or {},
         )
 
 

@@ -84,10 +84,10 @@ class TemplateField(BaseModel):
         if self.field_type in ["str", "Text"]:
             if "input_types" not in result:
                 result["input_types"] = ["Text"]
-            else:
-                result["input_types"].append("Text")
         if self.field_type == "Text":
             result["type"] = "str"
+        else:
+            result["type"] = self.field_type
         return result
 
     @field_serializer("file_path")

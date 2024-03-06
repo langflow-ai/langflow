@@ -1,7 +1,6 @@
 import ast
 import json
-from typing import (AsyncIterator, Callable, Dict, Iterator, List, Optional,
-                    Union)
+from typing import AsyncIterator, Callable, Dict, Iterator, List, Optional, Union
 
 import yaml
 from langchain_core.messages import AIMessage
@@ -398,7 +397,7 @@ class ChatVertex(Vertex):
 
                     self.will_stream = stream_url is not None
                 if artifacts:
-                    self.artifacts = artifacts.model_dump()
+                    self.artifacts = artifacts.model_dump(exclude_none=True)
             if isinstance(self._built_object, (AsyncIterator, Iterator)):
                 if self.params["return_record"]:
                     self._built_object = Record(text=message, data=self.artifacts)

@@ -39,10 +39,7 @@ class RunFlowComponent(CustomComponent):
             records.append(record)
         return records
 
-    async def build(
-        self, input_value: Text, flow_name: str, tweaks: NestedDict
-    ) -> Record:
-
+    async def build(self, input_value: Text, flow_name: str, tweaks: NestedDict) -> Record:
         results: List[Optional[ResultData]] = await self.run_flow(
             input_value=input_value, flow_name=flow_name, tweaks=tweaks
         )

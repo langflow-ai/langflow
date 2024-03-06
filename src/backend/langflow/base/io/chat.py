@@ -59,8 +59,8 @@ class ChatComponent(CustomComponent):
             )
         else:
             record = Record(
-                text=message,
                 data={
+                    "text": message,
                     "session_id": session_id,
                     "sender": sender,
                     "sender_name": sender_name,

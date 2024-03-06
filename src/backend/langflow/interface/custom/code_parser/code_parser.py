@@ -95,9 +95,7 @@ class CodeParser:
         elif isinstance(node, ast.ImportFrom):
             for alias in node.names:
                 if alias.asname:
-                    self.data["imports"].append(
-                        (node.module, f"{alias.name} as {alias.asname}")
-                    )
+                    self.data["imports"].append((node.module, f"{alias.name} as {alias.asname}"))
                 else:
                     self.data["imports"].append((node.module, alias.name))
 
@@ -146,9 +144,7 @@ class CodeParser:
         return_type = None
         if node.returns:
             return_type_str = ast.unparse(node.returns)
-            eval_env = self.construct_eval_env(
-                return_type_str, tuple(self.data["imports"])
-            )
+            eval_env = self.construct_eval_env(return_type_str, tuple(self.data["imports"]))
 
             try:
                 return_type = eval(return_type_str, eval_env)
@@ -190,22 +186,14 @@ class CodeParser:
         num_defaults = len(node.args.defaults)
         num_missing_defaults = num_args - num_defaults
         missing_defaults = [None] * num_missing_defaults
-        default_values = [
-            ast.unparse(default).strip("'") if default else None
-            for default in node.args.defaults
-        ]
+        default_values = [ast.unparse(default).strip("'") if default else None for default in node.args.defaults]
         # Now check all default values to see if there
         # are any "None" values in the middle
-        default_values = [
-            None if value == "None" else value for value in default_values
-        ]
+        default_values = [None if value == "None" else value for value in default_values]
 
         defaults = missing_defaults + default_values
 
-        args = [
-            self.parse_arg(arg, default)
-            for arg, default in zip(node.args.args, defaults)
-        ]
+        args = [self.parse_arg(arg, default) for arg, default in zip(node.args.args, defaults)]
         return args
 
     def parse_varargs(self, node: ast.FunctionDef) -> List[Dict[str, Any]]:
@@ -223,17 +211,11 @@ class CodeParser:
         """
         Parses the keyword-only arguments of a function or method node.
         """
-        kw_defaults = [None] * (
-            len(node.args.kwonlyargs) - len(node.args.kw_defaults)
-        ) + [
-            ast.unparse(default) if default else None
-            for default in node.args.kw_defaults
+        kw_defaults = [None] * (len(node.args.kwonlyargs) - len(node.args.kw_defaults)) + [
+            ast.unparse(default) if default else None for default in node.args.kw_defaults
         ]
 
-        args = [
-            self.parse_arg(arg, default)
-            for arg, default in zip(node.args.kwonlyargs, kw_defaults)
-        ]
+        args = [self.parse_arg(arg, default) for arg, default in zip(node.args.kwonlyargs, kw_defaults)]
         return args
 
     def parse_kwargs(self, node: ast.FunctionDef) -> List[Dict[str, Any]]:
@@ -337,9 +319,7 @@ class CodeParser:
         Extracts global variables from the code.
         """
         global_var = {
-            "targets": [
-                t.id if hasattr(t, "id") else ast.dump(t) for t in node.targets
-            ],
+            "targets": [t.id if hasattr(t, "id") else ast.dump(t) for t in node.targets],
             "value": ast.unparse(node.value),
         }
         self.data["global_vars"].append(global_var)
