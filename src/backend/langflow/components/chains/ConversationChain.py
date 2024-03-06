@@ -31,7 +31,7 @@ class ConversationChainComponent(CustomComponent):
             chain = ConversationChain(llm=llm)
         else:
             chain = ConversationChain(llm=llm, memory=memory)
-        result = chain.invoke(inputs)
+        result = chain.invoke({"input": input_value})
         if hasattr(result, "content") and isinstance(result.content, str):
             result = result.content
         elif isinstance(result, str):
