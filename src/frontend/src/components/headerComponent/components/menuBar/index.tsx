@@ -121,15 +121,12 @@ export const MenuBar = ({
               <IconComponent name="FileUp" className="header-menu-options " />
               Import
             </DropdownMenuItem>
-            {(!hasApiKey || !validApiKey) && (
               <ExportModal>
                 <div className="header-menubar-item">
                   <IconComponent name="FileDown" className="header-menu-options" />
                   Export
                 </div>
               </ExportModal>
-        )}
-
             <DropdownMenuItem
               onClick={() => {
                 undo();
