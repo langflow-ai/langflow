@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 import orjson
+from emoji import demojize, purely_emoji
 from loguru import logger
 from sqlmodel import select
 
@@ -80,7 +81,7 @@ def create_new_project(
     new_project = FlowCreate(
         name=project_name,
         description=project_description,
-        icon=project_icon,
+        icon=project_icon if not purely_emoji(project_icon) else demojize(project_icon),
         icon_bg_color=project_icon_bg_color,
         data=project_data,
         is_component=project_is_component,
@@ -126,7 +127,9 @@ def create_or_update_starter_projects():
                 project_icon_bg_color,
             ) = get_project_data(project)
             if project_name and project_data:
-                for existing_project in get_all_flows_similar_to_project(session, project_name):
+                for existing_project in get_all_flows_similar_to_project(
+                    session, project_name
+                ):
                     session.delete(existing_project)
 
                 create_new_project(
