@@ -5,7 +5,7 @@ from langchain_core.documents import Document
 
 from langflow import CustomComponent
 from langflow.schema import Record
-from langflow.utils.util import build_loader_repr_from_documents
+from langflow.utils.util import build_loader_repr_from_records
 
 
 class RecursiveCharacterTextSplitterComponent(CustomComponent):
@@ -84,5 +84,6 @@ class RecursiveCharacterTextSplitterComponent(CustomComponent):
             else:
                 documents.append(_input)
         docs = splitter.split_documents(documents)
-        self.repr_value = build_loader_repr_from_documents(docs)
-        return self.to_records(docs)
+        records = self.to_records(docs)
+        self.repr_value = build_loader_repr_from_records(records)
+        return records
