@@ -1,12 +1,11 @@
 import { cloneDeep } from "lodash";
+import { LinkIcon, SparklesIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
-import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import { PRIORITY_SIDEBAR_ORDER } from "../../../../constants/constants";
-import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
 import useAlertStore from "../../../../stores/alertStore";
@@ -268,37 +267,37 @@ export default function ExtraSidebar(): JSX.Element {
               <>
                 {index === 0 && (
                   <div className="pt-0.5">
-                    <div className="p-2 px-4 font-semibold" key={index}>
-                      Native
+                    <div className="p-2 px-4 font-semibold text-sm" key={index}>
+                      Native Components
                     </div>
                   </div>
                 )}
                 {index === PRIORITY_SIDEBAR_ORDER.length - 1 && (
                   <>
-                    <a target={"_blank"} href="https://langflow.store" className="components-disclosure-arrangement">
+                    <a
+                      target={"_blank"}
+                      href="https://langflow.store"
+                      className="components-disclosure-arrangement"
+                    >
                       <div className="flex gap-4">
                         {/* BUG ON THIS ICON */}
-                        <IconComponent
+                        <SparklesIcon
                           strokeWidth={1.5}
-                          name="sparkles"
-                          className="text-primary"
+                          className="text-primary w-[22px]"
                         />
+
                         <span className="components-disclosure-title">
                           Discover More
                         </span>
                       </div>
                       <div className="components-disclosure-div">
                         <div>
-                          <IconComponent
-                            name="link"
-                            className={`
-                     h-4 w-4 text-foreground`}
-                          />
+                          <LinkIcon className="h-4 w-4 text-foreground" />
                         </div>
                       </div>
                     </a>
-                    <div className="p-2 px-4 font-semibold" key={index}>
-                      Legacy
+                    <div className="p-2 px-4 font-semibold text-sm" key={index}>
+                      Legacy Components
                     </div>
                   </>
                 )}

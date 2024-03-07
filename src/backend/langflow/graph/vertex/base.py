@@ -18,6 +18,7 @@ from loguru import logger
 
 from langflow.graph.schema import (
     INPUT_COMPONENTS,
+    INPUT_FIELD_NAME,
     OUTPUT_COMPONENTS,
     InterfaceComponentTypes,
     ResultData,
@@ -709,7 +710,8 @@ class Vertex:
         self._reset()
 
         if self._is_chat_input() and inputs is not None:
-            self.update_raw_params(inputs)
+            inputs = {"input_value": inputs.get(INPUT_FIELD_NAME, "")}
+            self.update_raw_params(inputs, overwrite=True)
 
         # Run steps
         for step in self.steps:

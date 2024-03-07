@@ -55,7 +55,9 @@ export type TemplateVariableType = {
   input_types?: Array<string>;
   display_name?: string;
   name?: string;
-  refresh?: boolean;
+  real_time_refresh?: boolean;
+  refresh_button?: boolean;
+  refresh_button_text?: string;
   [key: string]: any;
 };
 export type sendAllProps = {

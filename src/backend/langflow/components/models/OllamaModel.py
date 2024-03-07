@@ -13,7 +13,7 @@ from langflow.field_typing import Text
 
 
 class ChatOllamaComponent(LCModelComponent):
-    display_name = "ChatOllamaModel"
+    display_name = "ChatOllama"
     description = "Generate text using Local LLM for chat with Ollama."
     icon = "Ollama"
 

@@ -6,9 +6,14 @@ from langflow.api.v1.base import (
     CodeValidationResponse,
     PromptValidationResponse,
     ValidatePromptRequest,
+)
+from langflow.base.prompts.utils import (
+    add_new_variables_to_template,
+    get_old_custom_fields,
+    remove_old_variables_from_template,
+    update_input_variables_field,
     validate_prompt,
 )
-from langflow.template.field.prompt import DefaultPromptField
 from langflow.utils.validate import validate_code
 
 # build router
@@ -37,13 +42,28 @@ def post_validate_prompt(prompt_request: ValidatePromptRequest):
                 input_variables=input_variables,
                 frontend_node=None,
             )
-        old_custom_fields = get_old_custom_fields(prompt_request)
+        old_custom_fields = get_old_custom_fields(
+            prompt_request.custom_fields, prompt_request.name
+        )
 
-        add_new_variables_to_template(input_variables, prompt_request)
+        add_new_variables_to_template(
+            input_variables,
+            prompt_request.custom_fields,
+            prompt_request.frontend_node.template,
+            prompt_request.name,
+        )
 
-        remove_old_variables_from_template(old_custom_fields, input_variables, prompt_request)
+        remove_old_variables_from_template(
+            old_custom_fields,
+            input_variables,
+            prompt_request.custom_fields,
+            prompt_request.frontend_node.template,
+            prompt_request.name,
+        )
 
-        update_input_variables_field(input_variables, prompt_request)
+        update_input_variables_field(
+            input_variables, prompt_request.frontend_node.template
+        )
 
         return PromptValidationResponse(
             input_variables=input_variables,
@@ -52,61 +72,3 @@ def post_validate_prompt(prompt_request: ValidatePromptRequest):
     except Exception as e:
         logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e)) from e
-
-
-def get_old_custom_fields(prompt_request):
-    try:
-        if len(prompt_request.frontend_node.custom_fields) == 1 and prompt_request.name == "":
-            # If there is only one custom field and the name is empty string
-            # then we are dealing with the first prompt request after the node was created
-            prompt_request.name = list(prompt_request.frontend_node.custom_fields.keys())[0]
-
-        old_custom_fields = prompt_request.frontend_node.custom_fields[prompt_request.name]
-        if old_custom_fields is None:
-            old_custom_fields = []
-
-        old_custom_fields = old_custom_fields.copy()
-    except KeyError:
-        old_custom_fields = []
-    prompt_request.frontend_node.custom_fields[prompt_request.name] = []
-    return old_custom_fields
-
-
-def add_new_variables_to_template(input_variables, prompt_request):
-    for variable in input_variables:
-        try:
-            template_field = DefaultPromptField(name=variable, display_name=variable)
-            if variable in prompt_request.frontend_node.template:
-                # Set the new field with the old value
-                template_field.value = prompt_request.frontend_node.template[variable]["value"]
-
-            prompt_request.frontend_node.template[variable] = template_field.to_dict()
-
-            # Check if variable is not already in the list before appending
-            if variable not in prompt_request.frontend_node.custom_fields[prompt_request.name]:
-                prompt_request.frontend_node.custom_fields[prompt_request.name].append(variable)
-
-        except Exception as exc:
-            logger.exception(exc)
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-
-def remove_old_variables_from_template(old_custom_fields, input_variables, prompt_request):
-    for variable in old_custom_fields:
-        if variable not in input_variables:
-            try:
-                # Remove the variable from custom_fields associated with the given name
-                if variable in prompt_request.frontend_node.custom_fields[prompt_request.name]:
-                    prompt_request.frontend_node.custom_fields[prompt_request.name].remove(variable)
-
-                # Remove the variable from the template
-                prompt_request.frontend_node.template.pop(variable, None)
-
-            except Exception as exc:
-                logger.exception(exc)
-                raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-
-def update_input_variables_field(input_variables, prompt_request):
-    if "input_variables" in prompt_request.frontend_node.template:
-        prompt_request.frontend_node.template["input_variables"]["value"] = input_variables
