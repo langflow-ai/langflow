@@ -20,6 +20,8 @@ from langflow.interface.custom.directory_reader.utils import (
     merge_nested_dicts_with_renaming,
 )
 from langflow.interface.custom.eval import eval_custom_component_code
+from langflow.interface.custom.schema import MissingDefault
+from langflow.schema import dotdict
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.custom_components import (
     CustomComponentFrontendNode,
@@ -110,7 +112,7 @@ def extract_type_from_optional(field_type):
     str: The extracted type, or an empty string if no type was found.
     """
     match = re.search(r"\[(.*?)\]$", field_type)
-    return match[1] if match else None
+    return match[1] if match else field_type
 
 
 def get_field_properties(extra_field):
@@ -118,7 +120,13 @@ def get_field_properties(extra_field):
     field_name = extra_field["name"]
     field_type = extra_field.get("type", "str")
     field_value = extra_field.get("default", "")
-    field_required = "optional" not in field_type.lower()
+    # a required field is a field that does not contain
+    # optional in field_type
+    # and a field that does not have a default value
+    field_required = "optional" not in field_type.lower() and isinstance(
+        field_value, MissingDefault
+    )
+    field_value = field_value if not isinstance(field_value, MissingDefault) else None
 
     if not field_required:
         field_type = extract_type_from_optional(field_type)
@@ -245,7 +253,7 @@ def add_extra_fields(frontend_node, field_config, function_args):
 def get_field_dict(field: Union[TemplateField, dict]):
     """Get the field dictionary from a TemplateField or a dict"""
     if isinstance(field, TemplateField):
-        return field.model_dump(by_alias=True, exclude_none=True)
+        return dotdict(field.model_dump(by_alias=True, exclude_none=True))
     return field
 
 
@@ -284,6 +292,7 @@ def run_build_config(
             # Allow user to build TemplateField as well
             # as a dict with the same keys as TemplateField
             field_dict = get_field_dict(field)
+            build_config[field_name] = field_dict
             # This has to be done to set refresh if options or value are callable
             if update_field is not None and field_name != update_field:
                 build_config = update_field_dict(
@@ -320,7 +329,11 @@ def run_build_config(
         return build_config, custom_instance
 
     except Exception as exc:
+
         logger.error(f"Error while building field config: {str(exc)}")
+        if hasattr(exc, "detail") and "traceback" in exc.detail:
+            logger.error(exc.detail["traceback"])
+
         raise exc
 
 
@@ -345,6 +358,7 @@ def build_frontend_node(template_config):
 
 
 def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code, field_config):
+
     code_field = TemplateField(
         dynamic=True,
         required=True,
@@ -353,7 +367,7 @@ def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code, field_c
         value=raw_code,
         password=False,
         name="code",
-        advanced=field_config.pop("advanced", False),
+        advanced=True,
         field_type="code",
         is_list=False,
     )
@@ -404,7 +418,7 @@ def build_custom_component_template(
             status_code=400,
             detail={
                 "error": (
-                    "Invalid type convertion. Please check your code and try again."
+                    f"Something went wrong while building the custom component. Hints: {str(exc)}"
                 ),
                 "traceback": traceback.format_exc(),
             },
@@ -415,7 +429,6 @@ def create_component_template(component):
     """Create a template for a component."""
     component_code = component["code"]
     component_output_types = component["output_types"]
-    # remove
 
     component_extractor = CustomComponent(code=component_code)
 
@@ -431,9 +444,7 @@ def build_custom_components(components_paths: List[str]):
     if not components_paths:
         return {}
 
-    logger.info(
-        f"Building custom components from {components_paths}"
-    )
+    logger.info(f"Building custom components from {components_paths}")
     custom_components_from_file = {}
     processed_paths = set()
     for path in components_paths:
@@ -464,18 +475,24 @@ def update_field_dict(
     call: bool = False,
 ):
     """Update the field dictionary by calling options() or value() if they are callable"""
-    if "refresh" in field_dict:
+    if ("real_time_refresh" in field_dict or "refresh_button" in field_dict) and any(
+        (
+            field_dict.get("real_time_refresh", False),
+            field_dict.get("refresh_button", False),
+        )
+    ):
         if call:
             try:
+                dd_build_config = dotdict(build_config)
                 custom_component_instance.update_build_config(
-                    build_config, update_field, update_field_value
+                    dd_build_config, update_field, update_field_value
                 )
+                build_config = dd_build_config
             except Exception as exc:
                 logger.error(f"Error while running update_build_config: {str(exc)}")
                 raise UpdateBuildConfigError(
                     f"Error while running update_build_config: {str(exc)}"
                 ) from exc
-        field_dict["refresh"] = True
 
     # Let's check if "range_spec" is a RangeSpec object
     if "rangeSpec" in field_dict and isinstance(field_dict["rangeSpec"], RangeSpec):
@@ -483,8 +500,10 @@ def update_field_dict(
     return build_config
 
 
-def sanitize_field_config(field_config: Dict):
+def sanitize_field_config(field_config: Union[Dict, TemplateField]):
     # If any of the already existing keys are in field_config, remove them
+    if isinstance(field_config, TemplateField):
+        field_config = field_config.to_dict()
     for key in [
         "name",
         "field_type",

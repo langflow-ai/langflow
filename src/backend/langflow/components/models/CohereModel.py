@@ -5,7 +5,7 @@ from langflow.field_typing import Text
 
 
 class CohereComponent(LCModelComponent):
-    display_name = "CohereModel"
+    display_name = "Cohere"
     description = "Generate text using Cohere large language models."
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/cohere"
 

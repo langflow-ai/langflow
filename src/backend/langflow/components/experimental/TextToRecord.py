@@ -80,7 +80,7 @@ class TextToRecordComponent(CustomComponent):
                 "display_name": "Mode",
                 "options": ["Text", "Number"],
                 "info": "The mode to use for creating the record.",
-                "refresh": True,
+                "real_time_refresh": True,
                 "input_types": [],
             },
         }
