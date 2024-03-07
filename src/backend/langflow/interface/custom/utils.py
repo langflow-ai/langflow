@@ -468,7 +468,9 @@ def update_field_dict(
     call: bool = False,
 ):
     """Update the field dictionary by calling options() or value() if they are callable"""
-    if "refresh" in field_dict:
+    if ("real_time_refresh" in field_dict or "refresh_button" in field_dict) and any(
+        (field_dict["real_time_refresh"], field_dict["refresh_button"])
+    ):
         if call:
             try:
                 dd_build_config = dotdict(build_config)
@@ -481,7 +483,6 @@ def update_field_dict(
                 raise UpdateBuildConfigError(
                     f"Error while running update_build_config: {str(exc)}"
                 ) from exc
-        field_dict["refresh"] = True
 
     # Let's check if "range_spec" is a RangeSpec object
     if "rangeSpec" in field_dict and isinstance(field_dict["rangeSpec"], RangeSpec):

@@ -7,6 +7,7 @@ function RefreshButton({
   isLoading,
   disabled,
   name,
+  button_text,
   data,
   handleUpdateValues,
   className,
@@ -15,6 +16,7 @@ function RefreshButton({
   isLoading: boolean;
   disabled: boolean;
   name: string;
+  button_text: string;
   data: NodeDataType;
   className?: string;
   handleUpdateValues: (name: string, data: NodeDataType) => void;
@@ -43,6 +45,7 @@ function RefreshButton({
       onClick={handleClick}
       id={id}
     >
+      <span className="mr-1">{button_text}</span>
       <IconComponent
         name={isLoading ? "Loader2" : "RefreshCcw"}
         className={iconClassName}
