@@ -7,6 +7,7 @@ import { Textarea } from "../ui/textarea";
 export default function IOInputField({
   inputType,
   inputId,
+  left,
 }: IOInputProps): JSX.Element | undefined {
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
@@ -17,7 +18,7 @@ export default function IOInputField({
       case "TextInput":
         return (
           <Textarea
-            className="w-full"
+            className={`w-full ${left ? "" : " h-full"}`}
             placeholder={"Enter text..."}
             value={node.data.node!.template["input_value"].value}
             onChange={(e) => {
