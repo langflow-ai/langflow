@@ -7,7 +7,6 @@ from langflow.field_typing import Text
 class RunnableExecComponent(CustomComponent):
     documentation: str = "http://docs.langflow.org/components/custom"
     display_name = "Runnable Executor"
-    beta = True
 
     def build_config(self):
         return {

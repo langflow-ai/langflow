@@ -17,7 +17,6 @@ class RedisComponent(CustomComponent):
     display_name: str = "Redis"
     description: str = "Implementation of Vector Store using Redis"
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/redis"
-    beta = True
 
     def build_config(self):
         """
