@@ -23,14 +23,16 @@ import {
   OUTPUT_HANDLER_HOVER,
   TOOLTIP_EMPTY,
 } from "../../../../constants/constants";
-import { postCustomComponentUpdate } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { APIClassType } from "../../../../types/api";
+import { APIClassType, ResponseErrorTypeAPI } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
-import { NodeDataType } from "../../../../types/flow";
+import {
+  handleUpdateValues,
+  throttledHandleUpdateValues,
+} from "../../../../utils/parameterUtils";
 import {
   convertObjToArray,
   convertValuesToNumbers,
@@ -86,72 +88,92 @@ export default function ParameterComponent({
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
-  const handleUpdateValues = async (
-    name: string,
-    data: NodeDataType,
-    delayAnimation: boolean = true
-  ) => {
+  const handleRefreshButtonPress = async (name, data) => {
     setIsLoading(true);
-    const code = data.node?.template["code"]?.value;
-    if (!code) {
-      console.error("Code not found in the template");
-      return;
-    }
-
     try {
-      const res = await postCustomComponentUpdate(code, name);
-      if (res.status === 200 && data.node?.template) {
+      let newTemplate = await handleUpdateValues(name, data);
+      if (newTemplate) {
         setNode(data.id, (oldNode) => {
           let newNode = cloneDeep(oldNode);
-
           newNode.data = {
             ...newNode.data,
           };
-
-          newNode.data.node.template[name] = res.data.template[name];
-
+          newNode.data.node.template = newTemplate;
           return newNode;
         });
       }
-    } catch (err) {
-      setErrorData(err as { title: string; list?: Array<string> });
+    } catch (error) {
+      let responseError = error as ResponseErrorTypeAPI;
+      setErrorData({
+        title: "Error while updating the Component",
+        list: [responseError.response.data.detail.error ?? "Unknown error"],
+      });
     }
-
+    setIsLoading(false);
     renderTooltips();
-    if (delayAnimation) {
-      try {
-        // Wait for at least 500 milliseconds
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        // Continue with the request
-        // If the request takes longer than 500 milliseconds, it will not wait an additional 500 milliseconds
-      } catch (error) {
-        console.error("Error occurred while waiting for refresh:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    } else setIsLoading(false);
   };
 
   useEffect(() => {
-    function fetchData() {
+    async function fetchData() {
       if (
-        data.node?.template[name]?.refresh &&
-        Object.keys(data.node?.template[name]?.options ?? {}).length === 0
+        (data.node?.template[name]?.real_time_refresh ||
+          data.node?.template[name]?.refresh_button) &&
+        // options can be undefined but not an empty array
+        (data.node?.template[name]?.options?.length ?? 0) === 0
       ) {
-        handleUpdateValues(name, data, false);
+        setIsLoading(true);
+        try {
+          let newTemplate = await handleUpdateValues(name, data);
+          if (newTemplate) {
+            setNode(data.id, (oldNode) => {
+              let newNode = cloneDeep(oldNode);
+              newNode.data = {
+                ...newNode.data,
+              };
+              newNode.data.node.template = newTemplate;
+              return newNode;
+            });
+          }
+        } catch (error) {
+          let responseError = error as ResponseErrorTypeAPI;
+          setErrorData({
+            title: "Error while updating the Component",
+            list: [responseError.response.data.detail.error ?? "Unknown error"],
+          });
+        }
+        setIsLoading(false);
+        renderTooltips();
       }
     }
     fetchData();
   }, []);
-  const handleOnNewValue = (
+  const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[]
-  ): void => {
+  ): Promise<void> => {
     if (data.node!.template[name].value !== newValue) {
       takeSnapshot();
     }
+    const shouldUpdate =
+      data.node?.template[name].real_time_refresh &&
+      !data.node?.template[name].refresh_button &&
+      data.node!.template[name].value !== newValue;
 
     data.node!.template[name].value = newValue; // necessary to enable ctrl+z inside the input
-
+    let newTemplate;
+    if (shouldUpdate) {
+      setIsLoading(true);
+      try {
+        newTemplate = await throttledHandleUpdateValues(name, data);
+      } catch (error) {
+        let responseError = error as ResponseErrorTypeAPI;
+        setErrorData({
+          title: "Error while updating the Component",
+          list: [responseError.response.data.detail.error ?? "Unknown error"],
+        });
+      }
+      setIsLoading(false);
+      // this de
+    }
     setNode(data.id, (oldNode) => {
       let newNode = cloneDeep(oldNode);
 
@@ -159,7 +181,9 @@ export default function ParameterComponent({
         ...newNode.data,
       };
 
-      newNode.data.node.template[name].value = newValue;
+      if (data.node?.template[name].real_time_refresh && newTemplate) {
+        newNode.data.node.template = newTemplate;
+      } else newNode.data.node.template[name].value = newValue;
 
       return newNode;
     });
@@ -253,15 +277,15 @@ export default function ParameterComponent({
                     {item.display_name === "" ? "" : " - "}
                     {item.display_name.split(", ").length > 2
                       ? item.display_name.split(", ").map((el, index) => (
-                        <React.Fragment key={el + name}>
-                          <span>
-                            {index ===
+                          <React.Fragment key={el + name}>
+                            <span>
+                              {index ===
                               item.display_name.split(", ").length - 1
-                              ? el
-                              : (el += `, `)}
-                          </span>
-                        </React.Fragment>
-                      ))
+                                ? el
+                                : (el += `, `)}
+                            </span>
+                          </React.Fragment>
+                        ))
                       : item.display_name}
                   </span>
                 ) : (
@@ -270,14 +294,14 @@ export default function ParameterComponent({
                     {item.type === "" ? "" : " - "}
                     {item.type.split(", ").length > 2
                       ? item.type.split(", ").map((el, index) => (
-                        <React.Fragment key={el + name}>
-                          <span>
-                            {index === item.type.split(", ").length - 1
-                              ? el
-                              : (el += `, `)}
-                          </span>
-                        </React.Fragment>
-                      ))
+                          <React.Fragment key={el + name}>
+                            <span>
+                              {index === item.type.split(", ").length - 1
+                                ? el
+                                : (el += `, `)}
+                            </span>
+                          </React.Fragment>
+                        ))
                       : item.type}
                   </span>
                 )}
@@ -291,11 +315,14 @@ export default function ParameterComponent({
       refHtml.current = <span>{TOOLTIP_EMPTY}</span>;
     }
   }
+  // If optionalHandle is an empty list, then it is not an optional handle
+  if (optionalHandle && optionalHandle.length === 0) {
+    optionalHandle = null;
+  }
 
   useEffect(() => {
     renderTooltips();
   }, [tooltipTitle, flow]);
-
   return !showNode ? (
     left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
       <></>
@@ -346,7 +373,7 @@ export default function ParameterComponent({
       className={
         "relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
         ((name === "code" && type === "code") ||
-          (name.includes("code") && proxy)
+        (name.includes("code") && proxy)
           ? " hidden "
           : "")
       }
@@ -355,21 +382,26 @@ export default function ParameterComponent({
         <div
           className={
             "w-full truncate text-sm" +
-            (left ? "" : " gap-2 flex justify-end items-center") +
+            (left ? "" : " flex items-center justify-end gap-2") +
             (info !== "" ? " flex items-center" : "")
           }
         >
-          {!left && data.node?.pinned  &&
+          {!left && data.node?.frozen && (
             <div>
-              <IconComponent className="w-5 h-5 text-ice" name={"Snowflake"} />
-            </div>}
+              <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
+            </div>
+          )}
           {proxy ? (
             <ShadTooltip content={<span>{proxy.id}</span>}>
-              <span className={!left && data.node?.pinned?" text-ice":""}>{title}</span>
+              <span className={!left && data.node?.frozen ? " text-ice" : ""}>
+                {title}
+              </span>
             </ShadTooltip>
           ) : (
-            <span className={!left && data.node?.pinned?" text-ice":""}>{title}</span>
-            )}
+            <span className={!left && data.node?.frozen ? " text-ice" : ""}>
+              {title}
+            </span>
+          )}
           <span className={(info === "" ? "" : "ml-1 ") + " text-status-red"}>
             {required ? " *" : ""}
           </span>
@@ -431,22 +463,29 @@ export default function ParameterComponent({
         )}
 
         {left === true &&
-          type === "str" &&
-          !data.node?.template[name].options ? (
+        type === "str" &&
+        !data.node?.template[name].options ? (
           <div className="mt-2 w-full">
             {data.node?.template[name].list ? (
-              <div className="w-5/6 flex-grow">
+              <div
+                className={
+                  // Commenting this out until we have a better
+                  // way to display
+                  // (data.node?.template[name].refresh ? "w-5/6 " : "") +
+                  "flex-grow"
+                }
+              >
                 <InputListComponent
                   disabled={disabled}
                   value={
                     !data.node.template[name].value ||
-                      data.node.template[name].value === ""
+                    data.node.template[name].value === ""
                       ? [""]
                       : data.node.template[name].value
                   }
                   onChange={handleOnNewValue}
                 />
-                {data.node?.template[name].refresh && (
+                {/* {data.node?.template[name].refresh_button && (
                   <div className="w-1/6">
                     <RefreshButton
                       isLoading={isLoading}
@@ -454,23 +493,49 @@ export default function ParameterComponent({
                       name={name}
                       data={data}
                       className="extra-side-bar-buttons ml-2 mt-1"
-                      handleUpdateValues={handleUpdateValues}
+                      handleUpdateValues={handleRefreshButtonPress}
+                      id={"refresh-button-" + name}
+                    />
+                  </div>
+                )} */}
+              </div>
+            ) : data.node?.template[name].multiline ? (
+              <div className="mt-2 flex w-full flex-col ">
+                <div className="flex-grow">
+                  <TextAreaComponent
+                    disabled={disabled}
+                    value={data.node.template[name].value ?? ""}
+                    onChange={handleOnNewValue}
+                    id={"textarea-" + data.node.template[name].name}
+                    data-testid={"textarea-" + data.node.template[name].name}
+                  />
+                </div>
+                {data.node?.template[name].refresh_button && (
+                  <div className="flex-grow">
+                    <RefreshButton
+                      isLoading={isLoading}
+                      disabled={disabled}
+                      name={name}
+                      data={data}
+                      button_text={
+                        data.node?.template[name].refresh_button_text ??
+                        "Refresh"
+                      }
+                      className="extra-side-bar-buttons mt-1"
+                      handleUpdateValues={handleRefreshButtonPress}
                       id={"refresh-button-" + name}
                     />
                   </div>
                 )}
               </div>
-            ) : data.node?.template[name].multiline ? (
-              <TextAreaComponent
-                disabled={disabled}
-                value={data.node.template[name].value ?? ""}
-                onChange={handleOnNewValue}
-                id={"textarea-" + data.node.template[name].name}
-                data-testid={"textarea-" + data.node.template[name].name}
-              />
             ) : (
               <div className="mt-2 flex w-full items-center">
-                <div className="w-5/6 flex-grow">
+                <div
+                  className={
+                    "flex-grow " +
+                    (data.node?.template[name].refresh_button ? "w-5/6" : "")
+                  }
+                >
                   <InputComponent
                     id={"input-" + name}
                     disabled={disabled}
@@ -479,15 +544,19 @@ export default function ParameterComponent({
                     onChange={handleOnNewValue}
                   />
                 </div>
-                {data.node?.template[name].refresh && (
+                {data.node?.template[name].refresh_button && (
                   <div className="w-1/6">
                     <RefreshButton
                       isLoading={isLoading}
                       disabled={disabled}
                       name={name}
                       data={data}
+                      button_text={
+                        data.node?.template[name].refresh_button_text ??
+                        "Refresh"
+                      }
                       className="extra-side-bar-buttons ml-2 mt-1"
-                      handleUpdateValues={handleUpdateValues}
+                      handleUpdateValues={handleRefreshButtonPress}
                       id={"refresh-button-" + name}
                     />
                   </div>
@@ -518,11 +587,12 @@ export default function ParameterComponent({
         ) : left === true &&
           type === "str" &&
           (data.node?.template[name].options ||
-            data.node?.template[name]?.refresh) ? (
+            data.node?.template[name]?.real_time_refresh) ? (
           // TODO: Improve CSS
           <div className="mt-2 flex w-full items-center">
             <div className="w-5/6 flex-grow">
               <Dropdown
+                disabled={disabled}
                 isLoading={isLoading}
                 options={data.node.template[name].options}
                 onSelect={handleOnNewValue}
@@ -530,15 +600,18 @@ export default function ParameterComponent({
                 id={"dropdown-" + name}
               />
             </div>
-            {data.node?.template[name].refresh && (
+            {data.node?.template[name].refresh_button && (
               <div className="w-1/6">
                 <RefreshButton
                   isLoading={isLoading}
                   disabled={disabled}
                   name={name}
                   data={data}
+                  button_text={
+                    data.node?.template[name].refresh_button_text ?? "Refresh"
+                  }
                   className="extra-side-bar-buttons ml-2 mt-1"
-                  handleUpdateValues={handleUpdateValues}
+                  handleUpdateValues={handleRefreshButtonPress}
                   id={"refresh-button-" + name}
                 />
               </div>
@@ -603,10 +676,10 @@ export default function ParameterComponent({
               editNode={false}
               value={
                 !data.node!.template[name].value ||
-                  data.node!.template[name].value?.toString() === "{}"
+                data.node!.template[name].value?.toString() === "{}"
                   ? {
-                    yourkey: "value",
-                  }
+                      yourkey: "value",
+                    }
                   : data.node!.template[name].value
               }
               onChange={handleOnNewValue}
@@ -620,7 +693,7 @@ export default function ParameterComponent({
               editNode={false}
               value={
                 data.node!.template[name].value?.length === 0 ||
-                  !data.node!.template[name].value
+                !data.node!.template[name].value
                   ? [{ "": "" }]
                   : convertObjToArray(data.node!.template[name].value)
               }
@@ -628,8 +701,14 @@ export default function ParameterComponent({
               onChange={(newValue) => {
                 const valueToNumbers = convertValuesToNumbers(newValue);
                 setErrorDuplicateKey(hasDuplicateKeys(valueToNumbers));
-                handleOnNewValue(valueToNumbers);
+                // if data.node?.template[name].list is true, then the value is an array of objects
+                // else we need to get the first object of the array
+
+                if (data.node?.template[name].list) {
+                  handleOnNewValue(valueToNumbers);
+                } else handleOnNewValue(valueToNumbers[0]);
               }}
+              isList={data.node?.template[name].list ?? false}
             />
           </div>
         ) : (

@@ -44,7 +44,9 @@ class MonitorService(Service):
 
     def ensure_tables_exist(self):
         for table_name, model in self.table_map.items():
-            drop_and_create_table_if_schema_mismatch(str(self.db_path), table_name, model)
+            drop_and_create_table_if_schema_mismatch(
+                str(self.db_path), table_name, model
+            )
 
     def add_row(
         self,
@@ -101,6 +103,12 @@ class MonitorService(Service):
         query = "DELETE FROM vertex_builds"
         if flow_id:
             query += f" WHERE flow_id = '{flow_id}'"
+
+        with duckdb.connect(str(self.db_path)) as conn:
+            conn.execute(query)
+
+    def delete_messages(self, session_id: str):
+        query = f"DELETE FROM messages WHERE session_id = '{session_id}'"
 
         with duckdb.connect(str(self.db_path)) as conn:
             conn.execute(query)

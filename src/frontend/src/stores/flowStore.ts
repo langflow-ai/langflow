@@ -190,8 +190,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     get().setNodes((oldNodes) =>
       oldNodes.map((node) => {
         if (node.id === id) {
-          if((node.data as NodeDataType).node?.pinned){
-            (newChange.data as NodeDataType).node!.pinned = false;
+          if ((node.data as NodeDataType).node?.frozen) {
+            (newChange.data as NodeDataType).node!.frozen = false;
           }
           return newChange;
         }
@@ -450,9 +450,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       status: BuildStatus,
       runId: string
     ) {
-      if (vertexBuildData && vertexBuildData.inactive_vertices) {
-        get().removeFromVerticesBuild(vertexBuildData.inactive_vertices);
+      if (vertexBuildData && vertexBuildData.inactivated_vertices) {
+        get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
       }
+
       if (vertexBuildData.next_vertices_ids) {
         // next_vertices_ids is a list of vertices that are going to be built next
         // verticesLayers is a list of list of vertices ids, where each list is a layer of vertices
@@ -534,10 +535,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       runId: string;
     } | null
   ) => {
-    console.log("updateVerticesBuild", vertices);
     set({ verticesBuild: vertices });
   },
   verticesBuild: null,
+  addToVerticesBuild: (vertices: string[]) => {
+    const verticesBuild = get().verticesBuild;
+    if (!verticesBuild) return;
+    set({
+      verticesBuild: {
+        ...verticesBuild,
+        verticesIds: [...verticesBuild.verticesIds, ...vertices],
+      },
+    });
+  },
   removeFromVerticesBuild: (vertices: string[]) => {
     const verticesBuild = get().verticesBuild;
     if (!verticesBuild) return;
@@ -551,7 +561,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
-    console.log("updateBuildStatus", nodeIdList, status);
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     nodeIdList.forEach((id) => {
       newFlowBuildStatus[id] = {
@@ -561,7 +570,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         const timestamp_string = new Date(Date.now()).toLocaleString();
         newFlowBuildStatus[id].timestamp = timestamp_string;
       }
-      console.log("updateBuildStatus", newFlowBuildStatus);
     });
     set({ flowBuildStatus: newFlowBuildStatus });
   },

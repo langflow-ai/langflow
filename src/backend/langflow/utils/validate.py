@@ -6,8 +6,6 @@ from typing import Dict, List, Optional, Union
 
 from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 
-PROMPT_INPUT_TYPES = ["Document", "BaseOutputParser", "Text", "Record"]
-
 
 def add_type_ignores():
     if not hasattr(ast, "TypeIgnore"):

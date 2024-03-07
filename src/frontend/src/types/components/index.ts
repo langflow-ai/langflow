@@ -30,6 +30,7 @@ export type ToggleComponentType = {
   editNode?: boolean;
 };
 export type DropDownComponentType = {
+  disabled?: boolean;
   isLoading?: boolean;
   value: string;
   options: string[];
@@ -70,6 +71,7 @@ export type KeyPairListComponentType = {
   editNode?: boolean;
   duplicateKey?: boolean;
   editNodeModal?: boolean;
+  isList?: boolean;
 };
 
 export type DictComponentType = {

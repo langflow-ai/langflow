@@ -8,32 +8,32 @@ test("IntComponent", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("getrequest");
+  await page.getByPlaceholder("Search").fill("openai");
 
   await page.waitForTimeout(2000);
 
   await page
-    .getByTestId("utilitiesGET Request")
+    .getByTestId("modelsOpenAI Model")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.getByTestId("int-input-timeout").click();
+  await page.getByTestId("int-input-max_tokens").click();
   await page
-    .getByTestId("int-input-timeout")
+    .getByTestId("int-input-max_tokens")
     .fill("123456789123456789123456789");
 
-  let value = await page.getByTestId("int-input-timeout").inputValue();
+  let value = await page.getByTestId("int-input-max_tokens").inputValue();
 
   if (value != "123456789123456789123456789") {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("int-input-timeout").click();
-  await page.getByTestId("int-input-timeout").fill("0");
+  await page.getByTestId("int-input-max_tokens").click();
+  await page.getByTestId("int-input-max_tokens").fill("0");
 
-  value = await page.getByTestId("int-input-timeout").inputValue();
+  value = await page.getByTestId("int-input-max_tokens").inputValue();
 
   if (value != "0") {
     expect(false).toBeTruthy();
@@ -42,35 +42,119 @@ test("IntComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  value = await page.getByTestId("edit-int-input-timeout").inputValue();
+  value = await page.getByTestId("edit-int-input-max_tokens").inputValue();
 
   if (value != "0") {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("edit-int-input-timeout").click();
+  await page.getByTestId("edit-int-input-max_tokens").click();
   await page
-    .getByTestId("edit-int-input-timeout")
+    .getByTestId("edit-int-input-max_tokens")
     .fill("123456789123456789123456789");
 
-  await page.locator('//*[@id="showheaders"]').click();
-  expect(await page.locator('//*[@id="showheaders"]').isChecked()).toBeFalsy();
+  await page.locator('//*[@id="showinput_value"]').click();
+  expect(
+    await page.locator('//*[@id="showinput_value"]').isChecked()
+  ).toBeFalsy();
 
-  await page.locator('//*[@id="showtimeout"]').click();
-  expect(await page.locator('//*[@id="showtimeout"]').isChecked()).toBeFalsy();
+  await page.locator('//*[@id="showmodel_kwargs"]').click();
+  expect(
+    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
+  ).toBeTruthy();
 
-  await page.locator('//*[@id="showurl"]').click();
-  expect(await page.locator('//*[@id="showurl"]').isChecked()).toBeFalsy();
+  await page.locator('//*[@id="showmodel_name"]').click();
+  expect(
+    await page.locator('//*[@id="showmodel_name"]').isChecked()
+  ).toBeFalsy();
 
-  await page.locator('//*[@id="showheaders"]').click();
-  expect(await page.locator('//*[@id="showheaders"]').isChecked()).toBeTruthy();
+  await page.locator('//*[@id="showopenai_api_base"]').click();
+  expect(
+    await page.locator('//*[@id="showopenai_api_base"]').isChecked()
+  ).toBeFalsy();
 
-  await page.locator('//*[@id="showurl"]').click();
-  expect(await page.locator('//*[@id="showurl"]').isChecked()).toBeTruthy();
+  await page.locator('//*[@id="showopenai_api_key"]').click();
+  expect(
+    await page.locator('//*[@id="showopenai_api_key"]').isChecked()
+  ).toBeFalsy();
+
+  await page.locator('//*[@id="showstream"]').click();
+  expect(await page.locator('//*[@id="showstream"]').isChecked()).toBeFalsy();
+
+  await page.locator('//*[@id="showtemperature"]').click();
+  expect(
+    await page.locator('//*[@id="showtemperature"]').isChecked()
+  ).toBeFalsy();
+
+  await page.locator('//*[@id="showinput_value"]').click();
+  expect(
+    await page.locator('//*[@id="showinput_value"]').isChecked()
+  ).toBeTruthy();
+
+  await page.locator('//*[@id="showmodel_kwargs"]').click();
+  expect(
+    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
+  ).toBeFalsy();
+
+  await page.locator('//*[@id="showmodel_name"]').click();
+  expect(
+    await page.locator('//*[@id="showmodel_name"]').isChecked()
+  ).toBeTruthy();
+
+  await page.locator('//*[@id="showopenai_api_base"]').click();
+  expect(
+    await page.locator('//*[@id="showopenai_api_base"]').isChecked()
+  ).toBeTruthy();
+
+  await page.locator('//*[@id="showopenai_api_key"]').click();
+  expect(
+    await page.locator('//*[@id="showopenai_api_key"]').isChecked()
+  ).toBeTruthy();
+
+  await page.locator('//*[@id="showstream"]').click();
+  expect(await page.locator('//*[@id="showstream"]').isChecked()).toBeTruthy();
+
+  await page.locator('//*[@id="showtemperature"]').click();
+  expect(
+    await page.locator('//*[@id="showtemperature"]').isChecked()
+  ).toBeTruthy();
+
+  await page.locator('//*[@id="showinput_value"]').click();
+  expect(
+    await page.locator('//*[@id="showinput_value"]').isChecked()
+  ).toBeFalsy();
+
+  await page.locator('//*[@id="showmodel_kwargs"]').click();
+  expect(
+    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
+  ).toBeTruthy();
+
+  await page.locator('//*[@id="showmodel_name"]').click();
+  expect(
+    await page.locator('//*[@id="showmodel_name"]').isChecked()
+  ).toBeFalsy();
+
+  await page.locator('//*[@id="showopenai_api_base"]').click();
+  expect(
+    await page.locator('//*[@id="showopenai_api_base"]').isChecked()
+  ).toBeFalsy();
+
+  await page.locator('//*[@id="showopenai_api_key"]').click();
+  expect(
+    await page.locator('//*[@id="showopenai_api_key"]').isChecked()
+  ).toBeFalsy();
+
+  await page.locator('//*[@id="showstream"]').click();
+  expect(await page.locator('//*[@id="showstream"]').isChecked()).toBeFalsy();
+
+  await page.locator('//*[@id="showtemperature"]').click();
+  expect(
+    await page.locator('//*[@id="showtemperature"]').isChecked()
+  ).toBeFalsy();
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
-  const plusButtonLocator = page.getByTestId("int-input-timeout");
+  const plusButtonLocator = page.getByTestId("int-input-max_tokens");
   const elementCount = await plusButtonLocator.count();
   if (elementCount === 0) {
     expect(true).toBeTruthy();
@@ -84,7 +168,7 @@ test("IntComponent", async ({ page }) => {
     ).toBeTruthy();
 
     const valueEditNode = await page
-      .getByTestId("edit-int-input-timeout")
+      .getByTestId("edit-int-input-max_tokens")
       .inputValue();
 
     if (valueEditNode != "123456789123456789123456789") {
@@ -92,19 +176,19 @@ test("IntComponent", async ({ page }) => {
     }
 
     await page.locator('//*[@id="saveChangesBtn"]').click();
-    await page.getByTestId("int-input-timeout").click();
-    await page.getByTestId("int-input-timeout").fill("3");
+    await page.getByTestId("int-input-max_tokens").click();
+    await page.getByTestId("int-input-max_tokens").fill("3");
 
-    let value = await page.getByTestId("int-input-timeout").inputValue();
+    let value = await page.getByTestId("int-input-max_tokens").inputValue();
 
     if (value != "3") {
       expect(false).toBeTruthy();
     }
 
-    await page.getByTestId("int-input-timeout").click();
-    await page.getByTestId("int-input-timeout").fill("-3");
+    await page.getByTestId("int-input-max_tokens").click();
+    await page.getByTestId("int-input-max_tokens").fill("-3");
 
-    value = await page.getByTestId("int-input-timeout").inputValue();
+    value = await page.getByTestId("int-input-max_tokens").inputValue();
 
     if (value != "0") {
       expect(false).toBeTruthy();

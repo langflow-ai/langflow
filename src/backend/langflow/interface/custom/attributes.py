@@ -37,7 +37,7 @@ ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "beta": getattr_return_bool,
     "documentation": getattr_return_str,
     "icon": validate_icon,
-    "pinned": getattr_return_bool,
+    "frozen": getattr_return_bool,
     "is_input": getattr_return_bool,
     "is_output": getattr_return_bool,
 }

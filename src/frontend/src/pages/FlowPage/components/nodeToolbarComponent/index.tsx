@@ -65,7 +65,7 @@ export default function NodeToolbarComponent({
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
-  const pinned = data.node?.pinned ?? false;
+  const frozen = data.node?.frozen ?? false;
   const paste = useFlowStore((state) => state.paste);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -155,6 +155,23 @@ export default function NodeToolbarComponent({
       case "copy":
         const node = nodes.filter((node) => node.id === data.id);
         setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
+        break;
+      case "duplicate":
+        paste(
+          {
+            nodes: [nodes.find((node) => node.id === data.id)!],
+            edges: [],
+          },
+          {
+            x: 50,
+            y: 10,
+            paneX: nodes.find((node) => node.id === data.id)?.position
+              .x,
+            paneY: nodes.find((node) => node.id === data.id)?.position
+              .y,
+          }
+        );
+        break;
     }
   };
 
@@ -308,7 +325,7 @@ export default function NodeToolbarComponent({
     <>
       <div className="w-26 h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
-          {hasCode ? (
+          {hasCode && (
             <ShadTooltip content="Code" side="top">
               <button
                 className="relative inline-flex items-center rounded-l-md  bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
@@ -317,51 +334,28 @@ export default function NodeToolbarComponent({
                 }}
                 data-testid="code-button-modal"
               >
-                <IconComponent name="TerminalSquare" className="h-4 w-4" />
-              </button>
-            </ShadTooltip>
-          ) : (
-            <ShadTooltip content="Save" side="top">
-              <button
-                className={classNames(
-                  "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
-                  hasCode ? "" : "rounded-l-md"
-                )}
-                onClick={() => {
-                  isSaved
-                    ? setShowOverrideModal(true)
-                    : saveComponent(cloneDeep(data), false);
-                }}
-              >
-                <IconComponent name="SaveAll" className=" h-4 w-4" />
+                <IconComponent name="Code" className="h-4 w-4" />
               </button>
             </ShadTooltip>
           )}
 
-          <ShadTooltip content="Duplicate" side="top">
+          <ShadTooltip content={"Save"} side="top">
             <button
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
               )}
               onClick={(event) => {
                 event.preventDefault();
-                paste(
-                  {
-                    nodes: [nodes.find((node) => node.id === data.id)!],
-                    edges: [],
-                  },
-                  {
-                    x: 50,
-                    y: 10,
-                    paneX: nodes.find((node) => node.id === data.id)?.position
-                      .x,
-                    paneY: nodes.find((node) => node.id === data.id)?.position
-                      .y,
-                  }
-                );
+                if (isSaved) {
+                  return setShowOverrideModal(true);
+                }
+                saveComponent(cloneDeep(data), false);
               }}
             >
-              <IconComponent name="Copy" className="h-4 w-4" />
+              <IconComponent
+                name="SaveAll"
+                className="h-4 w-4"
+              />
             </button>
           </ShadTooltip>
 
@@ -378,7 +372,7 @@ export default function NodeToolbarComponent({
                     ...old.data,
                     node: {
                       ...old.data.node,
-                      pinned: old.data?.node?.pinned ? false : true,
+                      frozen: old.data?.node?.frozen ? false : true,
                     },
                   },
                 }));
@@ -389,7 +383,7 @@ export default function NodeToolbarComponent({
                 className={cn(
                   "h-4 w-4 transition-all",
                   // TODO UPDATE THIS COLOR TO BE A VARIABLE
-                  pinned ? "animate-wiggle text-ice" : ""
+                  frozen ? "animate-wiggle text-ice" : ""
                 )}
               />
             </button>
@@ -433,53 +427,17 @@ export default function NodeToolbarComponent({
                     <span className="absolute right-2 top-[0.46em]">E</span>
                   </div>
                 </SelectItem>
-              )}
-
-              {isSaved ? (
-                <SelectItem value={"override"}>
-                  <div className="flex">
-                    <IconComponent
-                      name="SaveAll"
-                      className="relative top-0.5 mr-2 h-4 w-4 "
-                    />{" "}
-                    <span className="">Save</span>{" "}
-                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                      <IconComponent
-                      name="Command"
-                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                    ></IconComponent>
-                    ) : (
-                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
-                    )}
-                    <span className="absolute right-2 top-[0.45em]">S</span>
-                  </div>
-                </SelectItem>
-              ) : (
-                hasCode && (
-                  <SelectItem value={"SaveAll"}>
-                    <div className="flex">
-                      <IconComponent
-                        name="SaveAll"
-                        className="relative top-0.5 mr-2 h-4 w-4 "
-                      />{" "}
-                      <span className="">Save</span>{" "}
-                      {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                      <IconComponent
-                      name="Command"
-                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                    ></IconComponent>
-                    ) : (
-                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
-                    )}
-                      <span className="absolute right-2 top-[0.46em]">S</span>
-                    </div>
-                  </SelectItem>
-                )
-              )}
+              )}              
+              <SelectItem value={"duplicate"}>
+                <div className="flex" data-testid="save-button-modal">
+                  <IconComponent name="Copy" className="relative top-0.5 mr-2 h-4 w-4" />
+                  Duplicate
+                </div>{" "}
+              </SelectItem>
               <SelectItem value={"copy"}>
                 <div className="flex">
                   <IconComponent
-                    name="Copy"
+                    name="Clipboard"
                     className="relative top-0.5 mr-2 h-4 w-4 "
                   />{" "}
                   <span className="">Copy</span>{" "}

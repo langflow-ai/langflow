@@ -1,7 +1,6 @@
 import ast
 import json
-from typing import (AsyncIterator, Callable, Dict, Iterator, List, Optional,
-                    Union)
+from typing import AsyncIterator, Callable, Dict, Iterator, List, Optional, Union
 
 import yaml
 from langchain_core.messages import AIMessage
@@ -9,14 +8,14 @@ from loguru import logger
 
 from langflow.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes
 from langflow.graph.utils import UnbuiltObject, flatten_list, serialize_field
-from langflow.graph.vertex.base import StatefulVertex, StatelessVertex
+from langflow.graph.vertex.base import Vertex
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema import Record
 from langflow.services.monitor.utils import log_vertex_build
 from langflow.utils.schemas import ChatOutputResponse
 
 
-class AgentVertex(StatelessVertex):
+class AgentVertex(Vertex):
     def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
         super().__init__(data, graph=graph, base_type="agents", params=params)
 
@@ -59,12 +58,12 @@ class AgentVertex(StatelessVertex):
         await self._build(user_id=user_id)
 
 
-class ToolVertex(StatelessVertex):
+class ToolVertex(Vertex):
     def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
         super().__init__(data, graph=graph, base_type="tools", params=params)
 
 
-class LLMVertex(StatelessVertex):
+class LLMVertex(Vertex):
     built_node_type = None
     class_built_object = None
 
@@ -87,7 +86,7 @@ class LLMVertex(StatelessVertex):
             self.class_built_object = self._built_object
 
 
-class ToolkitVertex(StatelessVertex):
+class ToolkitVertex(Vertex):
     def __init__(self, data: Dict, graph, params=None):
         super().__init__(data, graph=graph, base_type="toolkits", params=params)
 
@@ -101,7 +100,7 @@ class FileToolVertex(ToolVertex):
         )
 
 
-class WrapperVertex(StatelessVertex):
+class WrapperVertex(Vertex):
     def __init__(self, data: Dict, graph, params=None):
         super().__init__(data, graph=graph, base_type="wrappers")
         self.steps: List[Callable] = [self._custom_build]
@@ -115,7 +114,7 @@ class WrapperVertex(StatelessVertex):
             await self._build(user_id=user_id)
 
 
-class DocumentLoaderVertex(StatefulVertex):
+class DocumentLoaderVertex(Vertex):
     def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
         super().__init__(data, graph=graph, base_type="documentloaders", params=params)
 
@@ -135,12 +134,12 @@ class DocumentLoaderVertex(StatefulVertex):
         return f"{self.vertex_type}()"
 
 
-class EmbeddingVertex(StatefulVertex):
+class EmbeddingVertex(Vertex):
     def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
         super().__init__(data, graph=graph, base_type="embeddings", params=params)
 
 
-class VectorStoreVertex(StatefulVertex):
+class VectorStoreVertex(Vertex):
     def __init__(self, data: Dict, graph, params=None):
         super().__init__(data, graph=graph, base_type="vectorstores")
 
@@ -182,17 +181,17 @@ class VectorStoreVertex(StatefulVertex):
         self.remove_docs_and_texts_from_params()
 
 
-class MemoryVertex(StatefulVertex):
+class MemoryVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="memory")
 
 
-class RetrieverVertex(StatefulVertex):
+class RetrieverVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="retrievers")
 
 
-class TextSplitterVertex(StatefulVertex):
+class TextSplitterVertex(Vertex):
     def __init__(self, data: Dict, graph, params: Optional[Dict] = None):
         super().__init__(data, graph=graph, base_type="textsplitters", params=params)
 
@@ -210,7 +209,7 @@ class TextSplitterVertex(StatefulVertex):
         return f"{self.vertex_type}()"
 
 
-class ChainVertex(StatelessVertex):
+class ChainVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="chains")
         self.steps = [self._custom_build]
@@ -224,7 +223,7 @@ class ChainVertex(StatelessVertex):
             if isinstance(value, PromptVertex):
                 # Build the PromptVertex, passing the tools if available
                 tools = kwargs.get("tools", None)
-                self.params[key] = value.build(tools=tools, pinned=force)
+                self.params[key] = value.build(tools=tools, frozen=force)
 
         await self._build(user_id=user_id)
 
@@ -240,7 +239,7 @@ class ChainVertex(StatelessVertex):
         return super()._built_object_repr()
 
 
-class PromptVertex(StatelessVertex):
+class PromptVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="prompts")
         self.steps: List[Callable] = [self._custom_build]
@@ -324,12 +323,12 @@ class PromptVertex(StatelessVertex):
             return str(self._built_object)
 
 
-class OutputParserVertex(StatelessVertex):
+class OutputParserVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="output_parsers")
 
 
-class CustomComponentVertex(StatelessVertex):
+class CustomComponentVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="custom_components")
 
@@ -338,7 +337,7 @@ class CustomComponentVertex(StatelessVertex):
             return self.artifacts["repr"] or super()._built_object_repr()
 
 
-class ChatVertex(StatelessVertex):
+class ChatVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="custom_components", is_task=True)
         self.steps = [self._build, self._run]
@@ -398,7 +397,7 @@ class ChatVertex(StatelessVertex):
 
                     self.will_stream = stream_url is not None
                 if artifacts:
-                    self.artifacts = artifacts.model_dump()
+                    self.artifacts = artifacts.model_dump(exclude_none=True)
             if isinstance(self._built_object, (AsyncIterator, Iterator)):
                 if self.params["return_record"]:
                     self._built_object = Record(text=message, data=self.artifacts)
@@ -460,7 +459,7 @@ class ChatVertex(StatelessVertex):
         return self.vertex_type == InterfaceComponentTypes.ChatInput and self.is_input
 
 
-class RoutingVertex(StatelessVertex):
+class RoutingVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="custom_components")
         self.use_result = True
@@ -493,6 +492,18 @@ class RoutingVertex(StatelessVertex):
             else:
                 self.graph.mark_branch(self.id, "INACTIVE")
                 self._built_result = None
+
+
+class StateVertex(Vertex):
+    def __init__(self, data: Dict, graph):
+        super().__init__(data, graph=graph, base_type="custom_components")
+        self.steps = [self._build]
+        self.is_state = True
+
+    @property
+    def successors_ids(self) -> List[str]:
+        successors = self.graph.successor_map.get(self.id, [])
+        return successors + self.graph.activated_vertices
 
 
 def dict_to_codeblock(d: dict) -> str:

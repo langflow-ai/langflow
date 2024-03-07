@@ -15,7 +15,7 @@ from langflow.template.template.base import Template
 
 
 class MemoryFrontendNode(FrontendNode):
-    pinned: bool = True
+    frozen: bool = True
 
     def add_extra_fields(self) -> None:
         # chat history should have another way to add common field?

@@ -3,9 +3,10 @@ from typing import Optional, Union
 from langchain.embeddings.base import Embeddings
 from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.redis import Redis
-from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
+
 from langflow import CustomComponent
+from langflow.schema.schema import Record
 
 
 class RedisComponent(CustomComponent):
@@ -28,7 +29,7 @@ class RedisComponent(CustomComponent):
         return {
             "index_name": {"display_name": "Index Name", "value": "your_index"},
             "code": {"show": False, "display_name": "Code"},
-            "documents": {"display_name": "Documents", "is_list": True},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
             "embedding": {"display_name": "Embedding"},
             "schema": {"display_name": "Schema", "file_types": [".yaml"]},
             "redis_server_url": {
@@ -44,7 +45,7 @@ class RedisComponent(CustomComponent):
         redis_server_url: str,
         redis_index_name: str,
         schema: Optional[str] = None,
-        documents: Optional[Document] = None,
+        inputs: Optional[Record] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         """
         Builds the Vector Store or BaseRetriever object.
@@ -58,7 +59,13 @@ class RedisComponent(CustomComponent):
         Returns:
         - VectorStore: The Vector Store object.
         """
-        if documents is None:
+        documents = []
+        for _input in inputs:
+            if isinstance(_input, Record):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
+        if not documents:
             if schema is None:
                 raise ValueError("If no documents are provided, a schema must be provided.")
             redis_vs = Redis.from_existing_index(

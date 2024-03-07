@@ -93,7 +93,7 @@ async def build_vertex(
     current_user=Depends(get_current_active_user),
 ):
     """Build a vertex instead of the entire graph."""
-    {"inputs": {"input_value": "some value"}}
+
     start_time = time.perf_counter()
     next_vertices_ids = []
     try:
@@ -110,7 +110,7 @@ async def build_vertex(
 
         vertex = graph.get_vertex(vertex_id)
         try:
-            if not vertex.pinned or not vertex._built:
+            if not vertex.frozen or not vertex._built:
                 inputs_dict = inputs.model_dump() if inputs else {}
                 await vertex.build(user_id=current_user.id, inputs=inputs_dict)
 
@@ -155,10 +155,10 @@ async def build_vertex(
         result_data_response.duration = duration
         result_data_response.timedelta = timedelta
         vertex.add_build_time(timedelta)
-        inactive_vertices = None
-        if graph.inactive_vertices:
-            inactive_vertices = list(graph.inactive_vertices)
-            graph.reset_inactive_vertices()
+        inactivated_vertices = None
+        inactivated_vertices = list(graph.inactivated_vertices)
+        graph.reset_inactivated_vertices()
+        graph.reset_activated_vertices()
         chat_service.set_cache(flow_id, graph)
 
         # graph.stop_vertex tells us if the user asked
@@ -169,8 +169,8 @@ async def build_vertex(
             next_vertices_ids = [graph.stop_vertex]
 
         build_response = VertexBuildResponse(
+            inactivated_vertices=inactivated_vertices,
             next_vertices_ids=next_vertices_ids,
-            inactive_vertices=inactive_vertices,
             valid=valid,
             params=params,
             id=vertex.id,
@@ -227,7 +227,7 @@ async def build_vertex_stream(
                     )
                     yield str(stream_data)
 
-                elif not vertex.pinned or not vertex._built:
+                elif not vertex.frozen or not vertex._built:
                     logger.debug(f"Streaming vertex {vertex_id}")
                     stream_data = StreamData(
                         event="message",

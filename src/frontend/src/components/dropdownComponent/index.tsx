@@ -5,6 +5,7 @@ import { classNames } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 
 export default function Dropdown({
+  disabled,
   isLoading,
   value,
   options,
@@ -28,6 +29,7 @@ export default function Dropdown({
         <>
           <Listbox
             value={internalValue}
+            disabled={disabled}
             onChange={(value) => {
               setInternalValue(value);
               onSelect(value);

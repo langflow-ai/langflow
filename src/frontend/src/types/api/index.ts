@@ -27,8 +27,9 @@ export type APIClassType = {
   documentation: string;
   error?: string;
   official?: boolean;
-  pinned?: boolean;
+  frozen?: boolean;
   flow?: FlowType;
+  field_order?: string[];
   [key: string]:
     | Array<string>
     | string
@@ -54,7 +55,9 @@ export type TemplateVariableType = {
   input_types?: Array<string>;
   display_name?: string;
   name?: string;
-  refresh?: boolean;
+  real_time_refresh?: boolean;
+  refresh_button?: boolean;
+  refresh_button_text?: string;
   [key: string]: any;
 };
 export type sendAllProps = {
@@ -141,8 +144,8 @@ export type VerticesOrderTypeAPI = {
 
 export type VertexBuildTypeAPI = {
   id: string;
+  inactivated_vertices: Array<string> | null;
   next_vertices_ids: Array<string>;
-  inactive_vertices: Array<string> | null;
   run_id: string;
   valid: boolean;
   params: string;
@@ -157,4 +160,18 @@ export type VertexDataTypeAPI = {
   artifacts: { [key: string]: string };
   timedelta?: number;
   duration?: string;
+};
+
+export type CodeErrorDataTypeAPI = {
+  error: string | undefined;
+  traceback: string | undefined;
+};
+
+// the error above is inside this error.response.data.detail.error
+// which comes from a request to the API
+// to type the error we need to know the structure of the object
+
+// error that has a response, that has a data, that has a detail, that has an error
+export type ResponseErrorTypeAPI = {
+  response: { data: { detail: CodeErrorDataTypeAPI } };
 };
