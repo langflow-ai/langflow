@@ -140,7 +140,10 @@ class CustomComponent(Component):
         return self.field_config
 
     def update_build_config(
-        self, build_config: dotdict, field_name: str, field_value: Any
+        self,
+        build_config: dotdict,
+        field_name: str,
+        field_value: Any,
     ):
         build_config[field_name] = field_value
         return build_config
