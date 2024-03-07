@@ -326,7 +326,7 @@ export default function NodeToolbarComponent({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [isSaved, showNode, data.showNode]);
+  }, [isSaved, showNode, data.showNode, isMinimal]);
 
   return (
     <>
