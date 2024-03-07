@@ -98,6 +98,7 @@ export default function NodeToolbarComponent({
   );
 
   const setSuccessData = useAlertStore(state => state.setSuccessData);
+  const setNoticeData = useAlertStore(state => state.setNoticeData);
 
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
@@ -261,13 +262,16 @@ export default function NodeToolbarComponent({
       }
       if (
         selected &&
-        isMinimal &&
         (event.ctrlKey || event.metaKey) &&
         event.key === "q"
       ) {
         event.preventDefault();
-        setShowState(show => !show)
-        setShowNode(data.showNode ?? true ? false : true);
+        if (isMinimal) {
+          setShowState(show => !show)
+          setShowNode(data.showNode ?? true ? false : true);
+          return
+        }
+        setNoticeData({title: "Minimization are only available for nodes with one handle or fewer."});
       }
       if (
         selected &&
@@ -276,7 +280,8 @@ export default function NodeToolbarComponent({
         event.key === "C"
       ) {
         event.preventDefault();
-        setOpenModal((state) => !state);
+        if (hasCode) return setOpenModal((state) => !state);
+        setNoticeData({title: `You can not access ${data.id} code`})
       }
       if (
         selected &&
@@ -304,13 +309,15 @@ export default function NodeToolbarComponent({
       }
       if (
         selected &&
-        data.node?.documentation &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
         event.key === "D"
       ) {
         event.preventDefault();
-        openInNewTab(data.node?.documentation);
+        if (data.node?.documentation) {
+          return openInNewTab(data.node?.documentation);
+        }
+        setNoticeData({title: `${data.id} docs is not available at the moment.`})
       }
     }
 
@@ -342,7 +349,7 @@ export default function NodeToolbarComponent({
           <ShadTooltip content={"Save"} side="top">
             <button
               className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10", (hasCode ? " " : " rounded-l-md ")
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -458,7 +465,7 @@ export default function NodeToolbarComponent({
                     ) : (
                       <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
                     )}
-                  <span className="absolute right-2 top-[0.5em]">C</span>
+                  <span className="absolute right-2 top-[0.4em]">C</span>
                 </div>
               </SelectItem>
               {hasStore && (
@@ -594,9 +601,13 @@ export default function NodeToolbarComponent({
             index={6}
             onConfirm={(index, user) => {
               saveComponent(cloneDeep(data), true);
+              setSuccessData({title: `${data.id} successfully overridden!`})
             }}
             onClose={setShowOverrideModal}
-            onCancel={() => saveComponent(cloneDeep(data), false)}
+            onCancel={() => {
+              saveComponent(cloneDeep(data), false)
+              setSuccessData({title: "New node successfully saved!"})
+            }}
           >
             <ConfirmationModal.Content>
               <span>
