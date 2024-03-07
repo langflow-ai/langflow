@@ -33,7 +33,7 @@ class FAISSComponent(CustomComponent):
         index_name: str = "langflow_index",
     ) -> Union[VectorStore, FAISS, BaseRetriever]:
         documents = []
-        for _input in inputs:
+        for _input in inputs or []:
             if isinstance(_input, Record):
                 documents.append(_input.to_lc_document())
             else:

@@ -15,7 +15,9 @@ from langflow.schema.schema import Record
 class VectaraComponent(CustomComponent):
     display_name: str = "Vectara"
     description: str = "Implementation of Vector Store using Vectara"
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/vectara"
+    documentation = (
+        "https://python.langchain.com/docs/integrations/vectorstores/vectara"
+    )
     icon = "Vectara"
     field_config = {
         "vectara_customer_id": {
@@ -50,7 +52,7 @@ class VectaraComponent(CustomComponent):
         source = "Langflow"
 
         documents = []
-        for _input in inputs:
+        for _input in inputs or []:
             if isinstance(_input, Record):
                 documents.append(_input.to_lc_document())
             else:

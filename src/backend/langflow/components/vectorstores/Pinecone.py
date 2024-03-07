@@ -45,7 +45,7 @@ class PineconeComponent(CustomComponent):
         self,
         embedding: Embeddings,
         pinecone_env: str,
-        inputs: List[Record],
+        inputs: Optional[List[Record]] = None,
         text_key: str = "text",
         pool_threads: int = 4,
         index_name: Optional[str] = None,
@@ -61,7 +61,7 @@ class PineconeComponent(CustomComponent):
         if not index_name:
             raise ValueError("Index Name is required.")
         documents = []
-        for _input in inputs:
+        for _input in inputs or []:
             if isinstance(_input, Record):
                 documents.append(_input.to_lc_document())
             else:

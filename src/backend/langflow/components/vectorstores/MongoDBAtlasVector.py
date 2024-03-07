@@ -9,7 +9,9 @@ from langflow.schema.schema import Record
 
 class MongoDBAtlasComponent(CustomComponent):
     display_name = "MongoDB Atlas"
-    description = "Construct a `MongoDB Atlas Vector Search` vector store from raw documents."
+    description = (
+        "Construct a `MongoDB Atlas Vector Search` vector store from raw documents."
+    )
     icon = "MongoDB"
 
     def build_config(self):
@@ -26,7 +28,7 @@ class MongoDBAtlasComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
-        inputs: List[Record],
+        inputs: Optional[List[Record]] = None,
         collection_name: str = "",
         db_name: str = "",
         index_name: str = "",
@@ -37,14 +39,16 @@ class MongoDBAtlasComponent(CustomComponent):
         try:
             from pymongo import MongoClient
         except ImportError:
-            raise ImportError("Please install pymongo to use MongoDB Atlas Vector Store")
+            raise ImportError(
+                "Please install pymongo to use MongoDB Atlas Vector Store"
+            )
         try:
             mongo_client: MongoClient = MongoClient(mongodb_atlas_cluster_uri)
             collection = mongo_client[db_name][collection_name]
         except Exception as e:
             raise ValueError(f"Failed to connect to MongoDB Atlas: {e}")
         documents = []
-        for _input in inputs:
+        for _input in inputs or []:
             if isinstance(_input, Record):
                 documents.append(_input.to_lc_document())
             else:

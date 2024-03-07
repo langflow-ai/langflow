@@ -48,7 +48,7 @@ class Graph:
         self._is_state_vertices: List[str] = []
         self._has_session_id_vertices: List[str] = []
         self._sorted_vertices_layers: List[List[str]] = []
-        self._run_id = None
+        self._run_id = ""
 
         self.top_level_vertices = []
         for vertex in self._vertices:
@@ -130,9 +130,6 @@ class Graph:
             self.state_manager.subscribe(run_id, vertex.update_graph_state)
         self._run_id = run_id
 
-    def add_state(self, state: str):
-        self.state_manager.append_state(self._run_id, state)
-
     @property
     def sorted_vertices_layers(self) -> List[List[str]]:
         if not self._sorted_vertices_layers:
@@ -198,7 +195,7 @@ class Graph:
 
     async def run(
         self,
-        inputs: Dict[str, Union[str, list[str]]],
+        inputs: list[Dict[str, Union[str, list[str]]]],
         outputs: list[str],
         session_id: str,
         stream: Optional[bool] = False,
@@ -210,13 +207,12 @@ class Graph:
         # of the vertices that are inputs
         # if the value is a list, we need to run multiple times
         vertex_outputs = []
-        inputs_values = inputs.get(INPUT_FIELD_NAME, "")
         if not isinstance(inputs_values, list):
             inputs_values = [inputs_values]
-        for input_value in inputs_values:
+        for input_dict in inputs_values:
             run_outputs = await self._run(
-                inputs={INPUT_FIELD_NAME: input_value},
-                input_components=inputs.get("components", []),
+                inputs={INPUT_FIELD_NAME: input_dict.get(INPUT_FIELD_NAME)},
+                input_components=input_dict.get("components", []),
                 outputs=outputs,
                 stream=stream,
                 session_id=session_id,

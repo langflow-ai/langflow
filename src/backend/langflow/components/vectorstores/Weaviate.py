@@ -12,7 +12,9 @@ from langflow.schema.schema import Record
 class WeaviateVectorStoreComponent(CustomComponent):
     display_name: str = "Weaviate"
     description: str = "Implementation of Vector Store using Weaviate"
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/weaviate"
+    documentation = (
+        "https://python.langchain.com/docs/integrations/vectorstores/weaviate"
+    )
     field_config = {
         "url": {"display_name": "Weaviate URL", "value": "http://localhost:8080"},
         "api_key": {
@@ -79,7 +81,7 @@ class WeaviateVectorStoreComponent(CustomComponent):
 
         index_name = _to_pascal_case(index_name) if index_name else None
         documents = []
-        for _input in inputs:
+        for _input in inputs or []:
             if isinstance(_input, Record):
                 documents.append(_input.to_lc_document())
             else:

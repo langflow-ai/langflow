@@ -13,10 +13,10 @@ class MergeRecordsComponent(CustomComponent):
 
     def build(self, records: list[Record]) -> Record:
         if not records:
-            return records
+            return Record()
         if len(records) == 1:
             return records[0]
-        merged_record = None
+        merged_record = Record()
         for record in records:
             if merged_record is None:
                 merged_record = record
@@ -24,3 +24,13 @@ class MergeRecordsComponent(CustomComponent):
                 merged_record += record
         self.status = merged_record
         return merged_record
+
+
+if __name__ == "__main__":
+    records = [
+        Record(data={"key1": "value1"}),
+        Record(data={"key2": "value2"}),
+    ]
+    component = MergeRecordsComponent()
+    result = component.build(records)
+    print(result)

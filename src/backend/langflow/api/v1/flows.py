@@ -57,7 +57,7 @@ def read_flows(
     try:
         auth_settings = settings_service.auth_settings
         if auth_settings.AUTO_LOGIN:
-            flows = session.exec(
+            flows: list[Flow] = session.exec(
                 select(Flow).where(
                     (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa
                 )
