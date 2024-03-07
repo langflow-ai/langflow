@@ -118,7 +118,7 @@ export default function HomePage(): JSX.Element {
           <Outlet />
         </div>
       </div>
-      <BaseModal open={openModal} setOpen={setOpenModal}>
+      <BaseModal size="three-cards" open={openModal} setOpen={setOpenModal}>
         <BaseModal.Header
           description={"Select a template below"}
         >
