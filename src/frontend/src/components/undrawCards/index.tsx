@@ -35,17 +35,14 @@ export default function UndrawCardComponent({
             addFlow(true, flow).then((id) => {
                 navigate("/flow/" + id);
             });
-        }} className="pt-4 w-80 h-72 cursor-pointer">
+        }} className="pt-4 w-80 h-64 cursor-pointer bg-background">
             <CardContent className="w-full h-full">
-                <div className="rounded-md border border-border bg-background w-full h-full flex flex-col items-center align-middle justify-center">
+                <div className="rounded-md p-1 bg-muted w-full h-full flex flex-col items-center align-middle justify-center">
                     {selectImage()}
                 </div>
             </CardContent>
-            <CardDescription className="px-4 pb-4">
-                <CardTitle>{flow.name}</CardTitle>
-                <ShadTooltip side="bottom" styleClasses="z-50" content={flow.description}>
-                    <div className="pt-1 truncate-doubleline">{flow.description}</div>
-                </ShadTooltip>
+            <CardDescription className="px-6 pb-4">
+                <CardTitle className="text-primary text-lg">{flow.name}</CardTitle>
             </CardDescription>
         </Card>
     )
