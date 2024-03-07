@@ -20,6 +20,7 @@ from langflow.interface.custom.directory_reader.utils import (
     merge_nested_dicts_with_renaming,
 )
 from langflow.interface.custom.eval import eval_custom_component_code
+from langflow.interface.custom.schema import MissingDefault
 from langflow.schema import dotdict
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.custom_components import (
@@ -111,7 +112,7 @@ def extract_type_from_optional(field_type):
     str: The extracted type, or an empty string if no type was found.
     """
     match = re.search(r"\[(.*?)\]$", field_type)
-    return match[1] if match else None
+    return match[1] if match else field_type
 
 
 def get_field_properties(extra_field):
@@ -119,7 +120,13 @@ def get_field_properties(extra_field):
     field_name = extra_field["name"]
     field_type = extra_field.get("type", "str")
     field_value = extra_field.get("default", "")
-    field_required = "optional" not in field_type.lower()
+    # a required field is a field that does not contain
+    # optional in field_type
+    # and a field that does not have a default value
+    field_required = "optional" not in field_type.lower() and isinstance(
+        field_value, MissingDefault
+    )
+    field_value = field_value if not isinstance(field_value, MissingDefault) else None
 
     if not field_required:
         field_type = extract_type_from_optional(field_type)
@@ -469,7 +476,10 @@ def update_field_dict(
 ):
     """Update the field dictionary by calling options() or value() if they are callable"""
     if ("real_time_refresh" in field_dict or "refresh_button" in field_dict) and any(
-        (field_dict["real_time_refresh"], field_dict["refresh_button"])
+        (
+            field_dict.get("real_time_refresh", False),
+            field_dict.get("refresh_button", False),
+        )
     ):
         if call:
             try:
