@@ -268,7 +268,6 @@ export default function ExtraSidebar(): JSX.Element {
               <>
                 {index === 0 && (
                   <div className="pt-0.5">
-                    <Separator />
                     <div className="p-2 px-4 font-semibold" key={index}>
                       Native
                     </div>
