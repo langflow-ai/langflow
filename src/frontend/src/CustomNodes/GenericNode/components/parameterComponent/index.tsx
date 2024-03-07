@@ -88,10 +88,36 @@ export default function ParameterComponent({
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
+  const handleRefreshButtonPress = async (name, data) => {
+    setIsLoading(true);
+    try {
+      let newTemplate = await handleUpdateValues(name, data);
+      if (newTemplate) {
+        setNode(data.id, (oldNode) => {
+          let newNode = cloneDeep(oldNode);
+          newNode.data = {
+            ...newNode.data,
+          };
+          newNode.data.node.template = newTemplate;
+          return newNode;
+        });
+      }
+    } catch (error) {
+      let responseError = error as ResponseErrorTypeAPI;
+      setErrorData({
+        title: "Error while updating the Component",
+        list: [responseError.response.data.detail.error ?? "Unknown error"],
+      });
+    }
+    setIsLoading(false);
+    renderTooltips();
+  };
+
   useEffect(() => {
     async function fetchData() {
       if (
-        data.node?.template[name]?.refresh &&
+        (data.node?.template[name]?.real_time_refresh ||
+          data.node?.template[name]?.refresh_button) &&
         // options can be undefined but not an empty array
         (data.node?.template[name]?.options?.length ?? 0) === 0
       ) {
@@ -128,7 +154,8 @@ export default function ParameterComponent({
       takeSnapshot();
     }
     const shouldUpdate =
-      data.node?.template[name].refresh &&
+      data.node?.template[name].real_time_refresh &&
+      !data.node?.template[name].refresh_button &&
       data.node!.template[name].value !== newValue;
 
     data.node!.template[name].value = newValue; // necessary to enable ctrl+z inside the input
@@ -154,7 +181,7 @@ export default function ParameterComponent({
         ...newNode.data,
       };
 
-      if (data.node?.template[name].refresh && newTemplate) {
+      if (data.node?.template[name].real_time_refresh && newTemplate) {
         newNode.data.node.template = newTemplate;
       } else newNode.data.node.template[name].value = newValue;
 
@@ -458,7 +485,7 @@ export default function ParameterComponent({
                   }
                   onChange={handleOnNewValue}
                 />
-                {/* {data.node?.template[name].refresh && (
+                {/* {data.node?.template[name].refresh_button && (
                   <div className="w-1/6">
                     <RefreshButton
                       isLoading={isLoading}
@@ -466,26 +493,47 @@ export default function ParameterComponent({
                       name={name}
                       data={data}
                       className="extra-side-bar-buttons ml-2 mt-1"
-                      handleUpdateValues={handleUpdateValues}
+                      handleUpdateValues={handleRefreshButtonPress}
                       id={"refresh-button-" + name}
                     />
                   </div>
                 )} */}
               </div>
             ) : data.node?.template[name].multiline ? (
-              <TextAreaComponent
-                disabled={disabled}
-                value={data.node.template[name].value ?? ""}
-                onChange={handleOnNewValue}
-                id={"textarea-" + data.node.template[name].name}
-                data-testid={"textarea-" + data.node.template[name].name}
-              />
+              <div className="mt-2 flex w-full flex-col ">
+                <div className="flex-grow">
+                  <TextAreaComponent
+                    disabled={disabled}
+                    value={data.node.template[name].value ?? ""}
+                    onChange={handleOnNewValue}
+                    id={"textarea-" + data.node.template[name].name}
+                    data-testid={"textarea-" + data.node.template[name].name}
+                  />
+                </div>
+                {data.node?.template[name].refresh_button && (
+                  <div className="flex-grow">
+                    <RefreshButton
+                      isLoading={isLoading}
+                      disabled={disabled}
+                      name={name}
+                      data={data}
+                      button_text={
+                        data.node?.template[name].refresh_button_text ??
+                        "Refresh"
+                      }
+                      className="extra-side-bar-buttons mt-1"
+                      handleUpdateValues={handleRefreshButtonPress}
+                      id={"refresh-button-" + name}
+                    />
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="mt-2 flex w-full items-center">
                 <div
                   className={
                     "flex-grow " +
-                    (data.node?.template[name].refresh ? "w-5/6" : "")
+                    (data.node?.template[name].refresh_button ? "w-5/6" : "")
                   }
                 >
                   <InputComponent
@@ -496,15 +544,19 @@ export default function ParameterComponent({
                     onChange={handleOnNewValue}
                   />
                 </div>
-                {data.node?.template[name].refresh && (
+                {data.node?.template[name].refresh_button && (
                   <div className="w-1/6">
                     <RefreshButton
                       isLoading={isLoading}
                       disabled={disabled}
                       name={name}
                       data={data}
+                      button_text={
+                        data.node?.template[name].refresh_button_text ??
+                        "Refresh"
+                      }
                       className="extra-side-bar-buttons ml-2 mt-1"
-                      handleUpdateValues={handleUpdateValues}
+                      handleUpdateValues={handleRefreshButtonPress}
                       id={"refresh-button-" + name}
                     />
                   </div>
@@ -535,7 +587,7 @@ export default function ParameterComponent({
         ) : left === true &&
           type === "str" &&
           (data.node?.template[name].options ||
-            data.node?.template[name]?.refresh) ? (
+            data.node?.template[name]?.real_time_refresh) ? (
           // TODO: Improve CSS
           <div className="mt-2 flex w-full items-center">
             <div className="w-5/6 flex-grow">
@@ -548,15 +600,18 @@ export default function ParameterComponent({
                 id={"dropdown-" + name}
               />
             </div>
-            {data.node?.template[name].refresh && (
+            {data.node?.template[name].refresh_button && (
               <div className="w-1/6">
                 <RefreshButton
                   isLoading={isLoading}
                   disabled={disabled}
                   name={name}
                   data={data}
+                  button_text={
+                    data.node?.template[name].refresh_button_text ?? "Refresh"
+                  }
                   className="extra-side-bar-buttons ml-2 mt-1"
-                  handleUpdateValues={handleUpdateValues}
+                  handleUpdateValues={handleRefreshButtonPress}
                   id={"refresh-button-" + name}
                 />
               </div>
