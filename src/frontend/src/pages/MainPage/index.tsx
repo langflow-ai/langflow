@@ -134,7 +134,7 @@ export default function HomePage(): JSX.Element {
         </BaseModal.Header>
         <BaseModal.Content>
           <div className=" h-full w-full grid grid-cols-3 gap-3 overflow-auto p-4 custom-scroll">
-            {EXAMPLES_MOCK.map((example, idx) => {
+            {examples.map((example, idx) => {
               return <UndrawCardComponent key={idx} flow={example} />;
             })}
             <NewFlowCardComponent />
