@@ -5,6 +5,7 @@ import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
+import { PRIORITY_SIDEBAR_ORDER } from "../../../../constants/constants";
 import ApiModal from "../../../../modals/ApiModal";
 import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
@@ -264,64 +265,81 @@ export default function ExtraSidebar(): JSX.Element {
           .sort(sortKeys)
           .map((SBSectionName: keyof APIObjectType, index) =>
             Object.keys(dataFilter[SBSectionName]).length > 0 ? (
-              <DisclosureComponent
-                openDisc={
-                  getFilterEdge.length !== 0 || search.length !== 0
-                    ? true
-                    : false
-                }
-                key={index + search + JSON.stringify(getFilterEdge)}
-                button={{
-                  title: nodeNames[SBSectionName] ?? nodeNames.unknown,
-                  Icon:
-                    nodeIconsLucide[SBSectionName] ?? nodeIconsLucide.unknown,
-                }}
-              >
-                <div className="side-bar-components-gap">
-                  {Object.keys(dataFilter[SBSectionName])
-                    .sort((a, b) =>
-                      sensitiveSort(
-                        dataFilter[SBSectionName][a].display_name,
-                        dataFilter[SBSectionName][b].display_name
+              <>
+                {index === 0 && (
+                  <div className="pt-0.5">
+                    <Separator />
+                    <div className="p-2 px-4 font-semibold" key={index}>
+                      Native
+                    </div>
+                  </div>
+                )}
+                {index === PRIORITY_SIDEBAR_ORDER.length - 1 && (
+                  <div className="p-2 px-4 font-semibold" key={index}>
+                    Legacy
+                  </div>
+                )}
+                <DisclosureComponent
+                  openDisc={
+                    getFilterEdge.length !== 0 || search.length !== 0
+                      ? true
+                      : false
+                  }
+                  key={index + search + JSON.stringify(getFilterEdge)}
+                  button={{
+                    title: nodeNames[SBSectionName] ?? nodeNames.unknown,
+                    Icon:
+                      nodeIconsLucide[SBSectionName] ?? nodeIconsLucide.unknown,
+                  }}
+                >
+                  <div className="side-bar-components-gap">
+                    {Object.keys(dataFilter[SBSectionName])
+                      .sort((a, b) =>
+                        sensitiveSort(
+                          dataFilter[SBSectionName][a].display_name,
+                          dataFilter[SBSectionName][b].display_name
+                        )
                       )
-                    )
-                    .map((SBItemName: string, index) => (
-                      <ShadTooltip
-                        content={
-                          dataFilter[SBSectionName][SBItemName].display_name
-                        }
-                        side="right"
-                        key={index}
-                      >
-                        <SidebarDraggableComponent
-                          sectionName={SBSectionName as string}
-                          apiClass={dataFilter[SBSectionName][SBItemName]}
-                          key={index}
-                          onDragStart={(event) =>
-                            onDragStart(event, {
-                              //split type to remove type in nodes saved with same name removing it's
-                              type: removeCountFromString(SBItemName),
-                              node: dataFilter[SBSectionName][SBItemName],
-                            })
-                          }
-                          color={nodeColors[SBSectionName]}
-                          itemName={SBItemName}
-                          //convert error to boolean
-                          error={!!dataFilter[SBSectionName][SBItemName].error}
-                          display_name={
+                      .map((SBItemName: string, index) => (
+                        <ShadTooltip
+                          content={
                             dataFilter[SBSectionName][SBItemName].display_name
                           }
-                          official={
-                            dataFilter[SBSectionName][SBItemName].official ===
-                            false
-                              ? false
-                              : true
-                          }
-                        />
-                      </ShadTooltip>
-                    ))}
-                </div>
-              </DisclosureComponent>
+                          side="right"
+                          key={index}
+                        >
+                          <SidebarDraggableComponent
+                            sectionName={SBSectionName as string}
+                            apiClass={dataFilter[SBSectionName][SBItemName]}
+                            key={index}
+                            onDragStart={(event) =>
+                              onDragStart(event, {
+                                //split type to remove type in nodes saved with same name removing it's
+                                type: removeCountFromString(SBItemName),
+                                node: dataFilter[SBSectionName][SBItemName],
+                              })
+                            }
+                            color={nodeColors[SBSectionName]}
+                            itemName={SBItemName}
+                            //convert error to boolean
+                            error={
+                              !!dataFilter[SBSectionName][SBItemName].error
+                            }
+                            display_name={
+                              dataFilter[SBSectionName][SBItemName].display_name
+                            }
+                            official={
+                              dataFilter[SBSectionName][SBItemName].official ===
+                              false
+                                ? false
+                                : true
+                            }
+                          />
+                        </ShadTooltip>
+                      ))}
+                  </div>
+                </DisclosureComponent>
+              </>
             ) : (
               <div key={index}></div>
             )
