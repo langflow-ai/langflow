@@ -84,7 +84,8 @@ class ChromaComponent(CustomComponent):
 
         if chroma_server_host is not None:
             chroma_settings = chromadb.config.Settings(
-                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or None,
+                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins
+                or None,
                 chroma_server_host=chroma_server_host,
                 chroma_server_port=chroma_server_port or None,
                 chroma_server_grpc_port=chroma_server_grpc_port or None,
@@ -98,14 +99,16 @@ class ChromaComponent(CustomComponent):
             index_directory = self.resolve_path(index_directory)
 
         documents = []
-        for _input in inputs:
+        for _input in inputs or []:
             if isinstance(_input, Record):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
         if documents is not None and embedding is not None:
             if len(documents) == 0:
-                raise ValueError("If documents are provided, there must be at least one document.")
+                raise ValueError(
+                    "If documents are provided, there must be at least one document."
+                )
             chroma = Chroma.from_documents(
                 documents=documents,  # type: ignore
                 persist_directory=index_directory,

@@ -105,9 +105,11 @@ async def run_flow_with_caching(
     """
     try:
         if inputs is not None:
-            input_values_dict: dict[str, Union[str, list[str]]] = inputs.model_dump()
+            input_values: list[dict[str, Union[str, list[str]]]] = [
+                _input.model_dump() for _input in inputs
+            ]
         else:
-            input_values_dict = {}
+            input_values = [{}]
 
         if outputs is None:
             outputs = []
@@ -124,7 +126,7 @@ async def run_flow_with_caching(
                 graph=graph,
                 flow_id=flow_id,
                 session_id=session_id,
-                inputs=input_values_dict,
+                inputs=input_values,
                 outputs=outputs,
                 artifacts=artifacts,
                 session_service=session_service,
@@ -150,7 +152,7 @@ async def run_flow_with_caching(
                 graph=graph_data,
                 flow_id=flow_id,
                 session_id=session_id,
-                inputs=input_values_dict,
+                inputs=input_values,
                 outputs=outputs,
                 artifacts={},
                 session_service=session_service,

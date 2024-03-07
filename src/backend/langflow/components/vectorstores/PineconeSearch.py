@@ -55,7 +55,7 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
         vector_store = super().build(
             embedding=embedding,
             pinecone_env=pinecone_env,
-            documents=[],
+            inputs=[],
             text_key=text_key,
             pool_threads=pool_threads,
             index_name=index_name,

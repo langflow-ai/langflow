@@ -39,7 +39,6 @@ class MongoDBAtlasSearchComponent(MongoDBAtlasComponent, LCVectorStoreComponent)
         vector_store = super().build(
             embedding=embedding,
             collection_name=collection_name,
-            documents=[],
             db_name=db_name,
             index_name=index_name,
             mongodb_atlas_cluster_uri=mongodb_atlas_cluster_uri,

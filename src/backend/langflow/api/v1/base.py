@@ -26,7 +26,7 @@ class FrontendNodeRequest(FrontendNode):
 class ValidatePromptRequest(BaseModel):
     name: str
     template: str
-    # optional for tweak call
+    custom_fields: Optional[dict] = None
     frontend_node: Optional[FrontendNodeRequest] = None
 
 

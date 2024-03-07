@@ -97,7 +97,6 @@ class Vertex:
         self.use_result = False
         self.build_times: List[float] = []
         self.state = VertexStates.ACTIVE
-        self.graph_state = {}
 
     def update_graph_state(self, key, new_state, append: bool):
         if append:

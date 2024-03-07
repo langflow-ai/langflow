@@ -18,7 +18,7 @@ class URLComponent(CustomComponent):
     async def build(
         self,
         urls: list[str],
-    ) -> Record:
+    ) -> list[Record]:
         loader = WebBaseLoader(web_paths=urls)
         docs = loader.load()
         records = self.to_records(docs)
