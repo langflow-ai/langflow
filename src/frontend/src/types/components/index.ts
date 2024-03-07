@@ -1,4 +1,4 @@
-import { ReactElement, ReactNode } from "react";
+import { ReactElement, ReactNode, SetStateAction } from "react";
 import { ReactFlowJsonObject, XYPosition } from "reactflow";
 import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
 import { ChatMessageType } from "../chat";
@@ -107,6 +107,7 @@ export type PromptAreaComponentType = {
 };
 
 export type CodeAreaComponentType = {
+  setOpenModal?: (bool: boolean) => void;
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
@@ -490,6 +491,7 @@ export type nodeToolbarPropsType = {
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
   selected: boolean;
+  setShowState: (show: boolean | SetStateAction<boolean>) => void;
 };
 
 export type parsedDataType = {
@@ -517,6 +519,7 @@ export type modalHeaderType = {
 
 export type codeAreaModalPropsType = {
   setValue: (value: string) => void;
+  setOpenModal?: (bool: boolean) => void;
   value: string;
   nodeClass: APIClassType | undefined;
   setNodeClass: (Class: APIClassType, code?: string) => void | undefined;
