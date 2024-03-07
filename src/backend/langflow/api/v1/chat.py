@@ -93,7 +93,7 @@ async def build_vertex(
     current_user=Depends(get_current_active_user),
 ):
     """Build a vertex instead of the entire graph."""
-    {"inputs": {"input_value": "some value"}}
+
     start_time = time.perf_counter()
     next_vertices_ids = []
     try:
@@ -101,8 +101,12 @@ async def build_vertex(
         cache = chat_service.get_cache(flow_id)
         if not cache:
             # If there's no cache
-            logger.warning(f"No cache found for {flow_id}. Building graph starting at {vertex_id}")
-            graph = build_and_cache_graph(flow_id=flow_id, session=next(get_session()), chat_service=chat_service)
+            logger.warning(
+                f"No cache found for {flow_id}. Building graph starting at {vertex_id}"
+            )
+            graph = build_and_cache_graph(
+                flow_id=flow_id, session=next(get_session()), chat_service=chat_service
+            )
         else:
             graph = cache.get("result")
         result_data_response = ResultDataResponse(results={})
@@ -122,7 +126,9 @@ async def build_vertex(
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
             next_vertices_ids = vertex.successors_ids
-            next_vertices_ids = [v for v in next_vertices_ids if graph.should_run_vertex(v)]
+            next_vertices_ids = [
+                v for v in next_vertices_ids if graph.should_run_vertex(v)
+            ]
 
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
@@ -205,7 +211,9 @@ async def build_vertex_stream(
                     else:
                         graph = cache.get("result")
                 else:
-                    session_data = await session_service.load_session(session_id, flow_id=flow_id)
+                    session_data = await session_service.load_session(
+                        session_id, flow_id=flow_id
+                    )
                     graph, artifacts = session_data if session_data else (None, None)
                     if not graph:
                         raise ValueError(f"No graph found for {flow_id}.")
