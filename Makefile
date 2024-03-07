@@ -102,8 +102,8 @@ build:
 build_base:
 	make install_frontend
 	make build_frontend
-	poetry build --format sdist
-	rm -rf src/backend/langflow/frontend
+	cd src/backend/base poetry build --format sdist
+	rm -rf src/backend/base/frontend
 
 dev:
 	make install_frontend
@@ -117,7 +117,7 @@ endif
 
 publish:
 	make build
-	poetry publish 
+	poetry publish
 
 help:
 	@echo '----'
