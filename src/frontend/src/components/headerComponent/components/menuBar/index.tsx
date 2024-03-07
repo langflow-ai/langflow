@@ -18,6 +18,9 @@ import { cn } from "../../../../utils/utils";
 import ShadTooltip from "../../../ShadTooltipComponent";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
+import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
+import ExportModal from "../../../../modals/exportModal";
+import { useStoreStore } from "../../../../stores/storeStore";
 
 export const MenuBar = ({
   removeFunction,
@@ -32,7 +35,9 @@ export const MenuBar = ({
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const [openSettings, setOpenSettings] = useState(false);
   const n = useFlowStore((state) => state.nodes);
-
+  const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
+  const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const validApiKey = useStoreStore((state) => state.validApiKey);
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
@@ -100,7 +105,28 @@ export const MenuBar = ({
               />
               Settings
             </DropdownMenuItem>
-
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={() => {
+                uploadFlow({ newProject: false, isComponent: false }).catch(
+                  (error) => {
+                    setErrorData({
+                      title: UPLOAD_ERROR_ALERT,
+                      list: [error],
+                    });
+                  }
+                );
+              }}
+            >
+              <IconComponent name="FileUp" className="header-menu-options " />
+              Import
+            </DropdownMenuItem>
+              <ExportModal>
+                <div className="header-menubar-item">
+                  <IconComponent name="FileDown" className="header-menu-options" />
+                  Export
+                </div>
+              </ExportModal>
             <DropdownMenuItem
               onClick={() => {
                 undo();

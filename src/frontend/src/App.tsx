@@ -69,7 +69,7 @@ export default function App() {
         .catch(() => {
           setFetchError(true);
         });
-    }, 20000);
+    }, 20000); // 20 seconds
 
     // Clean up the timer on component unmount
     return () => {

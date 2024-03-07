@@ -12,7 +12,6 @@ import ReactFlow, {
   updateEdge,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
-import Chat from "../../../../components/chatComponent";
 import {
   INVALID_SELECTION_ERROR_ALERT,
   UPLOAD_ALERT_LIST,
@@ -38,6 +37,7 @@ import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import ExtraSidebar from "../extraSidebarComponent";
+import FlowToolbar from "../../../../components/chatComponent";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -109,7 +109,7 @@ export default function Page({
             ...old.data,
             node: {
               ...old.data.node,
-              pinned: old.data?.node?.pinned ? false : true,
+              frozen: old.data?.node?.frozen ? false : true,
             },
           },
         }));
@@ -481,7 +481,7 @@ export default function Page({
                     }}
                   />
                 </ReactFlow>
-                {!view && <Chat flow={flow} />}
+                {!view && <FlowToolbar flow={flow} />}
               </div>
             ) : (
               <></>

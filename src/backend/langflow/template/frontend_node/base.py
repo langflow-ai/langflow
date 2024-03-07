@@ -71,8 +71,11 @@ class FrontendNode(BaseModel):
     """Full path of the frontend node."""
     field_formatters: FieldFormatters = Field(default_factory=FieldFormatters)
     """Field formatters for the frontend node."""
-    pinned: bool = False
-    """Whether the frontend node is pinned."""
+    frozen: bool = False
+    """Whether the frontend node is frozen."""
+
+    field_order: list[str] = []
+    """Order of the fields in the frontend node."""
 
     beta: bool = False
     error: Optional[str] = None

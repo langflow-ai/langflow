@@ -14,7 +14,6 @@ from uuid import UUID
 
 import yaml
 from cachetools import TTLCache, cachedmethod
-from fastapi import HTTPException
 from langchain_core.documents import Document
 from pydantic import BaseModel
 from sqlmodel import select
@@ -25,6 +24,7 @@ from langflow.interface.custom.code_parser.utils import (
 )
 from langflow.interface.custom.custom_component.component import Component
 from langflow.schema import Record
+from langflow.schema.dotdict import dotdict
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import (
@@ -59,8 +59,8 @@ class CustomComponent(Component):
     """The field configuration of the component. Defaults to an empty dictionary."""
     field_order: Optional[List[str]] = None
     """The field order of the component. Defaults to an empty list."""
-    pinned: Optional[bool] = False
-    """The default pinned state of the component. Defaults to False."""
+    frozen: Optional[bool] = False
+    """The default frozen state of the component. Defaults to False."""
     build_parameters: Optional[dict] = None
     """The build parameters of the component. Defaults to None."""
     selected_output_type: Optional[str] = None
@@ -75,6 +75,28 @@ class CustomComponent(Component):
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_records: Optional[List[Record]] = None
+
+    def update_state(self, name: str, value: Any):
+        try:
+            self.vertex.graph.update_state(
+                name=name, record=value, caller=self.vertex.id
+            )
+        except Exception as e:
+            raise ValueError(f"Error updating state: {e}")
+
+    def append_state(self, name: str, value: Any):
+        try:
+            self.vertex.graph.append_state(
+                name=name, record=value, caller=self.vertex.id
+            )
+        except Exception as e:
+            raise ValueError(f"Error appending state: {e}")
+
+    def get_state(self, name: str):
+        try:
+            return self.vertex.graph.get_state(name=name)
+        except Exception as e:
+            raise ValueError(f"Error getting state: {e}")
 
     _tree: Optional[dict] = None
 
@@ -117,12 +139,21 @@ class CustomComponent(Component):
     def build_config(self):
         return self.field_config
 
+    def update_build_config(
+        self,
+        build_config: dotdict,
+        field_name: str,
+        field_value: Any,
+    ):
+        build_config[field_name] = field_value
+        return build_config
+
     @property
     def tree(self):
         return self.get_code_tree(self.code or "")
 
     def to_records(
-        self, data: Any, text_key: str = "text", data_key: str = "data"
+        self, data: Any, keys: Optional[List[str]] = None, silent_errors: bool = False
     ) -> List[Record]:
         """
         Converts input data into a list of Record objects.
@@ -131,8 +162,9 @@ class CustomComponent(Component):
             data (Any): The input data to be converted. It can be a single item or a sequence of items.
             If the input data is a Langchain Document, text_key and data_key are ignored.
 
-            text_key (str, optional): The key to access the text value in each item. Defaults to "text".
-            data_key (str, optional): The key to access the data value in each item. Defaults to "data".
+            keys (List[str], optional): The keys to access the text and data values in each item.
+                It should be a list of strings where the first element is the text key and the second element is the data key.
+                Defaults to None, in which case the default keys "text" and "data" are used.
 
         Returns:
             List[Record]: A list of Record objects.
@@ -145,27 +177,29 @@ class CustomComponent(Component):
         if not isinstance(data, Sequence):
             data = [data]
         for item in data:
+            data_dict = {}
             if isinstance(item, Document):
-                item = {"text": item.page_content, "data": item.metadata}
+                data_dict = item.metadata
+                data_dict["text"] = item.page_content
             elif isinstance(item, BaseModel):
                 model_dump = item.model_dump()
-                if text_key not in model_dump:
-                    raise ValueError(f"Key '{text_key}' not found in BaseModel item.")
-                if data_key not in model_dump:
-                    raise ValueError(f"Key '{data_key}' not found in BaseModel item.")
-                item = {"text": model_dump[text_key], "data": model_dump[data_key]}
+                for key in keys:
+                    if silent_errors:
+                        data_dict[key] = model_dump.get(key, "")
+                    else:
+                        try:
+                            data_dict[key] = model_dump[key]
+                        except KeyError:
+                            raise ValueError(f"Key {key} not found in {item}")
+
             elif isinstance(item, str):
-                item = {"text": item, "data": {}}
+                data_dict = {"text": item}
             elif isinstance(item, dict):
-                if text_key not in item:
-                    raise ValueError(f"Key '{text_key}' not found in dictionary item.")
-                if data_key not in item:
-                    raise ValueError(f"Key '{data_key}' not found in dictionary item.")
-                item = {"text": item[text_key], "data": item[data_key]}
+                data_dict = item.copy()
             else:
                 raise ValueError(f"Invalid data type: {type(item)}")
 
-            records.append(Record(**item))
+            records.append(Record(data=data_dict))
 
         return records
 
@@ -200,18 +234,7 @@ class CustomComponent(Component):
 
         args = build_method["args"]
         for arg in args:
-            if arg.get("type") == "prompt":
-                raise HTTPException(
-                    status_code=400,
-                    detail={
-                        "error": "Type hint Error",
-                        "traceback": (
-                            "Prompt type is not supported in the build method."
-                            " Try using PromptTemplate instead."
-                        ),
-                    },
-                )
-            elif not arg.get("type") and arg.get("name") != "self":
+            if not arg.get("type") and arg.get("name") != "self":
                 # Set the type to Data
                 arg["type"] = "Data"
         return args
@@ -372,7 +395,7 @@ class CustomComponent(Component):
                 flows = session.exec(
                     select(Flow)
                     .where(Flow.user_id == self._user_id)
-                    .where(Flow.is_component == False)
+                    .where(Flow.is_component == False)  # noqa
                 ).all()
 
             flows_records = [flow.to_record() for flow in flows]

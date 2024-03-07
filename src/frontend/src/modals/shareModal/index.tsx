@@ -179,7 +179,7 @@ export default function ShareModal({
             </span>
             <br></br>
             <span className=" text-xs text-destructive ">
-            Note: This action is irreversible.
+              Note: This action is irreversible.
             </span>
           </ConfirmationModal.Content>
         </ConfirmationModal>
@@ -204,7 +204,9 @@ export default function ShareModal({
           {children ? children : <></>}
         </BaseModal.Trigger>
         <BaseModal.Header
-          description={`Publish ${is_component ? "your component" : "workflow"} to the Langflow Store.`}
+          description={`Publish ${
+            is_component ? "your component" : "workflow"
+          } to the Langflow Store.`}
         >
           <span className="pr-2">Share</span>
           <IconComponent
@@ -239,7 +241,8 @@ export default function ShareModal({
             </label>
           </div>
           <span className=" text-xs text-destructive ">
-            <b>Attention:</b> API keys in specified fields are automatically removed upon sharing.
+            <b>Attention:</b> API keys in specified fields are automatically
+            removed upon sharing.
           </span>
         </BaseModal.Content>
 

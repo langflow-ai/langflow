@@ -32,6 +32,7 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
     id: vertexId,
     data: inactiveData,
     params: "Inactive",
+    inactivated_vertices: null,
     run_id: "",
     next_vertices_ids: [],
     inactive_vertices: null,

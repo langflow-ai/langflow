@@ -7,7 +7,7 @@ from langflow.field_typing import Text
 
 
 class CTransformersComponent(LCModelComponent):
-    display_name = "CTransformersModel"
+    display_name = "CTransformers"
     description = "Generate text using CTransformers LLM models"
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/ctransformers"
 

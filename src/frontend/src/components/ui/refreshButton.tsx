@@ -1,11 +1,13 @@
 import IconComponent from "../../components/genericIconComponent";
 import { NodeDataType } from "../../types/flow";
 import { cn } from "../../utils/utils";
+import { Button } from "./button";
 
 function RefreshButton({
   isLoading,
   disabled,
   name,
+  button_text,
   data,
   handleUpdateValues,
   className,
@@ -14,6 +16,7 @@ function RefreshButton({
   isLoading: boolean;
   disabled: boolean;
   name: string;
+  button_text: string;
   data: NodeDataType;
   className?: string;
   handleUpdateValues: (name: string, data: NodeDataType) => void;
@@ -24,10 +27,7 @@ function RefreshButton({
     handleUpdateValues(name, data);
   };
 
-  const classNames = cn(
-    className,
-    disabled ? "cursor-not-allowed" : "cursor-pointer"
-  );
+  const classNames = cn(className, disabled ? "cursor-not-allowed" : "");
 
   // icon class name should take into account the disabled state and the loading state
   const disabledIconTextClass = disabled ? "text-muted-foreground" : "";
@@ -38,13 +38,20 @@ function RefreshButton({
   );
 
   return (
-    <button className={classNames} onClick={handleClick} id={id}>
+    <Button
+      variant="primary"
+      disabled={disabled}
+      className={classNames}
+      onClick={handleClick}
+      id={id}
+    >
+      <span className="mr-1">{button_text}</span>
       <IconComponent
         name={isLoading ? "Loader2" : "RefreshCcw"}
         className={iconClassName}
         id={id + "-icon"}
       />
-    </button>
+    </Button>
   );
 }
 

@@ -1,6 +1,7 @@
 // src/constants/constants.ts
 
 import { languageMap } from "../types/components";
+import { FlowType } from "../types/flow";
 
 /**
  * invalid characters for flow name
@@ -727,3 +728,87 @@ export const STATUS_BUILD = "Build to validate status.";
 export const STATUS_BUILDING = "Building...";
 export const SAVED_HOVER = "Last saved at ";
 export const RUN_TIMESTAMP_PREFIX = "Last Run: ";
+export const STARTER_FOLDER_NAME = "Starter Projects";
+export const PRIORITY_SIDEBAR_ORDER = [
+  "saved_components",
+  "inputs",
+  "outputs",
+  "prompts",
+  "data",
+  "prompt",
+  "models",
+  "helpers",
+  "experimental",
+];
+/*
+Data ingestion
+Basic Prompting
+Chat com memória
+Working with data (file/website)
+API requests
+Vector Store
+Assistant
+*/
+
+export const EXAMPLES_MOCK:FlowType[] = [
+  {
+    name: "Working with data",
+    id: "Working with data Description",
+    data: {
+      nodes: [],
+      edges: [],
+      viewport: { zoom: 1, x: 1, y: 1 }
+    },
+    description: "This flow represents the first process in our application.",
+    folder: STARTER_FOLDER_NAME,
+    user_id: undefined,
+  },
+  {
+    name: "Basic Prompting",
+    id: "Basic Prompting Description",
+    data: {
+      nodes: [],
+      edges: [],
+      viewport: { zoom: 1, x: 1, y: 1 }
+    },
+    description: "This flow represents the first process in our application.",
+    folder: STARTER_FOLDER_NAME,
+    user_id: undefined,
+  },
+  {
+    name: "Chat with memory",
+    id: "Chat with memory Description",
+    data: {
+      nodes: [],
+      edges: [],
+      viewport: { zoom: 1, x: 1, y: 1 }
+    },
+    description: "This flow represents the first process in our application.",
+    folder: STARTER_FOLDER_NAME,
+    user_id: undefined,
+  },
+  {
+    name: "API requests",
+    id: "API requests Description",
+    data: {
+      nodes: [],
+      edges: [],
+      viewport: { zoom: 1, x: 1, y: 1 }
+    },
+    description: "This flow represents the first process in our application.",
+    folder: STARTER_FOLDER_NAME,
+    user_id: undefined,
+  },
+  {
+    name: "Assistant",
+    id: "Assistant Description",
+    data: {
+      nodes: [],
+      edges: [],
+      viewport: { zoom: 1, x: 1, y: 1 }
+    },
+    description: "This flow represents the first process in our application.",
+    folder: STARTER_FOLDER_NAME,
+    user_id: undefined,
+  },
+];

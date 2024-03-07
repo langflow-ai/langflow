@@ -18,6 +18,7 @@ from loguru import logger
 
 from langflow.graph.schema import (
     INPUT_COMPONENTS,
+    INPUT_FIELD_NAME,
     OUTPUT_COMPONENTS,
     InterfaceComponentTypes,
     ResultData,
@@ -58,8 +59,14 @@ class Vertex:
         self.will_stream = False
         self.updated_raw_params = False
         self.id: str = data["id"]
-        self.is_input = any(input_component_name in self.id for input_component_name in INPUT_COMPONENTS)
-        self.is_output = any(output_component_name in self.id for output_component_name in OUTPUT_COMPONENTS)
+        self.is_state = False
+        self.is_input = any(
+            input_component_name in self.id for input_component_name in INPUT_COMPONENTS
+        )
+        self.is_output = any(
+            output_component_name in self.id
+            for output_component_name in OUTPUT_COMPONENTS
+        )
         self.has_session_id = None
         self._custom_component = None
         self.has_external_input = False
@@ -94,21 +101,21 @@ class Vertex:
 
     def update_graph_state(self, key, new_state, append: bool):
         if append:
-            if key in self.graph_state:
-                self.graph_state[key].append(new_state)
-            else:
-                self.graph_state[key] = [new_state]
+            self.graph.append_state(key, new_state, caller=self.id)
         else:
-            self.graph_state[key] = new_state
+            self.graph.update_state(key, new_state, caller=self.id)
 
     def set_state(self, state: str):
         self.state = VertexStates[state]
         if self.state == VertexStates.INACTIVE and self.graph.in_degree_map[self.id] < 2:
             # If the vertex is inactive and has only one in degree
             # it means that it is not a merge point in the graph
-            self.graph.inactive_vertices.add(self.id)
-        elif self.state == VertexStates.ACTIVE and self.id in self.graph.inactive_vertices:
-            self.graph.inactive_vertices.remove(self.id)
+            self.graph.inactivated_vertices.add(self.id)
+        elif (
+            self.state == VertexStates.ACTIVE
+            and self.id in self.graph.inactivated_vertices
+        ):
+            self.graph.inactivated_vertices.remove(self.id)
 
     @property
     def avg_build_time(self):
@@ -176,7 +183,7 @@ class Vertex:
         self.base_type = state["base_type"]
         self.is_task = state["is_task"]
         self.id = state["id"]
-        self.pinned = state.get("pinned", False)
+        self.frozen = state.get("frozen", False)
         self._parse_data()
         if "_built_object" in state:
             self._built_object = state["_built_object"]
@@ -202,7 +209,7 @@ class Vertex:
         self.data = self._data["data"]
         self.output = self.data["node"]["base_classes"]
         self.display_name = self.data["node"].get("display_name", self.id.split("-")[0])
-        self.pinned = self.data["node"].get("pinned", False)
+        self.frozen = self.data["node"].get("frozen", False)
         self.selected_output_type = self.data["node"].get("selected_output_type")
         self.is_input = self.data["node"].get("is_input") or self.is_input
         self.is_output = self.data["node"].get("is_output") or self.is_output
@@ -282,7 +289,16 @@ class Vertex:
                         params[param_key] = []
                     params[param_key].append(self.graph.get_vertex(edge.source_id))
                 elif edge.target_id == self.id:
-                    params[param_key] = self.graph.get_vertex(edge.source_id)
+                    if isinstance(template_dict[param_key].get("value"), dict):
+                        # we don't know the key of the dict but we need to set the value
+                        # to the vertex that is the source of the edge
+                        param_dict = template_dict[param_key]["value"]
+                        params[param_key] = {
+                            key: self.graph.get_vertex(edge.source_id)
+                            for key in param_dict.keys()
+                        }
+                    else:
+                        params[param_key] = self.graph.get_vertex(edge.source_id)
 
         for key, value in template_dict.items():
             if key in params:
@@ -348,7 +364,7 @@ class Vertex:
         self.params = params
         self._raw_params = params.copy()
 
-    def update_raw_params(self, new_params: Dict[str, str]):
+    def update_raw_params(self, new_params: Dict[str, str], overwrite: bool = False):
         """
         Update the raw parameters of the vertex with the given new parameters.
 
@@ -363,6 +379,10 @@ class Vertex:
             return
         if any(isinstance(self._raw_params.get(key), Vertex) for key in new_params):
             return
+        if not overwrite:
+            for key in new_params.copy():
+                if key not in self._raw_params:
+                    new_params.pop(key)
         self._raw_params.update(new_params)
         self.updated_raw_params = True
 
@@ -452,8 +472,23 @@ class Vertex:
                 await self._build_node_and_update_params(key, value, user_id)
             elif isinstance(value, list) and self._is_list_of_nodes(value):
                 await self._build_list_of_nodes_and_update_params(key, value, user_id)
+            elif isinstance(value, dict):
+                await self._build_dict_and_update_params(key, value, user_id)
             elif key not in self.params or self.updated_raw_params:
                 self.params[key] = value
+
+    async def _build_dict_and_update_params(
+        self, key, nodes_dict: Dict[str, "Vertex"], user_id=None
+    ):
+        """
+        Iterates over a dictionary of nodes, builds each and updates the params dictionary.
+        """
+        for sub_key, value in nodes_dict.items():
+            if not self._is_node(value):
+                self.params[key][sub_key] = value
+            else:
+                built = await value.get_result(requester=self, user_id=user_id)
+                self.params[key][sub_key] = built
 
     def _is_node(self, value):
         """
@@ -517,10 +552,14 @@ class Vertex:
                 self.params[key].extend(built)
             else:
                 try:
+                    if self.params[key] == built:
+                        continue
+
                     self.params[key].append(built)
                 except AttributeError as e:
                     logger.exception(e)
                     raise ValueError(
+                        f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {built}"
                         f"Error building node {self.display_name}: {str(e)}"
                     ) from e
 
@@ -625,12 +664,17 @@ class Vertex:
             self.build_inactive()
             return
 
-        if self.pinned and self._built:
+        if self.frozen and self._built:
             return self.get_requester_result(requester)
+        elif self._built and requester is not None:
+            # This means that the vertex has already been built
+            # and we are just getting the result for the requester
+            return await self.get_requester_result(requester)
         self._reset()
 
         if self._is_chat_input() and inputs is not None:
-            self.update_raw_params(inputs)
+            inputs = {"input_value": inputs.get(INPUT_FIELD_NAME, "")}
+            self.update_raw_params(inputs, overwrite=True)
 
         # Run steps
         for step in self.steps:
@@ -682,12 +726,8 @@ class Vertex:
 
     def _built_object_repr(self):
         # Add a message with an emoji, stars for sucess,
-        return "Built sucessfully ✨" if self._built_object is not None else "Failed to build 😵‍💫"
-
-
-class StatefulVertex(Vertex):
-    pass
-
-
-class StatelessVertex(Vertex):
-    pass
+        return (
+            "Built sucessfully ✨"
+            if self._built_object is not None
+            else "Failed to build 😵‍💫"
+        )

@@ -69,7 +69,7 @@
     @apply flex h-full w-[14.5rem] flex-col overflow-hidden border-r scrollbar-hide;
   }
   .side-bar-search-div-placement {
-    @apply relative mx-auto mb-2 mt-2 flex items-center;
+    @apply relative mx-auto flex items-center py-3;
   }
   .side-bar-components-icon {
     @apply h-6 w-4 text-ring;
@@ -114,7 +114,10 @@
     @apply pointer-events-none;
   }
   .extra-side-bar-buttons {
-    @apply relative inline-flex w-full items-center justify-center rounded-md bg-background px-2 py-2 text-foreground shadow-sm ring-1 ring-inset ring-input transition-all duration-500 ease-in-out;
+    @apply relative inline-flex w-full items-center justify-center rounded-md bg-background px-2 py-2 text-foreground transition-all duration-500 ease-in-out;
+  }
+  .header-menubar-item {
+    @apply relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer;
   }
   .extra-side-bar-buttons:hover {
     @apply hover:bg-muted;
@@ -316,7 +319,7 @@
     @apply border-none ring ring-[#FF9090];
   }
   .built-invalid-status-dark {
-    @apply border-none ring ring-[#751C1C]
+    @apply border-none ring ring-[#751C1C];
   }
   .building-status {
     @apply border-none ring;
@@ -431,7 +434,9 @@
   .code-area-external-link:hover {
     @apply hover:text-accent-foreground;
   }
-
+  .dropdown-component-disabled {
+    @apply pointer-events-none cursor-not-allowed;
+  }
   .dropdown-component-outline {
     @apply input-edit-node relative pr-8;
   }
@@ -441,11 +446,17 @@
   .dropdown-component-display {
     @apply block w-full truncate bg-background;
   }
+  .dropdown-component-display-disabled {
+    @apply text-muted-foreground;
+  }
   .dropdown-component-arrow {
     @apply pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2;
   }
   .dropdown-component-arrow-color {
-    @apply extra-side-bar-save-disable h-5 w-5;
+    @apply h-5 w-5 text-accent-foreground;
+  }
+  .dropdown-component-arrow-color-disable {
+    @apply h-5 w-5 text-muted-foreground;
   }
   .dropdown-component-options {
     @apply z-10 mt-1 max-h-60 overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm;
@@ -487,7 +498,7 @@
     @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium;
   }
   .header-menu-bar-display {
-    @apply flex max-w-[120px] cursor-pointer items-center gap-2 lg:max-w-[200px];
+    @apply flex max-w-[115px] cursor-pointer items-center gap-2 lg:max-w-[145px];
   }
   .header-menu-flow-name {
     @apply flex-1 truncate;
@@ -902,7 +913,7 @@
     @apply flex-max-width px-2 py-6 pl-4 pr-9;
   }
   .form-modal-chatbot-icon {
-    @apply flex flex-col mb-3 ml-3 mr-6 mt-1;
+    @apply mb-3 ml-3 mr-6 mt-1 flex flex-col;
   }
   .form-modal-chat-image {
     @apply flex flex-col items-center gap-1;

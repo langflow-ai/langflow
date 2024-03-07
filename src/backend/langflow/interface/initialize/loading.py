@@ -30,6 +30,7 @@ from langflow.interface.retrievers.base import retriever_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.interface.wrappers.base import wrapper_creator
+from langflow.schema.schema import Record
 from langflow.utils import validate
 
 if TYPE_CHECKING:
@@ -165,8 +166,10 @@ async def instantiate_custom_component(node_type, class_object, params, user_id,
     else:
         # Call the build method directly if it's sync
         build_result = custom_component.build(**params_copy)
-
-    return custom_component, build_result, {"repr": custom_component.custom_repr()}
+    custom_repr = custom_component.custom_repr()
+    if not custom_repr and isinstance(build_result, (dict, Record, str)):
+        custom_repr = build_result
+    return custom_component, build_result, {"repr": custom_repr}
 
 
 def instantiate_wrapper(node_type, class_object, params):

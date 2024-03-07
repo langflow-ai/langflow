@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator, model_serializer
+from pydantic import BaseModel, Field, RootModel, field_validator, model_serializer
 
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
@@ -158,14 +158,13 @@ class StreamData(BaseModel):
     data: dict
 
     def __str__(self) -> str:
-        return (
-            f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
-        )
+        return f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
 
 
 class CustomComponentCode(BaseModel):
     code: str
     field: Optional[str] = None
+    field_value: Optional[Any] = None
     frontend_node: Optional[dict] = None
 
 
@@ -229,8 +228,8 @@ class ResultDataResponse(BaseModel):
 
 class VertexBuildResponse(BaseModel):
     id: Optional[str] = None
+    inactivated_vertices: Optional[List[str]] = None
     next_vertices_ids: Optional[List[str]] = None
-    inactive_vertices: Optional[List[str]] = None
     valid: bool
     params: Optional[Any] = Field(default_factory=dict)
     """JSON string of the params."""
@@ -245,4 +244,49 @@ class VerticesBuiltResponse(BaseModel):
 
 
 class InputValueRequest(BaseModel):
-    input_value: str
+    components: Optional[List[str]] = None
+    input_value: Optional[str] = None
+
+    # add an example
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "components": ["components_id", "Component Name"],
+                    "input_value": "input_value",
+                },
+                {"components": ["Component Name"], "input_value": "input_value"},
+                {"input_value": "input_value"},
+            ]
+        }
+    }
+
+
+class Tweaks(RootModel):
+    root: dict[str, Union[str, dict[str, str]]] = Field(
+        description="A dictionary of tweaks to adjust the flow's execution. Allows customizing flow behavior dynamically. All tweaks are overridden by the input values.",
+    )
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "parameter_name": "value",
+                    "Component Name": {"parameter_name": "value"},
+                    "component_id": {"parameter_name": "value"},
+                }
+            ]
+        }
+    }
+
+    # This should behave like a dict
+    def __getitem__(self, key):
+        return self.root[key]
+
+    def __setitem__(self, key, value):
+        self.root[key] = value
+
+    def __delitem__(self, key):
+        del self.root[key]
+
+    def items(self):
+        return self.root.items()

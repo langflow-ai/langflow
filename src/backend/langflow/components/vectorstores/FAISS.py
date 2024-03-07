@@ -5,7 +5,8 @@ from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.faiss import FAISS
 
 from langflow import CustomComponent
-from langflow.field_typing import Document, Embeddings
+from langflow.field_typing import Embeddings
+from langflow.schema.schema import Record
 
 
 class FAISSComponent(CustomComponent):
@@ -15,7 +16,7 @@ class FAISSComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "documents": {"display_name": "Documents"},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
             "embedding": {"display_name": "Embedding"},
             "folder_path": {
                 "display_name": "Folder Path",
@@ -27,10 +28,16 @@ class FAISSComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
-        documents: List[Document],
+        inputs: List[Record],
         folder_path: str,
         index_name: str = "langflow_index",
     ) -> Union[VectorStore, FAISS, BaseRetriever]:
+        documents = []
+        for _input in inputs:
+            if isinstance(_input, Record):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
         vector_store = FAISS.from_documents(documents=documents, embedding=embedding)
         if not folder_path:
             raise ValueError("Folder path is required to save the FAISS index.")

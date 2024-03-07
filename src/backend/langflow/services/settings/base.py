@@ -65,6 +65,8 @@ class Settings(BaseSettings):
 
     STORAGE_TYPE: str = "local"
 
+    CELERY_ENABLED: bool = False
+
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
         if not value:

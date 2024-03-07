@@ -7,7 +7,7 @@ from sqlmodel import select
 from langflow.api.utils import format_elapsed_time
 from langflow.api.v1.schemas import ResultDataResponse, VertexBuildResponse
 from langflow.graph.graph.base import Graph
-from langflow.graph.vertex.base import StatelessVertex
+from langflow.graph.vertex.base import Vertex
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_session
 from langflow.services.monitor.utils import log_vertex_build
@@ -63,7 +63,7 @@ async def build_vertex(
             return
         start_time = time.perf_counter()
         try:
-            if isinstance(vertex, StatelessVertex) or not vertex._built:
+            if isinstance(vertex, Vertex) or not vertex._built:
                 await vertex.build(user_id=None, session_id=sid)
             params = vertex._built_object_repr()
             valid = True

@@ -7,7 +7,7 @@ from langflow.field_typing import Text
 
 
 class LlamaCppComponent(LCModelComponent):
-    display_name = "LlamaCppModel"
+    display_name = "LlamaCpp"
     description = "Generate text using llama.cpp model."
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/llamacpp"
 

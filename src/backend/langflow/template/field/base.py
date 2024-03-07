@@ -65,10 +65,17 @@ class TemplateField(BaseModel):
     info: Optional[str] = ""
     """Additional information about the field to be shown in the tooltip. Defaults to an empty string."""
 
-    refresh: Optional[bool] = None
-    """Specifies if the field should be refreshed. Defaults to False."""
+    real_time_refresh: Optional[bool] = None
+    """Specifies if the field should have real time refresh. `refresh_button` must be False. Defaults to None."""
 
-    range_spec: Optional[RangeSpec] = Field(default=None, serialization_alias="rangeSpec")
+    refresh_button: Optional[bool] = None
+    """Specifies if the field should have a refresh button. Defaults to False."""
+    refresh_button_text: Optional[str] = None
+    """Specifies the text for the refresh button. Defaults to None."""
+
+    range_spec: Optional[RangeSpec] = Field(
+        default=None, serialization_alias="rangeSpec"
+    )
     """Range specification for the field. Defaults to None."""
 
     title_case: bool = False
@@ -84,10 +91,10 @@ class TemplateField(BaseModel):
         if self.field_type in ["str", "Text"]:
             if "input_types" not in result:
                 result["input_types"] = ["Text"]
-            else:
-                result["input_types"].append("Text")
         if self.field_type == "Text":
             result["type"] = "str"
+        else:
+            result["type"] = self.field_type
         return result
 
     @field_serializer("file_path")
@@ -117,6 +124,10 @@ class TemplateField(BaseModel):
         if not isinstance(value, list):
             raise ValueError("file_types must be a list")
         return [
-            (f".{file_type}" if isinstance(file_type, str) and not file_type.startswith(".") else file_type)
+            (
+                f".{file_type}"
+                if isinstance(file_type, str) and not file_type.startswith(".")
+                else file_type
+            )
             for file_type in value
         ]

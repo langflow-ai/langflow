@@ -3,7 +3,8 @@ from typing import List, Optional
 from langchain_community.vectorstores.mongodb_atlas import MongoDBAtlasVectorSearch
 
 from langflow import CustomComponent
-from langflow.field_typing import Document, Embeddings, NestedDict
+from langflow.field_typing import Embeddings, NestedDict
+from langflow.schema.schema import Record
 
 
 class MongoDBAtlasComponent(CustomComponent):
@@ -13,7 +14,7 @@ class MongoDBAtlasComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "documents": {"display_name": "Documents"},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
             "embedding": {"display_name": "Embedding"},
             "collection_name": {"display_name": "Collection Name"},
             "db_name": {"display_name": "Database Name"},
@@ -25,7 +26,7 @@ class MongoDBAtlasComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
-        documents: List[Document],
+        inputs: List[Record],
         collection_name: str = "",
         db_name: str = "",
         index_name: str = "",
@@ -42,6 +43,12 @@ class MongoDBAtlasComponent(CustomComponent):
             collection = mongo_client[db_name][collection_name]
         except Exception as e:
             raise ValueError(f"Failed to connect to MongoDB Atlas: {e}")
+        documents = []
+        for _input in inputs:
+            if isinstance(_input, Record):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
         if documents:
             vector_store = MongoDBAtlasVectorSearch.from_documents(
                 documents=documents,

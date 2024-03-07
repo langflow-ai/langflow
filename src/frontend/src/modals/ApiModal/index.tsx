@@ -98,6 +98,9 @@ const ApiModal = forwardRef(
       let arrNodesWithValues: string[] = [];
 
       flow["data"]!["nodes"].forEach((node) => {
+        if (!node["data"]["node"]["template"]) {
+          return;
+        }
         Object.keys(node["data"]["node"]["template"])
           .filter(
             (templateField) =>

@@ -66,6 +66,7 @@ interface BaseModalProps {
     | "small"
     | "medium"
     | "large"
+    | "three-cards"
     | "large-thin"
     | "large-h-full"
     | "small-h-full"
@@ -127,6 +128,10 @@ function BaseModal({
       break;
     case "large":
       minWidth = "min-w-[85vw]";
+      height = "h-[80vh]";
+      break;
+    case "three-cards":
+      minWidth = "min-w-[1066px]";
       height = "h-[80vh]";
       break;
     case "large-thin":

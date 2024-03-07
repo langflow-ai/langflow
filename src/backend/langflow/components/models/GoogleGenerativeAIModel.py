@@ -8,7 +8,7 @@ from langflow.field_typing import RangeSpec, Text
 
 
 class GoogleGenerativeAIComponent(LCModelComponent):
-    display_name: str = "Google Generative AIModel"
+    display_name: str = "Google Generative AI"
     description: str = "Generate text using Google Generative AI to generate text."
     icon = "GoogleGenerativeAI"
     icon = "Google"

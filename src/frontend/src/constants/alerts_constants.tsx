@@ -58,4 +58,3 @@ export const FLOW_BUILD_SUCCESS_ALERT = `Flow built successfully`;
 export const SAVE_SUCCESS_ALERT = "Changes saved successfully!";
 
 // Generic Node
-

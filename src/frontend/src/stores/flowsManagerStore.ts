@@ -2,6 +2,7 @@ import { AxiosError } from "axios";
 import { cloneDeep } from "lodash";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
+import { STARTER_FOLDER_NAME } from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   readFlowsFromDatabase,
@@ -37,6 +38,10 @@ const past = {};
 const future = {};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
+  examples: [],
+  setExamples: (examples: FlowType[]) => {
+    set({ examples });
+  },
   currentFlowId: "",
   setCurrentFlowId: (currentFlowId: string) => {
     set((state) => ({
@@ -62,7 +67,16 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         .then((dbData) => {
           if (dbData) {
             const { data, flows } = processFlows(dbData, false);
-            get().setFlows(flows);
+            get().setExamples(
+              flows.filter(
+                (f) => f.folder === STARTER_FOLDER_NAME && !f.user_id
+              )
+            );
+            get().setFlows(
+              flows.filter(
+                (f) => !(f.folder === STARTER_FOLDER_NAME && !f.user_id)
+              )
+            );
             useTypesStore.setState((state) => ({
               data: { ...state.data, ["saved_components"]: data },
             }));
@@ -92,7 +106,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           true
         );
       }
-      set({ saveLoading: true });
     }, 500); // Delay of 500ms because chat message depends on it.
   },
   saveFlow: (flow: FlowType, silent?: boolean) => {

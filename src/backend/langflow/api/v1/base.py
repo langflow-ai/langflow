@@ -1,9 +1,7 @@
 from typing import Optional
 
-from langchain.prompts import PromptTemplate
 from pydantic import BaseModel, field_validator, model_serializer
 
-from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.template.frontend_node.base import FrontendNode
 
 
@@ -78,24 +76,6 @@ INVALID_NAMES = {
     "template_format",
     "validate_template",
 }
-
-
-def validate_prompt(template: str):
-    input_variables = extract_input_variables_from_prompt(template)
-
-    # Check if there are invalid characters in the input_variables
-    input_variables = check_input_variables(input_variables)
-    if any(var in INVALID_NAMES for var in input_variables):
-        raise ValueError(
-            f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. "
-        )
-
-    try:
-        PromptTemplate(template=template, input_variables=input_variables)
-    except Exception as exc:
-        raise ValueError(f"Invalid prompt: {exc}") from exc
-
-    return input_variables
 
 
 def is_json_like(var):
