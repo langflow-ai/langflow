@@ -72,3 +72,17 @@ def get_all_types_dict(components_paths):
     return merge_nested_dicts_with_renaming(
         native_components, custom_components_from_file
     )
+
+
+def get_all_components(components_paths, as_dict=False):
+    """Get all components names combining native and custom components."""
+    all_types_dict = get_all_types_dict(components_paths)
+    components = [] if not as_dict else {}
+    for category in all_types_dict.values():
+        for component in category.values():
+            component["name"] = component["display_name"]
+            if as_dict:
+                components[component["name"]] = component
+            else:
+                components.append(component)
+    return components
