@@ -9,6 +9,7 @@ from langflow.schema import Record
 class RunFlowComponent(CustomComponent):
     display_name = "Run Flow"
     description = "A component to run a flow."
+    beta: bool = True
 
     def get_flow_names(self) -> List[str]:
         flow_records = self.list_flows()

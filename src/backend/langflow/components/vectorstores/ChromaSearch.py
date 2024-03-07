@@ -15,7 +15,6 @@ class ChromaSearchComponent(LCVectorStoreComponent):
 
     display_name: str = "Chroma Search"
     description: str = "Search a Chroma collection for similar documents."
-    beta: bool = True
     icon = "Chroma"
 
     def build_config(self):
