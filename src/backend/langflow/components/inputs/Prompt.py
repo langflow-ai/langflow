@@ -9,6 +9,7 @@ class PromptComponent(CustomComponent):
     display_name: str = "Prompt"
     description: str = "A component for creating prompts using templates"
     beta = True
+    icon = "terminal-square"
 
     def build_config(self):
         return {
