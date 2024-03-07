@@ -69,7 +69,7 @@
     @apply flex h-full w-[14.5rem] flex-col overflow-hidden border-r scrollbar-hide;
   }
   .side-bar-search-div-placement {
-    @apply relative mx-auto flex items-center py-3;
+    @apply relative mx-auto flex items-center py-5;
   }
   .side-bar-components-icon {
     @apply h-6 w-4 text-ring;
