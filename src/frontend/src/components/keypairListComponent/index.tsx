@@ -54,6 +54,7 @@ export default function KeypairListComponent({
           return (
             <div key={idx} className="flex w-full gap-2">
               <Input
+                disabled={disabled}
                 data-testid={
                   editNode ? "editNodekeypair" + index : "keypair" + index
                 }
@@ -91,6 +92,7 @@ export default function KeypairListComponent({
 
               {isList && index === ref.current.length - 1 ? (
                 <button
+                disabled={disabled}
                   onClick={() => {
                     let newInputList = _.cloneDeep(ref.current);
                     newInputList.push({ "": "" });
