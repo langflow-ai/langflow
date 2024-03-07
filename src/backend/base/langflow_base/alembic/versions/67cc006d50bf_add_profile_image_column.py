@@ -27,11 +27,7 @@ def upgrade() -> None:
         column["name"] for column in inspector.get_columns("user")
     ]:
         with op.batch_alter_table("user", schema=None) as batch_op:
-            batch_op.add_column(
-                sa.Column(
-                    "profile_image", sqlmodel.sql.sqltypes.AutoString(), nullable=True
-                )
-            )
+            batch_op.add_column(sa.Column("profile_image", sqlmodel.sql.sqltypes.AutoString(), nullable=True))
 
     # ### end Alembic commands ###
 

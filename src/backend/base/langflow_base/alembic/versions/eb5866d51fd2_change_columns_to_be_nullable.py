@@ -60,9 +60,7 @@ def downgrade() -> None:
         )
         with op.batch_alter_table("component", schema=None) as batch_op:
             batch_op.create_index("ix_component_name", ["name"], unique=False)
-            batch_op.create_index(
-                "ix_component_frontend_node_id", ["frontend_node_id"], unique=False
-            )
+            batch_op.create_index("ix_component_frontend_node_id", ["frontend_node_id"], unique=False)
     except Exception:
         pass
 

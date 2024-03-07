@@ -1,7 +1,6 @@
 from typing import Optional
 
-from langflow_base.interface.custom.constants import \
-    DEFAULT_CUSTOM_COMPONENT_CODE
+from langflow_base.interface.custom.constants import DEFAULT_CUSTOM_COMPONENT_CODE
 from langflow_base.template.field.base import TemplateField
 from langflow_base.template.frontend_node.base import FrontendNode
 from langflow_base.template.template.base import Template

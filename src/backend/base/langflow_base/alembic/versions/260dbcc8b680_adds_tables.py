@@ -30,21 +30,16 @@ def upgrade() -> None:
     # and other related indices
     if "flowstyle" in existing_tables:
         op.drop_table("flowstyle")
-        if "ix_flowstyle_flow_id" in [
-            index["name"] for index in inspector.get_indexes("flowstyle")
-        ]:
+        if "ix_flowstyle_flow_id" in [index["name"] for index in inspector.get_indexes("flowstyle")]:
             op.drop_index("ix_flowstyle_flow_id", table_name="flowstyle")
 
     existing_indices_flow = []
     existing_fks_flow = []
     if "flow" in existing_tables:
-        existing_indices_flow = [
-            index["name"] for index in inspector.get_indexes("flow")
-        ]
+        existing_indices_flow = [index["name"] for index in inspector.get_indexes("flow")]
         # Existing foreign keys for the 'flow' table, if it exists
         existing_fks_flow = [
-            fk["referred_table"] + "." + fk["referred_columns"][0]
-            for fk in inspector.get_foreign_keys("flow")
+            fk["referred_table"] + "." + fk["referred_columns"][0] for fk in inspector.get_foreign_keys("flow")
         ]
         # Now check if the columns user_id exists in the 'flow' table
         # If it does not exist, we need to create the foreign key
@@ -64,9 +59,7 @@ def upgrade() -> None:
             sa.UniqueConstraint("id"),
         )
         with op.batch_alter_table("user", schema=None) as batch_op:
-            batch_op.create_index(
-                batch_op.f("ix_user_username"), ["username"], unique=True
-            )
+            batch_op.create_index(batch_op.f("ix_user_username"), ["username"], unique=True)
 
     if "apikey" not in existing_tables:
         op.create_table(
@@ -87,13 +80,9 @@ def upgrade() -> None:
             sa.UniqueConstraint("id"),
         )
         with op.batch_alter_table("apikey", schema=None) as batch_op:
-            batch_op.create_index(
-                batch_op.f("ix_apikey_api_key"), ["api_key"], unique=True
-            )
+            batch_op.create_index(batch_op.f("ix_apikey_api_key"), ["api_key"], unique=True)
             batch_op.create_index(batch_op.f("ix_apikey_name"), ["name"], unique=False)
-            batch_op.create_index(
-                batch_op.f("ix_apikey_user_id"), ["user_id"], unique=False
-            )
+            batch_op.create_index(batch_op.f("ix_apikey_user_id"), ["user_id"], unique=False)
     if "flow" not in existing_tables:
         op.create_table(
             "flow",
@@ -128,16 +117,12 @@ def upgrade() -> None:
         if "user.id" not in existing_fks_flow:
             batch_op.create_foreign_key("fk_flow_user_id", "user", ["user_id"], ["id"])
         if "ix_flow_description" not in existing_indices_flow:
-            batch_op.create_index(
-                batch_op.f("ix_flow_description"), ["description"], unique=False
-            )
+            batch_op.create_index(batch_op.f("ix_flow_description"), ["description"], unique=False)
         if "ix_flow_name" not in existing_indices_flow:
             batch_op.create_index(batch_op.f("ix_flow_name"), ["name"], unique=False)
     with op.batch_alter_table("flow", schema=None) as batch_op:
         if "ix_flow_user_id" not in existing_indices_flow:
-            batch_op.create_index(
-                batch_op.f("ix_flow_user_id"), ["user_id"], unique=False
-            )
+            batch_op.create_index(batch_op.f("ix_flow_user_id"), ["user_id"], unique=False)
 
     # ### end Alembic commands ###
 

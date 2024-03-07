@@ -1,17 +1,13 @@
-from fastapi import (APIRouter, Depends, HTTPException, Query, WebSocket,
-                     WebSocketException, status)
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketException, status
 from fastapi.responses import StreamingResponse
 from langflow_base.api.utils import build_input_keys_response
-from langflow_base.api.v1.schemas import (BuildStatus, BuiltResponse,
-                                          InitResponse, StreamData)
+from langflow_base.api.v1.schemas import BuildStatus, BuiltResponse, InitResponse, StreamData
 from langflow_base.graph.graph.base import Graph
-from langflow_base.services.auth.utils import (get_current_active_user,
-                                               get_current_user_by_jwt)
+from langflow_base.services.auth.utils import get_current_active_user, get_current_user_by_jwt
 from langflow_base.services.cache.service import BaseCacheService
 from langflow_base.services.cache.utils import update_build_status
 from langflow_base.services.chat.service import ChatService
-from langflow_base.services.deps import (get_cache_service, get_chat_service,
-                                         get_session)
+from langflow_base.services.deps import get_cache_service, get_chat_service, get_session
 from loguru import logger
 from sqlmodel import Session
 

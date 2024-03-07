@@ -7,8 +7,7 @@ from alembic import command, util
 from alembic.config import Config
 from langflow_base.services.base import Service
 from langflow_base.services.database import models  # noqa
-from langflow_base.services.database.models.user.crud import \
-    get_user_by_username
+from langflow_base.services.database.models.user.crud import get_user_by_username
 from langflow_base.services.database.utils import Result, TableResults
 from langflow_base.services.deps import get_settings_service
 from langflow_base.services.utils import teardown_superuser

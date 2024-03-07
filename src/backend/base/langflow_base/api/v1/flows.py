@@ -8,8 +8,7 @@ from fastapi.encoders import jsonable_encoder
 from langflow_base.api.utils import remove_api_keys
 from langflow_base.api.v1.schemas import FlowListCreate, FlowListRead
 from langflow_base.services.auth.utils import get_current_active_user
-from langflow_base.services.database.models.flow import (Flow, FlowCreate,
-                                                         FlowRead, FlowUpdate)
+from langflow_base.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
 from langflow_base.services.database.models.user.model import User
 from langflow_base.services.deps import get_session, get_settings_service
 from sqlmodel import Session

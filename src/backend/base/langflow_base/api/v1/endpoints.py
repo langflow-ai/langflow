@@ -3,23 +3,22 @@ from typing import Annotated, Optional, Union
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
-from langflow_base.api.v1.schemas import (CustomComponentCode, ProcessResponse,
-                                          TaskResponse, TaskStatusResponse,
-                                          UploadFileResponse)
+from langflow_base.api.v1.schemas import (
+    CustomComponentCode,
+    ProcessResponse,
+    TaskResponse,
+    TaskStatusResponse,
+    UploadFileResponse,
+)
 from langflow_base.interface.custom.custom_component import CustomComponent
 from langflow_base.interface.custom.directory_reader import DirectoryReader
-from langflow_base.interface.types import (
-    build_langchain_template_custom_component, create_and_validate_component)
-from langflow_base.processing.process import (process_graph_cached,
-                                              process_tweaks)
-from langflow_base.services.auth.utils import (api_key_security,
-                                               get_current_active_user)
+from langflow_base.interface.types import build_langchain_template_custom_component, create_and_validate_component
+from langflow_base.processing.process import process_graph_cached, process_tweaks
+from langflow_base.services.auth.utils import api_key_security, get_current_active_user
 from langflow_base.services.cache.utils import save_uploaded_file
 from langflow_base.services.database.models.flow import Flow
 from langflow_base.services.database.models.user.model import User
-from langflow_base.services.deps import (get_session, get_session_service,
-                                         get_settings_service,
-                                         get_task_service)
+from langflow_base.services.deps import get_session, get_session_service, get_settings_service, get_task_service
 from loguru import logger
 
 try:
@@ -214,8 +213,7 @@ async def custom_component(
 
 @router.post("/custom_component/reload", status_code=HTTPStatus.OK)
 async def reload_custom_component(path: str, user: User = Depends(get_current_active_user)):
-    from langflow_base.interface.types import \
-        build_langchain_template_custom_component
+    from langflow_base.interface.types import build_langchain_template_custom_component
 
     try:
         reader = DirectoryReader("")

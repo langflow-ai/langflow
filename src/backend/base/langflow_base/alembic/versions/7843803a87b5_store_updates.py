@@ -26,11 +26,7 @@ def upgrade() -> None:
             batch_op.add_column(sa.Column("is_component", sa.Boolean(), nullable=True))
 
         with op.batch_alter_table("user", schema=None) as batch_op:
-            batch_op.add_column(
-                sa.Column(
-                    "store_api_key", sqlmodel.sql.sqltypes.AutoString(), nullable=True
-                )
-            )
+            batch_op.add_column(sa.Column("store_api_key", sqlmodel.sql.sqltypes.AutoString(), nullable=True))
     except Exception:
         pass
 
