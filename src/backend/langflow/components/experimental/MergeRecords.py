@@ -5,6 +5,7 @@ from langflow.schema import Record
 class MergeRecordsComponent(CustomComponent):
     display_name = "Merge Records"
     description = "Merges records."
+    beta: bool = True
 
     field_config = {
         "records": {"display_name": "Records"},

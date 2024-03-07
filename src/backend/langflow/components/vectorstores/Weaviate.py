@@ -13,7 +13,6 @@ class WeaviateVectorStoreComponent(CustomComponent):
     display_name: str = "Weaviate"
     description: str = "Implementation of Vector Store using Weaviate"
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/weaviate"
-    beta = True
     field_config = {
         "url": {"display_name": "Weaviate URL", "value": "http://localhost:8080"},
         "api_key": {

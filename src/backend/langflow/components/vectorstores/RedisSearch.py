@@ -16,7 +16,6 @@ class RedisSearchComponent(RedisComponent, LCVectorStoreComponent):
     display_name: str = "Redis Search"
     description: str = "Search a Redis Vector Store for similar documents."
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/redis"
-    beta = True
 
     def build_config(self):
         """

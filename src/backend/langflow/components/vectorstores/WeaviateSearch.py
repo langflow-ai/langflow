@@ -12,7 +12,6 @@ class WeaviateSearchVectorStore(WeaviateVectorStoreComponent, LCVectorStoreCompo
     display_name: str = "Weaviate Search"
     description: str = "Search a Weaviate Vector Store for similar documents."
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/weaviate"
-    beta = True
     icon = "Weaviate"
 
     field_config = {

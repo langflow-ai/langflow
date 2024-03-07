@@ -7,6 +7,7 @@ from langflow.schema import Record
 class NotifyComponent(CustomComponent):
     display_name = "Notify"
     description = "A component to generate a notification to Get Notified component."
+    beta: bool = True
 
     def build_config(self):
         return {
