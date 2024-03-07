@@ -1,12 +1,21 @@
----
-name: langflow Release
+name: LangFlow Release
 
 on:
-  workflow_dispatch: # Allows to trigger the workflow manually in GitHub UI
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+    paths:
+      - "langflow/pyproject.toml"
 
 jobs:
-  release:
+  release_langflow:
+    if: ${{ (github.event.pull_request.merged == true) && contains(github.event.pull_request.labels.*.name, 'LangFlow Release') }}
     uses: ./.github/workflows/release.yml
     with:
-      working-directory: src/backend/langflow
-    secrets: inherit
+      component-path: langflow/
+      build_cmd: make build
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
