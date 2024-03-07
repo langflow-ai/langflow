@@ -275,9 +275,33 @@ export default function ExtraSidebar(): JSX.Element {
                   </div>
                 )}
                 {index === PRIORITY_SIDEBAR_ORDER.length - 1 && (
-                  <div className="p-2 px-4 font-semibold" key={index}>
-                    Legacy
-                  </div>
+                  <>
+                    <a target={"_blank"} href="https://langflow.store" className="components-disclosure-arrangement">
+                      <div className="flex gap-4">
+                        {/* BUG ON THIS ICON */}
+                        <IconComponent
+                          strokeWidth={1.5}
+                          name="sparkles"
+                          className="text-primary"
+                        />
+                        <span className="components-disclosure-title">
+                          Discover More
+                        </span>
+                      </div>
+                      <div className="components-disclosure-div">
+                        <div>
+                          <IconComponent
+                            name="link"
+                            className={`
+                     h-4 w-4 text-foreground`}
+                          />
+                        </div>
+                      </div>
+                    </a>
+                    <div className="p-2 px-4 font-semibold" key={index}>
+                      Legacy
+                    </div>
+                  </>
                 )}
                 <DisclosureComponent
                   openDisc={
