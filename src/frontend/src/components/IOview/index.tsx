@@ -197,6 +197,7 @@ export default function IOView({ children, open, setOpen, disable }: {
                                 <div className="">
                                   {input && (
                                     <IOInputField
+                                      left={true}
                                       inputType={input.type}
                                       inputId={input.id}
                                     />
@@ -265,6 +266,7 @@ export default function IOView({ children, open, setOpen, disable }: {
                                 <div className="">
                                   {output && (
                                     <IOOutputView
+                                      left={true}
                                       outputType={output.type}
                                       outputId={output.id}
                                     />
@@ -303,11 +305,13 @@ export default function IOView({ children, open, setOpen, disable }: {
                         (input) => input.id === selectedViewField.id
                       ) ? (
                         <IOInputField
+                          left={false}
                           inputType={selectedViewField.type!}
                           inputId={selectedViewField.id!}
                         />
                       ) : (
                         <IOOutputView
+                          left={false}
                           outputType={selectedViewField.type!}
                           outputId={selectedViewField.id!}
                         />

@@ -670,10 +670,12 @@ export type dropdownButtonPropsType = {
 export type IOInputProps = {
   inputType: string;
   inputId: string;
+  left?: boolean;
 };
 export type IOOutputProps = {
   outputType: string;
   outputId: string;
+  left?: boolean;
 };
 
 export type IOFileInputProps = {

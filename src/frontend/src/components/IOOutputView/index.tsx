@@ -6,6 +6,7 @@ import { Textarea } from "../ui/textarea";
 export default function IOOutputView({
   outputType,
   outputId,
+  left,
 }: IOOutputProps): JSX.Element | undefined {
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
@@ -17,7 +18,7 @@ export default function IOOutputView({
       case "TextOutput":
         return (
           <Textarea
-            className="w-full custom-scroll"
+            className={`w-full custom-scroll ${left ? "" : " h-full"}`}
             placeholder={"Empty"}
             // update to real value on flowPool
             value={
