@@ -46,13 +46,13 @@ export default function CodeAreaModal({
       : useState(false);
   const dark = useDarkStore((state) => state.dark);
   const unselectAll = useFlowStore((state) => state.unselectAll);
-
   const [height, setHeight] = useState<string | null>(null);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [error, setError] = useState<{
     detail: CodeErrorDataTypeAPI;
   } | null>(null);
+  const nodes = useFlowStore((state) => state.nodes);
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
