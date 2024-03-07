@@ -48,7 +48,7 @@ class CustomComponentFrontendNode(FrontendNode):
     _format_template: bool = False
     name: str = "CustomComponent"
     display_name: Optional[str] = "CustomComponent"
-    beta: bool = True
+    beta: bool = False
     template: Template = Template(
         type_name="CustomComponent",
         fields=[
