@@ -31,7 +31,7 @@ httpx = "^0.25.0"
 uvicorn = "^0.24.0"
 gunicorn = "^21.2.0"
 langchain = "^0.0.341"
-sqlmodel = { git = "https://github.com/honglei/sqlmodel.git", branch = "main" }
+sqlmodel = "0.0.16"
 loguru = "^0.7.1"
 rich = "^13.7.0"
 langchain-experimental = "*"
