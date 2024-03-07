@@ -14,6 +14,7 @@ class APIRequest(CustomComponent):
     description: str = "Make an HTTP request to the given URL."
     output_types: list[str] = ["Record"]
     documentation: str = "https://docs.langflow.org/components/utilities#api-request"
+    beta: bool = True
     field_config = {
         "url": {"display_name": "URL", "info": "The URL to make the request to."},
         "method": {
