@@ -354,7 +354,7 @@ export default function NodeToolbarComponent({
               <SelectItem value={"copy"}>
                 <div className="flex">
                   <IconComponent
-                    name="Copy"
+                    name="Clipboard"
                     className="relative top-0.5 mr-2 h-4 w-4 "
                   />{" "}
                   <span className="">Copy</span>{" "}
