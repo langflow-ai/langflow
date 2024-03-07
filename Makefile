@@ -94,9 +94,12 @@ build_and_install:
 
 build_frontend:
 	cd src/frontend && CI='' npm run build
-	cp -r src/frontend/build src/backend/langflow/frontend
+	cp -r src/frontend/build src/backend/base/frontend
 
 build:
+	poetry build --format sdist
+
+build_base:
 	make install_frontend
 	make build_frontend
 	poetry build --format sdist
@@ -114,7 +117,7 @@ endif
 
 publish:
 	make build
-	poetry publish
+	poetry publish 
 
 help:
 	@echo '----'
