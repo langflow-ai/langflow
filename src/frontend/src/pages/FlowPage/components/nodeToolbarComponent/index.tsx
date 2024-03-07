@@ -432,6 +432,15 @@ export default function NodeToolbarComponent({
                 <div className="flex" data-testid="save-button-modal">
                   <IconComponent name="Copy" className="relative top-0.5 mr-2 h-4 w-4" />
                   Duplicate
+                  {navigator.userAgent.toUpperCase().includes("MAC") ? (
+                      <IconComponent
+                      name="Command"
+                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                    ></IconComponent>
+                    ) : (
+                      <span className="absolute right-[1.20rem] top-[0.40em] stroke-2">Ctrl + </span>
+                    )}
+                  <span className="absolute right-2 top-[0.4em]">D</span>
                 </div>{" "}
               </SelectItem>
               <SelectItem value={"copy"}>
