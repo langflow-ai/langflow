@@ -7,13 +7,16 @@ test("IntComponent", async ({ page }) => {
   await page.locator('//*[@id="new-project-btn"]').click();
   await page.waitForTimeout(2000);
 
+  await page.getByTestId("blank-flow").click();
+  await page.waitForTimeout(2000);
+
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("openai");
 
   await page.waitForTimeout(2000);
 
   await page
-    .getByTestId("modelsOpenAI Model")
+    .getByTestId("modelsOpenAI")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();

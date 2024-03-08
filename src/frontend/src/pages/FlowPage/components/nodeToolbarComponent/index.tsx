@@ -343,6 +343,7 @@ export default function NodeToolbarComponent({
 
           <ShadTooltip content={"Save"} side="top">
             <button
+              data-testid="save-button-modal"
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
                 hasCode ? " " : " rounded-l-md "
@@ -410,7 +411,7 @@ export default function NodeToolbarComponent({
             <SelectContent>
               {nodeLength > 0 && (
                 <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
-                  <div className="flex">
+                  <div className="flex" data-testid="edit-button-modal">
                     <IconComponent
                       name="Settings2"
                       className="relative top-0.5 mr-2 h-4 w-4 "
@@ -431,7 +432,7 @@ export default function NodeToolbarComponent({
                 </SelectItem>
               )}
               <SelectItem value={"duplicate"}>
-                <div className="flex" data-testid="save-button-modal">
+                <div className="flex" data-testid="duplicate-button-modal">
                   <IconComponent
                     name="Copy"
                     className="relative top-0.5 mr-2 h-4 w-4"

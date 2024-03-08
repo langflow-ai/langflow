@@ -7,13 +7,16 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.locator('//*[@id="new-project-btn"]').click();
   await page.waitForTimeout(2000);
 
+  await page.getByTestId("blank-flow").click();
+  await page.waitForTimeout(2000);
+
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("prompt");
 
   await page.waitForTimeout(2000);
 
   await page
-    .locator('//*[@id="promptsPrompt"]')
+    .locator('//*[@id="inputsPrompt"]')
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -55,7 +58,6 @@ test("PromptTemplateComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("more-options-modal").click();
   await page.getByTestId("save-button-modal").click();
 
   const replace = await page.getByTestId("replace-button");

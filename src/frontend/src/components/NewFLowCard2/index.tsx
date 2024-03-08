@@ -13,6 +13,7 @@ export default function NewFlowCardComponent() {
         });
       }}
       className="h-64 w-80 cursor-pointer bg-background pt-4"
+      data-testid="blank-flow"
     >
       <CardContent className="h-full w-full">
         <div className="flex h-full w-full flex-col items-center justify-center rounded-md bg-muted align-middle bg-dotted-spacing-6 bg-dotted-muted-foreground bg-dotted-radius-px"></div>
