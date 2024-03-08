@@ -5,13 +5,15 @@ from langchain_core.documents import Document
 
 from langflow import CustomComponent
 from langflow.schema import Record
-from langflow.utils.util import build_loader_repr_from_records
+from langflow.utils.util import build_loader_repr_from_records, unescape_string
 
 
 class RecursiveCharacterTextSplitterComponent(CustomComponent):
     display_name: str = "Recursive Character Text Splitter"
     description: str = "Split text into chunks of a specified length."
-    documentation: str = "https://docs.langflow.org/components/text-splitters#recursivecharactertextsplitter"
+    documentation: str = (
+        "https://docs.langflow.org/components/text-splitters#recursivecharactertextsplitter"
+    )
 
     def build_config(self):
         return {
@@ -65,7 +67,7 @@ class RecursiveCharacterTextSplitterComponent(CustomComponent):
         elif separators:
             # check if the separators list has escaped characters
             # if there are escaped characters, unescape them
-            separators = [x.encode().decode("unicode-escape") for x in separators]
+            separators = [unescape_string(x) for x in separators]
 
         # Make sure chunk_size and chunk_overlap are ints
         if isinstance(chunk_size, str):
