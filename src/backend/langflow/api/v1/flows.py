@@ -211,7 +211,5 @@ async def download_file(
     current_user: User = Depends(get_current_active_user),
 ):
     """Download all flows as a file."""
-    flows = read_flows(
-        current_user=current_user, session=session, settings_service=settings_service
-    )
+    flows = read_flows(current_user=current_user, session=session, settings_service=settings_service)
     return FlowListRead(flows=flows)

@@ -17,9 +17,7 @@ CUSTOM_TOOLS = {
     "PythonFunctionTool": PythonFunctionTool,
 }
 
-OTHER_TOOLS = {
-    tool: import_class(f"langchain_community.tools.{tool}") for tool in tools.__all__
-}
+OTHER_TOOLS = {tool: import_class(f"langchain_community.tools.{tool}") for tool in tools.__all__}
 
 ALL_TOOLS_NAMES = {
     **_BASE_TOOLS,
