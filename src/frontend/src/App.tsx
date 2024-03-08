@@ -102,7 +102,7 @@ export default function App() {
         )}
       </ErrorBoundary>
       <div></div>
-      <div className="app-div" style={{ zIndex: 999 }}>
+      <div className="app-div z-40">
         {tempNotificationList.map((alert) => (
           <div key={alert.id}>
             {alert.type === "error" ? (
