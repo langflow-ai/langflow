@@ -5,6 +5,7 @@ from langflow.memory import delete_messages, get_messages
 class ClearMessageHistoryComponent(CustomComponent):
     display_name = "Clear Message History"
     description = "A component to clear the message history."
+    icon="ClearMessageHistory"
     beta: bool = True
 
     def build_config(self):

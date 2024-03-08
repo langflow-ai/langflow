@@ -7,6 +7,7 @@ from langflow.schema import Record
 class ListFlowsComponent(CustomComponent):
     display_name = "List Flows"
     description = "A component to list all available flows."
+    icon = "ListFlows"
     beta: bool = True
 
     def build_config(self):
