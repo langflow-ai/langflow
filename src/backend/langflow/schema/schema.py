@@ -1,7 +1,7 @@
 import copy
 
 from langchain_core.documents import Document
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class Record(BaseModel):
@@ -14,6 +14,16 @@ class Record(BaseModel):
 
     data: dict = {}
     _default_value: str = ""
+
+    @model_validator(mode="before")
+    def validate_data(values):
+        if not values.get("data"):
+            values["data"] = {}
+        # Any other keyword should be added to the data dictionary
+        for key in values:
+            if key not in values["data"] and key != "data":
+                values["data"][key] = values[key]
+        return values
 
     @classmethod
     def from_document(cls, document: Document) -> "Record":
@@ -63,7 +73,9 @@ class Record(BaseModel):
             return self.data.get(key, self._default_value)
         except KeyError:
             # Fallback to default behavior to raise AttributeError for undefined attributes
-            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{key}'")
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{key}'"
+            )
 
     def __setattr__(self, key, value):
         """
