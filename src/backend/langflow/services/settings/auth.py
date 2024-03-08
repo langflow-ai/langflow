@@ -38,10 +38,6 @@ class AuthSettings(BaseSettings):
     SUPERUSER: str = DEFAULT_SUPERUSER
     SUPERUSER_PASSWORD: str = DEFAULT_SUPERUSER_PASSWORD
     
-    EXPIRES_ACCESS:datetime = 60*60
-    """The expiration time of the access token cookie."""
-    EXPIRES_REFRESH:datetime = 60*60*12
-    """The expiration time of the refresh token cookie."""
     REFRESH_SAME_SITE: str = "none"
     """The SameSite attribute of the refresh token cookie."""
     REFRESH_SECURE: bool = True
