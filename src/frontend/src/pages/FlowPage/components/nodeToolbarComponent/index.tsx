@@ -13,6 +13,7 @@ import {
 import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShareModal from "../../../../modals/shareModal";
+import useAlertStore from "../../../../stores/alertStore";
 import { useDarkStore } from "../../../../stores/darkStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -27,7 +28,6 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn } from "../../../../utils/utils";
-import useAlertStore from "../../../../stores/alertStore";
 
 export default function NodeToolbarComponent({
   data,
@@ -97,8 +97,8 @@ export default function NodeToolbarComponent({
     (state) => state.setLastCopiedSelection
   );
 
-  const setSuccessData = useAlertStore(state => state.setSuccessData);
-  const setNoticeData = useAlertStore(state => state.setNoticeData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
 
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
@@ -166,10 +166,8 @@ export default function NodeToolbarComponent({
           {
             x: 50,
             y: 10,
-            paneX: nodes.find((node) => node.id === data.id)?.position
-              .x,
-            paneY: nodes.find((node) => node.id === data.id)?.position
-              .y,
+            paneX: nodes.find((node) => node.id === data.id)?.position.x,
+            paneY: nodes.find((node) => node.id === data.id)?.position.y,
           }
         );
         break;
@@ -229,7 +227,7 @@ export default function NodeToolbarComponent({
 
   const [openModal, setOpenModal] = useState(false);
   const hasCode = Object.keys(data.node!.template).includes("code");
-  
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (
@@ -260,18 +258,17 @@ export default function NodeToolbarComponent({
         event.preventDefault();
         setShowconfirmShare((state) => !state);
       }
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "q"
-      ) {
+      if (selected && (event.ctrlKey || event.metaKey) && event.key === "q") {
         event.preventDefault();
         if (isMinimal) {
-          setShowState(show => !show)
+          setShowState((show) => !show);
           setShowNode(data.showNode ?? true ? false : true);
-          return
+          return;
         }
-        setNoticeData({title: "Minimization are only available for nodes with one handle or fewer."});
+        setNoticeData({
+          title:
+            "Minimization are only available for nodes with one handle or fewer.",
+        });
       }
       if (
         selected &&
@@ -281,7 +278,7 @@ export default function NodeToolbarComponent({
       ) {
         event.preventDefault();
         if (hasCode) return setOpenModal((state) => !state);
-        setNoticeData({title: `You can not access ${data.id} code`})
+        setNoticeData({ title: `You can not access ${data.id} code` });
       }
       if (
         selected &&
@@ -292,11 +289,7 @@ export default function NodeToolbarComponent({
         event.preventDefault();
         setShowModalAdvanced((state) => !state);
       }
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "s"
-      ) {
+      if (selected && (event.ctrlKey || event.metaKey) && event.key === "s") {
         if (isSaved) {
           event.preventDefault();
           return setShowOverrideModal((state) => !state);
@@ -304,7 +297,7 @@ export default function NodeToolbarComponent({
         if (hasCode) {
           event.preventDefault();
           saveComponent(cloneDeep(data), false);
-          setSuccessData({title: `${data.id} saved successfully`})
+          setSuccessData({ title: `${data.id} saved successfully` });
         }
       }
       if (
@@ -317,7 +310,9 @@ export default function NodeToolbarComponent({
         if (data.node?.documentation) {
           return openInNewTab(data.node?.documentation);
         }
-        setNoticeData({title: `${data.id} docs is not available at the moment.`})
+        setNoticeData({
+          title: `${data.id} docs is not available at the moment.`,
+        });
       }
     }
 
@@ -349,7 +344,8 @@ export default function NodeToolbarComponent({
           <ShadTooltip content={"Save"} side="top">
             <button
               className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10", (hasCode ? " " : " rounded-l-md ")
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                hasCode ? " " : " rounded-l-md "
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -359,10 +355,7 @@ export default function NodeToolbarComponent({
                 saveComponent(cloneDeep(data), false);
               }}
             >
-              <IconComponent
-                name="SaveAll"
-                className="h-4 w-4"
-              />
+              <IconComponent name="SaveAll" className="h-4 w-4" />
             </button>
           </ShadTooltip>
 
@@ -425,28 +418,35 @@ export default function NodeToolbarComponent({
                     <span className="">Edit</span>{" "}
                     {navigator.userAgent.toUpperCase().includes("MAC") ? (
                       <IconComponent
-                      name="Command"
-                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                    ></IconComponent>
+                        name="Command"
+                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                      ></IconComponent>
                     ) : (
-                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
+                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">
+                        Ctrl +{" "}
+                      </span>
                     )}
                     <span className="absolute right-2 top-[0.46em]">E</span>
                   </div>
                 </SelectItem>
-              )}              
+              )}
               <SelectItem value={"duplicate"}>
                 <div className="flex" data-testid="save-button-modal">
-                  <IconComponent name="Copy" className="relative top-0.5 mr-2 h-4 w-4" />
+                  <IconComponent
+                    name="Copy"
+                    className="relative top-0.5 mr-2 h-4 w-4"
+                  />
                   Duplicate
                   {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                      <IconComponent
+                    <IconComponent
                       name="Command"
                       className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                     ></IconComponent>
-                    ) : (
-                      <span className="absolute right-[1.20rem] top-[0.40em] stroke-2">Ctrl + </span>
-                    )}
+                  ) : (
+                    <span className="absolute right-[1.20rem] top-[0.40em] stroke-2">
+                      Ctrl +{" "}
+                    </span>
+                  )}
                   <span className="absolute right-2 top-[0.4em]">D</span>
                 </div>{" "}
               </SelectItem>
@@ -458,13 +458,15 @@ export default function NodeToolbarComponent({
                   />{" "}
                   <span className="">Copy</span>{" "}
                   {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                      <IconComponent
+                    <IconComponent
                       name="Command"
                       className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                     ></IconComponent>
-                    ) : (
-                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
-                    )}
+                  ) : (
+                    <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">
+                      Ctrl +{" "}
+                    </span>
+                  )}
                   <span className="absolute right-2 top-[0.4em]">C</span>
                 </div>
               </SelectItem>
@@ -481,13 +483,14 @@ export default function NodeToolbarComponent({
                     Share{" "}
                     {navigator.userAgent.toUpperCase().includes("MAC") ? (
                       <IconComponent
-                      name="Command"
-                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                    ></IconComponent>
+                        name="Command"
+                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                      ></IconComponent>
                     ) : (
-                      <span className="absolute right-[2.10rem] top-[0.43em] stroke-2">Ctrl</span>
+                      <span className="absolute right-[2.10rem] top-[0.43em] stroke-2">
+                        Ctrl
+                      </span>
                     )}
-                    
                     <IconComponent
                       name="ArrowBigUp"
                       className="absolute right-[1.09rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
@@ -518,13 +521,15 @@ export default function NodeToolbarComponent({
                   />{" "}
                   <span className="">Docs</span>{" "}
                   {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                      <IconComponent
+                    <IconComponent
                       name="Command"
                       className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                     ></IconComponent>
-                    ) : (
-                      <span className="absolute right-[2.10rem] top-[0.43em] stroke-2">Ctrl</span>
-                    )}
+                  ) : (
+                    <span className="absolute right-[2.10rem] top-[0.43em] stroke-2">
+                      Ctrl
+                    </span>
+                  )}
                   <IconComponent
                     name="ArrowBigUp"
                     className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
@@ -542,11 +547,13 @@ export default function NodeToolbarComponent({
                     {showNode ? "Minimize" : "Expand"}
                     {navigator.userAgent.toUpperCase().includes("MAC") ? (
                       <IconComponent
-                      name="Command"
-                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                    ></IconComponent>
+                        name="Command"
+                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                      ></IconComponent>
                     ) : (
-                      <span className="absolute right-[1.30rem] top-[0.40em] stroke-2">Ctrl + </span>
+                      <span className="absolute right-[1.30rem] top-[0.40em] stroke-2">
+                        Ctrl +{" "}
+                      </span>
                     )}
                     <span className="absolute right-2 top-[0.46em]">Q</span>
                   </div>
@@ -562,11 +569,13 @@ export default function NodeToolbarComponent({
                     <span className="">Ungroup</span>{" "}
                     {navigator.userAgent.toUpperCase().includes("MAC") ? (
                       <IconComponent
-                      name="Command"
-                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                    ></IconComponent>
+                        name="Command"
+                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                      ></IconComponent>
                     ) : (
-                      <span className="absolute right-[1.30rem] top-[0.40em] stroke-2">Ctrl + </span>
+                      <span className="absolute right-[1.30rem] top-[0.40em] stroke-2">
+                        Ctrl +{" "}
+                      </span>
                     )}
                     <span className="absolute right-2 top-[0.43em]">U</span>
                   </div>
@@ -601,12 +610,12 @@ export default function NodeToolbarComponent({
             index={6}
             onConfirm={(index, user) => {
               saveComponent(cloneDeep(data), true);
-              setSuccessData({title: `${data.id} successfully overridden!`})
+              setSuccessData({ title: `${data.id} successfully overridden!` });
             }}
             onClose={setShowOverrideModal}
             onCancel={() => {
-              saveComponent(cloneDeep(data), false)
-              setSuccessData({title: "New node successfully saved!"})
+              saveComponent(cloneDeep(data), false);
+              setSuccessData({ title: "New node successfully saved!" });
             }}
           >
             <ConfirmationModal.Content>

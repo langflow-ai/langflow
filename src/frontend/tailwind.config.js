@@ -87,7 +87,7 @@ module.exports = {
         "beta-foreground": "var(--beta-foreground)",
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
-        "ice": "var(--ice)",
+        ice: "var(--ice)",
         hover: "var(--hover)",
         white: "var(--white)",
         border: "hsl(var(--border))",
@@ -224,6 +224,6 @@ module.exports = {
     }),
     require("@tailwindcss/typography"),
     require("daisyui"),
-    require('tailwindcss-dotted-background'),
+    require("tailwindcss-dotted-background"),
   ],
 };

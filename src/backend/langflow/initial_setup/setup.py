@@ -18,10 +18,7 @@ STARTER_FOLDER_NAME = "Starter Projects"
 # can use them as a starting point for their own projects.
 
 
-def update_projects_components_with_latest_component_versions(
-    project_data, all_types_dict
-):
-
+def update_projects_components_with_latest_component_versions(project_data, all_types_dict):
     # project data has a nodes key, which is a list of nodes
     # we want to run through each node and see if it exists in the all_types_dict
     # if so, we go into  the template key and also get the template from all_types_dict
@@ -148,13 +145,9 @@ def create_or_update_starter_projects():
                 project_icon,
                 project_icon_bg_color,
             ) = get_project_data(project)
-            project_data = update_projects_components_with_latest_component_versions(
-                project_data, all_types_dict
-            )
+            project_data = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
             if project_name and project_data:
-                for existing_project in get_all_flows_similar_to_project(
-                    session, project_name
-                ):
+                for existing_project in get_all_flows_similar_to_project(session, project_name):
                     session.delete(existing_project)
 
                 create_new_project(

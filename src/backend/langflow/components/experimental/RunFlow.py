@@ -38,18 +38,12 @@ class RunFlowComponent(CustomComponent):
             return []
         records = []
         for message in messages:
-            message_dict = (
-                message if isinstance(message, dict) else message.model_dump()
-            )
-            record = Record(
-                text=message_dict.get("text", ""), data={"result": result_data}
-            )
+            message_dict = message if isinstance(message, dict) else message.model_dump()
+            record = Record(text=message_dict.get("text", ""), data={"result": result_data})
             records.append(record)
         return records
 
-    async def build(
-        self, input_value: Text, flow_name: str, tweaks: NestedDict
-    ) -> List[Record]:
+    async def build(self, input_value: Text, flow_name: str, tweaks: NestedDict) -> List[Record]:
         results: List[Optional[ResultData]] = await self.run_flow(
             input_value=input_value, flow_name=flow_name, tweaks=tweaks
         )

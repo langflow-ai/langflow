@@ -750,14 +750,14 @@ Vector Store
 Assistant
 */
 
-export const EXAMPLES_MOCK:FlowType[] = [
+export const EXAMPLES_MOCK: FlowType[] = [
   {
     name: "Working with data",
     id: "Working with data Description",
     data: {
       nodes: [],
       edges: [],
-      viewport: { zoom: 1, x: 1, y: 1 }
+      viewport: { zoom: 1, x: 1, y: 1 },
     },
     description: "This flow represents the first process in our application.",
     folder: STARTER_FOLDER_NAME,
@@ -769,7 +769,7 @@ export const EXAMPLES_MOCK:FlowType[] = [
     data: {
       nodes: [],
       edges: [],
-      viewport: { zoom: 1, x: 1, y: 1 }
+      viewport: { zoom: 1, x: 1, y: 1 },
     },
     description: "This flow represents the first process in our application.",
     folder: STARTER_FOLDER_NAME,
@@ -781,7 +781,7 @@ export const EXAMPLES_MOCK:FlowType[] = [
     data: {
       nodes: [],
       edges: [],
-      viewport: { zoom: 1, x: 1, y: 1 }
+      viewport: { zoom: 1, x: 1, y: 1 },
     },
     description: "This flow represents the first process in our application.",
     folder: STARTER_FOLDER_NAME,
@@ -793,7 +793,7 @@ export const EXAMPLES_MOCK:FlowType[] = [
     data: {
       nodes: [],
       edges: [],
-      viewport: { zoom: 1, x: 1, y: 1 }
+      viewport: { zoom: 1, x: 1, y: 1 },
     },
     description: "This flow represents the first process in our application.",
     folder: STARTER_FOLDER_NAME,
@@ -805,7 +805,7 @@ export const EXAMPLES_MOCK:FlowType[] = [
     data: {
       nodes: [],
       edges: [],
-      viewport: { zoom: 1, x: 1, y: 1 }
+      viewport: { zoom: 1, x: 1, y: 1 },
     },
     description: "This flow represents the first process in our application.",
     folder: STARTER_FOLDER_NAME,

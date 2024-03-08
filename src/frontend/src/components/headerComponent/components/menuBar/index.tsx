@@ -9,18 +9,18 @@ import {
 
 import { useNavigate } from "react-router-dom";
 import { Node } from "reactflow";
+import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import { SAVED_HOVER } from "../../../../constants/constants";
+import ExportModal from "../../../../modals/exportModal";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useStoreStore } from "../../../../stores/storeStore";
 import { cn } from "../../../../utils/utils";
 import ShadTooltip from "../../../ShadTooltipComponent";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
-import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
-import ExportModal from "../../../../modals/exportModal";
-import { useStoreStore } from "../../../../stores/storeStore";
 
 export const MenuBar = ({
   removeFunction,
@@ -121,12 +121,15 @@ export const MenuBar = ({
               <IconComponent name="FileUp" className="header-menu-options " />
               Import
             </DropdownMenuItem>
-              <ExportModal>
-                <div className="header-menubar-item">
-                  <IconComponent name="FileDown" className="header-menu-options" />
-                  Export
-                </div>
-              </ExportModal>
+            <ExportModal>
+              <div className="header-menubar-item">
+                <IconComponent
+                  name="FileDown"
+                  className="header-menu-options"
+                />
+                Export
+              </div>
+            </ExportModal>
             <DropdownMenuItem
               onClick={() => {
                 undo();
@@ -141,7 +144,9 @@ export const MenuBar = ({
                   className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                 />
               ) : (
-                <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
+                <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">
+                  Ctrl +{" "}
+                </span>
               )}
               <span className="absolute right-2 top-[0.4em]">Z</span>
             </DropdownMenuItem>
@@ -159,7 +164,9 @@ export const MenuBar = ({
                   className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                 />
               ) : (
-                <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">Ctrl + </span>
+                <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">
+                  Ctrl +{" "}
+                </span>
               )}
               <span className="absolute right-2 top-[0.4em]">Y</span>
             </DropdownMenuItem>

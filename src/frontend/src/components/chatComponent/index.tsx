@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import useFlowStore from "../../stores/flowStore";
-import { ChatType } from "../../types/chat";
-import IOView from "../IOview";
-import ChatTrigger from "../ViewTriggers/chat";
 import { Transition } from "@headlessui/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import ApiModal from "../../modals/ApiModal";
+import ShareModal from "../../modals/shareModal";
+import useFlowStore from "../../stores/flowStore";
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useStoreStore } from "../../stores/storeStore";
+import { ChatType } from "../../types/chat";
+import { classNames } from "../../utils/utils";
+import IOView from "../IOview";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
-import ShareModal from "../../modals/shareModal";
-import { useStoreStore } from "../../stores/storeStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { classNames } from "../../utils/utils";
-import ApiModal from "../../modals/ApiModal";
 
 export default function FlowToolbar({ flow }: ChatType): JSX.Element {
   const [open, setOpen] = useState(false);
@@ -51,7 +50,7 @@ export default function FlowToolbar({ flow }: ChatType): JSX.Element {
         <button
           disabled={!hasApiKey || !validApiKey || !hasStore}
           className={classNames(
-            "relative inline-flex w-full h-full items-center justify-center hover:bg-hover bg-muted hover:bg-background px-5 py-3 text-foreground transition-all duration-500 ease-in-out gap-[4px] text-sm font-semibold ",
+            "relative inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-500 ease-in-out hover:bg-background hover:bg-hover ",
             !hasApiKey || !validApiKey || !hasStore
               ? " button-disable text-muted-foreground  "
               : ""
@@ -76,67 +75,83 @@ export default function FlowToolbar({ flow }: ChatType): JSX.Element {
   return (
     <>
       <Transition
-      show={true}
-      appear={true}
-      enter="transition ease-out duration-300"
-      enterFrom="translate-y-96"
-      enterTo="translate-y-0"
-      leave="transition ease-in duration-300"
-      leaveFrom="translate-y-0"
-      leaveTo="translate-y-96"
+        show={true}
+        appear={true}
+        enter="transition ease-out duration-300"
+        enterFrom="translate-y-96"
+        enterTo="translate-y-0"
+        leave="transition ease-in duration-300"
+        leaveFrom="translate-y-0"
+        leaveTo="translate-y-96"
       >
-      <div
-        className={
-          "shadow-round-btn-shadow hover:shadow-round-btn-shadow message-button-position flex items-center justify-center rounded-sm bg-muted  shadow-md transition-all gap-7 border"
-        }
-      >
-        <div className="flex">
-          <div className="flex gap-1 text-medium-indigo  rounded-sm transition-all w-full h-full">
-          {hasIO ? (
-          <IOView open={open} setOpen={setOpen} disable={!hasIO}>
-            <div className="relative inline-flex w-full items-center justify-center   hover:bg-hover transition-all duration-500 ease-in-out px-5 py-3 text-medium-indigo ease-in-out gap-1 text-sm font-semibold transition-all">
-              <ForwardedIconComponent
-                name="Zap"
-                className={"message-button-icon h-5 w-5 transition-all"}
-              />
-              Run
+        <div
+          className={
+            "shadow-round-btn-shadow hover:shadow-round-btn-shadow message-button-position flex items-center justify-center gap-7 rounded-sm  border bg-muted shadow-md transition-all"
+          }
+        >
+          <div className="flex">
+            <div className="flex h-full w-full  gap-1 rounded-sm text-medium-indigo transition-all">
+              {hasIO ? (
+                <IOView open={open} setOpen={setOpen} disable={!hasIO}>
+                  <div className="relative inline-flex w-full items-center justify-center   gap-1 px-5 py-3 text-sm font-semibold text-medium-indigo transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
+                    <ForwardedIconComponent
+                      name="Zap"
+                      className={"message-button-icon h-5 w-5 transition-all"}
+                    />
+                    Run
+                  </div>
+                </IOView>
+              ) : (
+                <div
+                  className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-500 ease-in-out ease-in-out`}
+                >
+                  <ForwardedIconComponent
+                    name="Zap"
+                    className={
+                      "message-button-icon h-5 w-5 fill-muted-foreground stroke-muted-foreground transition-all"
+                    }
+                  />
+                  Run
+                </div>
+              )}
             </div>
-          </IOView>
-        ) : (
-          <div className={`relative inline-flex w-full items-center justify-center transition-all duration-500 ease-in-out px-5 py-3 text-muted-foreground ease-in-out gap-1 text-sm font-semibold cursor-not-allowed`}>
-              <ForwardedIconComponent
-                name="Zap"
-                className={"message-button-icon h-5 w-5 transition-all fill-muted-foreground stroke-muted-foreground"}
-              />
-              Run
-          </div>
-        )}
-          </div>
-          <div>
-            <Separator orientation="vertical" />
-          </div>
-          <div className="flex items-center gap-2 cursor-pointer">
-            {currentFlow && currentFlow.data && (
-              <ApiModal flow={currentFlow}>
-                  <div className={classNames("relative inline-flex w-full items-center justify-center hover:bg-hover px-5 py-3 text-foreground transition-all duration-500 ease-in-out gap-1 text-sm font-semibold")}>
+            <div>
+              <Separator orientation="vertical" />
+            </div>
+            <div className="flex cursor-pointer items-center gap-2">
+              {currentFlow && currentFlow.data && (
+                <ApiModal flow={currentFlow}>
+                  <div
+                    className={classNames(
+                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-500 ease-in-out hover:bg-hover"
+                    )}
+                  >
                     <ForwardedIconComponent
                       name="Code2"
                       className={" h-5 w-5"}
                     />
                     API
                   </div>
-              </ApiModal>
-            )}
-          </div>
-          <div>
-            <Separator orientation="vertical" />
-          </div>
-          <div className="flex items-center gap-2">
-            <div className={`side-bar-button ${!hasApiKey || !validApiKey || !hasStore ? " cursor-not-allowed" : " cursor-pointer"}`}>{ModalMemo}</div>
+                </ApiModal>
+              )}
+            </div>
+            <div>
+              <Separator orientation="vertical" />
+            </div>
+            <div className="flex items-center gap-2">
+              <div
+                className={`side-bar-button ${
+                  !hasApiKey || !validApiKey || !hasStore
+                    ? " cursor-not-allowed"
+                    : " cursor-pointer"
+                }`}
+              >
+                {ModalMemo}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
     </>
   );
 }

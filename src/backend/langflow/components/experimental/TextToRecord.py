@@ -93,11 +93,6 @@ class TextToRecordComponent(CustomComponent):
         if mode == "Text":
             data = kwargs
         else:
-            data = {
-                k: v
-                for key, d in kwargs.items()
-                for k, v in d.items()
-                if key not in ["mode", "n_keys", "keys"]
-            }
+            data = {k: v for key, d in kwargs.items() for k, v in d.items() if key not in ["mode", "n_keys", "keys"]}
         record = Record(data=data)
         return record

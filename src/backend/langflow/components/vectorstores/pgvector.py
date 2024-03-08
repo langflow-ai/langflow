@@ -16,9 +16,7 @@ class PGVectorComponent(CustomComponent):
 
     display_name: str = "PGVector"
     description: str = "Implementation of Vector Store using PostgreSQL"
-    documentation = (
-        "https://python.langchain.com/docs/integrations/vectorstores/pgvector"
-    )
+    documentation = "https://python.langchain.com/docs/integrations/vectorstores/pgvector"
 
     def build_config(self):
         """
