@@ -7,7 +7,7 @@ from langflow.schema import Record
 class NotifyComponent(CustomComponent):
     display_name = "Notify"
     description = "A component to generate a notification to Get Notified component."
-
+    icon = "Notify"
     def build_config(self):
         return {
             "name": {"display_name": "Name", "info": "The name of the notification."},

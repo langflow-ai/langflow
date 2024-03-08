@@ -8,7 +8,7 @@ from langflow.interface.custom.utils import get_function
 class PythonFunctionComponent(CustomComponent):
     display_name = "Python Function"
     description = "Define a Python function."
-
+    icon = "Python"
     def build_config(self):
         return {
             "function_code": {
