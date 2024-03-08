@@ -11,6 +11,11 @@ from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
 
 
+def unescape_string(s):
+    # Replace escaped new line characters with actual new line characters
+    return s.replace("\\n", "\n")
+
+
 def remove_ansi_escape_codes(text):
     return re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
 

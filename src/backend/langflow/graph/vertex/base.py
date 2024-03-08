@@ -30,7 +30,7 @@ from langflow.interface.listing import lazy_load_dict
 from langflow.services.deps import get_storage_service
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.schemas import ChatOutputResponse
-from langflow.utils.util import sync_to_async
+from langflow.utils.util import sync_to_async, unescape_string
 
 if TYPE_CHECKING:
     from langflow.graph.edge.base import ContractEdge
@@ -377,9 +377,9 @@ class Vertex:
                     # val may contain escaped \n, \t, etc.
                     # so we need to unescape it
                     if isinstance(val, list):
-                        params[key] = [v.encode().decode("unicode_escape") for v in val]
+                        params[key] = [unescape_string(v) for v in val]
                     elif isinstance(val, str):
-                        params[key] = val.encode().decode("unicode_escape")
+                        params[key] = unescape_string(val)
                 elif val is not None and val != "":
                     params[key] = val
 
