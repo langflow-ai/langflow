@@ -14,6 +14,9 @@ test.describe("save component tests", () => {
     await page.goto("http:localhost:3000/");
     await page.locator('//*[@id="new-project-btn"]').click();
 
+    await page.getByTestId("blank-flow").click();
+    await page.waitForTimeout(2000);
+
     // Read your file into a buffer.
     const jsonContent = readFileSync(
       "tests/end-to-end/assets/flow_group_test.json",
