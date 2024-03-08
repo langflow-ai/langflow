@@ -4,6 +4,7 @@ from langchain.text_splitter import CharacterTextSplitter
 
 from langflow import CustomComponent
 from langflow.schema.schema import Record
+from langflow.utils.util import unescape_string
 
 
 class CharacterTextSplitterComponent(CustomComponent):
@@ -26,7 +27,7 @@ class CharacterTextSplitterComponent(CustomComponent):
         separator: str = "\n",
     ) -> List[Record]:
         # separator may come escaped from the frontend
-        separator = separator.encode().decode("unicode_escape")
+        separator = unescape_string(separator)
         documents = []
         for _input in inputs:
             if isinstance(_input, Record):
