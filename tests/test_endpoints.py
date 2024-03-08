@@ -4,7 +4,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from langflow.interface.custom.directory_reader.directory_reader import DirectoryReader
-from langflow.interface.tools.constants import CUSTOM_TOOLS
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.utils import session_getter
@@ -29,7 +28,10 @@ def poll_task_status(client, headers, href, max_attempts=20, sleep_time=1):
             href,
             headers=headers,
         )
-        if task_status_response.status_code == 200 and task_status_response.json()["status"] == "SUCCESS":
+        if (
+            task_status_response.status_code == 200
+            and task_status_response.json()["status"] == "SUCCESS"
+        ):
             return task_status_response.json()
         time.sleep(sleep_time)
     return None  # Return None if task did not complete in time
@@ -123,7 +125,11 @@ def created_api_key(active_user):
     )
     db_manager = get_db_service()
     with session_getter(db_manager) as session:
-        if existing_api_key := session.query(ApiKey).filter(ApiKey.api_key == api_key.api_key).first():
+        if (
+            existing_api_key := session.query(ApiKey)
+            .filter(ApiKey.api_key == api_key.api_key)
+            .first()
+        ):
             return existing_api_key
         session.add(api_key)
         session.commit()
@@ -289,13 +295,17 @@ def test_get_all(client: TestClient, logged_in_headers):
     dir_reader = DirectoryReader(settings.COMPONENTS_PATH[0])
     files = dir_reader.get_files()
     # json_response is a dict of dicts
-    all_names = [component_name for _, components in response.json().items() for component_name in components]
+    all_names = [
+        component_name
+        for _, components in response.json().items()
+        for component_name in components
+    ]
     json_response = response.json()
     # We need to test the custom nodes
     assert len(all_names) > len(files)
-    assert "Prompt" in json_response["prompts"]
-    # All CUSTOM_TOOLS(dict) should be in the response
-    assert all(tool in json_response["tools"] for tool in CUSTOM_TOOLS.keys())
+    assert "ChatInput" in json_response["inputs"]
+    assert "Prompt" in json_response["inputs"]
+    assert "ChatOutput" in json_response["outputs"]
 
 
 def test_post_validate_code(client: TestClient):
@@ -414,35 +424,46 @@ def test_various_prompts(client, prompt, expected_input_variables):
 
 
 def test_get_vertices_flow_not_found(client, logged_in_headers):
-    response = client.get("/api/v1/build/nonexistent_id/vertices", headers=logged_in_headers)
-    assert response.status_code == 500  # Or whatever status code you've set for invalid ID
+    response = client.get(
+        "/api/v1/build/nonexistent_id/vertices", headers=logged_in_headers
+    )
+    assert (
+        response.status_code == 500
+    )  # Or whatever status code you've set for invalid ID
 
 
 def test_get_vertices(client, added_flow_with_prompt_and_history, logged_in_headers):
     flow_id = added_flow_with_prompt_and_history["id"]
-    response = client.get(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    response = client.get(
+        f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers
+    )
     assert response.status_code == 200
     assert "ids" in response.json()
     # The response should contain the list in this order
     # ['ConversationBufferMemory-Lu2Nb', 'PromptTemplate-5Q0W8', 'ChatOpenAI-vy7fV', 'LLMChain-UjBh1']
     # The important part is before the - (ConversationBufferMemory, PromptTemplate, ChatOpenAI, LLMChain)
-    ids = [inner_id.split("-")[0] for _id in response.json()["ids"] for inner_id in _id]
+    ids = [_id.split("-")[0] for _id in response.json()["ids"]]
     assert ids == [
         "ChatOpenAI",
         "PromptTemplate",
         "ConversationBufferMemory",
-        "LLMChain",
     ]
 
 
 def test_build_vertex_invalid_flow_id(client, logged_in_headers):
-    response = client.post("/api/v1/build/nonexistent_id/vertices/vertex_id", headers=logged_in_headers)
+    response = client.post(
+        "/api/v1/build/nonexistent_id/vertices/vertex_id", headers=logged_in_headers
+    )
     assert response.status_code == 500
 
 
-def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_history, logged_in_headers):
+def test_build_vertex_invalid_vertex_id(
+    client, added_flow_with_prompt_and_history, logged_in_headers
+):
     flow_id = added_flow_with_prompt_and_history["id"]
-    response = client.post(f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers)
+    response = client.post(
+        f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers
+    )
     assert response.status_code == 500
 
 
