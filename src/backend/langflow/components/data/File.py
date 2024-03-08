@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 
 from langflow import CustomComponent
-from langflow.base.data.utils import parse_file_to_record
+from langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_record
 from langflow.schema import Record
 
 
@@ -25,4 +25,7 @@ class FileComponent(CustomComponent):
         silent_errors: bool = False,
     ) -> Optional[Record]:
         resolved_path = self.resolve_path(path)
-        return parse_file_to_record(resolved_path, silent_errors)
+        extension = resolved_path.split(".")[-1]
+        if extension not in TEXT_FILE_TYPES:
+            raise ValueError(f"Unsupported file type: {extension}")
+        return parse_text_file_to_record(resolved_path, silent_errors)
