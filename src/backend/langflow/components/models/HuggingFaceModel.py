@@ -8,7 +8,7 @@ from langflow.field_typing import Text
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
-    display_name: str = "Hugging Face Inference API"
+    display_name: str = "Hugging Face API"
     description: str = "Generate text using LLM model from Hugging Face Inference API."
     icon = "HuggingFace"
 
