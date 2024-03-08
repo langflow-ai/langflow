@@ -1,7 +1,6 @@
 from langchain_core.prompts import PromptTemplate
 
 from langflow import CustomComponent
-from langflow.base.prompts.utils import dict_values_to_string
 from langflow.field_typing import Prompt, TemplateField, Text
 
 
@@ -21,9 +20,13 @@ class PromptComponent(CustomComponent):
         template: Prompt,
         **kwargs,
     ) -> Text:
+        from langflow.base.prompts.utils import dict_values_to_string
+
         prompt_template = PromptTemplate.from_template(Text(template))
         kwargs = dict_values_to_string(kwargs)
-        kwargs = {k: "\n".join(v) if isinstance(v, list) else v for k, v in kwargs.items()}
+        kwargs = {
+            k: "\n".join(v) if isinstance(v, list) else v for k, v in kwargs.items()
+        }
         try:
             formated_prompt = prompt_template.format(**kwargs)
         except Exception as exc:
