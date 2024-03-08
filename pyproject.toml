@@ -82,7 +82,7 @@ passlib = "^1.7.4"
 bcrypt = "4.0.1"
 python-jose = "^3.3.0"
 metaphor-python = "^0.1.11"
-pydantic = "^2.6.0"
+pydantic = "^2.5.0"
 pydantic-settings = "^2.1.0"
 zep-python = "1.5.0"
 pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
@@ -106,7 +106,7 @@ python-socketio = "^5.11.0"
 llama-index = "^0.10.13"
 langchain-openai = "^0.0.6"
 unstructured = { extras = ["md"], version = "^0.12.4" }
-dspy = "^0.0.7"
+dspy-ai = "^2.4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.1"
