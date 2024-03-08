@@ -14,7 +14,7 @@ class APIRequest(CustomComponent):
     output_types: list[str] = ["Record"]
     documentation: str = "https://docs.langflow.org/components/utilities#api-request"
     field_config = {
-        "url": {"display_name": "URL", "info": "The URL to make the request to."},
+        "urls": {"display_name": "URLs", "info": "The URLs to make the request to."},
         "method": {
             "display_name": "Method",
             "info": "The HTTP method to use.",
@@ -116,4 +116,5 @@ class APIRequest(CustomComponent):
                     for u, rec in zip(urls, bodies)
                 ]
             )
+        self.status = results
         return results

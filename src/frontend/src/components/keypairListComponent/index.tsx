@@ -54,7 +54,6 @@ export default function KeypairListComponent({
           return (
             <div key={idx} className="flex w-full gap-2">
               <Input
-                disabled={disabled}
                 data-testid={
                   editNode ? "editNodekeypair" + index : "keypair" + index
                 }
