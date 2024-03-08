@@ -20,11 +20,12 @@ class SocketIOService(Service):
     def init(self, sio: socketio.AsyncServer):
         # Registering event handlers
         self.sio = sio
-        self.sio.event(self.connect)
-        self.sio.event(self.disconnect)
-        self.sio.on("message")(self.message)
-        self.sio.on("get_vertices")(self.on_get_vertices)
-        self.sio.on("build_vertex")(self.on_build_vertex)
+        if self.sio:
+            self.sio.event(self.connect)
+            self.sio.event(self.disconnect)
+            self.sio.on("message")(self.message)
+            self.sio.on("get_vertices")(self.on_get_vertices)
+            self.sio.on("build_vertex")(self.on_build_vertex)
         self.sessions = {}  # type: dict[str, dict]
 
     async def emit_error(self, sid, error):
