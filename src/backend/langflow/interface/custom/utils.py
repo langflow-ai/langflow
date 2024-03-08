@@ -429,7 +429,7 @@ def build_custom_components(components_paths: List[str]):
         return {}
 
     logger.info(f"Building custom components from {components_paths}")
-    custom_components_from_file = {}
+    custom_components_from_file: dict = {}
     processed_paths = set()
     for path in components_paths:
         path_str = str(path)
@@ -485,7 +485,9 @@ def update_field_dict(
 def sanitize_field_config(field_config: Union[Dict, TemplateField]):
     # If any of the already existing keys are in field_config, remove them
     if isinstance(field_config, TemplateField):
-        field_config = field_config.to_dict()
+        field_dict = field_config.to_dict()
+    else:
+        field_dict = field_config
     for key in [
         "name",
         "field_type",
@@ -496,8 +498,8 @@ def sanitize_field_config(field_config: Union[Dict, TemplateField]):
         "advanced",
         "show",
     ]:
-        field_config.pop(key, None)
-    return field_config
+        field_dict.pop(key, None)
+    return field_dict
 
 
 def build_component(component):

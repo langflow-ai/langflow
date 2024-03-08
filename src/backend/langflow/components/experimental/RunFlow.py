@@ -32,8 +32,10 @@ class RunFlowComponent(CustomComponent):
             },
         }
 
-    def build_records_from_result_data(self, result_data: ResultData) -> Record:
+    def build_records_from_result_data(self, result_data: ResultData) -> List[Record]:
         messages = result_data.messages
+        if not messages:
+            return []
         records = []
         for message in messages:
             message_dict = (
@@ -47,7 +49,7 @@ class RunFlowComponent(CustomComponent):
 
     async def build(
         self, input_value: Text, flow_name: str, tweaks: NestedDict
-    ) -> Record:
+    ) -> List[Record]:
         results: List[Optional[ResultData]] = await self.run_flow(
             input_value=input_value, flow_name=flow_name, tweaks=tweaks
         )

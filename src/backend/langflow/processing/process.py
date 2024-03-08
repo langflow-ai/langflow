@@ -217,7 +217,7 @@ async def run_graph(
         graph = Graph.from_payload(graph, flow_id=flow_id)
     else:
         graph_data = graph._graph_data
-    if not session_id and session_service is not None:
+    if session_id is None and session_service is not None:
         session_id = session_service.generate_key(
             session_id=flow_id, data_graph=graph_data
         )
@@ -226,9 +226,9 @@ async def run_graph(
 
     outputs = await graph.run(
         inputs,
-        outputs,
+        outputs or [],
         stream=stream,
-        session_id=session_id,
+        session_id=session_id or "",
     )
     if session_id and session_service:
         session_service.update_session(session_id, (graph, artifacts))
@@ -236,7 +236,7 @@ async def run_graph(
 
 
 def validate_input(
-    graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]
+    graph_data: Dict[str, Any], tweaks: Union["Tweaks", Dict[str, Dict[str, Any]]]
 ) -> List[Dict[str, Any]]:
     if not isinstance(graph_data, dict) or not isinstance(tweaks, dict):
         raise ValueError("graph_data and tweaks should be dictionaries")

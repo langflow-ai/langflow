@@ -3,6 +3,8 @@ from typing import Any, Callable
 
 
 class TaskBackend(ABC):
+    name: str
+
     @abstractmethod
     def launch_task(self, task_func: Callable[..., Any], *args: Any, **kwargs: Any):
         pass

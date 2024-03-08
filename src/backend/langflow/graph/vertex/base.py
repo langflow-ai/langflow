@@ -396,7 +396,7 @@ class Vertex:
 
         self._built = True
 
-    def extract_messages_from_artifacts(self, artifacts: Dict[str, Any]) -> List[str]:
+    def extract_messages_from_artifacts(self, artifacts: Dict[str, Any]) -> List[dict]:
         """
         Extracts messages from the artifacts.
 

@@ -77,6 +77,8 @@ class CustomComponent(Component):
     _flows_records: Optional[List[Record]] = None
 
     def update_state(self, name: str, value: Any):
+        if not self.vertex:
+            raise ValueError("Vertex is not set")
         try:
             self.vertex.graph.update_state(
                 name=name, record=value, caller=self.vertex.id
@@ -85,6 +87,8 @@ class CustomComponent(Component):
             raise ValueError(f"Error updating state: {e}")
 
     def append_state(self, name: str, value: Any):
+        if not self.vertex:
+            raise ValueError("Vertex is not set")
         try:
             self.vertex.graph.append_state(
                 name=name, record=value, caller=self.vertex.id
@@ -93,6 +97,8 @@ class CustomComponent(Component):
             raise ValueError(f"Error appending state: {e}")
 
     def get_state(self, name: str):
+        if not self.vertex:
+            raise ValueError("Vertex is not set")
         try:
             return self.vertex.graph.get_state(name=name)
         except Exception as e:
@@ -142,7 +148,7 @@ class CustomComponent(Component):
     def update_build_config(
         self,
         build_config: dotdict,
-        field_name: str,
+        field_name: Optional[str],
         field_value: Any,
     ):
         build_config[field_name] = field_value
@@ -173,6 +179,8 @@ class CustomComponent(Component):
             ValueError: If the input data is not of a valid type or if the specified keys are not found in the data.
 
         """
+        if not keys:
+            keys = []
         records = []
         if not isinstance(data, Sequence):
             data = [data]
