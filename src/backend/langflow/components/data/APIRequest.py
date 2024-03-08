@@ -54,10 +54,10 @@ class APIRequest(CustomComponent):
             raise ValueError(f"Unsupported method: {method}")
 
         data = body if body else None
-        data = json.dumps(data)
+        payload = json.dumps(data)
         try:
             response = await client.request(
-                method, url, headers=headers, content=data, timeout=timeout
+                method, url, headers=headers, content=payload, timeout=timeout
             )
             try:
                 result = response.json()
@@ -93,14 +93,13 @@ class APIRequest(CustomComponent):
     async def build(
         self,
         method: str,
-        url: List[str],
+        urls: List[str],
         headers: Optional[dict] = None,
         body: Optional[List[Record]] = None,
         timeout: int = 5,
     ) -> List[Record]:
         if headers is None:
             headers = {}
-        urls = url if isinstance(url, list) else [url]
         bodies = []
         if body:
             if isinstance(body, list):

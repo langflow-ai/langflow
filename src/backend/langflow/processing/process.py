@@ -224,7 +224,7 @@ async def run_graph(
     if inputs is None:
         inputs = [{}]
 
-    outputs = await graph.run(
+    run_outputs = await graph.run(
         inputs,
         outputs or [],
         stream=stream,
@@ -232,7 +232,7 @@ async def run_graph(
     )
     if session_id and session_service:
         session_service.update_session(session_id, (graph, artifacts))
-    return outputs, session_id
+    return run_outputs, session_id
 
 
 def validate_input(
