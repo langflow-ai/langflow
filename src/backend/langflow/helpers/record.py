@@ -16,7 +16,7 @@ def docs_to_records(documents: list[Document]) -> list[Record]:
     return [Record.from_document(document) for document in documents]
 
 
-def records_to_text(template: str, records: list[Record]) -> list[str]:
+def records_to_text(template: str, records: list[Record]) -> str:
     """
     Converts a list of Records to a list of texts.
 

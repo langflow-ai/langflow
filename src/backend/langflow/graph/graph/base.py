@@ -60,8 +60,8 @@ class Graph:
         self._edges = self._graph_data["edges"]
         self.inactivated_vertices: set = set()
         self.activated_vertices: List[str] = []
-        self.vertices_layers = []
-        self.vertices_to_run = set()
+        self.vertices_layers: List[List[str]] = []
+        self.vertices_to_run: set[str] = set()
         self.stop_vertex = None
 
         self.inactive_vertices: set = set()
@@ -197,9 +197,9 @@ class Graph:
         self,
         inputs: list[Dict[str, Union[str, list[str]]]],
         outputs: list[str],
-        session_id: str,
-        stream: Optional[bool] = False,
-    ) -> List[Optional["ResultData"]]:
+        session_id: Optional[str] = None,
+        stream: bool = False,
+    ) -> List[List[Optional["ResultData"]]]:
         """Runs the graph with the given inputs."""
 
         # inputs is {"message": "Hello, world!"}
@@ -207,15 +207,16 @@ class Graph:
         # of the vertices that are inputs
         # if the value is a list, we need to run multiple times
         vertex_outputs = []
-        if not isinstance(inputs_values, list):
-            inputs_values = [inputs_values]
-        for input_dict in inputs_values:
+        if not isinstance(inputs, list):
+            inputs = [inputs]
+        for input_dict in inputs:
+            components: list[str] = input_dict.get("components", [])
             run_outputs = await self._run(
-                inputs={INPUT_FIELD_NAME: input_dict.get(INPUT_FIELD_NAME)},
-                input_components=input_dict.get("components", []),
+                inputs={INPUT_FIELD_NAME: input_dict.get(INPUT_FIELD_NAME, "")},
+                input_components=components,
                 outputs=outputs,
                 stream=stream,
-                session_id=session_id,
+                session_id=session_id or "",
             )
             logger.debug(f"Run outputs: {run_outputs}")
             vertex_outputs.append(run_outputs)

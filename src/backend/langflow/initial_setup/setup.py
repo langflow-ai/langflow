@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 import orjson
-from emoji import demojize, purely_emoji
+from emoji import demojize, purely_emoji  # type: ignore
 from loguru import logger
 from sqlmodel import select
 
