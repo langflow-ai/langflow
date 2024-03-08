@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from langflow import CustomComponent
 from langflow.base.data.utils import (
     parallel_load_records,
-    parse_file_to_record,
+    parse_text_file_to_record,
     retrieve_file_paths,
 )
 from langflow.schema import Record
@@ -11,7 +11,7 @@ from langflow.schema import Record
 
 class DirectoryComponent(CustomComponent):
     display_name = "Directory"
-    description = "Load files from a directory."
+    description = "Load Text Files from a Directory and Convert Them to Records."
 
     def build_config(self) -> Dict[str, Any]:
         return {
@@ -46,7 +46,6 @@ class DirectoryComponent(CustomComponent):
     def build(
         self,
         path: str,
-        types: Optional[List[str]] = None,
         depth: int = 0,
         max_concurrency: int = 2,
         load_hidden: bool = False,
@@ -54,16 +53,20 @@ class DirectoryComponent(CustomComponent):
         silent_errors: bool = False,
         use_multithreading: bool = True,
     ) -> List[Optional[Record]]:
-        if types is None:
-            types = []
+
         resolved_path = self.resolve_path(path)
-        file_paths = retrieve_file_paths(resolved_path, types, load_hidden, recursive, depth)
+        file_paths = retrieve_file_paths(resolved_path, load_hidden, recursive, depth)
         loaded_records = []
 
         if use_multithreading:
-            loaded_records = parallel_load_records(file_paths, silent_errors, max_concurrency)
+            loaded_records = parallel_load_records(
+                file_paths, silent_errors, max_concurrency
+            )
         else:
-            loaded_records = [parse_file_to_record(file_path, silent_errors) for file_path in file_paths]
+            loaded_records = [
+                parse_text_file_to_record(file_path, silent_errors)
+                for file_path in file_paths
+            ]
         loaded_records = list(filter(None, loaded_records))
         self.status = loaded_records
         return loaded_records
