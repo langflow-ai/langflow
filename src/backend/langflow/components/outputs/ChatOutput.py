@@ -9,6 +9,7 @@ class ChatOutput(ChatComponent):
     display_name = "Chat Output"
     description = "Used to send a message to the chat."
     icon = "ChatOutput"
+
     def build(
         self,
         sender: Optional[str] = "Machine",

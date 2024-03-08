@@ -92,7 +92,7 @@ export default function KeypairListComponent({
 
               {isList && index === ref.current.length - 1 ? (
                 <button
-                disabled={disabled}
+                  disabled={disabled}
                   onClick={() => {
                     let newInputList = _.cloneDeep(ref.current);
                     newInputList.push({ "": "" });

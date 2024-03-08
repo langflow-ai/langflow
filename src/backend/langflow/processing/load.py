@@ -6,9 +6,7 @@ from langflow.graph import Graph
 from langflow.processing.process import process_tweaks
 
 
-def load_flow_from_json(
-    flow: Union[Path, str, dict], tweaks: Optional[dict] = None
-) -> Graph:
+def load_flow_from_json(flow: Union[Path, str, dict], tweaks: Optional[dict] = None) -> Graph:
     """
     Load flow from a JSON file or a JSON object.
 
@@ -25,9 +23,7 @@ def load_flow_from_json(
     elif isinstance(flow, dict):
         flow_graph = flow
     else:
-        raise TypeError(
-            "Input must be either a file path (str) or a JSON object (dict)"
-        )
+        raise TypeError("Input must be either a file path (str) or a JSON object (dict)")
 
     graph_data = flow_graph["data"]
     if tweaks is not None:

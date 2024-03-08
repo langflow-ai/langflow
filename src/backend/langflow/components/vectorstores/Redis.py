@@ -66,9 +66,7 @@ class RedisComponent(CustomComponent):
                 documents.append(_input)
         if not documents:
             if schema is None:
-                raise ValueError(
-                    "If no documents are provided, a schema must be provided."
-                )
+                raise ValueError("If no documents are provided, a schema must be provided.")
             redis_vs = Redis.from_existing_index(
                 embedding=embedding,
                 index_name=redis_index_name,

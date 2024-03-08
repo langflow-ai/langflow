@@ -2,15 +2,14 @@ import { Group, ToyBrick } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../components/DropdownButtonComponent";
-import NewFlowCardComponent from "../../components/NewFLowCard2";;
-import ExampleCardComponent from "../../components/exampleComponent";
+import NewFlowCardComponent from "../../components/NewFLowCard2";
 import IconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
 import { Button } from "../../components/ui/button";
+import UndrawCardComponent from "../../components/undrawCards";
 import { CONSOLE_ERROR_MSG } from "../../constants/alerts_constants";
 import {
-  EXAMPLES_MOCK,
   MY_COLLECTION_DESC,
   USER_PROJECTS_HEADER,
 } from "../../constants/constants";
@@ -18,7 +17,6 @@ import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { downloadFlows } from "../../utils/reactflowUtils";
-import UndrawCardComponent from "../../components/undrawCards";
 export default function HomePage(): JSX.Element {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
@@ -120,9 +118,7 @@ export default function HomePage(): JSX.Element {
         </div>
       </div>
       <BaseModal size="three-cards" open={openModal} setOpen={setOpenModal}>
-        <BaseModal.Header
-          description={"Select a template below"}
-        >
+        <BaseModal.Header description={"Select a template below"}>
           <span className="pr-2" data-testid="modal-title">
             Get Started
           </span>
@@ -133,7 +129,7 @@ export default function HomePage(): JSX.Element {
           /> */}
         </BaseModal.Header>
         <BaseModal.Content>
-          <div className=" h-full w-full grid grid-cols-3 gap-3 overflow-auto p-4 custom-scroll">
+          <div className=" grid h-full w-full grid-cols-3 gap-3 overflow-auto p-4 custom-scroll">
             {examples.map((example, idx) => {
               return <UndrawCardComponent key={idx} flow={example} />;
             })}

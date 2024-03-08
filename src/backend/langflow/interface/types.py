@@ -66,12 +66,8 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
 def get_all_types_dict(components_paths):
     """Get all types dictionary combining native and custom components."""
     native_components = build_langchain_types_dict()
-    custom_components_from_file = build_custom_components(
-        components_paths=components_paths
-    )
-    return merge_nested_dicts_with_renaming(
-        native_components, custom_components_from_file
-    )
+    custom_components_from_file = build_custom_components(components_paths=components_paths)
+    return merge_nested_dicts_with_renaming(native_components, custom_components_from_file)
 
 
 def get_all_components(components_paths, as_dict=False):

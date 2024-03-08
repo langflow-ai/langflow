@@ -267,7 +267,7 @@ export default function ExtraSidebar(): JSX.Element {
               <>
                 {index === 0 && (
                   <div className="pt-0.5">
-                    <div className="p-2 px-4 font-semibold text-sm" key={index}>
+                    <div className="p-2 px-4 text-sm font-semibold" key={index}>
                       Native Components
                     </div>
                   </div>
@@ -283,7 +283,7 @@ export default function ExtraSidebar(): JSX.Element {
                         {/* BUG ON THIS ICON */}
                         <SparklesIcon
                           strokeWidth={1.5}
-                          className="text-primary w-[22px]"
+                          className="w-[22px] text-primary"
                         />
 
                         <span className="components-disclosure-title">
@@ -296,7 +296,7 @@ export default function ExtraSidebar(): JSX.Element {
                         </div>
                       </div>
                     </a>
-                    <div className="p-2 px-4 font-semibold text-sm" key={index}>
+                    <div className="p-2 px-4 text-sm font-semibold" key={index}>
                       Legacy Components
                     </div>
                   </>

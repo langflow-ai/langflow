@@ -20,7 +20,12 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
-export default function IOView({ children, open, setOpen, disable }: {
+export default function IOView({
+  children,
+  open,
+  setOpen,
+  disable,
+}: {
   children: JSX.Element;
   open: boolean;
   setOpen: (open: boolean) => void;
