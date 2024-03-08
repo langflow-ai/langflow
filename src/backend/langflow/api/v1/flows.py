@@ -207,8 +207,11 @@ async def upload_file(
 async def download_file(
     *,
     session: Session = Depends(get_session),
+    settings_service: "SettingsService" = Depends(get_settings_service),
     current_user: User = Depends(get_current_active_user),
 ):
     """Download all flows as a file."""
-    flows = read_flows(current_user=current_user)
+    flows = read_flows(
+        current_user=current_user, session=session, settings_service=settings_service
+    )
     return FlowListRead(flows=flows)
