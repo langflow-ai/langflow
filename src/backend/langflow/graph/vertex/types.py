@@ -13,6 +13,7 @@ from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema import Record
 from langflow.services.monitor.utils import log_vertex_build
 from langflow.utils.schemas import ChatOutputResponse
+from langflow.utils.util import unescape_string
 
 
 class AgentVertex(Vertex):
@@ -353,8 +354,13 @@ class ChatVertex(Vertex):
                 return f"Task {self.task_id} is not running"
         if self.artifacts:
             # dump as a yaml string
+            artifacts = {
+                k.title().replace("_", " "): v
+                for k, v in self.artifacts.items()
+                if v is not None
+            }
             yaml_str = yaml.dump(
-                self.artifacts, default_flow_style=False, allow_unicode=True
+                artifacts, default_flow_style=False, allow_unicode=True
             )
             return yaml_str
         return super()._built_object_repr()
@@ -365,7 +371,7 @@ class ChatVertex(Vertex):
                 artifacts = None
                 sender = self.params.get("sender", None)
                 sender_name = self.params.get("sender_name", None)
-                message = self.params.get(INPUT_FIELD_NAME, None)
+                message = unescape_string(self.params.get(INPUT_FIELD_NAME, None))
                 stream_url = None
                 if isinstance(self._built_object, AIMessage):
                     artifacts = ChatOutputResponse.from_message(
