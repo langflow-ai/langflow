@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+
 from langflow.services.deps import get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.services.storage.utils import build_content_type_from_extension
@@ -24,10 +25,15 @@ def test_upload_file(client, mock_storage_service, created_api_key, flow):
     client.app.dependency_overrides[get_storage_service] = lambda: mock_storage_service
 
     response = client.post(
-        f"api/v1/files/upload/{flow.id}", files={"file": ("test.txt", b"test content")}, headers=headers
+        f"api/v1/files/upload/{flow.id}",
+        files={"file": ("test.txt", b"test content")},
+        headers=headers,
     )
     assert response.status_code == 201
-    assert response.json() == {"flowId": str(flow.id), "file_path": f"{flow.id}/test.txt"}
+    assert response.json() == {
+        "flowId": str(flow.id),
+        "file_path": f"{flow.id}/test.txt",
+    }
 
 
 def test_download_file(client, mock_storage_service, created_api_key, flow):
@@ -64,9 +70,16 @@ def test_file_operations(client, created_api_key, flow):
     file_content = b"Hello, world!"
 
     # Step 1: Upload the file
-    response = client.post(f"api/v1/files/upload/{flow_id}", files={"file": (file_name, file_content)}, headers=headers)
+    response = client.post(
+        f"api/v1/files/upload/{flow_id}",
+        files={"file": (file_name, file_content)},
+        headers=headers,
+    )
     assert response.status_code == 201
-    assert response.json() == {"flowId": str(flow_id), "file_path": f"{flow_id}/{file_name}"}
+    assert response.json() == {
+        "flowId": str(flow_id),
+        "file_path": f"{flow_id}/{file_name}",
+    }
 
     # Step 2: List files in the folder
     response = client.get(f"api/v1/files/list/{flow_id}", headers=headers)
@@ -75,13 +88,19 @@ def test_file_operations(client, created_api_key, flow):
 
     # Step 3: Download the file and verify its content
     mime_type = build_content_type_from_extension(file_name.split(".")[-1])
-    response = client.get(f"api/v1/files/download/{flow_id}/{file_name}", headers=headers)
+    response = client.get(
+        f"api/v1/files/download/{flow_id}/{file_name}", headers=headers
+    )
     assert response.status_code == 200
     assert response.content == file_content
-    assert mime_type in response.headers["content-type"]
+    # the headers are application/octet-stream
+    assert response.headers["content-type"] == "application/octet-stream"
+    # mime_type is inside media_type
 
     # Step 4: Delete the file
-    response = client.delete(f"api/v1/files/delete/{flow_id}/{file_name}", headers=headers)
+    response = client.delete(
+        f"api/v1/files/delete/{flow_id}/{file_name}", headers=headers
+    )
     assert response.status_code == 200
     assert response.json() == {"message": f"File {file_name} deleted successfully"}
 

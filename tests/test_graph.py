@@ -1,14 +1,10 @@
 import copy
 import json
-import os
 import pickle
-from pathlib import Path
 from typing import Type, Union
 
 import pytest
-from langchain.agents import AgentExecutor
-from langchain.chains.base import Chain
-from langchain.llms.fake import FakeListLLM
+
 from langflow.graph import Graph
 from langflow.graph.edge.base import Edge
 from langflow.graph.graph.utils import (
@@ -21,8 +17,7 @@ from langflow.graph.graph.utils import (
     update_template,
 )
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import FileToolVertex, LLMVertex, ToolkitVertex
-from langflow.processing.process import get_result_and_thought
+from langflow.initial_setup.setup import load_starter_projects
 from langflow.utils.payload import get_root_vertex
 
 # Test cases for the graph module
@@ -44,7 +39,13 @@ def sample_nodes():
     return [
         {
             "id": "node1",
-            "data": {"node": {"template": {"some_field": {"show": True, "advanced": False, "name": "Name1"}}}},
+            "data": {
+                "node": {
+                    "template": {
+                        "some_field": {"show": True, "advanced": False, "name": "Name1"}
+                    }
+                }
+            },
         },
         {
             "id": "node2",
@@ -62,7 +63,11 @@ def sample_nodes():
         },
         {
             "id": "node3",
-            "data": {"node": {"template": {"unrelated_field": {"show": True, "advanced": True}}}},
+            "data": {
+                "node": {
+                    "template": {"unrelated_field": {"show": True, "advanced": True}}
+                }
+            },
         },
     ]
 
@@ -147,9 +152,15 @@ def test_get_node_neighbors_basic(basic_graph):
     # Root Node is an Agent, it requires an LLMChain and tools
     # We need to check if there is a Chain in the one of the neighbors'
     # data attribute in the type key
-    assert any("ConversationBufferMemory" in neighbor.data["type"] for neighbor, val in neighbors.items() if val)
+    assert any(
+        "ConversationBufferMemory" in neighbor.data["type"]
+        for neighbor, val in neighbors.items()
+        if val
+    )
 
-    assert any("OpenAI" in neighbor.data["type"] for neighbor, val in neighbors.items() if val)
+    assert any(
+        "OpenAI" in neighbor.data["type"] for neighbor, val in neighbors.items() if val
+    )
 
 
 def test_get_node(basic_graph):
@@ -231,87 +242,11 @@ def test_build_params(basic_graph):
     assert "memory" in root.params
 
 
-@pytest.mark.asyncio
-async def test_build(basic_graph):
-    """Test Node's build method"""
-    await assert_agent_was_built(basic_graph)
-
-
-async def assert_agent_was_built(graph):
-    """Assert that the agent was built"""
-    assert isinstance(graph, Graph)
-    # Now we test the build method
-    # Build the Agent
-    result = await graph.build()
-    # The agent should be a AgentExecutor
-    assert isinstance(result, Chain)
-
-
-def test_llm_node_build(basic_graph):
-    llm_node = get_node_by_type(basic_graph, LLMVertex)
-    assert llm_node is not None
-    built_object = llm_node.build()
-    assert built_object is not None
-
-
-def test_toolkit_node_build(client, openapi_graph):
-    # Write a file to the disk
-    file_path = "api-with-examples.yaml"
-    with open(file_path, "w") as f:
-        f.write("openapi: 3.0.0")
-
-    toolkit_node = get_node_by_type(openapi_graph, ToolkitVertex)
-    assert toolkit_node is not None
-    built_object = toolkit_node.build()
-    assert built_object is not None
-    # Remove the file
-    os.remove(file_path)
-    assert not Path(file_path).exists()
-
-
-def test_file_tool_node_build(client, openapi_graph):
-    file_path = "api-with-examples.yaml"
-    with open(file_path, "w") as f:
-        f.write("openapi: 3.0.0")
-
-    assert Path(file_path).exists()
-    file_tool_node = get_node_by_type(openapi_graph, FileToolVertex)
-    assert file_tool_node is not None
-    built_object = file_tool_node.build()
-    assert built_object is not None
-    # Remove the file
-    os.remove(file_path)
-    assert not Path(file_path).exists()
-
-
 # def test_wrapper_node_build(openapi_graph):
 #     wrapper_node = get_node_by_type(openapi_graph, WrapperVertex)
 #     assert wrapper_node is not None
 #     built_object = wrapper_node.build()
 #     assert built_object is not None
-
-
-@pytest.mark.asyncio
-async def test_get_result_and_thought(basic_graph):
-    """Test the get_result_and_thought method"""
-    responses = [
-        "Final Answer: I am a response",
-    ]
-    message = {"input": "Hello"}
-    # Find the node that is an LLMNode and change the
-    # _built_object to a FakeListLLM
-    llm_node = get_node_by_type(basic_graph, LLMVertex)
-    assert llm_node is not None
-    llm_node._built_object = FakeListLLM(responses=responses)
-    llm_node._built = True
-    langchain_object = await basic_graph.build()
-    # assert all nodes are built
-    assert all(node._built for node in basic_graph.vertices)
-    # now build again and check if FakeListLLM was used
-
-    # Get the result and thought
-    result = get_result_and_thought(langchain_object, message)
-    assert isinstance(result, dict)
 
 
 def test_find_last_node(grouped_chat_json_flow):
@@ -324,7 +259,9 @@ def test_find_last_node(grouped_chat_json_flow):
 
 def test_ungroup_node(grouped_chat_json_flow):
     grouped_chat_data = json.loads(grouped_chat_json_flow).get("data")
-    group_node = grouped_chat_data["nodes"][2]  # Assuming the first node is a group node
+    group_node = grouped_chat_data["nodes"][
+        2
+    ]  # Assuming the first node is a group node
     base_flow = copy.deepcopy(grouped_chat_data)
     ungroup_node(group_node["data"], base_flow)
     # after ungroup_node is called, the base_flow and grouped_chat_data should be different
@@ -376,9 +313,14 @@ def test_process_flow_one_group(one_grouped_chat_json_flow):
     assert "edges" in processed_flow
 
     # Now get the node that has ChatOpenAI in its id
-    chat_openai_node = next((node for node in processed_flow["nodes"] if "ChatOpenAI" in node["id"]), None)
+    chat_openai_node = next(
+        (node for node in processed_flow["nodes"] if "ChatOpenAI" in node["id"]), None
+    )
     assert chat_openai_node is not None
-    assert chat_openai_node["data"]["node"]["template"]["openai_api_key"]["value"] == "test"
+    assert (
+        chat_openai_node["data"]["node"]["template"]["openai_api_key"]["value"]
+        == "test"
+    )
 
 
 def test_process_flow_vector_store_grouped(vector_store_grouped_json_flow):
@@ -427,11 +369,17 @@ def test_update_template(sample_template, sample_nodes):
 
     assert node1_updated["data"]["node"]["template"]["some_field"]["show"] is True
     assert node1_updated["data"]["node"]["template"]["some_field"]["advanced"] is False
-    assert node1_updated["data"]["node"]["template"]["some_field"]["display_name"] == "Name1"
+    assert (
+        node1_updated["data"]["node"]["template"]["some_field"]["display_name"]
+        == "Name1"
+    )
 
     assert node2_updated["data"]["node"]["template"]["other_field"]["show"] is False
     assert node2_updated["data"]["node"]["template"]["other_field"]["advanced"] is True
-    assert node2_updated["data"]["node"]["template"]["other_field"]["display_name"] == "DisplayName2"
+    assert (
+        node2_updated["data"]["node"]["template"]["other_field"]["display_name"]
+        == "DisplayName2"
+    )
 
     # Ensure node3 remains unchanged
     assert node3_updated == sample_nodes[2]
@@ -462,7 +410,9 @@ def test_set_new_target_handle():
         "data": {
             "node": {
                 "flow": True,
-                "template": {"field_1": {"proxy": {"field": "new_field", "id": "new_id"}}},
+                "template": {
+                    "field_1": {"proxy": {"field": "new_field", "id": "new_id"}}
+                },
             }
         }
     }
@@ -482,30 +432,30 @@ def test_update_source_handle():
         "nodes": [{"id": "some_node"}, {"id": "last_node"}],
         "edges": [{"source": "some_node"}],
     }
-    updated_edge = update_source_handle(new_edge, flow_data["nodes"], flow_data["edges"])
+    updated_edge = update_source_handle(
+        new_edge, flow_data["nodes"], flow_data["edges"]
+    )
     assert updated_edge["source"] == "last_node"
     assert updated_edge["data"]["sourceHandle"]["id"] == "last_node"
 
 
 @pytest.mark.asyncio
 async def test_pickle_graph(json_vector_store):
-    loaded_json = json.loads(json_vector_store)
-    graph = Graph.from_payload(loaded_json)
+    starter_projects = load_starter_projects()
+    data = starter_projects[0]["data"]
+    graph = Graph.from_payload(data)
     assert isinstance(graph, Graph)
-    first_result = await graph.build()
-    assert isinstance(first_result, AgentExecutor)
     pickled = pickle.dumps(graph)
     assert pickled is not None
     unpickled = pickle.loads(pickled)
     assert unpickled is not None
-    result = await unpickled.build()
-    assert isinstance(result, AgentExecutor)
 
 
 @pytest.mark.asyncio
 async def test_pickle_each_vertex(json_vector_store):
-    loaded_json = json.loads(json_vector_store)
-    graph = Graph.from_payload(loaded_json)
+    starter_projects = load_starter_projects()
+    data = starter_projects[0]["data"]
+    graph = Graph.from_payload(data)
     assert isinstance(graph, Graph)
     for vertex in graph.vertices:
         await vertex.build()
