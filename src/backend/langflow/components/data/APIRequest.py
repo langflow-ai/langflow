@@ -1,12 +1,11 @@
 import asyncio
+import json
 from typing import List, Optional
 
 import httpx
-import json
 
 from langflow import CustomComponent
 from langflow.schema import Record
-from langflow.services.database.models.base import orjson_dumps
 
 
 class APIRequest(CustomComponent):
@@ -14,7 +13,6 @@ class APIRequest(CustomComponent):
     description: str = "Make an HTTP request to the given URL."
     output_types: list[str] = ["Record"]
     documentation: str = "https://docs.langflow.org/components/utilities#api-request"
-    beta: bool = True
     field_config = {
         "url": {"display_name": "URL", "info": "The URL to make the request to."},
         "method": {
@@ -52,35 +50,44 @@ class APIRequest(CustomComponent):
         timeout: int = 5,
     ) -> Record:
         method = method.upper()
-        if method not in ["GET", "POST", "PATCH", "PUT"]:
+        if method not in ["GET", "POST", "PATCH", "PUT", "DELETE"]:
             raise ValueError(f"Unsupported method: {method}")
 
         data = body if body else None
         data = json.dumps(data)
         try:
-            response = await client.request(method, url, headers=headers, content=data, timeout=timeout)
+            response = await client.request(
+                method, url, headers=headers, content=data, timeout=timeout
+            )
             try:
-                response_json = response.json()
-                result = orjson_dumps(response_json, indent_2=False)
+                result = response.json()
             except Exception:
                 result = response.text
             return Record(
-                text=result,
                 data={
                     "source": url,
                     "headers": headers,
                     "status_code": response.status_code,
+                    "result": result,
                 },
             )
         except httpx.TimeoutException:
             return Record(
-                text="Request Timed Out",
-                data={"source": url, "headers": headers, "status_code": 408},
+                data={
+                    "source": url,
+                    "headers": headers,
+                    "status_code": 408,
+                    "error": "Request timed out",
+                },
             )
         except Exception as exc:
             return Record(
-                text=str(exc),
-                data={"source": url, "headers": headers, "status_code": 500},
+                data={
+                    "source": url,
+                    "headers": headers,
+                    "status_code": 500,
+                    "error": str(exc),
+                },
             )
 
     async def build(
@@ -88,15 +95,23 @@ class APIRequest(CustomComponent):
         method: str,
         url: List[str],
         headers: Optional[dict] = None,
-        body: Optional[dict] = None,
+        body: Optional[List[Record]] = None,
         timeout: int = 5,
     ) -> List[Record]:
         if headers is None:
             headers = {}
         urls = url if isinstance(url, list) else [url]
-        bodies = body if isinstance(body, list) else [body] if body else [None] * len(urls)
+        bodies = []
+        if body:
+            if isinstance(body, list):
+                bodies = [b.data for b in body]
+            else:
+                bodies = [body.data]
         async with httpx.AsyncClient() as client:
             results = await asyncio.gather(
-                *[self.make_request(client, method, u, headers, rec, timeout) for u, rec in zip(urls, bodies)]
+                *[
+                    self.make_request(client, method, u, headers, rec, timeout)
+                    for u, rec in zip(urls, bodies)
+                ]
             )
         return results

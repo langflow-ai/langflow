@@ -93,7 +93,7 @@ async def build_vertex(
     current_user=Depends(get_current_active_user),
 ):
     """Build a vertex instead of the entire graph."""
-    {"inputs": {"input_value": "some value"}}
+
     start_time = time.perf_counter()
     next_vertices_ids = []
     try:
@@ -122,7 +122,9 @@ async def build_vertex(
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
             next_vertices_ids = vertex.successors_ids
-            next_vertices_ids = [v for v in next_vertices_ids if graph.should_run_vertex(v)]
+            next_vertices_ids = [
+                v for v in next_vertices_ids if graph.should_run_vertex(v)
+            ]
 
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 

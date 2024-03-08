@@ -8,6 +8,8 @@ class NotifyComponent(CustomComponent):
     display_name = "Notify"
     description = "A component to generate a notification to Get Notified component."
     icon = "Notify"
+    beta: bool = True
+
     def build_config(self):
         return {
             "name": {"display_name": "Name", "info": "The name of the notification."},

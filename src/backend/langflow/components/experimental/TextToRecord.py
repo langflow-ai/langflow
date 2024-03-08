@@ -9,6 +9,7 @@ class TextToRecordComponent(CustomComponent):
     display_name = "Text to Record"
     description = "A component to create a record from key-value pairs."
     field_order = ["mode", "keys", "n_keys"]
+    beta: bool = True
 
     def set_key_template(self, build_config, field_value):
         keys_template = TemplateField(
@@ -80,7 +81,7 @@ class TextToRecordComponent(CustomComponent):
                 "display_name": "Mode",
                 "options": ["Text", "Number"],
                 "info": "The mode to use for creating the record.",
-                "refresh": True,
+                "real_time_refresh": True,
                 "input_types": [],
             },
         }

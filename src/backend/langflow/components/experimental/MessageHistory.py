@@ -8,6 +8,7 @@ from langflow.schema import Record
 class MessageHistoryComponent(CustomComponent):
     display_name = "Message History"
     description = "Used to retrieve stored messages."
+    beta: bool = True
 
     def build_config(self):
         return {

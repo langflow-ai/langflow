@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Optional, Union
 
 from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import VectorStore
@@ -28,16 +28,18 @@ class SupabaseComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
-        inputs: List[Record],
+        inputs: Optional[List[Record]] = None,
         query_name: str = "",
         search_kwargs: NestedDict = {},
         supabase_service_key: str = "",
         supabase_url: str = "",
         table_name: str = "",
     ) -> Union[VectorStore, SupabaseVectorStore, BaseRetriever]:
-        supabase: Client = create_client(supabase_url, supabase_key=supabase_service_key)
+        supabase: Client = create_client(
+            supabase_url, supabase_key=supabase_service_key
+        )
         documents = []
-        for _input in inputs:
+        for _input in inputs or []:
             if isinstance(_input, Record):
                 documents.append(_input.to_lc_document())
             else:

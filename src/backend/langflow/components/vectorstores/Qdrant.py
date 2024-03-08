@@ -64,7 +64,7 @@ class QdrantComponent(CustomComponent):
         url: Optional[str] = None,
     ) -> Union[VectorStore, Qdrant, BaseRetriever]:
         documents = []
-        for _input in inputs:
+        for _input in inputs or []:
             if isinstance(_input, Record):
                 documents.append(_input.to_lc_document())
             else:

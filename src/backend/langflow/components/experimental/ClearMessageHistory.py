@@ -6,6 +6,8 @@ class ClearMessageHistoryComponent(CustomComponent):
     display_name = "Clear Message History"
     description = "A component to clear the message history."
     icon="ClearMessageHistory"
+    beta: bool = True
+
     def build_config(self):
         return {
             "session_id": {

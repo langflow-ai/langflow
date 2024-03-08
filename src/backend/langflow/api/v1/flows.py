@@ -65,7 +65,7 @@ def read_flows(
         else:
             flows = current_user.flows
 
-        flows = validate_is_component(flows)
+        flows = validate_is_component(flows)  # type: ignore
         flow_ids = [flow.id for flow in flows]
         # with the session get the flows that DO NOT have a user_id
         try:
@@ -77,7 +77,7 @@ def read_flows(
             ).all()
             for example_flow in example_flows:
                 if example_flow.id not in flow_ids:
-                    flows.append(example_flow)
+                    flows.append(example_flow)  # type: ignore
         except Exception as e:
             logger.error(e)
     except Exception as e:

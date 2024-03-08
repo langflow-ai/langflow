@@ -9,7 +9,9 @@ class UUIDGeneratorComponent(CustomComponent):
     display_name = "Unique ID Generator"
     description = "Generates a unique ID."
 
-    def update_build_config(self, build_config: dict, field_name: Text, field_value: Any):
+    def update_build_config(
+        self, build_config: dict, field_name: Text, field_value: Any
+    ):
         if field_name == "unique_id":
             build_config[field_name]["value"] = str(uuid.uuid4())
         return build_config
@@ -18,7 +20,7 @@ class UUIDGeneratorComponent(CustomComponent):
         return {
             "unique_id": {
                 "display_name": "Value",
-                "refresh": True,
+                "real_time_refresh": True,
             }
         }
 

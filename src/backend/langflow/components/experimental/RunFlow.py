@@ -9,6 +9,7 @@ from langflow.schema import Record
 class RunFlowComponent(CustomComponent):
     display_name = "Run Flow"
     description = "A component to run a flow."
+    beta: bool = True
 
     def get_flow_names(self) -> List[str]:
         flow_records = self.list_flows()
@@ -31,15 +32,24 @@ class RunFlowComponent(CustomComponent):
             },
         }
 
-    def build_records_from_result_data(self, result_data: ResultData) -> Record:
+    def build_records_from_result_data(self, result_data: ResultData) -> List[Record]:
         messages = result_data.messages
+        if not messages:
+            return []
         records = []
         for message in messages:
-            record = Record(text=message.get("text", ""), data={"result": result_data})
+            message_dict = (
+                message if isinstance(message, dict) else message.model_dump()
+            )
+            record = Record(
+                text=message_dict.get("text", ""), data={"result": result_data}
+            )
             records.append(record)
         return records
 
-    async def build(self, input_value: Text, flow_name: str, tweaks: NestedDict) -> Record:
+    async def build(
+        self, input_value: Text, flow_name: str, tweaks: NestedDict
+    ) -> List[Record]:
         results: List[Optional[ResultData]] = await self.run_flow(
             input_value=input_value, flow_name=flow_name, tweaks=tweaks
         )

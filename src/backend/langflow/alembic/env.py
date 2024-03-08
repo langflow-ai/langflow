@@ -81,7 +81,8 @@ def run_migrations_online() -> None:
         logger.error(f"Error getting database engine: {e}")
         url = os.getenv("LANGFLOW_DATABASE_URL")
         url = url or config.get_main_option("sqlalchemy.url")
-        config.set_main_option("sqlalchemy.url", url)
+        if url:
+            config.set_main_option("sqlalchemy.url", url)
         connectable = engine_from_config(
             config.get_section(config.config_ini_section, {}),
             prefix="sqlalchemy.",

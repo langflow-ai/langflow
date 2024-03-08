@@ -13,7 +13,6 @@ from langflow.schema import Record
 class LCVectorStoreComponent(CustomComponent):
     display_name: str = "LC Vector Store"
     description: str = "Search a LC Vector Store for similar documents."
-    beta: bool = True
 
     def search_with_vector_store(
         self,

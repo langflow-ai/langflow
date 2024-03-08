@@ -10,6 +10,7 @@ import SidebarNav from "../../components/sidebarComponent";
 import { Button } from "../../components/ui/button";
 import { CONSOLE_ERROR_MSG } from "../../constants/alerts_constants";
 import {
+  EXAMPLES_MOCK,
   MY_COLLECTION_DESC,
   USER_PROJECTS_HEADER,
 } from "../../constants/constants";
@@ -132,7 +133,7 @@ export default function HomePage(): JSX.Element {
           /> */}
         </BaseModal.Header>
         <BaseModal.Content>
-          <div className="flex h-full w-full flex-wrap gap-3 overflow-auto p-4 custom-scroll">
+          <div className=" h-full w-full grid grid-cols-3 gap-3 overflow-auto p-4 custom-scroll">
             {examples.map((example, idx) => {
               return <UndrawCardComponent key={idx} flow={example} />;
             })}

@@ -48,7 +48,7 @@ class Graph:
         self._is_state_vertices: List[str] = []
         self._has_session_id_vertices: List[str] = []
         self._sorted_vertices_layers: List[List[str]] = []
-        self._run_id = None
+        self._run_id = ""
 
         self.top_level_vertices = []
         for vertex in self._vertices:
@@ -60,8 +60,8 @@ class Graph:
         self._edges = self._graph_data["edges"]
         self.inactivated_vertices: set = set()
         self.activated_vertices: List[str] = []
-        self.vertices_layers = []
-        self.vertices_to_run = set()
+        self.vertices_layers: List[List[str]] = []
+        self.vertices_to_run: set[str] = set()
         self.stop_vertex = None
 
         self.inactive_vertices: set = set()
@@ -76,7 +76,9 @@ class Graph:
         """Returns the state of the graph."""
         return self.state_manager.get_state(name, run_id=self._run_id)
 
-    def update_state(self, name: str, record: Union[str, Record], caller: Optional[str] = None) -> None:
+    def update_state(
+        self, name: str, record: Union[str, Record], caller: Optional[str] = None
+    ) -> None:
         """Updates the state of the graph."""
         if caller:
             # If there is a caller which is a vertex_id, I want to activate
@@ -108,7 +110,9 @@ class Graph:
     def reset_activated_vertices(self):
         self.activated_vertices = []
 
-    def append_state(self, name: str, record: Union[str, Record], caller: Optional[str] = None) -> None:
+    def append_state(
+        self, name: str, record: Union[str, Record], caller: Optional[str] = None
+    ) -> None:
         """Appends the state of the graph."""
         if caller:
             self.activate_state_vertices(name, caller)
@@ -125,9 +129,6 @@ class Graph:
         for vertex in self.vertices:
             self.state_manager.subscribe(run_id, vertex.update_graph_state)
         self._run_id = run_id
-
-    def add_state(self, state: str):
-        self.state_manager.append_state(self._run_id, state)
 
     @property
     def sorted_vertices_layers(self) -> List[List[str]]:
@@ -156,7 +157,10 @@ class Graph:
         """Runs the graph with the given inputs."""
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
-            if input_components and (vertex_id not in input_components or vertex.display_name not in input_components):
+            if input_components and (
+                vertex_id not in input_components
+                or vertex.display_name not in input_components
+            ):
                 continue
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
@@ -179,19 +183,23 @@ class Graph:
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
 
-            if not vertex.result and not stream and hasattr(vertex, "consume_async_generator"):
+            if (
+                not vertex.result
+                and not stream
+                and hasattr(vertex, "consume_async_generator")
+            ):
                 await vertex.consume_async_generator()
-            if vertex.display_name in outputs or vertex.id in outputs:
+            if not outputs or (vertex.display_name in outputs or vertex.id in outputs):
                 vertex_outputs.append(vertex.result)
         return vertex_outputs
 
     async def run(
         self,
-        inputs: Dict[str, Union[str, list[str]]],
+        inputs: list[Dict[str, Union[str, list[str]]]],
         outputs: list[str],
-        stream: bool,
-        session_id: str,
-    ) -> List[Optional["ResultData"]]:
+        session_id: Optional[str] = None,
+        stream: bool = False,
+    ) -> List[List[Optional["ResultData"]]]:
         """Runs the graph with the given inputs."""
 
         # inputs is {"message": "Hello, world!"}
@@ -199,16 +207,16 @@ class Graph:
         # of the vertices that are inputs
         # if the value is a list, we need to run multiple times
         vertex_outputs = []
-        inputs_values = inputs.get(INPUT_FIELD_NAME, "")
-        if not isinstance(inputs_values, list):
-            inputs_values = [inputs_values]
-        for input_value in inputs_values:
+        if not isinstance(inputs, list):
+            inputs = [inputs]
+        for input_dict in inputs:
+            components: list[str] = input_dict.get("components", [])
             run_outputs = await self._run(
-                inputs={INPUT_FIELD_NAME: input_value},
-                input_components=inputs.get("components", []),
+                inputs={INPUT_FIELD_NAME: input_dict.get(INPUT_FIELD_NAME, "")},
+                input_components=components,
                 outputs=outputs,
                 stream=stream,
-                session_id=session_id,
+                session_id=session_id or "",
             )
             logger.debug(f"Run outputs: {run_outputs}")
             vertex_outputs.append(run_outputs)
@@ -442,7 +450,11 @@ class Graph:
         """Updates the edges of a vertex."""
         # Vertex has edges, so we need to update the edges
         for edge in vertex.edges:
-            if edge not in self.edges and edge.source_id in self.vertex_map and edge.target_id in self.vertex_map:
+            if (
+                edge not in self.edges
+                and edge.source_id in self.vertex_map
+                and edge.target_id in self.vertex_map
+            ):
                 self.edges.append(edge)
 
     def _build_graph(self) -> None:
@@ -550,7 +562,9 @@ class Graph:
                     name=f"{vertex.display_name} Run {vertex_task_run_count.get(vertex_id, 0)}",
                 )
                 tasks.append(task)
-                vertex_task_run_count[vertex_id] = vertex_task_run_count.get(vertex_id, 0) + 1
+                vertex_task_run_count[vertex_id] = (
+                    vertex_task_run_count.get(vertex_id, 0) + 1
+                )
             logger.debug(f"Running layer {layer_index} with {len(tasks)} tasks")
             await self._execute_tasks(tasks)
         logger.debug("Graph processing complete")
@@ -823,7 +837,8 @@ class Graph:
             vertex.id
             for vertex in vertices
             # if filter_graphs then only vertex.is_input will be considered
-            if self.in_degree_map[vertex.id] == 0 and (not filter_graphs or vertex.is_input)
+            if self.in_degree_map[vertex.id] == 0
+            and (not filter_graphs or vertex.is_input)
         )
         layers: List[List[str]] = []
         visited = set(queue)
@@ -938,7 +953,9 @@ class Graph:
         first_layer = vertices_layers[0]
         # save the only the rest
         self.vertices_layers = vertices_layers[1:]
-        self.vertices_to_run = {vertex_id for vertex_id in chain.from_iterable(vertices_layers)}
+        self.vertices_to_run = {
+            vertex_id for vertex_id in chain.from_iterable(vertices_layers)
+        }
         # Return just the first layer
         return first_layer
 

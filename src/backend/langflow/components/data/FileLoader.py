@@ -8,7 +8,6 @@ from langflow.utils.constants import LOADERS_INFO
 class FileLoaderComponent(CustomComponent):
     display_name: str = "File Loader"
     description: str = "Generic File Loader"
-    beta = True
 
     def build_config(self):
         loader_options = ["Automatic"] + [loader_info["name"] for loader_info in LOADERS_INFO]

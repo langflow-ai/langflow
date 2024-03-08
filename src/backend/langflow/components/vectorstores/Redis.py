@@ -17,7 +17,6 @@ class RedisComponent(CustomComponent):
     display_name: str = "Redis"
     description: str = "Implementation of Vector Store using Redis"
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/redis"
-    beta = True
 
     def build_config(self):
         """
@@ -60,14 +59,16 @@ class RedisComponent(CustomComponent):
         - VectorStore: The Vector Store object.
         """
         documents = []
-        for _input in inputs:
+        for _input in inputs or []:
             if isinstance(_input, Record):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
         if not documents:
             if schema is None:
-                raise ValueError("If no documents are provided, a schema must be provided.")
+                raise ValueError(
+                    "If no documents are provided, a schema must be provided."
+                )
             redis_vs = Redis.from_existing_index(
                 embedding=embedding,
                 index_name=redis_index_name,

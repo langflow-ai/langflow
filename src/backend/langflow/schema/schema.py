@@ -1,6 +1,6 @@
 import copy
 
-from langchain_core.documents import Document  # Assumed import
+from langchain_core.documents import Document
 from pydantic import BaseModel
 
 
