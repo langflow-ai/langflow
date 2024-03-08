@@ -153,7 +153,17 @@ def test_directory_without_mocks():
     # the directory component can be used to load the projects
     # and we can validate if the contents are the same as the projects variable
     setup_path = Path(setup.__file__).parent / "starter_projects"
-    result = directory_component.build(
-        str(setup_path), types=["json"], use_multithreading=False
-    )
-    assert len(result) == len(projects)
+    results = directory_component.build(str(setup_path), use_multithreading=False)
+    assert len(results) == len(projects)
+    # each result is a Record that contains the content attribute
+    # each are dict that are exactly the same as one of the projects
+    for result in results:
+        assert result.text in projects
+
+    # in ../docs/docs/components there are many mdx files
+    # check if the directory component can load them
+    # just check if the number of results is the same as the number of files
+    docs_path = Path(__file__).parent.parent / "docs" / "docs" / "components"
+    results = directory_component.build(str(docs_path), use_multithreading=False)
+    docs_files = list(docs_path.glob("*.mdx"))
+    assert len(results) == len(docs_files)
