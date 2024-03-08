@@ -130,10 +130,10 @@ export default function HomePage(): JSX.Element {
         </BaseModal.Header>
         <BaseModal.Content>
           <div className=" grid h-full w-full grid-cols-3 gap-3 overflow-auto p-4 custom-scroll">
+            <NewFlowCardComponent />
             {examples.map((example, idx) => {
               return <UndrawCardComponent key={idx} flow={example} />;
             })}
-            <NewFlowCardComponent />
           </div>
         </BaseModal.Content>
       </BaseModal>
