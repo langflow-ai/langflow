@@ -30,5 +30,5 @@ def records_to_text(template: str, records: list[Record]) -> str:
         records = [records]
     # Check if there are any format strings in the template
 
-    formated_records = [template.format(**record.data) for record in records]
+    formated_records = [template.format(data=record.data, **record.data) for record in records]
     return "\n".join(formated_records)
