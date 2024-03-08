@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 
@@ -42,6 +44,8 @@ def post_validate_prompt(prompt_request: ValidatePromptRequest):
                 input_variables=input_variables,
                 frontend_node=None,
             )
+        if not prompt_request.custom_fields:
+            prompt_request.custom_fields = defaultdict(list)
         old_custom_fields = get_old_custom_fields(
             prompt_request.custom_fields, prompt_request.name
         )
