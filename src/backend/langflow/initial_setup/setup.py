@@ -97,7 +97,7 @@ def create_new_project(
     project_icon,
     project_icon_bg_color,
 ):
-    logger.info(f"Creating starter project {project_name}")
+    logger.debug(f"Creating starter project {project_name}")
     new_project = FlowCreate(
         name=project_name,
         description=project_description,
