@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from langflow import CustomComponent
 from langflow.schema import Record
@@ -62,7 +62,10 @@ class TextToRecordComponent(CustomComponent):
             build_config[field.name] = field.to_dict()
 
     def update_build_config(
-        self, build_config: dict, field_name: str, field_value: Any
+        self,
+        build_config: dict,
+        field_value: Any,
+        field_name: Optional[str] = None,
     ):
         if field_name == "mode":
             build_config["mode"]["value"] = field_value

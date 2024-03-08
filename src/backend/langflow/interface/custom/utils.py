@@ -43,7 +43,9 @@ def add_output_types(
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": ("Invalid return type. Please check your code and try again."),
+                    "error": (
+                        "Invalid return type. Please check your code and try again."
+                    ),
                     "traceback": traceback.format_exc(),
                 },
             )
@@ -75,14 +77,18 @@ def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: List
     frontend_node.field_order = field_order
 
 
-def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: List[str]):
+def add_base_classes(
+    frontend_node: CustomComponentFrontendNode, return_types: List[str]
+):
     """Add base classes to the frontend node"""
     for return_type_instance in return_types:
         if return_type_instance is None:
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": ("Invalid return type. Please check your code and try again."),
+                    "error": (
+                        "Invalid return type. Please check your code and try again."
+                    ),
                     "traceback": traceback.format_exc(),
                 },
             )
@@ -170,7 +176,9 @@ def add_new_custom_field(
     )
 
     if "name" in field_config:
-        warnings.warn("The 'name' key in field_config is used to build the object and can't be changed.")
+        warnings.warn(
+            "The 'name' key in field_config is used to build the object and can't be changed."
+        )
     required = field_config.pop("required", field_required)
     placeholder = field_config.pop("placeholder", "")
 
@@ -269,7 +277,9 @@ def run_build_config(
         raise HTTPException(
             status_code=400,
             detail={
-                "error": ("Invalid type convertion. Please check your code and try again."),
+                "error": (
+                    "Invalid type convertion. Please check your code and try again."
+                ),
                 "traceback": traceback.format_exc(),
             },
         ) from exc
@@ -387,10 +397,16 @@ def build_custom_component_template(
 
         add_extra_fields(frontend_node, field_config, entrypoint_args)
 
-        frontend_node = add_code_field(frontend_node, custom_component.code, field_config.get("code", {}))
+        frontend_node = add_code_field(
+            frontend_node, custom_component.code, field_config.get("code", {})
+        )
 
-        add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type)
-        add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type)
+        add_base_classes(
+            frontend_node, custom_component.get_function_entrypoint_return_type
+        )
+        add_output_types(
+            frontend_node, custom_component.get_function_entrypoint_return_type
+        )
 
         reorder_fields(frontend_node, custom_instance._get_field_order())
 
@@ -439,7 +455,9 @@ def build_custom_components(components_paths: List[str]):
         custom_component_dict = build_custom_component_list_from_path(path_str)
         if custom_component_dict:
             category = next(iter(custom_component_dict))
-            logger.info(f"Loading {len(custom_component_dict[category])} component(s) from category {category}")
+            logger.info(
+                f"Loading {len(custom_component_dict[category])} component(s) from category {category}"
+            )
             custom_components_from_file = merge_nested_dicts_with_renaming(
                 custom_components_from_file, custom_component_dict
             )
@@ -467,7 +485,9 @@ def update_field_dict(
             try:
                 dd_build_config = dotdict(build_config)
                 custom_component_instance.update_build_config(
-                    dd_build_config, update_field, update_field_value
+                    build_config=dd_build_config,
+                    field_value=update_field,
+                    field_name=update_field_value,
                 )
                 build_config = dd_build_config
             except Exception as exc:

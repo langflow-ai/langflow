@@ -148,8 +148,8 @@ class CustomComponent(Component):
     def update_build_config(
         self,
         build_config: dotdict,
-        field_name: Optional[str],
         field_value: Any,
+        field_name: Optional[str] = None,
     ):
         build_config[field_name] = field_value
         return build_config
@@ -390,7 +390,7 @@ class CustomComponent(Component):
             raise ValueError(f"Flow {flow_name} not found")
 
         graph = await self.load_flow(flow_id, tweaks)
-        input_value_dict = {"input_value": input_value}
+        input_value_dict = [{"input_value": input_value}]
         return await graph.run(input_value_dict, stream=False)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Record]:
