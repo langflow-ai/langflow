@@ -42,8 +42,8 @@ import {
   Eye,
   EyeOff,
   File,
+  FileClock,
   FileDown,
-  SquarePen,
   FileSearch,
   FileSearch2,
   FileSliders,
@@ -109,6 +109,7 @@ import {
   Snowflake,
   Sparkles,
   Square,
+  SquarePen,
   Store,
   SunIcon,
   TerminalIcon,
@@ -133,12 +134,13 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { FaApple, FaGithub, FaRobot } from "react-icons/fa";
+import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
 import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
+import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { CohereIcon } from "../icons/Cohere";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
@@ -161,7 +163,9 @@ import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
 import { PineconeIcon } from "../icons/Pinecone";
 import { PostgresIcon } from "../icons/Postgres";
+import { PythonIcon } from "../icons/Python";
 import { QDrantIcon } from "../icons/QDrant";
+import { QianFanChatIcon } from "../icons/QianFanChat";
 import { RedisIcon } from "../icons/Redis";
 import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
@@ -274,6 +278,12 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
+  Notify: Bell,
+  ListFlows: Group,
+  ClearMessageHistory: FileClock,
+  Python: PythonIcon,
+  ChatOutput: BotMessageSquareIcon,
+  ChatInput: MessagesSquare,
   inputs: Download,
   outputs: Upload,
   data: Database,
@@ -290,7 +300,7 @@ export const nodeIconsLucide: iconsType = {
   Redis: RedisIcon,
   RedisSearch: RedisIcon,
   PostgresChatMessageHistory: PostgresIcon,
-  BaiduQianfan: FaRobot,
+  BaiduQianfan: QianFanChatIcon,
   Play,
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
