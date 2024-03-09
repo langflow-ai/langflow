@@ -123,7 +123,6 @@ def test_directory_component_build_with_multithreading(
     # Act
     directory_component.build(
         path,
-        types,
         depth,
         max_concurrency,
         load_hidden,
