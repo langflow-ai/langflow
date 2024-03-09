@@ -98,7 +98,7 @@ async def refresh_token(request: Request, response: Response, settings_service=D
         response.set_cookie(
             "refresh_token_lf",
             tokens["refresh_token"],
-            httponly=auth_settings.REFRESH_TOKEN_HTTPONLY,
+            httponly=auth_settings.REFRESH_HTTPONLY,
             samesite=auth_settings.REFRESH_SAME_SITE,
             secure=auth_settings.REFRESH_SECURE,
             expires=auth_settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
