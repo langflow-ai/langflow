@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlmodel import Session
+
 from langflow.api.v1.schemas import Token
 from langflow.services.auth.utils import (
     authenticate_user,
@@ -8,7 +10,6 @@ from langflow.services.auth.utils import (
     create_user_tokens,
 )
 from langflow.services.deps import get_session, get_settings_service
-from sqlmodel import Session
 
 router = APIRouter(tags=["Login"])
 
@@ -88,7 +89,9 @@ async def auto_login(
 
 
 @router.post("/refresh")
-async def refresh_token(request: Request, response: Response, settings_service=Depends(get_settings_service)):
+async def refresh_token(
+    request: Request, response: Response, settings_service=Depends(get_settings_service)
+):
     auth_settings = settings_service.auth_settings
 
     token = request.cookies.get("refresh_token_lf")
@@ -98,7 +101,7 @@ async def refresh_token(request: Request, response: Response, settings_service=D
         response.set_cookie(
             "refresh_token_lf",
             tokens["refresh_token"],
-            httponly=auth_settings.REFRESH_TOKEN_HTTPONLY,
+            httponly=auth_settings.REFRESH_HTTPONLY,
             samesite=auth_settings.REFRESH_SAME_SITE,
             secure=auth_settings.REFRESH_SECURE,
             expires=auth_settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
