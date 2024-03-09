@@ -172,4 +172,5 @@ def test_directory_without_mocks():
 def test_url_component():
     url_component = data.URLComponent()
     # the url component can be used to load the contents of a website
-    record = url_component.build("https://example.com")
+    records = url_component.build(["https://langflow.org"])
+    assert all(record.data for record in records)
