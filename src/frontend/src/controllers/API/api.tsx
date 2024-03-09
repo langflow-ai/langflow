@@ -1,7 +1,6 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
-import { useNavigate } from "react-router-dom";
 import { renewAccessToken } from ".";
 import { BuildStatus } from "../../constants/enums";
 import { AuthContext } from "../../contexts/authContext";
@@ -17,26 +16,25 @@ function ApiInterceptor() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   let { accessToken, login, logout, authenticationErrorCount, autoLogin } =
     useContext(AuthContext);
-  const navigate = useNavigate();
   const cookies = new Cookies();
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          const accessToken = cookies.get("access_token_lf");
-
-          if (accessToken && !autoLogin) {
+        if (error.response?.status === 403 || error.response?.status === 401) {
+          if (!autoLogin) {
             checkErrorCount();
-            await tryToRenewAccessToken(error);
-          }
+            const acceptedRequest = await tryToRenewAccessToken(error);
 
-          if (!accessToken && error?.config?.url?.includes("login")) {
-            return Promise.reject(error);
-          }
+            const accessToken = cookies.get("access_token_lf");
 
-          return logout();
+            if (!accessToken && error?.config?.url?.includes("login")) {
+              return Promise.reject(error);
+            }
+
+            return acceptedRequest;
+          }
         }
         await clearBuildVerticesState(error);
         return Promise.reject(error);
@@ -116,6 +114,7 @@ function ApiInterceptor() {
         return response;
       }
     } catch (error) {
+      clearBuildVerticesState(error);
       logout();
     }
   }
