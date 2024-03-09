@@ -174,3 +174,5 @@ def test_url_component():
     # the url component can be used to load the contents of a website
     records = url_component.build(["https://langflow.org"])
     assert all(record.data for record in records)
+    assert all(record.text for record in records)
+    assert all(record.source for record in records)
