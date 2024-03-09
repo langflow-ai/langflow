@@ -1,6 +1,14 @@
 import { expect, test } from "@playwright/test";
-
+import uaParser from "ua-parser-js";
 test("LangflowShortcuts", async ({ page }) => {
+  const getUA = await page.evaluate(() => navigator.userAgent);
+  const userAgentInfo = uaParser(getUA);
+  let control = "Control";
+
+  if (userAgentInfo.os.name.includes("Mac")) {
+    control = "Meta";
+  }
+
   await page.goto("http://localhost:3000/");
   await page.waitForTimeout(1000);
 
@@ -22,11 +30,11 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.mouse.down();
 
   await page.getByTestId("title-LlamaCpp").click();
-  await page.keyboard.press("Control+e");
+  await page.keyboard.press(`${control}+e`);
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
   await page.getByTestId("title-LlamaCpp").click();
-  await page.keyboard.press("Control+d");
+  await page.keyboard.press(`${control}+d`);
 
   let numberOfNodes = await page.getByTestId("title-LlamaCpp").count();
   if (numberOfNodes != 2) {
@@ -46,10 +54,10 @@ test("LangflowShortcuts", async ({ page }) => {
   }
 
   await page.getByTestId("title-LlamaCpp").click();
-  await page.keyboard.press("Control+c");
+  await page.keyboard.press(`${control}+c`);
 
   await page.getByTestId("title-LlamaCpp").click();
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press(`${control}+v`);
 
   numberOfNodes = await page.getByTestId("title-LlamaCpp").count();
   if (numberOfNodes != 2) {
@@ -64,13 +72,13 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.keyboard.press("Backspace");
 
   await page.getByTestId("title-LlamaCpp").click();
-  await page.keyboard.press("Control+x");
+  await page.keyboard.press(`${control}+x`);
 
   numberOfNodes = await page.getByTestId("title-LlamaCpp").count();
   if (numberOfNodes != 0) {
     expect(false).toBeTruthy();
   }
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press(`${control}+v`);
   numberOfNodes = await page.getByTestId("title-LlamaCpp").count();
   if (numberOfNodes != 1) {
     expect(false).toBeTruthy();
