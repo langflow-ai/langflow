@@ -344,6 +344,7 @@ class RedisCache(BaseCacheService, Service):
 class AsyncInMemoryCache(AsyncBaseCacheService, Service):
     def __init__(self, max_size=None, expiration_time=3600):
         self.cache = OrderedDict()
+
         self.lock = asyncio.Lock()
         self.max_size = max_size
         self.expiration_time = expiration_time
@@ -405,3 +406,24 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Service):
 
     async def _clear(self):
         self.cache.clear()
+
+    async def upsert(self, key, value, lock: Optional[asyncio.Lock] = None):
+        if not lock:
+            async with self.lock:
+                await self._upsert(key, value)
+        else:
+            await self._upsert(key, value)
+
+    async def _upsert(self, key, value):
+        existing_value = await self.get(key)
+        if (
+            existing_value is not None
+            and isinstance(existing_value, dict)
+            and isinstance(value, dict)
+        ):
+            existing_value.update(value)
+            value = existing_value
+        await self.set(key, value)
+
+    def __contains__(self, key):
+        return key in self.cache

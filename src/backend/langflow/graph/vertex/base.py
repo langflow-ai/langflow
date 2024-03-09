@@ -56,7 +56,7 @@ class Vertex:
     ) -> None:
         # is_external means that the Vertex send or receives data from
         # an external source (e.g the chat)
-
+        self._lock = asyncio.Lock()
         self.will_stream = False
         self.updated_raw_params = False
         self.id: str = data["id"]
@@ -424,13 +424,12 @@ class Vertex:
         """
         Initiate the build process.
         """
-        async with self._lock:
-            logger.debug(f"Building {self.display_name}")
-            await self._build_each_vertex_in_params_dict(user_id)
-            await self._get_and_instantiate_class(user_id)
-            self._validate_built_object()
+        logger.debug(f"Building {self.display_name}")
+        await self._build_each_vertex_in_params_dict(user_id)
+        await self._get_and_instantiate_class(user_id)
+        self._validate_built_object()
 
-            self._built = True
+        self._built = True
 
     def extract_messages_from_artifacts(self, artifacts: Dict[str, Any]) -> List[dict]:
         """

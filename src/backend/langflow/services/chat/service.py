@@ -24,7 +24,7 @@ class ChatService(Service):
                 "result": data,
                 "type": type(data),
             }
-            self.cache_service.upsert(
+            await self.cache_service.upsert(
                 flow_id, result_dict, lock=self._cache_locks[flow_id]
             )
         return flow_id in self.cache_service
@@ -33,7 +33,7 @@ class ChatService(Service):
         """
         Get the cache for a client.
         """
-        return self.cache_service.get(client_id)
+        return await self.cache_service.get(client_id)
 
     async def clear_cache(self, client_id: str):
         """

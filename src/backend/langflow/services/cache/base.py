@@ -178,31 +178,3 @@ class AsyncBaseCacheService(Service):
         Returns:
             True if the key is in the cache, False otherwise.
         """
-
-    @abc.abstractmethod
-    def __getitem__(self, key):
-        """
-        Retrieve an item from the cache using the square bracket notation.
-
-        Args:
-            key: The key of the item to retrieve.
-        """
-
-    @abc.abstractmethod
-    def __setitem__(self, key, value):
-        """
-        Add an item to the cache using the square bracket notation.
-
-        Args:
-            key: The key of the item.
-            value: The value to cache.
-        """
-
-    @abc.abstractmethod
-    def __delitem__(self, key):
-        """
-        Remove an item from the cache using the square bracket notation.
-
-        Args:
-            key: The key of the item to remove.
-        """
