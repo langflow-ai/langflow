@@ -58,7 +58,7 @@ async def get_vertices(
     try:
         # First, we need to check if the flow_id is in the cache
         graph = None
-        if cache := chat_service.get_cache(flow_id):
+        if cache := await chat_service.get_cache(flow_id):
             graph = cache.get("result")
         graph = await build_and_cache_graph(flow_id, session, chat_service, graph)
         if stop_component_id or start_component_id:
