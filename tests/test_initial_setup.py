@@ -38,7 +38,9 @@ def test_create_or_update_starter_projects(client):
         num_projects = len(load_starter_projects())
 
         # Get the number of projects in the database
-        num_db_projects = session.exec(select(func.count(Flow.id)).where(Flow.folder == STARTER_FOLDER_NAME)).one()
+        num_db_projects = session.exec(
+            select(func.count(Flow.id)).where(Flow.folder == STARTER_FOLDER_NAME)
+        ).one()
 
         # Check that the number of projects in the database is the same as the number of projects returned by load_starter_projects
         assert num_db_projects == num_projects
@@ -54,16 +56,21 @@ async def test_starter_project_can_run_successfully(client):
         num_projects = len(load_starter_projects())
 
         # Get the number of projects in the database
-        num_db_projects = session.exec(select(func.count(Flow.id)).where(Flow.folder == STARTER_FOLDER_NAME)).one()
+        num_db_projects = session.exec(
+            select(func.count(Flow.id)).where(Flow.folder == STARTER_FOLDER_NAME)
+        ).one()
 
         # Check that the number of projects in the database is the same as the number of projects returned by load_starter_projects
         assert num_db_projects == num_projects
 
         # Get all the starter projects
-        projects = session.exec(select(Flow).where(Flow.folder == STARTER_FOLDER_NAME)).all()
+        projects = session.exec(
+            select(Flow).where(Flow.folder == STARTER_FOLDER_NAME)
+        ).all()
 
         graphs: list[Graph] = [
-            (project.name, Graph.from_payload(project.data, flow_id=project.id)) for project in projects
+            (project.name, Graph.from_payload(project.data, flow_id=project.id))
+            for project in projects
         ]
         assert len(graphs) == len(projects)
     for name, graph in graphs:

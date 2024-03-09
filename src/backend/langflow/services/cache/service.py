@@ -1,16 +1,17 @@
+import asyncio
 import pickle
 import threading
 import time
 from collections import OrderedDict
+from typing import Optional
 
 from loguru import logger
 
 from langflow.services.base import Service
-from langflow.services.cache.base import BaseCacheService
+from langflow.services.cache.base import AsyncBaseCacheService, BaseCacheService
 
 
-class InMemoryCache(BaseCacheService, Service):
-
+class ThreadingInMemoryCache(BaseCacheService, Service):
     """
     A simple in-memory cache using an OrderedDict.
 
@@ -49,7 +50,7 @@ class InMemoryCache(BaseCacheService, Service):
         self.max_size = max_size
         self.expiration_time = expiration_time
 
-    def get(self, key):
+    def get(self, key, lock: Optional[threading.Lock] = None):
         """
         Retrieve an item from the cache.
 
@@ -59,7 +60,7 @@ class InMemoryCache(BaseCacheService, Service):
         Returns:
             The value associated with the key, or None if the key is not found or the item has expired.
         """
-        with self._lock:
+        with lock or self.lock:
             return self._get_without_lock(key)
 
     def _get_without_lock(self, key):
@@ -67,7 +68,10 @@ class InMemoryCache(BaseCacheService, Service):
         Retrieve an item from the cache without acquiring the lock.
         """
         if item := self._cache.get(key):
-            if self.expiration_time is None or time.time() - item["time"] < self.expiration_time:
+            if (
+                self.expiration_time is None
+                or time.time() - item["time"] < self.expiration_time
+            ):
                 # Move the key to the end to make it recently used
                 self._cache.move_to_end(key)
                 # Check if the value is pickled
@@ -80,7 +84,7 @@ class InMemoryCache(BaseCacheService, Service):
                 self.delete(key)
         return None
 
-    def set(self, key, value, pickle=False):
+    def set(self, key, value, pickle=False, lock: Optional[threading.Lock] = None):
         """
         Add an item to the cache.
 
@@ -90,7 +94,7 @@ class InMemoryCache(BaseCacheService, Service):
             key: The key of the item.
             value: The value to cache.
         """
-        with self._lock:
+        with lock or self.lock:
             if key in self._cache:
                 # Remove existing key before re-inserting to update order
                 self.delete(key)
@@ -103,7 +107,7 @@ class InMemoryCache(BaseCacheService, Service):
 
             self._cache[key] = {"value": value, "time": time.time()}
 
-    def upsert(self, key, value):
+    def upsert(self, key, value, lock: Optional[threading.Lock] = None):
         """
         Inserts or updates a value in the cache.
         If the existing value and the new value are both dictionaries, they are merged.
@@ -112,15 +116,19 @@ class InMemoryCache(BaseCacheService, Service):
             key: The key of the item.
             value: The value to insert or update.
         """
-        with self._lock:
+        with lock or self.lock:
             existing_value = self._get_without_lock(key)
-            if existing_value is not None and isinstance(existing_value, dict) and isinstance(value, dict):
+            if (
+                existing_value is not None
+                and isinstance(existing_value, dict)
+                and isinstance(value, dict)
+            ):
                 existing_value.update(value)
                 value = existing_value
 
             self.set(key, value)
 
-    def get_or_set(self, key, value):
+    def get_or_set(self, key, value, lock: Optional[threading.Lock] = None):
         """
         Retrieve an item from the cache. If the item does not exist,
         set it with the provided value.
@@ -132,27 +140,27 @@ class InMemoryCache(BaseCacheService, Service):
         Returns:
             The cached value associated with the key.
         """
-        with self._lock:
+        with lock or self.lock:
             if key in self._cache:
                 return self.get(key)
             self.set(key, value)
             return value
 
-    def delete(self, key):
+    def delete(self, key, lock: Optional[threading.Lock] = None):
         """
         Remove an item from the cache.
 
         Args:
             key: The key of the item to remove.
         """
-        with self._lock:
+        with lock or self.lock:
             self._cache.pop(key, None)
 
-    def clear(self):
+    def clear(self, lock: Optional[threading.Lock] = None):
         """
         Clear all items from the cache.
         """
-        with self._lock:
+        with lock or self.lock:
             self._cache.clear()
 
     def __contains__(self, key):
@@ -203,7 +211,9 @@ class RedisCache(BaseCacheService, Service):
         b = cache["b"]
     """
 
-    def __init__(self, host="localhost", port=6379, db=0, url=None, expiration_time=60 * 60):
+    def __init__(
+        self, host="localhost", port=6379, db=0, url=None, expiration_time=60 * 60
+    ):
         """
         Initialize a new RedisCache instance.
 
@@ -271,7 +281,9 @@ class RedisCache(BaseCacheService, Service):
                 if not result:
                     raise ValueError("RedisCache could not set the value.")
         except TypeError as exc:
-            raise TypeError("RedisCache only accepts values that can be pickled. ") from exc
+            raise TypeError(
+                "RedisCache only accepts values that can be pickled. "
+            ) from exc
 
     def upsert(self, key, value):
         """
@@ -283,7 +295,11 @@ class RedisCache(BaseCacheService, Service):
             value: The value to insert or update.
         """
         existing_value = self.get(key)
-        if existing_value is not None and isinstance(existing_value, dict) and isinstance(value, dict):
+        if (
+            existing_value is not None
+            and isinstance(existing_value, dict)
+            and isinstance(value, dict)
+        ):
             existing_value.update(value)
             value = existing_value
 
@@ -323,3 +339,69 @@ class RedisCache(BaseCacheService, Service):
     def __repr__(self):
         """Return a string representation of the RedisCache instance."""
         return f"RedisCache(expiration_time={self.expiration_time})"
+
+
+class AsyncInMemoryCache(AsyncBaseCacheService, Service):
+    def __init__(self, max_size=None, expiration_time=3600):
+        self.cache = OrderedDict()
+        self.lock = asyncio.Lock()
+        self.max_size = max_size
+        self.expiration_time = expiration_time
+
+    async def get(self, key, lock: Optional[asyncio.Lock] = None):
+        if not lock:
+            async with self.lock:
+                return await self._get(key)
+        else:
+            return await self._get(key)
+
+    async def _get(self, key):
+        item = self.cache.get(key, None)
+        if item and (time.time() - item["time"] < self.expiration_time):
+            self.cache.move_to_end(key)
+            return (
+                pickle.loads(item["value"])
+                if isinstance(item["value"], bytes)
+                else item["value"]
+            )
+        if item:
+            await self.delete(key)
+        return None
+
+    async def set(
+        self, key, value, pickle_obj=False, lock: Optional[asyncio.Lock] = None
+    ):
+        if not lock:
+            async with self.lock:
+                await self._set(key, value, pickle_obj)
+        else:
+            await self._set(key, value, pickle_obj)
+
+    async def _set(self, key, value, pickle_obj=False):
+        if self.max_size and len(self.cache) >= self.max_size:
+            self.cache.popitem(last=False)
+        if pickle_obj:
+            value = pickle.dumps(value)
+        self.cache[key] = {"value": value, "time": time.time()}
+        self.cache.move_to_end(key)
+
+    async def delete(self, key, lock: Optional[asyncio.Lock] = None):
+        if not lock:
+            async with self.lock:
+                await self._delete(key)
+        else:
+            await self._delete(key)
+
+    async def _delete(self, key):
+        if key in self.cache:
+            del self.cache[key]
+
+    async def clear(self, lock: Optional[asyncio.Lock] = None):
+        if not lock:
+            async with self.lock:
+                await self._clear()
+        else:
+            await self._clear()
+
+    async def _clear(self):
+        self.cache.clear()

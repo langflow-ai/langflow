@@ -342,7 +342,7 @@ class CustomComponent(Component):
             raise ValueError(f"Flow {flow_id} not found")
         if tweaks:
             graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-        graph = Graph.from_payload(graph_data, flow_id=flow_id)
+        graph = await Graph.from_payload(graph_data, flow_id=flow_id)
         return graph
 
     async def run_flow(
