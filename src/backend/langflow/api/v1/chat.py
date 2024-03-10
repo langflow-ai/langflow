@@ -143,7 +143,7 @@ async def build_vertex(
             artifacts = {}
             # If there's an error building the vertex
             # we need to clear the cache
-            chat_service.clear_cache(flow_id)
+            await chat_service.clear_cache(flow_id)
 
         # Log the vertex build
         if not vertex.will_stream:

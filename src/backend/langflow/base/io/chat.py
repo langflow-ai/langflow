@@ -26,6 +26,7 @@ class ChatComponent(CustomComponent):
             "session_id": {
                 "display_name": "Session ID",
                 "info": "If provided, the message will be stored in the memory.",
+                "advanced": True,
             },
             "return_record": {
                 "display_name": "Return Record",
@@ -45,7 +46,9 @@ class ChatComponent(CustomComponent):
             return []
 
         if not session_id or not sender or not sender_name:
-            raise ValueError("All of session_id, sender, and sender_name must be provided.")
+            raise ValueError(
+                "All of session_id, sender, and sender_name must be provided."
+            )
         if isinstance(message, Record):
             record = message
             record.data.update(
