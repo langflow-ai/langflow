@@ -491,6 +491,11 @@ export type nodeToolbarPropsType = {
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
   selected: boolean;
+  updateNodeCode?: (
+    newNodeClass: APIClassType,
+    code?: string,
+    name?: string
+  ) => void;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
 };
 

@@ -740,6 +740,16 @@ export const PRIORITY_SIDEBAR_ORDER = [
   "helpers",
   "experimental",
 ];
+export const NATIVE_CATEGORIES = [
+  "inputs",
+  "outputs",
+  "prompts",
+  "data",
+  "prompt",
+  "models",
+  "helpers",
+  "experimental",
+];
 /*
 Data ingestion
 Basic Prompting

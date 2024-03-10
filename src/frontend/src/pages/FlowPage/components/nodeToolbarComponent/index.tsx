@@ -10,6 +10,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
+import { postCustomComponent } from "../../../../controllers/API";
 import ConfirmationModal from "../../../../modals/ConfirmationModal";
 import EditNodeModal from "../../../../modals/EditNodeModal";
 import ShareModal from "../../../../modals/shareModal";
@@ -18,6 +19,7 @@ import { useDarkStore } from "../../../../stores/darkStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../../stores/storeStore";
+import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { FlowType } from "../../../../types/flow";
@@ -38,6 +40,7 @@ export default function NodeToolbarComponent({
   showNode,
   name = "code",
   selected,
+  updateNodeCode,
   setShowState,
   onCloseAdvancedModal,
 }: nodeToolbarPropsType): JSX.Element {
@@ -56,7 +59,7 @@ export default function NodeToolbarComponent({
         data.node.template[templateField].type === "dict" ||
         data.node.template[templateField].type === "NestedDict")
   ).length;
-
+  const templates = useTypesStore((state) => state.templates);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
@@ -70,6 +73,7 @@ export default function NodeToolbarComponent({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNodes = useFlowStore((state) => state.setNodes);
+
   const setEdges = useFlowStore((state) => state.setEdges);
   const unselectAll = useFlowStore((state) => state.unselectAll);
   const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
@@ -79,7 +83,9 @@ export default function NodeToolbarComponent({
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
-
+  const isOutdated = useFlowStore((state) => state.outDatedNodes).includes(
+    data.id
+  );
   const [flowComponent, setFlowComponent] = useState<FlowType>();
 
   const openInNewTab = (url) => {
@@ -170,6 +176,37 @@ export default function NodeToolbarComponent({
             paneY: nodes.find((node) => node.id === data.id)?.position.y,
           }
         );
+        break;
+      case "update":
+        takeSnapshot();
+        // to update we must get the code from the templates in useTypesStore
+        const thisNodeTemplate = templates[data.type].template;
+        // if the template does not have a code key
+        // return
+        if (!thisNodeTemplate.code) return;
+
+        const currentCode = thisNodeTemplate.code.value;
+        if (data.node) {
+          postCustomComponent(currentCode, data.node)
+            .then((apiReturn) => {
+              const { data } = apiReturn;
+              if (data && updateNodeCode) {
+                updateNodeCode(data, currentCode, "code");
+              }
+            })
+            .catch((err) => {
+              console.log(err);
+            });
+          setNode(data.id, (oldNode) => {
+            let newNode = cloneDeep(oldNode);
+            newNode.data = {
+              ...data,
+            };
+            newNode.data.node.template.code.value = currentCode;
+            return newNode;
+          });
+        }
+
         break;
     }
   };
@@ -470,6 +507,28 @@ export default function NodeToolbarComponent({
                   <span className="absolute right-2 top-[0.4em]">C</span>
                 </div>
               </SelectItem>
+              {isOutdated && (
+                <SelectItem value={"update"}>
+                  <div className="flex">
+                    <IconComponent
+                      name="Code"
+                      className="relative top-0.5 mr-2 h-4 w-4 "
+                    />{" "}
+                    <span className="">Update</span>{" "}
+                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
+                      <IconComponent
+                        name="Command"
+                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                      ></IconComponent>
+                    ) : (
+                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">
+                        Ctrl +{" "}
+                      </span>
+                    )}
+                    <span className="absolute right-2 top-[0.4em]">U</span>
+                  </div>
+                </SelectItem>
+              )}
               {hasStore && (
                 <SelectItem
                   value={"Share"}

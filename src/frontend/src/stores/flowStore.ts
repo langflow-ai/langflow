@@ -581,6 +581,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       }
     });
   },
+  outDatedNodes: [],
+  addToOutdatedNodes: (nodeId) => {
+    // add the nodes to the list of outdated nodes
+    // without removing the previous ones
+    let oldOutDatedNodes = get().outDatedNodes;
+    // filter out the nodes that are already in the list
+    if (!oldOutDatedNodes.includes(nodeId)) {
+      set({ outDatedNodes: [...oldOutDatedNodes, nodeId] });
+    }
+  },
+  removeFromOutdatedNodes: (nodeId) => {
+    // remove the nodes from the list of outdated nodes
+    let oldOutDatedNodes = get().outDatedNodes;
+    set({ outDatedNodes: oldOutDatedNodes.filter((id) => id !== nodeId) });
+  },
 }));
 
 export default useFlowStore;

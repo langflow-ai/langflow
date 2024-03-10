@@ -124,4 +124,7 @@ export type FlowStoreType = {
     data: FlowPoolObjectType | ChatOutputType | chatInputType,
     buildId?: string
   ) => void;
+  outDatedNodes: string[];
+  addToOutdatedNodes: (nodeId: string) => void;
+  removeFromOutdatedNodes: (nodeId: string) => void;
 };
