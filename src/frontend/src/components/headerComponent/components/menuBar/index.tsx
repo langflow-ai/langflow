@@ -34,7 +34,7 @@ export const MenuBar = ({
   const redo = useFlowsManagerStore((state) => state.redo);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const [openSettings, setOpenSettings] = useState(false);
-  const n = useFlowStore((state) => state.nodes);
+  const nodes = useFlowStore((state) => state.nodes);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
@@ -65,7 +65,7 @@ export const MenuBar = ({
     <div className="round-button-div">
       <button
         onClick={() => {
-          removeFunction(n);
+          removeFunction(nodes);
           navigate(-1);
         }}
       >
