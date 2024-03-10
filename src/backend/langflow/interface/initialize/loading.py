@@ -1,6 +1,6 @@
 import inspect
 import json
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence, Type
+from typing import TYPE_CHECKING, Any, Callable, Dict, Sequence, Type
 
 import orjson
 from langchain.agents import agent as agent_module
@@ -40,8 +40,8 @@ if TYPE_CHECKING:
 
 
 async def instantiate_class(
+    vertex: "Vertex",
     user_id=None,
-    vertex: Optional["Vertex"] = None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
     vertex_type: str = vertex.vertex_type
