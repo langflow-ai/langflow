@@ -16,7 +16,7 @@ class Record(BaseModel):
     _default_value: str = ""
 
     @model_validator(mode="before")
-    def validate_data(values):
+    def validate_data(cls, values):
         if not values.get("data"):
             values["data"] = {}
         # Any other keyword should be added to the data dictionary

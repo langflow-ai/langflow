@@ -58,9 +58,9 @@ async def get_vertices(
     try:
         # First, we need to check if the flow_id is in the cache
         graph = None
-        if cache := chat_service.get_cache(flow_id):
+        if cache := await chat_service.get_cache(flow_id):
             graph = cache.get("result")
-        graph = build_and_cache_graph(flow_id, session, chat_service, graph)
+        graph = await build_and_cache_graph(flow_id, session, chat_service, graph)
         if stop_component_id or start_component_id:
             try:
                 vertices = graph.sort_vertices(stop_component_id, start_component_id)
@@ -98,11 +98,11 @@ async def build_vertex(
     next_vertices_ids = []
     try:
         start_time = time.perf_counter()
-        cache = chat_service.get_cache(flow_id)
+        cache = await chat_service.get_cache(flow_id)
         if not cache:
             # If there's no cache
             logger.warning(f"No cache found for {flow_id}. Building graph starting at {vertex_id}")
-            graph = build_and_cache_graph(flow_id=flow_id, session=next(get_session()), chat_service=chat_service)
+            graph = await build_and_cache_graph(flow_id=flow_id, session=next(get_session()), chat_service=chat_service)
         else:
             graph = cache.get("result")
         result_data_response = ResultDataResponse(results={})
@@ -121,8 +121,11 @@ async def build_vertex(
                 artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
-            next_vertices_ids = vertex.successors_ids
-            next_vertices_ids = [v for v in next_vertices_ids if graph.should_run_vertex(v)]
+            async with chat_service._cache_locks[flow_id] as lock:
+                graph.remove_from_predecessors(vertex_id)
+                next_vertices_ids = vertex.successors_ids
+                next_vertices_ids = [v for v in next_vertices_ids if graph.should_run_vertex(v)]
+                await chat_service.set_cache(flow_id=flow_id, data=graph, lock=lock)
 
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
@@ -134,7 +137,7 @@ async def build_vertex(
             artifacts = {}
             # If there's an error building the vertex
             # we need to clear the cache
-            chat_service.clear_cache(flow_id)
+            await chat_service.clear_cache(flow_id)
 
         # Log the vertex build
         if not vertex.will_stream:
@@ -157,7 +160,7 @@ async def build_vertex(
         inactivated_vertices = list(graph.inactivated_vertices)
         graph.reset_inactivated_vertices()
         graph.reset_activated_vertices()
-        chat_service.set_cache(flow_id, graph)
+        await chat_service.set_cache(flow_id, graph)
 
         # graph.stop_vertex tells us if the user asked
         # to stop the build of the graph at a certain vertex

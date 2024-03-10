@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     DEV: bool = False
     DATABASE_URL: Optional[str] = None
-    CACHE_TYPE: str = "memory"
+    CACHE_TYPE: str = "async"
     REMOVE_API_KEYS: bool = False
     COMPONENTS_PATH: List[str] = []
     LANGCHAIN_CACHE: str = "InMemoryCache"

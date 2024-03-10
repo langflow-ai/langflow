@@ -104,7 +104,8 @@ def parse_text_file_to_record(file_path: str, silent_errors: bool) -> Optional[R
         elif file_path.endswith(".yaml") or file_path.endswith(".yml"):
             text = yaml.safe_load(text)
         elif file_path.endswith(".xml"):
-            text = ET.fromstring(text)
+            xml_element = ET.fromstring(text)
+            text = ET.tostring(xml_element, encoding="unicode")
     except Exception as e:
         if not silent_errors:
             raise ValueError(f"Error loading file {file_path}: {e}") from e

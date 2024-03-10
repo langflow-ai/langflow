@@ -26,6 +26,7 @@ class ChatComponent(CustomComponent):
             "session_id": {
                 "display_name": "Session ID",
                 "info": "If provided, the message will be stored in the memory.",
+                "advanced": True,
             },
             "return_record": {
                 "display_name": "Return Record",
