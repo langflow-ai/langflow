@@ -43,7 +43,6 @@ export const MenuBar = ({
       addFlow(true).then((id) => {
         navigate("/flow/" + id);
       });
-      // saveFlowStyleInDataBase();
     } catch (err) {
       setErrorData(err as { title: string; list?: Array<string> });
     }
