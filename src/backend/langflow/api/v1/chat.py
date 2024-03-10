@@ -125,10 +125,13 @@ async def build_vertex(
                 artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
-            next_vertices_ids = vertex.successors_ids
-            next_vertices_ids = [
-                v for v in next_vertices_ids if graph.should_run_vertex(v)
-            ]
+            async with chat_service._cache_locks[flow_id] as lock:
+                graph.remove_from_predecessors(vertex_id)
+                next_vertices_ids = vertex.successors_ids
+                next_vertices_ids = [
+                    v for v in next_vertices_ids if graph.should_run_vertex(v)
+                ]
+                await chat_service.set_cache(flow_id=flow_id, data=graph, lock=lock)
 
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
