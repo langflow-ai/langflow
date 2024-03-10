@@ -84,7 +84,7 @@ class ThreadingInMemoryCache(BaseCacheService, Service):
                 self.delete(key)
         return None
 
-    def set(self, key, value, pickle=False, lock: Optional[threading.Lock] = None):
+    def set(self, key, value, lock: Optional[threading.Lock] = None):
         """
         Add an item to the cache.
 
@@ -102,8 +102,6 @@ class ThreadingInMemoryCache(BaseCacheService, Service):
                 # Remove least recently used item
                 self._cache.popitem(last=False)
             # pickle locally to mimic Redis
-            if pickle:
-                value = pickle.dumps(value)
 
             self._cache[key] = {"value": value, "time": time.time()}
 
@@ -372,15 +370,19 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Service):
     async def set(self, key, value, lock: Optional[asyncio.Lock] = None):
         if not lock:
             async with self.lock:
-                await self._set(key, value, pickle_obj)
+                await self._set(
+                    key,
+                    value,
+                )
         else:
-            await self._set(key, value, pickle_obj)
+            await self._set(
+                key,
+                value,
+            )
 
-    async def _set(self, key, value, pickle_obj=False):
+    async def _set(self, key, value):
         if self.max_size and len(self.cache) >= self.max_size:
             self.cache.popitem(last=False)
-        if pickle_obj:
-            value = pickle.dumps(value)
         self.cache[key] = {"value": value, "time": time.time()}
         self.cache.move_to_end(key)
 

@@ -106,7 +106,6 @@ def test_directory_component_build_with_multithreading(
     # Arrange
     directory_component = data.DirectoryComponent()
     path = os.path.dirname(os.path.abspath(__file__))
-    types = ["py"]
     depth = 1
     max_concurrency = 2
     load_hidden = False
