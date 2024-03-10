@@ -16,7 +16,6 @@ import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { useStoreStore } from "../../../../stores/storeStore";
 import { cn } from "../../../../utils/utils";
 import ShadTooltip from "../../../ShadTooltipComponent";
 import IconComponent from "../../../genericIconComponent";
@@ -36,8 +35,6 @@ export const MenuBar = ({
   const [openSettings, setOpenSettings] = useState(false);
   const nodes = useFlowStore((state) => state.nodes);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
-  const hasApiKey = useStoreStore((state) => state.hasApiKey);
-  const validApiKey = useStoreStore((state) => state.validApiKey);
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
