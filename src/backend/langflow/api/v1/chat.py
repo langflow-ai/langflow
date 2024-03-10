@@ -101,12 +101,8 @@ async def build_vertex(
         cache = await chat_service.get_cache(flow_id)
         if not cache:
             # If there's no cache
-            logger.warning(
-                f"No cache found for {flow_id}. Building graph starting at {vertex_id}"
-            )
-            graph = await build_and_cache_graph(
-                flow_id=flow_id, session=next(get_session()), chat_service=chat_service
-            )
+            logger.warning(f"No cache found for {flow_id}. Building graph starting at {vertex_id}")
+            graph = await build_and_cache_graph(flow_id=flow_id, session=next(get_session()), chat_service=chat_service)
         else:
             graph = cache.get("result")
         result_data_response = ResultDataResponse(results={})
@@ -128,9 +124,7 @@ async def build_vertex(
             async with chat_service._cache_locks[flow_id] as lock:
                 graph.remove_from_predecessors(vertex_id)
                 next_vertices_ids = vertex.successors_ids
-                next_vertices_ids = [
-                    v for v in next_vertices_ids if graph.should_run_vertex(v)
-                ]
+                next_vertices_ids = [v for v in next_vertices_ids if graph.should_run_vertex(v)]
                 await chat_service.set_cache(flow_id=flow_id, data=graph, lock=lock)
 
             result_data_response = ResultDataResponse(**result_dict.model_dump())
@@ -214,9 +208,7 @@ async def build_vertex_stream(
                     else:
                         graph = cache.get("result")
                 else:
-                    session_data = await session_service.load_session(
-                        session_id, flow_id=flow_id
-                    )
+                    session_data = await session_service.load_session(session_id, flow_id=flow_id)
                     graph, artifacts = session_data if session_data else (None, None)
                     if not graph:
                         raise ValueError(f"No graph found for {flow_id}.")
