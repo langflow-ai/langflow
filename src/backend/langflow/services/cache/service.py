@@ -60,7 +60,7 @@ class ThreadingInMemoryCache(BaseCacheService, Service):
         Returns:
             The value associated with the key, or None if the key is not found or the item has expired.
         """
-        with lock or self.lock:
+        with lock or self._lock:
             return self._get_without_lock(key)
 
     def _get_without_lock(self, key):
@@ -94,7 +94,7 @@ class ThreadingInMemoryCache(BaseCacheService, Service):
             key: The key of the item.
             value: The value to cache.
         """
-        with lock or self.lock:
+        with lock or self._lock:
             if key in self._cache:
                 # Remove existing key before re-inserting to update order
                 self.delete(key)
@@ -116,7 +116,7 @@ class ThreadingInMemoryCache(BaseCacheService, Service):
             key: The key of the item.
             value: The value to insert or update.
         """
-        with lock or self.lock:
+        with lock or self._lock:
             existing_value = self._get_without_lock(key)
             if (
                 existing_value is not None
@@ -140,7 +140,7 @@ class ThreadingInMemoryCache(BaseCacheService, Service):
         Returns:
             The cached value associated with the key.
         """
-        with lock or self.lock:
+        with lock or self._lock:
             if key in self._cache:
                 return self.get(key)
             self.set(key, value)
@@ -153,14 +153,14 @@ class ThreadingInMemoryCache(BaseCacheService, Service):
         Args:
             key: The key of the item to remove.
         """
-        with lock or self.lock:
+        with lock or self._lock:
             self._cache.pop(key, None)
 
     def clear(self, lock: Optional[threading.Lock] = None):
         """
         Clear all items from the cache.
         """
-        with lock or self.lock:
+        with lock or self._lock:
             self._cache.clear()
 
     def __contains__(self, key):
@@ -369,9 +369,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Service):
             await self.delete(key)
         return None
 
-    async def set(
-        self, key, value, pickle_obj=False, lock: Optional[asyncio.Lock] = None
-    ):
+    async def set(self, key, value, lock: Optional[asyncio.Lock] = None):
         if not lock:
             async with self.lock:
                 await self._set(key, value, pickle_obj)
