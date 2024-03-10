@@ -44,9 +44,9 @@ async def instantiate_class(
     user_id=None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
-    vertex_type: str = vertex.vertex_type
-    base_type: str = vertex.base_type
-    params: Dict = vertex.params
+    vertex_type = vertex.vertex_type
+    base_type = vertex.base_type
+    params = vertex.params
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
 
@@ -56,6 +56,8 @@ async def instantiate_class(
                 return custom_node.initialize(**params)
             return custom_node(**params)
     logger.debug(f"Instantiating {vertex_type} of type {base_type}")
+    if not base_type:
+        raise ValueError("No base type provided for vertex")
     class_object = import_by_type(_type=base_type, name=vertex_type)
     return await instantiate_based_on_type(
         class_object=class_object,
