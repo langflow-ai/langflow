@@ -1,6 +1,6 @@
 import asyncio
 from collections import defaultdict
-from typing import Any
+from typing import Any, Optional
 
 from langflow.services.base import Service
 from langflow.services.deps import get_cache_service
@@ -14,7 +14,7 @@ class ChatService(Service):
         self.cache_service = get_cache_service()
 
     async def set_cache(
-        self, flow_id: str, data: Any, lock: asyncio.Lock = None
+        self, flow_id: str, data: Any, lock: Optional[asyncio.Lock] = None
     ) -> bool:
         """
         Set the cache for a client.
@@ -30,7 +30,7 @@ class ChatService(Service):
         )
         return flow_id in self.cache_service
 
-    async def get_cache(self, flow_id: str, lock: asyncio.Lock = None) -> Any:
+    async def get_cache(self, flow_id: str, lock: Optional[asyncio.Lock] = None) -> Any:
         """
         Get the cache for a client.
         """
@@ -38,7 +38,7 @@ class ChatService(Service):
             flow_id, lock=lock or self._cache_locks[flow_id]
         )
 
-    async def clear_cache(self, flow_id: str, lock: asyncio.Lock = None):
+    async def clear_cache(self, flow_id: str, lock: Optional[asyncio.Lock] = None):
         """
         Clear the cache for a client.
         """
