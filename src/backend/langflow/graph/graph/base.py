@@ -240,6 +240,7 @@ class Graph:
 
     def build_graph_maps(self):
         self.predecessor_map, self.successor_map = self.build_adjacency_maps()
+
         self.in_degree_map = self.build_in_degree()
         self.parent_child_map = self.build_parent_child_map()
 
@@ -294,6 +295,15 @@ class Graph:
             predecessor_map[edge.target_id].append(edge.source_id)
             successor_map[edge.source_id].append(edge.target_id)
         return predecessor_map, successor_map
+
+    def build_run_map(self):
+        run_map = defaultdict(list)
+        # The run map gets the predecessor_map and maps the info like this:
+        # {vertex_id: every id that contains the vertex_id in the predecessor_map}
+        for vertex_id, predecessors in self.predecessor_map.items():
+            for predecessor in predecessors:
+                run_map[predecessor].append(vertex_id)
+        return run_map
 
     @classmethod
     def from_payload(cls, payload: Dict, flow_id: Optional[str] = None) -> "Graph":
@@ -939,15 +949,36 @@ class Graph:
         # save the only the rest
         self.vertices_layers = vertices_layers[1:]
         self.vertices_to_run = {vertex_id for vertex_id in chain.from_iterable(vertices_layers)}
+        self.run_map, self.run_predecessors = (
+            self.build_run_map(),
+            self.predecessor_map.copy(),
+        )
+
         # Return just the first layer
         return first_layer
 
+    def vertex_has_no_more_predecessors(self, vertex_id: str) -> bool:
+        """Returns whether a vertex has no more predecessors."""
+        return not self.run_predecessors.get(vertex_id)
+
     def should_run_vertex(self, vertex_id: str) -> bool:
         """Returns whether a component should be run."""
-        should_run = vertex_id in self.vertices_to_run
+        # the self.run_map is a map of vertex_id to a list of predecessors
+        # each time a vertex is run, we remove it from the list of predecessors
+        # if a vertex has no more predecessors, it should be run
+        should_run = vertex_id in self.vertices_to_run and self.vertex_has_no_more_predecessors(vertex_id)
+
         if should_run:
             self.vertices_to_run.remove(vertex_id)
+            # remove the vertex from the run_map
+            self.remove_from_predecessors(vertex_id)
         return should_run
+
+    def remove_from_predecessors(self, vertex_id: str):
+        predecessors = self.run_map.get(vertex_id, [])
+        for predecessor in predecessors:
+            if vertex_id in self.run_predecessors[predecessor]:
+                self.run_predecessors[predecessor].remove(vertex_id)
 
     def sort_interface_components_first(self, vertices_layers: List[List[str]]) -> List[List[str]]:
         """Sorts the vertices in the graph so that vertices containing ChatInput or ChatOutput come first."""

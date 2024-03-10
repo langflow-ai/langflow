@@ -1,4 +1,5 @@
 import ast
+import asyncio
 import inspect
 import types
 from enum import Enum
@@ -7,7 +8,6 @@ from typing import (
     Any,
     AsyncIterator,
     Callable,
-    Coroutine,
     Dict,
     Iterator,
     List,
@@ -56,6 +56,7 @@ class Vertex:
     ) -> None:
         # is_external means that the Vertex send or receives data from
         # an external source (e.g the chat)
+        self._lock = asyncio.Lock()
         self.will_stream = False
         self.updated_raw_params = False
         self.id: str = data["id"]
@@ -171,6 +172,7 @@ class Vertex:
         }
 
     def __setstate__(self, state):
+        self._lock = asyncio.Lock()
         self._data = state["_data"]
         self.params = state["params"]
         self.base_type = state["base_type"]
@@ -383,7 +385,7 @@ class Vertex:
         Initiate the build process.
         """
         logger.debug(f"Building {self.display_name}")
-        await self._build_each_node_in_params_dict(user_id)
+        await self._build_each_vertex_in_params_dict(user_id)
         await self._get_and_instantiate_class(user_id)
         self._validate_built_object()
 
@@ -452,105 +454,123 @@ class Vertex:
         result = await generate_result(self._built_object, inputs, self.has_external_output, session_id)
         self._built_result = result
 
-    async def _build_each_node_in_params_dict(self, user_id=None):
+    async def _build_each_vertex_in_params_dict(self, user_id=None):
         """
-        Iterates over each node in the params dictionary and builds it.
+        Iterates over each vertex in the params dictionary and builds it.
         """
         for key, value in self._raw_params.items():
-            if self._is_node(value):
+            if self._is_vertex(value):
                 if value == self:
                     del self.params[key]
                     continue
-                await self._build_node_and_update_params(key, value, user_id)
-            elif isinstance(value, list) and self._is_list_of_nodes(value):
-                await self._build_list_of_nodes_and_update_params(key, value, user_id)
+                await self._build_vertex_and_update_params(
+                    key,
+                    value,
+                )
+            elif isinstance(value, list) and self._is_list_of_vertices(value):
+                await self._build_list_of_vertices_and_update_params(key, value)
             elif isinstance(value, dict):
-                await self._build_dict_and_update_params(key, value, user_id)
+                await self._build_dict_and_update_params(
+                    key,
+                    value,
+                )
             elif key not in self.params or self.updated_raw_params:
                 self.params[key] = value
 
-    async def _build_dict_and_update_params(self, key, nodes_dict: Dict[str, "Vertex"], user_id=None):
+    async def _build_dict_and_update_params(
+        self,
+        key,
+        vertices_dict: Dict[str, "Vertex"],
+    ):
         """
-        Iterates over a dictionary of nodes, builds each and updates the params dictionary.
+        Iterates over a dictionary of vertices, builds each and updates the params dictionary.
         """
-        for sub_key, value in nodes_dict.items():
-            if not self._is_node(value):
+        for sub_key, value in vertices_dict.items():
+            if not self._is_vertex(value):
                 self.params[key][sub_key] = value
             else:
-                built = await value.get_result(requester=self, user_id=user_id)
-                self.params[key][sub_key] = built
+                result = await value.get_result()
+                self.params[key][sub_key] = result
 
-    def _is_node(self, value):
+    def _is_vertex(self, value):
         """
         Checks if the provided value is an instance of Vertex.
         """
         return isinstance(value, Vertex)
 
-    def _is_list_of_nodes(self, value):
+    def _is_list_of_vertices(self, value):
         """
         Checks if the provided value is a list of Vertex instances.
         """
-        return all(self._is_node(node) for node in value)
+        return all(self._is_vertex(vertex) for vertex in value)
 
-    async def get_result(self, requester: Optional["Vertex"] = None, user_id=None, timeout=None) -> Any:
-        # PLEASE REVIEW THIS IF STATEMENT
-        # Check if the Vertex was built already
-        if self._built:
-            return self._built_object if not self.use_result else self._built_result
-
-        if self.is_task and self.task_id is not None:
-            task = self.get_task()
-
-            result = task.get(timeout=timeout)
-            if isinstance(result, Coroutine):
-                result = await result
-            if result is not None:  # If result is ready
-                self._update_built_object_and_artifacts(result)
-                return self._built_object
-            else:
-                # Handle the case when the result is not ready (retry, throw exception, etc.)
-                pass
-
-        # If there's no task_id, build the vertex locally
-        await self.build(requester=requester, user_id=user_id)
-        return self._built_object
-
-    async def _build_node_and_update_params(self, key, node: "Vertex", user_id=None):
+    async def get_result(
+        self,
+    ) -> Any:
         """
-        Builds a given node and updates the params dictionary accordingly.
+        Retrieves the result of the vertex.
+
+        This is a read-only method so it raises an error if the vertex has not been built yet.
+
+        Returns:
+            The result of the vertex.
+        """
+        async with self._lock:
+            return await self._get_result()
+
+    async def _get_result(self) -> Any:
+        """
+        Retrieves the result of the built component.
+
+        If the component has not been built yet, a ValueError is raised.
+
+        Returns:
+            The built result if use_result is True, else the built object.
+        """
+        if not self._built:
+            raise ValueError(f"Component {self.display_name} has not been built yet")
+        return self._built_result if self.use_result else self._built_object
+
+    async def _build_vertex_and_update_params(self, key, vertex: "Vertex"):
+        """
+        Builds a given vertex and updates the params dictionary accordingly.
         """
 
-        result = await node.get_result(requester=self, user_id=user_id)
+        result = await vertex.get_result()
         self._handle_func(key, result)
         if isinstance(result, list):
             self._extend_params_list_with_result(key, result)
         self.params[key] = result
 
-    async def _build_list_of_nodes_and_update_params(self, key, nodes: List["Vertex"], user_id=None):
+    async def _build_list_of_vertices_and_update_params(
+        self,
+        key,
+        vertices: List["Vertex"],
+    ):
         """
-        Iterates over a list of nodes, builds each and updates the params dictionary.
+        Iterates over a list of vertices, builds each and updates the params dictionary.
         """
         self.params[key] = []
-        for node in nodes:
-            built = await node.get_result(requester=self, user_id=user_id)
+        for vertex in vertices:
+            result = await vertex.get_result()
             # Weird check to see if the params[key] is a list
             # because sometimes it is a Record and breaks the code
             if not isinstance(self.params[key], list):
                 self.params[key] = [self.params[key]]
 
-            if isinstance(built, list):
-                self.params[key].extend(built)
+            if isinstance(result, list):
+                self.params[key].extend(result)
             else:
                 try:
-                    if self.params[key] == built:
+                    if self.params[key] == result:
                         continue
 
-                    self.params[key].append(built)
+                    self.params[key].append(result)
                 except AttributeError as e:
                     logger.exception(e)
                     raise ValueError(
-                        f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {built}"
-                        f"Error building node {self.display_name}: {str(e)}"
+                        f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {result}"
+                        f"Error building vertex {self.display_name}: {str(e)}"
                     ) from e
 
     def _handle_func(self, key, result):
@@ -580,12 +600,9 @@ class Vertex:
         Gets the class from a dictionary and instantiates it with the params.
         """
         if self.base_type is None:
-            raise ValueError(f"Base type for node {self.display_name} not found")
+            raise ValueError(f"Base type for vertex {self.display_name} not found")
         try:
             result = await loading.instantiate_class(
-                node_type=self.vertex_type,
-                base_type=self.base_type,
-                params=self.params,
                 user_id=user_id,
                 vertex=self,
             )
@@ -593,7 +610,7 @@ class Vertex:
         except Exception as exc:
             logger.exception(exc)
 
-            raise ValueError(f"Error building node {self.display_name}: {str(exc)}") from exc
+            raise ValueError(f"Error building vertex {self.display_name}: {str(exc)}") from exc
 
     def _update_built_object_and_artifacts(self, result):
         """
@@ -647,33 +664,34 @@ class Vertex:
         requester: Optional["Vertex"] = None,
         **kwargs,
     ) -> Any:
-        if self.state == VertexStates.INACTIVE:
-            # If the vertex is inactive, return None
-            self.build_inactive()
-            return
+        async with self._lock:
+            if self.state == VertexStates.INACTIVE:
+                # If the vertex is inactive, return None
+                self.build_inactive()
+                return
 
-        if self.frozen and self._built:
-            return self.get_requester_result(requester)
-        elif self._built and requester is not None:
-            # This means that the vertex has already been built
-            # and we are just getting the result for the requester
-            return await self.get_requester_result(requester)
-        self._reset()
+            if self.frozen and self._built:
+                return self.get_requester_result(requester)
+            elif self._built and requester is not None:
+                # This means that the vertex has already been built
+                # and we are just getting the result for the requester
+                return await self.get_requester_result(requester)
+            self._reset()
 
-        if self._is_chat_input() and inputs:
-            inputs = {"input_value": inputs.get(INPUT_FIELD_NAME, "")}
-            self.update_raw_params(inputs, overwrite=True)
+            if self._is_chat_input() and inputs:
+                inputs = {"input_value": inputs.get(INPUT_FIELD_NAME, "")}
+                self.update_raw_params(inputs, overwrite=True)
 
-        # Run steps
-        for step in self.steps:
-            if step not in self.steps_ran:
-                if inspect.iscoroutinefunction(step):
-                    await step(user_id=user_id, **kwargs)
-                else:
-                    step(user_id=user_id, **kwargs)
-                self.steps_ran.append(step)
+            # Run steps
+            for step in self.steps:
+                if step not in self.steps_ran:
+                    if inspect.iscoroutinefunction(step):
+                        await step(user_id=user_id, **kwargs)
+                    else:
+                        step(user_id=user_id, **kwargs)
+                    self.steps_ran.append(step)
 
-        self._finalize_build()
+            self._finalize_build()
 
         return await self.get_requester_result(requester)
 
@@ -686,7 +704,11 @@ class Vertex:
         # Get the requester edge
         requester_edge = next((edge for edge in self.edges if edge.target_id == requester.id), None)
         # Return the result of the requester edge
-        return None if requester_edge is None else await requester_edge.get_result(source=self, target=requester)
+        return (
+            None
+            if requester_edge is None
+            else await requester_edge.get_result_from_source(source=self, target=requester)
+        )
 
     def add_edge(self, edge: "ContractEdge") -> None:
         if edge not in self.edges:
