@@ -47,11 +47,7 @@ export default function GenericNode({
   const flowPool = useFlowStore((state) => state.flowPool);
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setNode = useFlowStore((state) => state.setNode);
-  const addToOutdatedNodes = useFlowStore((state) => state.addToOutdatedNodes);
   const updateNodeInternals = useUpdateNodeInternals();
-  const removeFromOutdatedNodes = useFlowStore(
-    (state) => state.removeFromOutdatedNodes
-  );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
@@ -79,20 +75,16 @@ export default function GenericNode({
     // This one should run only once
     // first check if data.type in NATIVE_CATEGORIES
     // if not return
-    if (!NATIVE_CATEGORIES.includes(types[data.type])) return;
+    if (!NATIVE_CATEGORIES.includes(types[data.type]) || !data.node?.template?.code?.value) return;
     const thisNodeTemplate = templates[data.type].template;
     // if the template does not have a code key
     // return
     if (!thisNodeTemplate.code) return;
-
     const currentCode = thisNodeTemplate.code?.value;
     const thisNodesCode = data.node!.template?.code?.value;
     if (currentCode !== thisNodesCode) {
-      addToOutdatedNodes(data.id);
       setIsOutdated(true);
     } else {
-      // remove the node from the outdatedNodes
-      removeFromOutdatedNodes(data.id);
       setIsOutdated(false);
     }
     // template.code can be undefined
@@ -111,13 +103,14 @@ export default function GenericNode({
         };
 
         newNode.data.node.template[name].value = code;
+        setIsOutdated(false);
 
         return newNode;
       });
 
       updateNodeInternals(data.id);
     },
-    [data.id, data.node, setNode]
+    [data.id, data.node, setNode,setIsOutdated]
   );
 
   if (!data.node!.template) {
@@ -361,6 +354,7 @@ export default function GenericNode({
           openAdvancedModal={false}
           onCloseAdvancedModal={() => {}}
           updateNodeCode={updateNodeCode}
+          isOutdated={isOutdated}
           selected={selected}
         ></NodeToolbarComponent>
       </NodeToolbar>

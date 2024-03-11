@@ -43,6 +43,7 @@ export default function NodeToolbarComponent({
   updateNodeCode,
   setShowState,
   onCloseAdvancedModal,
+  isOutdated,
 }: nodeToolbarPropsType): JSX.Element {
   const nodeLength = Object.keys(data.node!.template).filter(
     (templateField) =>
@@ -83,9 +84,6 @@ export default function NodeToolbarComponent({
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
-  const isOutdated = useFlowStore((state) => state.outDatedNodes).includes(
-    data.id
-  );
   const [flowComponent, setFlowComponent] = useState<FlowType>();
 
   const openInNewTab = (url) => {
