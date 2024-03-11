@@ -259,7 +259,7 @@ class VerticesBuiltResponse(BaseModel):
 
 
 class InputValueRequest(BaseModel):
-    components: Optional[List[str]] = None
+    components: Optional[List[str]] = []
     input_value: Optional[str] = None
 
     # add an example
