@@ -85,8 +85,8 @@ export default function GenericNode({
     // return
     if (!thisNodeTemplate.code) return;
 
-    const currentCode = thisNodeTemplate.code.value;
-    const thisNodesCode = data.node!.template.code.value;
+    const currentCode = thisNodeTemplate.code?.value;
+    const thisNodesCode = data.node!.template?.code?.value;
     if (currentCode !== thisNodesCode) {
       addToOutdatedNodes(data.id);
       setIsOutdated(true);
@@ -96,7 +96,7 @@ export default function GenericNode({
       setIsOutdated(false);
     }
     // template.code can be undefined
-  }, [data.node?.template.code.value]);
+  }, [data.node?.template?.code?.value]);
 
   const updateNodeCode = useCallback(
     (newNodeClass: APIClassType, code: string, name: string) => {

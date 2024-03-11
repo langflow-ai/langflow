@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 
 from langflow.api.utils import update_frontend_node_with_template_values
 from langflow.api.v1.schemas import (
-    CustomComponentCode,
+    CustomComponentRequest,
     InputValueRequest,
     ProcessResponse,
     RunResponse,
@@ -253,12 +253,12 @@ def get_version():
 
 @router.post("/custom_component", status_code=HTTPStatus.OK)
 async def custom_component(
-    raw_code: CustomComponentCode,
+    raw_code: CustomComponentRequest,
     user: User = Depends(get_current_active_user),
 ):
     component = CustomComponent(code=raw_code.code)
 
-    built_frontend_node = build_custom_component_template(component, user_id=user.id)
+    built_frontend_node, _ = build_custom_component_template(component, user_id=user.id)
 
     built_frontend_node = update_frontend_node_with_template_values(built_frontend_node, raw_code.frontend_node)
     return built_frontend_node
@@ -275,23 +275,40 @@ async def reload_custom_component(path: str, user: User = Depends(get_current_ac
             raise ValueError(content)
 
         extractor = CustomComponent(code=content)
-        return build_custom_component_template(extractor, user_id=user.id)
+        frontend_node, _ = build_custom_component_template(extractor, user_id=user.id)
+        return frontend_node
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)
 async def custom_component_update(
-    raw_code: CustomComponentCode,
+    code_request: CustomComponentRequest,
     user: User = Depends(get_current_active_user),
 ):
-    component = CustomComponent(code=raw_code.code)
+    """
+    Update a custom component with the provided code request.
 
-    component_node = build_custom_component_template(
+    This endpoint generates the CustomComponentFrontendNode normally but then runs the `update_build_config` method
+    on the latest version of the template. This ensures that every time it runs, it has the latest version of the template.
+
+    Args:
+        code_request (CustomComponentRequest): The code request containing the updated code for the custom component.
+        user (User, optional): The user making the request. Defaults to the current active user.
+
+    Returns:
+        dict: The updated custom component node.
+
+    """
+    component = CustomComponent(code=code_request.code)
+
+    component_node, cc_instance = build_custom_component_template(
         component,
         user_id=user.id,
-        update_field=raw_code.field,
-        update_field_value=raw_code.field_value,
     )
-    # Update the field
+    updated_build_config = cc_instance.update_build_config(
+        code_request.template, code_request.field_value, code_request.field_name
+    )
+    component_node["template"] = updated_build_config
+
     return component_node
