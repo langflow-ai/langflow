@@ -24,7 +24,10 @@ function ApiInterceptor() {
       async (error: AxiosError) => {
         if (error.response?.status === 403 || error.response?.status === 401) {
           if (!autoLogin) {
-            checkErrorCount();
+            const stillRefresh = checkErrorCount();
+            if (!stillRefresh) {
+              return Promise.reject(error);
+            }
             const acceptedRequest = await tryToRenewAccessToken(error);
 
             const accessToken = cookies.get("access_token_lf");
@@ -96,7 +99,10 @@ function ApiInterceptor() {
     if (authenticationErrorCount > 3) {
       authenticationErrorCount = 0;
       logout();
+      return false;
     }
+
+    return true;
   }
 
   async function tryToRenewAccessToken(error: AxiosError) {
@@ -116,6 +122,7 @@ function ApiInterceptor() {
     } catch (error) {
       clearBuildVerticesState(error);
       logout();
+      return Promise.reject("Authentication error");
     }
   }
 
