@@ -38,9 +38,7 @@ class SupabaseSearchComponent(LCVectorStoreComponent):
         supabase_url: str = "",
         table_name: str = "",
     ) -> List[Record]:
-        supabase: Client = create_client(
-            supabase_url, supabase_key=supabase_service_key
-        )
+        supabase: Client = create_client(supabase_url, supabase_key=supabase_service_key)
         vector_store = SupabaseVectorStore(
             client=supabase,
             embedding=embedding,

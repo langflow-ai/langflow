@@ -1,8 +1,10 @@
 from typing import List
 
 from langchain.text_splitter import CharacterTextSplitter
-from langchain_core.documents.base import Document
+
 from langflow import CustomComponent
+from langflow.schema.schema import Record
+from langflow.utils.util import unescape_string
 
 
 class CharacterTextSplitterComponent(CustomComponent):
@@ -11,7 +13,7 @@ class CharacterTextSplitterComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "documents": {"display_name": "Documents"},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
             "chunk_overlap": {"display_name": "Chunk Overlap", "default": 200},
             "chunk_size": {"display_name": "Chunk Size", "default": 1000},
             "separator": {"display_name": "Separator", "default": "\n"},
@@ -19,17 +21,24 @@ class CharacterTextSplitterComponent(CustomComponent):
 
     def build(
         self,
-        documents: List[Document],
+        inputs: List[Record],
         chunk_overlap: int = 200,
         chunk_size: int = 1000,
         separator: str = "\n",
-    ) -> List[Document]:
+    ) -> List[Record]:
         # separator may come escaped from the frontend
-        separator = separator.encode().decode("unicode_escape")
+        separator = unescape_string(separator)
+        documents = []
+        for _input in inputs:
+            if isinstance(_input, Record):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
         docs = CharacterTextSplitter(
             chunk_overlap=chunk_overlap,
             chunk_size=chunk_size,
             separator=separator,
         ).split_documents(documents)
-        self.status = docs
-        return docs
+        records = self.to_records(docs)
+        self.status = records
+        return records

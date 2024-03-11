@@ -1,9 +1,7 @@
 from typing import Optional
 
-from langchain.prompts import PromptTemplate
 from pydantic import BaseModel, field_validator, model_serializer
 
-from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.template.frontend_node.base import FrontendNode
 
 
@@ -28,7 +26,7 @@ class FrontendNodeRequest(FrontendNode):
 class ValidatePromptRequest(BaseModel):
     name: str
     template: str
-    # optional for tweak call
+    custom_fields: Optional[dict] = None
     frontend_node: Optional[FrontendNodeRequest] = None
 
 
@@ -80,24 +78,6 @@ INVALID_NAMES = {
 }
 
 
-def validate_prompt(template: str):
-    input_variables = extract_input_variables_from_prompt(template)
-
-    # Check if there are invalid characters in the input_variables
-    input_variables = check_input_variables(input_variables)
-    if any(var in INVALID_NAMES for var in input_variables):
-        raise ValueError(
-            f"Invalid input variables. None of the variables can be named {', '.join(input_variables)}. "
-        )
-
-    try:
-        PromptTemplate(template=template, input_variables=input_variables)
-    except Exception as exc:
-        raise ValueError(f"Invalid prompt: {exc}") from exc
-
-    return input_variables
-
-
 def is_json_like(var):
     if var.startswith("{{") and var.endswith("}}"):
         # If it is a double brance variable
@@ -123,9 +103,7 @@ def fix_variable(var, invalid_chars, wrong_variables):
     # Handle variables starting with a number
     if var[0].isdigit():
         invalid_chars.append(var[0])
-        new_var, invalid_chars, wrong_variables = fix_variable(
-            var[1:], invalid_chars, wrong_variables
-        )
+        new_var, invalid_chars, wrong_variables = fix_variable(var[1:], invalid_chars, wrong_variables)
 
     # Temporarily replace {{ and }} to avoid treating them as invalid
     new_var = new_var.replace("{{", "ᴛᴇᴍᴘᴏᴘᴇɴ").replace("}}", "ᴛᴇᴍᴘᴄʟᴏsᴇ")
@@ -152,9 +130,7 @@ def check_variable(var, invalid_chars, wrong_variables, empty_variables):
     return wrong_variables, empty_variables
 
 
-def check_for_errors(
-    input_variables, fixed_variables, wrong_variables, empty_variables
-):
+def check_for_errors(input_variables, fixed_variables, wrong_variables, empty_variables):
     if any(var for var in input_variables if var not in fixed_variables):
         error_message = (
             f"Error: Input variables contain invalid characters or formats. \n"
@@ -179,17 +155,11 @@ def check_input_variables(input_variables):
         if is_json_like(var):
             continue
 
-        new_var, wrong_variables, empty_variables = fix_variable(
-            var, invalid_chars, wrong_variables
-        )
-        wrong_variables, empty_variables = check_variable(
-            var, INVALID_CHARACTERS, wrong_variables, empty_variables
-        )
+        new_var, wrong_variables, empty_variables = fix_variable(var, invalid_chars, wrong_variables)
+        wrong_variables, empty_variables = check_variable(var, INVALID_CHARACTERS, wrong_variables, empty_variables)
         fixed_variables.append(new_var)
         variables_to_check.append(var)
 
-    check_for_errors(
-        variables_to_check, fixed_variables, wrong_variables, empty_variables
-    )
+    check_for_errors(variables_to_check, fixed_variables, wrong_variables, empty_variables)
 
     return fixed_variables

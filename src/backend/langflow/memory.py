@@ -40,8 +40,8 @@ def get_messages(
 
     for row in messages_df.itertuples():
         record = Record(
-            text=row.message,
             data={
+                "text": row.message,
                 "sender": row.sender,
                 "sender_name": row.sender_name,
                 "session_id": row.session_id,
@@ -81,3 +81,14 @@ def add_messages(records: Union[list[Record], Record]):
     except Exception as e:
         logger.exception(e)
         raise e
+
+
+def delete_messages(session_id: str):
+    """
+    Delete messages from the monitor service based on the provided session ID.
+
+    Args:
+        session_id (str): The session ID associated with the messages to delete.
+    """
+    monitor_service = get_monitor_service()
+    monitor_service.delete_messages(session_id)

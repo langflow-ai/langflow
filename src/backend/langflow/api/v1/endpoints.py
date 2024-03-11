@@ -7,20 +7,29 @@ from loguru import logger
 from sqlmodel import Session, select
 
 from langflow.api.utils import update_frontend_node_with_template_values
-from langflow.api.v1.schemas import (CustomComponentCode, InputValueRequest,
-                                     ProcessResponse, RunResponse,
-                                     TaskStatusResponse, UploadFileResponse)
+from langflow.api.v1.schemas import (
+    CustomComponentRequest,
+    InputValueRequest,
+    ProcessResponse,
+    RunResponse,
+    TaskStatusResponse,
+    Tweaks,
+    UploadFileResponse,
+)
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import build_custom_component_template
 from langflow.processing.process import process_tweaks, run_graph
-from langflow.services.auth.utils import (api_key_security,
-                                          get_current_active_user)
+from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import (get_session, get_session_service,
-                                    get_settings_service, get_task_service)
+from langflow.services.deps import (
+    get_session,
+    get_session_service,
+    get_settings_service,
+    get_task_service,
+)
 from langflow.services.session.service import SessionService
 from langflow.services.task.service import TaskService
 
@@ -36,39 +45,73 @@ def get_all(
 
     logger.debug("Building langchain types dict")
     try:
-        all_types_dict = get_all_types_dict(settings_service)
+        all_types_dict = get_all_types_dict(settings_service.settings.COMPONENTS_PATH)
         return all_types_dict
     except Exception as exc:
+        logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.post(
-    "/run/{flow_id}", response_model=RunResponse, response_model_exclude_none=True
-)
+@router.post("/run/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
 async def run_flow_with_caching(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
     inputs: Optional[List[InputValueRequest]] = None,
     outputs: Optional[List[str]] = None,
-    tweaks: Optional[dict] = None,
+    tweaks: Annotated[Optional[Tweaks], Body(embed=True)] = None,  # noqa: F821
     stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
     api_key_user: User = Depends(api_key_security),
     session_service: SessionService = Depends(get_session_service),
 ):
+    """
+    Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.
+    This endpoint supports running flows with caching to enhance performance and efficiency.
+
+    ### Parameters:
+    - `flow_id` (str): The unique identifier of the flow to be executed.
+    - `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components for the flow. Each input can target specific components and provide custom values.
+    - `outputs` (List[str], optional): A list of output names to retrieve from the executed flow. If not provided, all outputs are returned.
+    - `tweaks` (Optional[Tweaks], optional): A dictionary of tweaks to customize the flow execution. The tweaks can be used to modify the flow's parameters and components. Tweaks can be overridden by the input values.
+    - `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.
+    - `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow execution.
+    - `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.
+    - `session_service` (SessionService): The session service object for managing flow sessions.
+
+    ### Returns:
+    A `RunResponse` object containing the selected outputs (or all if not specified) of the executed flow and the session ID. The structure of the response accommodates multiple inputs, providing a nested list of outputs for each input.
+
+    ### Raises:
+    HTTPException: Indicates issues with finding the specified flow, invalid input formats, or internal errors during flow execution.
+
+    ### Example usage:
+    ```json
+    POST /run/{flow_id}
+    Payload:
+    {
+        "inputs": [
+            {"components": ["component1"], "input_value": "value1"},
+            {"components": ["component3"], "input_value": "value2"}
+        ],
+        "outputs": ["Component Name", "component_id"],
+        "tweaks": {"parameter_name": "value", "Component Name": {"parameter_name": "value"}, "component_id": {"parameter_name": "value"}}
+        "stream": false
+    }
+    ```
+
+    This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations, catering to diverse application requirements.
+    """
     try:
         if inputs is not None:
-            input_values_dict: dict[str, Union[str, list[str]]] = inputs.model_dump()
+            input_values: list[dict[str, Union[str, list[str]]]] = [_input.model_dump() for _input in inputs]
         else:
-            input_values_dict = {}
+            input_values = [{}]
 
         if outputs is None:
             outputs = []
 
         if session_id:
-            session_data = await session_service.load_session(
-                session_id, flow_id=flow_id
-            )
+            session_data = await session_service.load_session(session_id, flow_id=flow_id)
             graph, artifacts = session_data if session_data else (None, None)
             task_result: Any = None
             if not graph:
@@ -77,7 +120,7 @@ async def run_flow_with_caching(
                 graph=graph,
                 flow_id=flow_id,
                 session_id=session_id,
-                inputs=input_values_dict,
+                inputs=input_values,
                 outputs=outputs,
                 artifacts=artifacts,
                 session_service=session_service,
@@ -87,11 +130,7 @@ async def run_flow_with_caching(
         else:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            flow = session.exec(
-                select(Flow)
-                .where(Flow.id == flow_id)
-                .where(Flow.user_id == api_key_user.id)
-            ).first()
+            flow = session.exec(select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)).first()
             if flow is None:
                 raise ValueError(f"Flow {flow_id} not found")
 
@@ -103,7 +142,7 @@ async def run_flow_with_caching(
                 graph=graph_data,
                 flow_id=flow_id,
                 session_id=session_id,
-                inputs=input_values_dict,
+                inputs=input_values,
                 outputs=outputs,
                 artifacts={},
                 session_service=session_service,
@@ -115,18 +154,12 @@ async def run_flow_with_caching(
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
         if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-            ) from exc
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
         if f"Flow {flow_id} not found" in str(exc):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-            ) from exc
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
-            ) from exc
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
 @router.post(
@@ -155,8 +188,7 @@ async def process(
     """
     # Raise a depreciation warning
     logger.warning(
-        "The /process endpoint is deprecated and will be removed in a future version. "
-        "Please use /run instead."
+        "The /process endpoint is deprecated and will be removed in a future version. " "Please use /run instead."
     )
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -221,23 +253,19 @@ def get_version():
 
 @router.post("/custom_component", status_code=HTTPStatus.OK)
 async def custom_component(
-    raw_code: CustomComponentCode,
+    raw_code: CustomComponentRequest,
     user: User = Depends(get_current_active_user),
 ):
     component = CustomComponent(code=raw_code.code)
 
-    built_frontend_node = build_custom_component_template(component, user_id=user.id)
+    built_frontend_node, _ = build_custom_component_template(component, user_id=user.id)
 
-    built_frontend_node = update_frontend_node_with_template_values(
-        built_frontend_node, raw_code.frontend_node
-    )
+    built_frontend_node = update_frontend_node_with_template_values(built_frontend_node, raw_code.frontend_node)
     return built_frontend_node
 
 
 @router.post("/custom_component/reload", status_code=HTTPStatus.OK)
-async def reload_custom_component(
-    path: str, user: User = Depends(get_current_active_user)
-):
+async def reload_custom_component(path: str, user: User = Depends(get_current_active_user)):
     from langflow.interface.custom.utils import build_custom_component_template
 
     try:
@@ -247,20 +275,40 @@ async def reload_custom_component(
             raise ValueError(content)
 
         extractor = CustomComponent(code=content)
-        return build_custom_component_template(extractor, user_id=user.id)
+        frontend_node, _ = build_custom_component_template(extractor, user_id=user.id)
+        return frontend_node
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)
 async def custom_component_update(
-    raw_code: CustomComponentCode,
+    code_request: CustomComponentRequest,
     user: User = Depends(get_current_active_user),
 ):
-    component = CustomComponent(code=raw_code.code)
+    """
+    Update a custom component with the provided code request.
 
-    component_node = build_custom_component_template(
-        component, user_id=user.id, update_field=raw_code.field
+    This endpoint generates the CustomComponentFrontendNode normally but then runs the `update_build_config` method
+    on the latest version of the template. This ensures that every time it runs, it has the latest version of the template.
+
+    Args:
+        code_request (CustomComponentRequest): The code request containing the updated code for the custom component.
+        user (User, optional): The user making the request. Defaults to the current active user.
+
+    Returns:
+        dict: The updated custom component node.
+
+    """
+    component = CustomComponent(code=code_request.code)
+
+    component_node, cc_instance = build_custom_component_template(
+        component,
+        user_id=user.id,
     )
-    # Update the field
+    updated_build_config = cc_instance.update_build_config(
+        code_request.template, code_request.field_value, code_request.field_name
+    )
+    component_node["template"] = updated_build_config
+
     return component_node

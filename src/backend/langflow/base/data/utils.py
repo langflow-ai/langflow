@@ -1,8 +1,28 @@
+import json
+import xml.etree.ElementTree as ET
 from concurrent import futures
 from pathlib import Path
-from typing import List, Optional, Text
+from typing import Callable, List, Optional, Text
+
+import yaml
 
 from langflow.schema.schema import Record
+
+# Types of files that can be read simply by file.read()
+# and have 100% to be completely readable
+TEXT_FILE_TYPES = [
+    "txt",
+    "md",
+    "mdx",
+    "csv",
+    "json",
+    "yaml",
+    "yml",
+    "xml",
+    "html",
+    "htm",
+    "pdf",
+]
 
 
 def is_hidden(path: Path) -> bool:
@@ -11,10 +31,10 @@ def is_hidden(path: Path) -> bool:
 
 def retrieve_file_paths(
     path: str,
-    types: List[str],
     load_hidden: bool,
     recursive: bool,
     depth: int,
+    types: List[str] = TEXT_FILE_TYPES,
 ) -> List[str]:
     path_obj = Path(path)
     if not path_obj.exists() or not path_obj.is_dir():
@@ -35,14 +55,12 @@ def retrieve_file_paths(
 
     glob = "**/*" if recursive else "*"
     paths = walk_level(path_obj, depth) if depth else path_obj.glob(glob)
-    file_paths = [
-        Text(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)
-    ]
+    file_paths = [Text(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
 
     return file_paths
 
 
-def parse_file_to_record(file_path: str, silent_errors: bool) -> Optional[Record]:
+def partition_file_to_record(file_path: str, silent_errors: bool) -> Optional[Record]:
     # Use the partition function to load the file
     from unstructured.partition.auto import partition  # type: ignore
 
@@ -61,6 +79,42 @@ def parse_file_to_record(file_path: str, silent_errors: bool) -> Optional[Record
     return record
 
 
+def read_text_file(file_path: str) -> str:
+    with open(file_path, "r") as f:
+        return f.read()
+
+
+def parse_pdf_to_text(file_path: str) -> str:
+    from pypdf import PdfReader  # type: ignore
+
+    with open(file_path, "rb") as f:
+        reader = PdfReader(f)
+        return "\n\n".join([page.extract_text() for page in reader.pages])
+
+
+def parse_text_file_to_record(file_path: str, silent_errors: bool) -> Optional[Record]:
+    try:
+        if file_path.endswith(".pdf"):
+            text = parse_pdf_to_text(file_path)
+        else:
+            text = read_text_file(file_path)
+        # if file is json, yaml, or xml, we can parse it
+        if file_path.endswith(".json"):
+            text = json.loads(text)
+        elif file_path.endswith(".yaml") or file_path.endswith(".yml"):
+            text = yaml.safe_load(text)
+        elif file_path.endswith(".xml"):
+            xml_element = ET.fromstring(text)
+            text = ET.tostring(xml_element, encoding="unicode")
+    except Exception as e:
+        if not silent_errors:
+            raise ValueError(f"Error loading file {file_path}: {e}") from e
+        return None
+
+    record = Record(data={"file_path": file_path, "text": text})
+    return record
+
+
 def get_elements(
     file_paths: List[str],
     silent_errors: bool,
@@ -70,19 +124,20 @@ def get_elements(
     if use_multithreading:
         records = parallel_load_records(file_paths, silent_errors, max_concurrency)
     else:
-        records = [
-            parse_file_to_record(file_path, silent_errors) for file_path in file_paths
-        ]
+        records = [partition_file_to_record(file_path, silent_errors) for file_path in file_paths]
     records = list(filter(None, records))
     return records
 
 
 def parallel_load_records(
-    file_paths: List[str], silent_errors: bool, max_concurrency: int
+    file_paths: List[str],
+    silent_errors: bool,
+    max_concurrency: int,
+    load_function: Callable = parse_text_file_to_record,
 ) -> List[Optional[Record]]:
     with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
         loaded_files = executor.map(
-            lambda file_path: parse_file_to_record(file_path, silent_errors),
+            lambda file_path: load_function(file_path, silent_errors),
             file_paths,
         )
     # loaded_files is an iterator, so we need to convert it to a list

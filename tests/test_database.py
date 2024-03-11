@@ -3,12 +3,14 @@ from uuid import UUID, uuid4
 import orjson
 import pytest
 from fastapi.testclient import TestClient
+from sqlmodel import Session
+
 from langflow.api.v1.schemas import FlowListCreate
+from langflow.initial_setup.setup import load_starter_projects
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
-from sqlmodel import Session
 
 
 @pytest.fixture(scope="module")
@@ -182,7 +184,7 @@ def test_download_file(
     with session_getter(db_manager) as session:
         for flow in flow_list.flows:
             flow.user_id = active_user.id
-            db_flow = Flow.from_orm(flow)
+            db_flow = Flow.model_validate(flow, from_attributes=True)
             session.add(db_flow)
         session.commit()
     # Make request to endpoint
@@ -191,7 +193,9 @@ def test_download_file(
     assert response.status_code == 200, response.json()
     # Check response data
     response_data = response.json()["flows"]
-    assert len(response_data) == 2, response_data
+    starter_projects = load_starter_projects()
+    number_of_projects = len(starter_projects) + len(flow_list.flows)
+    assert len(response_data) == number_of_projects, response_data
     assert response_data[0]["name"] == "Flow 1"
     assert response_data[0]["description"] == "description"
     assert response_data[0]["data"] == data
@@ -243,7 +247,8 @@ def test_delete_nonexistent_flow(client: TestClient, active_user, logged_in_head
     assert response.status_code == 404
 
 
-def test_read_empty_flows(client: TestClient, active_user, logged_in_headers):
+def test_read_only_starter_projects(client: TestClient, active_user, logged_in_headers):
     response = client.get("api/v1/flows/", headers=logged_in_headers)
+    starter_projects = load_starter_projects()
     assert response.status_code == 200
-    assert len(response.json()) == 0
+    assert len(response.json()) == len(starter_projects)

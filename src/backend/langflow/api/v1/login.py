@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlmodel import Session
+
 from langflow.api.v1.schemas import Token
 from langflow.services.auth.utils import (
     authenticate_user,
@@ -8,7 +10,6 @@ from langflow.services.auth.utils import (
     create_user_tokens,
 )
 from langflow.services.deps import get_session, get_settings_service
-from sqlmodel import Session
 
 router = APIRouter(tags=["Login"])
 
@@ -40,6 +41,7 @@ async def login_to_get_access_token(
             httponly=auth_settings.REFRESH_HTTPONLY,
             samesite=auth_settings.REFRESH_SAME_SITE,
             secure=auth_settings.REFRESH_SECURE,
+            expires=auth_settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
         )
         response.set_cookie(
             "access_token_lf",
@@ -47,6 +49,7 @@ async def login_to_get_access_token(
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
+            expires=auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
         return tokens
     else:
@@ -72,6 +75,7 @@ async def auto_login(
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
+            expires=auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
         return tokens
 
@@ -95,9 +99,10 @@ async def refresh_token(request: Request, response: Response, settings_service=D
         response.set_cookie(
             "refresh_token_lf",
             tokens["refresh_token"],
-            httponly=auth_settings.REFRESH_TOKEN_HTTPONLY,
+            httponly=auth_settings.REFRESH_HTTPONLY,
             samesite=auth_settings.REFRESH_SAME_SITE,
             secure=auth_settings.REFRESH_SECURE,
+            expires=auth_settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
         )
         response.set_cookie(
             "access_token_lf",
@@ -105,6 +110,7 @@ async def refresh_token(request: Request, response: Response, settings_service=D
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
+            expires=auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
         return tokens
     else:

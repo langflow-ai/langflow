@@ -20,7 +20,17 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
-export default function IOView({ children, open, setOpen }): JSX.Element {
+export default function IOView({
+  children,
+  open,
+  setOpen,
+  disable,
+}: {
+  children: JSX.Element;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  disable?: boolean;
+}): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs).filter(
     (input) => input.type !== "ChatInput"
   );
@@ -98,6 +108,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
       size={haveChat ? (selectedTab === 0 ? "large-thin" : "large") : "small"}
       open={open}
       setOpen={setOpen}
+      disable={disable}
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
@@ -191,6 +202,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                                 <div className="">
                                   {input && (
                                     <IOInputField
+                                      left={true}
                                       inputType={input.type}
                                       inputId={input.id}
                                     />
@@ -259,6 +271,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                                 <div className="">
                                   {output && (
                                     <IOOutputView
+                                      left={true}
                                       outputType={output.type}
                                       outputId={output.id}
                                     />
@@ -297,11 +310,13 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                         (input) => input.id === selectedViewField.id
                       ) ? (
                         <IOInputField
+                          left={false}
                           inputType={selectedViewField.type!}
                           inputId={selectedViewField.id!}
                         />
                       ) : (
                         <IOOutputView
+                          left={false}
                           outputType={selectedViewField.type!}
                           outputId={selectedViewField.id!}
                         />

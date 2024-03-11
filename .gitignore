@@ -260,3 +260,4 @@ langflow.db
 src/backend/langflow/frontend/
 .docker
 scratchpad*
+chroma*/*

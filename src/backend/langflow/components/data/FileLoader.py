@@ -8,12 +8,9 @@ from langflow.utils.constants import LOADERS_INFO
 class FileLoaderComponent(CustomComponent):
     display_name: str = "File Loader"
     description: str = "Generic File Loader"
-    beta = True
 
     def build_config(self):
-        loader_options = ["Automatic"] + [
-            loader_info["name"] for loader_info in LOADERS_INFO
-        ]
+        loader_options = ["Automatic"] + [loader_info["name"] for loader_info in LOADERS_INFO]
 
         file_types = []
         suffixes = []
@@ -105,9 +102,7 @@ class FileLoaderComponent(CustomComponent):
         if isinstance(selected_loader_info, dict):
             loader_import: str = selected_loader_info["import"]
         else:
-            raise ValueError(
-                f"Loader info for {loader} is not a dict\nLoader info:\n{selected_loader_info}"
-            )
+            raise ValueError(f"Loader info for {loader} is not a dict\nLoader info:\n{selected_loader_info}")
         module_name, class_name = loader_import.rsplit(".", 1)
 
         try:
@@ -115,9 +110,7 @@ class FileLoaderComponent(CustomComponent):
             loader_module = __import__(module_name, fromlist=[class_name])
             loader_instance = getattr(loader_module, class_name)
         except ImportError as e:
-            raise ValueError(
-                f"Loader {loader} could not be imported\nLoader info:\n{selected_loader_info}"
-            ) from e
+            raise ValueError(f"Loader {loader} could not be imported\nLoader info:\n{selected_loader_info}") from e
 
         result = loader_instance(file_path=file_path)
         docs = result.load()

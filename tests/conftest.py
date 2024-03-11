@@ -10,16 +10,18 @@ import orjson
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
+
 from langflow.graph.graph.base import Graph
+from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
-from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -361,3 +363,25 @@ def created_api_key(active_user):
         session.commit()
         session.refresh(api_key)
     return api_key
+
+
+@pytest.fixture(name="starter_project")
+def get_starter_project(active_user):
+    # once the client is created, we can get the starter project
+    with session_getter(get_db_service()) as session:
+        flow = session.exec(select(Flow).where(Flow.folder == STARTER_FOLDER_NAME)).first()
+        if not flow:
+            raise ValueError("No starter project found")
+
+        new_flow_create = FlowCreate(
+            name=flow.name,
+            description=flow.description,
+            data=flow.data,
+            user_id=active_user.id,
+        )
+        new_flow = Flow.model_validate(new_flow_create, from_attributes=True)
+        session.add(new_flow)
+        session.commit()
+        session.refresh(new_flow)
+        new_flow_dict = new_flow.model_dump()
+    return new_flow_dict

@@ -165,8 +165,19 @@ const EditNodeModal = forwardRef(
                                 )
                             ) ?? false;
                           return (
-                            <TableRow key={index} className={"h-10 " + ((templateParam==="code" && myData.node?.template[templateParam].type==="code") || (templateParam.includes("code") && myData.node?.template[templateParam].proxy) ? " hidden " : "")
-                          }>
+                            <TableRow
+                              key={index}
+                              className={
+                                "h-10 " +
+                                ((templateParam === "code" &&
+                                  myData.node?.template[templateParam].type ===
+                                    "code") ||
+                                (templateParam.includes("code") &&
+                                  myData.node?.template[templateParam].proxy)
+                                  ? " hidden "
+                                  : "")
+                              }
+                            >
                               <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
                                 <ShadTooltip
                                   content={

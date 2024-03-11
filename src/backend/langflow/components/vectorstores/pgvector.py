@@ -3,9 +3,10 @@ from typing import Optional, Union
 from langchain.embeddings.base import Embeddings
 from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.pgvector import PGVector
-from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
+
 from langflow import CustomComponent
+from langflow.schema.schema import Record
 
 
 class PGVectorComponent(CustomComponent):
@@ -26,7 +27,7 @@ class PGVectorComponent(CustomComponent):
         """
         return {
             "code": {"show": False},
-            "documents": {"display_name": "Documents", "is_list": True},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
             "embedding": {"display_name": "Embedding"},
             "pg_server_url": {
                 "display_name": "PostgreSQL Server Connection String",
@@ -40,7 +41,7 @@ class PGVectorComponent(CustomComponent):
         embedding: Embeddings,
         pg_server_url: str,
         collection_name: str,
-        documents: Optional[Document] = None,
+        inputs: Optional[Record] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         """
         Builds the Vector Store or BaseRetriever object.
@@ -55,6 +56,12 @@ class PGVectorComponent(CustomComponent):
         - VectorStore: The Vector Store object.
         """
 
+        documents = []
+        for _input in inputs or []:
+            if isinstance(_input, Record):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
         try:
             if documents is None:
                 vector_store = PGVector.from_existing_index(

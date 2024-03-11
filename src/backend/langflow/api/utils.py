@@ -1,6 +1,6 @@
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 from fastapi import HTTPException
 from platformdirs import user_cache_dir
@@ -141,7 +141,7 @@ def get_file_path_value(file_path):
     return file_path
 
 
-def validate_is_component(flows: List["Flow"]):
+def validate_is_component(flows: list["Flow"]):
     for flow in flows:
         if not flow.data or flow.is_component is not None:
             continue
@@ -197,7 +197,7 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-def build_and_cache_graph(
+async def build_and_cache_graph(
     flow_id: str,
     session: Session,
     chat_service: "ChatService",
@@ -212,7 +212,7 @@ def build_and_cache_graph(
         graph = other_graph
     else:
         graph = graph.update(other_graph)
-    chat_service.set_cache(flow_id, graph)
+    await chat_service.set_cache(flow_id, graph)
     return graph
 
 

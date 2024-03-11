@@ -12,7 +12,7 @@ import ReactFlow, {
   updateEdge,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
-import Chat from "../../../../components/chatComponent";
+import FlowToolbar from "../../../../components/chatComponent";
 import {
   INVALID_SELECTION_ERROR_ALERT,
   UPLOAD_ALERT_LIST,
@@ -481,7 +481,7 @@ export default function Page({
                     }}
                   />
                 </ReactFlow>
-                {!view && <Chat />}
+                {!view && <FlowToolbar flow={flow} />}
               </div>
             ) : (
               <></>
