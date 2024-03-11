@@ -4,6 +4,7 @@ import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
   APIObjectType,
+  APITemplateType,
   Component,
   LoginType,
   Users,
@@ -369,11 +370,13 @@ export async function postCustomComponent(
 
 export async function postCustomComponentUpdate(
   code: string,
+  template: APITemplateType,
   field: string,
   field_value: any
 ): Promise<AxiosResponse<APIClassType>> {
   return await api.post(`${BASE_URL_API}custom_component/update`, {
     code,
+    template,
     field,
     field_value,
   });

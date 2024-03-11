@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 
 from langflow.api.utils import update_frontend_node_with_template_values
 from langflow.api.v1.schemas import (
-    CustomComponentCode,
+    CustomComponentRequest,
     InputValueRequest,
     ProcessResponse,
     RunResponse,
@@ -52,7 +52,9 @@ def get_all(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.post("/run/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
+@router.post(
+    "/run/{flow_id}", response_model=RunResponse, response_model_exclude_none=True
+)
 async def run_flow_with_caching(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
@@ -103,7 +105,9 @@ async def run_flow_with_caching(
     """
     try:
         if inputs is not None:
-            input_values: list[dict[str, Union[str, list[str]]]] = [_input.model_dump() for _input in inputs]
+            input_values: list[dict[str, Union[str, list[str]]]] = [
+                _input.model_dump() for _input in inputs
+            ]
         else:
             input_values = [{}]
 
@@ -111,7 +115,9 @@ async def run_flow_with_caching(
             outputs = []
 
         if session_id:
-            session_data = await session_service.load_session(session_id, flow_id=flow_id)
+            session_data = await session_service.load_session(
+                session_id, flow_id=flow_id
+            )
             graph, artifacts = session_data if session_data else (None, None)
             task_result: Any = None
             if not graph:
@@ -130,7 +136,11 @@ async def run_flow_with_caching(
         else:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            flow = session.exec(select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)).first()
+            flow = session.exec(
+                select(Flow)
+                .where(Flow.id == flow_id)
+                .where(Flow.user_id == api_key_user.id)
+            ).first()
             if flow is None:
                 raise ValueError(f"Flow {flow_id} not found")
 
@@ -154,12 +164,18 @@ async def run_flow_with_caching(
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
         if "badly formed hexadecimal UUID string" in str(exc):
             # This means the Flow ID is not a valid UUID which means it can't find the flow
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+            ) from exc
     except ValueError as exc:
         if f"Flow {flow_id} not found" in str(exc):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+            ) from exc
         else:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
+            ) from exc
 
 
 @router.post(
@@ -188,7 +204,8 @@ async def process(
     """
     # Raise a depreciation warning
     logger.warning(
-        "The /process endpoint is deprecated and will be removed in a future version. " "Please use /run instead."
+        "The /process endpoint is deprecated and will be removed in a future version. "
+        "Please use /run instead."
     )
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -253,19 +270,23 @@ def get_version():
 
 @router.post("/custom_component", status_code=HTTPStatus.OK)
 async def custom_component(
-    raw_code: CustomComponentCode,
+    raw_code: CustomComponentRequest,
     user: User = Depends(get_current_active_user),
 ):
     component = CustomComponent(code=raw_code.code)
 
-    built_frontend_node = build_custom_component_template(component, user_id=user.id)
+    built_frontend_node, _ = build_custom_component_template(component, user_id=user.id)
 
-    built_frontend_node = update_frontend_node_with_template_values(built_frontend_node, raw_code.frontend_node)
+    built_frontend_node = update_frontend_node_with_template_values(
+        built_frontend_node, raw_code.frontend_node
+    )
     return built_frontend_node
 
 
 @router.post("/custom_component/reload", status_code=HTTPStatus.OK)
-async def reload_custom_component(path: str, user: User = Depends(get_current_active_user)):
+async def reload_custom_component(
+    path: str, user: User = Depends(get_current_active_user)
+):
     from langflow.interface.custom.utils import build_custom_component_template
 
     try:
@@ -275,23 +296,40 @@ async def reload_custom_component(path: str, user: User = Depends(get_current_ac
             raise ValueError(content)
 
         extractor = CustomComponent(code=content)
-        return build_custom_component_template(extractor, user_id=user.id)
+        frontend_node, _ = build_custom_component_template(extractor, user_id=user.id)
+        return frontend_node
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)
 async def custom_component_update(
-    raw_code: CustomComponentCode,
+    code_request: CustomComponentRequest,
     user: User = Depends(get_current_active_user),
 ):
-    component = CustomComponent(code=raw_code.code)
+    """
+    Update a custom component with the provided code request.
 
-    component_node = build_custom_component_template(
+    This endpoint generates the CustomComponentFrontendNode normally but then runs the `update_build_config` method
+    on the latest version of the template. This ensures that every time it runs, it has the latest version of the template.
+
+    Args:
+        code_request (CustomComponentRequest): The code request containing the updated code for the custom component.
+        user (User, optional): The user making the request. Defaults to the current active user.
+
+    Returns:
+        dict: The updated custom component node.
+
+    """
+    component = CustomComponent(code=code_request.code)
+
+    component_node, cc_instance = build_custom_component_template(
         component,
         user_id=user.id,
-        update_field=raw_code.field,
-        update_field_value=raw_code.field_value,
     )
-    # Update the field
+    updated_build_config = cc_instance.update_build_config(
+        code_request.template, code_request.field_value, code_request.field_name
+    )
+    component_node["template"] = updated_build_config
+
     return component_node

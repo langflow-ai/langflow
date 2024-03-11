@@ -4,8 +4,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, Field, RootModel, field_validator, model_serializer
+from pydantic import (
+    BaseModel,
+    Field,
+    RootModel,
+    field_serializer,
+    field_validator,
+    model_serializer,
+)
 
+from langflow.schema import dotdict
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
@@ -158,14 +166,21 @@ class StreamData(BaseModel):
     data: dict
 
     def __str__(self) -> str:
-        return f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
+        return (
+            f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
+        )
 
 
-class CustomComponentCode(BaseModel):
+class CustomComponentRequest(BaseModel):
     code: str
     field: Optional[str] = None
     field_value: Optional[Any] = None
+    template: Optional[Union[dict, dotdict]] = None
     frontend_node: Optional[dict] = None
+
+    @field_serializer("template")
+    def template_into_dotdict(v):
+        return dotdict(v)
 
 
 class CustomComponentResponseError(BaseModel):
