@@ -202,8 +202,10 @@ class Graph:
         for input_dict in inputs:
             components: Union[str, list[str]] = input_dict.get("components", [])
 
-            if not isinstance(components, list):
-                components = [components]
+            if components and not isinstance(components, list):
+                raise ValueError(f"Invalid components value: {components}. Expected list")
+            elif components is None:
+                components = []
 
             if INPUT_FIELD_NAME not in input_dict:
                 input_value = ""
