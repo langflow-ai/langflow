@@ -75,7 +75,11 @@ export default function GenericNode({
     // This one should run only once
     // first check if data.type in NATIVE_CATEGORIES
     // if not return
-    if (!NATIVE_CATEGORIES.includes(types[data.type]) || !data.node?.template?.code?.value) return;
+    if (
+      !NATIVE_CATEGORIES.includes(types[data.type]) ||
+      !data.node?.template?.code?.value
+    )
+      return;
     const thisNodeTemplate = templates[data.type].template;
     // if the template does not have a code key
     // return
@@ -110,7 +114,7 @@ export default function GenericNode({
 
       updateNodeInternals(data.id);
     },
-    [data.id, data.node, setNode,setIsOutdated]
+    [data.id, data.node, setNode, setIsOutdated]
   );
 
   if (!data.node!.template) {
