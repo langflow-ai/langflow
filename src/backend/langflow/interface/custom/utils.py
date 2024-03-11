@@ -248,7 +248,7 @@ def run_build_config(
 
     try:
         if custom_component.code is None:
-            return {}
+            raise ValueError("Code is None")
         elif isinstance(custom_component.code, str):
             custom_class = eval_custom_component_code(custom_component.code)
         else:
