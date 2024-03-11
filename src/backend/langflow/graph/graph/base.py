@@ -184,13 +184,13 @@ class Graph:
 
     async def run(
         self,
-        inputs: list[Dict[str, Union[str, list[str]]]],
+        inputs: list[Dict[str, str]],
+        inputs_components: Optional[list[list[str]]] = None,
         outputs: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         stream: bool = False,
     ) -> List[RunOutputs]:
         """Runs the graph with the given inputs."""
-
         # inputs is {"message": "Hello, world!"}
         # we need to go through self.inputs and update the self._raw_params
         # of the vertices that are inputs
@@ -198,23 +198,14 @@ class Graph:
         vertex_outputs = []
         if not isinstance(inputs, list):
             inputs = [inputs]
-        for input_dict in inputs:
-            components: Union[str, list[str]] = input_dict.get("components", [])
-
+        for run_inputs, components in zip(inputs, inputs_components or []):
             if components and not isinstance(components, list):
                 raise ValueError(f"Invalid components value: {components}. Expected list")
             elif components is None:
                 components = []
 
-            if INPUT_FIELD_NAME not in input_dict:
-                input_value = ""
-            else:
-                _input_value = input_dict[INPUT_FIELD_NAME]
-                if isinstance(_input_value, str):
-                    input_value = _input_value
-                else:
-                    raise ValueError(f"Invalid input value: {input_value}. Expected string")
-            run_inputs = {INPUT_FIELD_NAME: input_value}
+            if not isinstance(run_inputs.get(INPUT_FIELD_NAME, ""), str):
+                raise ValueError(f"Invalid input value: {run_inputs.get(INPUT_FIELD_NAME)}. Expected string")
             run_outputs = await self._run(
                 inputs=run_inputs,
                 input_components=components,
