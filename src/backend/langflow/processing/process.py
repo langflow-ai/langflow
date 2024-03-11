@@ -272,6 +272,9 @@ def process_tweaks(graph_data: Dict[str, Any], tweaks: Union["Tweaks", Dict[str,
 
     :raises ValueError: If the input is not in the expected format.
     """
+    if not isinstance(tweaks, dict):
+        tweaks = tweaks.model_dump()
+
     nodes = validate_input(graph_data, tweaks)
     nodes_map = {node.get("id"): node for node in nodes}
 

@@ -428,6 +428,8 @@ class Vertex:
             results=result_dict,
             artifacts=artifacts,
             messages=messages,
+            component_display_name=self.display_name,
+            component_id=self.id,
         )
         self.set_result(result_dict)
 

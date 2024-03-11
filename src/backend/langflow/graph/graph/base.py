@@ -171,8 +171,7 @@ class Graph:
             raise ValueError(f"Error running graph: {exc}") from exc
         # Get the outputs
         vertex_outputs = []
-        for vertex_id in self.vertices:
-            vertex = self.get_vertex(vertex_id)
+        for vertex in self.vertices:
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
 
