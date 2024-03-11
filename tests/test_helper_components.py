@@ -24,9 +24,7 @@ def test_document_to_record_component():
 
     # Act
     # Replace with your actual test data
-    document = Document(
-        page_content="key: value", metadata={"url": "https://example.com"}
-    )
+    document = Document(page_content="key: value", metadata={"url": "https://example.com"})
     result = document_to_record_component.build(document)
 
     # Assert
@@ -44,9 +42,7 @@ def test_uuid_generator_component():
     # Act
     build_config = frontend_node.get("template")
     field_name = "unique_id"
-    build_config = uuid_generator_component.update_build_config(
-        build_config, None, field_name
-    )
+    build_config = uuid_generator_component.update_build_config(build_config, None, field_name)
     unique_id = build_config["unique_id"]["value"]
     result = uuid_generator_component.build(unique_id)
 
