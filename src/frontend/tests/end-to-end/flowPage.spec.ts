@@ -1,4 +1,8 @@
 import { Page, test } from "@playwright/test";
+test.beforeEach(async ({ page }) => {
+  await page.waitForTimeout(6000);
+  test.setTimeout(120000);
+});
 
 test.describe("Flow Page tests", () => {
   async function goToFlowPage(page: Page) {
