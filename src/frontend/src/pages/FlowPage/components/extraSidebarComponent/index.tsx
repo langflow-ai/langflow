@@ -1,6 +1,7 @@
 import { cloneDeep } from "lodash";
 import { LinkIcon, SparklesIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import AccordionComponent from "../../../../components/AccordionComponent";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
@@ -24,7 +25,6 @@ import {
   removeCountFromString,
   sensitiveSort,
 } from "../../../../utils/utils";
-import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
 import { sortKeys } from "./utils";
 
@@ -233,6 +233,20 @@ export default function ExtraSidebar(): JSX.Element {
     []
   );
 
+  const getIcon = useMemo(() => {
+    return (SBSectionName: string) => {
+      if (nodeIconsLucide[SBSectionName]) {
+        return (
+          <IconComponent
+            name={SBSectionName}
+            className="h-5 w-5 stroke-[1.5] text-primary"
+            aria-hidden="true"
+          />
+        );
+      }
+    };
+  }, []);
+
   return (
     <div className="side-bar-arrangement">
       <div className="side-bar-search-div-placement">
@@ -311,18 +325,25 @@ export default function ExtraSidebar(): JSX.Element {
                     </div>
                   </>
                 )}
-                <DisclosureComponent
+
+                <AccordionComponent
+                  trigger={
+                    <>
+                      <div className="flex justify-between">
+                        <div>
+                          {nodeNames[SBSectionName] ?? nodeNames.unknown}
+                        </div>
+                        <div>{getIcon(SBSectionName as any)}</div>
+                      </div>
+                    </>
+                  }
+                  key={index + search + JSON.stringify(getFilterEdge)}
+                  keyValue={index + search + JSON.stringify(getFilterEdge)}
                   openDisc={
                     getFilterEdge.length !== 0 || search.length !== 0
                       ? true
                       : false
                   }
-                  key={index + search + JSON.stringify(getFilterEdge)}
-                  button={{
-                    title: nodeNames[SBSectionName] ?? nodeNames.unknown,
-                    Icon:
-                      nodeIconsLucide[SBSectionName] ?? nodeIconsLucide.unknown,
-                  }}
                 >
                   <div className="side-bar-components-gap">
                     {Object.keys(dataFilter[SBSectionName])
@@ -370,7 +391,7 @@ export default function ExtraSidebar(): JSX.Element {
                         </ShadTooltip>
                       ))}
                   </div>
-                </DisclosureComponent>
+                </AccordionComponent>
               </>
             ) : (
               <div key={index}></div>

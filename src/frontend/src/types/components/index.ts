@@ -202,6 +202,7 @@ export type AccordionComponentType = {
   open?: string[];
   trigger?: string | ReactElement;
   keyValue?: string;
+  openDisc?: boolean;
 };
 export type Side = "top" | "right" | "bottom" | "left";
 
