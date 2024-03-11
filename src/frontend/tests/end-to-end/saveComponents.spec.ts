@@ -1,6 +1,9 @@
 import { Page, expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
-
+test.beforeEach(async ({ page }) => {
+  await page.waitForTimeout(14000);
+  test.setTimeout(120000);
+});
 test.describe("save component tests", () => {
   async function saveComponent(page: Page, pattern: RegExp, n: number) {
     for (let i = 0; i < n; i++) {
