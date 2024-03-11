@@ -162,14 +162,16 @@ class Graph:
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
             vertex.update_raw_params({"session_id": session_id})
+        # Process the graph
         try:
             await self.process()
             self.increment_run_count()
         except Exception as exc:
             logger.exception(exc)
             raise ValueError(f"Error running graph: {exc}") from exc
+        # Get the outputs
         vertex_outputs = []
-        for vertex_id in self._is_output_vertices:
+        for vertex_id in self.vertices:
             vertex = self.get_vertex(vertex_id)
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
@@ -178,6 +180,7 @@ class Graph:
                 await vertex.consume_async_generator()
             if not outputs or (vertex.display_name in outputs or vertex.id in outputs):
                 vertex_outputs.append(vertex.result)
+
         return vertex_outputs
 
     async def run(
