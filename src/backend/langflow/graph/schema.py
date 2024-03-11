@@ -13,6 +13,8 @@ class ResultData(BaseModel):
     messages: Optional[list[ChatOutputResponse]] = Field(default_factory=list)
     timedelta: Optional[float] = None
     duration: Optional[str] = None
+    component_display_name: Optional[str] = None
+    component_id: Optional[str] = None
 
     @field_serializer("results")
     def serialize_results(self, value):

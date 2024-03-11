@@ -171,8 +171,7 @@ class Graph:
             raise ValueError(f"Error running graph: {exc}") from exc
         # Get the outputs
         vertex_outputs = []
-        for vertex_id in self.vertices:
-            vertex = self.get_vertex(vertex_id)
+        for vertex in self.vertices:
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
 
@@ -202,8 +201,10 @@ class Graph:
         for input_dict in inputs:
             components: Union[str, list[str]] = input_dict.get("components", [])
 
-            if not isinstance(components, list):
-                components = [components]
+            if components and not isinstance(components, list):
+                raise ValueError(f"Invalid components value: {components}. Expected list")
+            elif components is None:
+                components = []
 
             if INPUT_FIELD_NAME not in input_dict:
                 input_value = ""
