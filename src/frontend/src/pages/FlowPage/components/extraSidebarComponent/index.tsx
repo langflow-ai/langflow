@@ -239,8 +239,8 @@ export default function ExtraSidebar(): JSX.Element {
         return (
           <IconComponent
             name={SBSectionName}
-            className="h-5 w-5 stroke-[1.5] text-primary"
-            aria-hidden="true"
+            strokeWidth={1.5}
+            className="w-[22px] text-primary"
           />
         );
       }
@@ -320,20 +320,28 @@ export default function ExtraSidebar(): JSX.Element {
                         </div>
                       </div>
                     </a>
-                    <div className="p-2 px-4 text-sm font-semibold" key={index}>
+                    <div
+                      className=" font-semibol border-b-1 z-50 p-2 px-4 text-sm"
+                      key={index}
+                    >
                       Legacy Components
                     </div>
+                    <Separator className="h-[0.6px]" />
                   </>
                 )}
 
                 <AccordionComponent
+                  sideBar
                   trigger={
                     <>
-                      <div className="flex justify-between">
-                        <div>
+                      <div className="flex justify-between ">
+                        <div className="mr-3 text-primary">
+                          {getIcon(SBSectionName as any)}
+                        </div>
+
+                        <div className=" self-center pl-1 font-normal">
                           {nodeNames[SBSectionName] ?? nodeNames.unknown}
                         </div>
-                        <div>{getIcon(SBSectionName as any)}</div>
                       </div>
                     </>
                   }

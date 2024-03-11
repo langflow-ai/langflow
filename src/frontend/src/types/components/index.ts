@@ -131,20 +131,6 @@ export type FileComponentType = {
   editNode?: boolean;
 };
 
-export type DisclosureComponentType = {
-  children: ReactNode;
-  openDisc: boolean;
-  button: {
-    title: string;
-    Icon: React.ElementType;
-    buttons?: {
-      Icon: ReactElement;
-      title: string;
-      onClick: (event?: React.MouseEvent) => void;
-    }[];
-  };
-};
-
 export type RangeSpecType = {
   min: number;
   max: number;
@@ -203,6 +189,7 @@ export type AccordionComponentType = {
   trigger?: string | ReactElement;
   keyValue?: string;
   openDisc?: boolean;
+  sideBar?: boolean;
 };
 export type Side = "top" | "right" | "bottom" | "left";
 
