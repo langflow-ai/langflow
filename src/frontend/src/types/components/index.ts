@@ -493,10 +493,11 @@ export type nodeToolbarPropsType = {
   selected: boolean;
   updateNodeCode?: (
     newNodeClass: APIClassType,
-    code?: string,
-    name?: string
+    code: string,
+    name: string
   ) => void;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
+  isOutdated?: boolean;
 };
 
 export type parsedDataType = {
