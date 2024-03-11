@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field, field_serializer
 
@@ -50,3 +50,8 @@ OUTPUT_COMPONENTS = [
 ]
 
 INPUT_FIELD_NAME = "input_value"
+
+
+class RunOutputs(BaseModel):
+    inputs: dict = Field(default_factory=dict)
+    outputs: List[Optional[ResultData]] = Field(default_factory=list)
