@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import (
     BaseModel,
+    ConfigDict,
     Field,
     RootModel,
     field_serializer,
@@ -172,10 +173,11 @@ class StreamData(BaseModel):
 
 
 class CustomComponentRequest(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     code: str
     field: Optional[str] = None
     field_value: Optional[Any] = None
-    template: Optional[Union[dict, dotdict]] = None
+    template: Optional[dict] = None
     frontend_node: Optional[dict] = None
 
     @field_serializer("template")
