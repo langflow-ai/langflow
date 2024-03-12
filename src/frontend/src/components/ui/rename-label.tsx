@@ -28,6 +28,9 @@ export default function RenameLabel(props) {
       }
     }
     resizeInput();
+    return () => {
+      if(isRename) document.removeEventListener("keydown", () => {});
+    };
   }, [isRename]);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
