@@ -22,7 +22,7 @@ class AuthSettings(BaseSettings):
         frozen=False,
     )
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 12 * 7
 
     # API Key to execute /process endpoint
