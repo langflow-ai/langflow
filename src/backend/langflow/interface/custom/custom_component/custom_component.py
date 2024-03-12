@@ -366,9 +366,10 @@ class CustomComponent(Component):
 
         if not flow_id:
             raise ValueError(f"Flow {flow_name} not found")
-
+        if isinstance(input_value, str):
+            input_value = [input_value]
         graph = await self.load_flow(flow_id, tweaks)
-        input_value_dict = [{"input_value": input_value}]
+        input_value_dict = [{"input_value": input_val} for input_val in input_value]
         return await graph.run(input_value_dict, stream=False)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Record]:
