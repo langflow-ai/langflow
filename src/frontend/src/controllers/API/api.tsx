@@ -107,6 +107,7 @@ function ApiInterceptor() {
 
   async function tryToRenewAccessToken(error: AxiosError) {
     try {
+      if (window.location.pathname.includes("/login")) return;
       const res = await renewAccessToken();
       if (res?.data?.access_token && res?.data?.refresh_token) {
         login(res?.data?.access_token);
