@@ -9,11 +9,11 @@ from pydantic import (
     ConfigDict,
     Field,
     RootModel,
-    field_serializer,
     field_validator,
     model_serializer,
 )
 
+from langflow.graph.schema import RunOutputs
 from langflow.schema import dotdict
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
@@ -58,7 +58,7 @@ class ProcessResponse(BaseModel):
 class RunResponse(BaseModel):
     """Run response schema."""
 
-    outputs: Optional[List[Any]] = None
+    outputs: Optional[List[RunOutputs]] = []
     session_id: Optional[str] = None
 
     @model_serializer(mode="wrap")
@@ -173,14 +173,16 @@ class StreamData(BaseModel):
 class CustomComponentRequest(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     code: str
-    field: Optional[str] = None
-    field_value: Optional[Any] = None
-    template: Optional[dict] = None
     frontend_node: Optional[dict] = None
 
-    @field_serializer("template")
-    def template_into_dotdict(v):
-        return dotdict(v)
+
+class UpdateCustomComponentRequest(CustomComponentRequest):
+    field: str
+    field_value: Optional[Union[str, int, float, bool, dict, list]] = None
+    template: dict
+
+    def get_template(self):
+        return dotdict(self.template)
 
 
 class CustomComponentResponseError(BaseModel):
