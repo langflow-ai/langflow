@@ -30,35 +30,40 @@ export default function PdfViewer(): JSX.Element {
     }
 
     return (
-        <div className={"w-full h-full min-h-0 overflow-auto custom-scroll relative"}>
-            <Document onLoadSuccess={onDocumentLoadSuccess} file="https://vjudge.net/contest/614781/problemPrint/I" className="w-full h-full max-w-full max-h-full">
-                <Page renderTextLayer pageNumber={pageNumber} className={"w-full h-full max-w-full max-h-full"} />
-            </Document>
-            <div className='absolute z-50 bg-secondary gap-0.5 rounded-xl px-2 flex align-middle justify-center items-center'>
-                <button
-                    type="button"
-                    disabled={pageNumber <= 1}
-                    onClick={previousPage}
-                >
-                    <IconComponent
-                        name={"ChevronLeft"}
-                        className="h-6 w-6"
-                    ></IconComponent>
-                </button>
-                <p>
-                    {pageNumber || (numPages ? 1 : '--')}/{numPages || '--'}
-                </p>
-                <button
-                    type="button"
-                    disabled={pageNumber >= numPages}
-                    onClick={nextPage}
-                >
-                    <IconComponent
-                        name={"ChevronRight"}
-                        className="h-6 w-6"
-                    ></IconComponent>
-                </button>
-            </div>
+        <div className="w-full h-full overflow-clip border-border border rounded-lg flex flex-col justify-end items-center">
+            <div className={"w-full h-full min-h-0 overflow-auto custom-scroll"}>
+                <Document onLoadSuccess={onDocumentLoadSuccess} file="https://vjudge.net/contest/614781/problemPrint/I"
+                    className="w-full h-full flex">
+                    <Page renderTextLayer pageNumber={pageNumber} className={"w-full h-full max-h-0"} />
+                </Document>
 
+            </div>
+            <div className='absolute z-50 pb-5'>
+                <div className=' bg-secondary w-min gap-0.5 rounded-xl px-2 flex align-middle justify-center items-center'>
+                    <button
+                        type="button"
+                        disabled={pageNumber <= 1}
+                        onClick={previousPage}
+                    >
+                        <IconComponent
+                            name={"ChevronLeft"}
+                            className="h-6 w-6"
+                        ></IconComponent>
+                    </button>
+                    <p>
+                        {pageNumber || (numPages ? 1 : '--')}/{numPages || '--'}
+                    </p>
+                    <button
+                        type="button"
+                        disabled={pageNumber >= numPages}
+                        onClick={nextPage}
+                    >
+                        <IconComponent
+                            name={"ChevronRight"}
+                            className="h-6 w-6"
+                        ></IconComponent>
+                    </button>
+                </div>
+            </div>
         </div>);
 }
