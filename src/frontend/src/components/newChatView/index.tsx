@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import IconComponent from "../../components/genericIconComponent";
 import { NOCHATOUTPUT_NOTICE_ALERT } from "../../constants/alerts_constants";
+import {
+  CHAT_FIRST_INITIAL_TEXT,
+  CHAT_SECOND_INITIAL_TEXT,
+} from "../../constants/constants";
 import { deleteFlowPool } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
@@ -10,7 +15,9 @@ import {
   ChatOutputType,
   FlowPoolObjectType,
 } from "../../types/chat";
-import CsvOutputComponent from "../csvOutputComponent";
+import { classNames } from "../../utils/utils";
+import ChatInput from "./chatInput";
+import ChatMessage from "./chatMessage";
 
 export default function NewChatView({
   sendMessage,
@@ -140,9 +147,7 @@ export default function NewChatView({
 
   return (
     <div className="eraser-column-arrangement">
-      <CsvOutputComponent />
-
-      {/* <div className="eraser-size">
+      <div className="eraser-size">
         <div className="eraser-position">
           <button disabled={lockChat} onClick={() => clearChat()}>
             <IconComponent
@@ -205,7 +210,7 @@ export default function NewChatView({
             />
           </div>
         </div>
-      </div> */}
+      </div>
     </div>
   );
 }
