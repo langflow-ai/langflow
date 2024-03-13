@@ -16,7 +16,6 @@ import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { useStoreStore } from "../../../../stores/storeStore";
 import { cn } from "../../../../utils/utils";
 import ShadTooltip from "../../../ShadTooltipComponent";
 import IconComponent from "../../../genericIconComponent";
@@ -34,10 +33,8 @@ export const MenuBar = ({
   const redo = useFlowsManagerStore((state) => state.redo);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const [openSettings, setOpenSettings] = useState(false);
-  const n = useFlowStore((state) => state.nodes);
+  const nodes = useFlowStore((state) => state.nodes);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
-  const hasApiKey = useStoreStore((state) => state.hasApiKey);
-  const validApiKey = useStoreStore((state) => state.validApiKey);
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
@@ -46,7 +43,6 @@ export const MenuBar = ({
       addFlow(true).then((id) => {
         navigate("/flow/" + id);
       });
-      // saveFlowStyleInDataBase();
     } catch (err) {
       setErrorData(err as { title: string; list?: Array<string> });
     }
@@ -65,7 +61,7 @@ export const MenuBar = ({
     <div className="round-button-div">
       <button
         onClick={() => {
-          removeFunction(n);
+          removeFunction(nodes);
           navigate(-1);
         }}
       >

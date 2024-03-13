@@ -91,9 +91,7 @@ from langflow.services.utils import teardown_superuser
 
 @patch("langflow.services.deps.get_settings_service")
 @patch("langflow.services.deps.get_session")
-def test_teardown_superuser_default_superuser(
-    mock_get_session, mock_get_settings_service
-):
+def test_teardown_superuser_default_superuser(mock_get_session, mock_get_settings_service):
     mock_settings_service = MagicMock()
     mock_settings_service.auth_settings.AUTO_LOGIN = True
     mock_settings_service.auth_settings.SUPERUSER = DEFAULT_SUPERUSER
@@ -113,9 +111,7 @@ def test_teardown_superuser_default_superuser(
 
 @patch("langflow.services.deps.get_settings_service")
 @patch("langflow.services.deps.get_session")
-def test_teardown_superuser_no_default_superuser(
-    mock_get_session, mock_get_settings_service
-):
+def test_teardown_superuser_no_default_superuser(mock_get_session, mock_get_settings_service):
     ADMIN_USER_NAME = "admin_user"
     mock_settings_service = MagicMock()
     mock_settings_service.auth_settings.AUTO_LOGIN = False

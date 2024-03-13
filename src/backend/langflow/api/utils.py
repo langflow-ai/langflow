@@ -197,7 +197,7 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-def build_and_cache_graph(
+async def build_and_cache_graph(
     flow_id: str,
     session: Session,
     chat_service: "ChatService",
@@ -212,7 +212,7 @@ def build_and_cache_graph(
         graph = other_graph
     else:
         graph = graph.update(other_graph)
-    chat_service.set_cache(flow_id, graph)
+    await chat_service.set_cache(flow_id, graph)
     return graph
 
 

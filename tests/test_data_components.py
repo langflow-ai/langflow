@@ -28,9 +28,7 @@ async def test_successful_get_request(api_request):
     respx.get(url).mock(return_value=Response(200, json=mock_response))
 
     # Making the request
-    result = await api_request.make_request(
-        client=httpx.AsyncClient(), method=method, url=url
-    )
+    result = await api_request.make_request(client=httpx.AsyncClient(), method=method, url=url)
 
     # Assertions
     assert result.data["status_code"] == 200
@@ -46,9 +44,7 @@ async def test_failed_request(api_request):
     respx.get(url).mock(return_value=Response(404))
 
     # Making the request
-    result = await api_request.make_request(
-        client=httpx.AsyncClient(), method=method, url=url
-    )
+    result = await api_request.make_request(client=httpx.AsyncClient(), method=method, url=url)
 
     # Assertions
     assert result.data["status_code"] == 404
@@ -60,14 +56,10 @@ async def test_timeout(api_request):
     # Mocking a timeout
     url = "https://example.com/api/timeout"
     method = "GET"
-    respx.get(url).mock(
-        side_effect=httpx.TimeoutException(message="Timeout", request=None)
-    )
+    respx.get(url).mock(side_effect=httpx.TimeoutException(message="Timeout", request=None))
 
     # Making the request
-    result = await api_request.make_request(
-        client=httpx.AsyncClient(), method=method, url=url, timeout=1
-    )
+    result = await api_request.make_request(client=httpx.AsyncClient(), method=method, url=url, timeout=1)
 
     # Assertions
     assert result.data["status_code"] == 408
@@ -106,7 +98,6 @@ def test_directory_component_build_with_multithreading(
     # Arrange
     directory_component = data.DirectoryComponent()
     path = os.path.dirname(os.path.abspath(__file__))
-    types = ["py"]
     depth = 1
     max_concurrency = 2
     load_hidden = False
@@ -121,9 +112,8 @@ def test_directory_component_build_with_multithreading(
     mock_parallel_load_records.return_value = [Mock()]
 
     # Act
-    result = directory_component.build(
+    directory_component.build(
         path,
-        types,
         depth,
         max_concurrency,
         load_hidden,
@@ -134,9 +124,7 @@ def test_directory_component_build_with_multithreading(
 
     # Assert
     mock_resolve_path.assert_called_once_with(path)
-    mock_retrieve_file_paths.assert_called_once_with(
-        path, types, load_hidden, recursive, depth
-    )
+    mock_retrieve_file_paths.assert_called_once_with(path, load_hidden, recursive, depth)
     mock_parallel_load_records.assert_called_once_with(
         mock_retrieve_file_paths.return_value, silent_errors, max_concurrency
     )
@@ -167,3 +155,12 @@ def test_directory_without_mocks():
     results = directory_component.build(str(docs_path), use_multithreading=False)
     docs_files = list(docs_path.glob("*.mdx"))
     assert len(results) == len(docs_files)
+
+
+def test_url_component():
+    url_component = data.URLComponent()
+    # the url component can be used to load the contents of a website
+    records = url_component.build(["https://langflow.org"])
+    assert all(record.data for record in records)
+    assert all(record.text for record in records)
+    assert all(record.source for record in records)

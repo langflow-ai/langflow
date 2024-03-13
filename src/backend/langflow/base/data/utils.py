@@ -21,6 +21,7 @@ TEXT_FILE_TYPES = [
     "xml",
     "html",
     "htm",
+    "pdf",
 ]
 
 
@@ -54,9 +55,7 @@ def retrieve_file_paths(
 
     glob = "**/*" if recursive else "*"
     paths = walk_level(path_obj, depth) if depth else path_obj.glob(glob)
-    file_paths = [
-        Text(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)
-    ]
+    file_paths = [Text(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
 
     return file_paths
 
@@ -85,19 +84,28 @@ def read_text_file(file_path: str) -> str:
         return f.read()
 
 
+def parse_pdf_to_text(file_path: str) -> str:
+    from pypdf import PdfReader  # type: ignore
+
+    with open(file_path, "rb") as f:
+        reader = PdfReader(f)
+        return "\n\n".join([page.extract_text() for page in reader.pages])
+
+
 def parse_text_file_to_record(file_path: str, silent_errors: bool) -> Optional[Record]:
     try:
-        text = read_text_file(file_path)
+        if file_path.endswith(".pdf"):
+            text = parse_pdf_to_text(file_path)
+        else:
+            text = read_text_file(file_path)
         # if file is json, yaml, or xml, we can parse it
         if file_path.endswith(".json"):
-
             text = json.loads(text)
         elif file_path.endswith(".yaml") or file_path.endswith(".yml"):
-
             text = yaml.safe_load(text)
         elif file_path.endswith(".xml"):
-
-            text = ET.fromstring(text)
+            xml_element = ET.fromstring(text)
+            text = ET.tostring(xml_element, encoding="unicode")
     except Exception as e:
         if not silent_errors:
             raise ValueError(f"Error loading file {file_path}: {e}") from e
@@ -116,10 +124,7 @@ def get_elements(
     if use_multithreading:
         records = parallel_load_records(file_paths, silent_errors, max_concurrency)
     else:
-        records = [
-            partition_file_to_record(file_path, silent_errors)
-            for file_path in file_paths
-        ]
+        records = [partition_file_to_record(file_path, silent_errors) for file_path in file_paths]
     records = list(filter(None, records))
     return records
 

@@ -16,7 +16,7 @@ class Record(BaseModel):
     _default_value: str = ""
 
     @model_validator(mode="before")
-    def validate_data(values):
+    def validate_data(cls, values):
         if not values.get("data"):
             values["data"] = {}
         # Any other keyword should be added to the data dictionary
@@ -73,9 +73,7 @@ class Record(BaseModel):
             return self.data.get(key, self._default_value)
         except KeyError:
             # Fallback to default behavior to raise AttributeError for undefined attributes
-            raise AttributeError(
-                f"'{type(self).__name__}' object has no attribute '{key}'"
-            )
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{key}'")
 
     def __setattr__(self, key, value):
         """

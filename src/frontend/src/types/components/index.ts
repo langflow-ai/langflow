@@ -491,7 +491,13 @@ export type nodeToolbarPropsType = {
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
   selected: boolean;
+  updateNodeCode?: (
+    newNodeClass: APIClassType,
+    code: string,
+    name: string
+  ) => void;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
+  isOutdated?: boolean;
 };
 
 export type parsedDataType = {
@@ -681,4 +687,20 @@ export type IOOutputProps = {
 export type IOFileInputProps = {
   field: TemplateVariableType;
   updateValue: (e: any, type: string) => void;
+};
+
+export type toolbarSelectItemProps = {
+  isMac: boolean;
+  shift: boolean;
+  keyboardKey: string;
+  value: string;
+  icon: string;
+  styleObj?: {
+    iconClasses?: string;
+    commandClasses?: string;
+    shiftClasses?: string;
+    ctrlClasses?: string;
+    keyClasses?: string;
+    valueClasses?: string;
+  }
 };

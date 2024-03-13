@@ -55,8 +55,6 @@ export default function CodeTabsComponent({
   const dark = useDarkStore((state) => state.dark);
   const unselectAll = useFlowStore((state) => state.unselectAll);
 
-  const setNodes = useFlowStore((state) => state.setNodes);
-
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   useEffect(() => {

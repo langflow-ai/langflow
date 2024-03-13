@@ -24,9 +24,7 @@ class PromptComponent(CustomComponent):
 
         prompt_template = PromptTemplate.from_template(Text(template))
         kwargs = dict_values_to_string(kwargs)
-        kwargs = {
-            k: "\n".join(v) if isinstance(v, list) else v for k, v in kwargs.items()
-        }
+        kwargs = {k: "\n".join(v) if isinstance(v, list) else v for k, v in kwargs.items()}
         try:
             formated_prompt = prompt_template.format(**kwargs)
         except Exception as exc:

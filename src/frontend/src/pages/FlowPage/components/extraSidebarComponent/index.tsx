@@ -250,10 +250,20 @@ export default function ExtraSidebar(): JSX.Element {
             setSearch(event.target.value);
           }}
         />
-        <div className="search-icon">
+        <div
+          className="search-icon "
+          onClick={() => {
+            if (search) {
+              setFilterData(data);
+              setSearch("");
+            }
+          }}
+        >
           <IconComponent
-            name="Search"
-            className={"h-5 w-5 stroke-[1.5] text-primary"}
+            name={search ? "X" : "Search"}
+            className={`h-5 w-5 stroke-[1.5] text-primary ${
+              search ? "cursor-pointer" : "cursor-default"
+            }`}
             aria-hidden="true"
           />
         </div>

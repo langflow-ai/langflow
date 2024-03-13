@@ -386,7 +386,7 @@ export function getCurlCode(
   -H 'Content-Type: application/json'\\${
     !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
   }
-  -d '{"inputs": ${inputs}, "tweaks": ${
+  -d '{"inputs": [${inputs}], "tweaks": ${
     tweak && tweak.length > 0
       ? buildTweakObject(tweak)
       : JSON.stringify(tweaks, null, 2)

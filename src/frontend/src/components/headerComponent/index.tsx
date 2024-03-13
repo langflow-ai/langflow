@@ -33,7 +33,7 @@ export default function Header(): JSX.Element {
   const removeFlow = useFlowsManagerStore((store) => store.removeFlow);
   const hasStore = useStoreStore((state) => state.hasStore);
   const { id } = useParams();
-  const n = useFlowStore((state) => state.nodes);
+  const nodes = useFlowStore((state) => state.nodes);
 
   const dark = useDarkStore((state) => state.dark);
   const setDark = useDarkStore((state) => state.setDark);
@@ -57,7 +57,7 @@ export default function Header(): JSX.Element {
   return (
     <div className="header-arrangement">
       <div className="header-start-display lg:w-[30%]">
-        <Link to="/" onClick={() => checkForChanges(n)}>
+        <Link to="/" onClick={() => checkForChanges(nodes)}>
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
         <MenuBar removeFunction={checkForChanges} />
@@ -74,7 +74,7 @@ export default function Header(): JSX.Element {
             }
             size="sm"
             onClick={() => {
-              checkForChanges(n);
+              checkForChanges(nodes);
             }}
           >
             <IconComponent name="Home" className="h-4 w-4" />
@@ -100,7 +100,7 @@ export default function Header(): JSX.Element {
               variant={location.pathname === "/store" ? "primary" : "secondary"}
               size="sm"
               onClick={() => {
-                checkForChanges(n);
+                checkForChanges(nodes);
               }}
             >
               <IconComponent name="Store" className="h-4 w-4" />
