@@ -9,9 +9,15 @@ export const handleUpdateValues = async (name: string, data: NodeDataType) => {
     console.error("Code not found in the template");
     return;
   }
+  const template = data.node?.template;
+  if (!template) {
+    console.error("No template found in the node.");
+    return;
+  }
   try {
     let newTemplate = await postCustomComponentUpdate(
       code,
+      template,
       name,
       data.node?.template[name]?.value
     )

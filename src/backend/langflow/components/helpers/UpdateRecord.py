@@ -15,6 +15,7 @@ class UpdateRecordComponent(CustomComponent):
             "new_data": {
                 "display_name": "New Data",
                 "info": "The new data to update the record with.",
+                "input_types": ["Text"],
             },
         }
 

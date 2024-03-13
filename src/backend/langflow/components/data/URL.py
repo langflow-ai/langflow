@@ -15,7 +15,7 @@ class URLComponent(CustomComponent):
             "urls": {"display_name": "URL"},
         }
 
-    async def build(
+    def build(
         self,
         urls: list[str],
     ) -> list[Record]:

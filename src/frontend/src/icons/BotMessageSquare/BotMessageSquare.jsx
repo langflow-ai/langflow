@@ -9,7 +9,7 @@ const SvgBotMessageSquare = (props) => (
     stroke-width="2"
     stroke-linecap="round"
     stroke-linejoin="round"
-    class="lucide lucide-bot-message-square"
+    className="lucide lucide-bot-message-square"
     {...props}
   >
     <path d="M12 6V2H8" />

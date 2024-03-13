@@ -1,5 +1,6 @@
+import { cloneDeep } from "lodash";
 import { useCallback, useEffect, useState } from "react";
-import { NodeToolbar } from "reactflow";
+import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
@@ -9,6 +10,7 @@ import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
 import Xmark from "../../components/ui/xmark";
 import {
+  NATIVE_CATEGORIES,
   RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
@@ -20,6 +22,7 @@ import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useTypesStore } from "../../stores/typesStore";
+import { APIClassType } from "../../types/api";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
@@ -39,10 +42,12 @@ export default function GenericNode({
   yPos: number;
 }): JSX.Element {
   const types = useTypesStore((state) => state.types);
+  const templates = useTypesStore((state) => state.templates);
   const deleteNode = useFlowStore((state) => state.deleteNode);
   const flowPool = useFlowStore((state) => state.flowPool);
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setNode = useFlowStore((state) => state.setNode);
+  const updateNodeInternals = useUpdateNodeInternals();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
@@ -51,6 +56,7 @@ export default function GenericNode({
   const [nodeDescription, setNodeDescription] = useState(
     data.node?.description!
   );
+  const [isOutdated, setIsOutdated] = useState(false);
   const buildStatus = useFlowStore(
     (state) => state.flowBuildStatus[data.id]?.status
   );
@@ -64,6 +70,52 @@ export default function GenericNode({
   const [validationString, setValidationString] = useState<string>("");
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+
+  useEffect(() => {
+    // This one should run only once
+    // first check if data.type in NATIVE_CATEGORIES
+    // if not return
+    if (
+      !NATIVE_CATEGORIES.includes(types[data.type]) ||
+      !data.node?.template?.code?.value
+    )
+      return;
+    const thisNodeTemplate = templates[data.type].template;
+    // if the template does not have a code key
+    // return
+    if (!thisNodeTemplate.code) return;
+    const currentCode = thisNodeTemplate.code?.value;
+    const thisNodesCode = data.node!.template?.code?.value;
+    if (currentCode !== thisNodesCode) {
+      setIsOutdated(true);
+    } else {
+      setIsOutdated(false);
+    }
+    // template.code can be undefined
+  }, [data.node?.template?.code?.value]);
+
+  const updateNodeCode = useCallback(
+    (newNodeClass: APIClassType, code: string, name: string) => {
+      setNode(data.id, (oldNode) => {
+        let newNode = cloneDeep(oldNode);
+
+        newNode.data = {
+          ...newNode.data,
+          node: newNodeClass,
+          description: newNodeClass.description ?? data.node!.description,
+          display_name: newNodeClass.display_name ?? data.node!.display_name,
+        };
+
+        newNode.data.node.template[name].value = code;
+        setIsOutdated(false);
+
+        return newNode;
+      });
+
+      updateNodeInternals(data.id);
+    },
+    [data.id, data.node, setNode, setIsOutdated]
+  );
 
   if (!data.node!.template) {
     setErrorData({
@@ -305,6 +357,8 @@ export default function GenericNode({
           showNode={showNode}
           openAdvancedModal={false}
           onCloseAdvancedModal={() => {}}
+          updateNodeCode={updateNodeCode}
+          isOutdated={isOutdated}
           selected={selected}
         ></NodeToolbarComponent>
       </NodeToolbar>

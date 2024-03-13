@@ -278,6 +278,7 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
+  X: X,
   Notify: Bell,
   ListFlows: Group,
   ClearMessageHistory: FileClock,

@@ -56,9 +56,7 @@ class APIRequest(CustomComponent):
         data = body if body else None
         payload = json.dumps(data)
         try:
-            response = await client.request(
-                method, url, headers=headers, content=payload, timeout=timeout
-            )
+            response = await client.request(method, url, headers=headers, content=payload, timeout=timeout)
             try:
                 result = response.json()
             except Exception:
@@ -108,13 +106,10 @@ class APIRequest(CustomComponent):
                 bodies = [body.data]
         if len(urls) != len(bodies):
             # add bodies with None
-            bodies += [None] * (len(urls) - len(bodies))
+            bodies += [None] * (len(urls) - len(bodies))  # type: ignore
         async with httpx.AsyncClient() as client:
             results = await asyncio.gather(
-                *[
-                    self.make_request(client, method, u, headers, rec, timeout)
-                    for u, rec in zip(urls, bodies)
-                ]
+                *[self.make_request(client, method, u, headers, rec, timeout) for u, rec in zip(urls, bodies)]
             )
         self.status = results
         return results

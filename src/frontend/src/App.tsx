@@ -102,35 +102,46 @@ export default function App() {
         )}
       </ErrorBoundary>
       <div></div>
-      <div className="app-div z-40">
-        {tempNotificationList.map((alert) => (
-          <div key={alert.id}>
-            {alert.type === "error" ? (
-              <ErrorAlert
-                key={alert.id}
-                title={alert.title}
-                list={alert.list}
-                id={alert.id}
-                removeAlert={removeAlert}
-              />
-            ) : alert.type === "notice" ? (
-              <NoticeAlert
-                key={alert.id}
-                title={alert.title}
-                link={alert.link}
-                id={alert.id}
-                removeAlert={removeAlert}
-              />
-            ) : (
-              <SuccessAlert
-                key={alert.id}
-                title={alert.title}
-                id={alert.id}
-                removeAlert={removeAlert}
-              />
-            )}
-          </div>
-        ))}
+      <div className="app-div">
+        <div className="flex flex-col-reverse" style={{ zIndex: 999 }}>
+          {tempNotificationList.map((alert) => (
+            <div key={alert.id}>
+              {alert.type === "error" && (
+                <ErrorAlert
+                  key={alert.id}
+                  title={alert.title}
+                  list={alert.list}
+                  id={alert.id}
+                  removeAlert={removeAlert}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="z-40 flex flex-col-reverse">
+          {tempNotificationList.map((alert) => (
+            <div key={alert.id}>
+              {alert.type === "notice" ? (
+                <NoticeAlert
+                  key={alert.id}
+                  title={alert.title}
+                  link={alert.link}
+                  id={alert.id}
+                  removeAlert={removeAlert}
+                />
+              ) : (
+                alert.type === "success" && (
+                  <SuccessAlert
+                    key={alert.id}
+                    title={alert.title}
+                    id={alert.id}
+                    removeAlert={removeAlert}
+                  />
+                )
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

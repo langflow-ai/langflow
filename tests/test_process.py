@@ -268,13 +268,9 @@ async def test_load_langchain_object_with_cached_session(client, basic_graph_dat
     # Provide a non-existent session_id
     session_service = get_session_service()
     session_id1 = "non-existent-session-id"
-    graph1, artifacts1 = await session_service.load_session(
-        session_id1, basic_graph_data
-    )
+    graph1, artifacts1 = await session_service.load_session(session_id1, basic_graph_data)
     # Use the new session_id to get the langchain_object again
-    graph2, artifacts2 = await session_service.load_session(
-        session_id1, basic_graph_data
-    )
+    graph2, artifacts2 = await session_service.load_session(session_id1, basic_graph_data)
 
     assert graph1 == graph2
     assert artifacts1 == artifacts2
@@ -286,15 +282,11 @@ async def test_load_langchain_object_with_no_cached_session(client, basic_graph_
     session_service = get_session_service()
     session_id1 = "non-existent-session-id"
     session_id = session_service.build_key(session_id1, basic_graph_data)
-    graph1, artifacts1 = await session_service.load_session(
-        session_id, data_graph=basic_graph_data, flow_id="flow_id"
-    )
+    graph1, artifacts1 = await session_service.load_session(session_id, data_graph=basic_graph_data, flow_id="flow_id")
     # Clear the cache
     session_service.clear_session(session_id)
     # Use the new session_id to get the langchain_object again
-    graph2, artifacts2 = await session_service.load_session(
-        session_id, data_graph=basic_graph_data, flow_id="flow_id"
-    )
+    graph2, artifacts2 = await session_service.load_session(session_id, data_graph=basic_graph_data, flow_id="flow_id")
 
     assert id(graph1) != id(graph2)
     # Since the cache was cleared, objects should be different
@@ -305,12 +297,8 @@ async def test_load_langchain_object_without_session_id(client, basic_graph_data
     # Provide a non-existent session_id
     session_service = get_session_service()
     session_id1 = None
-    graph1, artifacts1 = await session_service.load_session(
-        session_id1, data_graph=basic_graph_data, flow_id="flow_id"
-    )
+    graph1, artifacts1 = await session_service.load_session(session_id1, data_graph=basic_graph_data, flow_id="flow_id")
     # Use the new session_id to get the langchain_object again
-    graph2, artifacts2 = await session_service.load_session(
-        session_id1, data_graph=basic_graph_data, flow_id="flow_id"
-    )
+    graph2, artifacts2 = await session_service.load_session(session_id1, data_graph=basic_graph_data, flow_id="flow_id")
 
     assert graph1 == graph2

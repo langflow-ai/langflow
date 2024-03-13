@@ -9,7 +9,7 @@ from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import process_flow
-from langflow.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes
+from langflow.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import (
     ChatVertex,
@@ -162,15 +162,16 @@ class Graph:
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
             vertex.update_raw_params({"session_id": session_id})
+        # Process the graph
         try:
             await self.process()
             self.increment_run_count()
         except Exception as exc:
             logger.exception(exc)
             raise ValueError(f"Error running graph: {exc}") from exc
+        # Get the outputs
         vertex_outputs = []
-        for vertex_id in self._is_output_vertices:
-            vertex = self.get_vertex(vertex_id)
+        for vertex in self.vertices:
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
 
@@ -178,17 +179,18 @@ class Graph:
                 await vertex.consume_async_generator()
             if not outputs or (vertex.display_name in outputs or vertex.id in outputs):
                 vertex_outputs.append(vertex.result)
+
         return vertex_outputs
 
     async def run(
         self,
-        inputs: list[Dict[str, Union[str, list[str]]]],
+        inputs: list[Dict[str, str]],
+        inputs_components: Optional[list[list[str]]] = None,
         outputs: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         stream: bool = False,
-    ) -> List[List[Optional["ResultData"]]]:
+    ) -> List[RunOutputs]:
         """Runs the graph with the given inputs."""
-
         # inputs is {"message": "Hello, world!"}
         # we need to go through self.inputs and update the self._raw_params
         # of the vertices that are inputs
@@ -196,30 +198,24 @@ class Graph:
         vertex_outputs = []
         if not isinstance(inputs, list):
             inputs = [inputs]
-        for input_dict in inputs:
-            components: Union[str, list[str]] = input_dict.get("components", [])
+        for run_inputs, components in zip(inputs, inputs_components or []):
+            if components and not isinstance(components, list):
+                raise ValueError(f"Invalid components value: {components}. Expected list")
+            elif components is None:
+                components = []
 
-            if not isinstance(components, list):
-                components = [components]
-
-            if INPUT_FIELD_NAME not in input_dict:
-                input_value = ""
-            else:
-                _input_value = input_dict[INPUT_FIELD_NAME]
-                if isinstance(_input_value, str):
-                    input_value = _input_value
-                else:
-                    raise ValueError(f"Invalid input value: {input_value}. Expected string")
-
+            if not isinstance(run_inputs.get(INPUT_FIELD_NAME, ""), str):
+                raise ValueError(f"Invalid input value: {run_inputs.get(INPUT_FIELD_NAME)}. Expected string")
             run_outputs = await self._run(
-                inputs={INPUT_FIELD_NAME: input_value},
+                inputs=run_inputs,
                 input_components=components,
                 outputs=outputs or [],
                 stream=stream,
                 session_id=session_id or "",
             )
-            logger.debug(f"Run outputs: {run_outputs}")
-            vertex_outputs.append(run_outputs)
+            run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
+            logger.debug(f"Run outputs: {run_output_object}")
+            vertex_outputs.append(run_output_object)
         return vertex_outputs
 
     # vertices_layers is a list of lists ordered by the order the vertices
@@ -240,6 +236,7 @@ class Graph:
 
     def build_graph_maps(self):
         self.predecessor_map, self.successor_map = self.build_adjacency_maps()
+
         self.in_degree_map = self.build_in_degree()
         self.parent_child_map = self.build_parent_child_map()
 
@@ -294,6 +291,15 @@ class Graph:
             predecessor_map[edge.target_id].append(edge.source_id)
             successor_map[edge.source_id].append(edge.target_id)
         return predecessor_map, successor_map
+
+    def build_run_map(self):
+        run_map = defaultdict(list)
+        # The run map gets the predecessor_map and maps the info like this:
+        # {vertex_id: every id that contains the vertex_id in the predecessor_map}
+        for vertex_id, predecessors in self.predecessor_map.items():
+            for predecessor in predecessors:
+                run_map[predecessor].append(vertex_id)
+        return run_map
 
     @classmethod
     def from_payload(cls, payload: Dict, flow_id: Optional[str] = None) -> "Graph":
@@ -939,15 +945,36 @@ class Graph:
         # save the only the rest
         self.vertices_layers = vertices_layers[1:]
         self.vertices_to_run = {vertex_id for vertex_id in chain.from_iterable(vertices_layers)}
+        self.run_map, self.run_predecessors = (
+            self.build_run_map(),
+            self.predecessor_map.copy(),
+        )
+
         # Return just the first layer
         return first_layer
 
+    def vertex_has_no_more_predecessors(self, vertex_id: str) -> bool:
+        """Returns whether a vertex has no more predecessors."""
+        return not self.run_predecessors.get(vertex_id)
+
     def should_run_vertex(self, vertex_id: str) -> bool:
         """Returns whether a component should be run."""
-        should_run = vertex_id in self.vertices_to_run
+        # the self.run_map is a map of vertex_id to a list of predecessors
+        # each time a vertex is run, we remove it from the list of predecessors
+        # if a vertex has no more predecessors, it should be run
+        should_run = vertex_id in self.vertices_to_run and self.vertex_has_no_more_predecessors(vertex_id)
+
         if should_run:
             self.vertices_to_run.remove(vertex_id)
+            # remove the vertex from the run_map
+            self.remove_from_predecessors(vertex_id)
         return should_run
+
+    def remove_from_predecessors(self, vertex_id: str):
+        predecessors = self.run_map.get(vertex_id, [])
+        for predecessor in predecessors:
+            if vertex_id in self.run_predecessors[predecessor]:
+                self.run_predecessors[predecessor].remove(vertex_id)
 
     def sort_interface_components_first(self, vertices_layers: List[List[str]]) -> List[List[str]]:
         """Sorts the vertices in the graph so that vertices containing ChatInput or ChatOutput come first."""

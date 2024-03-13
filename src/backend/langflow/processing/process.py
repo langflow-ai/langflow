@@ -11,13 +11,14 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.graph.graph.base import Graph
+from langflow.graph.schema import INPUT_FIELD_NAME, RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.run import get_memory_key, update_memory_keys
 from langflow.services.session.service import SessionService
 
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import Tweaks
+    from langflow.api.v1.schemas import InputValueRequest, Tweaks
 
 
 def fix_memory_inputs(langchain_object):
@@ -200,31 +201,43 @@ async def run_graph(
     flow_id: str,
     stream: bool,
     session_id: Optional[str] = None,
-    inputs: Optional[list[dict[str, Union[List[str], str]]]] = None,
+    inputs: Optional[List["InputValueRequest"]] = None,
     outputs: Optional[List[str]] = None,
     artifacts: Optional[Dict[str, Any]] = None,
     session_service: Optional[SessionService] = None,
-):
+) -> tuple[List[RunOutputs], str]:
     """Run the graph and generate the result"""
+    inputs = inputs or []
     if isinstance(graph, dict):
         graph_data = graph
         graph = Graph.from_payload(graph, flow_id=flow_id)
     else:
         graph_data = graph._graph_data
     if session_id is None and session_service is not None:
-        session_id = session_service.generate_key(session_id=flow_id, data_graph=graph_data)
-    if inputs is None:
-        inputs = [{}]
+        session_id_str = session_service.generate_key(session_id=flow_id, data_graph=graph_data)
+    elif session_id is not None:
+        session_id_str = session_id
+    else:
+        raise ValueError("session_id or session_service must be provided")
+    components = []
+    inputs_list = []
+    for input_value_request in inputs:
+        if input_value_request.input_value is None:
+            logger.warning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
+            input_value_request.input_value = ""
+        components.append(input_value_request.components or [])
+        inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
 
     run_outputs = await graph.run(
-        inputs,
+        inputs_list,
+        components,
         outputs or [],
         stream=stream,
-        session_id=session_id or "",
+        session_id=session_id_str or "",
     )
-    if session_id and session_service:
-        session_service.update_session(session_id, (graph, artifacts))
-    return run_outputs, session_id
+    if session_id_str and session_service:
+        session_service.update_session(session_id_str, (graph, artifacts))
+    return run_outputs, session_id_str
 
 
 def validate_input(
@@ -272,6 +285,9 @@ def process_tweaks(graph_data: Dict[str, Any], tweaks: Union["Tweaks", Dict[str,
 
     :raises ValueError: If the input is not in the expected format.
     """
+    if not isinstance(tweaks, dict):
+        tweaks = tweaks.model_dump()
+
     nodes = validate_input(graph_data, tweaks)
     nodes_map = {node.get("id"): node for node in nodes}
 

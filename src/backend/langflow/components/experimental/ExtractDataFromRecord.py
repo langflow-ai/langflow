@@ -21,9 +21,7 @@ class ExtractKeyFromRecordComponent(CustomComponent):
         },
     }
 
-    def build(
-        self, record: Record, keys: list[str], silent_error: bool = True
-    ) -> Record:
+    def build(self, record: Record, keys: list[str], silent_error: bool = True) -> Record:
         """
         Extracts the keys from a record.
 

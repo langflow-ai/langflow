@@ -584,7 +584,7 @@
   }
 
   .app-div {
-    @apply fixed bottom-5 left-5 flex flex-col-reverse;
+    @apply absolute bottom-5 left-5 flex flex-col-reverse;
   }
 
   .chat-input-modal-txtarea {

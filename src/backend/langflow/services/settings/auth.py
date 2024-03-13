@@ -1,4 +1,3 @@
-import datetime
 import secrets
 from pathlib import Path
 from typing import Optional
@@ -37,7 +36,7 @@ class AuthSettings(BaseSettings):
     NEW_USER_IS_ACTIVE: bool = False
     SUPERUSER: str = DEFAULT_SUPERUSER
     SUPERUSER_PASSWORD: str = DEFAULT_SUPERUSER_PASSWORD
-    
+
     REFRESH_SAME_SITE: str = "none"
     """The SameSite attribute of the refresh token cookie."""
     REFRESH_SECURE: bool = True

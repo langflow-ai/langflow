@@ -4,8 +4,17 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, Field, RootModel, field_validator, model_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    RootModel,
+    field_validator,
+    model_serializer,
+)
 
+from langflow.graph.schema import RunOutputs
+from langflow.schema import dotdict
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
@@ -49,7 +58,7 @@ class ProcessResponse(BaseModel):
 class RunResponse(BaseModel):
     """Run response schema."""
 
-    outputs: Optional[List[Any]] = None
+    outputs: Optional[List[RunOutputs]] = []
     session_id: Optional[str] = None
 
     @model_serializer(mode="wrap")
@@ -161,11 +170,19 @@ class StreamData(BaseModel):
         return f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
 
 
-class CustomComponentCode(BaseModel):
+class CustomComponentRequest(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     code: str
-    field: Optional[str] = None
-    field_value: Optional[Any] = None
     frontend_node: Optional[dict] = None
+
+
+class UpdateCustomComponentRequest(CustomComponentRequest):
+    field: str
+    field_value: Optional[Union[str, int, float, bool, dict, list]] = None
+    template: dict
+
+    def get_template(self):
+        return dotdict(self.template)
 
 
 class CustomComponentResponseError(BaseModel):
@@ -244,7 +261,7 @@ class VerticesBuiltResponse(BaseModel):
 
 
 class InputValueRequest(BaseModel):
-    components: Optional[List[str]] = None
+    components: Optional[List[str]] = []
     input_value: Optional[str] = None
 
     # add an example

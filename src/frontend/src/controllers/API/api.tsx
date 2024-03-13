@@ -1,7 +1,6 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
-import { useNavigate } from "react-router-dom";
 import { renewAccessToken } from ".";
 import { BuildStatus } from "../../constants/enums";
 import { AuthContext } from "../../contexts/authContext";
@@ -17,26 +16,28 @@ function ApiInterceptor() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   let { accessToken, login, logout, authenticationErrorCount, autoLogin } =
     useContext(AuthContext);
-  const navigate = useNavigate();
   const cookies = new Cookies();
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          const accessToken = cookies.get("access_token_lf");
+        if (error.response?.status === 403 || error.response?.status === 401) {
+          if (!autoLogin) {
+            const stillRefresh = checkErrorCount();
+            if (!stillRefresh) {
+              return Promise.reject(error);
+            }
+            const acceptedRequest = await tryToRenewAccessToken(error);
 
-          if (accessToken && !autoLogin) {
-            checkErrorCount();
-            await tryToRenewAccessToken(error);
+            const accessToken = cookies.get("access_token_lf");
+
+            if (!accessToken && error?.config?.url?.includes("login")) {
+              return Promise.reject(error);
+            }
+
+            return acceptedRequest;
           }
-
-          if (!accessToken && error?.config?.url?.includes("login")) {
-            return Promise.reject(error);
-          }
-
-          return logout();
         }
         await clearBuildVerticesState(error);
         return Promise.reject(error);
@@ -98,11 +99,15 @@ function ApiInterceptor() {
     if (authenticationErrorCount > 3) {
       authenticationErrorCount = 0;
       logout();
+      return false;
     }
+
+    return true;
   }
 
   async function tryToRenewAccessToken(error: AxiosError) {
     try {
+      if (window.location.pathname.includes("/login")) return;
       const res = await renewAccessToken();
       if (res?.data?.access_token && res?.data?.refresh_token) {
         login(res?.data?.access_token);
@@ -116,7 +121,9 @@ function ApiInterceptor() {
         return response;
       }
     } catch (error) {
+      clearBuildVerticesState(error);
       logout();
+      return Promise.reject("Authentication error");
     }
   }
 

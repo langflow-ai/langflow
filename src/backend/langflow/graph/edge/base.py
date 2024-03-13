@@ -122,7 +122,9 @@ class ContractEdge(Edge):
             return
 
         if not source._built:
-            await source.build()
+            # The system should be read-only, so we should not be building vertices
+            # that are not already built.
+            raise ValueError(f"Source vertex {source.id} is not built.")
 
         if self.matched_type == "Text":
             self.result = source._built_result
@@ -132,7 +134,7 @@ class ContractEdge(Edge):
         target.params[self.target_param] = self.result
         self.is_fulfilled = True
 
-    async def get_result(self, source: "Vertex", target: "Vertex"):
+    async def get_result_from_source(self, source: "Vertex", target: "Vertex"):
         # Fulfill the contract if it has not been fulfilled.
         if not self.is_fulfilled:
             await self.honor(source, target)

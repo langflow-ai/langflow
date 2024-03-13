@@ -3,7 +3,7 @@ import contextlib
 import re
 import traceback
 import warnings
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -155,6 +155,9 @@ def add_new_custom_field(
     field_value = field_config.pop("value", field_value)
     field_advanced = field_config.pop("advanced", False)
 
+    if field_type == "Dict":
+        field_type = "dict"
+
     if field_type == "bool" and field_value is None:
         field_value = False
 
@@ -240,14 +243,12 @@ def get_field_dict(field: Union[TemplateField, dict]):
 def run_build_config(
     custom_component: CustomComponent,
     user_id: Optional[Union[str, UUID]] = None,
-    update_field=None,
-    update_field_value=None,
-):
+) -> Tuple[dict, CustomComponent]:
     """Build the field configuration for a custom component"""
 
     try:
         if custom_component.code is None:
-            return {}
+            raise ValueError("Code is None")
         elif isinstance(custom_component.code, str):
             custom_class = eval_custom_component_code(custom_component.code)
         else:
@@ -271,38 +272,6 @@ def run_build_config(
             # as a dict with the same keys as TemplateField
             field_dict = get_field_dict(field)
             build_config[field_name] = field_dict
-            # This has to be done to set refresh if options or value are callable
-            if update_field is not None and field_name != update_field:
-                build_config = update_field_dict(
-                    custom_component_instance=custom_instance,
-                    field_dict=field_dict,
-                    build_config=build_config,
-                    call=False,
-                )
-                continue
-            try:
-                build_config = update_field_dict(
-                    custom_component_instance=custom_instance,
-                    field_dict=field_dict,
-                    build_config=build_config,
-                    update_field=update_field,
-                    update_field_value=update_field_value,
-                    call=True,
-                )
-                build_config[field_name] = field_dict
-            except Exception as exc:
-                logger.error(f"Error while getting build_config: {str(exc)}")
-                if isinstance(exc, UpdateBuildConfigError):
-                    message = str(exc)
-                else:
-                    message = f"Error while getting build_config: {str(exc)}"
-                raise HTTPException(
-                    status_code=400,
-                    detail={
-                        "error": message,
-                        "traceback": traceback.format_exc(),
-                    },
-                ) from exc
 
         return build_config, custom_instance
 
@@ -355,9 +324,7 @@ def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code, field_c
 def build_custom_component_template(
     custom_component: CustomComponent,
     user_id: Optional[Union[str, UUID]] = None,
-    update_field: Optional[str] = None,
-    update_field_value: Optional[str] = None,
-) -> Optional[Dict[str, Any]]:
+) -> Tuple[Dict[str, Any], CustomComponent]:
     """Build a custom component template for the langchain"""
     try:
         frontend_node = build_frontend_node(custom_component.template_config)
@@ -365,8 +332,6 @@ def build_custom_component_template(
         field_config, custom_instance = run_build_config(
             custom_component,
             user_id=user_id,
-            update_field=update_field,
-            update_field_value=update_field_value,
         )
 
         entrypoint_args = custom_component.get_function_entrypoint_args
@@ -380,7 +345,7 @@ def build_custom_component_template(
 
         reorder_fields(frontend_node, custom_instance._get_field_order())
 
-        return frontend_node.to_dict(add_name=False)
+        return frontend_node.to_dict(add_name=False), custom_instance
     except Exception as exc:
         if isinstance(exc, HTTPException):
             raise exc
@@ -400,7 +365,7 @@ def create_component_template(component):
 
     component_extractor = CustomComponent(code=component_code)
 
-    component_template = build_custom_component_template(component_extractor)
+    component_template, _ = build_custom_component_template(component_extractor)
     if not component_template["output_types"] and component_output_types:
         component_template["output_types"] = component_output_types
 

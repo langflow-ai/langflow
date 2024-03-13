@@ -1,6 +1,6 @@
 import inspect
 import json
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Sequence, Type
+from typing import TYPE_CHECKING, Any, Callable, Dict, Sequence, Type
 
 import orjson
 from langchain.agents import agent as agent_module
@@ -40,27 +40,29 @@ if TYPE_CHECKING:
 
 
 async def instantiate_class(
-    node_type: str,
-    base_type: str,
-    params: Dict,
+    vertex: "Vertex",
     user_id=None,
-    vertex: Optional["Vertex"] = None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
+    vertex_type = vertex.vertex_type
+    base_type = vertex.base_type
+    params = vertex.params
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
 
-    if node_type in CUSTOM_NODES:
-        if custom_node := CUSTOM_NODES.get(node_type):
+    if vertex_type in CUSTOM_NODES:
+        if custom_node := CUSTOM_NODES.get(vertex_type):
             if hasattr(custom_node, "initialize"):
                 return custom_node.initialize(**params)
             return custom_node(**params)
-    logger.debug(f"Instantiating {node_type} of type {base_type}")
-    class_object = import_by_type(_type=base_type, name=node_type)
+    logger.debug(f"Instantiating {vertex_type} of type {base_type}")
+    if not base_type:
+        raise ValueError("No base type provided for vertex")
+    class_object = import_by_type(_type=base_type, name=vertex_type)
     return await instantiate_based_on_type(
         class_object=class_object,
         base_type=base_type,
-        node_type=node_type,
+        node_type=vertex_type,
         params=params,
         user_id=user_id,
         vertex=vertex,
