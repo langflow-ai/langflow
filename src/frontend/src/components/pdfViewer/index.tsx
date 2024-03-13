@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Document, Page } from 'react-pdf'
 import { pdfjs } from 'react-pdf';
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
@@ -14,7 +14,9 @@ export default function PdfViewer(): JSX.Element {
     const [numPages, setNumPages] = useState(-1);
     const [pageNumber, setPageNumber] = useState(1);
     const [scale, setScale] = useState(1);
+    const [width, setWidth] = useState<number|undefined>(undefined);
     const [showControl, setShowControl] = useState(false);
+    const container = useRef<null | HTMLDivElement>(null);
 
     function onDocumentLoadSuccess({ numPages }) {
         setNumPages(numPages);
@@ -36,7 +38,7 @@ export default function PdfViewer(): JSX.Element {
     //set handle scale in % to real number
     function handleScaleChange(e) {
         //check if e is a number
-        if (isNaN(e) || e<0.1) return;
+        if (isNaN(e) || e < 0.1) return;
         // round to 2 decimal places
         e = Math.round(e * 10) / 10;
 
@@ -44,14 +46,23 @@ export default function PdfViewer(): JSX.Element {
     }
 
     function zoomIn() {
-        handleScaleChange(scale +0.1);
+        handleScaleChange(scale + 0.1);
     }
     function zoomOut() {
-        if(scale>0.1) handleScaleChange(scale -0.1);
+        if (scale > 0.1) handleScaleChange(scale - 0.1);
+    }
+
+    function handlePageLoad(page) {
+        if (!container.current) return;
+        const containerWidth = container.current.clientWidth;
+        const pageWidth = page.width;
+        if (containerWidth > pageWidth) {
+            setWidth(containerWidth-10);
+        }
     }
 
     return (
-        <div onMouseEnter={_ => setShowControl(true)} onMouseLeave={_ => setShowControl(false)} className="w-full h-full overflow-clip border-border border rounded-lg flex flex-col justify-end items-center">
+        <div ref={container} onMouseEnter={_ => setShowControl(true)} onMouseLeave={_ => setShowControl(false)} className="w-full h-full overflow-clip border-border border rounded-lg flex flex-col justify-end items-center">
             <div className={"w-full h-full min-h-0 overflow-auto custom-scroll"}>
                 <Document loading={
                     <div className="w-full h-full flex justify-center items-center align-middle">
@@ -59,11 +70,11 @@ export default function PdfViewer(): JSX.Element {
                     </div>
                 } onLoadSuccess={onDocumentLoadSuccess} file="https://vjudge.net/contest/614781/problemPrint/I"
                     className="w-full h-full">
-                    <Page scale={scale} renderTextLayer pageNumber={pageNumber} className={"w-full h-full max-h-0"} />
+                    <Page width={width} onLoadSuccess={handlePageLoad} scale={scale} renderTextLayer pageNumber={pageNumber} className={"w-full h-full max-h-0"} />
                 </Document>
 
             </div>
-            <div className={'absolute z-50 pb-5 ' + ((showControl && numPages>0) ? "" : " hidden")}>
+            <div className={'absolute z-50 pb-5 ' + ((showControl && numPages > 0) ? "" : " hidden")}>
                 <div className=' bg-secondary w-min gap-0.5 rounded-xl px-2 flex align-middle justify-center items-center'>
                     <button
                         type="button"
@@ -98,8 +109,8 @@ export default function PdfViewer(): JSX.Element {
                             className="h-6 w-6"
                         ></IconComponent>
                     </button>
-                    <input type='number' step={0.1} className='w-6 bg-transparent border-b text-center arrow-hide' 
-                    onChange={(e)=>handleScaleChange(e.target.value)} value={scale}/>
+                    <input type='number' step={0.1} className='w-6 bg-transparent border-b text-center arrow-hide'
+                        onChange={(e) => handleScaleChange(e.target.value)} value={scale} />
                     <button
                         type="button"
                         onClick={zoomIn}
