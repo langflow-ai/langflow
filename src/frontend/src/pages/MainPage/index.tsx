@@ -6,6 +6,7 @@ import NewFlowCardComponent from "../../components/NewFLowCard2";
 import IconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
+import CsvOutputComponent from "../../components/textOutputComponent";
 import { Button } from "../../components/ui/button";
 import UndrawCardComponent from "../../components/undrawCards";
 import { CONSOLE_ERROR_MSG } from "../../constants/alerts_constants";
@@ -109,6 +110,9 @@ export default function HomePage(): JSX.Element {
         </div>
       }
     >
+      <div className="m-5">
+        <CsvOutputComponent />
+      </div>
       <div className="flex h-full w-full space-y-8 lg:flex-row lg:space-x-8 lg:space-y-0">
         <aside className="flex h-full flex-col space-y-6 lg:w-1/5">
           <SidebarNav items={sidebarNavItems} />
