@@ -68,3 +68,21 @@ select:-webkit-autofill:focus {
   background-color: #bbb;
   border-radius: 999px;
 }
+
+.ag-root ::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.ag-root ::-webkit-scrollbar-button {
+  background: #ccc;
+}
+.ag-root ::-webkit-scrollbar-track-piece {
+  background-color: #f1f1f1;
+}
+.ag-root ::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+}
+
+.ag-root ::-webkit-scrollbar-thumb:hover {
+  background-color: #ccc;
+}
