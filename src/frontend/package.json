@@ -32,6 +32,7 @@
     "accordion": "^3.0.2",
     "ace-builds": "^1.24.1",
     "add": "^2.0.6",
+    "ag-grid-react": "^31.1.1",
     "ansi-to-html": "^0.7.2",
     "axios": "^1.5.0",
     "base64-js": "^1.5.1",

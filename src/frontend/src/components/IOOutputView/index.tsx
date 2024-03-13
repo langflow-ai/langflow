@@ -1,8 +1,9 @@
 import { cloneDeep } from "lodash";
 import useFlowStore from "../../stores/flowStore";
 import { IOOutputProps } from "../../types/components";
-import { Textarea } from "../ui/textarea";
+import CsvOutputComponent from "../csvOutputComponent";
 import PdfViewer from "../pdfViewer";
+import { Textarea } from "../ui/textarea";
 
 export default function IOOutputView({
   outputType,
@@ -13,6 +14,7 @@ export default function IOOutputView({
   const setNode = useFlowStore((state) => state.setNode);
   const flowPool = useFlowStore((state) => state.flowPool);
   const node = nodes.find((node) => node.id === outputId);
+
   function handleOutputType() {
     if (!node) return <>"No node found!"</>;
     switch (outputType) {
@@ -30,9 +32,9 @@ export default function IOOutputView({
           />
         );
       case "PyPDFLoader":
-        return(
-          <PdfViewer/>
-        )
+        return <PdfViewer />;
+      case "CSVLoader":
+        return <CsvOutputComponent />;
 
       default:
         return (

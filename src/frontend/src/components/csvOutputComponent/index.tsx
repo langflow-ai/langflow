@@ -58,7 +58,7 @@ export default function CsvOutputComponent() {
   ]);
 
   return (
-    <div className="ag-theme-balham" style={{ height: 600 }}>
+    <div className="ag-theme-balham" style={{ height: 500 }}>
       <AgGridReact rowData={rowData} columnDefs={colDefs as any} />
     </div>
   );
