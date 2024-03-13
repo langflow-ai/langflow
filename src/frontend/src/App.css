@@ -99,3 +99,6 @@ body {
   background-color: rgba(99, 102, 241, 0.1); /* Medium indigo color with 20% opacity */
 }
 
+.react-pdf__message--loading {
+  height: 100%;
+}
