@@ -33,6 +33,23 @@ export default function PdfViewer(): JSX.Element {
         changePage(1);
     }
 
+    //set handle scale in % to real number
+    function handleScaleChange(e) {
+        //check if e is a number
+        if (isNaN(e) || e<0.1) return;
+        // round to 2 decimal places
+        e = Math.round(e * 10) / 10;
+
+        setScale(e);
+    }
+
+    function zoomIn() {
+        handleScaleChange(scale +0.1);
+    }
+    function zoomOut() {
+        if(scale>0.1) handleScaleChange(scale -0.1);
+    }
+
     return (
         <div onMouseEnter={_ => setShowControl(true)} onMouseLeave={_ => setShowControl(false)} className="w-full h-full overflow-clip border-border border rounded-lg flex flex-col justify-end items-center">
             <div className={"w-full h-full min-h-0 overflow-auto custom-scroll"}>
@@ -42,7 +59,7 @@ export default function PdfViewer(): JSX.Element {
                     </div>
                 } onLoadSuccess={onDocumentLoadSuccess} file="https://vjudge.net/contest/614781/problemPrint/I"
                     className="w-full h-full">
-                    <Page renderTextLayer pageNumber={pageNumber} className={"w-full h-full max-h-0"} />
+                    <Page scale={scale} renderTextLayer pageNumber={pageNumber} className={"w-full h-full max-h-0"} />
                 </Document>
 
             </div>
@@ -68,6 +85,27 @@ export default function PdfViewer(): JSX.Element {
                     >
                         <IconComponent
                             name={"ChevronRight"}
+                            className="h-6 w-6"
+                        ></IconComponent>
+                    </button>
+                    <p className='px-2'>|</p>
+                    <button
+                        type="button"
+                        onClick={zoomOut}
+                    >
+                        <IconComponent
+                            name={"ZoomOut"}
+                            className="h-6 w-6"
+                        ></IconComponent>
+                    </button>
+                    <input type='number' step={0.1} className='w-6 bg-transparent border-b text-center arrow-hide' 
+                    onChange={(e)=>handleScaleChange(e.target.value)} value={scale}/>
+                    <button
+                        type="button"
+                        onClick={zoomIn}
+                    >
+                        <IconComponent
+                            name={"ZoomIn"}
                             className="h-6 w-6"
                         ></IconComponent>
                     </button>
