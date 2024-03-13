@@ -32,7 +32,11 @@ export default function IOOutputView({
           />
         );
       case "PyPDFLoader":
-        return <PdfViewer />;
+        return left ? (
+          <div>Expand the ouptut to see the PDF</div>
+        ) : (
+          <PdfViewer />
+        );
       case "CSVLoader":
         return <CsvOutputComponent />;
 
