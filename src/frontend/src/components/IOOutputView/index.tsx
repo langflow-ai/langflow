@@ -31,7 +31,9 @@ export default function IOOutputView({
         );
       case "PyPDFLoader":
         return(
-          <PdfViewer/>
+          left?<div>
+            Expand the ouptut to see the PDF
+            </div>:<PdfViewer/>
         )
 
       default:

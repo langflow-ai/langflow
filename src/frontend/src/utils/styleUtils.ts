@@ -384,7 +384,6 @@ export const nodeIconsLucide: iconsType = {
   Trash2,
   Boxes,
   Network,
-  X,
   XCircle,
   Info,
   CheckCircle2,
