@@ -2,6 +2,7 @@ import { cloneDeep } from "lodash";
 import useFlowStore from "../../stores/flowStore";
 import { IOOutputProps } from "../../types/components";
 import { Textarea } from "../ui/textarea";
+import PdfViewer from "../pdfViewer";
 
 export default function IOOutputView({
   outputType,
@@ -28,6 +29,10 @@ export default function IOOutputView({
             readOnly
           />
         );
+      case "PyPDFLoader":
+        return(
+          <PdfViewer/>
+        )
 
       default:
         return (
