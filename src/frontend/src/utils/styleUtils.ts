@@ -1,4 +1,7 @@
 import {
+  ArrowDownToLine,
+  RotateCcw,
+  ZoomOut,
   AlertCircle,
   ArrowBigUp,
   ArrowLeft,
@@ -133,6 +136,7 @@ import {
   X,
   XCircle,
   Zap,
+  ZoomIn,
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -179,6 +183,7 @@ import SvgWolfram from "../icons/Wolfram/Wolfram";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { SupabaseIcon } from "../icons/supabase";
 import { iconsType } from "../types/components";
+import { ZoomInIcon } from "@radix-ui/react-icons";
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
@@ -278,6 +283,10 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
+  ArrowDownToLine,
+  RotateCcw,
+  ZoomOut,
+  ZoomIn,
   X: X,
   Notify: Bell,
   ListFlows: Group,
