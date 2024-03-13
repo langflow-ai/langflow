@@ -38,7 +38,11 @@ export default function IOOutputView({
           <PdfViewer />
         );
       case "CSVLoader":
-        return <CsvOutputComponent />;
+        return left ? (
+          <div>Expand the ouptut to see the CSV</div>
+        ) : (
+          <CsvOutputComponent />
+        );
 
       default:
         return (
