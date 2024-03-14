@@ -6,6 +6,8 @@ import "react-pdf/dist/esm/Page/TextLayer.css";
 import IconComponent from "../genericIconComponent";
 import LoadingComponent from '../loadingComponent';
 import Loading from '../ui/loading';
+import NoDataPdf from './noData';
+import Error from './Error';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
@@ -84,6 +86,8 @@ export default function PdfViewer({pdf}:{pdf:string}): JSX.Element {
                         <Loading />
                     </div>
                 } onLoadSuccess={onDocumentLoadSuccess} file={pdf}
+                noData={<NoDataPdf/>}
+                error={<Error/>}
                     className="w-full h-full">
                     <Page width={width} onLoadSuccess={handlePageLoad} scale={scale} renderTextLayer pageNumber={pageNumber} className={"w-full h-full max-h-0"} />
                 </Document>
