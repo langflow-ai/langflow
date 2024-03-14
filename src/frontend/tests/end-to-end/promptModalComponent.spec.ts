@@ -155,7 +155,8 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.locator('//*[@id="showprompt1"]').click();
   expect(await page.locator('//*[@id="showprompt1"]').isChecked()).toBeTruthy();
 
-  value = await page.locator('//*[@id="textarea-edit-prompt"]').inputValue();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("edit-button-modal").click();
 
   if (value != "prompt_edit_test_44444444444!@#$") {
     expect(false).toBeTruthy();

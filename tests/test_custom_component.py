@@ -3,22 +3,16 @@ import types
 from uuid import uuid4
 
 import pytest
-from langchain_core.documents import Document
-
-from langflow.interface.custom.base import CustomComponent
-from langflow.interface.custom.code_parser.code_parser import (
-    CodeParser,
-    CodeSyntaxError,
-)
-from langflow.interface.custom.custom_component.component import (
-    Component,
-    ComponentCodeNullError,
-)
-from langflow.services.database.models.flow import Flow, FlowCreate
+from fastapi import HTTPException
+from langflow_base.field_typing.constants import Data
+from langflow_base.interface.custom.base import CustomComponent
+from langflow_base.interface.custom.code_parser import CodeParser, CodeSyntaxError
+from langflow_base.interface.custom.component import Component, ComponentCodeNullError
+from langflow_base.services.database.models.flow import Flow, FlowCreate
 
 code_default = """
-from langflow.field_typing import Prompt
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow import Prompt
+from langflow_base.interface.custom.custom_component import CustomComponent
 
 from langchain.llms.base import BaseLLM
 from langchain.chains import LLMChain

@@ -1,8 +1,8 @@
 # Test this:
 import pytest
-from langflow.interface.custom.utils import get_function
-from langflow.interface.tools.custom import PythonFunction, PythonFunctionTool
-from langflow.utils import constants
+from langflow_base.interface.importing.utils import get_function
+from langflow_base.interface.tools.custom import PythonFunction, PythonFunctionTool
+from langflow_base.utils import constants
 
 
 def test_python_function_tool():

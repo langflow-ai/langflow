@@ -1,7 +1,7 @@
 import pytest
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.template.base import Template
+from langflow_base.template.field.base import TemplateField
+from langflow_base.template.frontend_node.base import FrontendNode
+from langflow_base.template.template.base import Template
 
 
 @pytest.fixture

@@ -1,0 +1,21 @@
+name: LangFlow Release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+    paths:
+      - "langflow/pyproject.toml"
+
+jobs:
+  release_langflow:
+    if: ${{ (github.event.pull_request.merged == true) && contains(github.event.pull_request.labels.*.name, 'LangFlow Release') }}
+    uses: ./.github/workflows/release.yml
+    with:
+      component-path: langflow/
+      build_cmd: make build
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}

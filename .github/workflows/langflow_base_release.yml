@@ -1,0 +1,21 @@
+name: LangFlow Base Release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+    paths:
+      - "**/base/pyproject.toml"
+
+jobs:
+  release_base:
+    if: ${{ (github.event.pull_request.merged == true) && contains(github.event.pull_request.labels.*.name, 'Base Release') }}
+    uses: ./.github/workflows/release.yml
+    with:
+      component-path: base/
+      build_cmd: make build_base
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}

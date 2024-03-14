@@ -1,36 +1,44 @@
-name: release
+name: Reusable Release Workflow
 
 on:
-  pull_request:
-    types:
-      - closed
-    branches:
-      - main
-    paths:
-      - "pyproject.toml"
+  workflow_call:
+    inputs:
+      working-directory:
+        required: true
+        type: string
+        description: "Directory from which this pipeline executes"
+      component-path:
+        required: true
+        type: string
+        description: "Relative path to the component being released"
+    secrets:
+      GITHUB_TOKEN:
+        required: true
+      PYPI_API_TOKEN:
+        required: true
 
 env:
   POETRY_VERSION: "1.5.1"
 
 jobs:
-  if_release:
-    if: ${{ (github.event.pull_request.merged == true) && contains(github.event.pull_request.labels.*.name, 'Release') }}
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install poetry
-        run: pipx install poetry==$POETRY_VERSION
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v5
+        run: |
+          pip install poetry==$POETRY_VERSION
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: "3.10"
           cache: "poetry"
       - name: Build project for distribution
-        run: make build
+        run: ${{ inputs.build_cmd }}
       - name: Check Version
         id: check-version
         run: |
-          echo version=$(poetry version --short) >> $GITHUB_OUTPUT
+          echo "version=$(poetry version --short)" >> $GITHUB_OUTPUT
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
