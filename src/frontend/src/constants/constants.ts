@@ -693,7 +693,7 @@ export const INPUT_TYPES = new Set(["ChatInput", "TextInput"]);
 export const OUTPUT_TYPES = new Set([
   "ChatOutput",
   "TextOutput",
-  "PyPDFLoader",
+  "PDFOutput",
   "CSVLoader",
 ]);
 

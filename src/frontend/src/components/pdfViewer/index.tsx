@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Document, Page } from 'react-pdf'
 import { pdfjs } from 'react-pdf';
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
@@ -6,10 +6,12 @@ import "react-pdf/dist/esm/Page/TextLayer.css";
 import IconComponent from "../genericIconComponent";
 import LoadingComponent from '../loadingComponent';
 import Loading from '../ui/loading';
+import NoDataPdf from './noData';
+import Error from './Error';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
-export default function PdfViewer(): JSX.Element {
+export default function PdfViewer({pdf}:{pdf:string}): JSX.Element {
 
     const [numPages, setNumPages] = useState(-1);
     const [pageNumber, setPageNumber] = useState(1);
@@ -17,6 +19,21 @@ export default function PdfViewer(): JSX.Element {
     const [width, setWidth] = useState<number|undefined>(undefined);
     const [showControl, setShowControl] = useState(false);
     const container = useRef<null | HTMLDivElement>(null);
+
+    //shortcuts to change page
+    useEffect(() => {
+        function handleKeyDown(event: KeyboardEvent) {
+            if (event.key === 'ArrowLeft') {
+                if(pageNumber > 1) previousPage();
+            } else if (event.key === 'ArrowRight') {
+                if(pageNumber<numPages) nextPage();
+            }
+        }
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    },[pageNumber])
 
     function onDocumentLoadSuccess({ numPages }) {
         setNumPages(numPages);
@@ -68,7 +85,9 @@ export default function PdfViewer(): JSX.Element {
                     <div className="w-full h-full flex justify-center items-center align-middle">
                         <Loading />
                     </div>
-                } onLoadSuccess={onDocumentLoadSuccess} file="https://vjudge.net/contest/614781/problemPrint/I"
+                } onLoadSuccess={onDocumentLoadSuccess} file={pdf}
+                noData={<NoDataPdf/>}
+                error={<Error/>}
                     className="w-full h-full">
                     <Page width={width} onLoadSuccess={handlePageLoad} scale={scale} renderTextLayer pageNumber={pageNumber} className={"w-full h-full max-h-0"} />
                 </Document>
