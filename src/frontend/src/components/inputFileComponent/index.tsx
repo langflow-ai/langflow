@@ -1,3 +1,4 @@
+import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import {
   CONSOLE_ERROR_MSG,
@@ -6,6 +7,7 @@ import {
 } from "../../constants/alerts_constants";
 import { uploadFile } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
+import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FileComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
@@ -17,11 +19,13 @@ export default function InputFileComponent({
   fileTypes,
   onFileChange,
   editNode = false,
+  nodeToChange,
 }: FileComponentType): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [myValue, setMyValue] = useState(value);
   const [loading, setLoading] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setNode = useFlowStore((state) => state.setNode);
 
   // Clear component state
   useEffect(() => {
@@ -59,6 +63,19 @@ export default function InputFileComponent({
 
       // Get the selected file
       const file = (event.target as HTMLInputElement).files?.[0];
+
+      //precisa pensar um jeito do backend salvar o file dentro do node no endpoint abaixo!
+      //quando salvar no backend, não vai precisar dessa parte do código e já vai funcionar o componente.
+      setNode(nodeToChange.id, (oldNode) => {
+        let newNode = cloneDeep(oldNode);
+
+        newNode.data = {
+          ...newNode.data,
+          file: file,
+        };
+
+        return newNode;
+      });
 
       // Check if the file type is correct
       if (file && checkFileType(file.name)) {

@@ -129,6 +129,7 @@ export type FileComponentType = {
   fileTypes: Array<string>;
   onFileChange: (value: string) => void;
   editNode?: boolean;
+  nodeToChange?: any;
 };
 
 export type DisclosureComponentType = {
@@ -702,5 +703,5 @@ export type toolbarSelectItemProps = {
     ctrlClasses?: string;
     keyClasses?: string;
     valueClasses?: string;
-  }
+  };
 };
