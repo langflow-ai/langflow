@@ -83,7 +83,6 @@ export default function InputFileComponent({
         uploadFile(file, currentFlowId)
           .then((res) => res.data)
           .then((data) => {
-            debugger;
             console.log(CONSOLE_SUCCESS_MSG);
             // Get the file name from the response
             const { file_path } = data;
