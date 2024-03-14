@@ -26,16 +26,19 @@ export default function IOOutputView({
             // update to real value on flowPool
             value={
               (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
-                ?.params ?? ""
+                ?.data.results.result.result ?? ""
             }
             readOnly
           />
         );
-      case "PyPDFLoader":
+      case "PDFOutput":
         return left ? (
           <div>Expand the ouptut to see the PDF</div>
         ) : (
-          <PdfViewer />
+          <PdfViewer pdf={
+            (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
+                ?.params ?? ""
+          } />
         );
       case "CSVLoader":
         return left ? (

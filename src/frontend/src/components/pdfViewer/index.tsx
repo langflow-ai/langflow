@@ -9,7 +9,7 @@ import Loading from '../ui/loading';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
-export default function PdfViewer(): JSX.Element {
+export default function PdfViewer({pdf}:{pdf:string}): JSX.Element {
 
     const [numPages, setNumPages] = useState(-1);
     const [pageNumber, setPageNumber] = useState(1);
@@ -83,7 +83,7 @@ export default function PdfViewer(): JSX.Element {
                     <div className="w-full h-full flex justify-center items-center align-middle">
                         <Loading />
                     </div>
-                } onLoadSuccess={onDocumentLoadSuccess} file="https://vjudge.net/contest/614781/problemPrint/I"
+                } onLoadSuccess={onDocumentLoadSuccess} file={pdf}
                     className="w-full h-full">
                     <Page width={width} onLoadSuccess={handlePageLoad} scale={scale} renderTextLayer pageNumber={pageNumber} className={"w-full h-full max-h-0"} />
                 </Document>
