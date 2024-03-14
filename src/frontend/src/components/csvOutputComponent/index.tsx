@@ -4,7 +4,7 @@ import { AgGridReact } from "ag-grid-react";
 import { useEffect, useState } from "react";
 import { convertCSVToData } from "./helpers/convert-data-function";
 
-function CsvOutputComponent({ csvNode }: any) {
+function CsvOutputComponent({ csvNode }) {
   const [rowData, setRowData] = useState([]);
   const [colDefs, setColDefs] = useState([]);
 
