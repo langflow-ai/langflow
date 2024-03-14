@@ -129,7 +129,7 @@ export type FileComponentType = {
   fileTypes: Array<string>;
   onFileChange: (value: string) => void;
   editNode?: boolean;
-  nodeToChange?: any;
+  nodeToChange?: NodeDataType;
 };
 
 export type DisclosureComponentType = {

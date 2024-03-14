@@ -66,7 +66,7 @@ export default function InputFileComponent({
 
       //precisa pensar um jeito do backend salvar o file dentro do node no endpoint abaixo!
       //quando salvar no backend, não vai precisar dessa parte do código e já vai funcionar o componente.
-      setNode(nodeToChange.id, (oldNode) => {
+      setNode(nodeToChange!.id, (oldNode) => {
         let newNode = cloneDeep(oldNode);
 
         newNode.data = {
@@ -83,6 +83,7 @@ export default function InputFileComponent({
         uploadFile(file, currentFlowId)
           .then((res) => res.data)
           .then((data) => {
+            debugger;
             console.log(CONSOLE_SUCCESS_MSG);
             // Get the file name from the response
             const { file_path } = data;
