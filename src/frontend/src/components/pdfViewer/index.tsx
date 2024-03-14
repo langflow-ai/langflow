@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Document, Page } from 'react-pdf'
 import { pdfjs } from 'react-pdf';
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
@@ -17,6 +17,21 @@ export default function PdfViewer(): JSX.Element {
     const [width, setWidth] = useState<number|undefined>(undefined);
     const [showControl, setShowControl] = useState(false);
     const container = useRef<null | HTMLDivElement>(null);
+
+    //shortcuts to change page
+    useEffect(() => {
+        function handleKeyDown(event: KeyboardEvent) {
+            if (event.key === 'ArrowLeft') {
+                if(pageNumber > 1) previousPage();
+            } else if (event.key === 'ArrowRight') {
+                if(pageNumber<numPages) nextPage();
+            }
+        }
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    },[pageNumber])
 
     function onDocumentLoadSuccess({ numPages }) {
         setNumPages(numPages);
