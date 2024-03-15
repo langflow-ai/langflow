@@ -32,18 +32,14 @@ export default function IOOutputView({
       default:
         return (
           <Textarea
-            className="w-full custom-scroll"
-            placeholder={"Enter text..."}
-            value={node.data.node!.template["input_value"]}
-            onChange={(e) => {
-              e.target.value;
-              if (node) {
-                let newNode = cloneDeep(node);
-                newNode.data.node!.template["input_value"].value =
-                  e.target.value;
-                setNode(node.id, newNode);
-              }
-            }}
+            className={`w-full custom-scroll ${left ? "" : " h-full"}`}
+            placeholder={"Empty"}
+            // update to real value on flowPool
+            value={
+              (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
+                ?.params ?? ""
+            }
+            readOnly
           />
         );
     }
