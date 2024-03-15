@@ -4,9 +4,11 @@ import { AgGridReact } from "ag-grid-react";
 import { useEffect, useState } from "react";
 import { convertCSVToData } from "./helpers/convert-data-function";
 
-function CsvOutputComponent({ csvNode }) {
+function CsvOutputComponent({ csvNode, csvSeparator = ";" }) {
   const [rowData, setRowData] = useState([]);
   const [colDefs, setColDefs] = useState([]);
+
+  const [status, setStatus] = useState("loading");
 
   const file = csvNode.file;
 
@@ -15,10 +17,20 @@ function CsvOutputComponent({ csvNode }) {
       const reader = new FileReader();
 
       reader.onload = (e) => {
-        const contents = e.target!.result;
-        const { rowData: data, colDefs: columns } = convertCSVToData(contents);
-        setRowData(data);
-        setColDefs(columns);
+        try {
+          const contents = e.target!.result;
+
+          const { rowData: data, colDefs: columns } = convertCSVToData(
+            contents,
+            csvSeparator
+          );
+          setRowData(data);
+          setColDefs(columns);
+        } catch (e) {
+          setStatus("error");
+        }
+
+        setStatus("loaded");
       };
       reader.readAsText(file);
     }
