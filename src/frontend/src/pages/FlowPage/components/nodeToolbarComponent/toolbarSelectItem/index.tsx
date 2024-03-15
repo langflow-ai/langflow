@@ -19,9 +19,9 @@ export default function ToolbarSelectItem({
       {isMac ? (
         <ForwardedIconComponent
           name="Command"
-          className={`absolute right-[${
-            shift ? "2rem" : "1.15rem"
-          }] top-[0.65em] h-3.5 w-3.5 stroke-2 ${styleObj?.commandClasses}`}
+          className={`absolute
+          ${shift ? " right-[2rem] " : "right-[1.15rem]"}
+          top-[0.65em] h-3.5 w-3.5 stroke-2 ${styleObj?.commandClasses}`}
         ></ForwardedIconComponent>
       ) : (
         <span

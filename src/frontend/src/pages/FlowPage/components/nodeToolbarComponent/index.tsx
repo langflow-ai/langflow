@@ -495,7 +495,9 @@ export default function NodeToolbarComponent({
                     shift={true}
                     value={"Share"}
                     icon={"Share3"}
-                    styleObj={{iconClasses: "relative top-0.5 -m-1 mr-1 h-6 w-6"}}
+                    styleObj={{
+                      iconClasses: "relative top-0.5 -m-1 mr-1 h-6 w-6",
+                    }}
                   />
                 </SelectItem>
               )}
@@ -515,12 +517,12 @@ export default function NodeToolbarComponent({
                 disabled={data.node?.documentation === ""}
               >
                 <ToolbarSelectItem
-                    keyboardKey="D"
-                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={true}
-                    value={"Docs"}
-                    icon={"FileText"}
-                  />
+                  keyboardKey="D"
+                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                  shift={true}
+                  value={"Docs"}
+                  icon={"FileText"}
+                />
               </SelectItem>
               {isMinimal && (
                 <SelectItem value={"show"}>
@@ -533,7 +535,7 @@ export default function NodeToolbarComponent({
                     {navigator.userAgent.toUpperCase().includes("MAC") ? (
                       <IconComponent
                         name="Command"
-                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                        className="absolute right-[1.25rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                       ></IconComponent>
                     ) : (
                       <span className="absolute right-[1.30rem] top-[0.40em] stroke-2">
