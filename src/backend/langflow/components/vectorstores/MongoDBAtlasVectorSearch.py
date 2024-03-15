@@ -43,8 +43,11 @@ class MongoDBAtlasComponent(CustomComponent):
             index_name=index_name,
         )
 
-        if documents:
-            pass
+        if documents is not None:
+            if len(documents) == 0:
+                raise ValueError("If documents are provided, there must be at least one document.")
+            
+            vector_store.add_documents(documents)
 
         return vector_store
 
