@@ -453,6 +453,7 @@ export default function NodeToolbarComponent({
                     shift={false}
                     value={"Edit"}
                     icon={"Settings2"}
+                    dataTestId="edit-button-modal"
                   />
                 </SelectItem>
               )}
@@ -463,6 +464,7 @@ export default function NodeToolbarComponent({
                   shift={false}
                   value={"Duplicate"}
                   icon={"Copy"}
+                  dataTestId="duplicate-button-modal"
                 />
               </SelectItem>
               <SelectItem value={"copy"}>
@@ -472,6 +474,7 @@ export default function NodeToolbarComponent({
                   shift={false}
                   value={"Copy"}
                   icon={"Clipboard"}
+                  dataTestId="copy-button-modal"
                 />
               </SelectItem>
               {isOutdated && (
@@ -482,6 +485,7 @@ export default function NodeToolbarComponent({
                     shift={false}
                     value={"Update"}
                     icon={"Code"}
+                    dataTestId="update-button-modal"
                   />
                 </SelectItem>
               )}
@@ -499,6 +503,7 @@ export default function NodeToolbarComponent({
                     styleObj={{
                       iconClasses: "relative top-0.5 -m-1 mr-1 h-6 w-6",
                     }}
+                    dataTestId="share-button-modal"
                   />
                 </SelectItem>
               )}
@@ -523,6 +528,7 @@ export default function NodeToolbarComponent({
                   shift={true}
                   value={"Docs"}
                   icon={"FileText"}
+                  dataTestId="docs-button-modal"
                 />
               </SelectItem>
               {isMinimal && (
