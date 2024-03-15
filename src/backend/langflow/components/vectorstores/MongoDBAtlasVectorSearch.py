@@ -3,11 +3,7 @@ from typing import List, Optional
 from langchain_community.vectorstores.mongodb_atlas import MongoDBAtlasVectorSearch
 
 from langflow import CustomComponent
-from langflow.field_typing import (
-    Document,
-    Embeddings,
-    NestedDict,
-)
+from langflow.field_typing import Document, Embeddings, NestedDict
 
 
 class MongoDBAtlasComponent(CustomComponent):
@@ -46,18 +42,7 @@ class MongoDBAtlasComponent(CustomComponent):
         if documents is not None:
             if len(documents) == 0:
                 raise ValueError("If documents are provided, there must be at least one document.")
-            
+
             vector_store.add_documents(documents)
 
         return vector_store
-
-
-        # return MongoDBAtlasVectorSearch(
-        #     documents=documents,
-        #     embedding=embedding,
-        #     collection_name=collection_name,
-        #     db_name=db_name,
-        #     index_name=index_name,
-        #     mongodb_atlas_cluster_uri=mongodb_atlas_cluster_uri,
-        #     search_kwargs=search_kwargs,
-        # )

@@ -1,11 +1,7 @@
-from typing import Union
-
-from langchain.schema import BaseRetriever
-from langchain.schema.vectorstore import VectorStore
 from langchain.tools.retriever import create_retriever_tool
 
 from langflow import CustomComponent
-from langflow.field_typing import Tool
+from langflow.field_typing import BaseRetriever, Tool
 
 
 class RetrieverToolComponent(CustomComponent):
@@ -14,7 +10,11 @@ class RetrieverToolComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "retriever": {"display_name": "Retriever", "info": "Retriever to interact with"},
+            "retriever": {
+                "display_name": "Retriever",
+                "info": "Retriever to interact with",
+                "type": BaseRetriever,
+            },
             "name": {"display_name": "Name", "info": "Name of the tool"},
             "description": {"display_name": "Description", "info": "Description of the tool"},
         }
@@ -24,7 +24,7 @@ class RetrieverToolComponent(CustomComponent):
         retriever: BaseRetriever,
         name: str,
         description: str,
-    ) -> Union[Tool]:
+    ) -> Tool:
         return create_retriever_tool(
             retriever=retriever,
             name=name,
