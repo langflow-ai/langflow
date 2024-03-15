@@ -542,7 +542,7 @@ export default function NodeToolbarComponent({
                     {navigator.userAgent.toUpperCase().includes("MAC") ? (
                       <IconComponent
                         name="Command"
-                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                        className="absolute right-[1.25rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                       ></IconComponent>
                     ) : (
                       <span className="absolute right-[1.30rem] top-[0.40em] stroke-2">
