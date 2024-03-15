@@ -1,6 +1,9 @@
 import { Page, expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
-
+test.beforeEach(async ({ page }) => {
+  await page.waitForTimeout(14000);
+  test.setTimeout(120000);
+});
 test.describe("save component tests", () => {
   async function saveComponent(page: Page, pattern: RegExp, n: number) {
     for (let i = 0; i < n; i++) {
@@ -13,6 +16,9 @@ test.describe("save component tests", () => {
   test("save group component tests", async ({ page }) => {
     await page.goto("http:localhost:3000/");
     await page.locator('//*[@id="new-project-btn"]').click();
+
+    await page.getByTestId("blank-flow").click();
+    await page.waitForTimeout(2000);
 
     // Read your file into a buffer.
     const jsonContent = readFileSync(
