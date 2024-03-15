@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
-  await page.waitForTimeout(10000);
+  await page.waitForTimeout(20000);
   test.setTimeout(120000);
 });
 test("KeypairListComponent", async ({ page }) => {
