@@ -69,6 +69,25 @@ export default function IOOutputView({
     }
   }, [imageMock]);
 
+  const handleDownload = () => {
+    if (viewerRef.current) {
+      const canvas = viewerRef.current.querySelector('.openseadragon-canvas');
+      const url = canvas.toDataURL(); // Convert canvas to data URL
+
+      // Create a temporary link element
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "image.jpg"; // Set the download attribute
+      document.body.appendChild(link);
+
+      // Trigger the click event on the link
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+    }
+  };
+
   function handleOutputType() {
     if (!node) return <>"No node found!"</>;
     switch (outputType) {
@@ -89,51 +108,52 @@ export default function IOOutputView({
       case "ImageOutput":
         return (
           <>
-          <div ref={viewerRef} className="w-full h-full" />
-          <div className="shadow-round-btn-shadow hover:shadow-round-btn-shadow flex items-center justify-center rounded-sm  border bg-muted shadow-md transition-all">
-            <button id="zoom-in-button" className="relative inline-flex w-full items-center justify-center px-5 py-3 text-sm font-semibold transition-all w-full transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
-              <ForwardedIconComponent
-                name="ZoomIn"
-                className={"text-secondary-foreground w-5 h-5"}
-              />
-            </button>
-            <div>
-              <Separator orientation="vertical" />
+          <div ref={viewerRef} className={`w-full ${left ? "h-72" : "h-[85%]"} `} />
+          <div className="w-full flex align-center justify-center my-2 mt-4">
+            <div className="shadow-round-btn-shadow hover:shadow-round-btn-shadow flex items-center justify-center rounded-sm  border bg-muted shadow-md transition-all w-[50%]">
+              <button id="zoom-in-button" className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all w-full transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
+                <ForwardedIconComponent
+                  name="ZoomIn"
+                  className={"text-secondary-foreground w-5 h-5"}
+                />
+              </button>
+              <div>
+                <Separator orientation="vertical" />
+              </div>
+              <button id="zoom-out-button" className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
+                <ForwardedIconComponent
+                  name="ZoomOut"
+                  className={"text-secondary-foreground w-5 h-5"}
+                />
+              </button>
+              <div>
+                <Separator orientation="vertical" />
+              </div>
+              <button id="home-button" className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
+                <ForwardedIconComponent
+                  name="RotateCcw"
+                  className={"text-secondary-foreground w-5 h-5"}
+                />
+              </button>
+              <div>
+                <Separator orientation="vertical" />
+              </div>
+              <button id="full-page-button" className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
+                <ForwardedIconComponent
+                  name="Maximize2"
+                  className={"text-secondary-foreground w-5 h-5"}
+                />
+              </button>
+              <div>
+                <Separator orientation="vertical" />
+              </div>
+              <button onClick={handleDownload} className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
+            <ForwardedIconComponent
+              name="ArrowDownToLine"
+              className={"text-secondary-foreground w-5 h-5"}
+            />
+          </button>
             </div>
-            <button id="zoom-out-button" className="relative inline-flex w-full items-center justify-center px-5 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
-              <ForwardedIconComponent
-                name="ZoomOut"
-                className={"text-secondary-foreground w-5 h-5"}
-              />
-            </button>
-            <div>
-              <Separator orientation="vertical" />
-            </div>
-            <button id="home-button" className="relative inline-flex w-full items-center justify-center px-5 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
-              <ForwardedIconComponent
-                name="RotateCcw"
-                className={"text-secondary-foreground w-5 h-5"}
-              />
-            </button>
-            <div>
-              <Separator orientation="vertical" />
-            </div>
-            <button id="full-page-button" className="relative inline-flex w-full items-center justify-center px-5 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
-              <ForwardedIconComponent
-                name="Maximize2"
-                className={"text-secondary-foreground w-5 h-5"}
-              />
-            </button>
-            <div>
-              <Separator orientation="vertical" />
-            </div>
-            <button id="full-page-button" className="relative inline-flex w-full items-center justify-center px-5 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
-              <ForwardedIconComponent
-                name="ArrowDownToLine"
-                className={"text-secondary-foreground w-5 h-5"}
-              />
-            </button>
-
           </div>
           </>
         ) 
