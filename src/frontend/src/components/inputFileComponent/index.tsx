@@ -1,4 +1,3 @@
-import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import {
   CONSOLE_ERROR_MSG,
@@ -63,19 +62,6 @@ export default function InputFileComponent({
 
       // Get the selected file
       const file = (event.target as HTMLInputElement).files?.[0];
-
-      //precisa pensar um jeito do backend salvar o file dentro do node no endpoint abaixo!
-      //quando salvar no backend, não vai precisar dessa parte do código e já vai funcionar o componente.
-      setNode(nodeToChange!.id, (oldNode) => {
-        let newNode = cloneDeep(oldNode);
-
-        newNode.data = {
-          ...newNode.data,
-          file: file,
-        };
-
-        return newNode;
-      });
 
       // Check if the file type is correct
       if (file && checkFileType(file.name)) {
