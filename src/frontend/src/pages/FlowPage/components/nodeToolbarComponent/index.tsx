@@ -379,6 +379,7 @@ export default function NodeToolbarComponent({
 
           <ShadTooltip content={"Save"} side="top">
             <button
+              data-testid="save-button-modal"
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
                 hasCode ? " " : " rounded-l-md "
@@ -452,6 +453,7 @@ export default function NodeToolbarComponent({
                     shift={false}
                     value={"Edit"}
                     icon={"Settings2"}
+                    dataTestId="edit-button-modal"
                   />
                 </SelectItem>
               )}
@@ -462,6 +464,7 @@ export default function NodeToolbarComponent({
                   shift={false}
                   value={"Duplicate"}
                   icon={"Copy"}
+                  dataTestId="duplicate-button-modal"
                 />
               </SelectItem>
               <SelectItem value={"copy"}>
@@ -471,6 +474,7 @@ export default function NodeToolbarComponent({
                   shift={false}
                   value={"Copy"}
                   icon={"Clipboard"}
+                  dataTestId="copy-button-modal"
                 />
               </SelectItem>
               {isOutdated && (
@@ -481,6 +485,7 @@ export default function NodeToolbarComponent({
                     shift={false}
                     value={"Update"}
                     icon={"Code"}
+                    dataTestId="update-button-modal"
                   />
                 </SelectItem>
               )}
@@ -498,6 +503,7 @@ export default function NodeToolbarComponent({
                     styleObj={{
                       iconClasses: "relative top-0.5 -m-1 mr-1 h-6 w-6",
                     }}
+                    dataTestId="share-button-modal"
                   />
                 </SelectItem>
               )}
@@ -522,6 +528,7 @@ export default function NodeToolbarComponent({
                   shift={true}
                   value={"Docs"}
                   icon={"FileText"}
+                  dataTestId="docs-button-modal"
                 />
               </SelectItem>
               {isMinimal && (

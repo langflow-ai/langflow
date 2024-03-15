@@ -54,7 +54,7 @@ sleep 10
 poetry install --extras deploy
 
 # Start the backend using 'make backend' in the background
-LANGFLOW_DATABASE_URL=sqlite:///./temp LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser &
+LANGFLOW_DATABASE_URL=sqlite:///./temp LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --env-file .env &
 
 # Give some time for the backend to start (adjust sleep duration as needed)
 sleep 25

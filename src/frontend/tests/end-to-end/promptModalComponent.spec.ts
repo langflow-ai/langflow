@@ -1,10 +1,16 @@
 import { expect, test } from "@playwright/test";
-
+test.beforeEach(async ({ page }) => {
+  await page.waitForTimeout(13000);
+  test.setTimeout(120000);
+});
 test("PromptTemplateComponent", async ({ page }) => {
   await page.goto("http://localhost:3000/");
   await page.waitForTimeout(2000);
 
   await page.locator('//*[@id="new-project-btn"]').click();
+  await page.waitForTimeout(2000);
+
+  await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(2000);
 
   await page.getByPlaceholder("Search").click();
@@ -13,7 +19,7 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   await page
-    .locator('//*[@id="promptsPrompt"]')
+    .locator('//*[@id="inputsPrompt"]')
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -55,7 +61,6 @@ test("PromptTemplateComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("more-options-modal").click();
   await page.getByTestId("save-button-modal").click();
 
   const replace = await page.getByTestId("replace-button");

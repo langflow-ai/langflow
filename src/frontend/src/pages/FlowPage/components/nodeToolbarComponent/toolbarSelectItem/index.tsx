@@ -8,9 +8,10 @@ export default function ToolbarSelectItem({
   value,
   icon,
   styleObj,
+  dataTestId,
 }: toolbarSelectItemProps) {
   return (
-    <div className="flex">
+    <div className="flex" data-testid={dataTestId}>
       <ForwardedIconComponent
         name={icon}
         className={`relative top-0.5 mr-2 h-4 w-4 ${styleObj?.iconClasses}`}

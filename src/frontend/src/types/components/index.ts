@@ -702,5 +702,6 @@ export type toolbarSelectItemProps = {
     ctrlClasses?: string;
     keyClasses?: string;
     valueClasses?: string;
-  }
+  };
+  dataTestId: string;
 };
