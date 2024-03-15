@@ -33,6 +33,7 @@ export type FlowPoolObjectType = {
   progress?: number;
   id: string;
   buildId: string;
+  artifacts: any;
 };
 
 export type FlowPoolType = {

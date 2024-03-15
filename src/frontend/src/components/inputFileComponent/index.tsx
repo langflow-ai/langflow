@@ -6,6 +6,7 @@ import {
 } from "../../constants/alerts_constants";
 import { uploadFile } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
+import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FileComponentType } from "../../types/components";
 import IconComponent from "../genericIconComponent";
@@ -17,11 +18,13 @@ export default function InputFileComponent({
   fileTypes,
   onFileChange,
   editNode = false,
+  nodeToChange,
 }: FileComponentType): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [myValue, setMyValue] = useState(value);
   const [loading, setLoading] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setNode = useFlowStore((state) => state.setNode);
 
   // Clear component state
   useEffect(() => {

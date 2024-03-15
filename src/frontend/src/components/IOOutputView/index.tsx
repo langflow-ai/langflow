@@ -1,4 +1,3 @@
-import { cloneDeep } from "lodash";
 import useFlowStore from "../../stores/flowStore";
 import { IOOutputProps } from "../../types/components";
 import CsvOutputComponent from "../csvOutputComponent";
@@ -35,16 +34,30 @@ export default function IOOutputView({
         return left ? (
           <div>Expand the ouptut to see the PDF</div>
         ) : (
-          <PdfViewer pdf={
-            (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
+          <PdfViewer
+            pdf={
+              (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
                 ?.params ?? ""
-          } />
+            }
+          />
         );
-      case "CSVLoader":
+      case "CSVOutput":
         return left ? (
-          <div>Expand the ouptut to see the CSV</div>
+          <>
+            <div className="flex justify-between">
+              Expand the ouptut to see the CSV
+            </div>
+          </>
         ) : (
-          <CsvOutputComponent />
+          <>
+            <CsvOutputComponent
+              csvNode={
+                (flowPool[node!.id] ?? [])[
+                  (flowPool[node!.id]?.length ?? 1) - 1
+                ]?.data?.artifacts?.repr
+              }
+            />
+          </>
         );
 
       default:
