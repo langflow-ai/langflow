@@ -10,6 +10,7 @@ export default function ImageViewer({image }) {
   const viewerRef = useRef(null);
   const [errorDownloading, setErrordownloading] = useState(false)
   const setErrorList = useAlertStore(state => state.setErrorData);
+  const [initialMsg, setInicialMsg] = useState("Please build your flow");
 
 
     useEffect(() => {
@@ -24,6 +25,7 @@ export default function ImageViewer({image }) {
               maxZoomPixelRatio: 4,
               showNavigationControl: false,
             });
+            console.log(viewer)
     
             const zoomInButton = document.getElementById('zoom-in-button');
         const zoomOutButton = document.getElementById('zoom-out-button');
@@ -41,9 +43,9 @@ export default function ImageViewer({image }) {
             return () => {
               viewer.destroy();
               zoomInButton!.removeEventListener('click', () => viewer.viewport.zoomBy(1.2));
-        zoomOutButton!.removeEventListener('click', () => viewer.viewport.zoomBy(0.8));
-        homeButton!.removeEventListener('click', () => viewer.viewport.goHome());
-        fullPageButton!.removeEventListener('click', () => viewer.setFullScreen(true));
+              zoomOutButton!.removeEventListener('click', () => viewer.viewport.zoomBy(0.8));
+              homeButton!.removeEventListener('click', () => viewer.viewport.goHome());
+              fullPageButton!.removeEventListener('click', () => viewer.setFullScreen(true));
             };
           }
         } catch (error) {
@@ -51,26 +53,37 @@ export default function ImageViewer({image }) {
         }
       }, [image]);
 
-      
-
       function download() {
         const imageUrl = image;
-
-    // Fetch the image data
-    fetch(imageUrl)
-        .then(response => response.blob())
-        .then(blob => {
-            // Save the image using FileSaver.js
-            saveAs(blob, 'image.jpg');
-        })
-        .catch(error => {
-          setErrorList({title: "There was an error downloading your image"})
-          console.error('Error downloading image:', error)
-        });
+        // Fetch the image data
+        fetch(imageUrl)
+            .then(response => response.blob())
+            .then(blob => {
+                // Save the image using FileSaver.js
+                saveAs(blob, 'image.jpg');
+            })
+            .catch(error => {
+              setErrorList({title: "There was an error downloading your image"})
+              console.error('Error downloading image:', error)
+            });
       }
+      console.log(viewerRef)
 
     return (
-        <>
+        image === "" || !viewerRef ? (
+          <div className="w-full h-full flex align-center justify-center flex-col  gap-5">
+            <div className="rounded-md border border-border py-20 gap-4 flex flex-col ">
+              <div className="flex gap-2 align-center justify-center ">
+                <ForwardedIconComponent
+                  name="Image"
+                />
+                Image output
+              </div>
+              <div className="flex justify-center align-center">Please build your flow or inform a valid image url to see your image preview</div>
+            </div>
+          </div>
+        ) : (
+          <>
           <div className="w-full flex align-center justify-center my-2 mb-4">
             <div className="shadow-round-btn-shadow hover:shadow-round-btn-shadow flex items-center justify-center rounded-sm  border bg-muted shadow-md transition-all w-[50%]">
               <button id="zoom-in-button" className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all w-full transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
@@ -121,5 +134,6 @@ export default function ImageViewer({image }) {
           </div>
           <div id="canvas" ref={viewerRef} className={`w-full h-full `} />
           </>
+        )
     );
 }
