@@ -9,6 +9,7 @@ import { element } from "prop-types";
 import { style } from "d3-selection";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
+import ImageViewer from "../ImageViewer";
 
 const buttonStyles = {
   backgroundColor: 'blue-500',
@@ -30,64 +31,6 @@ export default function IOOutputView({
   const buttonClasses = 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded';
   const viewerRef = useRef(null);
 
-  useEffect(() => {
-    try {
-      if (viewerRef.current) {
-        // Initialize OpenSeadragon viewer
-        const viewer = OpenSeadragon({
-          element: viewerRef.current,
-          prefixUrl: 'https://cdnjs.cloudflare.com/ajax/libs/openseadragon/2.4.2/images/', // Optional: Set the path to OpenSeadragon images
-          tileSources: {type: 'image', url: 'https://sm.ign.com/t/ign_br/screenshot/default/gojo-1_tmqy.1200.jpg'},
-          defaultZoomLevel: 1,
-          maxZoomPixelRatio: 4,
-          showNavigationControl: false,
-        });
-
-        const zoomInButton = document.getElementById('zoom-in-button');
-    const zoomOutButton = document.getElementById('zoom-out-button');
-    const homeButton = document.getElementById('home-button');
-    const fullPageButton = document.getElementById('full-page-button');
-
-    zoomInButton!.addEventListener('click', () => viewer.viewport.zoomBy(1.2));
-    zoomOutButton!.addEventListener('click', () => viewer.viewport.zoomBy(0.8));
-    homeButton!.addEventListener('click', () => viewer.viewport.goHome());
-    fullPageButton!.addEventListener('click', () => viewer.setFullScreen(true));
-  
-        // Optionally, you can set additional viewer options here
-  
-        // Cleanup function
-        return () => {
-          viewer.destroy();
-          zoomInButton!.removeEventListener('click', () => viewer.viewport.zoomBy(1.2));
-    zoomOutButton!.removeEventListener('click', () => viewer.viewport.zoomBy(0.8));
-    homeButton!.removeEventListener('click', () => viewer.viewport.goHome());
-    fullPageButton!.removeEventListener('click', () => viewer.setFullScreen(true));
-        };
-      }
-    } catch (error) {
-      console.error('Error initializing OpenSeadragon:', error);
-    }
-  }, [imageMock]);
-
-  const handleDownload = () => {
-    if (viewerRef.current) {
-      const canvas = viewerRef.current.querySelector('.openseadragon-canvas');
-      const url = canvas.toDataURL(); // Convert canvas to data URL
-
-      // Create a temporary link element
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "image.jpg"; // Set the download attribute
-      document.body.appendChild(link);
-
-      // Trigger the click event on the link
-      link.click();
-
-      // Cleanup
-      document.body.removeChild(link);
-    }
-  };
-
   function handleOutputType() {
     if (!node) return <>"No node found!"</>;
     switch (outputType) {
@@ -107,55 +50,11 @@ export default function IOOutputView({
 
       case "ImageOutput":
         return (
-          <>
-          <div ref={viewerRef} className={`w-full ${left ? "h-72" : "h-[85%]"} `} />
-          <div className="w-full flex align-center justify-center my-2 mt-4">
-            <div className="shadow-round-btn-shadow hover:shadow-round-btn-shadow flex items-center justify-center rounded-sm  border bg-muted shadow-md transition-all w-[50%]">
-              <button id="zoom-in-button" className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all w-full transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
-                <ForwardedIconComponent
-                  name="ZoomIn"
-                  className={"text-secondary-foreground w-5 h-5"}
-                />
-              </button>
-              <div>
-                <Separator orientation="vertical" />
-              </div>
-              <button id="zoom-out-button" className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
-                <ForwardedIconComponent
-                  name="ZoomOut"
-                  className={"text-secondary-foreground w-5 h-5"}
-                />
-              </button>
-              <div>
-                <Separator orientation="vertical" />
-              </div>
-              <button id="home-button" className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
-                <ForwardedIconComponent
-                  name="RotateCcw"
-                  className={"text-secondary-foreground w-5 h-5"}
-                />
-              </button>
-              <div>
-                <Separator orientation="vertical" />
-              </div>
-              <button id="full-page-button" className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
-                <ForwardedIconComponent
-                  name="Maximize2"
-                  className={"text-secondary-foreground w-5 h-5"}
-                />
-              </button>
-              <div>
-                <Separator orientation="vertical" />
-              </div>
-              <button onClick={handleDownload} className="relative inline-flex w-full items-center justify-center px-3 py-3 text-sm font-semibold transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
-            <ForwardedIconComponent
-              name="ArrowDownToLine"
-              className={"text-secondary-foreground w-5 h-5"}
-            />
-          </button>
-            </div>
-          </div>
-          </>
+          left ? (
+            <div>Expand the view to see the image</div>
+          ) : (
+            <ImageViewer image={"https://sm.ign.com/t/ign_br/screenshot/default/gojo-1_tmqy.1200.jpg"} />
+          )
         ) 
 
       default:

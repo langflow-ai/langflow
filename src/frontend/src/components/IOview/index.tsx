@@ -305,7 +305,7 @@ export default function IOView({
                       </button>
                       {selectedViewField.type}
                     </div>
-                    <div className="h-full w-full">
+                    <div className="h-[85%] w-full">
                       {inputs.some(
                         (input) => input.id === selectedViewField.id
                       ) ? (
