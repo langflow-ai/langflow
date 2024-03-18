@@ -11,49 +11,60 @@ from langchain.chains.base import Chain
 from langchain.document_loaders.base import BaseLoader
 from langchain_community.vectorstores import VectorStore
 from langchain_core.documents import Document
-from loguru import logger
-from pydantic import ValidationError
-
+from langflow.interface.custom.eval import eval_custom_component_code
+from langflow.interface.custom.utils import get_function
 from langflow.interface.custom_lists import CUSTOM_NODES
-from langflow.interface.importing.utils import eval_custom_component_code, get_function, import_by_type
+from langflow.interface.importing.utils import import_by_type
 from langflow.interface.initialize.llm import initialize_vertexai
-from langflow.interface.initialize.utils import handle_format_kwargs, handle_node_type, handle_partial_variables
+from langflow.interface.initialize.utils import (
+    handle_format_kwargs,
+    handle_node_type,
+    handle_partial_variables,
+)
 from langflow.interface.initialize.vector_store import vecstore_initializer
 from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.retrievers.base import retriever_creator
 from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.interface.wrappers.base import wrapper_creator
+from langflow.schema.schema import Record
 from langflow.utils import validate
-
+from langflow.utils.util import unescape_string
+from loguru import logger
+from pydantic import ValidationError
 
 if TYPE_CHECKING:
     from langflow import CustomComponent
-
-
-def build_vertex_in_params(params: Dict) -> Dict:
     from langflow.graph.vertex.base import Vertex
-
-    # If any of the values in params is a Vertex, we will build it
-    return {key: value.build() if isinstance(value, Vertex) else value for key, value in params.items()}
 
 
 async def instantiate_class(
-    node_type: str, base_type: str, load_from_db_fields: list[str], params: Dict, user_id=None
+    vertex: "Vertex",
+    user_id=None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
+    vertex_type = vertex.vertex_type
+    base_type = vertex.base_type
+    params = vertex.params
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
 
-    if node_type in CUSTOM_NODES:
-        if custom_node := CUSTOM_NODES.get(node_type):
+    if vertex_type in CUSTOM_NODES:
+        if custom_node := CUSTOM_NODES.get(vertex_type):
             if hasattr(custom_node, "initialize"):
                 return custom_node.initialize(**params)
             return custom_node(**params)
-    logger.debug(f"Instantiating {node_type} of type {base_type}")
-    class_object = import_by_type(_type=base_type, name=node_type)
+    logger.debug(f"Instantiating {vertex_type} of type {base_type}")
+    if not base_type:
+        raise ValueError("No base type provided for vertex")
+    class_object = import_by_type(_type=base_type, name=vertex_type)
     return await instantiate_based_on_type(
-        class_object, base_type, node_type, load_from_db_fields, params, user_id=user_id
+        class_object=class_object,
+        base_type=base_type,
+        node_type=vertex_type,
+        params=params,
+        user_id=user_id,
+        vertex=vertex,
     )
 
 
@@ -81,7 +92,14 @@ def convert_kwargs(params):
     return params
 
 
-async def instantiate_based_on_type(class_object, base_type, node_type, load_from_db_fields, params, user_id):
+async def instantiate_based_on_type(
+    class_object,
+    base_type,
+    node_type,
+    params,
+    user_id,
+    vertex,
+):
     if base_type == "agents":
         return instantiate_agent(node_type, class_object, params)
     elif base_type == "prompts":
@@ -108,14 +126,20 @@ async def instantiate_based_on_type(class_object, base_type, node_type, load_fro
         return instantiate_chains(node_type, class_object, params)
     elif base_type == "output_parsers":
         return instantiate_output_parser(node_type, class_object, params)
-    elif base_type == "llms":
+    elif base_type == "models":
         return instantiate_llm(node_type, class_object, params)
     elif base_type == "retrievers":
         return instantiate_retriever(node_type, class_object, params)
     elif base_type == "memory":
         return instantiate_memory(node_type, class_object, params)
     elif base_type == "custom_components":
-        return await instantiate_custom_component(node_type, class_object, load_from_db_fields, params, user_id)
+        return await instantiate_custom_component(
+            node_type,
+            class_object,
+            params,
+            user_id,
+            vertex,
+        )
     elif base_type == "wrappers":
         return instantiate_wrapper(node_type, class_object, params)
     else:
@@ -137,11 +161,17 @@ def update_params_with_load_from_db_fields(custom_component: "CustomComponent", 
     return params
 
 
-async def instantiate_custom_component(node_type, class_object, load_from_db_fields, params, user_id):
+async def instantiate_custom_component(node_type, class_object, params, user_id, vertex):
     params_copy = params.copy()
-    class_object: "CustomComponent" = eval_custom_component_code(params_copy.pop("code"))
-    custom_component = class_object(user_id=user_id)
-    params_copy = update_params_with_load_from_db_fields(custom_component, params_copy, load_from_db_fields)
+    class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
+    custom_component: "CustomComponent" = class_object(
+        user_id=user_id,
+        parameters=params_copy,
+        vertex=vertex,
+        selected_output_type=vertex.selected_output_type,
+    )
+    params_copy = update_params_with_load_from_db_fields(custom_component, params_copy, vertex.load_from_db_fields)
+
     if "retriever" in params_copy and hasattr(params_copy["retriever"], "as_retriever"):
         params_copy["retriever"] = params_copy["retriever"].as_retriever()
 
@@ -150,12 +180,14 @@ async def instantiate_custom_component(node_type, class_object, load_from_db_fie
 
     if is_async:
         # Await the build method directly if it's async
-        built_object = await custom_component.build(**params_copy)
+        build_result = await custom_component.build(**params_copy)
     else:
         # Call the build method directly if it's sync
-        built_object = custom_component.build(**params_copy)
-
-    return built_object, {"repr": custom_component.custom_repr()}
+        build_result = custom_component.build(**params_copy)
+    custom_repr = custom_component.custom_repr()
+    if not custom_repr and isinstance(build_result, (dict, Record, str)):
+        custom_repr = build_result
+    return custom_component, build_result, {"repr": custom_repr}
 
 
 def instantiate_wrapper(node_type, class_object, params):
@@ -387,7 +419,10 @@ def instantiate_textsplitter(
         # separators might come in as an escaped string like \\n
         # so we need to convert it to a string
         if "separators" in params:
-            params["separators"] = params["separators"].encode().decode("unicode-escape")
+            if isinstance(params["separators"], str):
+                params["separators"] = unescape_string(params["separators"])
+            elif isinstance(params["separators"], list):
+                params["separators"] = [unescape_string(separator) for separator in params["separators"]]
         text_splitter = class_object(**params)
     else:
         from langchain.text_splitter import Language
