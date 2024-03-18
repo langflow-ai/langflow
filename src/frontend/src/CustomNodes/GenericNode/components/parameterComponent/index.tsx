@@ -644,6 +644,7 @@ export default function ParameterComponent({
               onFileChange={(filePath: string) => {
                 data.node!.template[name].file_path = filePath;
               }}
+              nodeToChange={data}
             ></InputFileComponent>
           </div>
         ) : left === true && type === "int" ? (

@@ -292,7 +292,7 @@ export default function IOView({
                 {selectedViewField && (
                   <div
                     className={cn(
-                      "flex h-full w-full flex-col items-start gap-4 min-h-0",
+                      "flex h-full min-h-0 w-full flex-col items-start gap-4",
                       !selectedViewField ? "hidden" : ""
                     )}
                   >

@@ -86,3 +86,36 @@ select:-webkit-autofill:focus {
 .ag-root ::-webkit-scrollbar-thumb:hover {
   background-color: #ccc;
 }
+
+.ag-body-horizontal-scroll-container {
+  height: 8px !important;
+  min-height: 8px !important;
+  max-height: 8px !important  ;
+}
+.ag-body-horizontal-scroll-viewport {
+  height: 8px !important;
+  min-height: 8px !important;
+  max-height: 8px !important  ;
+}
+.ag-body-horizontal-scroll {
+  height: 8px !important;
+  min-height: 8px !important;
+  max-height: 8px !important;
+}
+
+.ag-theme-balham-dark .ag-header-row {
+  background-color: hsl(var(--background)) !important;
+  border-color: hsl(var(--border));
+}
+
+.ag-row-odd {
+  background-color: hsl(var(--muted)) !important;
+}
+
+.ag-row-even {
+  background-color: hsl(var(--accent)) !important;
+}
+
+.ag-center-cols-viewport {
+  background-color: hsl(var(--background)) !important;
+}

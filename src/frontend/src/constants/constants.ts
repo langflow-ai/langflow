@@ -694,8 +694,8 @@ export const OUTPUT_TYPES = new Set([
   "ChatOutput",
   "TextOutput",
   "PDFOutput",
-  "CSVLoader",
   "ImageOutput",
+  "CSVOutput",
 ]);
 
 export const CHAT_FIRST_INITIAL_TEXT =
