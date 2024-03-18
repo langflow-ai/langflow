@@ -272,7 +272,7 @@ export default function IOView({
                                   {output && (
                                     <IOOutputView
                                       left={true}
-                                      outputType={"ImageOutput"}
+                                      outputType={output.type}
                                       outputId={output.id}
                                     />
                                   )}
@@ -317,7 +317,7 @@ export default function IOView({
                       ) : (
                         <IOOutputView
                           left={false}
-                          outputType={"ImageOutput"}
+                          outputType={selectedViewField.type}
                           outputId={selectedViewField.id!}
                         />
                       )}
