@@ -10,7 +10,7 @@ import { useGlobalVariablesStore } from "../../../stores/globalVariables";
 
 //TODO IMPLEMENT FORM LOGIC
 
-export default function AddNewVariableButton(): JSX.Element {
+export default function AddNewVariableButton({children}): JSX.Element {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
   const [provider, setProvider] = useState("");
@@ -33,25 +33,24 @@ export default function AddNewVariableButton(): JSX.Element {
     });
   }
   return (
-    <BaseModal open={open} setOpen={setOpen} size="small">
+    <BaseModal open={open} setOpen={setOpen} size="x-small">
       <BaseModal.Header
         description={"write a text variable to use anywhere on your flow"}
       >
         <span>Create a new Variable</span>
       </BaseModal.Header>
       <BaseModal.Trigger>
-        <Button>Create a new variable</Button>
+        {children}
       </BaseModal.Trigger>
       <BaseModal.Content>
-        <div className="flex h-full w-full flex-col justify-around align-middle">
-          <div className="h-1/2">
+        <div className="flex gap-4 h-full w-full flex-col align-middle">
             <Label>Variable name </Label>
             <Input
               value={key}
               onChange={(e) => {
                 setKey(e.target.value);
               }}
-              placeholder="example name"
+              placeholder="Insert a name for the variable..."
             ></Input>
             <Label>Provider (optional) </Label>
             <InputComponent
@@ -61,19 +60,17 @@ export default function AddNewVariableButton(): JSX.Element {
               }}
               password={false}
               options={["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]}
-              placeholder="example provider"
+              placeholder="Choose a provider between the environment variables..."
             ></InputComponent>
-          </div>
-          <div className="h-1/2">
             <Label>Variable Value </Label>
             <Textarea
               value={value}
               onChange={(e) => {
                 setValue(e.target.value);
               }}
-              className="h-4/6 w-full resize-none custom-scroll"
+              placeholder="Insert a value for the variable..."
+              className="w-full resize-none custom-scroll"
             />
-          </div>
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>

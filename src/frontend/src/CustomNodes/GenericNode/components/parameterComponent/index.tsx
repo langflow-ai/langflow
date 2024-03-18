@@ -314,9 +314,8 @@ export default function ParameterComponent({
       <>
         <div
           className={
-            "w-full truncate text-sm" +
-            (left ? "" : " text-end") +
-            (info !== "" ? " flex items-center" : "")
+            "w-full truncate text-sm flex items-center" +
+            (left ? "" : " text-end")
           }
         >
           {proxy ? (
@@ -429,8 +428,7 @@ export default function ParameterComponent({
                       newNode.data.node.template[name].load_from_db = true;
                       return newNode;
                     });
-                  }
-                  else{
+                  } else {
                     setNode(data.id, (oldNode) => {
                       let newNode = cloneDeep(oldNode);
                       newNode.data = {
