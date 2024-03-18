@@ -2,8 +2,6 @@ import importlib
 from typing import Dict, List, Optional
 
 import pytest
-from pydantic import BaseModel
-
 from langflow.utils.constants import CHAT_OPENAI_MODELS, OPENAI_MODELS
 from langflow.utils.util import (
     build_template_from_class,
@@ -12,6 +10,7 @@ from langflow.utils.util import (
     get_base_classes,
     get_default_factory,
 )
+from pydantic import BaseModel
 
 
 # Dummy classes for testing purposes
@@ -236,7 +235,7 @@ def test_format_dict():
             "password": False,
             "multiline": False,
             "options": CHAT_OPENAI_MODELS,
-            "value": "gpt-4-1106-preview",
+            "value": "gpt-4-turbo-preview",
         },
     }
     assert format_dict(input_dict, "OpenAI") == expected_output_openai

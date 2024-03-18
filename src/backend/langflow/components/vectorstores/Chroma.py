@@ -2,10 +2,12 @@ from typing import List, Optional, Union
 
 import chromadb  # type: ignore
 from langchain.embeddings.base import Embeddings
-from langchain.schema import BaseRetriever, Document
+from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.chroma import Chroma
+
 from langflow import CustomComponent
+from langflow.schema.schema import Record
 
 
 class ChromaComponent(CustomComponent):
@@ -16,7 +18,7 @@ class ChromaComponent(CustomComponent):
     display_name: str = "Chroma"
     description: str = "Implementation of Vector Store using Chroma"
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/chroma"
-    beta: bool = True
+    icon = "Chroma"
 
     def build_config(self):
         """
@@ -27,10 +29,9 @@ class ChromaComponent(CustomComponent):
         """
         return {
             "collection_name": {"display_name": "Collection Name", "value": "langflow"},
-            "persist": {"display_name": "Persist"},
-            "persist_directory": {"display_name": "Persist Directory"},
-            "code": {"show": False, "display_name": "Code"},
-            "documents": {"display_name": "Documents", "is_list": True},
+            "index_directory": {"display_name": "Persist Directory"},
+            "code": {"advanced": True, "display_name": "Code"},
+            "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
             "embedding": {"display_name": "Embedding"},
             "chroma_server_cors_allow_origins": {
                 "display_name": "Server CORS Allow Origins",
@@ -51,11 +52,10 @@ class ChromaComponent(CustomComponent):
     def build(
         self,
         collection_name: str,
-        persist: bool,
         embedding: Embeddings,
         chroma_server_ssl_enabled: bool,
-        persist_directory: Optional[str] = None,
-        documents: Optional[List[Document]] = None,
+        index_directory: Optional[str] = None,
+        inputs: Optional[List[Record]] = None,
         chroma_server_cors_allow_origins: Optional[str] = None,
         chroma_server_host: Optional[str] = None,
         chroma_server_port: Optional[int] = None,
@@ -66,9 +66,8 @@ class ChromaComponent(CustomComponent):
 
         Args:
         - collection_name (str): The name of the collection.
-        - persist_directory (Optional[str]): The directory to persist the Vector Store to.
+        - index_directory (Optional[str]): The directory to persist the Vector Store to.
         - chroma_server_ssl_enabled (bool): Whether to enable SSL for the Chroma server.
-        - persist (bool): Whether to persist the Vector Store or not.
         - embedding (Optional[Embeddings]): The embeddings to use for the Vector Store.
         - documents (Optional[Document]): The documents to use for the Vector Store.
         - chroma_server_cors_allow_origins (Optional[str]): The CORS allow origins for the Chroma server.
@@ -93,15 +92,31 @@ class ChromaComponent(CustomComponent):
             )
 
         # If documents, then we need to create a Chroma instance using .from_documents
+
+        # Check index_directory and expand it if it is a relative path
+        if index_directory is not None:
+            index_directory = self.resolve_path(index_directory)
+
+        documents = []
+        for _input in inputs or []:
+            if isinstance(_input, Record):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(_input)
         if documents is not None and embedding is not None:
             if len(documents) == 0:
                 raise ValueError("If documents are provided, there must be at least one document.")
-            return Chroma.from_documents(
+            chroma = Chroma.from_documents(
                 documents=documents,  # type: ignore
-                persist_directory=persist_directory if persist else None,
+                persist_directory=index_directory,
                 collection_name=collection_name,
                 embedding=embedding,
                 client_settings=chroma_settings,
             )
-
-        return Chroma(persist_directory=persist_directory, client_settings=chroma_settings)
+        else:
+            chroma = Chroma(
+                persist_directory=index_directory,
+                client_settings=chroma_settings,
+                embedding_function=embedding,
+            )
+        return chroma

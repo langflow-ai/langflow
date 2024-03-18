@@ -1,10 +1,14 @@
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Optional
 
 from fastapi import HTTPException
 from platformdirs import user_cache_dir
+from sqlmodel import Session
 
+from langflow.graph.graph.base import Graph
+from langflow.services.chat.service import ChatService
+from langflow.services.database.models.flow import Flow
 from langflow.services.store.schema import StoreComponentCreate
 from langflow.services.store.utils import get_lf_version_from_pypi
 
@@ -137,7 +141,7 @@ def get_file_path_value(file_path):
     return file_path
 
 
-def validate_is_component(flows: List["Flow"]):
+def validate_is_component(flows: list["Flow"]):
     for flow in flows:
         if not flow.data or flow.is_component is not None:
             continue
@@ -171,19 +175,66 @@ async def check_langflow_version(component: StoreComponentCreate):
         )
 
 
-def format_elapsed_time(elapsed_time) -> str:
-    # Format elapsed time to human readable format coming from
-    # perf_counter()
-    # If the elapsed time is less than 1 second, return ms
-    # If the elapsed time is less than 1 minute, return seconds rounded to 2 decimals
-    time_str = ""
+def format_elapsed_time(elapsed_time: float) -> str:
+    """Format elapsed time to a human-readable format coming from perf_counter().
+
+    - Less than 1 second: returns milliseconds
+    - Less than 1 minute: returns seconds rounded to 2 decimals
+    - 1 minute or more: returns minutes and seconds
+    """
     if elapsed_time < 1:
-        elapsed_time = int(round(elapsed_time * 1000))
-        time_str = f"{elapsed_time} ms"
+        milliseconds = int(round(elapsed_time * 1000))
+        return f"{milliseconds} ms"
     elif elapsed_time < 60:
-        elapsed_time = round(elapsed_time, 2)
-        time_str = f"{elapsed_time} seconds"
+        seconds = round(elapsed_time, 2)
+        unit = "second" if seconds == 1 else "seconds"
+        return f"{seconds} {unit}"
     else:
-        elapsed_time = round(elapsed_time / 60, 2)
-        time_str = f"{elapsed_time} minutes"
-    return time_str
+        minutes = int(elapsed_time // 60)
+        seconds = round(elapsed_time % 60, 2)
+        minutes_unit = "minute" if minutes == 1 else "minutes"
+        seconds_unit = "second" if seconds == 1 else "seconds"
+        return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
+
+
+async def build_and_cache_graph(
+    flow_id: str,
+    session: Session,
+    chat_service: "ChatService",
+    graph: Optional[Graph] = None,
+):
+    """Build and cache the graph."""
+    flow: Optional[Flow] = session.get(Flow, flow_id)
+    if not flow or not flow.data:
+        raise ValueError("Invalid flow ID")
+    other_graph = Graph.from_payload(flow.data, flow_id)
+    if graph is None:
+        graph = other_graph
+    else:
+        graph = graph.update(other_graph)
+    await chat_service.set_cache(flow_id, graph)
+    return graph
+
+
+def format_syntax_error_message(exc: SyntaxError) -> str:
+    """Format a SyntaxError message for returning to the frontend."""
+    if exc.text is None:
+        return f"Syntax error in code. Error on line {exc.lineno}"
+    return f"Syntax error in code. Error on line {exc.lineno}: {exc.text.strip()}"
+
+
+def get_causing_exception(exc: BaseException) -> BaseException:
+    """Get the causing exception from an exception."""
+    if hasattr(exc, "__cause__") and exc.__cause__:
+        return get_causing_exception(exc.__cause__)
+    return exc
+
+
+def format_exception_message(exc: Exception) -> str:
+    """Format an exception message for returning to the frontend."""
+    # We need to check if the __cause__ is a SyntaxError
+    # If it is, we need to return the message of the SyntaxError
+    causing_exception = get_causing_exception(exc)
+    if isinstance(causing_exception, SyntaxError):
+        return format_syntax_error_message(causing_exception)
+    return str(exc)

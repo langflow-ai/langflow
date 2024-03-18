@@ -2,6 +2,7 @@ import { AxiosError } from "axios";
 import { cloneDeep } from "lodash";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
+import { STARTER_FOLDER_NAME } from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   readFlowsFromDatabase,
@@ -37,6 +38,10 @@ const past = {};
 const future = {};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
+  examples: [],
+  setExamples: (examples: FlowType[]) => {
+    set({ examples });
+  },
   currentFlowId: "",
   setCurrentFlowId: (currentFlowId: string) => {
     set((state) => ({
@@ -52,6 +57,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     });
   },
   currentFlow: undefined,
+  saveLoading: false,
   isLoading: true,
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
   refreshFlows: () => {
@@ -61,11 +67,20 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         .then((dbData) => {
           if (dbData) {
             const { data, flows } = processFlows(dbData, false);
-            get().setFlows(flows);
-            set({ isLoading: false });
+            get().setExamples(
+              flows.filter(
+                (f) => f.folder === STARTER_FOLDER_NAME && !f.user_id
+              )
+            );
+            get().setFlows(
+              flows.filter(
+                (f) => !(f.folder === STARTER_FOLDER_NAME && !f.user_id)
+              )
+            );
             useTypesStore.setState((state) => ({
               data: { ...state.data, ["saved_components"]: data },
             }));
+            set({ isLoading: false });
             resolve();
           }
         })
@@ -82,7 +97,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     if (saveTimeoutId) {
       clearTimeout(saveTimeoutId);
     }
-
+    set({ saveLoading: true });
     // Set up a new timeout.
     saveTimeoutId = setTimeout(() => {
       if (get().currentFlow) {
@@ -91,9 +106,10 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           true
         );
       }
-    }, 300); // Delay of 300ms.
+    }, 500); // Delay of 500ms because chat message depends on it.
   },
   saveFlow: (flow: FlowType, silent?: boolean) => {
+    set({ saveLoading: true });
     return new Promise<void>((resolve, reject) => {
       updateFlowInDatabase(flow)
         .then((updatedFlow) => {
@@ -115,6 +131,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
             //update tabs state
 
             resolve();
+            set({ saveLoading: false });
           }
         })
         .catch((err) => {

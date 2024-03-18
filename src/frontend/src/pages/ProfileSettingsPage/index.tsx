@@ -6,6 +6,12 @@ import GradientChooserComponent from "../../components/gradientChooserComponent"
 import Header from "../../components/headerComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
+import {
+  EDIT_PASSWORD_ALERT_LIST,
+  EDIT_PASSWORD_ERROR_ALERT,
+  SAVE_ERROR_ALERT,
+  SAVE_SUCCESS_ALERT,
+} from "../../constants/alerts_constants";
 import { CONTROL_PATCH_USER_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { resetPassword, updateUser } from "../../controllers/API";
@@ -37,8 +43,8 @@ export default function ProfileSettingsPage(): JSX.Element {
   async function handlePatchUser() {
     if (password !== cnfPassword) {
       setErrorData({
-        title: "Error changing password",
-        list: ["Passwords do not match"],
+        title: EDIT_PASSWORD_ERROR_ALERT,
+        list: [EDIT_PASSWORD_ALERT_LIST],
       });
       return;
     }
@@ -54,10 +60,10 @@ export default function ProfileSettingsPage(): JSX.Element {
       }
       handleInput({ target: { name: "password", value: "" } });
       handleInput({ target: { name: "cnfPassword", value: "" } });
-      setSuccessData({ title: "Changes saved successfully!" });
+      setSuccessData({ title: SAVE_SUCCESS_ALERT });
     } catch (error) {
       setErrorData({
-        title: "Error saving changes",
+        title: SAVE_ERROR_ALERT,
         list: [(error as any).response.data.detail],
       });
     }

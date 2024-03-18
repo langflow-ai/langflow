@@ -1,4 +1,3 @@
-import ast
 import operator
 import warnings
 from typing import Any, ClassVar, Optional
@@ -6,7 +5,9 @@ from typing import Any, ClassVar, Optional
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
 
+from langflow.interface.custom.attributes import ATTR_FUNC_MAPPING
 from langflow.interface.custom.code_parser import CodeParser
+from langflow.interface.custom.eval import eval_custom_component_code
 from langflow.utils import validate
 
 
@@ -38,7 +39,8 @@ class Component:
     def __setattr__(self, key, value):
         if key == "_user_id" and hasattr(self, "_user_id"):
             warnings.warn("user_id is immutable and cannot be changed.")
-        super().__setattr__(key, value)
+        else:
+            super().__setattr__(key, value)
 
     @cachedmethod(cache=operator.attrgetter("cache"))
     def get_code_tree(self, code: str):
@@ -63,24 +65,19 @@ class Component:
 
         return validate.create_function(self.code, self._function_entrypoint_name)
 
-    def build_template_config(self, attributes) -> dict:
+    def build_template_config(self) -> dict:
+        if not self.code:
+            return {}
+
+        cc_class = eval_custom_component_code(self.code)
+        component_instance = cc_class()
         template_config = {}
 
-        for item in attributes:
-            item_name = item.get("name")
-
-            if item_value := item.get("value"):
-                if "display_name" in item_name:
-                    template_config["display_name"] = ast.literal_eval(item_value)
-
-                elif "description" in item_name:
-                    template_config["description"] = ast.literal_eval(item_value)
-
-                elif "beta" in item_name:
-                    template_config["beta"] = ast.literal_eval(item_value)
-
-                elif "documentation" in item_name:
-                    template_config["documentation"] = ast.literal_eval(item_value)
+        for attribute, func in ATTR_FUNC_MAPPING.items():
+            if hasattr(component_instance, attribute):
+                value = getattr(component_instance, attribute)
+                if value is not None:
+                    template_config[attribute] = func(value=value)
 
         return template_config
 

@@ -1,9 +1,11 @@
 import ast
 import os
 import zlib
+from pathlib import Path
+
+from loguru import logger
 
 from langflow.interface.custom.custom_component import CustomComponent
-from loguru import logger
 
 
 class CustomComponentPathValueError(ValueError):
@@ -116,12 +118,15 @@ class DirectoryReader:
             raise CustomComponentPathValueError(f"The path needs to start with '{self.base_path}'.")
 
         file_list = []
-        for root, _, files in os.walk(safe_path):
-            file_list.extend(
-                os.path.join(root, filename)
-                for filename in files
-                if filename.endswith(".py") and not filename.startswith("__")
-            )
+        safe_path_obj = Path(safe_path)
+        for file_path in safe_path_obj.rglob("*.py"):
+            # The other condtion is that it should be
+            # in the safe_path/[folder]/[file].py format
+            # any folders below [folder] will be ignored
+            # basically the parent folder of the file should be a
+            # folder in the safe_path
+            if file_path.is_file() and file_path.parent.parent == safe_path_obj and not file_path.name.startswith("__"):
+                file_list.append(str(file_path))
         return file_list
 
     def find_menu(self, response, menu_name):
@@ -226,10 +231,10 @@ class DirectoryReader:
 
         for file_path in file_paths:
             menu_name = os.path.basename(os.path.dirname(file_path))
-            logger.debug(f"Menu name: {menu_name}")
             filename = os.path.basename(file_path)
             validation_result, result_content = self.process_file(file_path)
-            logger.debug(f"Validation result: {validation_result}")
+            if not validation_result:
+                logger.error(f"Error while processing file {file_path}: {result_content}")
 
             menu_result = self.find_menu(response, menu_name) or {
                 "name": menu_name,
@@ -256,7 +261,7 @@ class DirectoryReader:
                 output_types = [component_name_camelcase]
 
             component_info = {
-                "name": "CustomComponent",
+                "name": component_name_camelcase,
                 "output_types": output_types,
                 "file": filename,
                 "code": result_content if validation_result else "",
@@ -264,7 +269,6 @@ class DirectoryReader:
             }
             menu_result["components"].append(component_info)
 
-            logger.debug(f"Component info: {component_info}")
             if menu_result not in response["menu"]:
                 response["menu"].append(menu_result)
         logger.debug("-------------------- Component menu list built --------------------")
@@ -277,5 +281,6 @@ class DirectoryReader:
         """
         custom_component = CustomComponent(code=code)
         types_list = custom_component.get_function_entrypoint_return_type
+
         # Get the name of types classes
         return [type_.__name__ for type_ in types_list if hasattr(type_, "__name__")]

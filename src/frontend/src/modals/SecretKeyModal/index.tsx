@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { COPIED_NOTICE_ALERT } from "../../constants/alerts_constants";
 import { createApiKey } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { ApiKeyType } from "../../types/components";
@@ -47,7 +48,7 @@ export default function SecretKeyModal({
       inputRef?.current?.focus();
       inputRef?.current?.select();
       setSuccessData({
-        title: "API Key copied!",
+        title: COPIED_NOTICE_ALERT,
       });
       setTextCopied(false);
 

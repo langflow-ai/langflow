@@ -7,31 +7,27 @@ export const useStoreStore = create<StoreStoreType>((set) => ({
   validApiKey: false,
   hasApiKey: false,
   loadingApiKey: true,
-  updateHasStore: (hasStore) => set(() => ({ hasStore: hasStore })),
+  checkHasStore: () => {
+    checkHasStore().then((res) => {
+      set({ hasStore: res?.enabled ?? false });
+    });
+  },
   updateValidApiKey: (validApiKey) => set(() => ({ validApiKey: validApiKey })),
   updateLoadingApiKey: (loadingApiKey) =>
     set(() => ({ loadingApiKey: loadingApiKey })),
   updateHasApiKey: (hasApiKey) => set(() => ({ hasApiKey: hasApiKey })),
+  fetchApiData: async () => {
+    set({ loadingApiKey: true });
+    try {
+      const res = await checkHasApiKey();
+      set({
+        validApiKey: res?.is_valid ?? false,
+        hasApiKey: res?.has_api_key ?? false,
+        loadingApiKey: false,
+      });
+    } catch (e) {
+      set({ loadingApiKey: false });
+      console.log(e);
+    }
+  },
 }));
-
-checkHasStore().then((res) => {
-  useStoreStore.setState({ hasStore: res?.enabled ?? false });
-});
-
-const fetchApiData = async () => {
-  useStoreStore.setState({ loadingApiKey: true });
-  try {
-    const res = await checkHasApiKey();
-
-    useStoreStore.setState({
-      loadingApiKey: false,
-      validApiKey: res?.is_valid ?? false,
-      hasApiKey: res?.has_api_key ?? false,
-    });
-  } catch (e) {
-    useStoreStore.setState({ loadingApiKey: false });
-    console.log(e);
-  }
-};
-
-fetchApiData();

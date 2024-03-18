@@ -109,7 +109,11 @@ def version_callback(value: bool):
 @app.callback()
 def main_entry_point(
     version: bool = typer.Option(
-        None, "--version", callback=version_callback, is_eager=True, help="Show the version and exit."
+        None,
+        "--version",
+        callback=version_callback,
+        is_eager=True,
+        help="Show the version and exit.",
     ),
 ):
     """

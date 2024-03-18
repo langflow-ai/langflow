@@ -1,7 +1,9 @@
 from typing import Optional
 
-from langchain.embeddings import BedrockEmbeddings
 from langchain.embeddings.base import Embeddings
+from langchain_community.embeddings import BedrockEmbeddings
+
+
 from langflow import CustomComponent
 
 
@@ -13,7 +15,6 @@ class AmazonBedrockEmeddingsComponent(CustomComponent):
     display_name: str = "Amazon Bedrock Embeddings"
     description: str = "Embeddings model from Amazon Bedrock."
     documentation = "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/bedrock"
-    beta = True
 
     def build_config(self):
         return {

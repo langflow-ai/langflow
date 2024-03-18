@@ -1,20 +1,33 @@
-import { useEffect, useState } from "react";
-import { NodeToolbar } from "reactflow";
+import { cloneDeep } from "lodash";
+import { useCallback, useEffect, useState } from "react";
+import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
-import Tooltip from "../../components/TooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
+import { Button } from "../../components/ui/button";
+import Checkmark from "../../components/ui/checkmark";
+import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
-import { priorityFields } from "../../constants/constants";
+import Xmark from "../../components/ui/xmark";
+import {
+  NATIVE_CATEGORIES,
+  RUN_TIMESTAMP_PREFIX,
+  STATUS_BUILD,
+  STATUS_BUILDING,
+} from "../../constants/constants";
+import { BuildStatus } from "../../constants/enums";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+import useAlertStore from "../../stores/alertStore";
+import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useTypesStore } from "../../stores/typesStore";
+import { APIClassType } from "../../types/api";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
-import { classNames, cn, getFieldTitle } from "../../utils/utils";
+import { classNames, cn, getFieldTitle, sortFields } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
@@ -29,8 +42,13 @@ export default function GenericNode({
   yPos: number;
 }): JSX.Element {
   const types = useTypesStore((state) => state.types);
+  const templates = useTypesStore((state) => state.templates);
   const deleteNode = useFlowStore((state) => state.deleteNode);
+  const flowPool = useFlowStore((state) => state.flowPool);
+  const buildFlow = useFlowStore((state) => state.buildFlow);
   const setNode = useFlowStore((state) => state.setNode);
+  const updateNodeInternals = useUpdateNodeInternals();
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);
@@ -38,11 +56,78 @@ export default function GenericNode({
   const [nodeDescription, setNodeDescription] = useState(
     data.node?.description!
   );
+  const [isOutdated, setIsOutdated] = useState(false);
+  const buildStatus = useFlowStore(
+    (state) => state.flowBuildStatus[data.id]?.status
+  );
+  const lastRunTime = useFlowStore(
+    (state) => state.flowBuildStatus[data.id]?.timestamp
+  );
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
   const [handles, setHandles] = useState<number>(0);
 
+  const [validationString, setValidationString] = useState<string>("");
+
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+
+  useEffect(() => {
+    // This one should run only once
+    // first check if data.type in NATIVE_CATEGORIES
+    // if not return
+    if (
+      !NATIVE_CATEGORIES.includes(types[data.type]) ||
+      !data.node?.template?.code?.value
+    )
+      return;
+    const thisNodeTemplate = templates[data.type].template;
+    // if the template does not have a code key
+    // return
+    if (!thisNodeTemplate.code) return;
+    const currentCode = thisNodeTemplate.code?.value;
+    const thisNodesCode = data.node!.template?.code?.value;
+    if (currentCode !== thisNodesCode) {
+      setIsOutdated(true);
+    } else {
+      setIsOutdated(false);
+    }
+    // template.code can be undefined
+  }, [data.node?.template?.code?.value]);
+
+  const updateNodeCode = useCallback(
+    (newNodeClass: APIClassType, code: string, name: string) => {
+      setNode(data.id, (oldNode) => {
+        let newNode = cloneDeep(oldNode);
+
+        newNode.data = {
+          ...newNode.data,
+          node: newNodeClass,
+          description: newNodeClass.description ?? data.node!.description,
+          display_name: newNodeClass.display_name ?? data.node!.display_name,
+        };
+
+        newNode.data.node.template[name].value = code;
+        setIsOutdated(false);
+
+        return newNode;
+      });
+
+      updateNodeInternals(data.id);
+    },
+    [data.id, data.node, setNode, setIsOutdated]
+  );
+
+  if (!data.node!.template) {
+    setErrorData({
+      title: `Error in component ${data.node!.display_name}`,
+      list: [
+        `The component ${data.node!.display_name} has no template.`,
+        `Please contact the developer of the component to fix this issue.`,
+      ],
+    });
+    takeSnapshot();
+    deleteNode(data.id);
+  }
 
   function countHandles(): void {
     let count = Object.keys(data.node!.template)
@@ -68,7 +153,6 @@ export default function GenericNode({
 
     setHandles(count);
   }
-
   useEffect(() => {
     countHandles();
   }, [data, data.node]);
@@ -81,8 +165,18 @@ export default function GenericNode({
   }, [selected]);
 
   // State for outline color
-  const sseData = useFlowStore((state) => state.sseData);
   const isBuilding = useFlowStore((state) => state.isBuilding);
+
+  // should be empty string if no duration
+  // else should be `Duration: ${duration}`
+  const getDurationString = (duration: number | undefined): string => {
+    if (duration === undefined) {
+      return "";
+    } else {
+      return `${duration}`;
+    }
+  };
+  const durationString = getDurationString(validationStatus?.data.duration);
 
   useEffect(() => {
     setNodeDescription(data.node!.description);
@@ -92,20 +186,155 @@ export default function GenericNode({
     setNodeName(data.node!.display_name);
   }, [data.node!.display_name]);
 
-  // New useEffect to watch for changes in sseData and update validation status
   useEffect(() => {
-    const relevantData = sseData[data.id];
+    const relevantData =
+      flowPool[data.id] && flowPool[data.id]?.length > 0
+        ? flowPool[data.id][flowPool[data.id].length - 1]
+        : null;
     if (relevantData) {
       // Extract validation information from relevantData and update the validationStatus state
       setValidationStatus(relevantData);
     } else {
       setValidationStatus(null);
     }
-  }, [sseData, data.id]);
+  }, [flowPool[data.id], data.id]);
 
-  const showNode = data.showNode ?? true;
+  useEffect(() => {
+    if (validationStatus?.params) {
+      // if it is not a string turn it into a string
+      let newValidationString = validationStatus.params;
+      if (typeof newValidationString !== "string") {
+        newValidationString = JSON.stringify(validationStatus.params);
+      }
 
-  const nameEditable = data.node?.flow || data.type === "CustomComponent";
+      setValidationString(newValidationString);
+    }
+  }, [validationStatus, validationStatus?.params]);
+
+  // const showNode = data.showNode ?? true;
+
+  const [showNode, setShowNode] = useState(data.showNode ?? true);
+
+  const nameEditable = true;
+
+  const emojiRegex = /\p{Emoji}/u;
+  const isEmoji = emojiRegex.test(data?.node?.icon!);
+
+  const iconNodeRender = useCallback(() => {
+    const iconElement = data?.node?.icon;
+    const iconColor = nodeColors[types[data.type]];
+    const iconName =
+      iconElement || (data.node?.flow ? "group_components" : name);
+    const iconClassName = `generic-node-icon ${
+      !showNode ? " absolute inset-x-6 h-12 w-12 " : ""
+    }`;
+    if (iconElement && isEmoji) {
+      return nodeIconFragment(iconElement);
+    } else {
+      return checkNodeIconFragment(iconColor, iconName, iconClassName);
+    }
+  }, [data, isEmoji, name, showNode]);
+
+  const nodeIconFragment = (icon) => {
+    return <span className="text-lg">{icon}</span>;
+  };
+
+  const checkNodeIconFragment = (iconColor, iconName, iconClassName) => {
+    return (
+      <IconComponent
+        name={iconName}
+        className={iconClassName}
+        iconColor={iconColor}
+      />
+    );
+  };
+
+  const isDark = useDarkStore((state) => state.dark);
+  const renderIconStatus = (
+    buildStatus: BuildStatus | undefined,
+    validationStatus: validationStatusType | null
+  ) => {
+    if (buildStatus === BuildStatus.BUILDING) {
+      return <Loading className="text-medium-indigo" />;
+    } else {
+      return (
+        <>
+          <IconComponent
+            name="Play"
+            className="absolute ml-0.5 h-5 fill-current stroke-2 text-medium-indigo opacity-0 transition-all group-hover:opacity-100"
+          />
+          {validationStatus && validationStatus.valid ? (
+            <Checkmark
+              className="absolute ml-0.5 h-5 stroke-2 text-status-green opacity-100 transition-all group-hover:opacity-0"
+              isVisible={true}
+            />
+          ) : validationStatus &&
+            !validationStatus.valid &&
+            buildStatus === BuildStatus.INACTIVE ? (
+            <IconComponent
+              name="Play"
+              className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-green opacity-30 transition-all group-hover:opacity-0"
+            />
+          ) : validationStatus && !validationStatus.valid ? (
+            <Xmark
+              isVisible={true}
+              className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-red opacity-100 transition-all group-hover:opacity-0"
+            />
+          ) : (
+            <IconComponent
+              name="Play"
+              className="absolute ml-0.5 h-5 fill-current stroke-2 text-muted-foreground opacity-100 transition-all group-hover:opacity-0"
+            />
+          )}
+        </>
+      );
+    }
+  };
+
+  const getSpecificClassFromBuildStatus = (
+    buildStatus: BuildStatus | undefined,
+    validationStatus: validationStatusType | null
+  ) => {
+    let isInvalid = validationStatus && !validationStatus.valid;
+
+    if (buildStatus === BuildStatus.INACTIVE && isInvalid) {
+      // INACTIVE should have its own class
+      return "inactive-status";
+    }
+    if (buildStatus === BuildStatus.BUILT && isInvalid) {
+      return isDark ? "built-invalid-status-dark" : "built-invalid-status";
+    } else if (buildStatus === BuildStatus.BUILDING) {
+      return "building-status";
+    } else {
+      return "";
+    }
+  };
+
+  const getNodeBorderClassName = (
+    selected: boolean,
+    showNode: boolean,
+    buildStatus: BuildStatus | undefined,
+    validationStatus: validationStatusType | null
+  ) => {
+    const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
+      buildStatus,
+      validationStatus
+    );
+    const baseBorderClass = getBaseBorderClass(selected);
+    const nodeSizeClass = getNodeSizeClass(showNode);
+    return classNames(
+      baseBorderClass,
+      nodeSizeClass,
+      "generic-node-div",
+      specificClassFromBuildStatus
+    );
+  };
+
+  const getBaseBorderClass = (selected) =>
+    selected ? "border border-ring" : "border";
+
+  const getNodeSizeClass = (showNode) =>
+    showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full";
 
   return (
     <>
@@ -123,16 +352,22 @@ export default function GenericNode({
               data: { ...old.data, showNode: show },
             }));
           }}
+          setShowState={setShowNode}
           numberOfHandles={handles}
           showNode={showNode}
+          openAdvancedModal={false}
+          onCloseAdvancedModal={() => {}}
+          updateNodeCode={updateNodeCode}
+          isOutdated={isOutdated}
+          selected={selected}
         ></NodeToolbarComponent>
       </NodeToolbar>
-
       <div
-        className={classNames(
-          selected ? "border border-ring" : "border",
-          showNode ? " w-96 rounded-lg" : " w-26 h-26 rounded-full",
-          "generic-node-div"
+        className={getNodeBorderClassName(
+          selected,
+          showNode,
+          buildStatus,
+          validationStatus
         )}
       >
         {data.node?.beta && showNode && (
@@ -153,17 +388,10 @@ export default function GenericNode({
             <div
               className={
                 "generic-node-title-arrangement rounded-full" +
-                (!showNode && "justify-center")
+                (!showNode && " justify-center ")
               }
             >
-              <IconComponent
-                name={data.node?.flow ? "group_components" : name}
-                className={
-                  "generic-node-icon " +
-                  (!showNode ? "absolute inset-x-6 h-12 w-12" : "")
-                }
-                iconColor={`${nodeColors[types[data.type]]}`}
-              />
+              {iconNodeRender()}
               {showNode && (
                 <div className="generic-node-tooltip-div">
                   {nameEditable && inputName ? (
@@ -194,28 +422,39 @@ export default function GenericNode({
                       />
                     </div>
                   ) : (
-                    <ShadTooltip content={data.node?.display_name}>
-                      <div
-                        className="flex"
-                        onDoubleClick={() => {
-                          setInputName(true);
-                          takeSnapshot();
-                        }}
-                      >
+                    <div className="group flex items-start gap-1.5">
+                      <ShadTooltip content={data.node?.display_name}>
                         <div
+                          onDoubleClick={(event) => {
+                            if (nameEditable) {
+                              setInputName(true);
+                            }
+                            takeSnapshot();
+                            event.stopPropagation();
+                            event.preventDefault();
+                          }}
                           data-testid={"title-" + data.node?.display_name}
-                          className="generic-node-tooltip-div pr-2 text-primary"
+                          className="generic-node-tooltip-div text-primary"
                         >
                           {data.node?.display_name}
                         </div>
-                        {nameEditable && (
+                      </ShadTooltip>
+                      {nameEditable && (
+                        <div
+                          onClick={(event) => {
+                            setInputName(true);
+                            takeSnapshot();
+                            event.stopPropagation();
+                            event.preventDefault();
+                          }}
+                        >
                           <IconComponent
-                            name="Pencil"
-                            className="h-4 w-4 text-ring"
+                            name="PencilLine"
+                            className="hidden h-3 w-3 text-status-blue group-hover:block"
                           />
-                        )}
-                      </div>
-                    </ShadTooltip>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -241,13 +480,34 @@ export default function GenericNode({
                             })}
                             data={data}
                             color={
-                              nodeColors[
-                                types[data.node?.template[templateField].type!]
-                              ] ??
-                              nodeColors[
-                                data.node?.template[templateField].type!
-                              ] ??
-                              nodeColors.unknown
+                              data.node?.template[templateField].input_types &&
+                              data.node?.template[templateField].input_types!
+                                .length > 0
+                                ? nodeColors[
+                                    data.node?.template[templateField]
+                                      .input_types![
+                                      data.node?.template[templateField]
+                                        .input_types!.length - 1
+                                    ]
+                                  ] ??
+                                  nodeColors[
+                                    types[
+                                      data.node?.template[templateField]
+                                        .input_types![
+                                        data.node?.template[templateField]
+                                          .input_types!.length - 1
+                                      ]
+                                    ]
+                                  ]
+                                : nodeColors[
+                                    data.node?.template[templateField].type!
+                                  ] ??
+                                  nodeColors[
+                                    types[
+                                      data.node?.template[templateField].type!
+                                    ]
+                                  ] ??
+                                  nodeColors.unknown
                             }
                             title={getFieldTitle(
                               data.node?.template!,
@@ -292,7 +552,7 @@ export default function GenericNode({
                     title={
                       data.node?.output_types &&
                       data.node.output_types.length > 0
-                        ? data.node.output_types.join("|")
+                        ? data.node.output_types.join(" | ")
                         : data.type
                     }
                     tooltipTitle={data.node?.base_classes.join("\n")}
@@ -308,65 +568,64 @@ export default function GenericNode({
                 </>
               )}
             </div>
-
             {showNode && (
-              <div className="round-button-div">
-                <div>
-                  <Tooltip
-                    title={
-                      isBuilding ? (
-                        <span>Building...</span>
-                      ) : !validationStatus ? (
-                        <span className="flex">
-                          Build{" "}
-                          <IconComponent
-                            name="Zap"
-                            className="mx-0.5 h-5 fill-build-trigger stroke-build-trigger stroke-1"
-                          />{" "}
-                          flow to validate status.
-                        </span>
-                      ) : (
-                        <div className="max-h-96 overflow-auto">
-                          {typeof validationStatus.params === "string"
-                            ? `Duration: ${validationStatus.duration}\n${validationStatus.params}`
-                                .split("\n")
-                                .map((line, index) => (
-                                  <div key={index}>{line}</div>
-                                ))
-                            : ""}
+              <ShadTooltip
+                content={
+                  buildStatus === BuildStatus.BUILDING ? (
+                    <span> {STATUS_BUILDING} </span>
+                  ) : !validationStatus ? (
+                    <span className="flex">{STATUS_BUILD}</span>
+                  ) : (
+                    <div className="max-h-100 p-2">
+                      <div>
+                        {lastRunTime && (
+                          <div className="justify-left flex font-normal text-muted-foreground">
+                            <div>{RUN_TIMESTAMP_PREFIX}</div>
+                            <div className="ml-1 text-status-blue">
+                              {lastRunTime}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="justify-left flex font-normal text-muted-foreground">
+                        <div>Duration:</div>
+                        <div className="mb-3 ml-1 text-status-blue">
+                          {validationStatus?.data.duration}
                         </div>
-                      )
-                    }
-                  >
-                    <div className="generic-node-status-position">
-                      <div
-                        className={classNames(
-                          validationStatus && validationStatus.valid
-                            ? "green-status"
-                            : "status-build-animation",
-                          "status-div"
-                        )}
-                      ></div>
-                      <div
-                        className={classNames(
-                          validationStatus && !validationStatus.valid
-                            ? "red-status"
-                            : "status-build-animation",
-                          "status-div"
-                        )}
-                      ></div>
-                      <div
-                        className={classNames(
-                          !validationStatus || isBuilding
-                            ? "yellow-status"
-                            : "status-build-animation",
-                          "status-div"
-                        )}
-                      ></div>
+                      </div>
+                      <hr />
+                      <span className="mb-2 mt-2   flex justify-center font-semibold text-muted-foreground">
+                        Output
+                      </span>
+                      <div className="max-h-96 overflow-auto font-normal custom-scroll">
+                        {validationString.split("\n").map((line, index) => (
+                          <div className="font-normal" key={index}>
+                            {line}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </Tooltip>
-                </div>
-              </div>
+                  )
+                }
+                side="bottom"
+              >
+                <Button
+                  onClick={() => {
+                    if (buildStatus === BuildStatus.BUILDING || isBuilding)
+                      return;
+                    setValidationStatus(null);
+                    buildFlow({ stopNodeId: data.id });
+                  }}
+                  variant="secondary"
+                  className={"group h-9 px-1.5"}
+                >
+                  <div>
+                    <div className="generic-node-status-position flex items-center justify-center">
+                      {renderIconStatus(buildStatus, validationStatus)}
+                    </div>
+                  </div>
+                </Button>
+              </ShadTooltip>
             )}
           </div>
         </div>
@@ -387,6 +646,7 @@ export default function GenericNode({
                   autoFocus
                   onBlur={() => {
                     setInputDescription(false);
+                    setInputName(false);
                     setNodeDescription(nodeDescription);
                     setNode(data.id, (old) => ({
                       ...old,
@@ -434,7 +694,7 @@ export default function GenericNode({
                       ? "font-light italic"
                       : ""
                   )}
-                  onDoubleClick={() => {
+                  onDoubleClick={(e) => {
                     setInputDescription(true);
                     takeSnapshot();
                   }}
@@ -449,15 +709,7 @@ export default function GenericNode({
             <>
               {Object.keys(data.node!.template)
                 .filter((templateField) => templateField.charAt(0) !== "_")
-                .sort((a, b) => {
-                  if (priorityFields.has(a.toLowerCase())) {
-                    return -1;
-                  } else if (priorityFields.has(b.toLowerCase())) {
-                    return 1;
-                  } else {
-                    return a.localeCompare(b);
-                  }
-                })
+                .sort((a, b) => sortFields(a, b, data.node?.field_order ?? []))
                 .map((templateField: string, idx) => (
                   <div key={idx}>
                     {data.node!.template[templateField].show &&
@@ -474,13 +726,31 @@ export default function GenericNode({
                         })}
                         data={data}
                         color={
-                          nodeColors[
-                            data.node?.template[templateField].type!
-                          ] ??
-                          nodeColors[
-                            types[data.node?.template[templateField].type!]
-                          ] ??
-                          nodeColors.unknown
+                          data.node?.template[templateField].input_types &&
+                          data.node?.template[templateField].input_types!
+                            .length > 0
+                            ? nodeColors[
+                                data.node?.template[templateField].input_types![
+                                  data.node?.template[templateField]
+                                    .input_types!.length - 1
+                                ]
+                              ] ??
+                              nodeColors[
+                                types[
+                                  data.node?.template[templateField]
+                                    .input_types![
+                                    data.node?.template[templateField]
+                                      .input_types!.length - 1
+                                  ]
+                                ]
+                              ]
+                            : nodeColors[
+                                data.node?.template[templateField].type!
+                              ] ??
+                              nodeColors[
+                                types[data.node?.template[templateField].type!]
+                              ] ??
+                              nodeColors.unknown
                         }
                         title={getFieldTitle(
                           data.node?.template!,
@@ -539,7 +809,7 @@ export default function GenericNode({
                   }
                   title={
                     data.node?.output_types && data.node.output_types.length > 0
-                      ? data.node.output_types.join("|")
+                      ? data.node.output_types.join(" | ")
                       : data.type
                   }
                   tooltipTitle={data.node?.base_classes.join("\n")}

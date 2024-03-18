@@ -6,6 +6,11 @@ import CardsWrapComponent from "../../../../components/cardsWrapComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
+import {
+  CONSOLE_ERROR_MSG,
+  UPLOAD_ALERT_LIST,
+  WRONG_FILE_ERROR_ALERT,
+} from "../../../../constants/alerts_constants";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { FlowType } from "../../../../types/flow";
@@ -19,10 +24,11 @@ export default function ComponentsComponent({
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const removeFlow = useFlowsManagerStore((state) => state.removeFlow);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
+  const setExamples = useFlowsManagerStore((state) => state.setExamples);
   const flows = useFlowsManagerStore((state) => state.flows);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
   const [loadingScreen, setLoadingScreen] = useState(true);
 
@@ -30,7 +36,7 @@ export default function ComponentsComponent({
 
   useEffect(() => {
     if (isLoading) return;
-    const all = flows
+    let all = flows
       .filter((f) => (f.is_component ?? false) === is_component)
       .sort((a, b) => {
         if (a?.updated_at && b?.updated_at) {
@@ -76,14 +82,14 @@ export default function ComponentsComponent({
           })
           .catch((error) => {
             setErrorData({
-              title: "Error uploading file",
+              title: CONSOLE_ERROR_MSG,
               list: [error],
             });
           });
       } else {
         setErrorData({
-          title: "Invalid file type",
-          list: ["Please upload a JSON file"],
+          title: WRONG_FILE_ERROR_ALERT,
+          list: [UPLOAD_ALERT_LIST],
         });
       }
     }
@@ -91,14 +97,8 @@ export default function ComponentsComponent({
 
   function resetFilter() {
     setPageIndex(1);
-    setPageSize(10);
+    setPageSize(20);
   }
-
-  useEffect(() => {
-    setTimeout(() => {
-      setLoadingScreen(false);
-    }, 600);
-  }, []);
 
   return (
     <CardsWrapComponent
@@ -107,7 +107,7 @@ export default function ComponentsComponent({
     >
       <div className="flex h-full w-full flex-col justify-between">
         <div className="flex w-full flex-col gap-4">
-          {!loadingScreen && data.length === 0 ? (
+          {!isLoading && data.length === 0 ? (
             <div className="mt-6 flex w-full items-center justify-center text-center">
               <div className="flex-max-width h-full flex-col">
                 <div className="flex w-full flex-col gap-4">
@@ -136,7 +136,7 @@ export default function ComponentsComponent({
             </div>
           ) : (
             <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
-              {loadingScreen === false && data?.length > 0 ? (
+              {isLoading === false && data?.length > 0 ? (
                 data?.map((item, idx) => (
                   <CollectionCardComponent
                     onDelete={() => {
@@ -185,7 +185,7 @@ export default function ComponentsComponent({
             </div>
           )}
         </div>
-        {!loadingScreen && data.length > 0 && (
+        {!isLoading && data.length > 0 && (
           <div className="relative py-6">
             <PaginatorComponent
               storeComponent={true}

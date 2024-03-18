@@ -1,7 +1,9 @@
-from langflow import CustomComponent
+from typing import Optional
+
 from langchain.chains import ConversationChain
-from typing import Optional, Union, Callable
-from langflow.field_typing import BaseLanguageModel, BaseMemory, Chain
+
+from langflow import CustomComponent
+from langflow.field_typing import BaseLanguageModel, BaseMemory, Text
 
 
 class ConversationChainComponent(CustomComponent):
@@ -21,9 +23,21 @@ class ConversationChainComponent(CustomComponent):
 
     def build(
         self,
+        input_value: Text,
         llm: BaseLanguageModel,
         memory: Optional[BaseMemory] = None,
-    ) -> Union[Chain, Callable]:
+    ) -> Text:
         if memory is None:
-            return ConversationChain(llm=llm)
-        return ConversationChain(llm=llm, memory=memory)
+            chain = ConversationChain(llm=llm)
+        else:
+            chain = ConversationChain(llm=llm, memory=memory)
+        result = chain.invoke({"input": input_value})
+        if isinstance(result, dict):
+            result = result.get(chain.output_key, "")  # type: ignore
+
+        elif isinstance(result, str):
+            result = result
+        else:
+            result = result.get("response")
+        self.status = result
+        return str(result)

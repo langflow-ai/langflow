@@ -5,6 +5,7 @@ Revises:
 Create Date: 2023-08-27 19:49:02.681355
 
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa
@@ -33,7 +34,9 @@ def upgrade() -> None:
         if "ix_flowstyle_flow_id" in [
             index["name"] for index in inspector.get_indexes("flowstyle")
         ]:
-            op.drop_index("ix_flowstyle_flow_id", table_name="flowstyle")
+            op.drop_index(
+                "ix_flowstyle_flow_id", table_name="flowstyle", if_exists=True
+            )
 
     existing_indices_flow = []
     existing_fks_flow = []
@@ -80,8 +83,7 @@ def upgrade() -> None:
             sa.Column("api_key", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("user_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
             sa.ForeignKeyConstraint(
-                ["user_id"],
-                ["user.id"],
+                ["user_id"], ["user.id"], name="fk_apikey_user_id_user"
             ),
             sa.PrimaryKeyConstraint("id", name="pk_apikey"),
             sa.UniqueConstraint("id", name="uq_apikey_id"),
@@ -103,8 +105,7 @@ def upgrade() -> None:
             sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
             sa.Column("user_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
             sa.ForeignKeyConstraint(
-                ["user_id"],
-                ["user.id"],
+                ["user_id"], ["user.id"], name="fk_flow_user_id_user"
             ),
             sa.PrimaryKeyConstraint("id", name="pk_flow"),
             sa.UniqueConstraint("id", name="uq_flow_id"),
@@ -151,21 +152,21 @@ def downgrade() -> None:
     existing_tables = inspector.get_table_names()
     if "flow" in existing_tables:
         with op.batch_alter_table("flow", schema=None) as batch_op:
-            batch_op.drop_index(batch_op.f("ix_flow_user_id"))
-            batch_op.drop_index(batch_op.f("ix_flow_name"))
-            batch_op.drop_index(batch_op.f("ix_flow_description"))
+            batch_op.drop_index(batch_op.f("ix_flow_user_id"), if_exists=True)
+            batch_op.drop_index(batch_op.f("ix_flow_name"), if_exists=True)
+            batch_op.drop_index(batch_op.f("ix_flow_description"), if_exists=True)
 
         op.drop_table("flow")
     if "apikey" in existing_tables:
         with op.batch_alter_table("apikey", schema=None) as batch_op:
-            batch_op.drop_index(batch_op.f("ix_apikey_user_id"))
-            batch_op.drop_index(batch_op.f("ix_apikey_name"))
-            batch_op.drop_index(batch_op.f("ix_apikey_api_key"))
+            batch_op.drop_index(batch_op.f("ix_apikey_user_id"), if_exists=True)
+            batch_op.drop_index(batch_op.f("ix_apikey_name"), if_exists=True)
+            batch_op.drop_index(batch_op.f("ix_apikey_api_key"), if_exists=True)
 
         op.drop_table("apikey")
     if "user" in existing_tables:
         with op.batch_alter_table("user", schema=None) as batch_op:
-            batch_op.drop_index(batch_op.f("ix_user_username"))
+            batch_op.drop_index(batch_op.f("ix_user_username"), if_exists=True)
 
         op.drop_table("user")
 

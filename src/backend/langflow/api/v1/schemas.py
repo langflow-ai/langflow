@@ -1,13 +1,24 @@
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    RootModel,
+    field_validator,
+    model_serializer,
+)
+
+from langflow.graph.schema import RunOutputs
+from langflow.schema import dotdict
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
-from pydantic import BaseModel, Field, field_validator
 
 
 class BuildStatus(Enum):
@@ -17,26 +28,6 @@ class BuildStatus(Enum):
     FAILURE = "failure"
     STARTED = "started"
     IN_PROGRESS = "in_progress"
-
-
-class GraphData(BaseModel):
-    """Data inside the exported flow."""
-
-    nodes: List[Dict[str, Any]]
-    edges: List[Dict[str, Any]]
-
-
-class ExportedFlow(BaseModel):
-    """Exported flow from Langflow."""
-
-    description: str
-    name: str
-    id: str
-    data: GraphData
-
-
-class InputRequest(BaseModel):
-    input: dict
 
 
 class TweaksRequest(BaseModel):
@@ -64,6 +55,26 @@ class ProcessResponse(BaseModel):
     backend: Optional[str] = None
 
 
+class RunResponse(BaseModel):
+    """Run response schema."""
+
+    outputs: Optional[List[RunOutputs]] = []
+    session_id: Optional[str] = None
+
+    @model_serializer(mode="wrap")
+    def serialize(self, handler):
+        # Serialize all the outputs if they are base models
+        if self.outputs:
+            serialized_outputs = []
+            for output in self.outputs:
+                if isinstance(output, BaseModel):
+                    serialized_outputs.append(output.model_dump(exclude_none=True))
+                else:
+                    serialized_outputs.append(output)
+            self.outputs = serialized_outputs
+        return handler(self)
+
+
 class PreloadResponse(BaseModel):
     """Preload response schema."""
 
@@ -71,9 +82,6 @@ class PreloadResponse(BaseModel):
     is_clear: Optional[bool] = None
 
 
-# TaskStatusResponse(
-#         status=task.status, result=task.result if task.ready() else None
-#     )
 class TaskStatusResponse(BaseModel):
     """Task status response schema."""
 
@@ -162,10 +170,19 @@ class StreamData(BaseModel):
         return f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
 
 
-class CustomComponentCode(BaseModel):
+class CustomComponentRequest(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     code: str
-    field: Optional[str] = None
     frontend_node: Optional[dict] = None
+
+
+class UpdateCustomComponentRequest(CustomComponentRequest):
+    field: str
+    field_value: Optional[Union[str, int, float, bool, dict, list]] = None
+    template: dict
+
+    def get_template(self):
+        return dotdict(self.template)
 
 
 class CustomComponentResponseError(BaseModel):
@@ -212,3 +229,81 @@ class Token(BaseModel):
 
 class ApiKeyCreateRequest(BaseModel):
     api_key: str
+
+
+class VerticesOrderResponse(BaseModel):
+    ids: List[str]
+    run_id: UUID
+
+
+class ResultDataResponse(BaseModel):
+    results: Optional[Any] = Field(default_factory=dict)
+    artifacts: Optional[Any] = Field(default_factory=dict)
+    timedelta: Optional[float] = None
+    duration: Optional[str] = None
+
+
+class VertexBuildResponse(BaseModel):
+    id: Optional[str] = None
+    inactivated_vertices: Optional[List[str]] = None
+    next_vertices_ids: Optional[List[str]] = None
+    valid: bool
+    params: Optional[Any] = Field(default_factory=dict)
+    """JSON string of the params."""
+    data: ResultDataResponse
+    """Mapping of vertex ids to result dict containing the param name and result value."""
+    timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    """Timestamp of the build."""
+
+
+class VerticesBuiltResponse(BaseModel):
+    vertices: List[VertexBuildResponse]
+
+
+class InputValueRequest(BaseModel):
+    components: Optional[List[str]] = []
+    input_value: Optional[str] = None
+
+    # add an example
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "components": ["components_id", "Component Name"],
+                    "input_value": "input_value",
+                },
+                {"components": ["Component Name"], "input_value": "input_value"},
+                {"input_value": "input_value"},
+            ]
+        }
+    }
+
+
+class Tweaks(RootModel):
+    root: dict[str, Union[str, dict[str, str]]] = Field(
+        description="A dictionary of tweaks to adjust the flow's execution. Allows customizing flow behavior dynamically. All tweaks are overridden by the input values.",
+    )
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "parameter_name": "value",
+                    "Component Name": {"parameter_name": "value"},
+                    "component_id": {"parameter_name": "value"},
+                }
+            ]
+        }
+    }
+
+    # This should behave like a dict
+    def __getitem__(self, key):
+        return self.root[key]
+
+    def __setitem__(self, key, value):
+        self.root[key] = value
+
+    def __delitem__(self, key):
+        del self.root[key]
+
+    def items(self):
+        return self.root.items()

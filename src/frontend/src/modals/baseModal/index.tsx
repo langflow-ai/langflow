@@ -21,7 +21,7 @@ type TriggerProps = {
 };
 
 const Content: React.FC<ContentProps> = ({ children }) => {
-  return <div className="h-full w-full">{children}</div>;
+  return <div className="flex h-full w-full flex-col">{children}</div>;
 };
 const Trigger: React.FC<TriggerProps> = ({ children, asChild, disable }) => {
   return (
@@ -66,6 +66,8 @@ interface BaseModalProps {
     | "small"
     | "medium"
     | "large"
+    | "three-cards"
+    | "large-thin"
     | "large-h-full"
     | "small-h-full"
     | "medium-h-full"
@@ -125,7 +127,15 @@ function BaseModal({
       minWidth = "min-w-[60vw]";
       break;
     case "large":
-      minWidth = "min-w-[80vw]";
+      minWidth = "min-w-[85vw]";
+      height = "h-[80vh]";
+      break;
+    case "three-cards":
+      minWidth = "min-w-[1066px]";
+      height = "h-[80vh]";
+      break;
+    case "large-thin":
+      minWidth = "min-w-[65vw]";
       height = "h-[80vh]";
       break;
     case "large-h-full":

@@ -2,10 +2,10 @@ from typing import TYPE_CHECKING, List, Union
 
 from langchain.agents.agent import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
-from langflow.api.v1.callback import AsyncStreamingLLMCallbackHandler, StreamingLLMCallbackHandler
+from loguru import logger
+
 from langflow.processing.process import fix_memory_inputs, format_actions
 from langflow.services.deps import get_plugins_service
-from loguru import logger
 
 if TYPE_CHECKING:
     from langfuse.callback import CallbackHandler  # type: ignore
@@ -14,11 +14,6 @@ if TYPE_CHECKING:
 def setup_callbacks(sync, trace_id, **kwargs):
     """Setup callbacks for langchain object"""
     callbacks = []
-    if sync:
-        callbacks.append(StreamingLLMCallbackHandler(**kwargs))
-    else:
-        callbacks.append(AsyncStreamingLLMCallbackHandler(**kwargs))
-
     plugin_service = get_plugins_service()
     plugin_callbacks = plugin_service.get_callbacks(_id=trace_id)
     if plugin_callbacks:
@@ -28,13 +23,12 @@ def setup_callbacks(sync, trace_id, **kwargs):
 
 def get_langfuse_callback(trace_id):
     from langflow.services.deps import get_plugins_service
-    from langfuse.callback import CreateTrace
 
     logger.debug("Initializing langfuse callback")
     if langfuse := get_plugins_service().get("langfuse"):
         logger.debug("Langfuse credentials found")
         try:
-            trace = langfuse.trace(CreateTrace(name="langflow-" + trace_id, id=trace_id))
+            trace = langfuse.trace(name="langflow-" + trace_id, id=trace_id)
             return trace.getNewHandler()
         except Exception as exc:
             logger.error(f"Error initializing langfuse callback: {exc}")
@@ -70,14 +64,13 @@ async def get_result_and_steps(langchain_object, inputs: Union[dict, str], **kwa
         except Exception as exc:
             logger.error(f"Error fixing memory inputs: {exc}")
 
+        trace_id = kwargs.pop("session_id", None)
         try:
-            trace_id = kwargs.pop("session_id", None)
             callbacks = setup_callbacks(sync=False, trace_id=trace_id, **kwargs)
             output = await langchain_object.acall(inputs, callbacks=callbacks)
         except Exception as exc:
             # make the error message more informative
             logger.debug(f"Error: {str(exc)}")
-            trace_id = kwargs.pop("session_id", None)
             callbacks = setup_callbacks(sync=True, trace_id=trace_id, **kwargs)
             output = langchain_object(inputs, callbacks=callbacks)
 

@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Union
+from typing import Callable, Dict, Text, Union
 
 from langchain.agents.agent import AgentExecutor
 from langchain.chains.base import Chain
@@ -30,6 +30,10 @@ class Prompt:
     pass
 
 
+class Code:
+    pass
+
+
 LANGCHAIN_BASE_TYPES = {
     "Chain": Chain,
     "AgentExecutor": AgentExecutor,
@@ -54,6 +58,7 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
     **LANGCHAIN_BASE_TYPES,
     "NestedDict": NestedDict,
     "Data": Data,
+    "Text": Text,
     "Object": Object,
     "Callable": Callable,
     "Prompt": Prompt,

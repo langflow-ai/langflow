@@ -12,7 +12,7 @@
 
 ## 🐦 Stay tunned for **Langflow** on Twitter
 
-Follow [@logspace_ai](https://twitter.com/logspace_ai) on **Twitter** to get the latest news about **Langflow**.
+Follow [@langflow_ai](https://twitter.com/langflow_ai) on **Twitter** to get the latest news about **Langflow**.
 
 ---
 ## ⭐️ Star **Langflow** on GitHub

@@ -1,9 +1,17 @@
-from . import factory, service
-from langflow.services.cache.service import InMemoryCache
+from langflow.services.cache.service import (
+    AsyncInMemoryCache,
+    BaseCacheService,
+    RedisCache,
+    ThreadingInMemoryCache,
+)
 
+from . import factory, service
 
 __all__ = [
     "factory",
     "service",
-    "InMemoryCache",
+    "ThreadingInMemoryCache",
+    "AsyncInMemoryCache",
+    "BaseCacheService",
+    "RedisCache",
 ]

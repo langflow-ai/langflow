@@ -20,7 +20,17 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
-import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
+import {
+  CHAT_ERROR_ALERT,
+  INFO_MISSING_ALERT,
+  MSG_ERROR_ALERT,
+} from "../../constants/alerts_constants";
+import {
+  CHAT_FIRST_INITIAL_TEXT,
+  CHAT_FORM_DIALOG_SUBTITLE,
+  CHAT_SECOND_INITIAL_TEXT,
+  LANGFLOW_CHAT_TITLE,
+} from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { getBuildStatus } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
@@ -169,7 +179,7 @@ export default function FormModal({
             connectWS();
           } else {
             setErrorData({
-              title: "Please build the flow again before using the chat.",
+              title: CHAT_ERROR_ALERT,
             });
           }
         })
@@ -205,7 +215,6 @@ export default function FormModal({
     if (Array.isArray(data) && data.length > 0) {
       //set chat history
       setChatHistory((_) => {
-        console.log(data);
         let newChatHistory: ChatMessageType[] = [];
         for (let i = 0; i < data.length; i++) {
           if (data[i].type === "prompt" && data[i].prompt) {
@@ -357,7 +366,7 @@ export default function FormModal({
       }
     } catch (error) {
       setErrorData({
-        title: "There was an error sending the message",
+        title: MSG_ERROR_ALERT,
         list: [(error as { message: string }).message],
       });
       setChatValue(data.inputs);
@@ -402,7 +411,7 @@ export default function FormModal({
       }
     } else {
       setErrorData({
-        title: "Oops! Looks like you missed some required information:",
+        title: INFO_MISSING_ALERT,
         list: nodeValidationErrors,
       });
     }
@@ -440,7 +449,7 @@ export default function FormModal({
             <DialogDescription>{CHAT_FORM_DIALOG_SUBTITLE}</DialogDescription>
           </DialogHeader>
 
-          <div className="form-modal-iv-box ">
+          <div className="flex-max-width mt-2 h-[80vh]">
             <div className="form-modal-iv-size">
               <div className="file-component-arrangement">
                 <IconComponent
@@ -577,6 +586,7 @@ export default function FormModal({
                           chatHistory.length - 1 === index ? true : false
                         }
                         key={index}
+                        updateChat={() => {}}
                       />
                     ))
                   ) : (
@@ -584,20 +594,20 @@ export default function FormModal({
                       <span>
                         👋{" "}
                         <span className="langflow-chat-span">
-                          Langflow Chat
+                          {LANGFLOW_CHAT_TITLE}
                         </span>
                       </span>
                       <br />
                       <div className="langflow-chat-desc">
                         <span className="langflow-chat-desc-span">
-                          Start a conversation and click the agent's thoughts{" "}
+                          {CHAT_FIRST_INITIAL_TEXT}{" "}
                           <span>
                             <IconComponent
                               name="MessageSquare"
                               className="mx-1 inline h-5 w-5 animate-bounce "
                             />
                           </span>{" "}
-                          to inspect the chaining process.
+                          {CHAT_SECOND_INITIAL_TEXT}
                         </span>
                       </div>
                     </div>

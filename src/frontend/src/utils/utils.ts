@@ -1,5 +1,6 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { priorityFields } from "../constants/constants";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
 import {
   APIDataType,
@@ -13,7 +14,7 @@ import {
   tweakType,
 } from "../types/components";
 import { FlowType, NodeType } from "../types/flow";
-import { FlowState, FlowsState } from "../types/tabs";
+import { FlowState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
 
 export function classNames(...classes: Array<string>): string {
@@ -58,11 +59,15 @@ export function normalCaseToSnakeCase(str: string): string {
     .join("_");
 }
 
-export function toTitleCase(str: string | undefined): string {
+export function toTitleCase(
+  str: string | undefined,
+  isNodeField?: boolean
+): string {
   if (!str) return "";
   let result = str
     .split("_")
     .map((word, index) => {
+      if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
           word[0].toUpperCase() + word.slice(1).toLowerCase()
@@ -75,6 +80,7 @@ export function toTitleCase(str: string | undefined): string {
   return result
     .split("-")
     .map((word, index) => {
+      if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
           word[0].toUpperCase() + word.slice(1).toLowerCase()
@@ -119,15 +125,7 @@ export function groupByFamily(
     display_name?: string;
   }> = [];
   let checkedNodes = new Map();
-  const excludeTypes = new Set([
-    "str",
-    "bool",
-    "float",
-    "code",
-    "prompt",
-    "file",
-    "int",
-  ]);
+  const excludeTypes = new Set(["bool", "float", "code", "file", "int"]);
 
   const checkBaseClass = (template: TemplateVariableType) => {
     return (
@@ -136,17 +134,20 @@ export function groupByFamily(
       ((!excludeTypes.has(template.type) &&
         baseClassesSet.has(template.type)) ||
         (template.input_types &&
-          template.input_types.some((inputType) => {
-            baseClassesSet.has(inputType);
-          })))
+          template.input_types.some((inputType) =>
+            baseClassesSet.has(inputType)
+          )))
     );
   };
 
   if (flow) {
+    // se existir o flow
     for (const node of flow) {
+      // para cada node do flow
+      if (node!.data!.node!.flow || !node!.data!.node!.template) break; // não faz nada se o node for um group
       const nodeData = node.data;
 
-      const foundNode = checkedNodes.get(nodeData.type);
+      const foundNode = checkedNodes.get(nodeData.type); // verifica se o tipo do node já foi checado
       checkedNodes.set(nodeData.type, {
         hasBaseClassInTemplate:
           foundNode?.hasBaseClassInTemplate ||
@@ -155,7 +156,7 @@ export function groupByFamily(
           foundNode?.hasBaseClassInBaseClasses ||
           nodeData.node!.base_classes.some((baseClass) =>
             baseClassesSet.has(baseClass)
-          ),
+          ), //seta como anterior ou verifica se o node tem base class
         displayName: nodeData.node?.display_name,
       });
     }
@@ -217,12 +218,8 @@ export function groupByFamily(
       }));
 }
 
-export function buildInputs(flowState?: FlowState): string {
-  return flowState &&
-    flowState.input_keys &&
-    Object.keys(flowState.input_keys!).length > 0
-    ? JSON.stringify(flowState.input_keys)
-    : '{"input": "message"}';
+export function buildInputs(): string {
+  return '{"input_value": "message"}';
 }
 
 export function getRandomElement<T>(array: T[]): T {
@@ -323,7 +320,7 @@ export function getPythonApiCode(
   //   node.data.id
   // }
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(flowState);
+  const inputs = buildInputs();
   return `import requests
 from typing import Optional
 
@@ -382,20 +379,41 @@ export function getCurlCode(
 ): string {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(flowState);
+  const inputs = buildInputs();
+
+  const arrayOfOutputs = getOutputIds(flow);
 
   return `curl -X POST \\
-  ${window.location.protocol}//${
-    window.location.host
-  }/api/v1/process/${flowId} \\
+  ${window.location.protocol}//${window.location.host}/api/v1/run/${flowId} \\
   -H 'Content-Type: application/json'\\${
     !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
   }
-  -d '{"inputs": ${inputs}, "tweaks": ${
+  -d '{"inputs": [${inputs}],
+  "outputs": [${arrayOfOutputs}], 
+  "stream": false,
+  "tweaks": ${
     tweak && tweak.length > 0
       ? buildTweakObject(tweak)
       : JSON.stringify(tweaks, null, 2)
-  }}'`;
+  }}'
+  `;
+}
+
+export function getOutputIds(flow) {
+  const nodes = flow.data!.nodes;
+
+  const arrayOfOutputs = nodes.reduce((acc: string[], node) => {
+    if (node.data.type.toLowerCase().includes("output")) {
+      acc.push(node.id);
+    }
+    return acc;
+  }, []);
+
+  const arrayOfOutputsJoin = arrayOfOutputs
+    .map((output) => `"${output}"`)
+    .join(", ");
+
+  return arrayOfOutputsJoin;
 }
 
 /**
@@ -410,7 +428,7 @@ export function getPythonCode(
 ): string {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(flowState);
+  const inputs = buildInputs();
   return `from langflow import load_flow_from_json
 TWEAKS = ${
     tweak && tweak.length > 0
@@ -435,7 +453,7 @@ export function getWidgetCode(
 ): string {
   const flowId = flow.id;
   const flowName = flow.name;
-  const inputs = buildInputs(flowState);
+  const inputs = buildInputs();
   let chat_input_field = getChatInputField(flow, flowState);
 
   return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
@@ -592,6 +610,11 @@ export function removeCountFromString(input: string): string {
   return result.trim(); // Trim any leading/trailing spaces
 }
 
+export function extractTypeFromLongId(id: string): string {
+  let [newId, _] = id.split("-");
+  return newId;
+}
+
 export function createRandomKey(key: string, uid: string): string {
   return removeCountFromString(key) + ` (${uid})`;
 }
@@ -641,7 +664,44 @@ export function getFieldTitle(
 ): string {
   return template[templateField].display_name
     ? template[templateField].display_name!
-    : template[templateField].name
-    ? toTitleCase(template[templateField].name!)
-    : toTitleCase(templateField);
+    : template[templateField].name ?? templateField;
+}
+
+export function sortFields(a, b, fieldOrder) {
+  // Early return for empty fields
+  if (!a && !b) return 0;
+  if (!a) return 1;
+  if (!b) return -1;
+
+  // Normalize the case to ensure case-insensitive comparison
+  const normalizedFieldA = a.toLowerCase();
+  const normalizedFieldB = b.toLowerCase();
+
+  const aIsPriority = priorityFields.has(normalizedFieldA);
+  const bIsPriority = priorityFields.has(normalizedFieldB);
+
+  // Sort by priority
+  if (aIsPriority && !bIsPriority) return -1;
+  if (!aIsPriority && bIsPriority) return 1;
+
+  // Check if either field is in the fieldOrder array
+  const indexOfA = fieldOrder.indexOf(normalizedFieldA);
+  const indexOfB = fieldOrder.indexOf(normalizedFieldB);
+
+  // If both fields are in fieldOrder, sort by their order in the array
+  if (indexOfA !== -1 && indexOfB !== -1) {
+    return indexOfA - indexOfB;
+  }
+
+  // If only one of the fields is in fieldOrder, that field comes first
+  if (indexOfA !== -1) {
+    return -1;
+  }
+  if (indexOfB !== -1) {
+    return 1;
+  }
+
+  // Default case for fields not in priorityFields and not found in fieldOrder
+  // You might want to sort them alphabetically or in another specific manner
+  return a.localeCompare(b);
 }

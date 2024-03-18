@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Union
+from typing import Optional
 
 from langchain.chains import LLMChain
 
@@ -7,7 +7,7 @@ from langflow.field_typing import (
     BaseLanguageModel,
     BaseMemory,
     BasePromptTemplate,
-    Chain,
+    Text,
 )
 
 
@@ -28,5 +28,10 @@ class LLMChainComponent(CustomComponent):
         prompt: BasePromptTemplate,
         llm: BaseLanguageModel,
         memory: Optional[BaseMemory] = None,
-    ) -> Union[Chain, Callable, LLMChain]:
-        return LLMChain(prompt=prompt, llm=llm, memory=memory)
+    ) -> Text:
+        runnable = LLMChain(prompt=prompt, llm=llm, memory=memory)
+        result_dict = runnable.invoke({})
+        output_key = runnable.output_key
+        result = result_dict[output_key]
+        self.status = result
+        return result

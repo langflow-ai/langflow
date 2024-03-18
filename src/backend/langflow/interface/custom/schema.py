@@ -27,3 +27,12 @@ class CallableCodeDetails(BaseModel):
     body: list
     return_type: Optional[Any] = None
     has_return: bool = False
+
+
+class MissingDefault:
+    """
+    A class to represent a missing default value.
+    """
+
+    def __repr__(self):
+        return "MISSING"

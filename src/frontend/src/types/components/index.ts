@@ -1,4 +1,4 @@
-import { ReactElement, ReactNode } from "react";
+import { ReactElement, ReactNode, SetStateAction } from "react";
 import { ReactFlowJsonObject, XYPosition } from "reactflow";
 import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
 import { ChatMessageType } from "../chat";
@@ -28,8 +28,11 @@ export type ToggleComponentType = {
   disabled: boolean | undefined;
   size: "small" | "medium" | "large";
   id?: string;
+  editNode?: boolean;
 };
 export type DropDownComponentType = {
+  disabled?: boolean;
+  isLoading?: boolean;
   value: string;
   options: string[];
   onSelect: (value: string) => void;
@@ -69,6 +72,7 @@ export type KeyPairListComponentType = {
   editNode?: boolean;
   duplicateKey?: boolean;
   editNodeModal?: boolean;
+  isList?: boolean;
 };
 
 export type DictComponentType = {
@@ -104,6 +108,7 @@ export type PromptAreaComponentType = {
 };
 
 export type CodeAreaComponentType = {
+  setOpenModal?: (bool: boolean) => void;
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
@@ -113,9 +118,12 @@ export type CodeAreaComponentType = {
   dynamic?: boolean;
   id?: string;
   readonly?: boolean;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
 };
 
 export type FileComponentType = {
+  IOInputProps?;
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
@@ -445,7 +453,7 @@ export type chatInputType = {
   };
   lockChat: boolean;
   noInput: boolean;
-  sendMessage: () => void;
+  sendMessage: (count?: number) => void;
   setChatValue: (value: string) => void;
 };
 
@@ -480,6 +488,17 @@ export type nodeToolbarPropsType = {
   setShowNode: (boolean: any) => void;
   numberOfHandles: number;
   showNode: boolean;
+  name?: string;
+  openAdvancedModal?: boolean;
+  onCloseAdvancedModal?: (close: boolean) => void;
+  selected: boolean;
+  updateNodeCode?: (
+    newNodeClass: APIClassType,
+    code: string,
+    name: string
+  ) => void;
+  setShowState: (show: boolean | SetStateAction<boolean>) => void;
+  isOutdated?: boolean;
 };
 
 export type parsedDataType = {
@@ -507,18 +526,27 @@ export type modalHeaderType = {
 
 export type codeAreaModalPropsType = {
   setValue: (value: string) => void;
+  setOpenModal?: (bool: boolean) => void;
   value: string;
   nodeClass: APIClassType | undefined;
   setNodeClass: (Class: APIClassType, code?: string) => void | undefined;
   children: ReactNode;
   dynamic?: boolean;
   readonly?: boolean;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
 };
 
 export type chatMessagePropsType = {
   chat: ChatMessageType;
   lockChat: boolean;
   lastMessage: boolean;
+  setLockChat: (lock: boolean) => void;
+  updateChat: (
+    chat: ChatMessageType,
+    message: string,
+    stream_url?: string
+  ) => void;
 };
 
 export type formModalPropsType = {
@@ -620,10 +648,11 @@ export type crashComponentPropsType = {
 
 export type validationStatusType = {
   id: string;
+  data: object | any;
   params: string;
-  progress: number;
+  progress?: number;
   valid: boolean;
-  duration: string;
+  duration?: string;
 };
 
 export type ApiKey = {
@@ -643,4 +672,37 @@ export type dropdownButtonPropsType = {
   firstButtonName: string;
   onFirstBtnClick: () => void;
   options: Array<{ name: string; onBtnClick: () => void }>;
+};
+
+export type IOInputProps = {
+  inputType: string;
+  inputId: string;
+  left?: boolean;
+};
+export type IOOutputProps = {
+  outputType: string;
+  outputId: string;
+  left?: boolean;
+};
+
+export type IOFileInputProps = {
+  field: TemplateVariableType;
+  updateValue: (e: any, type: string) => void;
+};
+
+export type toolbarSelectItemProps = {
+  isMac: boolean;
+  shift: boolean;
+  keyboardKey: string;
+  value: string;
+  icon: string;
+  styleObj?: {
+    iconClasses?: string;
+    commandClasses?: string;
+    shiftClasses?: string;
+    ctrlClasses?: string;
+    keyClasses?: string;
+    valueClasses?: string;
+  };
+  dataTestId: string;
 };

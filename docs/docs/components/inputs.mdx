@@ -1,0 +1,39 @@
+import Admonition from '@theme/Admonition';
+
+# Inputs
+
+### ChatInput
+
+This component is designed to get user input from the chat.
+
+**Params**
+
+- **Sender Type:** specifies the sender type. Defaults to _`"User"`_. Options are _`"Machine"`_ and _`"User"`_.
+
+- **Sender Name:** specifies the name of the sender. Defaults to _`"User"`_.
+
+- **Message:** specifies the message text. It is a multiline text input.
+
+- **Session ID:** specifies the session ID of the chat history. If provided, the message will be saved in the Message History.
+
+<Admonition type="note" title="Note">
+    <p>
+        If _`As Record`_ is _`true`_ and the _`Message`_ is a _`Record`_, the data of the _`Record`_ will be updated with the _`Sender`_, _`Sender Name`_, and _`Session ID`_.
+    </p>
+</Admonition>
+
+### TextInput
+
+This component is designed for simple text input, allowing users to pass textual data to subsequent components in the workflow. It's particularly useful for scenarios where a brief user input is required to initiate or influence the flow.
+
+
+**Params**
+
+- **Value:** Specifies the text input value. This is where the user can input the text data that will be passed to the next component in the sequence. If no value is provided, it defaults to an empty string.
+
+<Admonition type="note" title="Note">
+    <p>
+        The `TextInput` component serves as a straightforward means for setting Text input values in the chat window. It ensures that textual data can be seamlessly passed to subsequent components in the flow.
+    </p>
+</Admonition>
+

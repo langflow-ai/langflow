@@ -1,7 +1,12 @@
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from loguru import logger
 from pydantic import BaseModel, Field
+
+from langflow.graph.edge.utils import build_clean_params
+from langflow.graph.schema import INPUT_FIELD_NAME
+from langflow.services.deps import get_monitor_service
+from langflow.services.monitor.utils import log_message
 
 if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
@@ -93,5 +98,81 @@ class Edge:
     def __hash__(self) -> int:
         return hash(self.__repr__())
 
-    def __eq__(self, __value: object) -> bool:
-        return self.__repr__() == __value.__repr__() if isinstance(__value, Edge) else False
+    def __eq__(self, __o: object) -> bool:
+        if not isinstance(__o, Edge):
+            return False
+        return self._source_handle == __o._source_handle and self._target_handle == __o._target_handle
+
+
+class ContractEdge(Edge):
+    def __init__(self, source: "Vertex", target: "Vertex", raw_edge: dict):
+        super().__init__(source, target, raw_edge)
+        self.is_fulfilled = False  # Whether the contract has been fulfilled.
+        self.result: Any = None
+
+    async def honor(self, source: "Vertex", target: "Vertex") -> None:
+        """
+        Fulfills the contract by setting the result of the source vertex to the target vertex's parameter.
+        If the edge is runnable, the source vertex is run with the message text and the target vertex's
+        root_field param is set to the
+        result. If the edge is not runnable, the target vertex's parameter is set to the result.
+        :param message: The message object to be processed if the edge is runnable.
+        """
+        if self.is_fulfilled:
+            return
+
+        if not source._built:
+            # The system should be read-only, so we should not be building vertices
+            # that are not already built.
+            raise ValueError(f"Source vertex {source.id} is not built.")
+
+        if self.matched_type == "Text":
+            self.result = source._built_result
+        else:
+            self.result = source._built_object
+
+        target.params[self.target_param] = self.result
+        self.is_fulfilled = True
+
+    async def get_result_from_source(self, source: "Vertex", target: "Vertex"):
+        # Fulfill the contract if it has not been fulfilled.
+        if not self.is_fulfilled:
+            await self.honor(source, target)
+
+        log_transaction(self, source, target, "success")
+        # If the target vertex is a power component we log messages
+        if target.vertex_type == "ChatOutput" and (
+            isinstance(target.params.get(INPUT_FIELD_NAME), str)
+            or isinstance(target.params.get(INPUT_FIELD_NAME), dict)
+        ):
+            if target.params.get("message") == "":
+                return self.result
+            await log_message(
+                sender=target.params.get("sender", ""),
+                sender_name=target.params.get("sender_name", ""),
+                message=target.params.get(INPUT_FIELD_NAME, {}),
+                session_id=target.params.get("session_id", ""),
+                artifacts=target.artifacts,
+            )
+        return self.result
+
+    def __repr__(self) -> str:
+        return f"{self.source_id} -[{self.target_param}]-> {self.target_id}"
+
+
+def log_transaction(edge: ContractEdge, source: "Vertex", target: "Vertex", status, error=None):
+    try:
+        monitor_service = get_monitor_service()
+        clean_params = build_clean_params(target)
+        data = {
+            "source": source.vertex_type,
+            "target": target.vertex_type,
+            "target_args": clean_params,
+            "timestamp": monitor_service.get_timestamp(),
+            "status": status,
+            "error": error,
+        }
+        monitor_service.add_row(table_name="transactions", data=data)
+    except Exception as e:
+        logger.error(f"Error logging transaction: {e}")
+        logger.error(f"Error logging transaction: {e}")

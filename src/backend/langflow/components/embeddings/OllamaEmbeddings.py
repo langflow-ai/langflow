@@ -13,7 +13,6 @@ class OllamaEmbeddingsComponent(CustomComponent):
     display_name: str = "Ollama Embeddings"
     description: str = "Embeddings model from Ollama."
     documentation = "https://python.langchain.com/docs/integrations/text_embedding/ollama"
-    beta = True
 
     def build_config(self):
         return {
