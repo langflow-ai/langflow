@@ -2,14 +2,17 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
-
 from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.credential import Credential, CredentialCreate, CredentialRead, CredentialUpdate
-from langflow.services.database.models.user.model import User
+from langflow.services.database.models.credential import (
+    Credential,
+    CredentialCreate,
+    CredentialRead,
+    CredentialUpdate,
+)
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
+from sqlmodel import Session, select
 
 router = APIRouter(prefix="/credentials", tags=["Credentials"])
 
@@ -26,7 +29,10 @@ def create_credential(
     try:
         # check if credential name already exists
         credential_exists = session.exec(
-            select(Credential).where(Credential.name == credential.name, Credential.user_id == current_user.id)
+            select(Credential).where(
+                Credential.name == credential.name,
+                Credential.user_id == current_user.id,
+            )
         ).first()
         if credential_exists:
             raise HTTPException(status_code=400, detail="Credential name already exists")
@@ -105,7 +111,6 @@ def delete_credential(
         ).first()
         if not db_credential:
             raise HTTPException(status_code=404, detail="Credential not found")
-
         session.delete(db_credential)
         session.commit()
         return db_credential
