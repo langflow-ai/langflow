@@ -694,6 +694,7 @@ export const OUTPUT_TYPES = new Set([
   "ChatOutput",
   "TextOutput",
   "PDFOutput",
+  "ImageOutput",
   "CSVOutput",
 ]);
 

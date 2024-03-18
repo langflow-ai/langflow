@@ -3,6 +3,8 @@ import { IOOutputProps } from "../../types/components";
 import CsvOutputComponent from "../csvOutputComponent";
 import PdfViewer from "../pdfViewer";
 import { Textarea } from "../ui/textarea";
+import ImageViewer from "../ImageViewer";
+
 
 export default function IOOutputView({
   outputType,
@@ -59,7 +61,17 @@ export default function IOOutputView({
             />
           </>
         );
-
+      case "ImageOutput":
+        return (
+          left ? (
+            <div>Expand the view to see the image</div>
+          ) : (
+            <ImageViewer image={
+              (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
+                  ?.params ?? ""
+            } />
+          )
+        ) 
       default:
         return (
           <Textarea

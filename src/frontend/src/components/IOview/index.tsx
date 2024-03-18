@@ -272,7 +272,7 @@ export default function IOView({
                                   {output && (
                                     <IOOutputView
                                       left={true}
-                                      outputType={output.type}
+                                      outputType={"ImageOutput"}
                                       outputId={output.id}
                                     />
                                   )}
@@ -305,7 +305,7 @@ export default function IOView({
                       </button>
                       {selectedViewField.type}
                     </div>
-                    <div className="h-full w-full">
+                    <div className="h-[85%] w-full">
                       {inputs.some(
                         (input) => input.id === selectedViewField.id
                       ) ? (
@@ -317,7 +317,7 @@ export default function IOView({
                       ) : (
                         <IOOutputView
                           left={false}
-                          outputType={selectedViewField.type!}
+                          outputType={"ImageOutput"}
                           outputId={selectedViewField.id!}
                         />
                       )}
