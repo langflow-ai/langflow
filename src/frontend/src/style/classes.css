@@ -69,14 +69,20 @@ select:-webkit-autofill:focus {
   border-radius: 999px;
 }
 
-.osd-button {
-  background-color: #4299e1; /* Tailwind's blue-500 */
-  color: #ffffff; /* White text color */
-  padding: 0.5rem 1rem; /* Padding for the buttons */
-  border-radius: 0.25rem; /* Rounded corners */
-  cursor: pointer; /* Change cursor on hover */
+.ag-root ::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.ag-root ::-webkit-scrollbar-button {
+  background: #ccc;
+}
+.ag-root ::-webkit-scrollbar-track-piece {
+  background-color: #f1f1f1;
+}
+.ag-root ::-webkit-scrollbar-thumb {
+  background-color: #ccc;
 }
 
-.osd-button:hover {
-  background-color: #2b6cb0; /* Tailwind's blue-700 on hover */
+.ag-root ::-webkit-scrollbar-thumb:hover {
+  background-color: #ccc;
 }

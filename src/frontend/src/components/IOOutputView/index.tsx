@@ -1,6 +1,8 @@
 import { cloneDeep } from "lodash";
 import useFlowStore from "../../stores/flowStore";
 import { IOOutputProps } from "../../types/components";
+import CsvOutputComponent from "../csvOutputComponent";
+import PdfViewer from "../pdfViewer";
 import { Textarea } from "../ui/textarea";
 import ImageViewer from "../ImageViewer";
 
@@ -26,12 +28,26 @@ export default function IOOutputView({
             // update to real value on flowPool
             value={
               (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
-                ?.params ?? ""
+                ?.data.results.result.result ?? ""
             }
             readOnly
           />
         );
-
+      case "PDFOutput":
+        return left ? (
+          <div>Expand the ouptut to see the PDF</div>
+        ) : (
+          <PdfViewer pdf={
+            (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
+                ?.params ?? ""
+          } />
+        );
+      case "CSVLoader":
+        return left ? (
+          <div>Expand the ouptut to see the CSV</div>
+        ) : (
+          <CsvOutputComponent />
+        );
       case "ImageOutput":
         return (
           left ? (
@@ -43,22 +59,17 @@ export default function IOOutputView({
             } />
           )
         ) 
-
       default:
         return (
           <Textarea
-            className="w-full custom-scroll"
-            placeholder={"Enter text..."}
-            value={node.data.node!.template["input_value"]}
-            onChange={(e) => {
-              e.target.value;
-              if (node) {
-                let newNode = cloneDeep(node);
-                newNode.data.node!.template["input_value"].value =
-                  e.target.value;
-                setNode(node.id, newNode);
-              }
-            }}
+            className={`w-full custom-scroll ${left ? "" : " h-full"}`}
+            placeholder={"Empty"}
+            // update to real value on flowPool
+            value={
+              (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
+                ?.params ?? ""
+            }
+            readOnly
           />
         );
     }

@@ -690,7 +690,13 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
 export const priorityFields = new Set(["code", "template"]);
 
 export const INPUT_TYPES = new Set(["ChatInput", "TextInput"]);
-export const OUTPUT_TYPES = new Set(["ChatOutput", "TextOutput", "ImageOutput"]);
+export const OUTPUT_TYPES = new Set([
+  "ChatOutput",
+  "TextOutput",
+  "PDFOutput",
+  "CSVLoader",
+  "ImageOutput",
+]);
 
 export const CHAT_FIRST_INITIAL_TEXT =
   "Start a conversation and click the agent's thoughts";
