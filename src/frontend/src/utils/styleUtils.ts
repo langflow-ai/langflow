@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   ArrowUpToLine,
   ZoomIn,
-  ZoomOut,
   Bell,
   Binary,
   BookMarked,
@@ -139,7 +138,6 @@ import {
   X,
   XCircle,
   Zap,
-  ZoomIn,
   Image,
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
@@ -418,8 +416,6 @@ export const nodeIconsLucide: iconsType = {
   Shield,
   Plus,
   FileX2,
-  ZoomIn,
-  ZoomOut,
   Redo,
   Settings2,
   FileType2,

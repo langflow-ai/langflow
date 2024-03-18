@@ -67,10 +67,9 @@ export default function ImageViewer({image }) {
               console.error('Error downloading image:', error)
             });
       }
-      console.log(viewerRef)
 
     return (
-        image === "" || !viewerRef ? (
+        image === "" ? (
           <div className="w-full h-full flex align-center justify-center flex-col  gap-5">
             <div className="rounded-md border border-border py-20 gap-4 flex flex-col ">
               <div className="flex gap-2 align-center justify-center ">
