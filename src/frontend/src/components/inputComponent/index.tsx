@@ -1,11 +1,13 @@
 import { Listbox, Transition } from "@headlessui/react";
 import * as Form from "@radix-ui/react-form";
 import { Fragment, useEffect, useRef, useState } from "react";
+import AddNewVariableButton from "../../pages/globalVariablesPage/components/addNewVariableButton";
 import { InputComponentType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
-import { classNames } from "../../utils/utils";
+import { classNames, cn } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { Input } from "../ui/input";
+import { Separator } from "../ui/separator";
 
 export default function InputComponent({
   autoFocus = false,
@@ -26,7 +28,6 @@ export default function InputComponent({
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
-  const [filteredOpts, setFilteredValue] = useState<string[]>(options);
 
   // Clear component state
   useEffect(() => {
@@ -35,13 +36,12 @@ export default function InputComponent({
     }
   }, [disabled]);
 
-  const filteredOptions = filteredOpts.filter((option) =>
+  const filteredOptions = options.filter((option) =>
     option.toLowerCase().includes(value.toLowerCase())
   );
 
   function onInputLostFocus(event): void {
     if (onBlur) onBlur(event);
-    setShowOptions(false);
   }
 
   return (
@@ -107,103 +107,115 @@ export default function InputComponent({
               handleKeyDown(e, value, "");
               if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
             }}
-            onFocus={() => setShowOptions(true)}
           />
-          {
-            /* options.length > 0 && filteredOptions.length > 0 */ true ? (
-              <Listbox
-                onChange={(val) => {
-                  onChange(val);
-                }}
-              >
-                <>
-                  <div className={"relative mt-1 "}>
-                    <Transition
-                      show={showOptions}
-                      as={Fragment}
-                      leave="transition ease-in duration-100"
-                      leaveFrom="opacity-100"
-                      leaveTo="opacity-0"
-                    >
-                      <Listbox.Options
-                        className={classNames(
-                          editNode
-                            ? "dropdown-component-true-options nowheel custom-scroll"
-                            : "dropdown-component-false-options nowheel custom-scroll",
-                          false ? "mb-2 w-[250px]" : "absolute w-full"
-                        )}
+          <Listbox
+            onChange={(val) => {
+              onChange(val);
+            }}
+          >
+            <>
+              <div className={"relative mt-1 "}>
+                <Transition
+                  show={showOptions}
+                  as={Fragment}
+                  leave="transition ease-in duration-100"
+                  leaveFrom="opacity-100"
+                  leaveTo="opacity-0"
+                >
+                  <Listbox.Options
+                    className={classNames(
+                      editNode
+                        ? "dropdown-component-true-options nowheel custom-scroll"
+                        : "dropdown-component-false-options nowheel custom-scroll",
+                      false ? "mb-2 w-[250px]" : "absolute w-full"
+                    )}
+                  >
+                    <div className="flex items-center justify-between px-4 pb-3 pt-2 font-semibold">
+                      <div className="flex items-center gap-2">
+                        <IconComponent name="Globe" className="h-4 w-4" />
+                        Global Variables
+                      </div>
+                      <div>
+                        <AddNewVariableButton>
+                          <button className="text-muted-foreground hover:text-accent-foreground">
+                            <IconComponent name="Plus" className="h-5 w-5" />
+                          </button>
+                        </AddNewVariableButton>
+                      </div>
+                    </div>
+                    <Separator />
+                    {filteredOptions.map((option, id) => (
+                      <Listbox.Option
+                        key={id}
+                        className={({ active }) =>
+                          classNames(
+                            active ? " bg-accent" : "",
+                            editNode
+                              ? "dropdown-component-false-option"
+                              : "dropdown-component-true-option",
+                            " hover:bg-accent"
+                          )
+                        }
+                        value={option}
                       >
-                        {filteredOptions.map((option, id) => (
-                          <Listbox.Option
-                            key={id}
-                            className={({ active }) =>
-                              classNames(
-                                active ? " bg-accent" : "",
-                                editNode
-                                  ? "dropdown-component-false-option"
-                                  : "dropdown-component-true-option",
-                                " hover:bg-accent"
-                              )
-                            }
-                            value={option}
-                          >
-                            {({ selected, active }) => (
-                              <>
-                                <span
-                                  className={classNames(
-                                    selected ? "font-semibold" : "font-normal",
-                                    "block truncate "
-                                  )}
-                                  data-testid={`${option}-${id ?? ""}-option`}
-                                >
-                                  {option}
-                                </span>
+                        {({ selected, active }) => (
+                          <>
+                            <span
+                              className={classNames(
+                                selected ? "font-semibold" : "font-normal",
+                                "block truncate "
+                              )}
+                              data-testid={`${option}-${id ?? ""}-option`}
+                            >
+                              {option}
+                            </span>
 
-                                {selected ? (
-                                  <span
-                                    className={classNames(
-                                      active ? "text-background " : "",
-                                      "dropdown-component-choosal"
-                                    )}
-                                  >
-                                    <IconComponent
-                                      name="Check"
-                                      className={
-                                        active
-                                          ? "dropdown-component-check-icon"
-                                          : "dropdown-component-check-icon"
-                                      }
-                                      aria-hidden="true"
-                                    />
-                                  </span>
-                                ) : null}
-                              </>
-                            )}
-                          </Listbox.Option>
-                        ))}
-                      </Listbox.Options>
-                    </Transition>
-                  </div>
-                </>
-              </Listbox>
-            ) : null
-          }
+                            {selected ? (
+                              <span
+                                className={classNames(
+                                  "dropdown-component-choosal"
+                                )}
+                              >
+                                <IconComponent
+                                  name="Check"
+                                  className={
+                                    "dropdown-component-check-icon text-foreground"
+                                  }
+                                  aria-hidden="true"
+                                />
+                              </span>
+                            ) : null}
+                          </>
+                        )}
+                      </Listbox.Option>
+                    ))}
+                  </Listbox.Options>
+                </Transition>
+              </div>
+            </>
+          </Listbox>
         </>
       )}
 
       {options.length > 0 && (
         <span
-          className={
-            password
-              ? "dropdown-component-arrow  right-8"
-              : "dropdown-component-arrow right-0"
-          }
+          className={cn(
+            password ? "right-8" : "right-0",
+            "absolute inset-y-0 flex items-center pr-2"
+          )}
         >
-          <IconComponent
-            name="ChevronsUpDown"
-            className="dropdown-component-arrow-color"
-            aria-hidden="true"
-          />
+          <button
+            onClick={() => {
+              setShowOptions(!showOptions);
+            }}
+            className="text-muted-foreground hover:text-accent-foreground"
+          >
+            <IconComponent
+              name="Globe"
+              className="h-4 w-4"
+              aria-hidden="true"
+            />
+          </button>
         </span>
       )}
 
@@ -212,6 +224,7 @@ export default function InputComponent({
           type="button"
           tabIndex={-1}
           className={classNames(
+            "mb-px",
             editNode
               ? "input-component-true-button"
               : "input-component-false-button"
