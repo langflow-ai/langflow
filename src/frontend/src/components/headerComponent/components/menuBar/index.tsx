@@ -29,6 +29,7 @@ export const MenuBar = ({
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const undo = useFlowsManagerStore((state) => state.undo);
   const redo = useFlowsManagerStore((state) => state.redo);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
@@ -38,11 +39,22 @@ export const MenuBar = ({
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
-  function handleAddFlow() {
+  function handleAddFlow(duplicate?: boolean) {
     try {
-      addFlow(true).then((id) => {
-        navigate("/flow/" + id);
-      });
+      if(duplicate) {
+        if (!currentFlow) {
+          throw new Error("No flow to duplicate");
+        }
+        addFlow(true, currentFlow).then((_) => {
+          setSuccessData({title:"Flow duplicated successfully"});
+        });
+      }
+      else
+      {
+        addFlow(true).then((id) => {
+          navigate("/flow/" + id);
+        });
+      }
     } catch (err) {
       setErrorData(err as { title: string; list?: Array<string> });
     }
@@ -87,6 +99,15 @@ export const MenuBar = ({
             >
               <IconComponent name="Plus" className="header-menu-options" />
               New
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                handleAddFlow(true);
+              }}
+              className="cursor-pointer"
+            >
+              <IconComponent name="Copy" className="header-menu-options" />
+              Duplicate
             </DropdownMenuItem>
 
             <DropdownMenuItem
