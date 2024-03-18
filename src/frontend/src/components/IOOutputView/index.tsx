@@ -1,10 +1,18 @@
+import { cloneDeep } from "lodash";
 import useFlowStore from "../../stores/flowStore";
 import { IOOutputProps } from "../../types/components";
+import ImageViewer from "../ImageViewer";
 import CsvOutputComponent from "../csvOutputComponent";
 import PdfViewer from "../pdfViewer";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { Textarea } from "../ui/textarea";
-import ImageViewer from "../ImageViewer";
-
 
 export default function IOOutputView({
   outputType,
@@ -13,8 +21,23 @@ export default function IOOutputView({
 }: IOOutputProps): JSX.Element | undefined {
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
+  const setFlowPool = useFlowStore((state) => state.setFlowPool);
   const flowPool = useFlowStore((state) => state.flowPool);
   const node = nodes.find((node) => node.id === outputId);
+  const separatorOptions = node?.data?.node?.template?.separator?.options ?? [
+    ";",
+    ",",
+    "|",
+  ];
+  const flowPoolNode = (flowPool[node!.id] ?? [])[
+    (flowPool[node!.id]?.length ?? 1) - 1
+  ];
+
+  const handleChangeSelect = (e) => {
+    flowPoolNode.data.artifacts.repr.separator = e;
+    const newFlowPool = cloneDeep(flowPool);
+    setFlowPool(newFlowPool);
+  };
 
   function handleOutputType() {
     if (!node) return <>"No node found!"</>;
@@ -25,10 +48,7 @@ export default function IOOutputView({
             className={`w-full custom-scroll ${left ? "" : " h-full"}`}
             placeholder={"Empty"}
             // update to real value on flowPool
-            value={
-              (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
-                ?.data.results.result.result ?? ""
-            }
+            value={flowPoolNode?.data.results.result.result ?? ""}
             readOnly
           />
         );
@@ -36,42 +56,48 @@ export default function IOOutputView({
         return left ? (
           <div>Expand the ouptut to see the PDF</div>
         ) : (
-          <PdfViewer
-            pdf={
+          <PdfViewer pdf={flowPoolNode?.params ?? ""} />
+        );
+      case "CSVOutput":
+        return left ? (
+          <>
+            <div className="flex justify-between">
+              Expand the ouptut to see the CSV
+            </div>
+            <div className="flex items-center justify-between pt-5">
+              <span>CSV separator </span>
+              <Select onValueChange={(e) => handleChangeSelect(e)}>
+                <SelectTrigger className="w-[70px]">
+                  <SelectValue placeholder=";" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {separatorOptions.map((separator) => (
+                      <SelectItem key={separator} value={separator}>
+                        {separator}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        ) : (
+          <>
+            <CsvOutputComponent csvNode={node} />
+          </>
+        );
+      case "ImageOutput":
+        return left ? (
+          <div>Expand the view to see the image</div>
+        ) : (
+          <ImageViewer
+            image={
               (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
                 ?.params ?? ""
             }
           />
         );
-      case "CSVOutput":
-        return left ? (
-          <>
-            <div className="flex align-center justify-center">
-              Expand the ouptut to see the CSV
-            </div>
-          </>
-        ) : (
-          <>
-            <CsvOutputComponent
-              csvNode={
-                (flowPool[node!.id] ?? [])[
-                  (flowPool[node!.id]?.length ?? 1) - 1
-                ]?.data?.artifacts?.repr
-              }
-            />
-          </>
-        );
-      case "ImageOutput":
-        return (
-          left ? (
-            <div>Expand the view to see the image</div>
-          ) : (
-            <ImageViewer image={
-              (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
-                  ?.params ?? ""
-            } />
-          )
-        ) 
       default:
         return (
           <Textarea

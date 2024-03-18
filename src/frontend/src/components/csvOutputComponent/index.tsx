@@ -3,13 +3,18 @@ import "ag-grid-community/styles/ag-theme-balham.css"; // Optional Theme applied
 import { AgGridReact } from "ag-grid-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDarkStore } from "../../stores/darkStore";
+import useFlowStore from "../../stores/flowStore";
+import ForwardedIconComponent from "../genericIconComponent";
 import Loading from "../ui/loading";
 import { convertCSVToData } from "./helpers/convert-data-function";
-import ForwardedIconComponent from "../genericIconComponent";
 
 function CsvOutputComponent({ csvNode }) {
-  const separator = csvNode?.separator || ";";
-  const file = csvNode?.data || "";
+  const flowPool = useFlowStore((state) => state.flowPool);
+  const csvNodeArtifacts = (flowPool[csvNode!.id] ?? [])[
+    (flowPool[csvNode!.id]?.length ?? 1) - 1
+  ]?.data?.artifacts?.repr;
+  const separator = csvNodeArtifacts?.separator || ";";
+  const file = csvNodeArtifacts?.data || "";
 
   const dark = useDarkStore.getState().dark;
 
@@ -39,7 +44,7 @@ function CsvOutputComponent({ csvNode }) {
     } else {
       setStatus("nodata");
     }
-  }, [csvNode]);
+  }, [csvNodeArtifacts]);
 
   const getRowHeight = useCallback((params: any) => {
     return currentRowHeight;
@@ -86,34 +91,30 @@ function CsvOutputComponent({ csvNode }) {
   return (
     <div className=" h-full rounded-md border bg-muted">
       {status === "nodata" && (
-        <div className=" h-full w-full flex flex-col items-center justify-center align-center gap-5">
-          <div className="flex gap-2 align-center justify-center w-full">
-            <ForwardedIconComponent
-              name="Table"
-            />
-              CSV output
+        <div className=" align-center flex h-full w-full flex-col items-center justify-center gap-5">
+          <div className="align-center flex w-full justify-center gap-2">
+            <ForwardedIconComponent name="Table" />
+            CSV output
           </div>
-          <div className="w-full flex align-center justify-center">
-            <div className="langflow-chat-desc flex align-center justify-center px-6 py-8">
-               <div className="langflow-chat-desc-span">No data available</div>
+          <div className="align-center flex w-full justify-center">
+            <div className="langflow-chat-desc align-center flex justify-center px-6 py-8">
+              <div className="langflow-chat-desc-span">No data available</div>
             </div>
           </div>
         </div>
       )}
       {status === "error" && (
-        <div className=" h-full w-full flex flex-col items-center justify-center align-center gap-5">
-        <div className="flex gap-2 align-center justify-center w-full">
-          <ForwardedIconComponent
-            name="Table"
-          />
+        <div className=" align-center flex h-full w-full flex-col items-center justify-center gap-5">
+          <div className="align-center flex w-full justify-center gap-2">
+            <ForwardedIconComponent name="Table" />
             CSV output
-        </div>
-        <div className="w-full flex align-center justify-center">
-          <div className="langflow-chat-desc flex align-center justify-center px-6 py-8">
-             <div className="langflow-chat-desc-span">Error loading CSV</div>
+          </div>
+          <div className="align-center flex w-full justify-center">
+            <div className="langflow-chat-desc align-center flex justify-center px-6 py-8">
+              <div className="langflow-chat-desc-span">Error loading CSV</div>
+            </div>
           </div>
         </div>
-      </div>
       )}
       {status === "loaded" && (
         <div
