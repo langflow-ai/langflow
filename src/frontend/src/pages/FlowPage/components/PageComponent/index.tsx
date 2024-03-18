@@ -12,7 +12,13 @@ import ReactFlow, {
   updateEdge,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
-import Chat from "../../../../components/chatComponent";
+import FlowToolbar from "../../../../components/chatComponent";
+import {
+  INVALID_SELECTION_ERROR_ALERT,
+  UPLOAD_ALERT_LIST,
+  UPLOAD_ERROR_ALERT,
+  WRONG_FILE_ERROR_ALERT,
+} from "../../../../constants/alerts_constants";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -24,6 +30,8 @@ import {
   generateNodeFromFlow,
   getNodeId,
   isValidConnection,
+  reconnectEdges,
+  scapeJSONParse,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
@@ -55,7 +63,6 @@ export default function Page({
   const setReactFlowInstance = useFlowStore(
     (state) => state.setReactFlowInstance
   );
-
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
@@ -77,13 +84,50 @@ export default function Page({
     (state) => state.setLastCopiedSelection
   );
   const onConnect = useFlowStore((state) => state.onConnect);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
+  const edgeUpdateSuccessful = useRef(true);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
 
+  const setNode = useFlowStore((state) => state.setNode);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const selectedNode = nodes.filter((obj) => obj.selected);
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "p" &&
+        selectedNode.length > 0
+      ) {
+        event.preventDefault();
+        setNode(selectedNode[0].id, (old) => ({
+          ...old,
+          data: {
+            ...old.data,
+            node: {
+              ...old.data.node,
+              frozen: old.data?.node?.frozen ? false : true,
+            },
+          },
+        }));
+      }
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "d" &&
+        selectedNode.length > 0
+      ) {
+        event.preventDefault();
+        paste(
+          { nodes: selectedNode, edges: [] },
+          {
+            x: position.current.x,
+            y: position.current.y,
+          }
+        );
+      }
       if (!isWrappedWithClass(event, "noundo")) {
         if (
           (event.key === "y" || (event.key === "z" && event.shiftKey)) &&
@@ -107,6 +151,13 @@ export default function Page({
         ) {
           event.preventDefault();
           setLastCopiedSelection(_.cloneDeep(lastSelection));
+        } else if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key === "x" &&
+          lastSelection
+        ) {
+          event.preventDefault();
+          setLastCopiedSelection(_.cloneDeep(lastSelection), true);
         } else if (
           (event.ctrlKey || event.metaKey) &&
           event.key === "v" &&
@@ -152,16 +203,8 @@ export default function Page({
     };
   }, [lastCopiedSelection, lastSelection, takeSnapshot]);
 
-  const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
-
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-
-  const edgeUpdateSuccessful = useRef(true);
-
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-
   useEffect(() => {
-    if (reactFlowInstance) {
+    if (reactFlowInstance && currentFlowId) {
       resetFlow({
         nodes: flow?.data?.nodes ?? [],
         edges: flow?.data?.edges ?? [],
@@ -254,14 +297,14 @@ export default function Page({
             position: position,
           }).catch((error) => {
             setErrorData({
-              title: "Error uploading file",
+              title: UPLOAD_ERROR_ALERT,
               list: [error],
             });
           });
         } else {
           setErrorData({
-            title: "Invalid file type",
-            list: ["Please upload a JSON file"],
+            title: WRONG_FILE_ERROR_ALERT,
+            list: [UPLOAD_ALERT_LIST],
           });
         }
       }
@@ -278,6 +321,8 @@ export default function Page({
     (oldEdge: Edge, newConnection: Connection) => {
       if (isValidConnection(newConnection, nodes, edges)) {
         edgeUpdateSuccessful.current = true;
+        oldEdge.data.targetHandle = scapeJSONParse(newConnection.targetHandle!);
+        oldEdge.data.sourceHandle = scapeJSONParse(newConnection.sourceHandle!);
         setEdges((els) => updateEdge(oldEdge, newConnection, els));
       }
     },
@@ -320,6 +365,19 @@ export default function Page({
   const onPaneClick = useCallback((flow) => {
     setFilterEdge([]);
   }, []);
+
+  function onMouseAction(edge: Edge, color: string): void {
+    const edges = useFlowStore.getState().edges;
+    const newEdges = _.cloneDeep(edges);
+    const style = { stroke: color, transition: "stroke 0.25s" };
+    const updatedEdges = newEdges.map((obj) => {
+      if (obj.id === edge.id) {
+        return { ...obj, style };
+      }
+      return obj;
+    });
+    setEdges(updatedEdges);
+  }
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -379,7 +437,7 @@ export default function Page({
                       if (
                         validateSelection(lastSelection!, edges).length === 0
                       ) {
-                        const { newFlow } = generateFlow(
+                        const { newFlow, removedEdges } = generateFlow(
                           lastSelection!,
                           nodes,
                           edges,
@@ -388,6 +446,10 @@ export default function Page({
                         const newGroupNode = generateNodeFromFlow(
                           newFlow,
                           getNodeId
+                        );
+                        const newEdges = reconnectEdges(
+                          newGroupNode,
+                          removedEdges
                         );
                         setNodes((oldNodes) => [
                           ...oldNodes.filter(
@@ -399,26 +461,27 @@ export default function Page({
                           ),
                           newGroupNode,
                         ]);
-                        setEdges((oldEdges) =>
-                          oldEdges.filter(
+                        setEdges((oldEdges) => [
+                          ...oldEdges.filter(
                             (oldEdge) =>
                               !lastSelection!.nodes.some(
                                 (selectionNode) =>
                                   selectionNode.id === oldEdge.target ||
                                   selectionNode.id === oldEdge.source
                               )
-                          )
-                        );
+                          ),
+                          ...newEdges,
+                        ]);
                       } else {
                         setErrorData({
-                          title: "Invalid selection",
+                          title: INVALID_SELECTION_ERROR_ALERT,
                           list: validateSelection(lastSelection!, edges),
                         });
                       }
                     }}
                   />
                 </ReactFlow>
-                {!view && <Chat flow={flow} />}
+                {!view && <FlowToolbar flow={flow} />}
               </div>
             ) : (
               <></>

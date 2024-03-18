@@ -81,7 +81,17 @@ The CustomComponent class serves as the foundation for creating custom component
   | _`required: bool`_         | Makes the field required.                                                                                                                                                                                                                                                   |
   | _`info: str`_              | Adds a tooltip to the field.                                                                                                                                                                                                                                                |
   | _`file_types: List[str]`_  | This is a requirement if the _`field_type`_ is _file_. Defines which file types will be accepted. For example, _json_, _yaml_ or _yml_.                                                                                                                                     |
-  | _`range_spec: langflow.field_typing.RangeSpec`_ | This is a requirement if the _`field_type`_ is _`float`_. Defines the range of values accepted and the step size. If none is defined, the default is _`[-1, 1, 0.1]`_.                                                                                                     |
+  | _`range_spec: langflow.field_typing.RangeSpec`_ | This is a requirement if the _`field_type`_ is _`float`_. Defines the range of values accepted and the step size. If none is defined, the default is _`[-1, 1, 0.1]`_.                                                                                 |
+  | _`title_case: bool`_       | Formats the name of the field when _`display_name`_ is not defined. Set it to False to keep the name as you set it in the _`build`_ method.                                                                                                                                 |
+  | _`refresh_button: bool`_          | If set to True a button will appear to the right of the field, and when clicked, it will call the _`update_build_config`_ method which takes in the _`build_config`_, the name of the field (_`field_name`_) and the latest value of the field (_`field_value`_). This is useful when you want to update the _`build_config`_ based on the value of the field. |
+  | _`real_time_refresh: bool`_ | If set to True, the _`update_build_config`_ method will be called every time the field value changes.                                                                                                                                                                      |
+
+<Admonition type="info" label="Tip">
+
+By using the _`update_build_config`_ method, you can update the _`build_config`_ in whatever way you want based on the value of the field or not.
+
+</Admonition>
+
 - The CustomComponent class also provides helpful methods for specific tasks (e.g., to load and use other flows from the Langflow platform):
 
   | Method Name    | Description                                                         |
@@ -94,7 +104,9 @@ The CustomComponent class serves as the foundation for creating custom component
 
   | Attribute Name | Description                                                                   |
   | -------------- | ----------------------------------------------------------------------------- |
-  | _`repr_value`_ | Displays the value it receives in the _`build`_ method. Useful for debugging. |
+  | _`status`_ | Displays the value it receives in the _`build`_ method. Useful for debugging. |
+  | _`field_order`_ | Defines the order the fields will be displayed in the canvas.                  |
+  | _`icon`_ | Defines the emoji (for example, _`:rocket:`_) that will be displayed in the canvas. |
 
   <Admonition type="info" label="Tip">
 

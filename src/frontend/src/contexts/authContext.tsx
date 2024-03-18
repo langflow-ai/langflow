@@ -7,6 +7,7 @@ import {
   requestLogout,
 } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
+import useFlowsManagerStore from "../stores/flowsManagerStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
 
@@ -79,6 +80,7 @@ export function AuthProvider({ children }): React.ReactElement {
           getUser();
         } else {
           setLoading(false);
+          useFlowsManagerStore.setState({ isLoading: false });
         }
       });
   }, [setUserData, setLoading, autoLogin, setIsAdmin]);
@@ -92,7 +94,6 @@ export function AuthProvider({ children }): React.ReactElement {
         setIsAdmin(isSuperUser);
       })
       .catch((error) => {
-        console.log("auth context");
         setLoading(false);
       });
   }

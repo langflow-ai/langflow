@@ -2,7 +2,10 @@ import secrets
 from pathlib import Path
 from typing import Optional
 
-from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from langflow.services.settings.constants import (
+    DEFAULT_SUPERUSER,
+    DEFAULT_SUPERUSER_PASSWORD,
+)
 from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 from loguru import logger
 from passlib.context import CryptContext
@@ -33,6 +36,19 @@ class AuthSettings(BaseSettings):
     NEW_USER_IS_ACTIVE: bool = False
     SUPERUSER: str = DEFAULT_SUPERUSER
     SUPERUSER_PASSWORD: str = DEFAULT_SUPERUSER_PASSWORD
+
+    REFRESH_SAME_SITE: str = "none"
+    """The SameSite attribute of the refresh token cookie."""
+    REFRESH_SECURE: bool = True
+    """The Secure attribute of the refresh token cookie."""
+    REFRESH_HTTPONLY: bool = True
+    """The HttpOnly attribute of the refresh token cookie."""
+    ACCESS_SAME_SITE: str = "none"
+    """The SameSite attribute of the access token cookie."""
+    ACCESS_SECURE: bool = True
+    """The Secure attribute of the access token cookie."""
+    ACCESS_HTTPONLY: bool = False
+    """The HttpOnly attribute of the access token cookie."""
 
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

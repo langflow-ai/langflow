@@ -1,6 +1,7 @@
 // src/constants/constants.ts
 
 import { languageMap } from "../types/components";
+import { FlowType } from "../types/flow";
 
 /**
  * invalid characters for flow name
@@ -25,10 +26,18 @@ export const INVALID_CHARACTERS = [
 
 /**
  * regex to highlight the variables in the text
- * @constant
+ * @constant regexHighlight
+ * @type {RegExp}
+ * @default
+ * @example
+ * {{variable}} or {variable}
+ * @returns {RegExp}
+ * @description
+ * This regex is used to highlight the variables in the text.
+ * It matches the variables in the text that are between {{}} or {}.
  */
 
-export const regexHighlight = /\{([^}]+)\}/g;
+export const regexHighlight = /\{\{(.*?)\}\}|\{([^{}]+)\}/g;
 export const specialCharsRegex = /[!@#$%^&*()\-_=+[\]{}|;:'",.<>/?\\`´]/;
 
 export const programmingLanguages: languageMap = {
@@ -519,6 +528,8 @@ export const ADMIN_HEADER_DESCRIPTION =
 
 export const BASE_URL_API = "/api/v1/";
 
+export const BACKEND_URL = "http://localhost:7860/";
+
 /**
  * URLs excluded from error retries.
  * @constant
@@ -677,3 +688,137 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
 ]);
 
 export const priorityFields = new Set(["code", "template"]);
+
+export const INPUT_TYPES = new Set(["ChatInput", "TextInput"]);
+export const OUTPUT_TYPES = new Set(["ChatOutput", "TextOutput"]);
+
+export const CHAT_FIRST_INITIAL_TEXT =
+  "Start a conversation and click the agent's thoughts";
+
+export const CHAT_SECOND_INITIAL_TEXT = "to inspect the chaining process.";
+
+export const ZERO_NOTIFICATIONS = "No new notifications";
+
+export const SUCCESS_BUILD = "Built sucessfully ✨";
+
+export const ALERT_SAVE_WITH_API =
+  "Caution: Uncheck this box only removes API keys from fields specifically designated for API keys.";
+
+export const SAVE_WITH_API_CHECKBOX = "Save with my API keys";
+export const EDIT_TEXT_MODAL_TITLE = "Edit Text";
+export const EDIT_TEXT_PLACEHOLDER = "Type message here.";
+export const INPUT_HANDLER_HOVER = "Avaliable input components:";
+export const OUTPUT_HANDLER_HOVER = "Avaliable output components:";
+export const TEXT_INPUT_MODAL_TITLE = "Text Inputs";
+export const OUTPUTS_MODAL_TITLE = "Text Outputs";
+export const LANGFLOW_CHAT_TITLE = "Langflow Chat";
+export const CHAT_INPUT_PLACEHOLDER =
+  "No chat input variables found. Click to run your flow.";
+export const CHAT_INPUT_PLACEHOLDER_SEND = "Send a message...";
+export const EDIT_CODE_TITLE = "Edit Code";
+export const MY_COLLECTION_DESC =
+  "Manage your personal projects. Download and upload entire collections.";
+export const STORE_DESC = "Explore community-shared flows and components.";
+export const STORE_TITLE = "Langflow Store";
+export const NO_API_KEY = "You don't have an API key. ";
+export const INSERT_API_KEY = "Insert your Langflow API key.";
+export const INVALID_API_KEY = "Your API key is not valid. ";
+export const CREATE_API_KEY = `Don’t have an API key? Sign up at`;
+export const STATUS_BUILD = "Build to validate status.";
+export const STATUS_BUILDING = "Building...";
+export const SAVED_HOVER = "Last saved at ";
+export const RUN_TIMESTAMP_PREFIX = "Last Run: ";
+export const STARTER_FOLDER_NAME = "Starter Projects";
+export const PRIORITY_SIDEBAR_ORDER = [
+  "saved_components",
+  "inputs",
+  "outputs",
+  "prompts",
+  "data",
+  "prompt",
+  "models",
+  "helpers",
+  "experimental",
+];
+export const NATIVE_CATEGORIES = [
+  "inputs",
+  "outputs",
+  "prompts",
+  "data",
+  "prompt",
+  "models",
+  "helpers",
+  "experimental",
+];
+/*
+Data ingestion
+Basic Prompting
+Chat com memória
+Working with data (file/website)
+API requests
+Vector Store
+Assistant
+*/
+
+export const EXAMPLES_MOCK: FlowType[] = [
+  {
+    name: "Working with data",
+    id: "Working with data Description",
+    data: {
+      nodes: [],
+      edges: [],
+      viewport: { zoom: 1, x: 1, y: 1 },
+    },
+    description: "This flow represents the first process in our application.",
+    folder: STARTER_FOLDER_NAME,
+    user_id: undefined,
+  },
+  {
+    name: "Basic Prompting",
+    id: "Basic Prompting Description",
+    data: {
+      nodes: [],
+      edges: [],
+      viewport: { zoom: 1, x: 1, y: 1 },
+    },
+    description: "This flow represents the first process in our application.",
+    folder: STARTER_FOLDER_NAME,
+    user_id: undefined,
+  },
+  {
+    name: "Chat with memory",
+    id: "Chat with memory Description",
+    data: {
+      nodes: [],
+      edges: [],
+      viewport: { zoom: 1, x: 1, y: 1 },
+    },
+    description: "This flow represents the first process in our application.",
+    folder: STARTER_FOLDER_NAME,
+    user_id: undefined,
+  },
+  {
+    name: "API requests",
+    id: "API requests Description",
+    data: {
+      nodes: [],
+      edges: [],
+      viewport: { zoom: 1, x: 1, y: 1 },
+    },
+    description: "This flow represents the first process in our application.",
+    folder: STARTER_FOLDER_NAME,
+    user_id: undefined,
+  },
+  {
+    name: "Assistant",
+    id: "Assistant Description",
+    data: {
+      nodes: [],
+      edges: [],
+      viewport: { zoom: 1, x: 1, y: 1 },
+    },
+    description: "This flow represents the first process in our application.",
+    folder: STARTER_FOLDER_NAME,
+    user_id: undefined,
+  },
+];

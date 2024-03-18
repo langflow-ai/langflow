@@ -9,7 +9,10 @@ import {
 } from "reactflow";
 import ShortUniqueId from "short-unique-id";
 import {
+  INPUT_TYPES,
   LANGFLOW_SUPPORTED_TYPES,
+  OUTPUT_TYPES,
+  SUCCESS_BUILD,
   specialCharsRegex,
 } from "../constants/constants";
 import { downloadFlowsFromDatabase } from "../controllers/API";
@@ -37,10 +40,13 @@ import {
   createRandomKey,
   getFieldTitle,
   getRandomDescription,
-  getRandomName,
   toTitleCase,
 } from "./utils";
 const uid = new ShortUniqueId({ length: 5 });
+
+export function checkChatInput(nodes: Node[]) {
+  return nodes.some((node) => node.data.type === "ChatInput");
+}
 
 export function cleanEdges(nodes: Node[], edges: Edge[]) {
   let newEdges = cloneDeep(edges);
@@ -258,7 +264,7 @@ export function buildTweaks(flow: FlowType) {
 export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
   if (!node.data?.node?.template || !Object.keys(node.data.node.template)) {
     return [
-      "We've noticed a potential issue with a node in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
+      "We've noticed a potential issue with a Component in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
     ];
   }
 
@@ -322,11 +328,7 @@ export function updateEdges(edges: Edge[]) {
       const targetHandleObject: targetHandleType = scapeJSONParse(
         edge.targetHandle!
       );
-      edge.className =
-        (targetHandleObject.type === "Text"
-          ? "stroke-gray-800 "
-          : "stroke-gray-900 ") + " stroke-connection";
-      edge.animated = targetHandleObject.type === "Text";
+      edge.className = "stroke-gray-900 stroke-connection";
     });
 }
 
@@ -600,8 +602,7 @@ export function generateFlow(
   const newFlowData = { nodes, edges, viewport: { zoom: 1, x: 0, y: 0 } };
   const uid = new ShortUniqueId({ length: 5 });
   /*	remove edges that are not connected to selected nodes on both ends
-		in future we can save this edges to when ungrouping reconect to the old nodes
-	*/
+   */
   newFlowData.edges = selection.edges.filter(
     (edge) =>
       selection.nodes.some((node) => node.id === edge.target) &&
@@ -622,10 +623,46 @@ export function generateFlow(
   // in the future we can use a better aproach using a set
   return {
     newFlow,
-    removedEdges: selection.edges.filter(
-      (edge) => !newFlowData.edges.includes(edge)
+    removedEdges: edges.filter(
+      (edge) =>
+        (selection.nodes.some((node) => node.id === edge.target) ||
+          selection.nodes.some((node) => node.id === edge.source)) &&
+        newFlowData.edges.every((e) => e.id !== edge.id)
     ),
   };
+}
+
+export function reconnectEdges(groupNode: NodeType, excludedEdges: Edge[]) {
+  let newEdges = cloneDeep(excludedEdges);
+  if (!groupNode.data.node!.flow) return [];
+  const { nodes, edges } = groupNode.data.node!.flow!.data!;
+  const lastNode = findLastNode(groupNode.data.node!.flow!.data!);
+  newEdges.forEach((edge) => {
+    if (lastNode && edge.source === lastNode.id) {
+      edge.source = groupNode.id;
+      let newSourceHandle: sourceHandleType = scapeJSONParse(
+        edge.sourceHandle!
+      );
+      newSourceHandle.id = groupNode.id;
+      edge.sourceHandle = scapedJSONStringfy(newSourceHandle);
+      edge.data.sourceHandle = newSourceHandle;
+    }
+    if (nodes.some((node) => node.id === edge.target)) {
+      const targetNode = nodes.find((node) => node.id === edge.target)!;
+      console.log("targetNode", targetNode);
+      const targetHandle: targetHandleType = scapeJSONParse(edge.targetHandle!);
+      console.log("targetHandle", targetHandle);
+      const proxy = { id: targetNode.id, field: targetHandle.fieldName };
+      let newTargetHandle: targetHandleType = cloneDeep(targetHandle);
+      newTargetHandle.id = groupNode.id;
+      newTargetHandle.proxy = proxy;
+      edge.target = groupNode.id;
+      newTargetHandle.fieldName = targetHandle.fieldName + "_" + targetNode.id;
+      edge.targetHandle = scapedJSONStringfy(newTargetHandle);
+      edge.data.targetHandle = newTargetHandle;
+    }
+  });
+  return newEdges;
 }
 
 export function filterFlow(
@@ -684,6 +721,7 @@ export function validateSelection(
   if (selection.edges.length === 0) {
     selection.edges = edges;
   }
+
   // get only edges that are connected to the nodes in the selection
   // first creates a set of all the nodes ids
   let nodesSet = new Set(selection.nodes.map((n) => n.id));
@@ -699,7 +737,17 @@ export function validateSelection(
   if (selection.nodes.length < 2) {
     errorsArray.push("Please select more than one node");
   }
-
+  if (
+    selection.nodes.some(
+      (node) =>
+        isInputNode(node.data as NodeDataType) ||
+        isOutputNode(node.data as NodeDataType)
+    )
+  ) {
+    errorsArray.push(
+      "Please select only nodes that are not input or output nodes"
+    );
+  }
   //check if there are two or more nodes with free outputs
   if (
     selection.nodes.filter(
@@ -735,7 +783,7 @@ function updateGroupNodeTemplate(template: APITemplateType) {
       template[key].advanced = true;
     }
     //prevent code fields from showing on the group node
-    if (type === "code") {
+    if (type === "code" && key === "code") {
       template[key].show = false;
     }
   });
@@ -1044,7 +1092,7 @@ export function getGroupStatus(
   flow: FlowType,
   ssData: { [key: string]: { valid: boolean; params: string } }
 ) {
-  let status = { valid: true, params: "Built sucessfully ✨" };
+  let status = { valid: true, params: SUCCESS_BUILD };
   const { nodes } = flow.data!;
   const ids = nodes.map((n: NodeType) => n.data.id);
   ids.forEach((id) => {
@@ -1185,9 +1233,25 @@ export const createNewFlow = (
 ) => {
   return {
     description: flow?.description ?? getRandomDescription(),
-    name: flow?.name ?? getRandomName(),
+    name: flow?.name ? flow.name : "Untitled document",
     data: flowData,
     id: "",
     is_component: flow?.is_component ?? false,
   };
 };
+
+export function isInputNode(nodeData: NodeDataType): boolean {
+  return INPUT_TYPES.has(nodeData.type);
+}
+
+export function isOutputNode(nodeData: NodeDataType): boolean {
+  return OUTPUT_TYPES.has(nodeData.type);
+}
+
+export function isInputType(type: string): boolean {
+  return INPUT_TYPES.has(type);
+}
+
+export function isOutputType(type: string): boolean {
+  return OUTPUT_TYPES.has(type);
+}

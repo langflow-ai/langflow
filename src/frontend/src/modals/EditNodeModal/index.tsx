@@ -58,7 +58,6 @@ const EditNodeModal = forwardRef(
   ) => {
     const [myData, setMyData] = useState(data);
 
-    const setPending = useFlowStore((state) => state.setPending);
     const edges = useFlowStore((state) => state.edges);
     const setNode = useFlowStore((state) => state.setNode);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
@@ -172,7 +171,19 @@ const EditNodeModal = forwardRef(
                                 )
                             ) ?? false;
                           return (
-                            <TableRow key={index} className="h-10">
+                            <TableRow
+                              key={index}
+                              className={
+                                "h-10 " +
+                                ((templateParam === "code" &&
+                                  myData.node?.template[templateParam].type ===
+                                    "code") ||
+                                (templateParam.includes("code") &&
+                                  myData.node?.template[templateParam].proxy)
+                                  ? " hidden "
+                                  : "")
+                              }
+                            >
                               <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
                                 <ShadTooltip
                                   content={
@@ -249,7 +260,11 @@ const EditNodeModal = forwardRef(
                                       />
                                     ) : (
                                       <InputComponent
-                                        id={"input-" + index}
+                                        id={
+                                          "input-" +
+                                          myData.node.template[templateParam]
+                                            .name
+                                        }
                                         editNode={true}
                                         options={globalVariablesEntries}
                                         disabled={disabled}
@@ -379,7 +394,10 @@ const EditNodeModal = forwardRef(
                                   <div className="ml-auto">
                                     {" "}
                                     <ToggleShadComponent
-                                      id={"toggle-edit-" + index}
+                                      id={
+                                        "toggle-edit-" +
+                                        myData.node.template[templateParam].name
+                                      }
                                       disabled={disabled}
                                       enabled={
                                         myData.node.template[templateParam]
@@ -392,6 +410,7 @@ const EditNodeModal = forwardRef(
                                         );
                                       }}
                                       size="small"
+                                      editNode={true}
                                     />
                                   </div>
                                 ) : myData.node?.template[templateParam]
@@ -432,14 +451,20 @@ const EditNodeModal = forwardRef(
                                         myData.node.template[templateParam]
                                           .value ?? "Choose an option"
                                       }
-                                      id={"dropdown-edit-" + index}
+                                      id={
+                                        "dropdown-edit-" +
+                                        myData.node.template[templateParam].name
+                                      }
                                     ></Dropdown>
                                   </div>
                                 ) : myData.node?.template[templateParam]
                                   .type === "int" ? (
                                   <div className="mx-auto">
                                     <IntComponent
-                                      id={"edit-int-input-" + index}
+                                      id={
+                                        "edit-int-input-" +
+                                        myData.node.template[templateParam].name
+                                      }
                                       disabled={disabled}
                                       editNode={true}
                                       value={
@@ -534,7 +559,10 @@ const EditNodeModal = forwardRef(
                                       onChange={(value: string | string[]) => {
                                         handleOnNewValue(value, templateParam);
                                       }}
-                                      id={"code-area-edit" + index}
+                                      id={
+                                        "code-area-edit" +
+                                        myData.node.template[templateParam].name
+                                      }
                                     />
                                   </div>
                                 ) : myData.node?.template[templateParam]
@@ -560,6 +588,7 @@ const EditNodeModal = forwardRef(
                                     }}
                                     disabled={disabled}
                                     size="small"
+                                    editNode={true}
                                   />
                                 </div>
                               </TableCell>
@@ -586,7 +615,6 @@ const EditNodeModal = forwardRef(
                   node: myData.node,
                 },
               }));
-              setPending(true);
               setOpen(false);
             }}
             type="submit"

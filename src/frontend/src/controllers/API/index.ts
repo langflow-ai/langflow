@@ -4,9 +4,12 @@ import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
   APIObjectType,
+  APITemplateType,
   Component,
   LoginType,
   Users,
+  VertexBuildTypeAPI,
+  VerticesOrderTypeAPI,
   changeUser,
   resetPasswordType,
   sendAllProps,
@@ -14,6 +17,7 @@ import {
 import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
 import { StoreComponentResponse } from "../../types/store";
+import { FlowPoolType } from "../../types/zustand/flow";
 import {
   APIClassType,
   BuildStatusTypeAPI,
@@ -350,7 +354,7 @@ export async function uploadFile(
 ): Promise<AxiosResponse<UploadFileTypeAPI>> {
   const formData = new FormData();
   formData.append("file", file);
-  return await api.post(`${BASE_URL_API}upload/${id}`, formData);
+  return await api.post(`${BASE_URL_API}files/upload/${id}`, formData);
 }
 
 export async function postCustomComponent(
@@ -366,11 +370,15 @@ export async function postCustomComponent(
 
 export async function postCustomComponentUpdate(
   code: string,
-  field: string
+  template: APITemplateType,
+  field: string,
+  field_value: any
 ): Promise<AxiosResponse<APIClassType>> {
   return await api.post(`${BASE_URL_API}custom_component/update`, {
     code,
+    template,
     field,
+    field_value,
   });
 }
 
@@ -893,4 +901,59 @@ export async function updateGlobalVariable(
     name,
     value,
   });
+}
+
+export async function getVerticesOrder(
+  flowId: string,
+  startNodeId?: string | null,
+  stopNodeId?: string | null
+): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
+  // nodeId is optional and is a query parameter
+  // if nodeId is not provided, the API will return all vertices
+  const config = {};
+  if (stopNodeId) {
+    config["params"] = { stop_component_id: stopNodeId };
+  } else if (startNodeId) {
+    config["params"] = { start_component_id: startNodeId };
+  }
+  return await api.get(`${BASE_URL_API}build/${flowId}/vertices`, config);
+}
+
+export async function postBuildVertex(
+  flowId: string,
+  vertexId: string,
+  input_value: string
+): Promise<AxiosResponse<VertexBuildTypeAPI>> {
+  // input_value is optional and is a query parameter
+  return await api.post(
+    `${BASE_URL_API}build/${flowId}/vertices/${vertexId}`,
+    input_value ? { inputs: { input_value: input_value } } : undefined
+  );
+}
+
+export async function downloadImage({ flowId, fileName }): Promise<any> {
+  return await api.get(`${BASE_URL_API}files/images/${flowId}/${fileName}`);
+}
+
+export async function getFlowPool({
+  flowId,
+  nodeId,
+}: {
+  flowId: string;
+  nodeId?: string;
+}): Promise<AxiosResponse<{ vertex_builds: FlowPoolType }>> {
+  const config = {};
+  config["params"] = { flow_id: flowId };
+  if (nodeId) {
+    config["params"] = { nodeId };
+  }
+  return await api.get(`${BASE_URL_API}monitor/builds`, config);
+}
+
+export async function deleteFlowPool(
+  flowId: string
+): Promise<AxiosResponse<any>> {
+  const config = {};
+  config["params"] = { flow_id: flowId };
+  return await api.delete(`${BASE_URL_API}monitor/builds`, config);
 }

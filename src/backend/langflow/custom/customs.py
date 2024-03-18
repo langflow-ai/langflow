@@ -7,7 +7,6 @@ CUSTOM_NODES = {
     # },
     "tools": {
         "PythonFunctionTool": frontend_node.tools.PythonFunctionToolNode(),
-        "PythonFunction": frontend_node.tools.PythonFunctionNode(),
         "Tool": frontend_node.tools.ToolNode(),
     },
     "agents": {

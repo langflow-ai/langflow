@@ -1,4 +1,5 @@
 import { ReactFlowJsonObject, XYPosition } from "reactflow";
+import { BuildStatus } from "../../constants/enums";
 import { APIClassType } from "../api/index";
 
 export type FlowType = {
@@ -7,12 +8,17 @@ export type FlowType = {
   data: ReactFlowJsonObject | null;
   description: string;
   style?: FlowStyleType;
-  is_component: boolean;
-  parent?: string;
-  date_created?: string;
-  updated_at?: string;
+  is_component?: boolean;
   last_tested_version?: string;
+  updated_at?: string;
+  date_created?: string;
+  parent?: string;
+  folder?: string;
+  user_id?: string;
+  icon?: string;
+  icon_bg_color?: string;
 };
+
 export type NodeType = {
   id: string;
   type?: string;
@@ -27,6 +33,7 @@ export type NodeDataType = {
   node?: APIClassType;
   id: string;
   output_types?: string[];
+  buildStatus?: BuildStatus;
 };
 // FlowStyleType is the type of the style object that is used to style the
 // Flow card with an emoji and a color.

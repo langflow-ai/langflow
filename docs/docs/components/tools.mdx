@@ -9,6 +9,21 @@ import Admonition from '@theme/Admonition';
 </Admonition>
 
 
+### SearchApi
+
+Real-time search engine results API. Returns structured JSON data that includes answer box, knowledge graph, organic results, and more.
+
+**Parameters**
+
+- **Api Key:** A unique identifier for the SearchApi, necessary for authenticating requests to real-time search engines. This key can be retrieved from the [SearchApi dashboard](https://www.searchapi.io/).
+- **Engine:** Specifies the search engine. For instance: google, google_scholar, bing, youtube, and youtube_transcripts. A full list of supported engines is available in the [documentation](https://www.searchapi.io/docs/google).
+- **Parameters:** Allows the selection of any parameters recognized by SearchApi, with some being required and others optional. 
+
+**Output**
+
+- **Document:** The JSON response from the request as a Document.
+
+
 ### BingSearchRun
 
 Bing Search is a web search engine owned and operated by Microsoft. It provides search results for various types of content, including web pages, images, videos, and news articles. It uses a combination of algorithms and human editors to deliver search results to users.

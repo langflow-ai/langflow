@@ -1,10 +1,11 @@
 import { cloneDeep } from "lodash";
+import { LinkIcon, SparklesIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
-import ApiModal from "../../../../modals/ApiModal";
+import { PRIORITY_SIDEBAR_ORDER } from "../../../../constants/constants";
 import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
 import useAlertStore from "../../../../stores/alertStore";
@@ -25,6 +26,7 @@ import {
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
+import { sortKeys } from "./utils";
 
 export default function ExtraSidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
@@ -37,7 +39,6 @@ export default function ExtraSidebar(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
 
-  const isBuilt = useFlowStore((state) => state.isBuilt);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [dataFilter, setFilterData] = useState(data);
   const [search, setSearch] = useState("");
@@ -234,71 +235,6 @@ export default function ExtraSidebar(): JSX.Element {
 
   return (
     <div className="side-bar-arrangement">
-      <div className="side-bar-buttons-arrangement">
-        {hasStore && validApiKey && (
-          <ShadTooltip
-            content={
-              !hasApiKey || !validApiKey
-                ? "Please review your API key."
-                : "Share"
-            }
-            side="top"
-            styleClasses="cursor-default"
-          >
-            <div className="side-bar-button">{ModalMemo}</div>
-          </ShadTooltip>
-        )}
-        <div className="side-bar-button">
-          <ShadTooltip content="Import" side="top">
-            <button
-              className="extra-side-bar-buttons"
-              onClick={() => {
-                uploadFlow({ newProject: false, isComponent: false }).catch(
-                  (error) => {
-                    setErrorData({
-                      title: "Error uploading file",
-                      list: [error],
-                    });
-                  }
-                );
-              }}
-            >
-              <IconComponent name="FileUp" className="side-bar-button-size " />
-            </button>
-          </ShadTooltip>
-        </div>
-        {(!hasApiKey || !validApiKey) && (
-          <ShadTooltip
-            content="Export"
-            side="top"
-            styleClasses="cursor-default"
-          >
-            <div className="side-bar-button">{ExportMemo}</div>
-          </ShadTooltip>
-        )}
-        <ShadTooltip content={"Code"} side="top">
-          <div className="side-bar-button">
-            {currentFlow && currentFlow.data && (
-              <ApiModal flow={currentFlow}>
-                <button
-                  className={"w-full " + (!isBuilt ? "button-disable" : "")}
-                >
-                  <div className={classNames("extra-side-bar-buttons")}>
-                    <IconComponent
-                      name="Code2"
-                      className={
-                        "side-bar-button-size" +
-                        (isBuilt ? " " : " extra-side-bar-save-disable")
-                      }
-                    />
-                  </div>
-                </button>
-              </ApiModal>
-            )}
-          </div>
-        </ShadTooltip>
-      </div>
-      <Separator />
       <div className="side-bar-search-div-placement">
         <Input
           onFocusCapture={() => handleBlur()}
@@ -314,90 +250,128 @@ export default function ExtraSidebar(): JSX.Element {
             setSearch(event.target.value);
           }}
         />
-        <div className="search-icon">
+        <div
+          className="search-icon "
+          onClick={() => {
+            if (search) {
+              setFilterData(data);
+              setSearch("");
+            }
+          }}
+        >
           <IconComponent
-            name="Search"
-            className={"h-5 w-5 stroke-[1.5] text-primary"}
+            name={search ? "X" : "Search"}
+            className={`h-5 w-5 stroke-[1.5] text-primary ${
+              search ? "cursor-pointer" : "cursor-default"
+            }`}
             aria-hidden="true"
           />
         </div>
       </div>
-
+      <Separator />
       <div className="side-bar-components-div-arrangement">
         {Object.keys(dataFilter)
-          .sort((a, b) => {
-            if (a.toLowerCase() === "saved_components") {
-              return -1;
-            } else if (b.toLowerCase() === "saved_components") {
-              return 1;
-            } else if (a.toLowerCase() === "custom_components") {
-              return -2;
-            } else if (b.toLowerCase() === "custom_components") {
-              return 2;
-            } else {
-              return a.localeCompare(b);
-            }
-          })
+          .sort(sortKeys)
           .map((SBSectionName: keyof APIObjectType, index) =>
             Object.keys(dataFilter[SBSectionName]).length > 0 ? (
-              <DisclosureComponent
-                openDisc={
-                  getFilterEdge.length !== 0 || search.length !== 0
-                    ? true
-                    : false
-                }
-                key={index + search + JSON.stringify(getFilterEdge)}
-                button={{
-                  title: nodeNames[SBSectionName] ?? nodeNames.unknown,
-                  Icon:
-                    nodeIconsLucide[SBSectionName] ?? nodeIconsLucide.unknown,
-                }}
-              >
-                <div className="side-bar-components-gap">
-                  {Object.keys(dataFilter[SBSectionName])
-                    .sort((a, b) =>
-                      sensitiveSort(
-                        dataFilter[SBSectionName][a].display_name,
-                        dataFilter[SBSectionName][b].display_name
+              <>
+                {index === 0 && (
+                  <div className="pt-0.5">
+                    <div className="p-2 px-4 text-sm font-semibold" key={index}>
+                      Native Components
+                    </div>
+                  </div>
+                )}
+                {index === PRIORITY_SIDEBAR_ORDER.length - 1 && (
+                  <>
+                    <a
+                      target={"_blank"}
+                      href="https://langflow.store"
+                      className="components-disclosure-arrangement"
+                    >
+                      <div className="flex gap-4">
+                        {/* BUG ON THIS ICON */}
+                        <SparklesIcon
+                          strokeWidth={1.5}
+                          className="w-[22px] text-primary"
+                        />
+
+                        <span className="components-disclosure-title">
+                          Discover More
+                        </span>
+                      </div>
+                      <div className="components-disclosure-div">
+                        <div>
+                          <LinkIcon className="h-4 w-4 text-foreground" />
+                        </div>
+                      </div>
+                    </a>
+                    <div className="p-2 px-4 text-sm font-semibold" key={index}>
+                      Legacy Components
+                    </div>
+                  </>
+                )}
+                <DisclosureComponent
+                  openDisc={
+                    getFilterEdge.length !== 0 || search.length !== 0
+                      ? true
+                      : false
+                  }
+                  key={index + search + JSON.stringify(getFilterEdge)}
+                  button={{
+                    title: nodeNames[SBSectionName] ?? nodeNames.unknown,
+                    Icon:
+                      nodeIconsLucide[SBSectionName] ?? nodeIconsLucide.unknown,
+                  }}
+                >
+                  <div className="side-bar-components-gap">
+                    {Object.keys(dataFilter[SBSectionName])
+                      .sort((a, b) =>
+                        sensitiveSort(
+                          dataFilter[SBSectionName][a].display_name,
+                          dataFilter[SBSectionName][b].display_name
+                        )
                       )
-                    )
-                    .map((SBItemName: string, index) => (
-                      <ShadTooltip
-                        content={
-                          dataFilter[SBSectionName][SBItemName].display_name
-                        }
-                        side="right"
-                        key={index}
-                      >
-                        <SidebarDraggableComponent
-                          sectionName={SBSectionName as string}
-                          apiClass={dataFilter[SBSectionName][SBItemName]}
-                          key={index}
-                          onDragStart={(event) =>
-                            onDragStart(event, {
-                              //split type to remove type in nodes saved with same name removing it's
-                              type: removeCountFromString(SBItemName),
-                              node: dataFilter[SBSectionName][SBItemName],
-                            })
-                          }
-                          color={nodeColors[SBSectionName]}
-                          itemName={SBItemName}
-                          //convert error to boolean
-                          error={!!dataFilter[SBSectionName][SBItemName].error}
-                          display_name={
+                      .map((SBItemName: string, index) => (
+                        <ShadTooltip
+                          content={
                             dataFilter[SBSectionName][SBItemName].display_name
                           }
-                          official={
-                            dataFilter[SBSectionName][SBItemName].official ===
-                            false
-                              ? false
-                              : true
-                          }
-                        />
-                      </ShadTooltip>
-                    ))}
-                </div>
-              </DisclosureComponent>
+                          side="right"
+                          key={index}
+                        >
+                          <SidebarDraggableComponent
+                            sectionName={SBSectionName as string}
+                            apiClass={dataFilter[SBSectionName][SBItemName]}
+                            key={index}
+                            onDragStart={(event) =>
+                              onDragStart(event, {
+                                //split type to remove type in nodes saved with same name removing it's
+                                type: removeCountFromString(SBItemName),
+                                node: dataFilter[SBSectionName][SBItemName],
+                              })
+                            }
+                            color={nodeColors[SBSectionName]}
+                            itemName={SBItemName}
+                            //convert error to boolean
+                            error={
+                              !!dataFilter[SBSectionName][SBItemName].error
+                            }
+                            display_name={
+                              dataFilter[SBSectionName][SBItemName].display_name
+                            }
+                            official={
+                              dataFilter[SBSectionName][SBItemName].official ===
+                              false
+                                ? false
+                                : true
+                            }
+                          />
+                        </ShadTooltip>
+                      ))}
+                  </div>
+                </DisclosureComponent>
+              </>
             ) : (
               <div key={index}></div>
             )

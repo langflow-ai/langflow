@@ -64,14 +64,13 @@ class LangfusePlugin(CallbackPlugin):
     def get_callback(self, _id: Optional[str] = None):
         if _id is None:
             _id = "default"
-        from langfuse.callback import CreateTrace  # type: ignore
 
         logger.debug("Initializing langfuse callback")
 
         try:
             langfuse_instance = self.get()
             if langfuse_instance is not None and hasattr(langfuse_instance, "trace"):
-                trace = langfuse_instance.trace(CreateTrace(name="langflow-" + _id, id=_id))
+                trace = langfuse_instance.trace(name="langflow-" + _id, id=_id)
                 if trace:
                     return trace.getNewHandler()
 

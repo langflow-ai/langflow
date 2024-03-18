@@ -1,4 +1,3 @@
-import _ from "lodash";
 import { useContext, useEffect, useState } from "react";
 import "reactflow/dist/style.css";
 import "./App.css";
@@ -21,113 +20,33 @@ import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useGlobalVariablesStore } from "./stores/globalVariables";
+import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
 
 export default function App() {
-  const errorData = useAlertStore((state) => state.errorData);
-  const errorOpen = useAlertStore((state) => state.errorOpen);
-  const setErrorOpen = useAlertStore((state) => state.setErrorOpen);
-  const noticeData = useAlertStore((state) => state.noticeData);
-  const noticeOpen = useAlertStore((state) => state.noticeOpen);
-  const setNoticeOpen = useAlertStore((state) => state.setNoticeOpen);
-  const successData = useAlertStore((state) => state.successData);
-  const successOpen = useAlertStore((state) => state.successOpen);
-  const setSuccessOpen = useAlertStore((state) => state.setSuccessOpen);
-  const loading = useAlertStore((state) => state.loading);
+  const removeFromTempNotificationList = useAlertStore(
+    (state) => state.removeFromTempNotificationList
+  );
+  const tempNotificationList = useAlertStore(
+    (state) => state.tempNotificationList
+  );
   const [fetchError, setFetchError] = useState(false);
-
-  // Initialize state variable for the list of alerts
-  const [alertsList, setAlertsList] = useState<
-    Array<{
-      type: string;
-      data: { title: string; list?: Array<string>; link?: string };
-      id: string;
-    }>
-  >([]);
-
-  // Use effect hook to update alertsList when a new alert is added
-  useEffect(() => {
-    // If there is an error alert open with data, add it to the alertsList
-    if (errorOpen && errorData) {
-      if (
-        alertsList.length > 0 &&
-        JSON.stringify(alertsList[alertsList.length - 1].data) ===
-          JSON.stringify(errorData)
-      ) {
-        return;
-      }
-      setErrorOpen(false);
-      setAlertsList((old) => {
-        let newAlertsList = [
-          ...old,
-          { type: "error", data: _.cloneDeep(errorData), id: _.uniqueId() },
-        ];
-        return newAlertsList;
-      });
-    }
-    // If there is a notice alert open with data, add it to the alertsList
-    else if (noticeOpen && noticeData) {
-      if (
-        alertsList.length > 0 &&
-        JSON.stringify(alertsList[alertsList.length - 1].data) ===
-          JSON.stringify(noticeData)
-      ) {
-        return;
-      }
-      setNoticeOpen(false);
-      setAlertsList((old) => {
-        let newAlertsList = [
-          ...old,
-          { type: "notice", data: _.cloneDeep(noticeData), id: _.uniqueId() },
-        ];
-        return newAlertsList;
-      });
-    }
-    // If there is a success alert open with data, add it to the alertsList
-    else if (successOpen && successData) {
-      if (
-        alertsList.length > 0 &&
-        JSON.stringify(alertsList[alertsList.length - 1].data) ===
-          JSON.stringify(successData)
-      ) {
-        return;
-      }
-      setSuccessOpen(false);
-      setAlertsList((old) => {
-        let newAlertsList = [
-          ...old,
-          { type: "success", data: _.cloneDeep(successData), id: _.uniqueId() },
-        ];
-        return newAlertsList;
-      });
-    }
-  }, [
-    _,
-    errorData,
-    errorOpen,
-    noticeData,
-    noticeOpen,
-    setErrorOpen,
-    setNoticeOpen,
-    setSuccessOpen,
-    successData,
-    successOpen,
-  ]);
+  const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
   const removeAlert = (id: string) => {
-    setAlertsList((prevAlertsList) =>
-      prevAlertsList.filter((alert) => alert.id !== id)
-    );
+    removeFromTempNotificationList(id);
   };
 
   const { isAuthenticated } = useContext(AuthContext);
   const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
+  const fetchApiData = useStoreStore((state) => state.fetchApiData);
   const getTypes = useTypesStore((state) => state.getTypes);
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const setGlobalVariables = useGlobalVariablesStore(
     (state) => state.setGlobalVariables
   );
+  const checkHasStore = useStoreStore((state) => state.checkHasStore);
 
   useEffect(() => {
     refreshStars();
@@ -142,6 +61,8 @@ export default function App() {
       getGlobalVariables().then((res) => {
         setGlobalVariables(res);
       });
+      checkHasStore();
+      fetchApiData();
     }
   }, [isAuthenticated]);
 
@@ -155,7 +76,7 @@ export default function App() {
         .catch(() => {
           setFetchError(true);
         });
-    }, 20000);
+    }, 20000); // 20 seconds
 
     // Clean up the timer on component unmount
     return () => {
@@ -177,7 +98,7 @@ export default function App() {
             description={FETCH_ERROR_DESCRIPION}
             message={FETCH_ERROR_MESSAGE}
           ></FetchErrorComponent>
-        ) : loading ? (
+        ) : isLoading ? (
           <div className="loading-page-panel">
             <LoadingComponent remSize={50} />
           </div>
@@ -188,35 +109,46 @@ export default function App() {
         )}
       </ErrorBoundary>
       <div></div>
-      <div className="app-div" style={{ zIndex: 999 }}>
-        {alertsList.map((alert) => (
-          <div key={alert.id}>
-            {alert.type === "error" ? (
-              <ErrorAlert
-                key={alert.id}
-                title={alert.data.title}
-                list={alert.data.list}
-                id={alert.id}
-                removeAlert={removeAlert}
-              />
-            ) : alert.type === "notice" ? (
-              <NoticeAlert
-                key={alert.id}
-                title={alert.data.title}
-                link={alert.data.link}
-                id={alert.id}
-                removeAlert={removeAlert}
-              />
-            ) : (
-              <SuccessAlert
-                key={alert.id}
-                title={alert.data.title}
-                id={alert.id}
-                removeAlert={removeAlert}
-              />
-            )}
-          </div>
-        ))}
+      <div className="app-div">
+        <div className="flex flex-col-reverse" style={{ zIndex: 999 }}>
+          {tempNotificationList.map((alert) => (
+            <div key={alert.id}>
+              {alert.type === "error" && (
+                <ErrorAlert
+                  key={alert.id}
+                  title={alert.title}
+                  list={alert.list}
+                  id={alert.id}
+                  removeAlert={removeAlert}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="z-40 flex flex-col-reverse">
+          {tempNotificationList.map((alert) => (
+            <div key={alert.id}>
+              {alert.type === "notice" ? (
+                <NoticeAlert
+                  key={alert.id}
+                  title={alert.title}
+                  link={alert.link}
+                  id={alert.id}
+                  removeAlert={removeAlert}
+                />
+              ) : (
+                alert.type === "success" && (
+                  <SuccessAlert
+                    key={alert.id}
+                    title={alert.title}
+                    id={alert.id}
+                    removeAlert={removeAlert}
+                  />
+                )
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

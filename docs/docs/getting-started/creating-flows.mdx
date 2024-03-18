@@ -7,18 +7,20 @@ import ReactPlayer from "react-player";
 
 ## Compose
 
-Creating flows with Langflow is easy. Drag sidebar components onto the canvas and connect them together to create your pipeline. Langflow provides a range of [LangChain components](https://python.langchain.com/docs/modules/) to choose from, including LLMs, prompt serializers, agents, and chains.
+Creating flows with Langflow is easy. Drag sidebar components onto the canvas and connect them together to create your pipeline.
+Langflow provides a range of Components to choose from, including **Chat Input**, **Chat Output**, **API Request** and **Prompt**.
 
 <ZoomableImage
   alt="Docusaurus themed image"
   sources={{
     light: "img/langflow_canvas.png",
+    dark: "img/langflow_canvas.png"
   }}
 />
 
-## Fork
+## Starter Flows
 
-The easiest way to start with Langflow is by forking a **community example**. Forking an example stores a copy in your project collection, allowing you to edit and save the modified version as a new flow.
+Langflow provides a range of starter flows to help you get started. These flows are pre-built and can be used as a starting point for your own flows.
 
 <div
   style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
@@ -26,9 +28,21 @@ The easiest way to start with Langflow is by forking a **community example**. Fo
   <ReactPlayer playing controls url="/videos/langflow_fork.mp4" />
 </div>
 
-## Build
+## Defining Inputs and Outputs
 
-Building a flow means validating if the components have prerequisites fulfilled and are properly instantiated. When a chat message is sent, the flow will run for the first time, executing the pipeline.
+Each flow can have multiple inputs and outputs. These can be defined by placing **Inputs** and **Outputs** components on the canvas.
+
+The **Inputs** components define the inputs to the flow.
+Whenever you place an Input component on the canvas, it will allow you to interactively define change its value
+from the Interactive Panel.
+
+The **Text Input** component allows you to define a text input, and the **Chat Input** component allows you to use the chat input from the Interactive Panel.
+
+The **Outputs** components define the outputs of the flow and work similarly to the Inputs components.
+
+Both Inputs and Outputs components can be connected to other components on the canvas and are used to define how the API works too.
+
+
 
 <div
   style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
