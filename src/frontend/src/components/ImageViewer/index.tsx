@@ -25,8 +25,6 @@ export default function ImageViewer({image }) {
               maxZoomPixelRatio: 4,
               showNavigationControl: false,
             });
-            console.log(viewer)
-    
             const zoomInButton = document.getElementById('zoom-in-button');
         const zoomOutButton = document.getElementById('zoom-out-button');
         const homeButton = document.getElementById('home-button');
@@ -70,16 +68,18 @@ export default function ImageViewer({image }) {
 
     return (
         image === "" ? (
-          <div className="w-full h-full flex align-center justify-center flex-col  gap-5">
-            <div className="rounded-md border border-border py-20 gap-4 flex flex-col ">
+          <div className="w-full h-full bg-muted rounded-md flex align-center justify-center flex-col  gap-5 border border-border">
               <div className="flex gap-2 align-center justify-center ">
                 <ForwardedIconComponent
                   name="Image"
                 />
                 Image output
               </div>
-              <div className="flex justify-center align-center">Please build your flow or inform a valid image url to see your image preview</div>
-            </div>
+              <div className="flex align-center justify-center">
+                <div className="langflow-chat-desc flex align-center justify-center">
+                  <div className="langflow-chat-desc-span">Run the flow or inform a valid url to see your image</div>
+                </div>
+              </div>
           </div>
         ) : (
           <>

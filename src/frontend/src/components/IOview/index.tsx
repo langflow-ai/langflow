@@ -272,7 +272,7 @@ export default function IOView({
                                   {output && (
                                     <IOOutputView
                                       left={true}
-                                      outputType={output.type}
+                                      outputType={output.type }
                                       outputId={output.id}
                                     />
                                   )}
