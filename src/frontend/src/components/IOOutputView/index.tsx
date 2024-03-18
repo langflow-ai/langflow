@@ -46,7 +46,7 @@ export default function IOOutputView({
       case "CSVOutput":
         return left ? (
           <>
-            <div className="flex justify-between">
+            <div className="flex align-center justify-center">
               Expand the ouptut to see the CSV
             </div>
           </>

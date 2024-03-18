@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDarkStore } from "../../stores/darkStore";
 import Loading from "../ui/loading";
 import { convertCSVToData } from "./helpers/convert-data-function";
+import ForwardedIconComponent from "../genericIconComponent";
 
 function CsvOutputComponent({ csvNode }) {
   const separator = csvNode?.separator || ";";
@@ -85,18 +86,34 @@ function CsvOutputComponent({ csvNode }) {
   return (
     <div className=" h-full rounded-md border bg-muted">
       {status === "nodata" && (
-        <div className=" h-full w-full items-center justify-center">
-          <div className="chat-alert-box ">
-            <span className="langflow-chat-span">No data available</span>
+        <div className=" h-full w-full flex flex-col items-center justify-center align-center gap-5">
+          <div className="flex gap-2 align-center justify-center w-full">
+            <ForwardedIconComponent
+              name="Table"
+            />
+              CSV output
+          </div>
+          <div className="w-full flex align-center justify-center">
+            <div className="langflow-chat-desc flex align-center justify-center px-6 py-8">
+               <div className="langflow-chat-desc-span">No data available</div>
+            </div>
           </div>
         </div>
       )}
       {status === "error" && (
-        <div className=" h-full w-full items-center justify-center">
-          <div className="chat-alert-box ">
-            <span className="langflow-chat-span">Error loading CSV</span>
+        <div className=" h-full w-full flex flex-col items-center justify-center align-center gap-5">
+        <div className="flex gap-2 align-center justify-center w-full">
+          <ForwardedIconComponent
+            name="Table"
+          />
+            CSV output
+        </div>
+        <div className="w-full flex align-center justify-center">
+          <div className="langflow-chat-desc flex align-center justify-center px-6 py-8">
+             <div className="langflow-chat-desc-span">Error loading CSV</div>
           </div>
         </div>
+      </div>
       )}
       {status === "loaded" && (
         <div
