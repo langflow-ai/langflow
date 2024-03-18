@@ -35,6 +35,7 @@ from pydantic import ValidationError
 
 if TYPE_CHECKING:
     from langflow import CustomComponent
+
     from langflow.graph.vertex.base import Vertex
 
 
@@ -551,7 +552,4 @@ def build_prompt_template(prompt, tools):
         "base_classes": ["BasePromptTemplate"],
     }
 
-    return prompt
-    return prompt
-    return prompt
     return prompt
