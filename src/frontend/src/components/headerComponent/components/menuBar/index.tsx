@@ -45,8 +45,9 @@ export const MenuBar = ({
         if (!currentFlow) {
           throw new Error("No flow to duplicate");
         }
-        addFlow(true, currentFlow).then((_) => {
+        addFlow(true, currentFlow).then((id) => {
           setSuccessData({title:"Flow duplicated successfully"});
+          navigate("/flow/" + id);
         });
       }
       else
@@ -74,7 +75,7 @@ export const MenuBar = ({
       <button
         onClick={() => {
           removeFunction(nodes);
-          navigate(-1);
+          navigate("/");
         }}
       >
         <IconComponent name="ChevronLeft" className="w-4" />
