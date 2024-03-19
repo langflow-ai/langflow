@@ -10,17 +10,6 @@ from typing import (
     Sequence,
     Union,
 )
-from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    List,
-    Optional,
-    Sequence,
-    Union,
-)
 from uuid import UUID
 
 import yaml
