@@ -21,22 +21,22 @@ export default function IOOutputView({
 }: IOOutputProps): JSX.Element | undefined {
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
-  const setFlowPool = useFlowStore((state) => state.setFlowPool);
   const flowPool = useFlowStore((state) => state.flowPool);
   const node = nodes.find((node) => node.id === outputId);
-  const separatorOptions = node?.data?.node?.template?.separator?.options ?? [
-    ";",
-    ",",
-    "|",
-  ];
   const flowPoolNode = (flowPool[node!.id] ?? [])[
     (flowPool[node!.id]?.length ?? 1) - 1
   ];
 
   const handleChangeSelect = (e) => {
-    flowPoolNode.data.artifacts.repr.separator = e;
-    const newFlowPool = cloneDeep(flowPool);
-    setFlowPool(newFlowPool);
+    if(node)
+    {
+      let newNode = cloneDeep(node);
+      if(newNode.data.node.template.separator)
+      {
+        newNode.data.node.template.separator.value = e;
+        setNode(newNode.id,newNode);
+      }
+    }
   };
 
   function handleOutputType() {
@@ -66,13 +66,13 @@ export default function IOOutputView({
             </div>
             <div className="flex items-center justify-between pt-5">
               <span>CSV separator </span>
-              <Select onValueChange={(e) => handleChangeSelect(e)}>
+              <Select value={node.data.node.template.separator.value} onValueChange={(e) => handleChangeSelect(e)}>
                 <SelectTrigger className="w-[70px]">
-                  <SelectValue placeholder=";" />
+                  <SelectValue/>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {separatorOptions.map((separator) => (
+                    {node?.data?.node?.template?.separator?.options.map((separator) => (
                       <SelectItem key={separator} value={separator}>
                         {separator}
                       </SelectItem>

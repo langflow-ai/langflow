@@ -8,13 +8,13 @@ import ForwardedIconComponent from "../genericIconComponent";
 import Loading from "../ui/loading";
 import { convertCSVToData } from "./helpers/convert-data-function";
 
-function CsvOutputComponent({ csvNode }) {
+function CsvOutputComponent({ csvNode }:{csvNode:any}) {
   const flowPool = useFlowStore((state) => state.flowPool);
   const csvNodeArtifacts = (flowPool[csvNode!.id] ?? [])[
     (flowPool[csvNode!.id]?.length ?? 1) - 1
   ]?.data?.artifacts?.repr;
-  const separator = csvNodeArtifacts?.separator || ";";
   const file = csvNodeArtifacts?.data || "";
+  const separator = csvNode?.data?.node?.template?.separator?.value || ",";
 
   const dark = useDarkStore.getState().dark;
 
@@ -44,7 +44,7 @@ function CsvOutputComponent({ csvNode }) {
     } else {
       setStatus("nodata");
     }
-  }, [csvNodeArtifacts]);
+  }, [csvNodeArtifacts,csvNode]);
 
   const getRowHeight = useCallback((params: any) => {
     return currentRowHeight;
