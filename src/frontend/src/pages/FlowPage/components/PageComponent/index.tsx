@@ -98,6 +98,58 @@ export default function Page({
     const onKeyDown = (event: KeyboardEvent) => {
       const selectedNode = nodes.filter((obj) => obj.selected);
       if (
+        selectionMenuVisible &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "g"
+      ) {
+        event.preventDefault();
+        takeSnapshot();
+        if (
+          validateSelection(lastSelection!, edges).length === 0
+        ) {
+          const { newFlow, removedEdges } = generateFlow(
+            lastSelection!,
+            nodes,
+            edges,
+            getRandomName()
+          );
+          const newGroupNode = generateNodeFromFlow(
+            newFlow,
+            getNodeId
+          );
+          const newEdges = reconnectEdges(
+            newGroupNode,
+            removedEdges
+          );
+          setNodes((oldNodes) => [
+            ...oldNodes.filter(
+              (oldNodes) =>
+                !lastSelection?.nodes.some(
+                  (selectionNode) =>
+                    selectionNode.id === oldNodes.id
+                )
+            ),
+            newGroupNode,
+          ]);
+          setEdges((oldEdges) => [
+            ...oldEdges.filter(
+              (oldEdge) =>
+                !lastSelection!.nodes.some(
+                  (selectionNode) =>
+                    selectionNode.id === oldEdge.target ||
+                    selectionNode.id === oldEdge.source
+                )
+            ),
+            ...newEdges,
+          ]);
+        } else {
+          setErrorData({
+            title: INVALID_SELECTION_ERROR_ALERT,
+            list: validateSelection(lastSelection!, edges),
+          });
+        }
+      }
+      if (
         (event.ctrlKey || event.metaKey) &&
         event.key === "p" &&
         selectedNode.length > 0
@@ -201,7 +253,7 @@ export default function Page({
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [lastCopiedSelection, lastSelection, takeSnapshot]);
+  }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
 
   useEffect(() => {
     if (reactFlowInstance && currentFlowId) {
