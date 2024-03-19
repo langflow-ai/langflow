@@ -7,8 +7,9 @@ import useFlowStore from "../../stores/flowStore";
 import ForwardedIconComponent from "../genericIconComponent";
 import Loading from "../ui/loading";
 import { convertCSVToData } from "./helpers/convert-data-function";
+import { NodeType } from "../../types/flow";
 
-function CsvOutputComponent({ csvNode }:{csvNode:any}) {
+function CsvOutputComponent({ csvNode }:{csvNode:NodeType}) {
   const flowPool = useFlowStore((state) => state.flowPool);
   const csvNodeArtifacts = (flowPool[csvNode!.id] ?? [])[
     (flowPool[csvNode!.id]?.length ?? 1) - 1
@@ -44,7 +45,7 @@ function CsvOutputComponent({ csvNode }:{csvNode:any}) {
     } else {
       setStatus("nodata");
     }
-  }, [csvNodeArtifacts,csvNode]);
+  }, [csvNodeArtifacts,csvNode.data.node?.template.separator.value]);
 
   const getRowHeight = useCallback((params: any) => {
     return currentRowHeight;

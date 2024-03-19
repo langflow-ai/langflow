@@ -26,7 +26,6 @@ export default function IOOutputView({
   const flowPoolNode = (flowPool[node!.id] ?? [])[
     (flowPool[node!.id]?.length ?? 1) - 1
   ];
-
   const handleChangeSelect = (e) => {
     if(node)
     {
