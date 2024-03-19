@@ -6,6 +6,7 @@ import { useDarkStore } from "../../stores/darkStore";
 import Loading from "../ui/loading";
 import { convertCSVToData } from "./helpers/convert-data-function";
 import ForwardedIconComponent from "../genericIconComponent";
+import { CSVError, CSVNoDataError, CSVViewErrorTitle } from "../../constants/constants";
 
 function CsvOutputComponent({ csvNode }) {
   const separator = csvNode?.separator || ";";
@@ -91,11 +92,11 @@ function CsvOutputComponent({ csvNode }) {
             <ForwardedIconComponent
               name="Table"
             />
-              CSV output
+              {CSVViewErrorTitle}
           </div>
           <div className="w-full flex align-center justify-center">
             <div className="langflow-chat-desc flex align-center justify-center px-6 py-8">
-               <div className="langflow-chat-desc-span">No data available</div>
+               <div className="langflow-chat-desc-span">{CSVNoDataError}</div>
             </div>
           </div>
         </div>
@@ -106,11 +107,11 @@ function CsvOutputComponent({ csvNode }) {
           <ForwardedIconComponent
             name="Table"
           />
-            CSV output
+            {CSVViewErrorTitle}
         </div>
         <div className="w-full flex align-center justify-center">
           <div className="langflow-chat-desc flex align-center justify-center px-6 py-8">
-             <div className="langflow-chat-desc-span">Error loading CSV</div>
+             <div className="langflow-chat-desc-span">{CSVError}</div>
           </div>
         </div>
       </div>

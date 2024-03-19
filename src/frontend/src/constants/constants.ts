@@ -828,3 +828,27 @@ export const EXAMPLES_MOCK: FlowType[] = [
     user_id: undefined,
   },
 ];
+
+export const PDFViewConstant = "Expand the ouptut to see the PDF";
+
+export const CSVViewConstant = "Expand the ouptut to see the CSV";
+
+export const CSVViewErrorTitle = "CSV output";
+
+export const CSVNoDataError = "No data available";
+
+export const CSVError = "Error loading CSV";
+
+export const IMGViewConstant = "Expand the view to see the image";
+
+export const IMGViewErrorMSG = "Run the flow or inform a valid url to see your image";
+
+export const IMGViewErrorTitle = "Image output";
+
+export const PDFErrorTitle = "PDF Output";
+
+export const PDFLoadError = "Run the flow to see the pdf";
+
+export const PDFLoadErrorTitle = "Error loading PDF";
+
+export const PDFCheckFlow = "Please check your flow and try again";

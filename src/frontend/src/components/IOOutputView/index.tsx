@@ -4,6 +4,7 @@ import CsvOutputComponent from "../csvOutputComponent";
 import PdfViewer from "../pdfViewer";
 import { Textarea } from "../ui/textarea";
 import ImageViewer from "../ImageViewer";
+import { CSVViewConstant, IMGViewConstant, PDFViewConstant } from "../../constants/constants";
 
 
 export default function IOOutputView({
@@ -34,7 +35,7 @@ export default function IOOutputView({
         );
       case "PDFOutput":
         return left ? (
-          <div>Expand the ouptut to see the PDF</div>
+          <div>{PDFViewConstant}</div>
         ) : (
           <PdfViewer
             pdf={
@@ -47,7 +48,7 @@ export default function IOOutputView({
         return left ? (
           <>
             <div className="flex align-center justify-center">
-              Expand the ouptut to see the CSV
+              {CSVViewConstant}
             </div>
           </>
         ) : (
@@ -64,7 +65,7 @@ export default function IOOutputView({
       case "ImageOutput":
         return (
           left ? (
-            <div>Expand the view to see the image</div>
+            <div>{IMGViewConstant}</div>
           ) : (
             <ImageViewer image={
               (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
