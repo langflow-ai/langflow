@@ -28,7 +28,6 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.schema.schema import Record
-from langflow.schema.schema import Record
 from langflow.utils import validate
 from langflow.utils.util import unescape_string
 from loguru import logger

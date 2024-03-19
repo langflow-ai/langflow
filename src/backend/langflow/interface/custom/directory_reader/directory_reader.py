@@ -3,9 +3,8 @@ import os
 import zlib
 from pathlib import Path
 
-from loguru import logger
-
 from langflow.interface.custom.custom_component import CustomComponent
+from loguru import logger
 
 
 class CustomComponentPathValueError(ValueError):
