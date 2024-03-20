@@ -16,6 +16,7 @@ import PromptAreaComponent from "../../../../components/promptComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
+import { CommandItem } from "../../../../components/ui/command";
 import { RefreshButton } from "../../../../components/ui/refreshButton";
 import {
   INPUT_HANDLER_HOVER,
@@ -23,6 +24,7 @@ import {
   OUTPUT_HANDLER_HOVER,
   TOOLTIP_EMPTY,
 } from "../../../../constants/constants";
+import AddNewVariableButton from "../../../../pages/globalVariablesPage/components/addNewVariableButton";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -46,7 +48,7 @@ import {
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils/styleUtils";
-import { classNames, groupByFamily } from "../../../../utils/utils";
+import { classNames, cn, groupByFamily } from "../../../../utils/utils";
 
 export default function ParameterComponent({
   left,
@@ -386,7 +388,7 @@ export default function ParameterComponent({
       <>
         <div
           className={
-            "w-full truncate text-sm flex items-center" +
+            "flex w-full items-center truncate text-sm" +
             (left ? "" : " text-end")
           }
         >
@@ -546,33 +548,47 @@ export default function ParameterComponent({
                     password={data.node?.template[name].password ?? false}
                     value={data.node?.template[name].value ?? ""}
                     options={globalVariablesEntries}
-                onChange={(value) => {
-                  handleOnNewValue(value);
-                  if (globalVariablesEntries.includes(value)) {
-                    setNoticeData({
-                      title: `the value inserted in ${data.node?.display_name} is a global variable, \n 
-                    the real value will be update on run`,
-                    });
-                    setNode(data.id, (oldNode) => {
-                      let newNode = cloneDeep(oldNode);
-                      newNode.data = {
-                        ...newNode.data,
-                      };
-                      newNode.data.node.template[name].load_from_db = true;
-                      return newNode;
-                    });
-                  } else {
-                    setNode(data.id, (oldNode) => {
-                      let newNode = cloneDeep(oldNode);
-                      newNode.data = {
-                        ...newNode.data,
-                      };
-                      newNode.data.node.template[name].load_from_db = false;
-                      return newNode;
-                    });
-                  }
-                  //mark as global variable
-                }}
+                    optionsPlaceholder={"Global Variables"}
+                    optionsButton={
+                      <AddNewVariableButton>
+                        <CommandItem value={"new"}>
+                          <IconComponent
+                            name="Plus"
+                            className={cn("mr-2 h-4 w-4 text-primary")}
+                            aria-hidden="true"
+                          />
+                          Add New Variable
+                        </CommandItem>
+                      </AddNewVariableButton>
+                    }
+                    selectedOption={
+                      data?.node?.template[name].load_from_db ?? false
+                        ? data?.node?.template[name].value
+                        : ""
+                    }
+                    setSelectedOption={(value) => {
+                      handleOnNewValue(value);
+                      setNode(data.id, (oldNode) => {
+                        let newNode = cloneDeep(oldNode);
+                        newNode.data = {
+                          ...newNode.data,
+                        };
+                        newNode.data.node.template[name].load_from_db =
+                          value === "" ? false : true;
+                        return newNode;
+                      });
+                    }}
+                    onChange={(value) => {
+                      handleOnNewValue(value);
+                      setNode(data.id, (oldNode) => {
+                        let newNode = cloneDeep(oldNode);
+                        newNode.data = {
+                          ...newNode.data,
+                        };
+                        newNode.data.node.template[name].load_from_db = false;
+                        return newNode;
+                      });
+                    }}
                   />
                 </div>
                 {data.node?.template[name].refresh_button && (

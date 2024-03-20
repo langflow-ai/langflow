@@ -20,7 +20,11 @@ export type InputComponentType = {
   className?: string;
   id?: string;
   blurOnEnter?: boolean;
+  optionsPlaceholder?: string;
   options?: string[];
+  optionsButton?: ReactElement;
+  selectedOption?: string;
+  setSelectedOption?: (value: string) => void;
 };
 export type ToggleComponentType = {
   enabled: boolean;

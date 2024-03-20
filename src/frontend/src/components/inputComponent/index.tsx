@@ -1,13 +1,20 @@
-import { Listbox, Transition } from "@headlessui/react";
 import * as Form from "@radix-ui/react-form";
-import { Fragment, useEffect, useRef, useState } from "react";
-import AddNewVariableButton from "../../pages/globalVariablesPage/components/addNewVariableButton";
+import { PopoverAnchor } from "@radix-ui/react-popover";
+import { useEffect, useRef, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "../ui/command";
 import { Input } from "../ui/input";
-import { Separator } from "../ui/separator";
+import { Popover, PopoverContentWithoutPortal } from "../ui/popover";
 
 export default function InputComponent({
   autoFocus = false,
@@ -23,7 +30,11 @@ export default function InputComponent({
   className,
   id = "",
   blurOnEnter = false,
+  selectedOption,
+  setSelectedOption,
   options = [],
+  optionsPlaceholder = "Search options...",
+  optionsButton,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
@@ -35,10 +46,6 @@ export default function InputComponent({
       onChange("");
     }
   }, [disabled]);
-
-  const filteredOptions = options.filter((option) =>
-    option.toLowerCase().includes(value.toLowerCase())
-  );
 
   function onInputLostFocus(event): void {
     if (onBlur) onBlur(event);
@@ -81,144 +88,118 @@ export default function InputComponent({
         </Form.Control>
       ) : (
         <>
-          <Input
-            id={id}
-            ref={refInput}
-            type="text"
-            onBlur={onInputLostFocus}
-            value={value}
-            autoFocus={autoFocus}
-            disabled={disabled}
-            required={required}
-            className={classNames(
-              password && !pwdVisible && value !== ""
-                ? " text-clip password "
-                : "",
-              editNode ? " input-edit-node " : "",
-              password && editNode ? "pr-8" : "",
-              password && !editNode ? "pr-10" : "",
-              className!
-            )}
-            placeholder={password && editNode ? "Key" : placeholder}
-            onChange={(e) => {
-              onChange(e.target.value);
-            }}
-            onKeyDown={(e) => {
-              handleKeyDown(e, value, "");
-              if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
-            }}
-            data-testid={editNode ? id + "-edit" : id}
-        />
-          <Listbox
-            onChange={(val) => {
-              onChange(val);
-            }}
-          >
-            <>
-              <div className={"relative mt-1 "}>
-                <Transition
-                  show={showOptions}
-                  as={Fragment}
-                  leave="transition ease-in duration-100"
-                  leaveFrom="opacity-100"
-                  leaveTo="opacity-0"
-                >
-                  <Listbox.Options
-                    className={classNames(
-                      editNode
-                        ? "dropdown-component-true-options nowheel custom-scroll"
-                        : "dropdown-component-false-options nowheel custom-scroll",
-                      false ? "mb-2 w-[250px]" : "absolute w-full"
-                    )}
-                  >
-                    <div className="flex items-center justify-between px-4 pb-3 pt-2 font-semibold">
-                      <div className="flex items-center gap-2">
-                        <IconComponent name="Globe" className="h-4 w-4" />
-                        Global Variables
-                      </div>
-                      <div>
-                        <AddNewVariableButton>
-                          <button className="text-muted-foreground hover:text-accent-foreground">
-                            <IconComponent name="Plus" className="h-5 w-5" />
-                          </button>
-                        </AddNewVariableButton>
-                      </div>
-                    </div>
-                    <Separator />
-                    {filteredOptions.map((option, id) => (
-                      <Listbox.Option
+          <Popover open={showOptions} onOpenChange={setShowOptions}>
+            <PopoverAnchor>
+              <Input
+                id={id}
+                ref={refInput}
+                type="text"
+                onBlur={onInputLostFocus}
+                value={value}
+                autoFocus={autoFocus}
+                disabled={disabled || selectedOption !== ""}
+                onClick={() => {
+                  selectedOption !== "" && setShowOptions(true);
+                }}
+                required={required}
+                className={classNames(
+                  password && !pwdVisible && value !== ""
+                    ? " text-clip password "
+                    : "",
+                  editNode ? " input-edit-node " : "",
+                  password && editNode ? "pr-8" : "",
+                  password && !editNode ? "pr-10" : "",
+                  className!
+                )}
+                placeholder={password && editNode ? "Key" : placeholder}
+                onChange={(e) => {
+                  onChange(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  handleKeyDown(e, value, "");
+                  if (blurOnEnter && e.key === "Enter")
+                    refInput.current?.blur();
+                }}
+                data-testid={editNode ? id + "-edit" : id}
+              />
+            </PopoverAnchor>
+            <PopoverContentWithoutPortal
+              className="nocopy nopan nodelete nodrag noundo p-0"
+              style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
+              side="bottom"
+              align="center"
+            >
+              <Command>
+                <CommandInput placeholder={optionsPlaceholder} />
+                <CommandList>
+                  <CommandEmpty>No results found.</CommandEmpty>
+                  <CommandGroup defaultChecked={false}>
+                    {options.map((option, id) => (
+                      <CommandItem
                         key={id}
-                        className={({ active }) =>
-                          classNames(
-                            active ? " bg-accent" : "",
-                            editNode
-                              ? "dropdown-component-false-option"
-                              : "dropdown-component-true-option",
-                            " hover:bg-accent"
-                          )
-                        }
                         value={option}
+                        onSelect={(currentValue) => {
+                          setSelectedOption &&
+                            setSelectedOption(
+                              currentValue === selectedOption
+                                ? ""
+                                : currentValue
+                            );
+                          setShowOptions(false);
+                        }}
                       >
-                        {({ selected, active }) => (
-                          <>
-                            <span
-                              className={classNames(
-                                selected ? "font-semibold" : "font-normal",
-                                "block truncate "
-                              )}
-                              data-testid={`${option}-${id ?? ""}-option`}
-                            >
-                              {option}
-                            </span>
-
-                            {selected ? (
-                              <span
-                                className={classNames(
-                                  "dropdown-component-choosal"
-                                )}
-                              >
-                                <IconComponent
-                                  name="Check"
-                                  className={
-                                    "dropdown-component-check-icon text-foreground"
-                                  }
-                                  aria-hidden="true"
-                                />
-                              </span>
-                            ) : null}
-                          </>
-                        )}
-                      </Listbox.Option>
+                        <IconComponent
+                          name="Check"
+                          className={cn(
+                            "mr-2 h-4 w-4 text-primary",
+                            selectedOption === option
+                              ? "opacity-100"
+                              : "opacity-0"
+                          )}
+                          aria-hidden="true"
+                        />
+                        {option}
+                      </CommandItem>
                     ))}
-                  </Listbox.Options>
-                </Transition>
-              </div>
-            </>
-          </Listbox>
+                    {optionsButton && optionsButton}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContentWithoutPortal>
+          </Popover>
+          <div
+            className={cn(
+              "pointer-events-auto absolute inset-y-0 h-full w-full",
+              selectedOption !== "" ? "" : "hidden"
+            )}
+            onClick={
+              selectedOption !== ""
+                ? (e) => {
+                    setShowOptions((old) => !old);
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                : () => {}
+            }
+          ></div>
         </>
       )}
 
-      {options.length > 0 && (
-        <span
-          className={cn(
-            password ? "right-8" : "right-0",
-            "absolute inset-y-0 flex items-center pr-2"
-          )}
+      <span
+        className={cn(
+          password ? "right-8" : "right-0",
+          "absolute inset-y-0 flex items-center pr-2"
+        )}
+      >
+        <button
+          onClick={() => {
+            setShowOptions(!showOptions);
+          }}
+          className="text-muted-foreground hover:text-accent-foreground"
         >
-          <button
-            onClick={() => {
-              setShowOptions(!showOptions);
-            }}
-            className="text-muted-foreground hover:text-accent-foreground"
-          >
-            <IconComponent
-              name="Globe"
-              className="h-4 w-4"
-              aria-hidden="true"
-            />
-          </button>
-        </span>
-      )}
+          <IconComponent name="Globe" className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </span>
 
       {password && (
         <button
