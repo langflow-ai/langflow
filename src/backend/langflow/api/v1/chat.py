@@ -202,7 +202,7 @@ async def build_vertex_stream(
         async def stream_vertex():
             try:
                 if not session_id:
-                    cache = chat_service.get_cache(flow_id)
+                    cache = await chat_service.get_cache(flow_id)
                     if not cache:
                         # If there's no cache
                         raise ValueError(f"No cache found for {flow_id}.")
@@ -252,7 +252,7 @@ async def build_vertex_stream(
                     raise ValueError(f"No result found for vertex {vertex_id}")
 
             except Exception as exc:
-                logger.error(f"Error building vertex: {exc}")
+                logger.exception(f"Error building vertex: {exc}")
                 yield str(StreamData(event="error", data={"error": str(exc)}))
             finally:
                 logger.debug("Closing stream")
