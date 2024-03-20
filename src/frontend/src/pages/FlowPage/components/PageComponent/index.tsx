@@ -1,4 +1,4 @@
-import _, { cloneDeep, set } from "lodash";
+import _, { cloneDeep } from "lodash";
 import { MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import ReactFlow, {
   Background,
@@ -105,40 +105,42 @@ export default function Page({
       ) {
         event.preventDefault();
         takeSnapshot();
-        if (
-          validateSelection(lastSelection!, edges).length === 0
-        ) {
-          const clonedNodes = cloneDeep(nodes)
-          const clonedEdges = cloneDeep(edges)
-          const clonedSelection = cloneDeep(lastSelection)
-          updateIds({ nodes: clonedNodes, edges: clonedEdges }, clonedSelection!)
+        if (validateSelection(lastSelection!, edges).length === 0) {
+          const clonedNodes = cloneDeep(nodes);
+          const clonedEdges = cloneDeep(edges);
+          const clonedSelection = cloneDeep(lastSelection);
+          updateIds(
+            { nodes: clonedNodes, edges: clonedEdges },
+            clonedSelection!
+          );
           const { newFlow, removedEdges } = generateFlow(
             clonedSelection!,
             clonedNodes,
             clonedEdges,
             getRandomName()
           );
-          const newGroupNode = generateNodeFromFlow(
-            newFlow,
-            getNodeId
-          );
-          const newEdges = reconnectEdges(
+          const newGroupNode = generateNodeFromFlow(newFlow, getNodeId);
+          const newEdges = reconnectEdges(newGroupNode, removedEdges);
+          setNodes([
+            ...clonedNodes.filter(
+              (oldNodes) =>
+                !clonedSelection?.nodes.some(
+                  (selectionNode) => selectionNode.id === oldNodes.id
+                )
+            ),
             newGroupNode,
-            removedEdges
-          );
-          setNodes([...clonedNodes.filter(
-            (oldNodes) =>
-              !clonedSelection?.nodes.some(
-                (selectionNode) =>
-                  selectionNode.id === oldNodes.id
-              )), newGroupNode])
-          setEdges([...clonedEdges.filter(
-            (oldEdge) =>
-              !clonedSelection!.nodes.some(
-                (selectionNode) =>
-                  selectionNode.id === oldEdge.target ||
-                  selectionNode.id === oldEdge.source
-              )), ...newEdges])
+          ]);
+          setEdges([
+            ...clonedEdges.filter(
+              (oldEdge) =>
+                !clonedSelection!.nodes.some(
+                  (selectionNode) =>
+                    selectionNode.id === oldEdge.target ||
+                    selectionNode.id === oldEdge.source
+                )
+            ),
+            ...newEdges,
+          ]);
         } else {
           setErrorData({
             title: INVALID_SELECTION_ERROR_ALERT,
@@ -437,7 +439,7 @@ export default function Page({
         <div className="h-full w-full">
           <div className="h-full w-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
-              Object.keys(types).length > 0 ? (
+            Object.keys(types).length > 0 ? (
               <div id="react-flow-id" className="h-full w-full">
                 <ReactFlow
                   nodes={nodes}
@@ -486,10 +488,13 @@ export default function Page({
                       if (
                         validateSelection(lastSelection!, edges).length === 0
                       ) {
-                        const clonedNodes = cloneDeep(nodes)
-                        const clonedEdges = cloneDeep(edges)
-                        const clonedSelection = cloneDeep(lastSelection)
-                        updateIds({ nodes: clonedNodes, edges: clonedEdges }, clonedSelection!)
+                        const clonedNodes = cloneDeep(nodes);
+                        const clonedEdges = cloneDeep(edges);
+                        const clonedSelection = cloneDeep(lastSelection);
+                        updateIds(
+                          { nodes: clonedNodes, edges: clonedEdges },
+                          clonedSelection!
+                        );
                         const { newFlow, removedEdges } = generateFlow(
                           clonedSelection!,
                           clonedNodes,
@@ -504,19 +509,27 @@ export default function Page({
                           newGroupNode,
                           removedEdges
                         );
-                        setNodes([...clonedNodes.filter(
-                          (oldNodes) =>
-                            !clonedSelection?.nodes.some(
-                              (selectionNode) =>
-                                selectionNode.id === oldNodes.id
-                            )), newGroupNode])
-                        setEdges([...clonedEdges.filter(
-                          (oldEdge) =>
-                            !clonedSelection!.nodes.some(
-                              (selectionNode) =>
-                                selectionNode.id === oldEdge.target ||
-                                selectionNode.id === oldEdge.source
-                            )), ...newEdges])
+                        setNodes([
+                          ...clonedNodes.filter(
+                            (oldNodes) =>
+                              !clonedSelection?.nodes.some(
+                                (selectionNode) =>
+                                  selectionNode.id === oldNodes.id
+                              )
+                          ),
+                          newGroupNode,
+                        ]);
+                        setEdges([
+                          ...clonedEdges.filter(
+                            (oldEdge) =>
+                              !clonedSelection!.nodes.some(
+                                (selectionNode) =>
+                                  selectionNode.id === oldEdge.target ||
+                                  selectionNode.id === oldEdge.source
+                              )
+                          ),
+                          ...newEdges,
+                        ]);
                       } else {
                         setErrorData({
                           title: INVALID_SELECTION_ERROR_ALERT,

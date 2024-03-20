@@ -37,10 +37,7 @@ import {
   getNodeId,
   scapeJSONParse,
   scapedJSONStringfy,
-  updateEdgesIds,
   updateGroupRecursion,
-  updateIds,
-  updateProxyIdsOnTemplate,
   validateNodes,
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
@@ -226,10 +223,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
   },
   paste: (selection, position) => {
-
-    function updateGroup(){
-
-    }
+    function updateGroup() {}
 
     if (
       selection.nodes.some((node) => node.data.type === "ChatInput") &&
@@ -267,7 +261,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       let newId = getNodeId(node.data.type);
       idsMap[node.id] = newId;
 
-      updateGroupRecursion(node,selection.edges)
+      updateGroupRecursion(node, selection.edges);
 
       // Create a new node object
       const newNode: NodeType = {
