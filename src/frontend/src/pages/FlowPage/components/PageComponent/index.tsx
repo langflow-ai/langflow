@@ -104,29 +104,20 @@ export default function Page({
       ) {
         event.preventDefault();
         takeSnapshot();
-        if (
-          validateSelection(lastSelection!, edges).length === 0
-        ) {
+        if (validateSelection(lastSelection!, edges).length === 0) {
           const { newFlow, removedEdges } = generateFlow(
             lastSelection!,
             nodes,
             edges,
             getRandomName()
           );
-          const newGroupNode = generateNodeFromFlow(
-            newFlow,
-            getNodeId
-          );
-          const newEdges = reconnectEdges(
-            newGroupNode,
-            removedEdges
-          );
+          const newGroupNode = generateNodeFromFlow(newFlow, getNodeId);
+          const newEdges = reconnectEdges(newGroupNode, removedEdges);
           setNodes((oldNodes) => [
             ...oldNodes.filter(
               (oldNodes) =>
                 !lastSelection?.nodes.some(
-                  (selectionNode) =>
-                    selectionNode.id === oldNodes.id
+                  (selectionNode) => selectionNode.id === oldNodes.id
                 )
             ),
             newGroupNode,

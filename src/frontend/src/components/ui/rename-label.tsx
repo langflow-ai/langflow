@@ -29,7 +29,7 @@ export default function RenameLabel(props) {
     }
     resizeInput();
     return () => {
-      if(isRename) document.removeEventListener("keydown", () => {});
+      if (isRename) document.removeEventListener("keydown", () => {});
     };
   }, [isRename]);
 
