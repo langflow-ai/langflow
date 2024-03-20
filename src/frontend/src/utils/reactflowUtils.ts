@@ -207,25 +207,26 @@ export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
 export function updateIds({edges,nodes}:{edges:Edge[],nodes:Node[]},selection?:{edges:Edge[],nodes:Node[]}) {
   let idsMap = {};
   const selectionIds = selection?.nodes.map(n=>n.id);
-  if (nodes)
+  if (nodes){
     nodes.forEach((node: NodeType) => {
-  // Generate a unique node ID
-  let newId = getNodeId(
-    node.data.type
-    );
-    if(selection && !selectionIds?.includes(node.id)){
-      newId = node.id;
-    }
-      idsMap[node.id] = newId;
-      node.id = newId;
-      node.data.id = newId;
-      // Add the new node to the list of nodes in state
-    });
-
-    selection?.nodes.forEach((node: NodeType) => {
-      node.id = idsMap[node.id];
-      node.data.id = idsMap[node.id];
-    });
+    // Generate a unique node ID
+    let newId = getNodeId(
+      node.data.type
+      );
+      if(selection && !selectionIds?.includes(node.id)){
+        newId = node.id;
+      }
+        idsMap[node.id] = newId;
+        node.id = newId;
+        node.data.id = newId;
+        // Add the new node to the list of nodes in state
+      });
+      selection?.nodes.forEach((sNode: NodeType) => {
+        let newId = idsMap[sNode.id]; 
+        sNode.id = newId;
+        sNode.data.id = newId;
+      });
+  }
   const concatedEdges = [...edges,...selection?.edges??[]];
   if (concatedEdges)
     concatedEdges.forEach((edge: Edge) => {
@@ -619,8 +620,7 @@ export function generateFlow(
     (edge) =>
       selection.nodes.some((node) => node.id === edge.target) &&
       selection.nodes.some((node) => node.id === edge.source)
-  );
-  newFlowData.nodes = selection.nodes;
+  );  newFlowData.nodes = selection.nodes;
 
   const newFlow: FlowType = {
     data: newFlowData,
