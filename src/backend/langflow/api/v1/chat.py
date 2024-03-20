@@ -10,6 +10,8 @@ from langflow.api.utils import (
     build_and_cache_graph,
     format_elapsed_time,
     format_exception_message,
+    get_next_runnable_vertices,
+    get_top_level_vertices,
 )
 from langflow.api.v1.schemas import (
     InputValueRequest,
@@ -95,7 +97,8 @@ async def build_vertex(
     """Build a vertex instead of the entire graph."""
 
     start_time = time.perf_counter()
-    next_vertices_ids = []
+    next_runnable_vertices = []
+    top_level_vertices = []
     try:
         start_time = time.perf_counter()
         cache = await chat_service.get_cache(flow_id)
@@ -121,12 +124,9 @@ async def build_vertex(
                 artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
-            async with chat_service._cache_locks[flow_id] as lock:
-                graph.remove_from_predecessors(vertex_id)
-                next_vertices_ids = vertex.successors_ids
-                next_vertices_ids = [v for v in next_vertices_ids if graph.should_run_vertex(v)]
-                await chat_service.set_cache(flow_id=flow_id, data=graph, lock=lock)
 
+            next_runnable_vertices = await get_next_runnable_vertices(graph, vertex, vertex_id, chat_service, flow_id)
+            top_level_vertices = get_top_level_vertices(graph, next_runnable_vertices)
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
         except Exception as exc:
@@ -166,12 +166,13 @@ async def build_vertex(
         # to stop the build of the graph at a certain vertex
         # if it is in next_vertices_ids, we need to remove other
         # vertices from next_vertices_ids
-        if graph.stop_vertex and graph.stop_vertex in next_vertices_ids:
-            next_vertices_ids = [graph.stop_vertex]
+        if graph.stop_vertex and graph.stop_vertex in next_runnable_vertices:
+            next_runnable_vertices = [graph.stop_vertex]
 
         build_response = VertexBuildResponse(
             inactivated_vertices=inactivated_vertices,
-            next_vertices_ids=next_vertices_ids,
+            next_vertices_ids=next_runnable_vertices,
+            top_level_vertices=top_level_vertices,
             valid=valid,
             params=params,
             id=vertex.id,

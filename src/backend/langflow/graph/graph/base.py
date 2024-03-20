@@ -953,22 +953,26 @@ class Graph:
         # Return just the first layer
         return first_layer
 
-    def vertex_has_no_more_predecessors(self, vertex_id: str) -> bool:
-        """Returns whether a vertex has no more predecessors."""
-        return not self.run_predecessors.get(vertex_id)
+    def is_vertex_runnable(self, vertex_id: str) -> bool:
+        """Returns whether a vertex is runnable."""
+        return vertex_id in self.vertices_to_run and not self.run_predecessors.get(vertex_id)
 
-    def should_run_vertex(self, vertex_id: str) -> bool:
-        """Returns whether a component should be run."""
-        # the self.run_map is a map of vertex_id to a list of predecessors
-        # each time a vertex is run, we remove it from the list of predecessors
-        # if a vertex has no more predecessors, it should be run
-        should_run = vertex_id in self.vertices_to_run and self.vertex_has_no_more_predecessors(vertex_id)
+    def find_runnable_predecessors_for_successors(self, vertex_id: str) -> List[str]:
+        """
+        For each successor of the current vertex, find runnable predecessors if any.
+        This checks the direct predecessors of each successor to identify any that are
+        immediately runnable, expanding the search to ensure progress can be made.
+        """
+        runnable_vertices = []
+        visited = set()
 
-        if should_run:
-            self.vertices_to_run.remove(vertex_id)
-            # remove the vertex from the run_map
-            self.remove_from_predecessors(vertex_id)
-        return should_run
+        for successor_id in self.run_map.get(vertex_id, []):
+            for predecessor_id in self.run_predecessors.get(successor_id, []):
+                if predecessor_id not in visited and self.is_vertex_runnable(predecessor_id):
+                    runnable_vertices.append(predecessor_id)
+                    visited.add(predecessor_id)
+
+        return runnable_vertices
 
     def remove_from_predecessors(self, vertex_id: str):
         predecessors = self.run_map.get(vertex_id, [])

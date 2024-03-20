@@ -247,6 +247,7 @@ class VertexBuildResponse(BaseModel):
     id: Optional[str] = None
     inactivated_vertices: Optional[List[str]] = None
     next_vertices_ids: Optional[List[str]] = None
+    top_level_vertices: Optional[List[str]] = None
     valid: bool
     params: Optional[Any] = Field(default_factory=dict)
     """JSON string of the params."""
