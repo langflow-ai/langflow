@@ -273,6 +273,8 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
     node: { template },
   } = node.data;
 
+  const displayName = node.data.node.display_name;
+
   return Object.keys(template).reduce((errors: Array<string>, t) => {
     if (
       template[t].required &&
@@ -288,7 +290,9 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
             node.id
       )
     ) {
-      errors.push(`${type} is missing ${getFieldTitle(template, t)}.`);
+      errors.push(
+        `${displayName || type} is missing ${getFieldTitle(template, t)}.`
+      );
     } else if (
       template[t].type === "dict" &&
       template[t].required &&
