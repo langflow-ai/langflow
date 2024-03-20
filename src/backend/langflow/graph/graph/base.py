@@ -377,7 +377,10 @@ class Graph:
 
         # Remove vertices that are not in the other graph
         for vertex_id in removed_vertex_ids:
-            self.remove_vertex(vertex_id)
+            try:
+                self.remove_vertex(vertex_id)
+            except ValueError:
+                pass
 
         # The order here matters because adding the vertex is required
         # if any of them have edges that point to any of the new vertices
@@ -742,7 +745,7 @@ class Graph:
             vertex_type: str = vertex_data["type"]  # type: ignore
             vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
             if "id" not in vertex_data:
-                raise ValueError(f"Vertex data {vertex_data} does not contain an id")
+                raise ValueError(f"Vertex data for {vertex_data['display_name']} does not contain an id")
 
             VertexClass = self._get_vertex_class(vertex_type, vertex_base_type, vertex_data["id"])
 
