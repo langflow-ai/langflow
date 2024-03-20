@@ -35,6 +35,7 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
     inactivated_vertices: null,
     run_id: "",
     next_vertices_ids: [],
+    top_level_vertices: [],
     inactive_vertices: null,
     valid: false,
     timestamp: new Date().toISOString(),
