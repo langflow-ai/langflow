@@ -539,6 +539,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       },
       onBuildStart: (elementList) => {
         const idList = elementList
+          // reference is the id of the vertex or the id of the parent in a group node
           .map((element) => element.reference)
           .filter(Boolean) as string[];
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
