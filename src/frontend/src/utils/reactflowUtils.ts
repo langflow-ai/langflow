@@ -963,7 +963,7 @@ export function connectedInputNodesOnHandle(
   return connectedNodes;
 }
 
-function updateProxyIdsOnTemplate(
+export function updateProxyIdsOnTemplate(
   template: APITemplateType,
   idsMap: { [key: string]: string }
 ) {
@@ -974,7 +974,7 @@ function updateProxyIdsOnTemplate(
   });
 }
 
-function updateEdgesIds(edges: Edge[], idsMap: { [key: string]: string }) {
+export function updateEdgesIds(edges: Edge[], idsMap: { [key: string]: string }) {
   edges.forEach((edge) => {
     let targetHandle: targetHandleType = edge.data.targetHandle;
     if (targetHandle.proxy && idsMap[targetHandle.proxy!.id]) {

@@ -36,6 +36,9 @@ import {
   getNodeId,
   scapeJSONParse,
   scapedJSONStringfy,
+  updateEdgesIds,
+  updateIds,
+  updateProxyIdsOnTemplate,
   validateNodes,
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
@@ -256,6 +259,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       // Generate a unique node ID
       let newId = getNodeId(node.data.type);
       idsMap[node.id] = newId;
+
+      if(node.data.node!.flow){
+        let newFlow = node.data.node!.flow;
+        const idsMap = updateIds(newFlow.data!);
+        updateProxyIdsOnTemplate(node.data.node!.template, idsMap);
+        let flowEdges = selection.edges
+        updateEdgesIds(flowEdges, idsMap);
+      }
 
       // Create a new node object
       const newNode: NodeType = {
