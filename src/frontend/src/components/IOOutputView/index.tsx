@@ -105,36 +105,6 @@ export default function IOOutputView({
             }
           />
         );
-      case "CSVOutput":
-        return left ? (
-          <>
-            <div className="align-center flex justify-center">
-              {CSVViewConstant}
-            </div>
-          </>
-        ) : (
-          <>
-            <CsvOutputComponent
-              csvNode={
-                (flowPool[node!.id] ?? [])[
-                  (flowPool[node!.id]?.length ?? 1) - 1
-                ]?.data?.artifacts?.repr
-              }
-              flowPool={flowPoolNode}
-            />
-          </>
-        );
-      case "ImageOutput":
-        return left ? (
-          <div>{IMGViewConstant}</div>
-        ) : (
-          <ImageViewer
-            image={
-              (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
-                ?.params ?? ""
-            }
-          />
-        );
       default:
         return (
           <Textarea
