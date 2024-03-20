@@ -30,6 +30,7 @@ export default function InputComponent({
   className,
   id = "",
   blurOnEnter = false,
+  optionsIcon = "ChevronsUpDown",
   selectedOption,
   setSelectedOption,
   options = [],
@@ -208,7 +209,7 @@ export default function InputComponent({
           )}
         >
           <ForwardedIconComponent
-            name="Globe"
+            name={optionsIcon}
             className={"h-4 w-4"}
             aria-hidden="true"
           />
