@@ -5,6 +5,7 @@ import OpenSeadragon from 'openseadragon';
 import { Separator } from "../ui/separator";
 import { saveAs } from 'file-saver'
 import useAlertStore from "../../stores/alertStore";
+import { IMGViewErrorMSG, IMGViewErrorTitle } from "../../constants/constants";
 
 export default function ImageViewer({image }) {
   const viewerRef = useRef(null);
@@ -73,11 +74,13 @@ export default function ImageViewer({image }) {
                 <ForwardedIconComponent
                   name="Image"
                 />
-                Image output
+                {IMGViewErrorTitle}
               </div>
               <div className="flex align-center justify-center">
                 <div className="langflow-chat-desc flex align-center justify-center">
-                  <div className="langflow-chat-desc-span">Run the flow or inform a valid url to see your image</div>
+                  <div className="langflow-chat-desc-span">
+                    {IMGViewErrorMSG}
+                  </div>
                 </div>
               </div>
           </div>

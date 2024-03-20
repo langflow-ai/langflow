@@ -1,4 +1,9 @@
 import { cloneDeep } from "lodash";
+import {
+  CSVViewConstant,
+  IMGViewConstant,
+  PDFViewConstant,
+} from "../../constants/constants";
 import useFlowStore from "../../stores/flowStore";
 import { IOOutputProps } from "../../types/components";
 import ImageViewer from "../ImageViewer";
@@ -51,7 +56,7 @@ export default function IOOutputView({
         );
       case "PDFOutput":
         return left ? (
-          <div>Expand the ouptut to see the PDF</div>
+          <div>{PDFViewConstant}</div>
         ) : (
           <PdfViewer pdf={flowPoolNode?.params ?? ""} />
         );
@@ -92,6 +97,36 @@ export default function IOOutputView({
       case "ImageOutput":
         return left ? (
           <div>Expand the view to see the image</div>
+        ) : (
+          <ImageViewer
+            image={
+              (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
+                ?.params ?? ""
+            }
+          />
+        );
+      case "CSVOutput":
+        return left ? (
+          <>
+            <div className="align-center flex justify-center">
+              {CSVViewConstant}
+            </div>
+          </>
+        ) : (
+          <>
+            <CsvOutputComponent
+              csvNode={
+                (flowPool[node!.id] ?? [])[
+                  (flowPool[node!.id]?.length ?? 1) - 1
+                ]?.data?.artifacts?.repr
+              }
+              flowPool={flowPoolNode}
+            />
+          </>
+        );
+      case "ImageOutput":
+        return left ? (
+          <div>{IMGViewConstant}</div>
         ) : (
           <ImageViewer
             image={

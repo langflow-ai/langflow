@@ -2,6 +2,11 @@ import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the 
 import "ag-grid-community/styles/ag-theme-balham.css"; // Optional Theme applied to the grid
 import { AgGridReact } from "ag-grid-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  CSVError,
+  CSVNoDataError,
+  CSVViewErrorTitle,
+} from "../../constants/constants";
 import { useDarkStore } from "../../stores/darkStore";
 import { FlowPoolObjectType } from "../../types/chat";
 import { NodeType } from "../../types/flow";
@@ -102,11 +107,11 @@ function CsvOutputComponent({
         <div className=" align-center flex h-full w-full flex-col items-center justify-center gap-5">
           <div className="align-center flex w-full justify-center gap-2">
             <ForwardedIconComponent name="Table" />
-            CSV output
+            {CSVViewErrorTitle}
           </div>
           <div className="align-center flex w-full justify-center">
             <div className="langflow-chat-desc align-center flex justify-center px-6 py-8">
-              <div className="langflow-chat-desc-span">No data available</div>
+              <div className="langflow-chat-desc-span">{CSVNoDataError}</div>
             </div>
           </div>
         </div>
@@ -115,11 +120,11 @@ function CsvOutputComponent({
         <div className=" align-center flex h-full w-full flex-col items-center justify-center gap-5">
           <div className="align-center flex w-full justify-center gap-2">
             <ForwardedIconComponent name="Table" />
-            CSV output
+            {CSVViewErrorTitle}
           </div>
           <div className="align-center flex w-full justify-center">
             <div className="langflow-chat-desc align-center flex justify-center px-6 py-8">
-              <div className="langflow-chat-desc-span">Error loading CSV</div>
+              <div className="langflow-chat-desc-span">{CSVError}</div>
             </div>
           </div>
         </div>
