@@ -7,9 +7,9 @@ import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   autoFocus?: boolean;
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
-  value: string;
+  value?: string;
   disabled?: boolean;
-  onChange: (value: string) => void;
+  onChange?: (value: string) => void;
   password: boolean;
   required?: boolean;
   isForm?: boolean;

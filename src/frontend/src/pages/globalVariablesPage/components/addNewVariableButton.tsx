@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ForwardedIconComponent from "../../../components/genericIconComponent";
 import InputComponent from "../../../components/inputComponent";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
@@ -10,7 +11,7 @@ import { useGlobalVariablesStore } from "../../../stores/globalVariables";
 
 //TODO IMPLEMENT FORM LOGIC
 
-export default function AddNewVariableButton({children}): JSX.Element {
+export default function AddNewVariableButton({ children }): JSX.Element {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
   const [provider, setProvider] = useState("");
@@ -35,42 +36,45 @@ export default function AddNewVariableButton({children}): JSX.Element {
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-small">
       <BaseModal.Header
-        description={"write a text variable to use anywhere on your flow"}
+        description={"Write a text global variable to use in any flow."}
       >
-        <span>Create a new Variable</span>
+        <span className="pr-2"> Create Variable </span>
+        <ForwardedIconComponent
+          name="Globe"
+          className="h-6 w-6 pl-1 text-primary "
+          aria-hidden="true"
+        />
       </BaseModal.Header>
-      <BaseModal.Trigger>
-        {children}
-      </BaseModal.Trigger>
+      <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content>
-        <div className="flex gap-4 h-full w-full flex-col align-middle">
-            <Label>Variable name </Label>
-            <Input
-              value={key}
-              onChange={(e) => {
-                setKey(e.target.value);
-              }}
-              placeholder="Insert a name for the variable..."
-            ></Input>
-            <Label>Provider (optional) </Label>
-            <InputComponent
-              value={provider}
-              onChange={(e) => {
-                setProvider(e);
-              }}
-              password={false}
-              options={["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]}
-              placeholder="Choose a provider between the environment variables..."
-            ></InputComponent>
-            <Label>Variable Value </Label>
-            <Textarea
-              value={value}
-              onChange={(e) => {
-                setValue(e.target.value);
-              }}
-              placeholder="Insert a value for the variable..."
-              className="w-full resize-none custom-scroll"
-            />
+        <div className="flex h-full w-full flex-col gap-4 align-middle">
+          <Label>Variable name </Label>
+          <Input
+            value={key}
+            onChange={(e) => {
+              setKey(e.target.value);
+            }}
+            placeholder="Insert a name for the variable..."
+          ></Input>
+          <Label>Provider (optional) </Label>
+          <InputComponent
+            setSelectedOption={(e) => {
+              setProvider(e);
+            }}
+            selectedOption={provider}
+            password={false}
+            options={["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]}
+            placeholder="Choose a provider between the environment variables..."
+          ></InputComponent>
+          <Label>Variable Value </Label>
+          <Textarea
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+            }}
+            placeholder="Insert a value for the variable..."
+            className="w-full resize-none custom-scroll"
+          />
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>
