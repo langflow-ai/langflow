@@ -473,7 +473,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           runId: runId,
         });
         get().updateBuildStatus(
-          vertexBuildData.next_vertices_ids,
+          vertexBuildData.top_level_vertices,
           BuildStatus.TO_BUILD
         );
       }
