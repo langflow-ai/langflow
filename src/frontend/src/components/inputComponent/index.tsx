@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { InputComponentType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
-import IconComponent from "../genericIconComponent";
+import ForwardedIconComponent from "../genericIconComponent";
 import {
   Command,
   CommandEmpty,
@@ -19,7 +19,7 @@ import { Popover, PopoverContentWithoutPortal } from "../ui/popover";
 export default function InputComponent({
   autoFocus = false,
   onBlur,
-  value,
+  value = "",
   onChange,
   disabled,
   required = false,
@@ -42,7 +42,7 @@ export default function InputComponent({
 
   // Clear component state
   useEffect(() => {
-    if (disabled && value !== "") {
+    if (disabled && value && onChange && value !== "") {
       onChange("");
     }
   }, [disabled]);
@@ -75,7 +75,7 @@ export default function InputComponent({
             )}
             placeholder={password && editNode ? "Key" : placeholder}
             onChange={(e) => {
-              onChange(e.target.value);
+              onChange && onChange(e.target.value);
             }}
             onCopy={(e) => {
               e.preventDefault();
@@ -95,25 +95,30 @@ export default function InputComponent({
                 ref={refInput}
                 type="text"
                 onBlur={onInputLostFocus}
-                value={value}
+                value={
+                  selectedOption !== "" || !onChange ? selectedOption : value
+                }
                 autoFocus={autoFocus}
-                disabled={disabled || selectedOption !== ""}
+                disabled={disabled}
                 onClick={() => {
-                  selectedOption !== "" && setShowOptions(true);
+                  (selectedOption !== "" || !onChange) && setShowOptions(true);
                 }}
                 required={required}
                 className={classNames(
-                  password && !pwdVisible && value !== ""
+                  password &&
+                    selectedOption === "" &&
+                    !pwdVisible &&
+                    value !== ""
                     ? " text-clip password "
                     : "",
                   editNode ? " input-edit-node " : "",
-                  password && editNode ? "pr-8" : "",
-                  password && !editNode ? "pr-10" : "",
+                  password && selectedOption === "" && editNode ? "pr-8" : "",
+                  password && selectedOption === "" && !editNode ? "pr-10" : "",
                   className!
                 )}
                 placeholder={password && editNode ? "Key" : placeholder}
                 onChange={(e) => {
-                  onChange(e.target.value);
+                  onChange && onChange(e.target.value);
                 }}
                 onKeyDown={(e) => {
                   handleKeyDown(e, value, "");
@@ -148,7 +153,7 @@ export default function InputComponent({
                           setShowOptions(false);
                         }}
                       >
-                        <IconComponent
+                        <ForwardedIconComponent
                           name="Check"
                           className={cn(
                             "mr-2 h-4 w-4 text-primary",
@@ -169,11 +174,11 @@ export default function InputComponent({
           </Popover>
           <div
             className={cn(
-              "pointer-events-auto absolute inset-y-0 h-full w-full",
-              selectedOption !== "" ? "" : "hidden"
+              "pointer-events-auto absolute inset-y-0 h-full w-full cursor-pointer",
+              selectedOption !== "" || !onChange ? "" : "hidden"
             )}
             onClick={
-              selectedOption !== ""
+              selectedOption !== "" || !onChange
                 ? (e) => {
                     setShowOptions((old) => !old);
                     e.preventDefault();
@@ -187,21 +192,30 @@ export default function InputComponent({
 
       <span
         className={cn(
-          password ? "right-8" : "right-0",
-          "absolute inset-y-0 flex items-center pr-2"
+          password && selectedOption === "" ? "right-8" : "right-0",
+          "absolute inset-y-0 flex items-center pr-2.5"
         )}
       >
         <button
           onClick={() => {
             setShowOptions(!showOptions);
           }}
-          className="text-muted-foreground hover:text-accent-foreground"
+          className={cn(
+            selectedOption !== ""
+              ? "text-medium-indigo"
+              : "text-muted-foreground",
+            "hover:text-accent-foreground"
+          )}
         >
-          <IconComponent name="Globe" className="h-4 w-4" aria-hidden="true" />
+          <ForwardedIconComponent
+            name="Globe"
+            className={"h-4 w-4"}
+            aria-hidden="true"
+          />
         </button>
       </span>
 
-      {password && (
+      {password && selectedOption === "" && (
         <button
           type="button"
           tabIndex={-1}
@@ -217,6 +231,7 @@ export default function InputComponent({
           }}
         >
           {password &&
+            selectedOption === "" &&
             (pwdVisible ? (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
