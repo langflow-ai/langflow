@@ -38,6 +38,7 @@ import {
   scapeJSONParse,
   scapedJSONStringfy,
   updateEdgesIds,
+  updateGroupRecursion,
   updateIds,
   updateProxyIdsOnTemplate,
   validateNodes,
@@ -225,6 +226,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
   },
   paste: (selection, position) => {
+
+    function updateGroup(){
+
+    }
+
     if (
       selection.nodes.some((node) => node.data.type === "ChatInput") &&
       checkChatInput(get().nodes)
@@ -261,13 +267,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       let newId = getNodeId(node.data.type);
       idsMap[node.id] = newId;
 
-      if (node.data.node!.flow) {
-        let newFlow = node.data.node!.flow;
-        const idsMap = updateIds(newFlow.data!);
-        updateProxyIdsOnTemplate(node.data.node!.template, idsMap);
-        let flowEdges = selection.edges;
-        updateEdgesIds(flowEdges, idsMap);
-      }
+      updateGroupRecursion(node,selection.edges)
 
       // Create a new node object
       const newNode: NodeType = {

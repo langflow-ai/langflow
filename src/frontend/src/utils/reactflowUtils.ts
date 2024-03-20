@@ -1273,3 +1273,18 @@ export function isInputType(type: string): boolean {
 export function isOutputType(type: string): boolean {
   return OUTPUT_TYPES.has(type);
 }
+
+export function updateGroupRecursion(groupNode:NodeType,edges:Edge[]){
+  if(groupNode.data.node?.flow){
+    groupNode.data.node.flow.data!.nodes.forEach((node)=>{
+      if(node.data.node?.flow){
+        updateGroupRecursion(node,node.data.node.flow.data!.edges);
+      }
+    })
+    let newFlow = groupNode.data.node!.flow;
+    const idsMap = updateIds(newFlow.data!);
+    updateProxyIdsOnTemplate(groupNode.data.node!.template, idsMap);
+    let flowEdges = edges;
+    updateEdgesIds(flowEdges, idsMap);
+  }
+}
