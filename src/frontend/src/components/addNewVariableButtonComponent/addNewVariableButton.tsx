@@ -1,13 +1,13 @@
 import { useState } from "react";
-import ForwardedIconComponent from "../../../components/genericIconComponent";
-import InputComponent from "../../../components/inputComponent";
-import { Button } from "../../../components/ui/button";
-import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
-import { Textarea } from "../../../components/ui/textarea";
-import { registerGlobalVariable } from "../../../controllers/API";
-import BaseModal from "../../../modals/baseModal";
-import { useGlobalVariablesStore } from "../../../stores/globalVariables";
+import ForwardedIconComponent from "../genericIconComponent";
+import InputComponent from "../inputComponent";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
+import { registerGlobalVariable } from "../../controllers/API";
+import BaseModal from "../../modals/baseModal";
+import { useGlobalVariablesStore } from "../../stores/globalVariables";
 
 //TODO IMPLEMENT FORM LOGIC
 

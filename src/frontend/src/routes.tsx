@@ -15,7 +15,6 @@ import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
-import GlobalVariablesPage from "./pages/globalVariablesPage";
 import LoginPage from "./pages/loginPage";
 import SignUp from "./pages/signUpPage";
 
@@ -154,14 +153,6 @@ const Router = () => {
           }
         ></Route>
       </Route>
-      <Route
-        path="variables"
-        element={
-          <ProtectedRoute>
-            <GlobalVariablesPage />
-          </ProtectedRoute>
-        }
-      ></Route>
     </Routes>
   );
 };
