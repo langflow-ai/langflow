@@ -41,17 +41,15 @@ export const MenuBar = ({
 
   function handleAddFlow(duplicate?: boolean) {
     try {
-      if(duplicate) {
+      if (duplicate) {
         if (!currentFlow) {
           throw new Error("No flow to duplicate");
         }
         addFlow(true, currentFlow).then((id) => {
-          setSuccessData({title:"Flow duplicated successfully"});
+          setSuccessData({ title: "Flow duplicated successfully" });
           navigate("/flow/" + id);
         });
-      }
-      else
-      {
+      } else {
         addFlow(true).then((id) => {
           navigate("/flow/" + id);
         });
