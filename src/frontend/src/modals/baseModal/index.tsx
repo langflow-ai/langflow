@@ -10,6 +10,7 @@ import {
   DialogTrigger,
 } from "../../components/ui/dialog";
 import { modalHeaderType } from "../../types/components";
+import { cn } from "../../utils/utils";
 
 type ContentProps = { children: ReactNode };
 type HeaderProps = { children: ReactNode; description: string };
@@ -157,11 +158,15 @@ function BaseModal({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {triggerChild}
-      <DialogContent className={minWidth}>
+      <DialogContent className={cn(minWidth, "duration-300")}>
         <div className="truncate-doubleline word-break-break-word">
           {headerChild}
         </div>
-        <div className={`flex flex-col ${height!} w-full `}>{ContentChild}</div>
+        <div
+          className={`flex flex-col ${height!} w-full transition-all duration-300`}
+        >
+          {ContentChild}
+        </div>
         {ContentFooter && (
           <div className="flex flex-row-reverse">{ContentFooter}</div>
         )}
