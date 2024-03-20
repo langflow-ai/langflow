@@ -549,6 +549,7 @@ export default function ParameterComponent({
                     value={data.node?.template[name].value ?? ""}
                     options={globalVariablesEntries}
                     optionsPlaceholder={"Global Variables"}
+                    optionsIcon="Globe"
                     optionsButton={
                       <AddNewVariableButton>
                         <CommandItem value={"new"}>

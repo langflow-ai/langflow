@@ -20,6 +20,7 @@ export type InputComponentType = {
   className?: string;
   id?: string;
   blurOnEnter?: boolean;
+  optionsIcon?: string;
   optionsPlaceholder?: string;
   options?: string[];
   optionsButton?: ReactElement;
