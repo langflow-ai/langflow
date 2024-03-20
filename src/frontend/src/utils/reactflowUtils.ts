@@ -204,30 +204,31 @@ export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
   return data;
 };
 
-export function updateIds({edges,nodes}:{edges:Edge[],nodes:Node[]},selection?:{edges:Edge[],nodes:Node[]}) {
+export function updateIds(
+  { edges, nodes }: { edges: Edge[]; nodes: Node[] },
+  selection?: { edges: Edge[]; nodes: Node[] }
+) {
   let idsMap = {};
-  const selectionIds = selection?.nodes.map(n=>n.id);
-  if (nodes){
+  const selectionIds = selection?.nodes.map((n) => n.id);
+  if (nodes) {
     nodes.forEach((node: NodeType) => {
-    // Generate a unique node ID
-    let newId = getNodeId(
-      node.data.type
-      );
-      if(selection && !selectionIds?.includes(node.id)){
+      // Generate a unique node ID
+      let newId = getNodeId(node.data.type);
+      if (selection && !selectionIds?.includes(node.id)) {
         newId = node.id;
       }
-        idsMap[node.id] = newId;
-        node.id = newId;
-        node.data.id = newId;
-        // Add the new node to the list of nodes in state
-      });
-      selection?.nodes.forEach((sNode: NodeType) => {
-        let newId = idsMap[sNode.id]; 
-        sNode.id = newId;
-        sNode.data.id = newId;
-      });
+      idsMap[node.id] = newId;
+      node.id = newId;
+      node.data.id = newId;
+      // Add the new node to the list of nodes in state
+    });
+    selection?.nodes.forEach((sNode: NodeType) => {
+      let newId = idsMap[sNode.id];
+      sNode.id = newId;
+      sNode.data.id = newId;
+    });
   }
-  const concatedEdges = [...edges,...selection?.edges??[]];
+  const concatedEdges = [...edges, ...(selection?.edges ?? [])];
   if (concatedEdges)
     concatedEdges.forEach((edge: Edge) => {
       edge.source = idsMap[edge.source];
@@ -620,7 +621,8 @@ export function generateFlow(
     (edge) =>
       selection.nodes.some((node) => node.id === edge.target) &&
       selection.nodes.some((node) => node.id === edge.source)
-  );  newFlowData.nodes = selection.nodes;
+  );
+  newFlowData.nodes = selection.nodes;
 
   const newFlow: FlowType = {
     data: newFlowData,
@@ -974,12 +976,16 @@ export function updateProxyIdsOnTemplate(
   });
 }
 
-export function updateEdgesIds(edges: Edge[], idsMap: { [key: string]: string }) {
+export function updateEdgesIds(
+  edges: Edge[],
+  idsMap: { [key: string]: string }
+) {
   edges.forEach((edge) => {
     let targetHandle: targetHandleType = edge.data.targetHandle;
     if (targetHandle.proxy && idsMap[targetHandle.proxy!.id]) {
       targetHandle.proxy!.id = idsMap[targetHandle.proxy!.id];
     }
+    console.log("edge", edge);
     edge.data.targetHandle = targetHandle;
     edge.targetHandle = scapedJSONStringfy(targetHandle);
   });
