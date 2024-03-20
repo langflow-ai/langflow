@@ -24,7 +24,7 @@ import {
   OUTPUT_HANDLER_HOVER,
   TOOLTIP_EMPTY,
 } from "../../../../constants/constants";
-import AddNewVariableButton from "../../../../pages/globalVariablesPage/components/addNewVariableButton";
+import AddNewVariableButton from "../../../../components/addNewVariableButtonComponent/addNewVariableButton";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
