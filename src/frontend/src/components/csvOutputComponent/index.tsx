@@ -3,17 +3,20 @@ import "ag-grid-community/styles/ag-theme-balham.css"; // Optional Theme applied
 import { AgGridReact } from "ag-grid-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDarkStore } from "../../stores/darkStore";
-import useFlowStore from "../../stores/flowStore";
+import { FlowPoolObjectType } from "../../types/chat";
+import { NodeType } from "../../types/flow";
 import ForwardedIconComponent from "../genericIconComponent";
 import Loading from "../ui/loading";
 import { convertCSVToData } from "./helpers/convert-data-function";
-import { NodeType } from "../../types/flow";
 
-function CsvOutputComponent({ csvNode }:{csvNode:NodeType}) {
-  const flowPool = useFlowStore((state) => state.flowPool);
-  const csvNodeArtifacts = (flowPool[csvNode!.id] ?? [])[
-    (flowPool[csvNode!.id]?.length ?? 1) - 1
-  ]?.data?.artifacts?.repr;
+function CsvOutputComponent({
+  csvNode,
+  flowPool,
+}: {
+  csvNode: NodeType;
+  flowPool: FlowPoolObjectType;
+}) {
+  const csvNodeArtifacts = flowPool?.data?.artifacts?.repr;
   const file = csvNodeArtifacts?.data || "";
   const separator = csvNode?.data?.node?.template?.separator?.value || ",";
 
@@ -34,6 +37,7 @@ function CsvOutputComponent({ csvNode }:{csvNode:NodeType}) {
   }, []);
 
   useEffect(() => {
+    setStatus("loading");
     if (file) {
       const { rowData: data, colDefs: columns } = convertCSVToData(
         file,
@@ -41,11 +45,14 @@ function CsvOutputComponent({ csvNode }:{csvNode:NodeType}) {
       );
       setRowData(data);
       setColDefs(columns);
-      setStatus("loaded");
+
+      setTimeout(() => {
+        setStatus("loaded");
+      }, 1000);
     } else {
       setStatus("nodata");
     }
-  }, [csvNodeArtifacts,csvNode.data.node?.template.separator.value]);
+  }, [separator]);
 
   const getRowHeight = useCallback((params: any) => {
     return currentRowHeight;
@@ -117,6 +124,7 @@ function CsvOutputComponent({ csvNode }:{csvNode:NodeType}) {
           </div>
         </div>
       )}
+
       {status === "loaded" && (
         <div
           className={`${dark ? "ag-theme-balham-dark" : "ag-theme-balham"}`}

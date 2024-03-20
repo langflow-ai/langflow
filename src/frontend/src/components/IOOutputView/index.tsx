@@ -27,13 +27,11 @@ export default function IOOutputView({
     (flowPool[node!.id]?.length ?? 1) - 1
   ];
   const handleChangeSelect = (e) => {
-    if(node)
-    {
+    if (node) {
       let newNode = cloneDeep(node);
-      if(newNode.data.node.template.separator)
-      {
+      if (newNode.data.node.template.separator) {
         newNode.data.node.template.separator.value = e;
-        setNode(newNode.id,newNode);
+        setNode(newNode.id, newNode);
       }
     }
   };
@@ -65,17 +63,22 @@ export default function IOOutputView({
             </div>
             <div className="flex items-center justify-between pt-5">
               <span>CSV separator </span>
-              <Select value={node.data.node.template.separator.value} onValueChange={(e) => handleChangeSelect(e)}>
+              <Select
+                value={node.data.node.template.separator.value}
+                onValueChange={(e) => handleChangeSelect(e)}
+              >
                 <SelectTrigger className="w-[70px]">
-                  <SelectValue/>
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {node?.data?.node?.template?.separator?.options.map((separator) => (
-                      <SelectItem key={separator} value={separator}>
-                        {separator}
-                      </SelectItem>
-                    ))}
+                    {node?.data?.node?.template?.separator?.options.map(
+                      (separator) => (
+                        <SelectItem key={separator} value={separator}>
+                          {separator}
+                        </SelectItem>
+                      )
+                    )}
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -83,7 +86,7 @@ export default function IOOutputView({
           </>
         ) : (
           <>
-            <CsvOutputComponent csvNode={node} />
+            <CsvOutputComponent csvNode={node} flowPool={flowPoolNode} />
           </>
         );
       case "ImageOutput":
