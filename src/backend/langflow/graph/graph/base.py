@@ -741,8 +741,11 @@ class Graph:
             vertex_data = vertex["data"]
             vertex_type: str = vertex_data["type"]  # type: ignore
             vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
+            if "id" not in vertex_data:
+                raise ValueError(f"Vertex data {vertex_data} does not contain an id")
 
             VertexClass = self._get_vertex_class(vertex_type, vertex_base_type, vertex_data["id"])
+
             vertex_instance = VertexClass(vertex, graph=self)
             vertex_instance.set_top_level(self.top_level_vertices)
             vertices.append(vertex_instance)
