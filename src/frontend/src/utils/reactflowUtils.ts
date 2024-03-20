@@ -204,23 +204,31 @@ export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
   return data;
 };
 
-export function updateIds(newFlow: ReactFlowJsonObject) {
+export function updateIds({edges,nodes}:{edges:Edge[],nodes:Node[]},selection?:{edges:Edge[],nodes:Node[]}) {
   let idsMap = {};
-
-  if (newFlow.nodes)
-    newFlow.nodes.forEach((node: NodeType) => {
-      // Generate a unique node ID
-      let newId = getNodeId(
-        node.data.node?.flow ? "GroupNode" : node.data.type
-      );
+  const selectionIds = selection?.nodes.map(n=>n.id);
+  if (nodes)
+    nodes.forEach((node: NodeType) => {
+  // Generate a unique node ID
+  let newId = getNodeId(
+    node.data.type
+    );
+    if(selection && !selectionIds?.includes(node.id)){
+      newId = node.id;
+    }
       idsMap[node.id] = newId;
       node.id = newId;
       node.data.id = newId;
       // Add the new node to the list of nodes in state
     });
 
-  if (newFlow.edges)
-    newFlow.edges.forEach((edge: Edge) => {
+    selection?.nodes.forEach((node: NodeType) => {
+      node.id = idsMap[node.id];
+      node.data.id = idsMap[node.id];
+    });
+  const concatedEdges = [...edges,...selection?.edges??[]];
+  if (concatedEdges)
+    concatedEdges.forEach((edge: Edge) => {
       edge.source = idsMap[edge.source];
       edge.target = idsMap[edge.target];
       const sourceHandleObject: sourceHandleType = scapeJSONParse(
