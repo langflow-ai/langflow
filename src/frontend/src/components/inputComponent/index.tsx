@@ -7,7 +7,6 @@ import { classNames, cn } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
