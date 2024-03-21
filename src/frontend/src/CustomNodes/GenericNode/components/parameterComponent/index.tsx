@@ -586,13 +586,14 @@ export default function ParameterComponent({
                     optionsIcon="Globe"
                     optionsButton={
                       <AddNewVariableButton>
-                        <CommandItem>
+                        <CommandItem value="doNotFilter-addNewVariable">
                           <IconComponent
                             name="Plus"
                             className={cn("mr-2 h-4 w-4 text-primary")}
                             aria-hidden="true"
                           />
-                          Add New Variable
+                          <span>Add New Variable</span>
+                          
                         </CommandItem>
                       </AddNewVariableButton>
                     }
