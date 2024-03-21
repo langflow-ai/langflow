@@ -275,7 +275,8 @@ export default function GenericNode({
               name="Play"
               className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-green opacity-30 transition-all group-hover:opacity-0"
             />
-          ) : validationStatus && !validationStatus.valid ? (
+          ) : buildStatus === BuildStatus.ERROR ||
+            (validationStatus && !validationStatus.valid) ? (
             <Xmark
               isVisible={true}
               className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-red opacity-100 transition-all group-hover:opacity-0"
@@ -301,7 +302,10 @@ export default function GenericNode({
       // INACTIVE should have its own class
       return "inactive-status";
     }
-    if (buildStatus === BuildStatus.BUILT && isInvalid) {
+    if (
+      (buildStatus === BuildStatus.BUILT && isInvalid) ||
+      buildStatus === BuildStatus.ERROR
+    ) {
       return isDark ? "built-invalid-status-dark" : "built-invalid-status";
     } else if (buildStatus === BuildStatus.BUILDING) {
       return "building-status";
