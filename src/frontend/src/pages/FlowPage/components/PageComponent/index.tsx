@@ -51,6 +51,7 @@ export default function Page({
   flow: FlowType;
   view?: boolean;
 }): JSX.Element {
+  console.log("Page");
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const autoSaveCurrentFlow = useFlowsManagerStore(
     (state) => state.autoSaveCurrentFlow

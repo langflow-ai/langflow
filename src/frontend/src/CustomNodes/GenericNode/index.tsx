@@ -290,6 +290,7 @@ export default function GenericNode({
       );
     }
   };
+  console.log("GenericNode");
 
   const getSpecificClassFromBuildStatus = (
     buildStatus: BuildStatus | undefined,
