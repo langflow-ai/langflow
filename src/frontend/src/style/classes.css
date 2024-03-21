@@ -70,8 +70,8 @@ select:-webkit-autofill:focus {
 }
 
 .ag-root ::-webkit-scrollbar {
-  height: 8px;
-  width: 8px;
+  height: 14px;
+  width: 14px;
 }
 .ag-root ::-webkit-scrollbar-button {
   background: #ccc;
@@ -85,22 +85,6 @@ select:-webkit-autofill:focus {
 
 .ag-root ::-webkit-scrollbar-thumb:hover {
   background-color: #ccc;
-}
-
-.ag-body-horizontal-scroll-container {
-  height: 8px !important;
-  min-height: 8px !important;
-  max-height: 8px !important  ;
-}
-.ag-body-horizontal-scroll-viewport {
-  height: 8px !important;
-  min-height: 8px !important;
-  max-height: 8px !important  ;
-}
-.ag-body-horizontal-scroll {
-  height: 8px !important;
-  min-height: 8px !important;
-  max-height: 8px !important;
 }
 
 .ag-theme-balham-dark .ag-header-row {

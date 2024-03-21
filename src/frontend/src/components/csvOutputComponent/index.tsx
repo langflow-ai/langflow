@@ -57,9 +57,9 @@ function CsvOutputComponent({
     } else {
       setStatus("nodata");
     }
-  }, [separator,file]);
+  }, [separator, file]);
 
-  const getRowHeight = useCallback((params: any) => {
+  const getRowHeight = useCallback(() => {
     return currentRowHeight;
   }, []);
 
@@ -146,6 +146,7 @@ function CsvOutputComponent({
             onGridReady={onGridReady}
             onFirstDataRendered={onFirstDataRendered}
             onGridSizeChanged={onGridSizeChanged}
+            scrollbarWidth={8}
           />
         </div>
       )}
