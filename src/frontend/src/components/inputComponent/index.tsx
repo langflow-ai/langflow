@@ -36,6 +36,7 @@ export default function InputComponent({
   options = [],
   optionsPlaceholder = "Search options...",
   optionsButton,
+  optionButton,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
@@ -89,7 +90,7 @@ export default function InputComponent({
         </Form.Control>
       ) : (
         <>
-          <Popover open={showOptions} onOpenChange={setShowOptions}>
+          <Popover modal open={showOptions} onOpenChange={setShowOptions}>
             <PopoverAnchor>
               <Input
                 id={id}
@@ -142,7 +143,8 @@ export default function InputComponent({
                   <CommandGroup defaultChecked={false}>
                     {options.map((option, id) => (
                       <CommandItem
-                        key={id}
+                        className="group"
+                        key={option + id}
                         value={option}
                         onSelect={(currentValue) => {
                           setSelectedOption &&
@@ -154,17 +156,22 @@ export default function InputComponent({
                           setShowOptions(false);
                         }}
                       >
-                        <ForwardedIconComponent
-                          name="Check"
-                          className={cn(
-                            "mr-2 h-4 w-4 text-primary",
-                            selectedOption === option
-                              ? "opacity-100"
-                              : "opacity-0"
-                          )}
-                          aria-hidden="true"
-                        />
-                        {option}
+                        <div className="flex w-full items-center justify-between">
+                          <div className="flex items-center">
+                            <ForwardedIconComponent
+                              name="Check"
+                              className={cn(
+                                "mr-2 h-4 w-4 text-primary",
+                                selectedOption === option
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                              aria-hidden="true"
+                            />
+                            {option}
+                          </div>
+                          {optionButton && optionButton(option)}
+                        </div>
                       </CommandItem>
                     ))}
                     {optionsButton && optionsButton}
