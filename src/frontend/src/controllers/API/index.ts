@@ -880,7 +880,7 @@ export async function registerGlobalVariable({
   name: string;
   value: string;
   provider?: string;
-}) {
+}): Promise<AxiosResponse<{ name: string; id: string; provider: string }>> {
   return await api.post(`${BASE_URL_API}credentials/`, {
     name,
     value,

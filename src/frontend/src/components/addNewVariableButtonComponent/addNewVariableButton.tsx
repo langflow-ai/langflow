@@ -1,13 +1,13 @@
 import { useState } from "react";
+import { registerGlobalVariable } from "../../controllers/API";
+import BaseModal from "../../modals/baseModal";
+import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
-import { registerGlobalVariable } from "../../controllers/API";
-import BaseModal from "../../modals/baseModal";
-import { useGlobalVariablesStore } from "../../stores/globalVariables";
 
 //TODO IMPLEMENT FORM LOGIC
 
@@ -25,8 +25,9 @@ export default function AddNewVariableButton({ children }): JSX.Element {
       value,
     };
     if (provider) data = { ...data, provider };
-    registerGlobalVariable(data).then((_) => {
-      addGlobalVariable(key, value, provider);
+    registerGlobalVariable(data).then((res) => {
+      const { name, id, provider } = res.data;
+      addGlobalVariable(name, id, provider);
       setKey("");
       setValue("");
       setProvider("");
