@@ -1,8 +1,11 @@
 import { AxiosError } from "axios";
-import { cloneDeep } from "lodash";
+import { cloneDeep, debounce } from "lodash";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
-import { STARTER_FOLDER_NAME } from "../constants/constants";
+import {
+  SAVE_DEBOUNCE_TIME,
+  STARTER_FOLDER_NAME,
+} from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   readFlowsFromDatabase,
@@ -92,22 +95,18 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         });
     });
   },
-  autoSaveCurrentFlow: (nodes: Node[], edges: Edge[], viewport: Viewport) => {
-    // Clear the previous timeout if it exists.
-    if (saveTimeoutId) {
-      clearTimeout(saveTimeoutId);
-    }
-    set({ saveLoading: true });
-    // Set up a new timeout.
-    saveTimeoutId = setTimeout(() => {
+  autoSaveCurrentFlow: debounce(
+    (nodes: Node[], edges: Edge[], viewport: Viewport) => {
+      set({ saveLoading: true });
       if (get().currentFlow) {
         get().saveFlow(
           { ...get().currentFlow!, data: { nodes, edges, viewport } },
           true
         );
       }
-    }, 500); // Delay of 500ms because chat message depends on it.
-  },
+    },
+    SAVE_DEBOUNCE_TIME
+  ),
   saveFlow: (flow: FlowType, silent?: boolean) => {
     set({ saveLoading: true });
     return new Promise<void>((resolve, reject) => {
