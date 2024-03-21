@@ -98,7 +98,7 @@ def update_credential(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.delete("/{credential_id}", response_model=CredentialRead, status_code=200)
+@router.delete("/{credential_id}", status_code=204)
 def delete_credential(
     *,
     session: Session = Depends(get_session),
@@ -114,6 +114,5 @@ def delete_credential(
             raise HTTPException(status_code=404, detail="Credential not found")
         session.delete(db_credential)
         session.commit()
-        return db_credential
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
