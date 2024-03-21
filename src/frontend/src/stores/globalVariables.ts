@@ -11,24 +11,24 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
         globalVariablesEntries: Object.keys(variables),
       });
     },
-    addGlobalVariable: (key, id, provider) => {
+    addGlobalVariable: (name, id, provider) => {
       const data = { id, provider };
-      const newVariables = { ...get().globalVariables, [key]: data };
+      const newVariables = { ...get().globalVariables, [name]: data };
       set({
         globalVariables: newVariables,
         globalVariablesEntries: Object.keys(newVariables),
       });
     },
-    removeGlobalVariable: (key) => {
+    removeGlobalVariable: (name) => {
       const newVariables = { ...get().globalVariables };
-      delete newVariables[key];
+      delete newVariables[name];
       set({
         globalVariables: newVariables,
         globalVariablesEntries: Object.keys(newVariables),
       });
     },
-    getVariableId: (key) => {
-      return get().globalVariables[key]?.id;
-    }
+    getVariableId: (name) => {
+      return get().globalVariables[name]?.id;
+    },
   })
 );
