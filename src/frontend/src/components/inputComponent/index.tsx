@@ -121,23 +121,25 @@ export default function InputComponent({
                 )}
                 placeholder={password && editNode ? "Key" : placeholder}
                 onChange={(e) => {
-            // if the user copies a password from another input
-            // it might come as ••••••••••• it causes errors
-            // in ascii encoding, so we need to handle it
-            if (password) {
-              // check if all chars are •
-              if (e.target.value.split("").every((char) => char === "•")) {
-                setErrorData({
-                  title: `Invalid characters: ${e.target.value}`,
-                  list: [
-                    "It seems you are trying to paste a password. Make sure the value is visible before copying from another field.",
-                  ],
-                });
-              }
+                  // if the user copies a password from another input
+                  // it might come as ••••••••••• it causes errors
+                  // in ascii encoding, so we need to handle it
+                  if (password) {
+                    // check if all chars are •
+                    if (
+                      e.target.value.split("").every((char) => char === "•")
+                    ) {
+                      setErrorData({
+                        title: `Invalid characters: ${e.target.value}`,
+                        list: [
+                          "It seems you are trying to paste a password. Make sure the value is visible before copying from another field.",
+                        ],
+                      });
+                    }
 
                     onChange && onChange(e.target.value);
                   }
-          }}
+                }}
                 onKeyDown={(e) => {
                   handleKeyDown(e, value, "");
                   if (blurOnEnter && e.key === "Enter")
