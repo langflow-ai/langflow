@@ -313,14 +313,17 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
     ) {
       if (hasDuplicateKeys(template[t].value))
         errors.push(
-          `${type} (${getFieldTitle(
+          `${displayName || type} (${getFieldTitle(
             template,
             t
           )}) contains duplicate keys with the same values.`
         );
       if (hasEmptyKey(template[t].value))
         errors.push(
-          `${type} (${getFieldTitle(template, t)}) field must not be empty.`
+          `${displayName || type} (${getFieldTitle(
+            template,
+            t
+          )}) field must not be empty.`
         );
     }
     return errors;
