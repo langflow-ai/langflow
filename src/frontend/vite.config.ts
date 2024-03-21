@@ -24,7 +24,7 @@ export default defineConfig(() => {
     build: {
       outDir: "build",
     },
-    plugins: [MillionCompiler.vite(),react(), svgr()],
+    plugins: [react(), svgr()],
     server: {
       port: port,
       proxy: {
