@@ -107,6 +107,7 @@ langchain-openai = "^0.0.5"
 unstructured = { extras = ["md"], version = "^0.12.4" }
 dspy-ai = "^2.4.0"
 crewai = "^0.22.5"
+langchain-anthropic = "^0.1.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.1"
