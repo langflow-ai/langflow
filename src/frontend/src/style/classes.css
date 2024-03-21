@@ -70,8 +70,8 @@ select:-webkit-autofill:focus {
 }
 
 .ag-root ::-webkit-scrollbar {
-  height: 14px;
-  width: 14px;
+  height: 8px;
+  width: 8px;
 }
 .ag-root ::-webkit-scrollbar-button {
   background: #ccc;
