@@ -136,10 +136,15 @@ export default function InputComponent({
               side="bottom"
               align="center"
             >
-              <Command>
+              <Command
+                filter={(value, search) => {
+                  if (value.includes(search) || value.includes("doNotFilter-"))
+                    return 1; // ensures items arent filtered
+                  return 0;
+                }}
+              >
                 <CommandInput placeholder={optionsPlaceholder} />
                 <CommandList>
-                  <CommandEmpty>No results found.</CommandEmpty>
                   <CommandGroup defaultChecked={false}>
                     {options.map((option, id) => (
                       <CommandItem
