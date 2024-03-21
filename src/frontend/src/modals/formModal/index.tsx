@@ -31,6 +31,7 @@ import {
   CHAT_SECOND_INITIAL_TEXT,
   LANGFLOW_CHAT_TITLE,
 } from "../../constants/constants";
+import { BuildStatus } from "../../constants/enums";
 import { AuthContext } from "../../contexts/authContext";
 import { getBuildStatus } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
@@ -49,6 +50,7 @@ export default function FormModal({
 }): JSX.Element {
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
+  const updateBuildStatus = useFlowStore((state) => state.updateBuildStatus);
   const flowState = useFlowStore((state) => state.flowState);
   const setFlowState = useFlowStore((state) => state.setFlowState);
   const [chatValue, setChatValue] = useState(() => {
@@ -388,7 +390,8 @@ export default function FormModal({
 
   function sendMessage(): void {
     let nodeValidationErrors = validateNodes(nodes, edges);
-    if (nodeValidationErrors.length === 0) {
+    const errors = nodeValidationErrors.flatMap((error) => error.errors);
+    if (errors.length === 0) {
       setLockChat(true);
       let inputs = flowState?.input_keys;
       setChatValue("");
@@ -412,8 +415,10 @@ export default function FormModal({
     } else {
       setErrorData({
         title: INFO_MISSING_ALERT,
-        list: nodeValidationErrors,
+        list: errors,
       });
+      const ids = nodeValidationErrors.map((error) => error.id);
+      updateBuildStatus(ids, BuildStatus.ERROR);
     }
   }
   function clearChat(): void {
