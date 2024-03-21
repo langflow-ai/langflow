@@ -1,4 +1,4 @@
-import _, { cloneDeep, set } from "lodash";
+import _, { cloneDeep } from "lodash";
 import { MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import ReactFlow, {
   Background,
@@ -94,6 +94,52 @@ export default function Page({
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
 
+  function handleGroupNode() {
+    takeSnapshot();
+    if (validateSelection(lastSelection!, edges).length === 0) {
+      const clonedNodes = cloneDeep(nodes);
+      const clonedEdges = cloneDeep(edges);
+      const clonedSelection = cloneDeep(lastSelection);
+      updateIds(
+        { nodes: clonedNodes, edges: clonedEdges },
+        clonedSelection!
+      );
+      const { newFlow, removedEdges } = generateFlow(
+        clonedSelection!,
+        clonedNodes,
+        clonedEdges,
+        getRandomName()
+      );
+      const newGroupNode = generateNodeFromFlow(newFlow, getNodeId);
+      const newEdges = reconnectEdges(newGroupNode, removedEdges);
+      setNodes([
+        ...clonedNodes.filter(
+          (oldNodes) =>
+            !clonedSelection?.nodes.some(
+              (selectionNode) => selectionNode.id === oldNodes.id
+            )
+        ),
+        newGroupNode,
+      ]);
+      setEdges([
+        ...clonedEdges.filter(
+          (oldEdge) =>
+            !clonedSelection!.nodes.some(
+              (selectionNode) =>
+                selectionNode.id === oldEdge.target ||
+                selectionNode.id === oldEdge.source
+            )
+        ),
+        ...newEdges,
+      ]);
+    } else {
+      setErrorData({
+        title: INVALID_SELECTION_ERROR_ALERT,
+        list: validateSelection(lastSelection!, edges),
+      });
+    }
+  }
+
   const setNode = useFlowStore((state) => state.setNode);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -104,47 +150,7 @@ export default function Page({
         event.key === "g"
       ) {
         event.preventDefault();
-        takeSnapshot();
-        if (
-          validateSelection(lastSelection!, edges).length === 0
-        ) {
-          const clonedNodes = cloneDeep(nodes)
-          const clonedEdges = cloneDeep(edges)
-          const clonedSelection = cloneDeep(lastSelection)
-          updateIds({ nodes: clonedNodes, edges: clonedEdges }, clonedSelection!)
-          const { newFlow, removedEdges } = generateFlow(
-            clonedSelection!,
-            clonedNodes,
-            clonedEdges,
-            getRandomName()
-          );
-          const newGroupNode = generateNodeFromFlow(
-            newFlow,
-            getNodeId
-          );
-          const newEdges = reconnectEdges(
-            newGroupNode,
-            removedEdges
-          );
-          setNodes([...clonedNodes.filter(
-            (oldNodes) =>
-              !clonedSelection?.nodes.some(
-                (selectionNode) =>
-                  selectionNode.id === oldNodes.id
-              )), newGroupNode])
-          setEdges([...clonedEdges.filter(
-            (oldEdge) =>
-              !clonedSelection!.nodes.some(
-                (selectionNode) =>
-                  selectionNode.id === oldEdge.target ||
-                  selectionNode.id === oldEdge.source
-              )), ...newEdges])
-        } else {
-          setErrorData({
-            title: INVALID_SELECTION_ERROR_ALERT,
-            list: validateSelection(lastSelection!, edges),
-          });
-        }
+        handleGroupNode();
       }
       if (
         (event.ctrlKey || event.metaKey) &&
@@ -437,7 +443,7 @@ export default function Page({
         <div className="h-full w-full">
           <div className="h-full w-full" ref={reactFlowWrapper}>
             {Object.keys(templates).length > 0 &&
-              Object.keys(types).length > 0 ? (
+            Object.keys(types).length > 0 ? (
               <div id="react-flow-id" className="h-full w-full">
                 <ReactFlow
                   nodes={nodes}
@@ -482,47 +488,7 @@ export default function Page({
                     isVisible={selectionMenuVisible}
                     nodes={lastSelection?.nodes}
                     onClick={() => {
-                      takeSnapshot();
-                      if (
-                        validateSelection(lastSelection!, edges).length === 0
-                      ) {
-                        const clonedNodes = cloneDeep(nodes)
-                        const clonedEdges = cloneDeep(edges)
-                        const clonedSelection = cloneDeep(lastSelection)
-                        updateIds({ nodes: clonedNodes, edges: clonedEdges }, clonedSelection!)
-                        const { newFlow, removedEdges } = generateFlow(
-                          clonedSelection!,
-                          clonedNodes,
-                          clonedEdges,
-                          getRandomName()
-                        );
-                        const newGroupNode = generateNodeFromFlow(
-                          newFlow,
-                          getNodeId
-                        );
-                        const newEdges = reconnectEdges(
-                          newGroupNode,
-                          removedEdges
-                        );
-                        setNodes([...clonedNodes.filter(
-                          (oldNodes) =>
-                            !clonedSelection?.nodes.some(
-                              (selectionNode) =>
-                                selectionNode.id === oldNodes.id
-                            )), newGroupNode])
-                        setEdges([...clonedEdges.filter(
-                          (oldEdge) =>
-                            !clonedSelection!.nodes.some(
-                              (selectionNode) =>
-                                selectionNode.id === oldEdge.target ||
-                                selectionNode.id === oldEdge.source
-                            )), ...newEdges])
-                      } else {
-                        setErrorData({
-                          title: INVALID_SELECTION_ERROR_ALERT,
-                          list: validateSelection(lastSelection!, edges),
-                        });
-                      }
+                      handleGroupNode()
                     }}
                   />
                 </ReactFlow>

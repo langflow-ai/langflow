@@ -707,6 +707,6 @@ export function sortFields(a, b, fieldOrder) {
 }
 
 export function freezeObject(obj: any) {
-  if(!obj) return obj;
-  return(JSON.parse(JSON.stringify(obj)));
+  if (!obj) return obj;
+  return JSON.parse(JSON.stringify(obj));
 }
