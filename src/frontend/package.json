@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@headlessui/react": "^1.7.17",
+    "@million/lint": "^0.0.73",
     "@radix-ui/react-accordion": "^1.1.2",
     "@radix-ui/react-checkbox": "^1.0.4",
     "@radix-ui/react-dialog": "^1.0.4",
@@ -35,6 +36,7 @@
     "framer-motion": "^11.0.6",
     "lodash": "^4.17.21",
     "lucide-react": "^0.331.0",
+    "million": "^3.0.6",
     "moment": "^2.29.4",
     "playwright": "^1.42.0",
     "react": "^18.2.0",
