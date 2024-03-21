@@ -11,8 +11,8 @@ class FileComponent(CustomComponent):
 
     def build_config(self) -> Dict[str, Any]:
         return {
-            "path": {
-                "display_name": "Path",
+            "paths": {
+                "display_name": "Paths",
                 "field_type": "file",
                 "file_types": TEXT_FILE_TYPES,
                 "info": f"Supported file types: {', '.join(TEXT_FILE_TYPES)}",
@@ -39,7 +39,7 @@ class FileComponent(CustomComponent):
         self,
         paths: List[str],
         silent_errors: bool = False,
-    ) -> Record:
+    ) -> List[Record]:
         records = [self.load_file(path, silent_errors) for path in paths]
         self.status = records
         return records
