@@ -1,10 +1,10 @@
 export type GlobalVariablesStore = {
   globalVariablesEntries: Array<string>;
-  globalVariables: { [key: string]: { id: string; provider?: string } };
+  globalVariables: { [name: string]: { id: string; provider?: string } };
   setGlobalVariables: (variables: {
-    [key: string]: { id: string; provider?: string };
+    [name: string]: { id: string; provider?: string };
   }) => void;
-  addGlobalVariable: (key: string, id: string, provider?: string) => void;
-  removeGlobalVariable: (key: string) => void;
-  getVariableId: (key: string) => string | undefined;
+  addGlobalVariable: (name: string, id: string, provider?: string) => void;
+  removeGlobalVariable: (name: string) => void;
+  getVariableId: (name: string) => string | undefined;
 };
