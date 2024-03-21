@@ -4,6 +4,7 @@ import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import useFlowStore from "../stores/flowStore";
 import { VertexBuildTypeAPI } from "../types/api";
+import { VertexLayerElementType } from "../types/zustand/flow";
 
 type BuildVerticesParams = {
   flowId: string; // Assuming FlowType is the type for your flow
@@ -17,8 +18,8 @@ type BuildVerticesParams = {
     buildId: string
   ) => void; // Replace any with the actual type if it's not any
   onBuildComplete?: (allNodesValid: boolean) => void;
-  onBuildError?: (title, list, idList: string[]) => void;
-  onBuildStart?: (idList: string[]) => void;
+  onBuildError?: (title, list, idList: VertexLayerElementType[]) => void;
+  onBuildStart?: (idList: VertexLayerElementType[]) => void;
   validateNodes?: (nodes: string[]) => void;
 };
 
@@ -35,6 +36,7 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
     inactivated_vertices: null,
     run_id: "",
     next_vertices_ids: [],
+    top_level_vertices: [],
     inactive_vertices: null,
     valid: false,
     timestamp: new Date().toISOString(),
@@ -48,7 +50,7 @@ export async function updateVerticesOrder(
   startNodeId?: string | null,
   stopNodeId?: string | null
 ): Promise<{
-  verticesLayers: string[][];
+  verticesLayers: VertexLayerElementType[][];
   verticesIds: string[];
   runId: string;
 }> {
@@ -66,7 +68,14 @@ export async function updateVerticesOrder(
       useFlowStore.getState().setIsBuilding(false);
       throw new Error("Invalid nodes");
     }
-    let verticesLayers: Array<Array<string>> = [orderResponse.data.ids];
+    // orderResponse.data.ids,
+    // for each id we need to build the VertexLayerElementType object as
+    // {id: id, reference: id}
+    let verticesLayers: Array<Array<VertexLayerElementType>> =
+      orderResponse.data.ids.map((id: string) => {
+        return [{ id: id, reference: id }];
+      });
+
     const runId = orderResponse.data.run_id;
     // if (nodeId) {
     //   for (let i = 0; i < verticesOrder.length; i += 1) {
@@ -160,17 +169,17 @@ export async function buildVertices({
     if (onBuildStart) onBuildStart(currentLayer);
     // Build each vertex in the current layer
     await Promise.all(
-      currentLayer.map(async (vertexId) => {
+      currentLayer.map(async (element) => {
         // Check if id is in the list of inactive nodes
         if (
           !useFlowStore
             .getState()
-            .verticesBuild?.verticesIds.includes(vertexId) &&
+            .verticesBuild?.verticesIds.includes(element.id) &&
           onBuildUpdate
         ) {
           // If it is, skip building and set the state to inactive
           onBuildUpdate(
-            getInactiveVertexData(vertexId),
+            getInactiveVertexData(element.id),
             BuildStatus.INACTIVE,
             runId
           );
@@ -181,7 +190,7 @@ export async function buildVertices({
         // Build the vertex
         await buildVertex({
           flowId,
-          id: vertexId,
+          id: element.id,
           input_value,
           onBuildUpdate: (data: VertexBuildTypeAPI, status: BuildStatus) => {
             if (onBuildUpdate) onBuildUpdate(data, status, runId);
@@ -226,7 +235,7 @@ async function buildVertex({
   id: string;
   input_value: string;
   onBuildUpdate?: (data: any, status: BuildStatus) => void;
-  onBuildError?: (title, list, idList: string[]) => void;
+  onBuildError?: (title, list, idList: VertexLayerElementType[]) => void;
   verticesIds: string[];
   buildResults: boolean[];
   stopBuild: () => void;
@@ -240,7 +249,7 @@ async function buildVertex({
         onBuildError!(
           "Error Building Component",
           [buildData.params],
-          verticesIds
+          verticesIds.map((id) => ({ id }))
         );
         stopBuild();
       }
@@ -251,7 +260,7 @@ async function buildVertex({
     onBuildError!(
       "Error Building Component",
       [(error as AxiosError<any>).response?.data?.detail ?? "Unknown Error"],
-      verticesIds
+      verticesIds.map((id) => ({ id }))
     );
     stopBuild();
   }

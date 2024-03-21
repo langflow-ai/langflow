@@ -705,3 +705,8 @@ export function sortFields(a, b, fieldOrder) {
   // You might want to sort them alphabetically or in another specific manner
   return a.localeCompare(b);
 }
+
+export function freezeObject(obj: any) {
+  if (!obj) return obj;
+  return JSON.parse(JSON.stringify(obj));
+}

@@ -1,6 +1,7 @@
 import * as Form from "@radix-ui/react-form";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { useEffect, useRef, useState } from "react";
+import useAlertStore from "../../stores/alertStore";
 import { InputComponentType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
@@ -37,6 +38,7 @@ export default function InputComponent({
   optionsButton,
   optionButton,
 }: InputComponentType): JSX.Element {
+  const setErrorData = useAlertStore.getState().setErrorData;
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
@@ -119,8 +121,23 @@ export default function InputComponent({
                 )}
                 placeholder={password && editNode ? "Key" : placeholder}
                 onChange={(e) => {
-                  onChange && onChange(e.target.value);
-                }}
+            // if the user copies a password from another input
+            // it might come as ••••••••••• it causes errors
+            // in ascii encoding, so we need to handle it
+            if (password) {
+              // check if all chars are •
+              if (e.target.value.split("").every((char) => char === "•")) {
+                setErrorData({
+                  title: `Invalid characters: ${e.target.value}`,
+                  list: [
+                    "It seems you are trying to paste a password. Make sure the value is visible before copying from another field.",
+                  ],
+                });
+              }
+
+                    onChange && onChange(e.target.value);
+                  }
+          }}
                 onKeyDown={(e) => {
                   handleKeyDown(e, value, "");
                   if (blurOnEnter && e.key === "Enter")

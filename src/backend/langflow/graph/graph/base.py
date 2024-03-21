@@ -35,6 +35,14 @@ class Graph:
         edges: List[Dict[str, str]],
         flow_id: Optional[str] = None,
     ) -> None:
+        """
+        Initializes a new instance of the Graph class.
+
+        Args:
+            nodes (List[Dict]): A list of dictionaries representing the vertices of the graph.
+            edges (List[Dict[str, str]]): A list of dictionaries representing the edges of the graph.
+            flow_id (Optional[str], optional): The ID of the flow. Defaults to None.
+        """
         self._vertices = nodes
         self._edges = edges
         self.raw_graph_data = {"nodes": nodes, "edges": edges}
@@ -71,11 +79,26 @@ class Graph:
         self.state_manager = GraphStateManager()
 
     def get_state(self, name: str) -> Optional[Record]:
-        """Returns the state of the graph."""
+        """
+        Returns the state of the graph with the given name.
+
+        Args:
+            name (str): The name of the state.
+
+        Returns:
+            Optional[Record]: The state record, or None if the state does not exist.
+        """
         return self.state_manager.get_state(name, run_id=self._run_id)
 
     def update_state(self, name: str, record: Union[str, Record], caller: Optional[str] = None) -> None:
-        """Updates the state of the graph."""
+        """
+        Updates the state of the graph with the given name.
+
+        Args:
+            name (str): The name of the state.
+            record (Union[str, Record]): The new state record.
+            caller (Optional[str], optional): The ID of the vertex that is updating the state. Defaults to None.
+        """
         if caller:
             # If there is a caller which is a vertex_id, I want to activate
             # all StateVertex in self.vertices that are not the caller
@@ -86,6 +109,13 @@ class Graph:
         self.state_manager.update_state(name, record, run_id=self._run_id)
 
     def activate_state_vertices(self, name: str, caller: str):
+        """
+        Activates the state vertices in the graph with the given name and caller.
+
+        Args:
+            name (str): The name of the state.
+            caller (str): The ID of the vertex that is updating the state.
+        """
         vertices_ids = []
         for vertex_id in self._is_state_vertices:
             if vertex_id == caller:
@@ -104,10 +134,20 @@ class Graph:
         self.vertices_to_run.update(vertices_ids)
 
     def reset_activated_vertices(self):
+        """
+        Resets the activated vertices in the graph.
+        """
         self.activated_vertices = []
 
     def append_state(self, name: str, record: Union[str, Record], caller: Optional[str] = None) -> None:
-        """Appends the state of the graph."""
+        """
+        Appends the state of the graph with the given name.
+
+        Args:
+            name (str): The name of the state.
+            record (Union[str, Record]): The state record to append.
+            caller (Optional[str], optional): The ID of the vertex that is updating the state. Defaults to None.
+        """
         if caller:
             self.activate_state_vertices(name, caller)
 
@@ -115,17 +155,38 @@ class Graph:
 
     @property
     def run_id(self):
+        """
+        The ID of the current run.
+
+        Returns:
+            str: The run ID.
+
+        Raises:
+            ValueError: If the run ID is not set.
+        """
         if not self._run_id:
             raise ValueError("Run ID not set")
         return self._run_id
 
     def set_run_id(self, run_id: str):
+        """
+        Sets the ID of the current run.
+
+        Args:
+            run_id (str): The run ID.
+        """
         for vertex in self.vertices:
             self.state_manager.subscribe(run_id, vertex.update_graph_state)
         self._run_id = run_id
 
     @property
     def sorted_vertices_layers(self) -> List[List[str]]:
+        """
+        The sorted layers of vertices in the graph.
+
+        Returns:
+            List[List[str]]: The sorted layers of vertices.
+        """
         if not self._sorted_vertices_layers:
             self.sort_vertices()
         return self._sorted_vertices_layers
@@ -148,7 +209,19 @@ class Graph:
         stream: bool,
         session_id: str,
     ) -> List[Optional["ResultData"]]:
-        """Runs the graph with the given inputs."""
+        """
+        Runs the graph with the given inputs.
+
+        Args:
+            inputs (Dict[str, str]): The input values for the graph.
+            input_components (list[str]): The components to run for the inputs.
+            outputs (list[str]): The outputs to retrieve from the graph.
+            stream (bool): Whether to stream the results or not.
+            session_id (str): The session ID for the graph.
+
+        Returns:
+            List[Optional["ResultData"]]: The outputs of the graph.
+        """
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
             if input_components and (vertex_id not in input_components or vertex.display_name not in input_components):
@@ -190,7 +263,19 @@ class Graph:
         session_id: Optional[str] = None,
         stream: bool = False,
     ) -> List[RunOutputs]:
-        """Runs the graph with the given inputs."""
+        """
+        Runs the graph with the given inputs.
+
+        Args:
+            inputs (list[Dict[str, str]]): The input values for the graph.
+            inputs_components (Optional[list[list[str]]], optional): The components to run for the inputs. Defaults to None.
+            outputs (Optional[list[str]], optional): The outputs to retrieve from the graph. Defaults to None.
+            session_id (Optional[str], optional): The session ID for the graph. Defaults to None.
+            stream (bool, optional): Whether to stream the results or not. Defaults to False.
+
+        Returns:
+            List[RunOutputs]: The outputs of the graph.
+        """
         # inputs is {"message": "Hello, world!"}
         # we need to go through self.inputs and update the self._raw_params
         # of the vertices that are inputs
@@ -218,16 +303,23 @@ class Graph:
             vertex_outputs.append(run_output_object)
         return vertex_outputs
 
-    # vertices_layers is a list of lists ordered by the order the vertices
-    # should be built.
-    # We need to create a new method that will take the vertices_layers
-    # and return the next vertex to be built.
     def next_vertex_to_build(self):
-        """Returns the next vertex to be built."""
+        """
+        Returns the next vertex to be built.
+
+        Yields:
+            str: The ID of the next vertex to be built.
+        """
         yield from chain.from_iterable(self.vertices_layers)
 
     @property
     def metadata(self):
+        """
+        The metadata of the graph.
+
+        Returns:
+            dict: The metadata of the graph.
+        """
         return {
             "runs": self._runs,
             "updates": self._updates,
@@ -235,12 +327,19 @@ class Graph:
         }
 
     def build_graph_maps(self):
+        """
+        Builds the adjacency maps for the graph.
+        """
         self.predecessor_map, self.successor_map = self.build_adjacency_maps()
 
         self.in_degree_map = self.build_in_degree()
         self.parent_child_map = self.build_parent_child_map()
 
     def reset_inactivated_vertices(self):
+        """
+        Resets the inactivated vertices in the graph.
+        """
+        self.inactivated_vertices = []
         self.inactivated_vertices = set()
 
     def mark_all_vertices(self, state: str):
@@ -377,7 +476,10 @@ class Graph:
 
         # Remove vertices that are not in the other graph
         for vertex_id in removed_vertex_ids:
-            self.remove_vertex(vertex_id)
+            try:
+                self.remove_vertex(vertex_id)
+            except ValueError:
+                pass
 
         # The order here matters because adding the vertex is required
         # if any of them have edges that point to any of the new vertices
@@ -741,8 +843,11 @@ class Graph:
             vertex_data = vertex["data"]
             vertex_type: str = vertex_data["type"]  # type: ignore
             vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
+            if "id" not in vertex_data:
+                raise ValueError(f"Vertex data for {vertex_data['display_name']} does not contain an id")
 
             VertexClass = self._get_vertex_class(vertex_type, vertex_base_type, vertex_data["id"])
+
             vertex_instance = VertexClass(vertex, graph=self)
             vertex_instance.set_top_level(self.top_level_vertices)
             vertices.append(vertex_instance)
@@ -953,22 +1058,26 @@ class Graph:
         # Return just the first layer
         return first_layer
 
-    def vertex_has_no_more_predecessors(self, vertex_id: str) -> bool:
-        """Returns whether a vertex has no more predecessors."""
-        return not self.run_predecessors.get(vertex_id)
+    def is_vertex_runnable(self, vertex_id: str) -> bool:
+        """Returns whether a vertex is runnable."""
+        return vertex_id in self.vertices_to_run and not self.run_predecessors.get(vertex_id)
 
-    def should_run_vertex(self, vertex_id: str) -> bool:
-        """Returns whether a component should be run."""
-        # the self.run_map is a map of vertex_id to a list of predecessors
-        # each time a vertex is run, we remove it from the list of predecessors
-        # if a vertex has no more predecessors, it should be run
-        should_run = vertex_id in self.vertices_to_run and self.vertex_has_no_more_predecessors(vertex_id)
+    def find_runnable_predecessors_for_successors(self, vertex_id: str) -> List[str]:
+        """
+        For each successor of the current vertex, find runnable predecessors if any.
+        This checks the direct predecessors of each successor to identify any that are
+        immediately runnable, expanding the search to ensure progress can be made.
+        """
+        runnable_vertices = []
+        visited = set()
 
-        if should_run:
-            self.vertices_to_run.remove(vertex_id)
-            # remove the vertex from the run_map
-            self.remove_from_predecessors(vertex_id)
-        return should_run
+        for successor_id in self.run_map.get(vertex_id, []):
+            for predecessor_id in self.run_predecessors.get(successor_id, []):
+                if predecessor_id not in visited and self.is_vertex_runnable(predecessor_id):
+                    runnable_vertices.append(predecessor_id)
+                    visited.add(predecessor_id)
+
+        return runnable_vertices
 
     def remove_from_predecessors(self, vertex_id: str):
         predecessors = self.run_map.get(vertex_id, [])

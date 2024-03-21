@@ -1,4 +1,4 @@
-import { cloneDeep } from "lodash";
+import { cloneDeep, zip } from "lodash";
 import {
   Edge,
   EdgeChange,
@@ -26,6 +26,7 @@ import {
   ChatOutputType,
   FlowPoolObjectType,
   FlowStoreType,
+  VertexLayerElementType,
   chatInputType,
 } from "../types/zustand/flow";
 import { buildVertices } from "../utils/buildUtils";
@@ -36,6 +37,7 @@ import {
   getNodeId,
   scapeJSONParse,
   scapedJSONStringfy,
+  updateGroupRecursion,
   validateNodes,
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
@@ -221,6 +223,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
   },
   paste: (selection, position) => {
+    function updateGroup() {}
+
     if (
       selection.nodes.some((node) => node.data.type === "ChatInput") &&
       checkChatInput(get().nodes)
@@ -256,6 +260,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       // Generate a unique node ID
       let newId = getNodeId(node.data.type);
       idsMap[node.id] = newId;
+
+      updateGroupRecursion(node, selection.edges);
 
       // Create a new node object
       const newNode: NodeType = {
@@ -459,9 +465,18 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         // verticesLayers is a list of list of vertices ids, where each list is a layer of vertices
         // we want to add a new layer (next_vertices_ids) to the list of layers (verticesLayers)
         // and the values of next_vertices_ids to the list of vertices ids (verticesIds)
+
+        // const nextVertices will be the zip of vertexBuildData.next_vertices_ids and
+        // vertexBuildData.top_level_vertices
+        // the VertexLayerElementType as {id: next_vertices_id, layer: top_level_vertex}
+        const nextVertices: VertexLayerElementType[] = zip(
+          vertexBuildData.next_vertices_ids,
+          vertexBuildData.top_level_vertices
+        ).map(([id, reference]) => ({ id: id!, reference }));
+
         const newLayers = [
           ...get().verticesBuild!.verticesLayers,
-          vertexBuildData.next_vertices_ids,
+          nextVertices,
         ];
         const newIds = [
           ...get().verticesBuild!.verticesIds,
@@ -473,7 +488,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           runId: runId,
         });
         get().updateBuildStatus(
-          vertexBuildData.next_vertices_ids,
+          vertexBuildData.top_level_vertices,
           BuildStatus.TO_BUILD
         );
       }
@@ -508,12 +523,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().setIsBuilding(false);
       },
       onBuildUpdate: handleBuildUpdate,
-      onBuildError: (title, list, idList) => {
+      onBuildError: (title: string, list: string[], elementList) => {
+        const idList = elementList
+          .map((element) => element.id)
+          .filter(Boolean) as string[];
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
         setErrorData({ list, title });
         get().setIsBuilding(false);
       },
-      onBuildStart: (idList) => {
+      onBuildStart: (elementList) => {
+        const idList = elementList
+          // reference is the id of the vertex or the id of the parent in a group node
+          .map((element) => element.reference)
+          .filter(Boolean) as string[];
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
       validateNodes: validateSubgraph,
@@ -531,7 +553,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateVerticesBuild: (
     vertices: {
       verticesIds: string[];
-      verticesLayers: string[][];
+      verticesLayers: VertexLayerElementType[][];
       runId: string;
     } | null
   ) => {
@@ -562,6 +584,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
+    console.log("newFlowBuildStatus", newFlowBuildStatus);
     nodeIdList.forEach((id) => {
       newFlowBuildStatus[id] = {
         status,

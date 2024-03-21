@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 def pytest_configure():
     pytest.BASIC_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "basic_example.json"
     pytest.COMPLEX_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "complex_example.json"
+    pytest.COMPLEX_DEPS_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "complex_deps_example.json"
     pytest.OPENAPI_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "Openapi.json"
     pytest.GROUPED_CHAT_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "grouped_chat.json"
     pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "one_group_chat.json"
@@ -190,6 +191,16 @@ def json_flow_with_prompt_and_history():
 def json_vector_store():
     with open(pytest.VECTOR_STORE_PATH, "r") as f:
         return f.read()
+
+
+@pytest.fixture
+def complex_graph_with_groups():
+    with open(pytest.COMPLEX_DEPS_EXAMPLE_PATH, "r") as f:
+        flow_graph = json.load(f)
+    data_graph = flow_graph["data"]
+    nodes = data_graph["nodes"]
+    edges = data_graph["edges"]
+    return Graph(nodes, edges)
 
 
 @pytest.fixture(name="client", autouse=True)
