@@ -24,6 +24,7 @@ export type InputComponentType = {
   optionsPlaceholder?: string;
   options?: string[];
   optionsButton?: ReactElement;
+  optionButton?: (option: string) => ReactElement;
   selectedOption?: string;
   setSelectedOption?: (value: string) => void;
 };
