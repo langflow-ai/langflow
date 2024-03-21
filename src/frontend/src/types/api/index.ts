@@ -146,6 +146,7 @@ export type VertexBuildTypeAPI = {
   id: string;
   inactivated_vertices: Array<string> | null;
   next_vertices_ids: Array<string>;
+  top_level_vertices: Array<string>;
   run_id: string;
   valid: boolean;
   params: string;
