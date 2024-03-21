@@ -136,9 +136,8 @@ export default function InputComponent({
                         ],
                       });
                     }
-
-                    onChange && onChange(e.target.value);
                   }
+                  onChange && onChange(e.target.value);
                 }}
                 onKeyDown={(e) => {
                   handleKeyDown(e, value, "");
