@@ -184,13 +184,13 @@ class Graph:
 
     async def run(
         self,
-        inputs: list[Dict[str, Union[str, list[str]]]],
+        inputs: list[Dict[str, str]],
+        inputs_components: Optional[list[list[str]]] = None,
         outputs: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         stream: bool = False,
     ) -> List[RunOutputs]:
         """Runs the graph with the given inputs."""
-
         # inputs is {"message": "Hello, world!"}
         # we need to go through self.inputs and update the self._raw_params
         # of the vertices that are inputs
@@ -198,23 +198,14 @@ class Graph:
         vertex_outputs = []
         if not isinstance(inputs, list):
             inputs = [inputs]
-        for input_dict in inputs:
-            components: Union[str, list[str]] = input_dict.get("components", [])
-
+        for run_inputs, components in zip(inputs, inputs_components or []):
             if components and not isinstance(components, list):
                 raise ValueError(f"Invalid components value: {components}. Expected list")
             elif components is None:
                 components = []
 
-            if INPUT_FIELD_NAME not in input_dict:
-                input_value = ""
-            else:
-                _input_value = input_dict[INPUT_FIELD_NAME]
-                if isinstance(_input_value, str):
-                    input_value = _input_value
-                else:
-                    raise ValueError(f"Invalid input value: {input_value}. Expected string")
-            run_inputs = {INPUT_FIELD_NAME: input_value}
+            if not isinstance(run_inputs.get(INPUT_FIELD_NAME, ""), str):
+                raise ValueError(f"Invalid input value: {run_inputs.get(INPUT_FIELD_NAME)}. Expected string")
             run_outputs = await self._run(
                 inputs=run_inputs,
                 input_components=components,
@@ -386,7 +377,10 @@ class Graph:
 
         # Remove vertices that are not in the other graph
         for vertex_id in removed_vertex_ids:
-            self.remove_vertex(vertex_id)
+            try:
+                self.remove_vertex(vertex_id)
+            except ValueError:
+                pass
 
         # The order here matters because adding the vertex is required
         # if any of them have edges that point to any of the new vertices
@@ -750,8 +744,11 @@ class Graph:
             vertex_data = vertex["data"]
             vertex_type: str = vertex_data["type"]  # type: ignore
             vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
+            if "id" not in vertex_data:
+                raise ValueError(f"Vertex data for {vertex_data['display_name']} does not contain an id")
 
             VertexClass = self._get_vertex_class(vertex_type, vertex_base_type, vertex_data["id"])
+
             vertex_instance = VertexClass(vertex, graph=self)
             vertex_instance.set_top_level(self.top_level_vertices)
             vertices.append(vertex_instance)
@@ -962,22 +959,26 @@ class Graph:
         # Return just the first layer
         return first_layer
 
-    def vertex_has_no_more_predecessors(self, vertex_id: str) -> bool:
-        """Returns whether a vertex has no more predecessors."""
-        return not self.run_predecessors.get(vertex_id)
+    def is_vertex_runnable(self, vertex_id: str) -> bool:
+        """Returns whether a vertex is runnable."""
+        return vertex_id in self.vertices_to_run and not self.run_predecessors.get(vertex_id)
 
-    def should_run_vertex(self, vertex_id: str) -> bool:
-        """Returns whether a component should be run."""
-        # the self.run_map is a map of vertex_id to a list of predecessors
-        # each time a vertex is run, we remove it from the list of predecessors
-        # if a vertex has no more predecessors, it should be run
-        should_run = vertex_id in self.vertices_to_run and self.vertex_has_no_more_predecessors(vertex_id)
+    def find_runnable_predecessors_for_successors(self, vertex_id: str) -> List[str]:
+        """
+        For each successor of the current vertex, find runnable predecessors if any.
+        This checks the direct predecessors of each successor to identify any that are
+        immediately runnable, expanding the search to ensure progress can be made.
+        """
+        runnable_vertices = []
+        visited = set()
 
-        if should_run:
-            self.vertices_to_run.remove(vertex_id)
-            # remove the vertex from the run_map
-            self.remove_from_predecessors(vertex_id)
-        return should_run
+        for successor_id in self.run_map.get(vertex_id, []):
+            for predecessor_id in self.run_predecessors.get(successor_id, []):
+                if predecessor_id not in visited and self.is_vertex_runnable(predecessor_id):
+                    runnable_vertices.append(predecessor_id)
+                    visited.add(predecessor_id)
+
+        return runnable_vertices
 
     def remove_from_predecessors(self, vertex_id: str):
         predecessors = self.run_map.get(vertex_id, [])

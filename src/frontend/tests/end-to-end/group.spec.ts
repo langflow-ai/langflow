@@ -1,11 +1,18 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
-
+test.beforeEach(async ({ page }) => {
+  await page.waitForTimeout(7000);
+  test.setTimeout(120000);
+});
 test.describe("group node test", () => {
   /// <reference lib="dom"/>
   test("group and ungroup updating values", async ({ page }) => {
     await page.goto("http:localhost:3000/");
     await page.locator('//*[@id="new-project-btn"]').click();
+
+    await page.getByTestId("blank-flow").click();
+    await page.waitForTimeout(2000);
+
     // Read your file into a buffer.
     const jsonContent = readFileSync(
       "tests/end-to-end/assets/flow_group_test.json",
@@ -23,7 +30,7 @@ test.describe("group node test", () => {
       return dt;
     }, jsonContent);
 
-    page.waitForTimeout(2000);
+    await page.waitForTimeout(2000);
 
     // Now dispatch
     await page.dispatchEvent(

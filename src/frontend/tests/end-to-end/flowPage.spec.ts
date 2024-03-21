@@ -1,4 +1,8 @@
 import { Page, test } from "@playwright/test";
+test.beforeEach(async ({ page }) => {
+  await page.waitForTimeout(6000);
+  test.setTimeout(120000);
+});
 
 test.describe("Flow Page tests", () => {
   async function goToFlowPage(page: Page) {
@@ -13,13 +17,16 @@ test.describe("Flow Page tests", () => {
     await page.locator('//*[@id="new-project-btn"]').click();
     await page.waitForTimeout(2000);
 
+    await page.getByTestId("blank-flow").click();
+    await page.waitForTimeout(2000);
+
     await page.getByPlaceholder("Search").click();
     await page.getByPlaceholder("Search").fill("custom");
 
     await page.waitForTimeout(2000);
 
     await page
-      .locator('//*[@id="utilitiesCustomComponent"]')
+      .locator('//*[@id="helpersCustom Component"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();

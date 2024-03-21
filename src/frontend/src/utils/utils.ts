@@ -381,16 +381,39 @@ export function getCurlCode(
   const tweaks = buildTweaks(flow);
   const inputs = buildInputs();
 
+  const arrayOfOutputs = getOutputIds(flow);
+
   return `curl -X POST \\
   ${window.location.protocol}//${window.location.host}/api/v1/run/${flowId} \\
   -H 'Content-Type: application/json'\\${
     !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
   }
-  -d '{"inputs": [${inputs}], "tweaks": ${
+  -d '{"inputs": [${inputs}],
+  "outputs": [${arrayOfOutputs}], 
+  "stream": false,
+  "tweaks": ${
     tweak && tweak.length > 0
       ? buildTweakObject(tweak)
       : JSON.stringify(tweaks, null, 2)
-  }}'`;
+  }}'
+  `;
+}
+
+export function getOutputIds(flow) {
+  const nodes = flow.data!.nodes;
+
+  const arrayOfOutputs = nodes.reduce((acc: string[], node) => {
+    if (node.data.type.toLowerCase().includes("output")) {
+      acc.push(node.id);
+    }
+    return acc;
+  }, []);
+
+  const arrayOfOutputsJoin = arrayOfOutputs
+    .map((output) => `"${output}"`)
+    .join(", ");
+
+  return arrayOfOutputsJoin;
 }
 
 /**
@@ -681,4 +704,9 @@ export function sortFields(a, b, fieldOrder) {
   // Default case for fields not in priorityFields and not found in fieldOrder
   // You might want to sort them alphabetically or in another specific manner
   return a.localeCompare(b);
+}
+
+export function freezeObject(obj: any) {
+  if(!obj) return obj;
+  return(JSON.parse(JSON.stringify(obj)));
 }

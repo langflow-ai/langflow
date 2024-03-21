@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import Annotated, Any, List, Optional, Union
+from typing import Annotated, List, Optional, Union
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
@@ -14,8 +14,10 @@ from langflow.api.v1.schemas import (
     RunResponse,
     TaskStatusResponse,
     Tweaks,
+    UpdateCustomComponentRequest,
     UploadFileResponse,
 )
+from langflow.graph.schema import RunOutputs
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import build_custom_component_template
@@ -24,12 +26,7 @@ from langflow.services.auth.utils import api_key_security, get_current_active_us
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import (
-    get_session,
-    get_session_service,
-    get_settings_service,
-    get_task_service,
-)
+from langflow.services.deps import get_session, get_session_service, get_settings_service, get_task_service
 from langflow.services.session.service import SessionService
 from langflow.services.task.service import TaskService
 
@@ -56,8 +53,8 @@ def get_all(
 async def run_flow_with_caching(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
-    inputs: Optional[List[InputValueRequest]] = None,
-    outputs: Optional[List[str]] = None,
+    inputs: Optional[List[InputValueRequest]] = [],
+    outputs: Optional[List[str]] = [],
     tweaks: Annotated[Optional[Tweaks], Body(embed=True)] = None,  # noqa: F821
     stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
     session_id: Annotated[Union[None, str], Body(embed=True)] = None,  # noqa: F821
@@ -102,25 +99,20 @@ async def run_flow_with_caching(
     This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations, catering to diverse application requirements.
     """
     try:
-        if inputs is not None:
-            input_values: list[dict[str, Union[str, list[str]]]] = [_input.model_dump() for _input in inputs]
-        else:
-            input_values = [{}]
-
         if outputs is None:
             outputs = []
 
         if session_id:
             session_data = await session_service.load_session(session_id, flow_id=flow_id)
             graph, artifacts = session_data if session_data else (None, None)
-            task_result: Any = None
+            task_result: List[RunOutputs] = []
             if not graph:
                 raise ValueError("Graph not found in the session")
             task_result, session_id = await run_graph(
                 graph=graph,
                 flow_id=flow_id,
                 session_id=session_id,
-                inputs=input_values,
+                inputs=inputs,
                 outputs=outputs,
                 artifacts=artifacts,
                 session_service=session_service,
@@ -142,7 +134,7 @@ async def run_flow_with_caching(
                 graph=graph_data,
                 flow_id=flow_id,
                 session_id=session_id,
-                inputs=input_values,
+                inputs=inputs,
                 outputs=outputs,
                 artifacts={},
                 session_service=session_service,
@@ -283,7 +275,7 @@ async def reload_custom_component(path: str, user: User = Depends(get_current_ac
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)
 async def custom_component_update(
-    code_request: CustomComponentRequest,
+    code_request: UpdateCustomComponentRequest,
     user: User = Depends(get_current_active_user),
 ):
     """
@@ -300,15 +292,21 @@ async def custom_component_update(
         dict: The updated custom component node.
 
     """
-    component = CustomComponent(code=code_request.code)
+    try:
+        component = CustomComponent(code=code_request.code)
 
-    component_node, cc_instance = build_custom_component_template(
-        component,
-        user_id=user.id,
-    )
-    updated_build_config = cc_instance.update_build_config(
-        code_request.template, code_request.field_value, code_request.field_name
-    )
-    component_node["template"] = updated_build_config
+        component_node, cc_instance = build_custom_component_template(
+            component,
+            user_id=user.id,
+        )
 
-    return component_node
+        updated_build_config = cc_instance.update_build_config(
+            build_config=code_request.get_template(),
+            field_value=code_request.field_value,
+            field_name=code_request.field,
+        )
+        component_node["template"] = updated_build_config
+
+        return component_node
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

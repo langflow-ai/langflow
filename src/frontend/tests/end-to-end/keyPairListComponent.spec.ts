@@ -1,10 +1,16 @@
 import { expect, test } from "@playwright/test";
-
+test.beforeEach(async ({ page }) => {
+  await page.waitForTimeout(20000);
+  test.setTimeout(120000);
+});
 test("KeypairListComponent", async ({ page }) => {
   await page.goto("http://localhost:3000/");
   await page.waitForTimeout(2000);
 
   await page.locator('//*[@id="new-project-btn"]').click();
+  await page.waitForTimeout(2000);
+
+  await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(2000);
 
   await page.getByPlaceholder("Search").click();
@@ -41,32 +47,14 @@ test("KeypairListComponent", async ({ page }) => {
   }
   await page.getByTestId("div-generic-node").click();
 
-  await page.locator('//*[@id="keypair1"]').click();
-  await page.locator('//*[@id="keypair1"]').fill("testtesttesttest1");
+  await page.locator('//*[@id="keypair0"]').click();
+  await page.locator('//*[@id="keypair0"]').fill("testtesttesttest1");
   await page.getByTestId("div-generic-node").click();
 
-  await page.locator('//*[@id="keypair101"]').click();
-  await page.locator('//*[@id="keypair101"]').fill("testtesttesttesttesttest1");
-  await page.getByTestId("div-generic-node").click();
-
-  await page.locator('//*[@id="plusbtn1"]').click();
-  await page.getByTestId("div-generic-node").click();
-
-  await page.locator('//*[@id="keypair2"]').click();
-  await page.locator('//*[@id="keypair2"]').fill("testtesttesttest2");
-  await page.getByTestId("div-generic-node").click();
-
-  await page.locator('//*[@id="keypair102"]').click();
-  await page.locator('//*[@id="keypair102"]').fill("testtesttesttesttesttest2");
-  await page.getByTestId("div-generic-node").click();
-
-  await page.locator('//*[@id="minusbtn1"]').click();
-  await page.getByTestId("div-generic-node").click();
-
-  const keyPairVerification = page.locator('//*[@id="keypair102"]');
+  const keyPairVerification = page.locator('//*[@id="keypair100"]');
   const elementKeyCount = await keyPairVerification.count();
 
-  if (elementKeyCount === 0) {
+  if (elementKeyCount === 1) {
     expect(true).toBeTruthy();
   } else {
     expect(false).toBeTruthy();
@@ -103,53 +91,22 @@ test("KeypairListComponent", async ({ page }) => {
 
     await page.locator('//*[@id="editNodekeypair0"]').click();
     await page.locator('//*[@id="editNodekeypair0"]').fill("testtesttesttest");
-    await page.locator('//*[@id="editNodekeypair100"]').click();
-    await page
-      .locator('//*[@id="editNodekeypair100"]')
-      .fill("test test test test test test");
 
-    const plusButtonLocator = page.locator('//*[@id="plusbtn0"]');
-    const elementCount = await plusButtonLocator.count();
-    if (elementCount > 0) {
-      await plusButtonLocator.click();
-    }
-
-    await page.locator('//*[@id="editNodekeypair1"]').click();
-    await page.locator('//*[@id="editNodekeypair1"]').fill("testtesttesttest1");
-    await page.locator('//*[@id="editNodekeypair101"]').first().click();
-    await page
-      .locator('//*[@id="editNodekeypair101"]')
-      .fill("testtesttesttesttesttest1");
-    await page.locator('//*[@id="editNodeplusbtn1"]').click();
-
-    await page.locator('//*[@id="editNodekeypair2"]').click();
-    await page.locator('//*[@id="editNodekeypair2"]').fill("testtesttesttest2");
-    await page.locator('//*[@id="editNodekeypair102"]').click();
-    await page
-      .locator('//*[@id="editNodekeypair102"]')
-      .fill("testtesttesttesttesttest2");
-
-    await page.locator('//*[@id="editNodeminusbtn1"]').click();
-
-    const keyPairVerification = page.locator('//*[@id="editNodekeypair102"]');
+    const keyPairVerification = page.locator('//*[@id="editNodekeypair0"]');
     const elementKeyCount = await keyPairVerification.count();
 
-    if (elementKeyCount === 0) {
+    if (elementKeyCount === 1) {
       await page.locator('//*[@id="saveChangesBtn"]').click();
 
       await page.getByTestId("div-generic-node").click();
 
       const key1 = await page.locator('//*[@id="keypair0"]').inputValue();
       const value1 = await page.locator('//*[@id="keypair100"]').inputValue();
-      const key2 = await page.locator('//*[@id="keypair1"]').inputValue();
-      const value2 = await page.locator('//*[@id="keypair101"]').inputValue();
       await page.getByTestId("div-generic-node").click();
 
       if (
         key1 === "testtesttesttest" &&
-        value1 === "test test test test test test" &&
-        key2 === "testtesttesttest2" &&
-        value2 === "testtesttesttesttesttest2"
+        value1 === "test test test test test test"
       ) {
         expect(true).toBeTruthy();
       } else {

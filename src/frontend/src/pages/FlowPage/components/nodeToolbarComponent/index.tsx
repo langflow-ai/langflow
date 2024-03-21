@@ -30,6 +30,7 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn } from "../../../../utils/utils";
+import ToolbarSelectItem from "./toolbarSelectItem";
 
 export default function NodeToolbarComponent({
   data,
@@ -378,6 +379,7 @@ export default function NodeToolbarComponent({
 
           <ShadTooltip content={"Save"} side="top">
             <button
+              data-testid="save-button-modal"
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
                 hasCode ? " " : " rounded-l-md "
@@ -445,86 +447,46 @@ export default function NodeToolbarComponent({
             <SelectContent>
               {nodeLength > 0 && (
                 <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
-                  <div className="flex">
-                    <IconComponent
-                      name="Settings2"
-                      className="relative top-0.5 mr-2 h-4 w-4 "
-                    />{" "}
-                    <span className="">Edit</span>{" "}
-                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                      <IconComponent
-                        name="Command"
-                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                      ></IconComponent>
-                    ) : (
-                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">
-                        Ctrl +{" "}
-                      </span>
-                    )}
-                    <span className="absolute right-2 top-[0.46em]">E</span>
-                  </div>
+                  <ToolbarSelectItem
+                    keyboardKey="E"
+                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                    shift={false}
+                    value={"Edit"}
+                    icon={"Settings2"}
+                    dataTestId="edit-button-modal"
+                  />
                 </SelectItem>
               )}
               <SelectItem value={"duplicate"}>
-                <div className="flex" data-testid="save-button-modal">
-                  <IconComponent
-                    name="Copy"
-                    className="relative top-0.5 mr-2 h-4 w-4"
-                  />
-                  Duplicate
-                  {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                    <IconComponent
-                      name="Command"
-                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                    ></IconComponent>
-                  ) : (
-                    <span className="absolute right-[1.20rem] top-[0.40em] stroke-2">
-                      Ctrl +{" "}
-                    </span>
-                  )}
-                  <span className="absolute right-2 top-[0.4em]">D</span>
-                </div>{" "}
+                <ToolbarSelectItem
+                  keyboardKey="D"
+                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                  shift={false}
+                  value={"Duplicate"}
+                  icon={"Copy"}
+                  dataTestId="duplicate-button-modal"
+                />
               </SelectItem>
               <SelectItem value={"copy"}>
-                <div className="flex">
-                  <IconComponent
-                    name="Clipboard"
-                    className="relative top-0.5 mr-2 h-4 w-4 "
-                  />{" "}
-                  <span className="">Copy</span>{" "}
-                  {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                    <IconComponent
-                      name="Command"
-                      className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                    ></IconComponent>
-                  ) : (
-                    <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">
-                      Ctrl +{" "}
-                    </span>
-                  )}
-                  <span className="absolute right-2 top-[0.4em]">C</span>
-                </div>
+                <ToolbarSelectItem
+                  keyboardKey="C"
+                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                  shift={false}
+                  value={"Copy"}
+                  icon={"Clipboard"}
+                  dataTestId="copy-button-modal"
+                />
               </SelectItem>
               {isOutdated && (
                 <SelectItem value={"update"}>
-                  <div className="flex">
-                    <IconComponent
-                      name="Code"
-                      className="relative top-0.5 mr-2 h-4 w-4 "
-                    />{" "}
-                    <span className="">Update</span>{" "}
-                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                      <IconComponent
-                        name="Command"
-                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                      ></IconComponent>
-                    ) : (
-                      <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">
-                        Ctrl +{" "}
-                      </span>
-                    )}
-                    <span className="absolute right-2 top-[0.4em]">U</span>
-                  </div>
+                  <ToolbarSelectItem
+                    keyboardKey="U"
+                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                    shift={false}
+                    value={"Update"}
+                    icon={"Code"}
+                    dataTestId="update-button-modal"
+                  />
                 </SelectItem>
               )}
               {hasStore && (
@@ -532,28 +494,17 @@ export default function NodeToolbarComponent({
                   value={"Share"}
                   disabled={!hasApiKey || !validApiKey}
                 >
-                  <div className="flex" data-testid="share-button-modal">
-                    <IconComponent
-                      name="Share3"
-                      className="relative top-0.5 -m-1 mr-1 h-6 w-6"
-                    />{" "}
-                    Share{" "}
-                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                      <IconComponent
-                        name="Command"
-                        className="absolute right-[2rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                      ></IconComponent>
-                    ) : (
-                      <span className="absolute right-[2.10rem] top-[0.43em] stroke-2">
-                        Ctrl
-                      </span>
-                    )}
-                    <IconComponent
-                      name="ArrowBigUp"
-                      className="absolute right-[1.09rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                    ></IconComponent>
-                    <span className="absolute right-2 top-[0.45em]">S</span>
-                  </div>{" "}
+                  <ToolbarSelectItem
+                    keyboardKey="S"
+                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                    shift={true}
+                    value={"Share"}
+                    icon={"Share3"}
+                    styleObj={{
+                      iconClasses: "relative top-0.5 -m-1 mr-1 h-6 w-6",
+                    }}
+                    dataTestId="share-button-modal"
+                  />
                 </SelectItem>
               )}
               {!hasStore && (
@@ -571,28 +522,14 @@ export default function NodeToolbarComponent({
                 value={"documentation"}
                 disabled={data.node?.documentation === ""}
               >
-                <div className="flex">
-                  <IconComponent
-                    name="FileText"
-                    className="relative top-0.5 mr-2 h-4 w-4 "
-                  />{" "}
-                  <span className="">Docs</span>{" "}
-                  {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                    <IconComponent
-                      name="Command"
-                      className="absolute right-[2rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                    ></IconComponent>
-                  ) : (
-                    <span className="absolute right-[2.10rem] top-[0.43em] stroke-2">
-                      Ctrl
-                    </span>
-                  )}
-                  <IconComponent
-                    name="ArrowBigUp"
-                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                  ></IconComponent>
-                  <span className="absolute right-2 top-[0.43em]">D</span>
-                </div>
+                <ToolbarSelectItem
+                  keyboardKey="D"
+                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                  shift={true}
+                  value={"Docs"}
+                  icon={"FileText"}
+                  dataTestId="docs-button-modal"
+                />
               </SelectItem>
               {isMinimal && (
                 <SelectItem value={"show"}>
@@ -605,7 +542,7 @@ export default function NodeToolbarComponent({
                     {navigator.userAgent.toUpperCase().includes("MAC") ? (
                       <IconComponent
                         name="Command"
-                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                        className="absolute right-[1.25rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
                       ></IconComponent>
                     ) : (
                       <span className="absolute right-[1.30rem] top-[0.40em] stroke-2">
