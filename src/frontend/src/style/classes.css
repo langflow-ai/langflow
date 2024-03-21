@@ -87,22 +87,6 @@ select:-webkit-autofill:focus {
   background-color: #ccc;
 }
 
-.ag-body-horizontal-scroll-container {
-  height: 8px !important;
-  min-height: 8px !important;
-  max-height: 8px !important  ;
-}
-.ag-body-horizontal-scroll-viewport {
-  height: 8px !important;
-  min-height: 8px !important;
-  max-height: 8px !important  ;
-}
-.ag-body-horizontal-scroll {
-  height: 8px !important;
-  min-height: 8px !important;
-  max-height: 8px !important;
-}
-
 .ag-theme-balham-dark .ag-header-row {
   background-color: hsl(var(--background)) !important;
   border-color: hsl(var(--border));
