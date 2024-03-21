@@ -108,6 +108,7 @@ unstructured = { extras = ["md"], version = "^0.12.4" }
 dspy-ai = "^2.4.0"
 crewai = "^0.22.5"
 langchain-anthropic = "^0.1.4"
+python-docx = "^1.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.1"

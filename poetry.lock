@@ -6977,6 +6977,21 @@ files = [
 six = ">=1.5"
 
 [[package]]
+name = "python-docx"
+version = "1.1.0"
+description = "Create, read, and update Microsoft Word .docx files."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "python-docx-1.1.0.tar.gz", hash = "sha256:5829b722141cf1ab79aedf0c34d9fe9924b29764584c0f2164eb2b02dcdf17c9"},
+    {file = "python_docx-1.1.0-py3-none-any.whl", hash = "sha256:bac9773278098a1ddc43a52d84e22f5909c4a3080a624530b3ecb3771b07c6cd"},
+]
+
+[package.dependencies]
+lxml = ">=3.1.0"
+typing-extensions = "*"
+
+[[package]]
 name = "python-dotenv"
 version = "1.0.0"
 description = "Read key-value pairs from a .env file and set them as environment variables"
@@ -9969,4 +9984,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "13fbf814f41f22cddd661bce5c37abcd36b50fad392d70271597c358694886bc"
+content-hash = "dedb98bf70db438c28d18a8289a9bb61c79d4ff983b96b7f1d52e11b9c32900b"
