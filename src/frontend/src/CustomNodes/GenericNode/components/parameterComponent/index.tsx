@@ -593,7 +593,6 @@ export default function ParameterComponent({
                             aria-hidden="true"
                           />
                           <span>Add New Variable</span>
-                          
                         </CommandItem>
                       </AddNewVariableButton>
                     }
