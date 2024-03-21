@@ -90,7 +90,7 @@ export default function InputComponent({
             // if the user copies a password from another input
             // it might come as ••••••••••• it causes errors
             // in ascii encoding, so we need to handle it
-            if (password) {
+            if (password && e.target.value.length > 0) {
               // check if all chars are •
               if (e.target.value.split("").every((char) => char === "•")) {
                 setErrorData({
