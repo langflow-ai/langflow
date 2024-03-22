@@ -9,8 +9,8 @@ from jose import JWTError, jwt
 from sqlmodel import Session
 from starlette.websockets import WebSocket
 
-from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.api_key.crud import check_key
+from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
@@ -333,7 +333,7 @@ def encrypt_api_key(api_key: str, settings_service=Depends(get_settings_service)
     fernet = get_fernet(settings_service)
     # Two-way encryption
     encrypted_key = fernet.encrypt(api_key.encode())
-    return encrypted_key
+    return encrypted_key.decode()
 
 
 def decrypt_api_key(encrypted_api_key: str, settings_service=Depends(get_settings_service)):
