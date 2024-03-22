@@ -84,5 +84,7 @@ class Component:
                 if value is not None:
                     template_config[attribute] = func(value=value)
 
+        return template_config
+
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
