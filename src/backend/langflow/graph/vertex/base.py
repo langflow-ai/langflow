@@ -3,16 +3,7 @@ import asyncio
 import inspect
 import types
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    AsyncIterator,
-    Callable,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-)
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
 
 from loguru import logger
 
@@ -312,7 +303,7 @@ class Vertex:
                     flow_id, file_name = file_path.split("/")
                     full_path = storage_service.build_full_path(flow_id, file_name)
                     params[key] = full_path
-                else:
+                elif value.get("required"):
                     raise ValueError(f"File path not found for {self.display_name}")
             elif value.get("type") in DIRECT_TYPES and params.get(key) is None:
                 val = value.get("value")
