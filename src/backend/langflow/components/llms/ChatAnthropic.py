@@ -2,7 +2,9 @@ from pydantic.v1.types import SecretStr
 from langflow import CustomComponent
 from typing import Optional, Union, Callable
 from langflow.field_typing import BaseLanguageModel
-from langchain_community.chat_models.anthropic import ChatAnthropic
+
+# from langchain_community.chat_models.anthropic import ChatAnthropic
+from langchain_anthropic import ChatAnthropic
 
 
 class ChatAnthropicComponent(CustomComponent):
@@ -17,31 +19,48 @@ class ChatAnthropicComponent(CustomComponent):
                 "field_type": "str",
                 "password": True,
             },
-            "anthropic_api_url": {
-                "display_name": "Anthropic API URL",
-                "field_type": "str",
-            },
             "model_kwargs": {
                 "display_name": "Model Kwargs",
                 "field_type": "dict",
                 "advanced": True,
             },
+            "model_name": {
+                "display_name": "Model Name",
+                "field_type": "str",
+                "advanced": False,
+                "required": False,
+                "options": ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
+            },
             "temperature": {
                 "display_name": "Temperature",
                 "field_type": "float",
             },
+            "max_tokens": {
+                "display_name": "Max Tokens",
+                "field_type": "int",
+                "advanced": False,
+                "required": False,
+            },
+            "top_k": {"display_name": "Top K", "field_type": "int", "advanced": True},
+            "top_p": {"display_name": "Top P", "field_type": "float", "advanced": True},
         }
 
     def build(
         self,
         anthropic_api_key: str,
-        anthropic_api_url: Optional[str] = None,
         model_kwargs: dict = {},
+        model_name: str = "claude-3-opus-20240229",
         temperature: Optional[float] = None,
+        max_tokens: Optional[int] = 1024,
+        top_k: Optional[int] = None,
+        top_p: Optional[float] = None,
     ) -> Union[BaseLanguageModel, Callable]:
         return ChatAnthropic(
             anthropic_api_key=SecretStr(anthropic_api_key),
-            anthropic_api_url=anthropic_api_url,
             model_kwargs=model_kwargs,
+            model_name=model_name,
             temperature=temperature,
+            max_tokens=max_tokens,
+            top_k=top_k,
+            top_p=top_p,
         )
