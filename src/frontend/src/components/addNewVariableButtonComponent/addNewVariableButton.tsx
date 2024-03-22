@@ -3,7 +3,7 @@ import { registerGlobalVariable } from "../../controllers/API";
 import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../stores/globalVariables";
-import { ResponseErrorDetailAPI, ResponseErrorTypeAPI } from "../../types/api";
+import { ResponseErrorDetailAPI } from "../../types/api";
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import { Button } from "../ui/button";
@@ -48,7 +48,9 @@ export default function AddNewVariableButton({ children }): JSX.Element {
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-small">
       <BaseModal.Header
-        description={"Write a text global variable to use in any flow."}
+        description={
+          "This variable will be encrypted and will be available for you to use in any of your projects."
+        }
       >
         <span className="pr-2"> Create Variable </span>
         <ForwardedIconComponent
