@@ -88,6 +88,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           }
         })
         .catch((e) => {
+          set({ isLoading: false });
           useAlertStore.getState().setErrorData({
             title: "Could not load flows from database",
           });
