@@ -208,11 +208,7 @@ async def run_graph(
 ) -> tuple[List[RunOutputs], str]:
     """Run the graph and generate the result"""
     inputs = inputs or []
-    if isinstance(graph, dict):
-        graph_data = graph
-        graph = Graph.from_payload(graph, flow_id=flow_id)
-    else:
-        graph_data = graph._graph_data
+    graph_data = graph._graph_data
     if session_id is None and session_service is not None:
         session_id_str = session_service.generate_key(session_id=flow_id, data_graph=graph_data)
     elif session_id is not None:
@@ -236,7 +232,7 @@ async def run_graph(
         session_id=session_id_str or "",
     )
     if session_id_str and session_service:
-        session_service.update_session(session_id_str, (graph, artifacts))
+        await session_service.update_session(session_id_str, (graph, artifacts))
     return run_outputs, session_id_str
 
 
@@ -262,6 +258,9 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
         return
 
     for tweak_name, tweak_value in node_tweaks.items():
+        if tweak_name not in template_data:
+            logger.warning(f"Node {node.get('id')} does not have a tweak named {tweak_name}")
+            continue
         if tweak_name and tweak_value and tweak_name in template_data:
             key = tweak_name if tweak_name == "file_path" else "value"
             template_data[tweak_name][key] = tweak_value

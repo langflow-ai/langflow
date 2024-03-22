@@ -4,14 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    RootModel,
-    field_validator,
-    model_serializer,
-)
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator, model_serializer
 
 from langflow.graph.schema import RunOutputs
 from langflow.schema import dotdict
@@ -61,18 +54,19 @@ class RunResponse(BaseModel):
     outputs: Optional[List[RunOutputs]] = []
     session_id: Optional[str] = None
 
-    @model_serializer(mode="wrap")
-    def serialize(self, handler):
+    @model_serializer(mode="plain")
+    def serialize(self):
         # Serialize all the outputs if they are base models
+        serialized = {"session_id": self.session_id, "outputs": []}
         if self.outputs:
             serialized_outputs = []
             for output in self.outputs:
-                if isinstance(output, BaseModel):
+                if isinstance(output, BaseModel) and not isinstance(output, RunOutputs):
                     serialized_outputs.append(output.model_dump(exclude_none=True))
                 else:
                     serialized_outputs.append(output)
-            self.outputs = serialized_outputs
-        return handler(self)
+            serialized["outputs"] = serialized_outputs
+        return serialized
 
 
 class PreloadResponse(BaseModel):
@@ -266,8 +260,8 @@ class InputValueRequest(BaseModel):
     input_value: Optional[str] = None
 
     # add an example
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "components": ["components_id", "Component Name"],
@@ -276,8 +270,9 @@ class InputValueRequest(BaseModel):
                 {"components": ["Component Name"], "input_value": "input_value"},
                 {"input_value": "input_value"},
             ]
-        }
-    }
+        },
+        extra="forbid",
+    )
 
 
 class Tweaks(RootModel):
