@@ -3,6 +3,7 @@ import "reactflow/dist/style.css";
 import "./App.css";
 
 import { ErrorBoundary } from "react-error-boundary";
+import { useNavigate } from "react-router-dom";
 import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
@@ -43,6 +44,9 @@ export default function App() {
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
+  const navigate = useNavigate();
+
+  const [isLoadingHealth, setIsLoadingHealth] = useState(false);
 
   useEffect(() => {
     refreshStars();
@@ -60,11 +64,12 @@ export default function App() {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    checkApplicationHealth();
     // Timer to call getHealth every 5 seconds
     const timer = setInterval(() => {
       getHealth()
         .then(() => {
-          if (fetchError) setFetchError(false);
+          onHealthCheck();
         })
         .catch(() => {
           setFetchError(true);
@@ -77,6 +82,30 @@ export default function App() {
     };
   }, []);
 
+  const checkApplicationHealth = () => {
+    setIsLoadingHealth(true);
+    getHealth()
+      .then(() => {
+        onHealthCheck();
+      })
+      .catch(() => {
+        setFetchError(true);
+      });
+
+    setTimeout(() => {
+      setIsLoadingHealth(false);
+    }, 2000);
+  };
+
+  const onHealthCheck = () => {
+    setFetchError(false);
+    //This condition is necessary to avoid infinite loop on starter page when the application is not healthy
+    if (isLoading === true && window.location.pathname === "/") {
+      navigate("/flows");
+      window.location.reload();
+    }
+  };
+
   return (
     //need parent component with width and height
     <div className="flex h-full flex-col">
@@ -86,20 +115,29 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        {fetchError ? (
-          <FetchErrorComponent
-            description={FETCH_ERROR_DESCRIPION}
-            message={FETCH_ERROR_MESSAGE}
-          ></FetchErrorComponent>
-        ) : isLoading ? (
-          <div className="loading-page-panel">
-            <LoadingComponent remSize={50} />
-          </div>
-        ) : (
-          <>
-            <Router />
-          </>
-        )}
+        <>
+          {
+            <FetchErrorComponent
+              description={FETCH_ERROR_DESCRIPION}
+              message={FETCH_ERROR_MESSAGE}
+              openModal={fetchError}
+              setRetry={() => {
+                checkApplicationHealth();
+              }}
+              isLoadingHealth={isLoadingHealth}
+            ></FetchErrorComponent>
+          }
+
+          {isLoading ? (
+            <div className="loading-page-panel">
+              <LoadingComponent remSize={50} />
+            </div>
+          ) : (
+            <>
+              <Router />
+            </>
+          )}
+        </>
       </ErrorBoundary>
       <div></div>
       <div className="app-div">
