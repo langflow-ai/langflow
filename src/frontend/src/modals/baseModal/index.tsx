@@ -16,6 +16,7 @@ import {
 } from "../../components/ui/dialog-with-no-close";
 
 import { modalHeaderType } from "../../types/components";
+import { cn } from "../../utils/utils";
 
 type ContentProps = { children: ReactNode };
 type HeaderProps = { children: ReactNode; description: string };
@@ -167,11 +168,13 @@ function BaseModal({
       {type === "modal" ? (
         <Modal open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <ModalContent className={minWidth}>
+          <ModalContent className={cn(minWidth, "duration-300")}>
             <div className="truncate-doubleline word-break-break-word">
               {headerChild}
             </div>
-            <div className={`flex flex-col ${height!} w-full `}>
+            <div
+              className={`flex flex-col ${height!} w-full transition-all duration-300`}
+            >
               {ContentChild}
             </div>
             {ContentFooter && (
@@ -182,11 +185,13 @@ function BaseModal({
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <DialogContent className={minWidth}>
+          <DialogContent className={cn(minWidth, "duration-300")}>
             <div className="truncate-doubleline word-break-break-word">
               {headerChild}
             </div>
-            <div className={`flex flex-col ${height!} w-full `}>
+            <div
+              className={`flex flex-col ${height!} w-full transition-all duration-300`}
+            >
               {ContentChild}
             </div>
             {ContentFooter && (

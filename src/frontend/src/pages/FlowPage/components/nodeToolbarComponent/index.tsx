@@ -270,19 +270,10 @@ export default function NodeToolbarComponent({
         selected &&
         isGroup &&
         (event.ctrlKey || event.metaKey) &&
-        event.key === "u"
+        event.key === "g"
       ) {
         event.preventDefault();
-        takeSnapshot();
-        expandGroupNode(
-          data.id,
-          updateFlowPosition(position, data.node?.flow!),
-          data.node!.template,
-          nodes,
-          edges,
-          setNodes,
-          setEdges
-        );
+        handleSelectChange("ungroup");
       }
       if (
         selected &&
@@ -571,7 +562,7 @@ export default function NodeToolbarComponent({
                         Ctrl +{" "}
                       </span>
                     )}
-                    <span className="absolute right-2 top-[0.43em]">U</span>
+                    <span className="absolute right-2 top-[0.43em]">G</span>
                   </div>
                 </SelectItem>
               )}

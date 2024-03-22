@@ -1,23 +1,23 @@
 import secrets
 from pathlib import Path
-from typing import Optional
+
+from loguru import logger
+from passlib.context import CryptContext
+from pydantic import Field, SecretStr, validator
+from pydantic_settings import BaseSettings
 
 from langflow.services.settings.constants import (
     DEFAULT_SUPERUSER,
     DEFAULT_SUPERUSER_PASSWORD,
 )
 from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
-from loguru import logger
-from passlib.context import CryptContext
-from pydantic import Field, validator
-from pydantic_settings import BaseSettings
 
 
 class AuthSettings(BaseSettings):
     # Login settings
     CONFIG_DIR: str
-    SECRET_KEY: str = Field(
-        default="",
+    SECRET_KEY: SecretStr = Field(
+        default=None,
         description="Secret key for JWT. If not provided, a random one will be generated.",
         frozen=False,
     )
@@ -26,7 +26,6 @@ class AuthSettings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 12 * 7
 
     # API Key to execute /process endpoint
-    API_KEY_SECRET_KEY: Optional[str] = "b82818e0ad4ff76615c5721ee21004b07d84cd9b87ba4d9cb42374da134b841a"
     API_KEY_ALGORITHM: str = "HS256"
     API_V1_STR: str = "/api/v1"
 
