@@ -1,4 +1,3 @@
-import ast
 import operator
 import warnings
 from typing import Any, ClassVar, Optional
@@ -6,7 +5,9 @@ from typing import Any, ClassVar, Optional
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
 
+from langflow.interface.custom.attributes import ATTR_FUNC_MAPPING
 from langflow.interface.custom.code_parser import CodeParser
+from langflow.interface.custom.eval import eval_custom_component_code
 from langflow.utils import validate
 
 
@@ -63,26 +64,25 @@ class Component:
 
         return validate.create_function(self.code, self._function_entrypoint_name)
 
-    def build_template_config(self, attributes) -> dict:
+    def build_template_config(self) -> dict:
+        """
+        Builds the template configuration for the custom component.
+
+        Returns:
+            A dictionary representing the template configuration.
+        """
+        if not self.code:
+            return {}
+
+        cc_class = eval_custom_component_code(self.code)
+        component_instance = cc_class()
         template_config = {}
 
-        for item in attributes:
-            item_name = item.get("name")
-
-            if item_value := item.get("value"):
-                if "display_name" in item_name:
-                    template_config["display_name"] = ast.literal_eval(item_value)
-
-                elif "description" in item_name:
-                    template_config["description"] = ast.literal_eval(item_value)
-
-                elif "beta" in item_name:
-                    template_config["beta"] = ast.literal_eval(item_value)
-
-                elif "documentation" in item_name:
-                    template_config["documentation"] = ast.literal_eval(item_value)
-
-        return template_config
+        for attribute, func in ATTR_FUNC_MAPPING.items():
+            if hasattr(component_instance, attribute):
+                value = getattr(component_instance, attribute)
+                if value is not None:
+                    template_config[attribute] = func(value=value)
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
