@@ -9,6 +9,7 @@ import AddNewVariableButton from "../addNewVariableButtonComponent/addNewVariabl
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import { CommandItem } from "../ui/command";
+import { InputGlobalComponentType } from "../../types/components";
 
 export default function InputGlobalComponent({
   disabled,
@@ -16,7 +17,7 @@ export default function InputGlobalComponent({
   setDb,
   name,
   data,
-}) {
+}: InputGlobalComponentType): JSX.Element {
   const globalVariablesEntries = useGlobalVariablesStore(
     (state) => state.globalVariablesEntries
   );
