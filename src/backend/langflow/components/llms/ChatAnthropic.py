@@ -1,10 +1,10 @@
-from pydantic.v1.types import SecretStr
-from langflow import CustomComponent
-from typing import Optional, Union, Callable
-from langflow.field_typing import BaseLanguageModel
+from typing import Callable, Optional, Union
 
-# from langchain_community.chat_models.anthropic import ChatAnthropic
 from langchain_anthropic import ChatAnthropic
+from pydantic.v1.types import SecretStr
+
+from langflow import CustomComponent
+from langflow.field_typing import BaseLanguageModel
 
 
 class ChatAnthropicComponent(CustomComponent):
@@ -60,7 +60,7 @@ class ChatAnthropicComponent(CustomComponent):
             model_kwargs=model_kwargs,
             model_name=model_name,
             temperature=temperature,
-            max_tokens=max_tokens,
+            max_tokens=max_tokens,  # type: ignore
             top_k=top_k,
             top_p=top_p,
         )
