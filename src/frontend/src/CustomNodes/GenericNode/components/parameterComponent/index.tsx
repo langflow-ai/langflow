@@ -35,7 +35,11 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useGlobalVariablesStore } from "../../../../stores/globalVariables";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { APIClassType, ResponseErrorTypeAPI } from "../../../../types/api";
+import {
+  APIClassType,
+  ResponseErrorDetailAPI,
+  ResponseErrorTypeAPI,
+} from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
 import {
   handleUpdateValues,
@@ -90,25 +94,36 @@ export default function ParameterComponent({
   function handleDelete(key: string) {
     const id = getVariableId(key);
     if (id !== undefined) {
-      deleteGlobalVariable(id).then((_) => {
-        removeGlobalVariable(key);
-        if (
-          data?.node?.template[name].value === key &&
-          data?.node?.template[name].load_from_db
-        ) {
-          handleOnNewValue("");
-          setNode(data.id, (oldNode) => {
-            let newNode = cloneDeep(oldNode);
-            newNode.data = {
-              ...newNode.data,
-            };
-            newNode.data.node.template[name].load_from_db = false;
-            return newNode;
+      deleteGlobalVariable(id)
+        .then((_) => {
+          removeGlobalVariable(key);
+          if (
+            data?.node?.template[name].value === key &&
+            data?.node?.template[name].load_from_db
+          ) {
+            handleOnNewValue("");
+            setNode(data.id, (oldNode) => {
+              let newNode = cloneDeep(oldNode);
+              newNode.data = {
+                ...newNode.data,
+              };
+              newNode.data.node.template[name].load_from_db = false;
+              return newNode;
+            });
+          }
+        })
+        .catch((error) => {
+          let responseError = error as ResponseErrorDetailAPI;
+          setErrorData({
+            title: "Error deleting variable",
+            list: [responseError.response.data.detail ?? "Unknown error"],
           });
-        }
-      });
+        });
     } else {
-      console.error("id is undefined");
+      setErrorData({
+        title: "Error deleting variable",
+        list: [cn("ID not found for variable: ", key)],
+      });
     }
   }
 
@@ -153,6 +168,24 @@ export default function ParameterComponent({
     setIsLoading(false);
     renderTooltips();
   };
+
+  useEffect(() => {
+    if (data.node?.template[name])
+      if (
+        !globalVariablesEntries.includes(data.node?.template[name].value) &&
+        data.node?.template[name].load_from_db
+      ) {
+        handleOnNewValue("");
+        setNode(data.id, (oldNode) => {
+          let newNode = cloneDeep(oldNode);
+          newNode.data = {
+            ...newNode.data,
+          };
+          newNode.data.node.template[name].load_from_db = false;
+          return newNode;
+        });
+      }
+  }, [globalVariablesEntries]);
 
   useEffect(() => {
     async function fetchData() {

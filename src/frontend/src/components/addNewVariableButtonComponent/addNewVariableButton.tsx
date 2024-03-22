@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { registerGlobalVariable } from "../../controllers/API";
 import BaseModal from "../../modals/baseModal";
+import useAlertStore from "../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../stores/globalVariables";
+import { ResponseErrorDetailAPI, ResponseErrorTypeAPI } from "../../types/api";
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import { Button } from "../ui/button";
@@ -16,6 +18,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
   const [value, setValue] = useState("");
   const [provider, setProvider] = useState("");
   const [open, setOpen] = useState(false);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const addGlobalVariable = useGlobalVariablesStore(
     (state) => state.addGlobalVariable
   );
@@ -25,14 +28,22 @@ export default function AddNewVariableButton({ children }): JSX.Element {
       value,
     };
     if (provider) data = { ...data, provider };
-    registerGlobalVariable(data).then((res) => {
-      const { name, id, provider } = res.data;
-      addGlobalVariable(name, id, provider);
-      setKey("");
-      setValue("");
-      setProvider("");
-      setOpen(false);
-    });
+    registerGlobalVariable(data)
+      .then((res) => {
+        const { name, id, provider } = res.data;
+        addGlobalVariable(name, id, provider);
+        setKey("");
+        setValue("");
+        setProvider("");
+        setOpen(false);
+      })
+      .catch((error) => {
+        let responseError = error as ResponseErrorDetailAPI;
+        setErrorData({
+          title: "Error creating variable",
+          list: [responseError.response.data.detail ?? "Unknown error"],
+        });
+      });
   }
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-small">
