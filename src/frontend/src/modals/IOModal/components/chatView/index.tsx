@@ -1,31 +1,32 @@
 import { useEffect, useRef, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
-import { NOCHATOUTPUT_NOTICE_ALERT } from "../../constants/alerts_constants";
+import IconComponent from "../../../../components/genericIconComponent";
+import { NOCHATOUTPUT_NOTICE_ALERT } from "../../../../constants/alerts_constants";
 import {
   CHAT_FIRST_INITIAL_TEXT,
   CHAT_SECOND_INITIAL_TEXT,
-} from "../../constants/constants";
-import { deleteFlowPool } from "../../controllers/API";
-import useAlertStore from "../../stores/alertStore";
-import useFlowStore from "../../stores/flowStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { sendAllProps } from "../../types/api";
+} from "../../../../constants/constants";
+import { deleteFlowPool } from "../../../../controllers/API";
+import useAlertStore from "../../../../stores/alertStore";
+import useFlowStore from "../../../../stores/flowStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { sendAllProps } from "../../../../types/api";
 import {
   ChatMessageType,
   ChatOutputType,
   FlowPoolObjectType,
-} from "../../types/chat";
-import { classNames } from "../../utils/utils";
+} from "../../../../types/chat";
+import { classNames } from "../../../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
+import { chatViewProps } from "../../../../types/components";
 
-export default function NewChatView({
+export default function ChatView({
   sendMessage,
   chatValue,
   setChatValue,
   lockChat,
   setLockChat,
-}): JSX.Element {
+}: chatViewProps): JSX.Element {
   const { flowPool, outputs, inputs, CleanFlowPool } = useFlowStore();
   const { setNoticeData } = useAlertStore();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);

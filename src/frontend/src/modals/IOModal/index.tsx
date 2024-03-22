@@ -1,36 +1,37 @@
 import { useEffect, useState } from "react";
+import AccordionComponent from "../../components/AccordionComponent";
+import IOFieldView from "./components/IOFieldView";
+import ShadTooltip from "../../components/ShadTooltipComponent";
+import IconComponent from "../../components/genericIconComponent";
+import ChatView from "./components/chatView";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
 import {
   CHAT_FORM_DIALOG_SUBTITLE,
   OUTPUTS_MODAL_TITLE,
   TEXT_INPUT_MODAL_TITLE,
 } from "../../constants/constants";
-import BaseModal from "../../modals/baseModal";
+import { InputOutput } from "../../constants/enums";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { NodeType } from "../../types/flow";
 import { updateVerticesOrder } from "../../utils/buildUtils";
 import { cn } from "../../utils/utils";
-import AccordionComponent from "../AccordionComponent";
-import IOInputField from "../IOInputField";
-import IOOutputView from "../IOOutputView";
-import ShadTooltip from "../ShadTooltipComponent";
-import IconComponent from "../genericIconComponent";
-import NewChatView from "../newChatView";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import BaseModal from "../baseModal";
+import { IOModalPropsType } from "../../types/components";
 
-export default function IOView({
+export default function IOModal({
   children,
   open,
   setOpen,
   disable,
-}: {
-  children: JSX.Element;
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  disable?: boolean;
-}): JSX.Element {
+}: IOModalPropsType): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs).filter(
     (input) => input.type !== "ChatInput"
   );
@@ -205,10 +206,11 @@ export default function IOView({
                               <div className="file-component-tab-column">
                                 <div className="">
                                   {input && (
-                                    <IOInputField
+                                    <IOFieldView
+                                      type={InputOutput.INPUT}
                                       left={true}
-                                      inputType={input.type}
-                                      inputId={input.id}
+                                      fieldType={input.type}
+                                      fieldId={input.id}
                                     />
                                   )}
                                 </div>
@@ -272,10 +274,11 @@ export default function IOView({
                               <div className="file-component-tab-column">
                                 <div className="">
                                   {output && (
-                                    <IOOutputView
+                                    <IOFieldView
+                                      type={InputOutput.OUTPUT}
                                       left={true}
-                                      outputType={output.type}
-                                      outputId={output.id}
+                                      fieldType={output.type}
+                                      fieldId={output.id}
                                     />
                                   )}
                                 </div>
@@ -311,16 +314,18 @@ export default function IOView({
                       {inputs.some(
                         (input) => input.id === selectedViewField.id
                       ) ? (
-                        <IOInputField
+                        <IOFieldView
+                          type={InputOutput.INPUT}
                           left={false}
-                          inputType={selectedViewField.type!}
-                          inputId={selectedViewField.id!}
+                          fieldType={selectedViewField.type!}
+                          fieldId={selectedViewField.id!}
                         />
                       ) : (
-                        <IOOutputView
+                        <IOFieldView
+                          type={InputOutput.OUTPUT}
                           left={false}
-                          outputType={selectedViewField.type!}
-                          outputId={selectedViewField.id!}
+                          fieldType={selectedViewField.type!}
+                          fieldId={selectedViewField.id!}
                         />
                       )}
                     </div>
@@ -332,7 +337,7 @@ export default function IOView({
                     selectedViewField ? "hidden" : ""
                   )}
                 >
-                  <NewChatView
+                  <ChatView
                     sendMessage={sendMessage}
                     chatValue={chatValue}
                     setChatValue={setChatValue}

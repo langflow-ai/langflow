@@ -7,7 +7,7 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { ChatType } from "../../types/chat";
 import { classNames } from "../../utils/utils";
-import IOView from "../IOview";
+import IOModal from "../../modals/IOModal";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
 
@@ -90,7 +90,7 @@ export default function FlowToolbar({ flow }: ChatType): JSX.Element {
           <div className="flex">
             <div className="flex h-full w-full  gap-1 rounded-sm text-medium-indigo transition-all">
               {hasIO ? (
-                <IOView open={open} setOpen={setOpen} disable={!hasIO}>
+                <IOModal open={open} setOpen={setOpen} disable={!hasIO}>
                   <div className="relative inline-flex w-full items-center justify-center   gap-1 px-5 py-3 text-sm font-semibold text-medium-indigo transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
                     <ForwardedIconComponent
                       name="Zap"
@@ -98,7 +98,7 @@ export default function FlowToolbar({ flow }: ChatType): JSX.Element {
                     />
                     Run
                   </div>
-                </IOView>
+                </IOModal>
               ) : (
                 <div
                   className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-500 ease-in-out ease-in-out`}

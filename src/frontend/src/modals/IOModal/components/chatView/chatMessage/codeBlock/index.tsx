@@ -2,8 +2,8 @@ import { IconCheck, IconClipboard, IconDownload } from "@tabler/icons-react";
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
-import { programmingLanguages } from "../../../../constants/constants";
-import { Props } from "../../../../types/components";
+import { programmingLanguages } from "../../../../../../constants/constants";
+import { Props } from "../../../../../../types/components";
 
 export function CodeBlock({ language, value }: Props): JSX.Element {
   const [isCopied, setIsCopied] = useState<Boolean>(false);

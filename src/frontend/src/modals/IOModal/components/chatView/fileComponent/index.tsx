@@ -1,7 +1,7 @@
 import * as base64js from "base64-js";
 import { useState } from "react";
-import IconComponent from "../../../components/genericIconComponent";
-import { fileCardPropsType } from "../../../types/components";
+import IconComponent from "../../../../../components/genericIconComponent";
+import { fileCardPropsType } from "../../../../../types/components";
 
 export default function FileCard({
   fileName,

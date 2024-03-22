@@ -6,12 +6,12 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import MaleTechnology from "../../../assets/male-technologist.png";
 import Robot from "../../../assets/robot.png";
-import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
-import CodeTabsComponent from "../../../components/codeTabsComponent";
-import IconComponent from "../../../components/genericIconComponent";
-import useFlowStore from "../../../stores/flowStore";
-import { chatMessagePropsType } from "../../../types/components";
-import { classNames } from "../../../utils/utils";
+import SanitizedHTMLWrapper from "../../../../../components/SanitizedHTMLWrapper";
+import CodeTabsComponent from "../../../../../components/codeTabsComponent";
+import IconComponent from "../../../../../components/genericIconComponent";
+import useFlowStore from "../../../../../stores/flowStore";
+import { chatMessagePropsType } from "../../../../../types/components";
+import { classNames } from "../../../../../utils/utils";
 import FileCard from "../fileComponent";
 
 export default function ChatMessage({

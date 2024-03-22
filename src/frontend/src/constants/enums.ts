@@ -13,3 +13,8 @@ export enum BuildStatus {
   BUILT = "BUILT",
   INACTIVE = "INACTIVE",
 }
+
+export enum InputOutput {
+  INPUT = "input",
+  OUTPUT = "output",
+}

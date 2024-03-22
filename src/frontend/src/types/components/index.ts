@@ -1,5 +1,6 @@
 import { ReactElement, ReactNode, SetStateAction } from "react";
 import { ReactFlowJsonObject, XYPosition } from "reactflow";
+import { InputOutput } from "../../constants/enums";
 import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
@@ -550,6 +551,18 @@ export type genericModalPropsType = {
   readonly?: boolean;
 };
 
+export type newFlowModalPropsType = {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+};
+
+export type IOModalPropsType = {
+  children: JSX.Element;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  disable?: boolean;
+};
+
 export type buttonBoxPropsType = {
   onClick: () => void;
   title: string;
@@ -655,15 +668,21 @@ export type dropdownButtonPropsType = {
   options: Array<{ name: string; onBtnClick: () => void }>;
 };
 
-export type IOInputProps = {
-  inputType: string;
-  inputId: string;
+export type IOFieldViewProps = {
+  type: InputOutput;
+  fieldType: string;
+  fieldId: string;
   left?: boolean;
 };
-export type IOOutputProps = {
-  outputType: string;
-  outputId: string;
-  left?: boolean;
+
+export type UndrawCardComponentProps = { flow: FlowType };
+
+export type chatViewProps = {
+  sendMessage: (count?: number) => void;
+  chatValue: string;
+  setChatValue: (value: string) => void;
+  lockChat: boolean;
+  setLockChat: (lock: boolean) => void;
 };
 
 export type IOFileInputProps = {

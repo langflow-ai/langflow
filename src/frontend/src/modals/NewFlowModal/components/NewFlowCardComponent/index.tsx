@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { Card, CardContent, CardDescription, CardTitle } from "../ui/card";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { Card, CardContent, CardDescription, CardTitle } from "../../../../components/ui/card";
 
 export default function NewFlowCardComponent() {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);

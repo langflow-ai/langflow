@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import IconComponent from "../../../components/genericIconComponent";
-import { Textarea } from "../../../components/ui/textarea";
+import IconComponent from "../../../../../components/genericIconComponent";
+import { Textarea } from "../../../../../components/ui/textarea";
 import {
   CHAT_INPUT_PLACEHOLDER,
   CHAT_INPUT_PLACEHOLDER_SEND,
-} from "../../../constants/constants";
-import useFlowsManagerStore from "../../../stores/flowsManagerStore";
-import { chatInputType } from "../../../types/components";
-import { classNames } from "../../../utils/utils";
+} from "../../../../../constants/constants";
+import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
+import { chatInputType } from "../../../../../types/components";
+import { classNames } from "../../../../../utils/utils";
 
 export default function ChatInput({
   lockChat,
