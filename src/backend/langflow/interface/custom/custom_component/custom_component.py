@@ -1,20 +1,14 @@
 import operator
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    List,
-    Optional,
-    Sequence,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Sequence, Union
 from uuid import UUID
 
 import yaml
 from cachetools import TTLCache, cachedmethod
 from langchain_core.documents import Document
+from pydantic import BaseModel
+from sqlmodel import select
+
 from langflow.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
@@ -24,15 +18,9 @@ from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import (
-    get_credential_service,
-    get_db_service,
-    get_storage_service,
-)
+from langflow.services.deps import get_credential_service, get_db_service, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.utils import validate
-from pydantic import BaseModel
-from sqlmodel import select
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
@@ -368,26 +356,6 @@ class CustomComponent(Component):
             dict: The template configuration for the custom component.
         """
         return self.build_template_config()
-
-    def build_template_config(self):
-        """
-        Builds the template configuration for the custom component.
-
-        Returns:
-            dict: The template configuration for the custom component.
-        """
-        if not self.code:
-            return {}
-
-        attributes = [
-            main_class["attributes"]
-            for main_class in self.tree.get("classes", [])
-            if main_class["name"] == self.get_main_class_name
-        ]
-        # Get just the first item
-        attributes = next(iter(attributes), [])
-
-        return super().build_template_config(attributes)
 
     @property
     def keys(self):
