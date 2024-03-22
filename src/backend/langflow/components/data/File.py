@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List
 
 from langflow import CustomComponent
 from langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_record
@@ -6,12 +6,17 @@ from langflow.schema import Record
 
 
 class FileComponent(CustomComponent):
-    display_name = "File"
-    description = "Load a file."
+    display_name = "Files"
+    description = "Read Text Files"
 
     def build_config(self) -> Dict[str, Any]:
         return {
-            "path": {"display_name": "Path"},
+            "paths": {
+                "display_name": "Paths",
+                "field_type": "file",
+                "file_types": TEXT_FILE_TYPES,
+                "info": f"Supported file types: {', '.join(TEXT_FILE_TYPES)}",
+            },
             "silent_errors": {
                 "display_name": "Silent Errors",
                 "advanced": True,
@@ -19,13 +24,22 @@ class FileComponent(CustomComponent):
             },
         }
 
-    def build(
-        self,
-        path: str,
-        silent_errors: bool = False,
-    ) -> Optional[Record]:
+    def load_file(self, path: str, silent_errors: bool = False) -> Record:
         resolved_path = self.resolve_path(path)
         extension = resolved_path.split(".")[-1]
+        if extension == "doc":
+            raise ValueError("doc files are not supported. Please save as .docx")
         if extension not in TEXT_FILE_TYPES:
             raise ValueError(f"Unsupported file type: {extension}")
-        return parse_text_file_to_record(resolved_path, silent_errors)
+        record = parse_text_file_to_record(resolved_path, silent_errors)
+        self.status = record if record else "No data"
+        return record or Record()
+
+    def build(
+        self,
+        paths: List[str],
+        silent_errors: bool = False,
+    ) -> List[Record]:
+        records = [self.load_file(path, silent_errors) for path in paths]
+        self.status = records
+        return records

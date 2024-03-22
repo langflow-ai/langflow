@@ -36,13 +36,12 @@ class MongoDBAtlasSearchComponent(MongoDBAtlasComponent, LCVectorStoreComponent)
         mongodb_atlas_cluster_uri: str = "",
         search_kwargs: Optional[NestedDict] = None,
     ) -> List[Record]:
+        search_kwargs = search_kwargs or {}
         vector_store = super().build(
+            connection_string=mongodb_atlas_cluster_uri,
+            namespace=f"{db_name}.{collection_name}",
             embedding=embedding,
-            collection_name=collection_name,
-            db_name=db_name,
             index_name=index_name,
-            mongodb_atlas_cluster_uri=mongodb_atlas_cluster_uri,
-            search_kwargs=search_kwargs,
         )
         if not vector_store:
             raise ValueError("Failed to create MongoDB Atlas Vector Store")

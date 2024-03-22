@@ -9,6 +9,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
+
+import {
+  Dialog as Modal,
+  DialogContent as ModalContent,
+} from "../../components/ui/dialog-with-no-close";
+
 import { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
 
@@ -76,6 +82,7 @@ interface BaseModalProps {
 
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;
+  type?: "modal" | "dialog";
 }
 function BaseModal({
   open,
@@ -83,6 +90,7 @@ function BaseModal({
   children,
   size = "large",
   onChangeOpenModal,
+  type = "dialog",
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header
@@ -156,22 +164,43 @@ function BaseModal({
 
   //UPDATE COLORS AND STYLE CLASSSES
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      {triggerChild}
-      <DialogContent className={cn(minWidth, "duration-300")}>
-        <div className="truncate-doubleline word-break-break-word">
-          {headerChild}
-        </div>
-        <div
-          className={`flex flex-col ${height!} w-full transition-all duration-300`}
-        >
-          {ContentChild}
-        </div>
-        {ContentFooter && (
-          <div className="flex flex-row-reverse">{ContentFooter}</div>
-        )}
-      </DialogContent>
-    </Dialog>
+    <>
+      {type === "modal" ? (
+        <Modal open={open} onOpenChange={setOpen}>
+          {triggerChild}
+          <ModalContent className={cn(minWidth, "duration-300")}>
+            <div className="truncate-doubleline word-break-break-word">
+              {headerChild}
+            </div>
+            <div
+              className={`flex flex-col ${height!} w-full transition-all duration-300`}
+            >
+              {ContentChild}
+            </div>
+            {ContentFooter && (
+              <div className="flex flex-row-reverse">{ContentFooter}</div>
+            )}
+          </ModalContent>
+        </Modal>
+      ) : (
+        <Dialog open={open} onOpenChange={setOpen}>
+          {triggerChild}
+          <DialogContent className={cn(minWidth, "duration-300")}>
+            <div className="truncate-doubleline word-break-break-word">
+              {headerChild}
+            </div>
+            <div
+              className={`flex flex-col ${height!} w-full transition-all duration-300`}
+            >
+              {ContentChild}
+            </div>
+            {ContentFooter && (
+              <div className="flex flex-row-reverse">{ContentFooter}</div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   );
 }
 

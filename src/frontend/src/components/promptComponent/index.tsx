@@ -26,6 +26,7 @@ export default function PromptAreaComponent({
     <div className={disabled ? "pointer-events-none w-full " : " w-full"}>
       <GenericModal
         id={id}
+        field_name={field_name}
         readonly={readonly}
         type={TypeModal.PROMPT}
         value={value}
