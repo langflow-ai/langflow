@@ -1,7 +1,6 @@
 from typing import Optional
 
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
 
 from langflow.components.models.base.model import LCModelComponent
 from langflow.field_typing import NestedDict, Text
@@ -78,16 +77,12 @@ class OpenAIModelComponent(LCModelComponent):
     ) -> Text:
         if not openai_api_base:
             openai_api_base = "https://api.openai.com/v1"
-        if openai_api_key:
-            secret_key = SecretStr(openai_api_key)
-        else:
-            secret_key = None
         output = ChatOpenAI(
             max_tokens=max_tokens,
             model_kwargs=model_kwargs,
             model=model_name,
             base_url=openai_api_base,
-            api_key=secret_key,
+            api_key=openai_api_key,
             temperature=temperature,
         )
 
