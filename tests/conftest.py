@@ -10,10 +10,6 @@ import orjson
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from sqlmodel import Session, SQLModel, create_engine, select
-from sqlmodel.pool import StaticPool
-from typer.testing import CliRunner
-
 from langflow.graph.graph.base import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
@@ -22,6 +18,9 @@ from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -263,7 +262,7 @@ def active_user(client):
             is_superuser=False,
         )
         # check if user exists
-        if active_user := session.query(User).filter(User.username == user.username).first():
+        if active_user := session.exec(select(User).where(User.username == user.username)).first():
             return active_user
         session.add(user)
         session.commit()
@@ -368,7 +367,7 @@ def created_api_key(active_user):
     )
     db_manager = get_db_service()
     with session_getter(db_manager) as session:
-        if existing_api_key := session.query(ApiKey).filter(ApiKey.api_key == api_key.api_key).first():
+        if existing_api_key := session.exec(select(ApiKey).where(ApiKey.api_key == api_key.api_key)).first():
             return existing_api_key
         session.add(api_key)
         session.commit()

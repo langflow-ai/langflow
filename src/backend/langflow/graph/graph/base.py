@@ -11,14 +11,7 @@ from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import (
-    ChatVertex,
-    FileToolVertex,
-    LLMVertex,
-    RoutingVertex,
-    StateVertex,
-    ToolkitVertex,
-)
+from langflow.graph.vertex.types import ChatVertex, FileToolVertex, LLMVertex, RoutingVertex, StateVertex, ToolkitVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.schema import Record
 
@@ -222,6 +215,13 @@ class Graph:
         Returns:
             List[Optional["ResultData"]]: The outputs of the graph.
         """
+        if input_components and not isinstance(input_components, list):
+            raise ValueError(f"Invalid components value: {input_components}. Expected list")
+        elif input_components is None:
+            input_components = []
+
+        if not isinstance(inputs.get(INPUT_FIELD_NAME, ""), str):
+            raise ValueError(f"Invalid input value: {inputs.get(INPUT_FIELD_NAME)}. Expected string")
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
             if input_components and (vertex_id not in input_components or vertex.display_name not in input_components):
@@ -250,7 +250,7 @@ class Graph:
 
             if not vertex.result and not stream and hasattr(vertex, "consume_async_generator"):
                 await vertex.consume_async_generator()
-            if not outputs or (vertex.display_name in outputs or vertex.id in outputs):
+            if (not outputs and vertex.is_output) or (vertex.display_name in outputs or vertex.id in outputs):
                 vertex_outputs.append(vertex.result)
 
         return vertex_outputs
@@ -283,14 +283,9 @@ class Graph:
         vertex_outputs = []
         if not isinstance(inputs, list):
             inputs = [inputs]
-        for run_inputs, components in zip(inputs, inputs_components or []):
-            if components and not isinstance(components, list):
-                raise ValueError(f"Invalid components value: {components}. Expected list")
-            elif components is None:
-                components = []
-
-            if not isinstance(run_inputs.get(INPUT_FIELD_NAME, ""), str):
-                raise ValueError(f"Invalid input value: {run_inputs.get(INPUT_FIELD_NAME)}. Expected string")
+        elif not inputs:
+            inputs = [{}]
+        for run_inputs, components in zip(inputs, inputs_components):
             run_outputs = await self._run(
                 inputs=run_inputs,
                 input_components=components,

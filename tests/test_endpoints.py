@@ -1,14 +1,12 @@
 import time
+from uuid import uuid4
 
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
 from langflow.interface.custom.directory_reader.directory_reader import DirectoryReader
-from langflow.services.auth.utils import get_password_hash
-from langflow.services.database.models.api_key.model import ApiKey
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, get_settings_service
+from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
 
 
@@ -110,25 +108,6 @@ PROMPT_REQUEST = {
         },
     },
 }
-
-
-@pytest.fixture
-def created_api_key(active_user):
-    hashed = get_password_hash("random_key")
-    api_key = ApiKey(
-        name="test_api_key",
-        user_id=active_user.id,
-        api_key="random_key",
-        hashed_api_key=hashed,
-    )
-    db_manager = get_db_service()
-    with session_getter(db_manager) as session:
-        if existing_api_key := session.query(ApiKey).filter(ApiKey.api_key == api_key.api_key).first():
-            return existing_api_key
-        session.add(api_key)
-        session.commit()
-        session.refresh(api_key)
-    return api_key
 
 
 # def test_process_flow_invalid_api_key(client, flow, monkeypatch):
@@ -452,18 +431,24 @@ def test_successful_run(client, starter_project, created_api_key):
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
+    assert "session_id" in json_response
     assert "outputs" in json_response
     outer_outputs = json_response["outputs"]
     assert len(outer_outputs) == 1
-    outputs = outer_outputs[0]
-    assert len(outputs) == 2
-    keys = ["results", "artifacts", "messages"]
-    for output in outputs:
-        assert all(key in output for key in keys)
-    output = outputs[0]
-    result = output["results"]["result"]
-    assert result == "Write a press release \n\n- Cars\n- Bottle\n\n\nAnswer:\n\n"
-    assert "session_id" in json_response
+    outputs_dict = outer_outputs[0]
+    assert len(outputs_dict) == 2
+    assert "inputs" in outputs_dict
+    assert "outputs" in outputs_dict
+    assert outputs_dict.get("inputs") == {"input_value": ""}
+    assert isinstance(outputs_dict.get("outputs"), list)
+    assert len(outputs_dict.get("outputs")) == 2
+    ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
+    assert all([id in ids for id in ["TextOutput-fTp5e", "ChatOutput-AVN8s"]])
+    display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
+    assert all([name in display_names for name in ["Prompt Output", "Chat Output"]])
+    inner_results = [output.get("results").get("result") for output in outputs_dict.get("outputs")]
+    expected_results = ["Write a press release \n\n- Cars\n- Bottle\n\n\nAnswer:\n\n", ""]
+    assert all([result in inner_results for result in expected_results])
 
 
 def test_run_with_inputs_and_outputs(client, starter_project, created_api_key):
@@ -484,3 +469,89 @@ def test_invalid_flow_id(client, created_api_key):
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND
     # Check if the error detail is as expected
+
+
+def test_run_flow_with_caching_success(client: TestClient, starter_project, created_api_key):
+    flow_id = starter_project["id"]
+    headers = {"x-api-key": created_api_key.api_key}
+    payload = {
+        "inputs": [
+            {"components": ["component1"], "input_value": "value1"},
+            {"components": ["component3"], "input_value": "value2"},
+        ],
+        "outputs": ["Component Name", "component_id"],
+        "tweaks": {
+            "parameter_name": "value",
+            "Component Name": {"parameter_name": "value"},
+            "component_id": {"parameter_name": "value"},
+        },
+        "stream": False,
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert "outputs" in data
+    assert "session_id" in data
+
+
+def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created_api_key):
+    invalid_flow_id = uuid4()
+    headers = {"x-api-key": created_api_key.api_key}
+    payload = {"inputs": [], "outputs": [], "tweaks": {}, "stream": False}
+    response = client.post(f"/api/v1/run/{invalid_flow_id}", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    data = response.json()
+    assert "detail" in data
+    assert f"Flow {invalid_flow_id} not found" in data["detail"]
+
+
+def test_run_flow_with_caching_invalid_input_format(client: TestClient, starter_project, created_api_key):
+    flow_id = starter_project["id"]
+    headers = {"x-api-key": created_api_key.api_key}
+    payload = {"inputs": [{"invalid_key": "value"}], "outputs": [], "tweaks": {}, "stream": False}
+    # This should raise an http 422 error not validation error
+    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+def test_run_flow_with_session_id(client, starter_project, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = starter_project["id"]
+    payload = {
+        "inputs": [{"components": ["component1"], "input_value": "value1"}],
+        "outputs": ["Component Name", "component_id"],
+        "session_id": "test-session-id",
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert "outputs" in data
+    assert "session_id" in data
+    assert data["session_id"] == "test-session-id"
+
+
+def test_run_flow_with_invalid_session_id(client, starter_project, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = starter_project["id"]
+    payload = {
+        "inputs": [{"components": ["component1"], "input_value": "value1"}],
+        "outputs": ["Component Name", "component_id"],
+        "session_id": "invalid-session-id",
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    data = response.json()
+    assert "detail" in data
+    assert f"Session {payload['session_id']} not found" in data["detail"]
+
+
+def test_run_flow_with_invalid_tweaks(client, starter_project, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = starter_project["id"]
+    payload = {
+        "inputs": [{"components": ["component1"], "input_value": "value1"}],
+        "outputs": ["Component Name", "component_id"],
+        "tweaks": {"invalid_tweak": "value"},
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_200_OK
