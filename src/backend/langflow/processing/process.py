@@ -7,13 +7,13 @@ from langchain.schema import AgentAction, Document
 from langchain_community.vectorstores import VectorStore
 from langchain_core.messages import AIMessage
 from langchain_core.runnables.base import Runnable
+from loguru import logger
+from pydantic import BaseModel
+
 from langflow.graph.graph.base import Graph
-from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.run import build_sorted_vertices, get_memory_key, update_memory_keys
 from langflow.services.deps import get_session_service
 from langflow.services.session.service import SessionService
-from loguru import logger
-from pydantic import BaseModel
 
 
 def fix_memory_inputs(langchain_object):
@@ -172,8 +172,6 @@ async def process_inputs_dict(built_object: Union[Chain, VectorStore, Runnable],
             result = result.content
         else:
             result = result
-    elif hasattr(built_object, "run") and isinstance(built_object, CustomComponent):
-        result = built_object.run(inputs)
     else:
         result = None
 
