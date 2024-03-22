@@ -911,6 +911,12 @@ class Graph:
                                 stack.append(successor.id)
                             else:
                                 excluded.add(successor.id)
+                else:
+                    # If the current vertex is not the target vertex, we should add all its successors
+                    # to the stack if they are not in visited
+                    for successor in current_vertex.successors:
+                        if successor.id not in visited:
+                            stack.append(successor.id)
 
         # Filter the original graph's vertices and edges to keep only those in `visited`
         vertices_to_keep = [self.get_vertex(vid) for vid in visited]
