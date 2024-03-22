@@ -20,7 +20,7 @@ type BuildVerticesParams = {
   onBuildComplete?: (allNodesValid: boolean) => void;
   onBuildError?: (title, list, idList: VertexLayerElementType[]) => void;
   onBuildStart?: (idList: VertexLayerElementType[]) => void;
-  validateNodes?: (nodes: string[]) => void;
+  onValidateNodes?: (nodes: string[]) => void;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -114,7 +114,7 @@ export async function buildVertices({
   onBuildComplete,
   onBuildError,
   onBuildStart,
-  validateNodes,
+  onValidateNodes,
 }: BuildVerticesParams) {
   let verticesBuild = useFlowStore.getState().verticesBuild;
   // if startNodeId and stopNodeId are provided
@@ -133,10 +133,10 @@ export async function buildVertices({
 
   if (onGetOrderSuccess) onGetOrderSuccess();
 
-  if (validateNodes) {
+  if (onValidateNodes) {
     try {
       const nodes = useFlowStore.getState().nodes;
-      validateNodes(nodes.map((node) => node.id));
+      onValidateNodes(nodes.map((node) => node.id));
     } catch (e) {
       return;
     }

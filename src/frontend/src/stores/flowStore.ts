@@ -438,16 +438,20 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const setErrorData = useAlertStore.getState().setErrorData;
     const setNoticeData = useAlertStore.getState().setNoticeData;
     function validateSubgraph(nodes: string[]) {
-      const errors = validateNodes(
+      const errorsObjs = validateNodes(
         get().nodes.filter((node) => nodes.includes(node.id)),
         get().edges
       );
+      const errors = errorsObjs.map((obj) => obj.errors).flat();
       if (errors.length > 0) {
         setErrorData({
           title: MISSED_ERROR_ALERT,
           list: errors,
         });
         get().setIsBuilding(false);
+        const ids = errorsObjs.map((obj) => obj.id).flat();
+        console.log("ids", ids);
+        get().updateBuildStatus(ids, BuildStatus.ERROR);
         throw new Error("Invalid nodes");
       }
     }
@@ -538,7 +542,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           .filter(Boolean) as string[];
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
-      validateNodes: validateSubgraph,
+      onValidateNodes: validateSubgraph,
     });
     get().setIsBuilding(false);
     get().revertBuiltStatusFromBuilding();

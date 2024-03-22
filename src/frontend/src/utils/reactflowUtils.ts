@@ -313,27 +313,40 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
     ) {
       if (hasDuplicateKeys(template[t].value))
         errors.push(
-          `${type} (${getFieldTitle(
+          `${displayName || type} (${getFieldTitle(
             template,
             t
           )}) contains duplicate keys with the same values.`
         );
       if (hasEmptyKey(template[t].value))
         errors.push(
-          `${type} (${getFieldTitle(template, t)}) field must not be empty.`
+          `${displayName || type} (${getFieldTitle(
+            template,
+            t
+          )}) field must not be empty.`
         );
     }
     return errors;
   }, [] as string[]);
 }
 
-export function validateNodes(nodes: Node[], edges: Edge[]) {
+export function validateNodes(
+  nodes: Node[],
+  edges: Edge[]
+): // this returns an array of tuples with the node id and the errors
+Array<{ id: string; errors: Array<string> }> {
   if (nodes.length === 0) {
     return [
-      "No nodes found in the flow. Please add at least one node to the flow.",
+      {
+        id: "",
+        errors: [
+          "No nodes found in the flow. Please add at least one node to the flow.",
+        ],
+      },
     ];
   }
-  return nodes.flatMap((n: NodeType) => validateNode(n, edges));
+  // validateNode(n, edges) returns an array of errors for the node
+  return nodes.map((n) => ({ id: n.id, errors: validateNode(n, edges) }));
 }
 
 export function updateEdges(edges: Edge[]) {

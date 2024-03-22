@@ -10,19 +10,7 @@ from langflow.schema.schema import Record
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
-TEXT_FILE_TYPES = [
-    "txt",
-    "md",
-    "mdx",
-    "csv",
-    "json",
-    "yaml",
-    "yml",
-    "xml",
-    "html",
-    "htm",
-    "pdf",
-]
+TEXT_FILE_TYPES = ["txt", "md", "mdx", "csv", "json", "yaml", "yml", "xml", "html", "htm", "pdf", "docx"]
 
 
 def is_hidden(path: Path) -> bool:
@@ -84,6 +72,13 @@ def read_text_file(file_path: str) -> str:
         return f.read()
 
 
+def read_docx_file(file_path: str) -> str:
+    from docx import Document  # type: ignore
+
+    doc = Document(file_path)
+    return "\n\n".join([p.text for p in doc.paragraphs])
+
+
 def parse_pdf_to_text(file_path: str) -> str:
     from pypdf import PdfReader  # type: ignore
 
@@ -96,6 +91,8 @@ def parse_text_file_to_record(file_path: str, silent_errors: bool) -> Optional[R
     try:
         if file_path.endswith(".pdf"):
             text = parse_pdf_to_text(file_path)
+        elif file_path.endswith(".docx"):
+            text = read_docx_file(file_path)
         else:
             text = read_text_file(file_path)
         # if file is json, yaml, or xml, we can parse it
