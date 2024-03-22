@@ -6,7 +6,6 @@ import AccordionComponent from "../../components/AccordionComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import Dropdown from "../../components/dropdownComponent";
 import FloatComponent from "../../components/floatComponent";
-import InputComponent from "../../components/inputComponent";
 import InputFileComponent from "../../components/inputFileComponent";
 import InputListComponent from "../../components/inputListComponent";
 import IntComponent from "../../components/intComponent";
@@ -28,10 +27,8 @@ import {
   TabsTrigger,
 } from "../../components/ui/tabs";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../constants/constants";
-import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
-import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import { codeTabsPropsType } from "../../types/components";
 import {
   convertObjToArray,
@@ -41,6 +38,7 @@ import {
 import { classNames } from "../../utils/utils";
 import DictComponent from "../dictComponent";
 import IconComponent from "../genericIconComponent";
+import InputGlobalComponent from "../inputGlobalComponent";
 import KeypairListComponent from "../keypairListComponent";
 
 export default function CodeTabsComponent({
@@ -56,10 +54,7 @@ export default function CodeTabsComponent({
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const dark = useDarkStore((state) => state.dark);
   const unselectAll = useFlowStore((state) => state.unselectAll);
-  const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries
-  );
-  const setNoticeData = useAlertStore((state) => state.setNoticeData);
+  const setNode = useFlowStore((state) => state.setNode);
 
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
@@ -350,63 +345,30 @@ export default function CodeTabsComponent({
                                                     />
                                                   </div>
                                                 ) : (
-                                                  <InputComponent
-                                                    options={
-                                                      globalVariablesEntries
-                                                    }
-                                                    editNode={true}
+                                                  <InputGlobalComponent
                                                     disabled={false}
-                                                    password={
-                                                      node.data.node.template[
-                                                        templateField
-                                                      ].password ?? false
-                                                    }
-                                                    value={
-                                                      !node.data.node.template[
-                                                        templateField
-                                                      ].value ||
-                                                      node.data.node.template[
-                                                        templateField
-                                                      ].value === ""
-                                                        ? ""
-                                                        : node.data.node
-                                                            .template[
-                                                            templateField
-                                                          ].value
-                                                    }
                                                     onChange={(target) => {
-                                                      setData((old) => {
-                                                        let newInputList =
-                                                          cloneDeep(old);
-                                                        newInputList![
-                                                          i
-                                                        ].data.node.template[
-                                                          templateField
-                                                        ].value = target;
-                                                        if (
-                                                          globalVariablesEntries.includes(
-                                                            target
-                                                          )
-                                                        ) {
-                                                          setNoticeData({
-                                                            title: `the value inserted in ${templateField} is a global variable, \n 
-                                                          the real value will be update on run`,
-                                                          });
-                                                          newInputList![
-                                                            i
-                                                          ].data.node.template[
-                                                            templateField
-                                                          ].load_from_db = true;
-                                                        }
-                                                        else{
-                                                          newInputList![
-                                                            i
-                                                          ].data.node.template[
-                                                            templateField
-                                                          ].load_from_db = false;
-                                                        }
-                                                        return newInputList;
-                                                      });
+                                                      if (node.data) {
+                                                        setNode(
+                                                          node.data.id,
+                                                          (oldNode) => {
+                                                            let newNode =
+                                                              cloneDeep(
+                                                                oldNode
+                                                              );
+
+                                                            newNode.data = {
+                                                              ...newNode.data,
+                                                            };
+
+                                                            newNode.data.node.template[
+                                                              templateField
+                                                            ].value = target;
+
+                                                            return newNode;
+                                                          }
+                                                        );
+                                                      }
                                                       tweaks.buildTweakObject!(
                                                         node["data"]["id"],
                                                         target,
@@ -415,6 +377,25 @@ export default function CodeTabsComponent({
                                                         ]
                                                       );
                                                     }}
+                                                    setDb={(value) => {
+                                                      setNode(
+                                                        node.data.id,
+                                                        (oldNode) => {
+                                                          let newNode =
+                                                            cloneDeep(oldNode);
+                                                          newNode.data = {
+                                                            ...newNode.data,
+                                                          };
+                                                          newNode.data.node.template[
+                                                            templateField
+                                                          ].load_from_db =
+                                                            value;
+                                                          return newNode;
+                                                        }
+                                                      );
+                                                    }}
+                                                    name={templateField}
+                                                    data={node.data}
                                                   />
                                                 )}
                                               </div>
