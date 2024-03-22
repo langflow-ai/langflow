@@ -76,7 +76,7 @@ async def auto_login(
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
-            expires=None,
+            expires=None,  # Set to None to make it a session cookie
         )
         return tokens
 
