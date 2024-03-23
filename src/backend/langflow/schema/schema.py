@@ -120,3 +120,6 @@ class Record(BaseModel):
     # check which attributes the Record has by checking the keys in the data dictionary
     def __dir__(self):
         return super().__dir__() + list(self.data.keys())
+
+
+INPUT_FIELD_NAME = "input_value"
