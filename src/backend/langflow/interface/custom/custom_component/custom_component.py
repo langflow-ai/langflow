@@ -326,7 +326,7 @@ class CustomComponent(Component):
         flow_name: Optional[str] = None,
         tweaks: Optional[dict] = None,
     ) -> Any:
-        return await run_flow(inputs=inputs, flow_id=flow_id, flow_name=flow_name, tweaks=tweaks)
+        return await run_flow(inputs=inputs, flow_id=flow_id, flow_name=flow_name, tweaks=tweaks, user_id=self._user_id)
 
     def list_flows(self) -> List[Record]:
         if not self._user_id:

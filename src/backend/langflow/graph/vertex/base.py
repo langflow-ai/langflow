@@ -4,19 +4,18 @@ import inspect
 import types
 from enum import Enum
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
+
 from loguru import logger
 
-from langflow.graph.schema import (
-    INPUT_COMPONENTS,
-    OUTPUT_COMPONENTS,
-    InterfaceComponentTypes,
-    ResultData,
-)
+from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import generate_result
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.schema import INPUT_FIELD_NAME
+from langflow.services.deps import get_storage_service
+from langflow.utils.constants import DIRECT_TYPES
+from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async, unescape_string
 
 if TYPE_CHECKING:
@@ -193,6 +192,7 @@ class Vertex:
         self.data = self._data["data"]
         self.output = self.data["node"]["base_classes"]
         self.display_name = self.data["node"].get("display_name", self.id.split("-")[0])
+        self.description = self.data["node"].get("description", "")
         self.frozen = self.data["node"].get("frozen", False)
         self.selected_output_type = self.data["node"].get("selected_output_type")
         self.is_input = self.data["node"].get("is_input") or self.is_input
@@ -296,8 +296,14 @@ class Vertex:
                 # value.get('value') is the file name
                 if file_path := value.get("file_path"):
                     storage_service = get_storage_service()
-                    flow_id, file_name = file_path.split("/")
-                    full_path = storage_service.build_full_path(flow_id, file_name)
+                    try:
+                        flow_id, file_name = file_path.split("/")
+                        full_path = storage_service.build_full_path(flow_id, file_name)
+                    except ValueError as e:
+                        if "too many values to unpack" in str(e):
+                            full_path = file_path
+                        else:
+                            raise e
                     params[key] = full_path
                 elif value.get("required"):
                     raise ValueError(f"File path not found for {self.display_name}")
@@ -388,19 +394,18 @@ class Vertex:
         Returns:
             List[str]: The extracted messages.
         """
-        messages = []
-        for key, artifact in artifacts.items():
-            if not isinstance(artifact, dict):
-                continue
-            if "message" in artifact:
-                chat_output_response = ChatOutputResponse(
-                    message=artifact["message"],
-                    sender=artifact.get("sender"),
-                    sender_name=artifact.get("sender_name"),
-                    session_id=artifact.get("session_id"),
+        try:
+            messages = [
+                ChatOutputResponse(
+                    message=artifacts["message"],
+                    sender=artifacts.get("sender"),
+                    sender_name=artifacts.get("sender_name"),
+                    session_id=artifacts.get("session_id"),
                     component_id=self.id,
-                )
-                messages.append(chat_output_response.model_dump(exclude_none=True))
+                ).model_dump(exclude_none=True)
+            ]
+        except KeyError:
+            messages = []
 
         return messages
 
