@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator, model_serializer
@@ -258,6 +258,10 @@ class VerticesBuiltResponse(BaseModel):
 class InputValueRequest(BaseModel):
     components: Optional[List[str]] = []
     input_value: Optional[str] = None
+    type: Optional[Literal["chat", "text", "json", "any"]] = Field(
+        "any",
+        description="Defines on which components the input value should be applied. 'any' applies to all input components.",
+    )
 
     # add an example
     model_config = ConfigDict(
@@ -269,6 +273,8 @@ class InputValueRequest(BaseModel):
                 },
                 {"components": ["Component Name"], "input_value": "input_value"},
                 {"input_value": "input_value"},
+                {"type": "chat", "input_value": "input_value"},
+                {"type": "json", "input_value": '{"key": "value"}'},
             ]
         },
         extra="forbid",

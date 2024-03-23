@@ -198,6 +198,7 @@ class Graph:
         self,
         inputs: Dict[str, str],
         input_components: list[str],
+        input_type: str,
         outputs: list[str],
         stream: bool,
         session_id: str,
@@ -224,7 +225,12 @@ class Graph:
             raise ValueError(f"Invalid input value: {inputs.get(INPUT_FIELD_NAME)}. Expected string")
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
+            # If the vertex is not in the input_components list
             if input_components and (vertex_id not in input_components or vertex.display_name not in input_components):
+                continue
+            # If the input_type is not any and the input_type is not in the vertex id
+            # Example: input_type = "chat" and vertex.id = "OpenAI-19ddn"
+            elif input_type != "any" and input_type not in vertex.id.lower():
                 continue
             if vertex is None:
                 raise ValueError(f"Vertex {vertex_id} not found")
@@ -259,6 +265,7 @@ class Graph:
         self,
         inputs: list[Dict[str, str]],
         inputs_components: Optional[list[list[str]]] = None,
+        types: Optional[list[str]] = None,
         outputs: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         stream: bool = False,
@@ -285,10 +292,11 @@ class Graph:
             inputs = [inputs]
         elif not inputs:
             inputs = [{}]
-        for run_inputs, components in zip(inputs, inputs_components):
+        for run_inputs, components, input_type in zip(inputs, inputs_components, types):
             run_outputs = await self._run(
                 inputs=run_inputs,
                 input_components=components,
+                input_type=input_type,
                 outputs=outputs or [],
                 stream=stream,
                 session_id=session_id or "",

@@ -217,16 +217,19 @@ async def run_graph(
         raise ValueError("session_id or session_service must be provided")
     components = []
     inputs_list = []
+    types = []
     for input_value_request in inputs:
         if input_value_request.input_value is None:
             logger.warning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
             input_value_request.input_value = ""
         components.append(input_value_request.components or [])
         inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
+        types.append(input_value_request.type)
 
     run_outputs = await graph.run(
         inputs_list,
         components,
+        types,
         outputs or [],
         stream=stream,
         session_id=session_id_str or "",
