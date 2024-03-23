@@ -310,4 +310,5 @@ async def custom_component_update(
 
         return component_node
     except Exception as exc:
+        logger.exception(exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc

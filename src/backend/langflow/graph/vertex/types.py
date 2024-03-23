@@ -11,7 +11,6 @@ from langflow.graph.vertex.base import Vertex
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema import Record
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.monitor.utils import log_vertex_build
 from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import unescape_string
