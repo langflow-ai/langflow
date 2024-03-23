@@ -226,7 +226,7 @@ async def run_graph(
         inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
         types.append(input_value_request.type)
 
-    run_outputs = await graph.run(
+    run_outputs = await graph.arun(
         inputs_list,
         components,
         types,

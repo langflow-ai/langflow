@@ -261,7 +261,45 @@ class Graph:
 
         return vertex_outputs
 
-    async def run(
+    def run(
+        self,
+        inputs: Dict[str, str],
+        input_components: Optional[list[str]] = None,
+        types: Optional[list[str]] = None,
+        outputs: Optional[list[str]] = None,
+        session_id: Optional[str] = None,
+        stream: bool = False,
+    ) -> List[RunOutputs]:
+        """
+        Run the graph with the given inputs and return the outputs.
+
+        Args:
+            inputs (Dict[str, str]): A dictionary of input values.
+            input_components (Optional[list[str]]): A list of input components.
+            types (Optional[list[str]]): A list of types.
+            outputs (Optional[list[str]]): A list of output components.
+            session_id (Optional[str]): The session ID.
+            stream (bool): Whether to stream the outputs.
+
+        Returns:
+            List[RunOutputs]: A list of RunOutputs objects representing the outputs.
+        """
+        # run the async function in a sync way
+        # this could be used in a FastAPI endpoint
+        # so we should take care of the event loop
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(
+            self.arun(
+                inputs=inputs,
+                inputs_components=input_components,
+                types=types,
+                outputs=outputs,
+                session_id=session_id,
+                stream=stream,
+            )
+        )
+
+    async def arun(
         self,
         inputs: list[Dict[str, str]],
         inputs_components: Optional[list[list[str]]] = None,

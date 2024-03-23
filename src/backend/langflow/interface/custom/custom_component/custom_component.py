@@ -1,15 +1,6 @@
 import operator
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    List,
-    Optional,
-    Sequence,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Sequence, Union
 from uuid import UUID
 
 import yaml
@@ -27,11 +18,7 @@ from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import (
-    get_credential_service,
-    get_db_service,
-    get_storage_service,
-)
+from langflow.services.deps import get_credential_service, get_db_service, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.utils import validate
 
@@ -370,7 +357,7 @@ class CustomComponent(Component):
             input_value = [input_value]
         graph = await self.load_flow(flow_id, tweaks)
         input_value_dict = [{"input_value": input_val} for input_val in input_value]
-        return await graph.run(input_value_dict, stream=False)
+        return await graph.arun(input_value_dict, stream=False)
 
     def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Record]:
         if not self._user_id:
