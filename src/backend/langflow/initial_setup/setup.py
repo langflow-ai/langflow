@@ -52,6 +52,10 @@ def get_project_data(project):
     updated_at_datetime = datetime.strptime(project_updated_at, "%Y-%m-%dT%H:%M:%S.%f")
     project_data = project.get("data")
     project_icon = project.get("icon")
+    if project_icon and purely_emoji(project_icon):
+        project_icon = demojize(project_icon)
+    else:
+        project_icon = ""
     project_icon_bg_color = project.get("icon_bg_color")
     return (
         project_name,
@@ -98,7 +102,7 @@ def create_new_project(
     new_project = FlowCreate(
         name=project_name,
         description=project_description,
-        icon=project_icon if not purely_emoji(project_icon) else demojize(project_icon),
+        icon=project_icon,
         icon_bg_color=project_icon_bg_color,
         data=project_data,
         is_component=project_is_component,
