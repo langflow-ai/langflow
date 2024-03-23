@@ -57,6 +57,16 @@ def get_session() -> Generator["Session", None, None]:
 
 @contextmanager
 def session_scope():
+    """
+    Context manager for managing a session scope.
+
+    Yields:
+        session: The session object.
+
+    Raises:
+        Exception: If an error occurs during the session scope.
+
+    """
     session = next(get_session())
     try:
         yield session
