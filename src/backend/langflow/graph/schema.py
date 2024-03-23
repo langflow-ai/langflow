@@ -49,8 +49,6 @@ OUTPUT_COMPONENTS = [
     InterfaceComponentTypes.TextOutput,
 ]
 
-INPUT_FIELD_NAME = "input_value"
-
 
 class RunOutputs(BaseModel):
     inputs: dict = Field(default_factory=dict)

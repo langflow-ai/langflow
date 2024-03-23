@@ -4,7 +4,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.graph.edge.utils import build_clean_params
-from langflow.graph.schema import INPUT_FIELD_NAME
+from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.deps import get_monitor_service
 from langflow.services.monitor.utils import log_message
 
