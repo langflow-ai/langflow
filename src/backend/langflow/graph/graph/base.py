@@ -15,8 +15,6 @@ from langflow.graph.vertex.types import ChatVertex, FileToolVertex, LLMVertex, R
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.schema import Record
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.schema import Record
-from langflow.schema.schema import INPUT_FIELD_NAME
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
@@ -226,18 +224,21 @@ class Graph:
 
         if not isinstance(inputs.get(INPUT_FIELD_NAME, ""), str):
             raise ValueError(f"Invalid input value: {inputs.get(INPUT_FIELD_NAME)}. Expected string")
-        for vertex_id in self._is_input_vertices:
-            vertex = self.get_vertex(vertex_id)
-            # If the vertex is not in the input_components list
-            if input_components and (vertex_id not in input_components or vertex.display_name not in input_components):
-                continue
-            # If the input_type is not any and the input_type is not in the vertex id
-            # Example: input_type = "chat" and vertex.id = "OpenAI-19ddn"
-            elif input_type != "any" and input_type not in vertex.id.lower():
-                continue
-            if vertex is None:
-                raise ValueError(f"Vertex {vertex_id} not found")
-            vertex.update_raw_params(inputs, overwrite=True)
+        if inputs:
+            for vertex_id in self._is_input_vertices:
+                vertex = self.get_vertex(vertex_id)
+                # If the vertex is not in the input_components list
+                if input_components and (
+                    vertex_id not in input_components or vertex.display_name not in input_components
+                ):
+                    continue
+                # If the input_type is not any and the input_type is not in the vertex id
+                # Example: input_type = "chat" and vertex.id = "OpenAI-19ddn"
+                elif input_type != "any" and input_type not in vertex.id.lower():
+                    continue
+                if vertex is None:
+                    raise ValueError(f"Vertex {vertex_id} not found")
+                vertex.update_raw_params(inputs, overwrite=True)
         # Update all the vertices with the session_id
         for vertex_id in self._has_session_id_vertices:
             vertex = self.get_vertex(vertex_id)
@@ -333,6 +334,12 @@ class Graph:
             inputs = [inputs]
         elif not inputs:
             inputs = [{}]
+        # Length of all should be the as inputs length
+        # just add empty lists to complete the length
+        for _ in range(len(inputs) - len(inputs_components)):
+            inputs_components.append([])
+        for _ in range(len(inputs) - len(types)):
+            types.append("any")
         for run_inputs, components, input_type in zip(inputs, inputs_components, types):
             run_outputs = await self._run(
                 inputs=run_inputs,

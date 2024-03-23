@@ -108,7 +108,7 @@ class Flow(FlowBase, table=True):
             "description": serialized.pop("description"),
             "updated_at": serialized.pop("updated_at"),
         }
-        record = Record(text=data.get("name"), data=data)
+        record = Record(data=data)
         return record
 
 

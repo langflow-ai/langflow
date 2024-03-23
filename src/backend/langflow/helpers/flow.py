@@ -19,15 +19,24 @@ def list_flows(*, user_id: Optional[str] = None) -> List[Record]:
                 select(Flow).where(Flow.user_id == user_id).where(Flow.is_component == False)  # noqa
             ).all()
 
-        flows_records = [flow.to_record() for flow in flows]
-        return flows_records
+            flows_records = [flow.to_record() for flow in flows]
+            return flows_records
     except Exception as e:
         raise ValueError(f"Error listing flows: {e}")
 
 
-async def load_flow(flow_id: str, tweaks: Optional[dict] = None) -> "Graph":
+async def load_flow(
+    user_id: str, flow_id: Optional[str] = None, flow_name: Optional[str] = None, tweaks: Optional[dict] = None
+) -> "Graph":
     from langflow.graph.graph.base import Graph
     from langflow.processing.process import process_tweaks
+
+    if not flow_id and not flow_name:
+        raise ValueError("Flow ID or Flow Name is required")
+    if not flow_id and flow_name:
+        flow_id = find_flow(flow_name, user_id)
+        if not flow_id:
+            raise ValueError(f"Flow {flow_name} not found")
 
     with session_scope() as session:
         graph_data = flow.data if (flow := session.get(Flow, flow_id)) else None
@@ -39,28 +48,20 @@ async def load_flow(flow_id: str, tweaks: Optional[dict] = None) -> "Graph":
     return graph
 
 
+def find_flow(flow_name: str, user_id: str) -> Optional[str]:
+    with session_scope() as session:
+        flow = session.exec(select(Flow).where(Flow.name == flow_name).where(Flow.user_id == user_id)).first()
+        return flow.id if flow else None
+
+
 async def run_flow(
     inputs: Union[dict, List[dict]] = None,
+    tweaks: Optional[dict] = None,
     flow_id: Optional[str] = None,
     flow_name: Optional[str] = None,
-    tweaks: Optional[dict] = None,
-    flows_records: Optional[List[Record]] = None,
+    user_id: Optional[str] = None,
 ) -> Any:
-    if not flow_id and not flow_name:
-        raise ValueError("Flow ID or Flow Name is required")
-    if not flows_records:
-        flows_records = list_flows()
-    if not flow_id and flows_records:
-        flow_ids = [flow.data["id"] for flow in flows_records if flow.data["name"] == flow_name]
-        if not flow_ids:
-            raise ValueError(f"Flow {flow_name} not found")
-        elif len(flow_ids) > 1:
-            raise ValueError(f"Multiple flows found with the name {flow_name}")
-        flow_id = flow_ids[0]
-
-    if not flow_id:
-        raise ValueError(f"Flow {flow_name} not found")
-    graph = await load_flow(flow_id, tweaks)
+    graph = await load_flow(user_id, flow_id, flow_name, tweaks)
 
     if inputs is None:
         inputs = []
