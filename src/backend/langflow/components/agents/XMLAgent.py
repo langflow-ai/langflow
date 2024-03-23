@@ -57,6 +57,10 @@ class XMLAgentComponent(CustomComponent):
                 "display_name": "Memory",
                 "info": "Memory to use for the agent.",
             },
+            "inputs": {
+                "display_name": "Inputs",
+                "info": "Input text to pass to the agent.",
+            },
         }
 
     def build(
