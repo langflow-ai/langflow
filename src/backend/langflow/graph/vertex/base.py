@@ -46,6 +46,7 @@ class Vertex:
         self.will_stream = False
         self.updated_raw_params = False
         self.id: str = data["id"]
+        self.base_name = self.id.split("-")[0]
         self.is_state = False
         self.is_input = any(input_component_name in self.id for input_component_name in INPUT_COMPONENTS)
         self.is_output = any(output_component_name in self.id for output_component_name in OUTPUT_COMPONENTS)
@@ -147,6 +148,7 @@ class Vertex:
             "_data": self._data,
             "params": {},
             "base_type": self.base_type,
+            "base_name": self.base_name,
             "is_task": self.is_task,
             "id": self.id,
             "_built_object": UnbuiltObject(),
@@ -167,6 +169,7 @@ class Vertex:
         self.frozen = state.get("frozen", False)
         self.is_input = state.get("is_input", False)
         self.is_output = state.get("is_output", False)
+        self.base_name = state["base_name"]
         self._parse_data()
         if "_built_object" in state:
             self._built_object = state["_built_object"]
@@ -192,6 +195,7 @@ class Vertex:
         self.data = self._data["data"]
         self.output = self.data["node"]["base_classes"]
         self.display_name = self.data["node"].get("display_name", self.id.split("-")[0])
+
         self.description = self.data["node"].get("description", "")
         self.frozen = self.data["node"].get("frozen", False)
         self.selected_output_type = self.data["node"].get("selected_output_type")
