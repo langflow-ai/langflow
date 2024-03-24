@@ -5,8 +5,9 @@ import { useDarkStore } from "../../stores/darkStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "./components/PageComponent";
 import ExtraSidebar from "./components/extraSidebarComponent";
+import FlowToolbar from "../../components/chatComponent";
 
-export default function FlowPage({view}:{view?:boolean}): JSX.Element {
+export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId
   );
@@ -26,7 +27,14 @@ export default function FlowPage({view}:{view?:boolean}): JSX.Element {
         {currentFlow &&
           <div className="flex h-full overflow-hidden">
             {!view && <ExtraSidebar />}
-            <Page flow={currentFlow} />
+            <main className="flex flex-1">
+              {/* Primary column */}
+              <div className="h-full w-full">
+                <Page flow={currentFlow} />
+              </div>
+              {!view && <FlowToolbar />}
+
+            </main>
           </div>
         }
         <a

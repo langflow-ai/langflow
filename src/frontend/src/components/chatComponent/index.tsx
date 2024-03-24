@@ -11,7 +11,7 @@ import IOModal from "../../modals/IOModal";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
 
-export default function FlowToolbar({ flow }: ChatType): JSX.Element {
+export default function FlowToolbar(): JSX.Element {
   const [open, setOpen] = useState(false);
   const hasIO = useFlowStore((state) => state.hasIO);
   const hasStore = useStoreStore((state) => state.hasStore);
