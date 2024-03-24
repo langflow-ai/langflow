@@ -192,7 +192,7 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
         if tweak_name not in template_data:
             logger.warning(f"Node {node.get('id')} does not have a tweak named {tweak_name}")
             continue
-        if tweak_name and tweak_value and tweak_name in template_data:
+        if tweak_name in template_data:
             key = tweak_name if tweak_name == "file_path" else "value"
             template_data[tweak_name][key] = tweak_value
 
@@ -220,17 +220,20 @@ def process_tweaks(graph_data: Dict[str, Any], tweaks: Union["Tweaks", Dict[str,
 
     nodes = validate_input(graph_data, tweaks)
     nodes_map = {node.get("id"): node for node in nodes}
+    nodes_display_name_map = {node.get("data", {}).get("node", {}).get("display_name"): node for node in nodes}
 
     all_nodes_tweaks = {}
     for key, value in tweaks.items():
         if isinstance(value, dict):
             if node := nodes_map.get(key):
                 apply_tweaks(node, value)
+            elif node := nodes_display_name_map.get(key):
+                apply_tweaks(node, value)
         else:
             all_nodes_tweaks[key] = value
-
-    for node in nodes:
-        apply_tweaks(node, all_nodes_tweaks)
+    if all_nodes_tweaks:
+        for node in nodes:
+            apply_tweaks(node, all_nodes_tweaks)
 
     return graph_data
 
