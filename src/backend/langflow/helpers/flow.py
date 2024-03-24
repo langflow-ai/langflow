@@ -74,3 +74,31 @@ async def run_flow(
         types.append(input_dict.get("type", []))
 
     return await graph.arun(inputs_list, inputs_components=inputs_components, types=types)
+
+
+def extract_argument_signatures(arguments):
+    """
+    Extracts and formats function argument signatures with type hints.
+    """
+    type_mapping = {"str": "str"}  # Extend this mapping as needed.
+    return [
+        f"{arg['display_name'].replace(' ', '_').lower()}: {type_mapping.get(arg['type'], 'Any')}" for arg in arguments
+    ]
+
+
+def create_function_definition(arg_signatures, body):
+    """
+    Constructs the function definition string.
+    """
+    func_signature = ", ".join(arg_signatures)
+    return f"def dynamic_function({func_signature}):\n{body}"
+
+
+def define_dynamic_function(function_definition):
+    """
+    Defines the dynamic function by executing the function definition string
+    within a local environment and returns the function object.
+    """
+    local_env = {}
+    exec(function_definition, globals(), local_env)
+    return local_env["dynamic_function"]
