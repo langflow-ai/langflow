@@ -63,7 +63,7 @@ class XMLAgentComponent(CustomComponent):
             },
         }
 
-    def build(
+    async def build(
         self,
         inputs: str,
         llm: BaseLLM,
@@ -89,6 +89,6 @@ class XMLAgentComponent(CustomComponent):
         for var in input_variables:
             if var not in ["agent_scratchpad", "input"]:
                 input_dict[var] = ""
-        result = runnable.invoke(input_dict)
+        result = await runnable.ainvoke(input_dict)
         self.status = result
-        return result
+        return result.get("output")
