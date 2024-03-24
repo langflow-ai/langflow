@@ -373,7 +373,7 @@ export default function ExtraSidebar(): JSX.Element {
                           <SidebarDraggableComponent
                             sectionName={SBSectionName as string}
                             apiClass={dataFilter[SBSectionName][SBItemName]}
-                            key={index}
+                            key={index+ SBItemName}
                             onDragStart={(event) =>
                               onDragStart(event, {
                                 //split type to remove type in nodes saved with same name removing it's
