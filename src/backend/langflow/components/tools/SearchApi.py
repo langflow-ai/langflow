@@ -1,8 +1,13 @@
-from langflow import CustomComponent
-from langchain.schema import Document
-from langflow.services.database.models.base import orjson_dumps
-from langchain_community.utilities.searchapi import SearchApiAPIWrapper
 from typing import Optional
+
+from langchain.schema import Document
+from langchain_community.utilities.searchapi import SearchApiAPIWrapper
+
+from langflow import CustomComponent
+from langflow.schema.schema import Record
+from langflow.services.database.models.base import orjson_dumps
+from langflow.schema.schema import Record
+from langflow.services.database.models.base import orjson_dumps
 
 
 class SearchApi(CustomComponent):
@@ -35,7 +40,7 @@ class SearchApi(CustomComponent):
         engine: str,
         api_key: str,
         params: Optional[dict] = None,
-    ) -> Document:
+    ) -> Record:
         if params is None:
             params = {}
 
@@ -48,4 +53,10 @@ class SearchApi(CustomComponent):
 
         document = Document(page_content=result)
 
-        return document
+        records = self.to_records(document)
+        if records:
+            record = records[0]
+            self.status = record
+            return record
+        else:
+            return Record()
