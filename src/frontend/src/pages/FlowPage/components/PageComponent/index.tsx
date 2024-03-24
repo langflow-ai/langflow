@@ -60,6 +60,8 @@ export default function Page({
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const [showCanvas,setSHowCanvas] = useState(Object.keys(templates).length > 0 &&
+  Object.keys(types).length > 0)
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
@@ -275,6 +277,11 @@ export default function Page({
     };
   }, []);
 
+  useEffect(() => {
+    setSHowCanvas(Object.keys(templates).length > 0 && Object.keys(types).length > 0)
+    console.log("showCanvas")
+  },[templates, types])
+
   const onConnectMod = useCallback(
     (params: Connection) => {
       takeSnapshot();
@@ -443,8 +450,7 @@ export default function Page({
         {/* Primary column */}
         <div className="h-full w-full">
           <div className="h-full w-full" ref={reactFlowWrapper}>
-            {Object.keys(templates).length > 0 &&
-            Object.keys(types).length > 0 ? (
+            {showCanvas? (
               <div id="react-flow-id" className="h-full w-full">
                 <ReactFlow
                   nodes={nodes}
