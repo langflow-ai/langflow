@@ -19,7 +19,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   useEffect(() => {
     setCurrentFlowId(id!);
   }, [id]);
-  console.log("FlowPage")
   return (
     <>
       <Header />

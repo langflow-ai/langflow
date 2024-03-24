@@ -625,7 +625,7 @@ export default function NodeToolbarComponent({
           />}
           {hasCode && (
             <div className="hidden">
-              <CodeAreaComponent
+              {openModal&& <CodeAreaComponent
                 open={openModal}
                 setOpen={setOpenModal}
                 readonly={
@@ -640,7 +640,7 @@ export default function NodeToolbarComponent({
                 value={data.node?.template[name].value ?? ""}
                 onChange={handleOnNewValue}
                 id={"code-input-node-toolbar-" + name}
-              />
+              />}
             </div>
           )}
         </span>
