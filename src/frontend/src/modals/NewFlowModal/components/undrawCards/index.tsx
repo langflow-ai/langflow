@@ -1,15 +1,15 @@
 import { useNavigate } from "react-router-dom";
 /// <reference types="vite-plugin-svgr/client" />
 //@ts-ignore
-import { ReactComponent as TransferFiles } from "../../assets/undraw_transfer_files_re_a2a9.svg";
+import { ReactComponent as TransferFiles } from "../../../../assets/undraw_transfer_files_re_a2a9.svg";
 //@ts-ignore
-import { ReactComponent as BasicPrompt } from "../../assets/undraw_design_components_9vy6.svg";
+import { ReactComponent as BasicPrompt } from "../../../../assets/undraw_design_components_9vy6.svg";
 //@ts-ignore
-import { ReactComponent as ChatWithHistory } from "../../assets/undraw_mobile_messages_re_yx8w.svg";
+import { ReactComponent as ChatWithHistory } from "../../../../assets/undraw_mobile_messages_re_yx8w.svg";
 //@ts-ignore
-import { ReactComponent as Assistant } from "../../assets/undraw_team_collaboration_re_ow29.svg";
+import { ReactComponent as Assistant } from "../../../../assets/undraw_team_collaboration_re_ow29.svg";
 //@ts-ignore
-import { ReactComponent as APIRequest } from "../../assets/undraw_real_time_analytics_re_yliv.svg";
+import { ReactComponent as APIRequest } from "../../../../assets/undraw_real_time_analytics_re_yliv.svg";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { FlowType } from "../../../../types/flow";
 import { updateIds } from "../../../../utils/reactflowUtils";
