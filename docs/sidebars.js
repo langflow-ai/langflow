@@ -13,6 +13,16 @@ module.exports = {
     },
     {
       type: "category",
+      label: "What's New",
+      collapsed: false,
+      items: [
+        "whats-new/customization-control",
+        "whats-new/debugging-reimagined",
+        "whats-new/simplification-standardization",
+      ],
+    },
+    {
+      type: "category",
       label: "Guidelines",
       collapsed: false,
       items: [

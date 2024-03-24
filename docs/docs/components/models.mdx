@@ -1,0 +1,576 @@
+import Admonition from '@theme/Admonition';
+
+# Models
+
+<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
+    <p>
+        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
+    </p>
+</Admonition>
+
+
+### Amazon Bedrock
+
+The `AmazonBedrock` is a custom component for generating text using an LLM (Large Language Model) from Amazon Bedrock.
+
+**Methods**
+
+****`build(input_value: Text, model_id: str = "anthropic.claude-instant-v1", credentials_profile_name: Optional[str] = None, region_name: Optional[str] = None, model_kwargs: Optional[dict] = None, endpoint_url: Optional[str] = None, streaming: bool = False, cache: Optional[bool] = None, stream: bool = False) -> Text`****
+
+Generates text using the specified LLM model from Amazon Bedrock.
+
+**Arguments**
+
+- `input_value (Text)`: The input text to generate the response.
+- `model_id (str)`: The ID of the Bedrock model to use.
+- `credentials_profile_name (Optional[str])`: The name of the credentials profile (optional).
+- `region_name (Optional[str])`: The name of the AWS region (optional).
+- `model_kwargs (Optional[dict])`: Additional keyword arguments for the model (optional).
+- `endpoint_url (Optional[str])`: The endpoint URL (optional).
+- `streaming (bool)`: Whether to enable streaming (default: False).
+- `cache (Optional[bool])`: Whether to enable caching (optional).
+- `stream (bool)`: Whether to stream the response from the model (default: False).
+
+**Returns**
+
+- `Text`: The generated text response.
+
+**Field Configuration**
+
+- `model_id`: Display name: Model Id, Options: ["ai21.j2-grande-instruct", "ai21.j2-jumbo-instruct", "ai21.j2-mid", "ai21.j2-mid-v1", "ai21.j2-ultra", "ai21.j2-ultra-v1", "anthropic.claude-instant-v1", "anthropic.claude-v1", "anthropic.claude-v2", "cohere.command-text-v14"].
+- `credentials_profile_name`: Display name: Credentials Profile Name.
+- `streaming`: Display name: Streaming, Field Type: "bool".
+- `endpoint_url`: Display name: Endpoint URL.
+- `region_name`: Display name: Region Name.
+- `model_kwargs`: Display name: Model Kwargs.
+- `cache`: Display name: Cache.
+- `input_value`: Display name: Input.
+- `stream`: Display name: Stream, Info: Stream the response from the model.
+- `code`: Advanced: True.
+
+---
+
+### Anthropic LLM
+
+The `AnthropicLLM` is a component for generating text using Anthropic Chat&Completion large language models.
+
+**Methods**
+
+****`build(model: str, input_value: Text, anthropic_api_key: Optional[str] = None, max_tokens: Optional[int] = None, temperature: Optional[float] = None, api_endpoint: Optional[str] = None, stream: bool = False) -> Text`****
+
+Generates text using the specified Anthropic large language model.
+
+**Arguments**
+
+- `model (str)`: The name of the Anthropic model to use.
+- `input_value (Text)`: The input text to generate the response.
+- `anthropic_api_key (Optional[str])`: The API key for Anthropic (optional).
+- `max_tokens (Optional[int])`: The maximum number of tokens to sample (optional).
+- `temperature (Optional[float])`: The sampling temperature (optional).
+- `api_endpoint (Optional[str])`: The API endpoint of Anthropic (optional).
+- `stream (bool)`: Whether to stream the response from the model (default: False).
+
+**Returns**
+
+- `Text`: The generated text response.
+
+**Field Configuration**
+
+- `model`: Display name: Model Name, Options: ["claude-2.1", "claude-2.0", "claude-instant-1.2", "claude-instant-1"], Required: True, Value: "claude-2.1".
+- `anthropic_api_key`: Display name: Anthropic API Key, Required: True, Password: True, Info: Your Anthropic API key.
+- `max_tokens`: Display name: Max Tokens, Field Type: "int", Value: 256.
+- `temperature`: Display name: Temperature, Field Type: "float", Value: 0.7.
+- `api_endpoint`: Display name: API Endpoint, Info: Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.
+- `input_value`: Display name: Input.
+- `stream`: Display name: Stream, Info: Stream the response from the model.
+- `code`: Show: False.
+
+For detailed documentation and integration guides, please refer to the [Anthropic Component Documentation](https://python.langchain.com/docs/integrations/chat/anthropic).
+
+---
+
+### Azure OpenAI
+
+The `AzureChatOpenAI` is a component for generating text using LLM model from Azure OpenAI.
+
+**Methods**
+
+****`build(model: str, azure_endpoint: str, input_value: Text, azure_deployment: str, api_key: str, api_version: str, temperature: float = 0.7, max_tokens: Optional[int] = 1000, stream: bool = False) -> BaseLanguageModel`****
+
+Generates text using the specified LLM model from Azure OpenAI.
+
+**Arguments**
+
+- `model (str)`: The name of the LLM model to use.
+- `azure_endpoint (str)`: Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`.
+- `input_value (Text)`: The input text to generate the response.
+- `azure_deployment (str)`: The deployment name on Azure.
+- `api_key (str)`: The API key for Azure OpenAI.
+- `api_version (str)`: The API version to use.
+- `temperature (float)`: The sampling temperature (default: 0.7).
+- `max_tokens (Optional[int])`: The maximum number of tokens to generate (default: 1000).
+- `stream (bool)`: Whether to stream the response from the model (default: False).
+
+**Returns**
+
+- `BaseLanguageModel`: The generated text response.
+
+**Field Configuration**
+
+- `model`: Display name: Model Name, Options: ["gpt-35-turbo", "gpt-35-turbo-16k", "gpt-35-turbo-instruct", "gpt-4", "gpt-4-32k", "gpt-4-vision"], Required: True, Value: "gpt-35-turbo".
+- `azure_endpoint`: Display name: Azure Endpoint, Required: True, Info: Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`.
+- `azure_deployment`: Display name: Deployment Name, Required: True.
+- `api_version`: Display name: API Version, Options: ["2023-03-15-preview", "2023-05-15", "2023-06-01-preview", "2023-07-01-preview", "2023-08-01-preview", "2023-09-01-preview", "2023-12-01-preview"], Required: True, Advanced: True, Value: "2023-12-01-preview".
+- `api_key`: Display name: API Key, Required: True, Password: True.
+- `temperature`: Display name: Temperature, Value: 0.7, Field Type: "float", Required: False.
+- `max_tokens`: Display name: Max Tokens, Value: 1000, Field Type: "int", Required: False, Advanced: True, Info: Maximum number of tokens to generate.
+- `input_value`: Display name: Input.
+- `stream`: Display name: Stream, Info: Stream the response from the model.
+- `code`: Show: False.
+
+For detailed documentation and integration guides, please refer to the [Azure OpenAI Component Documentation](https://python.langchain.com/docs/integrations/llms/azure_openai).
+
+
+---
+
+### Qianfan Chat Endpoint
+
+The `QianfanChatEndpoint` is a component for generating text using Baidu Qianfan chat models.
+
+Generate text using Baidu Qianfan chat models. For more details, refer to the [documentation](https://python.langchain.com/docs/integrations/chat/baidu_qianfan_endpoint).
+
+**Methods**
+
+****`build(input_value: Text, model: str = "ERNIE-Bot-turbo", qianfan_ak: Optional[str] = None, qianfan_sk: Optional[str] = None, top_p: Optional[float] = None, temperature: Optional[float] = None, penalty_score: Optional[float] = None, endpoint: Optional[str] = None, stream: bool = False) -> Text`****
+
+Generates text using the specified Baidu Qianfan chat model.
+
+**Arguments**
+
+- `input_value (Text)`: The input text to generate the response.
+- `model (str)`: The name of the Qianfan chat model to use (default: "ERNIE-Bot-turbo").
+- `qianfan_ak (Optional[str])`: The Qianfan Access Key obtained from [here](https://cloud.baidu.com/product/wenxinworkshop).
+- `qianfan_sk (Optional[str])`: The Qianfan Secret Key obtained from [here](https://cloud.baidu.com/product/wenxinworkshop).
+- `top_p (Optional[float])`: Model parameter, only supported in ERNIE-Bot and ERNIE-Bot-turbo (default: None).
+- `temperature (Optional[float])`: Model parameter, only supported in ERNIE-Bot and ERNIE-Bot-turbo (default: None).
+- `penalty_score (Optional[float])`: Model parameter, only supported in ERNIE-Bot and ERNIE-Bot-turbo (default: None).
+- `endpoint (Optional[str])`: Endpoint of the Qianfan LLM, required if a custom model is used.
+- `stream (bool)`: Whether to stream the response from the model (default: False).
+
+**Returns**
+
+- `Text`: The generated text response.
+
+**Field Configuration**
+
+- `model`: Display name: Model Name, Options: ["ERNIE-Bot", "ERNIE-Bot-turbo", "BLOOMZ-7B", "Llama-2-7b-chat", "Llama-2-13b-chat", "Llama-2-70b-chat", "Qianfan-BLOOMZ-7B-compressed", "Qianfan-Chinese-Llama-2-7B", "ChatGLM2-6B-32K", "AquilaChat-7B"], Required: True, Value: "ERNIE-Bot-turbo".
+- `qianfan_ak`: Display name: Qianfan Ak, Required: True, Password: True, Info: Obtain from [here](https://cloud.baidu.com/product/wenxinworkshop).
+- `qianfan_sk`: Display name: Qianfan Sk, Required: True, Password: True, Info: Obtain from [here](https://cloud.baidu.com/product/wenxinworkshop).
+- `top_p`: Display name: Top p, Field Type: "float", Info: Model params, only supported in ERNIE-Bot and ERNIE-Bot-turbo, Value: 0.8.
+- `temperature`: Display name: Temperature, Field Type: "float", Info: Model params, only supported in ERNIE-Bot and ERNIE-Bot-turbo, Value: 0.95.
+- `penalty_score`: Display name: Penalty Score, Field Type: "float", Info: Model params, only supported in ERNIE-Bot and ERNIE-Bot-turbo, Value: 1.0.
+- `endpoint`: Display name: Endpoint, Info: Endpoint of the Qianfan LLM, required if custom model used.
+- `input_value`: Display name: Input.
+- `stream`: Display name: Stream, Info: Stream the response from the model.
+- `code`: Show: False.
+
+---
+
+### Cohere
+
+The `Cohere` is a component for generating text using Cohere large language models.
+
+Generate text using Cohere large language models. For more details, refer to the [documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/cohere).
+
+**Methods**
+
+****`build(cohere_api_key: str, input_value: Text, temperature: float = 0.75, stream: bool = False) -> Text`****
+
+Generates text using the specified Cohere large language model.
+
+**Arguments**
+
+- `cohere_api_key (str)`: The Cohere API key.
+- `input_value (Text)`: The input text to generate the response.
+- `temperature (float)`: The temperature parameter for generating text (default: 0.75).
+- `stream (bool)`: Whether to stream the response from the model (default: False).
+
+**Returns**
+
+- `Text`: The generated text response.
+
+**Field Configuration**
+
+- `cohere_api_key`: Display name: Cohere API Key, Type: "password", Password: True.
+- `max_tokens`: Display name: Max Tokens, Default: 256, Type: "int", Show: True.
+- `temperature`: Display name: Temperature, Default: 0.75, Type: "float", Show: True.
+- `input_value`: Display name: Input.
+- `stream`: Display name: Stream, Info: Stream the response from the model.
+
+---
+
+### CTransformers
+
+The `CTransformers` is a component for generating text using CTransformers LLM models.
+
+Generate text using CTransformers LLM models. For more details, refer to the [documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/ctransformers).
+
+**Methods**
+
+****`build(model: str, model_file: str, input_value: Text, model_type: str, stream: bool = False, config: Optional[Dict] = None) -> Text`****
+
+Generates text using the specified CTransformers LLM model.
+
+**Arguments**
+
+- `model (str)`: The name of the CTransformers LLM model.
+- `model_file (str)`: The path to the model file (.bin).
+- `input_value (Text)`: The input text to generate the response.
+- `model_type (str)`: The type of the CTransformers model.
+- `stream (bool)`: Whether to stream the response from the model (default: False).
+- `config (Optional[Dict])`: Additional configuration options for the model (optional).
+
+**Returns**
+
+- `Text`: The generated text response.
+
+**Field Configuration**
+
+- `model`: Display name: Model, Required: True.
+- `model_file`: Display name: Model File, Required: False, Field Type: "file", File Types: [".bin"].
+- `model_type`: Display name: Model Type, Required: True.
+- `config`: Display name: Config, Advanced: True, Required: False, Field Type: "dict".
+
+---
+
+### Google Generative AI
+
+The `GoogleGenerativeAI` is a component for generating text using Google Generative AI.
+
+**Methods**
+
+****`build(google_api_key: str, model: str, input_value: Text, max_output_tokens: Optional[int] = None, temperature: float = 0.1, top_k: Optional[int] = None, top_p: Optional[float] = None, n: Optional[int] = 1, stream: bool = False) -> Text`****
+
+Generates text using the specified Google Generative AI model.
+
+**Arguments**
+
+- `google_api_key (str)`: The Google API Key to use for the Google Generative AI.
+- `model (str)`: The name of the model to use. Supported examples: gemini-pro, gemini-pro-vision.
+- `input_value (Text)`: The input to the model.
+- `max_output_tokens (Optional[int])`: The maximum number of tokens to generate.
+- `temperature (float)`: Run inference with this temperature. Must be in the closed interval [0.0, 1.0].
+- `top_k (Optional[int])`: Decode using top-k sampling: consider the set of top_k most probable tokens. Must be positive.
+- `top_p (Optional[float])`: The maximum cumulative probability of tokens to consider when sampling.
+- `n (Optional[int])`: Number of chat completions to generate for each prompt. Note that the API may not return the full n completions if duplicates are generated.
+- `stream (bool)`: Whether to stream the response from the model (default: False).
+
+**Returns**
+
+- `Text`: The generated text response.
+
+**Field Configuration**
+
+- `google_api_key`: Display name: Google API Key, Info: The Google API Key to use for the Google Generative AI.
+- `model`: Display name: Model, Info: The name of the model to use. Supported examples: gemini-pro, gemini-pro-vision.
+- `input_value`: Display name: Input, Info: The input to the model.
+- `max_output_tokens`: Display name: Max Output Tokens, Info: The maximum number of tokens to generate.
+- `temperature`: Display name: Temperature, Info: Run inference with this temperature. Must be in the closed interval [0.0, 1.0].
+- `top_k`: Display name: Top K, Info: Decode using top-k sampling: consider the set of top_k most probable tokens. Must be positive.
+- `top_p`: Display name: Top P, Info: The maximum cumulative probability of tokens to consider when sampling.
+- `n`: Display name: N, Info: Number of chat completions to generate for each prompt. Note that the API may not return the full n completions if duplicates are generated.
+- `stream`: Display name: Stream, Info: Stream the response from the model.
+- `code`: Advanced: True.
+
+---
+
+### Hugging Face API
+
+The `HuggingFaceEndpoints` is a custom component for generating text using LLM model from Hugging Face Inference API.
+
+**Methods**
+
+****`build(input_value: Text, endpoint_url: str, task: str = "text2text-generation", huggingfacehub_api_token: Optional[str] = None, model_kwargs: Optional[dict] = None, stream: bool = False) -> Text`****
+
+Generates text using the specified LLM model from the Hugging Face Inference API.
+
+**Arguments**
+
+- `input_value (Text)`: The input to the model.
+- `endpoint_url (str)`: The endpoint URL of the Hugging Face Inference API.
+- `task (str)`: The task type. Options: text2text-generation, text-generation, summarization (default: text2text-generation).
+- `huggingfacehub_api_token (Optional[str])`: The API token for accessing the Hugging Face model hub (optional).
+- `model_kwargs (Optional[dict])`: Model keyword arguments (optional).
+- `stream (bool)`: Whether to stream the response from the model (default: False).
+
+**Returns**
+
+- `Text`: The generated text response.
+
+**Field Configuration**
+
+- `endpoint_url`: Display name: Endpoint URL, Password: True.
+- `task`: Display name: Task, Options: text2text-generation, text-generation, summarization.
+- `huggingfacehub_api_token`: Display name: API token, Password: True.
+- `model_kwargs`: Display name: Model Keyword Arguments, Field type: Code.
+- `input_value`: Display name: Input.
+- `stream`: Display name: Stream, Info: Stream the response from the model.
+- `code`: Show: False.
+
+---
+
+### LlamaCpp 
+
+The `LlamaCpp` is a component for generating text using the llama.cpp model.
+
+**Methods**
+
+****`build(input_value: Text, model_path: str, grammar: Optional[str] = None, cache: Optional[bool] = None, client: Optional[Any] = None, echo: Optional[bool] = False, f16_kv: bool = True, grammar_path: Optional[str] = None, last_n_tokens_size: Optional[int] = 64, logits_all: bool = False, logprobs: Optional[int] = None, lora_base: Optional[str] = None, lora_path: Optional[str] = None, max_tokens: Optional[int] = 256, metadata: Optional[Dict] = None, model_kwargs: Dict = {}, n_batch: Optional[int] = 8, n_ctx: int = 512, n_gpu_layers: Optional[int] = 1, n_parts: int = -1, n_threads: Optional[int] = 1, repeat_penalty: Optional[float] = 1.1, rope_freq_base: float = 10000.0, rope_freq_scale: float = 1.0, seed: int = -1, stop: Optional[List[str]] = [], streaming: bool = True, suffix: Optional[str] = "", tags: Optional[List[str]] = [], temperature: Optional[float] = 0.8, top_k: Optional[int] = 40, top_p: Optional[float] = 0.95, use_mlock: bool = False, use_mmap: Optional[bool] = True, verbose: bool = True, vocab_only: bool = False, stream: bool = False) -> Text`****
+
+Generates text using the llama.cpp model.
+
+**Arguments**
+
+- `input_value (Text)`: The input to the model.
+- `model_path (str)`: The path to the model file (.bin).
+- `grammar (Optional[str])`: Grammar (optional).
+- `cache (Optional[bool])`: Cache (optional).
+- `client (Optional[Any])`: Client (optional).
+- `echo (Optional[bool])`: Echo (optional, default: False).
+- `f16_kv (bool)`: F16 KV (default: True).
+- `grammar_path (Optional[str])`: Grammar Path (optional).
+- `last_n_tokens_size (Optional[int])`: Last N Tokens Size (optional, default: 64).
+- `logits_all (bool)`: Logits All (default: False).
+- `logprobs (Optional[int])`: Logprobs (optional).
+- `lora_base (Optional[str])`: Lora Base (optional).
+- `lora_path (Optional[str])`: Lora Path (optional).
+- `max_tokens (Optional[int])`: Max Tokens (optional, default: 256).
+- `metadata (Optional[Dict])`: Metadata (optional).
+- `model_kwargs (Dict)`: Model Kwargs (default: {}).
+- `n_batch (Optional[int])`: N Batch (optional, default: 8).
+- `n_ctx (int)`: N Ctx (default: 512).
+- `n_gpu_layers (Optional[int])`: N GPU Layers (optional, default: 1).
+- `n_parts (int)`: N Parts (default: -1).
+- `n_threads (Optional[int])`: N Threads (optional, default: 1).
+- `repeat_penalty (Optional[float])`: Repeat Penalty (optional, default: 1.1).
+- `rope_freq_base (float)`: Rope Freq Base (default: 10000.0).
+- `rope_freq_scale (float)`: Rope Freq Scale (default: 1.0).
+- `seed (int)`: Seed (default: -1).
+- `stop (Optional[List[str]])`: Stop (optional, default: []).
+- `streaming (bool)`: Streaming (default: True).
+- `suffix (Optional[str])`: Suffix (optional).
+- `tags (Optional[List[str]])`: Tags (optional, default: []).
+- `temperature (Optional[float])`: Temperature (optional, default: 0.8).
+- `top_k (Optional[int])`: Top K (optional, default: 40).
+- `top_p (Optional[float])`: Top P (optional, default: 0.95).
+- `use_mlock (bool)`: Use Mlock (default: False).
+- `use_mmap (Optional[bool])`: Use Mmap (optional, default: True).
+- `verbose (bool)`: Verbose (default: True).
+- `vocab_only (bool)`: Vocab Only (default: False).
+- `stream (bool)`: Stream (default: False).
+
+**Returns**
+
+- `Text`: The generated text response.
+
+**Field Configuration**
+
+- `grammar`: Display name: Grammar, Advanced: True.
+- `cache`: Display name: Cache, Advanced: True.
+- `client`: Display name: Client, Advanced: True.
+- `echo`: Display name: Echo, Advanced: True.
+- `f16_kv`: Display name: F16 KV, Advanced: True.
+- `grammar_path`: Display name: Grammar Path, Advanced: True.
+- `last_n_tokens_size`: Display name: Last N Tokens Size, Advanced: True.
+- `logits_all`: Display name: Logits All, Advanced: True.
+- `logprobs`: Display name: Logprobs, Advanced: True.
+- `lora_base`: Display name: Lora Base, Advanced: True.
+- `lora_path`: Display name: Lora Path, Advanced: True.
+- `max_tokens`: Display name: Max Tokens, Advanced: True.
+- `metadata`: Display name: Metadata, Advanced: True.
+- `model_kwargs`: Display name: Model Kwargs, Advanced: True.
+- `model_path`: Display name: Model Path, Field type: File, File types: .bin, Required: True.
+- `n_batch`: Display name: N Batch, Advanced: True.
+- `n_ctx`: Display name: N Ctx, Advanced: True.
+- `n_gpu_layers`: Display name: N GPU Layers, Advanced: True.
+- `n_parts`: Display name: N Parts, Advanced: True.
+- `n_threads`: Display name: N Threads, Advanced: True.
+- `repeat_penalty`: Display name: Repeat Penalty, Advanced: True.
+- `rope_freq_base`: Display name: Rope Freq Base, Advanced: True.
+- `rope_freq_scale`: Display name: Rope Freq Scale, Advanced: True.
+- `seed`: Display name: Seed, Advanced: True.
+- `stop`: Display name: Stop, Advanced: True.
+- `streaming`: Display name: Streaming, Advanced: True.
+- `suffix`: Display name: Suffix, Advanced: True.
+- `tags`: Display name: Tags, Advanced: True.
+- `temperature`: Display name: Temperature.
+- `top_k`: Display name: Top K, Advanced: True.
+- `top_p`: Display name: Top P, Advanced: True.
+- `use_mlock`: Display name: Use Mlock, Advanced: True.
+- `use_mmap`: Display name: Use Mmap, Advanced: True.
+- `verbose`: Display name: Verbose, Advanced: True.
+- `vocab_only`: Display name: Vocab Only, Advanced: True.
+- `input_value`: Display name: Input.
+- `stream`: Display name: Stream, Info: Stream the response from the model.
+
+For more information, please refer to the [documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/llamacpp).
+
+---
+
+### ChatOllama
+
+The `ChatOllama` is a component for generating text using Local LLM for chat with Ollama.
+
+**Methods**
+
+****`build(base_url: Optional[str], model: str, input_value: Text, mirostat: Optional[str], mirostat_eta: Optional[float] = None, mirostat_tau: Optional[float] = None, repeat_last_n: Optional[int] = None, verbose: Optional[bool] = None, cache: Optional[bool] = None, num_ctx: Optional[int] = None, num_gpu: Optional[int] = None, format: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None, num_thread: Optional[int] = None, repeat_penalty: Optional[float] = None, stop: Optional[List[str]] = None, system: Optional[str] = None, tags: Optional[List[str]] = None, temperature: Optional[float] = None, template: Optional[str] = None, tfs_z: Optional[float] = None, timeout: Optional[int] = None, top_k: Optional[int] = None, top_p: Optional[int] = None, stream: bool = False) -> Text`****
+
+Generates text using Local LLM for chat with Ollama.
+
+**Arguments**
+
+- `base_url (Optional[str])`: Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.
+- `model (str)`: Model Name. Refer to [Ollama Library](https://ollama.ai/library) for more models.
+- `input_value (Text)`: The input to the model.
+- `mirostat (Optional[str])`: Enable/disable Mirostat sampling for controlling perplexity.
+- `mirostat_eta (Optional[float])`: Learning rate for Mirostat algorithm. (Default: 0.1)
+- `mirostat_tau (Optional[float])`: Controls the balance between coherence and diversity of the output. (Default: 5.0)
+- `repeat_last_n (Optional[int])`: How far back the model looks to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)
+- `verbose (Optional[bool])`: Whether to print out response text.
+- `cache (Optional[bool])`: Enable or disable caching. (Advanced: True, Default: False)
+- `num_ctx (Optional[int])`: Size of the context window for generating tokens. (Advanced: True, Default: 2048)
+- `num_gpu (Optional[int])`: Number of GPUs to use for computation. (Advanced: True, Default: 1 on macOS, 0 to disable)
+- `format (Optional[str])`: Specify the format of the output (e.g., json). (Advanced: True)
+- `metadata (Optional[Dict[str, Any]])`: Metadata to add to the run trace. (Advanced: True)
+- `num_thread (Optional[int])`: Number of threads to use during computation. (Advanced: True)
+- `repeat_penalty (Optional[float])`: Penalty for repetitions in generated text. (Advanced: True, Default: 1.1)
+- `stop (Optional[List[str]])`: List of tokens to signal the model to stop generating text. (Advanced: True)
+- `system (Optional[str])`: System to use for generating text. (Advanced: True)
+- `tags (Optional[List[str]])`: Tags to add to the run trace. (Advanced: True)
+- `temperature (Optional[float])`: Controls the creativity of model responses. (Default: 0.8)
+- `template (Optional[str])`: Template to use for generating text. (Advanced: True)
+- `tfs_z (Optional[float])`: Tail free sampling value. (Advanced: True, Default: 1)
+- `timeout (Optional[int])`: Timeout for the request stream. (Advanced: True)
+- `top_k (Optional[int])`: Limits token selection to top K. (Advanced: True, Default: 40)
+- `top_p (Optional[int])`: Works together with top-k. (Advanced: True, Default: 0.9)
+- `stream (bool)`: Stream the response from the model. (Default: False)
+
+**Returns**
+
+- `Text`: The generated text response.
+
+**Field Configuration**
+
+- `base_url`: Display name: Base URL, Password: False.
+- `model`: Display name: Model Name, Value: llama2.
+- `temperature`: Display name: Temperature, Field type: Float, Default value: 0.8.
+- `cache`: Display name: Cache, Field type: Boolean, Default value: False, Advanced: True.
+- `mirostat`: Display name: Mirostat, Options: Disabled, Mirostat, Mirostat 2.0, Default value: Disabled, Advanced: True.
+- `mirostat_eta`: Display name: Mirostat Eta, Field type: Float, Default value: 0.1, Advanced: True.
+- `mirostat_tau`: Display name: Mirostat Tau, Field type: Float, Default value: 5.0, Advanced: True.
+- `num_ctx`: Display name: Context Window Size, Field type: Integer, Default value: 2048, Advanced: True.
+- `num_gpu`: Display name: Number of GPUs, Field type: Integer, Default value: 1 on macOS, 0 to disable, Advanced: True.
+- `num_thread`: Display name: Number of Threads, Field type: Integer, Advanced: True.
+- `repeat_last_n`: Display name: Repeat Last N, Field type: Integer, Default value: 64, 0 = disabled, -1 = num_ctx, Advanced: True.
+- `repeat_penalty`: Display name: Repeat Penalty, Field type: Float, Default value: 1.1, Advanced: True.
+- `tfs_z`: Display name: TFS Z, Field type: Float, Default value: 1, Advanced: True.
+- `timeout`: Display name: Timeout, Field type: Integer, Advanced: True.
+- `top_k`: Display name: Top K, Field type: Integer, Default value: 40, Advanced: True.
+- `top_p`: Display name: Top P, Field type: Float, Default value: 0.9, Advanced: True.
+- `verbose`: Display name: Verbose, Field type: Boolean.
+- `tags`: Display name: Tags, Field type: List, Advanced: True.
+- `stop`: Display name: Stop Tokens, Field type: List, Advanced: True.
+- `system`: Display name: System, Field type: String, Advanced: True.
+- `template`: Display name: Template, Field type: String, Advanced: True.
+- `input_value`: Display name: Input.
+- `stream`: Display name: Stream, Info: Stream the response from the model.
+
+---
+
+### OpenAIModel
+
+The `OpenAIModelComponent` is a custom component for generating text using OpenAI's models.
+
+**Methods**
+
+****`build(input_value: Text, max_tokens: Optional[int] = 256, model_kwargs: NestedDict = {}, model_name: str = "gpt-4-1106-preview", openai_api_base: Optional[str] = None, openai_api_key: Optional[str] = None, temperature: float = 0.7, stream: bool = False) -> Text`****
+
+Generates text using OpenAI's models.
+
+**Arguments**
+
+- `input_value (Text)`: The input to the model.
+- `max_tokens (Optional[int])`: Max Tokens (Default: 256)
+- `model_kwargs (NestedDict)`: Model Kwargs (Advanced: True)
+- `model_name (str)`: Model Name (Options: gpt-4-turbo-preview, gpt-4-0125-preview, gpt-4-1106-preview, gpt-4-vision-preview, gpt-3.5-turbo-0125, gpt-3.5-turbo-1106, Default: gpt-4-1106-preview)
+- `openai_api_base (Optional[str])`: OpenAI API Base (Default: https://api.openai.com/v1)
+- `openai_api_key (Optional[str])`: OpenAI API Key
+- `temperature (float)`: Temperature (Default: 0.7)
+- `stream (bool)`: Stream the response from the model.
+
+**Returns**
+
+- `Text`: The generated text response.
+
+**Field Configuration**
+
+- `input_value`: Display name: Input.
+- `max_tokens`: Display name: Max Tokens, Advanced: False, Required: False.
+- `model_kwargs`: Display name: Model Kwargs, Advanced: True, Required: False.
+- `model_name`: Display name: Model Name, Advanced: False, Required: False, Options: gpt-4-turbo-preview, gpt-4-0125-preview, gpt-4-1106-preview, gpt-4-vision-preview, gpt-3.5-turbo-0125, gpt-3.5-turbo-1106.
+- `openai_api_base`: Display name: OpenAI API Base, Advanced: False, Required: False, Info: The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.
+- `openai_api_key`: Display name: OpenAI API Key, Advanced: False, Required: False, Password: True.
+- `temperature`: Display name: Temperature, Advanced: False, Required: False, Value: 0.7.
+- `stream`: Display name: Stream, Info: Stream the response from the model.
+
+---
+
+### ChatVertexAI
+
+**Overview**
+
+The `ChatVertexAI` is a component for generating text using Vertex AI Chat large language models API.
+
+**Methods**
+
+****`build(input_value: Text, credentials: Optional[str], project: str, examples: Optional[List[BaseMessage]] = [], location: str = "us-central1", max_output_tokens: int = 128, model_name: str = "chat-bison", temperature: float = 0.0, top_k: int = 40, top_p: float = 0.95, verbose: bool = False, stream: bool = False) -> Text`****
+
+Generate text using Vertex AI Chat large language models API.
+
+**Arguments**
+
+- `input_value (Text)`: The input to the model.
+- `credentials (Optional[str])`: Credentials (Field type: File, File types: .json).
+- `project (str)`: Project.
+- `examples (Optional[List[BaseMessage]])`: Examples (Multiline: True).
+- `location (str)`: Location (Default: us-central1).
+- `max_output_tokens (int)`: Max Output Tokens (Default: 128, Advanced: True).
+- `model_name (str)`: Model Name (Default: chat-bison).
+- `temperature (float)`: Temperature (Default: 0.0).
+- `top_k (int)`: Top K (Default: 40, Advanced: True).
+- `top_p (float)`: Top P (Default: 0.95, Advanced: True).
+- `verbose (bool)`: Verbose (Default: False, Advanced: True).
+- `stream (bool)`: Stream the response from the model.
+
+**Returns**
+
+- `Text`: The generated text response.
+
+**Field Configuration**
+
+- `credentials`: Display name: Credentials, Field type: File, File types: .json.
+- `project`: Display name: Project.
+- `examples`: Display name: Examples, Multiline: True.
+- `location`: Display name: Location, Value: us-central1.
+- `max_output_tokens`: Display name: Max Output Tokens, Value: 128, Advanced: True.
+- `model_name`: Display name: Model Name, Value: chat-bison.
+- `temperature`: Display name: Temperature, Value: 0.0.
+- `top_k`: Display name: Top K, Value: 40, Advanced: True.
+- `top_p`: Display name: Top P, Value: 0.95, Advanced: True.
+- `verbose`: Display name: Verbose, Value: False, Advanced: True.
+- `input_value`: Display name: Input.
+- `stream`: Display name: Stream, Info: Stream the response from the model.
+
+
+
+
