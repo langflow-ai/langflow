@@ -341,7 +341,6 @@ export default function GenericNode({
     <>
       <NodeToolbar>
         <NodeToolbarComponent
-          position={{ x: xPos, y: yPos }}
           data={data}
           deleteNode={(id) => {
             takeSnapshot();

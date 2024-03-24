@@ -472,7 +472,6 @@ export type fileCardPropsType = {
 export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
-  position: XYPosition;
   setShowNode: (boolean: any) => void;
   numberOfHandles: number;
   showNode: boolean;
