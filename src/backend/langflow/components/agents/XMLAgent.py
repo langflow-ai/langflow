@@ -77,7 +77,14 @@ class XMLAgentComponent(CustomComponent):
             raise ValueError("Prompt must contain 'input' key.")
 
         def render_tool_description(tools):
-            return "\n".join([tool_template.format(name=tool.name, description=tool.description) for tool in tools])
+            return "\n".join(
+                [
+                    tool_template.format(
+                        name=tool.name, description=tool.description, args_schema=tool.args_schema, args=tool.args
+                    )
+                    for tool in tools
+                ]
+            )
 
         prompt_template = PromptTemplate.from_template(prompt)
         input_variables = prompt_template.input_variables
