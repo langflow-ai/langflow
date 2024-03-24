@@ -78,12 +78,7 @@ class XMLAgentComponent(CustomComponent):
 
         def render_tool_description(tools):
             return "\n".join(
-                [
-                    tool_template.format(
-                        name=tool.name, description=tool.description, args_schema=tool.args_schema, args=tool.args
-                    )
-                    for tool in tools
-                ]
+                [tool_template.format(name=tool.name, description=tool.description, args=tool.args) for tool in tools]
             )
 
         prompt_template = PromptTemplate.from_template(prompt)
