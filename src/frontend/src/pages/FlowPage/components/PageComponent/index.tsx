@@ -443,9 +443,6 @@ export default function Page({
   }
 
   return (
-    <div className="flex h-full overflow-hidden">
-      {!view && <ExtraSidebar />}
-      {/* Main area */}
       <main className="flex flex-1">
         {/* Primary column */}
         <div className="h-full w-full">
@@ -507,6 +504,6 @@ export default function Page({
           </div>
         </div>
       </main>
-    </div>
+
   );
 }

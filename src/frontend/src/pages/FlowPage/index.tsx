@@ -4,8 +4,9 @@ import Header from "../../components/headerComponent";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "./components/PageComponent";
+import ExtraSidebar from "./components/extraSidebarComponent";
 
-export default function FlowPage(): JSX.Element {
+export default function FlowPage({view}:{view?:boolean}): JSX.Element {
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId
   );
@@ -22,7 +23,12 @@ export default function FlowPage(): JSX.Element {
     <>
       <Header />
       <div className="flow-page-positioning">
-        {currentFlow && <Page flow={currentFlow} />}
+        {currentFlow &&
+          <div className="flex h-full overflow-hidden">
+            {!view && <ExtraSidebar />}
+            <Page flow={currentFlow} />
+          </div>
+        }
         <a
           target={"_blank"}
           href="https://logspace.ai/"
