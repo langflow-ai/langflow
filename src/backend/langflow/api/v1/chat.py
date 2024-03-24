@@ -65,19 +65,25 @@ async def get_vertices(
         graph = await build_and_cache_graph(flow_id, session, chat_service, graph)
         if stop_component_id or start_component_id:
             try:
-                vertices = graph.sort_vertices(stop_component_id, start_component_id)
+                first_layer = graph.sort_vertices(stop_component_id, start_component_id)
             except Exception as exc:
                 logger.error(exc)
-                vertices = graph.sort_vertices()
+                first_layer = graph.sort_vertices()
         else:
-            vertices = graph.sort_vertices()
+            first_layer = graph.sort_vertices()
+        # When we send vertices to the frontend
+        # we need to remove them from the predecessors
+        # so they are not considered for building again
+        # which duplicates the results
+        for vertex_id in first_layer:
+            graph.remove_from_predecessors(vertex_id)
 
         # Now vertices is a list of lists
         # We need to get the id of each vertex
         # and return the same structure but only with the ids
         run_id = uuid.uuid4()
         graph.set_run_id(run_id)
-        return VerticesOrderResponse(ids=vertices, run_id=run_id)
+        return VerticesOrderResponse(ids=first_layer, run_id=run_id)
 
     except Exception as exc:
         logger.error(f"Error checking build status: {exc}")
