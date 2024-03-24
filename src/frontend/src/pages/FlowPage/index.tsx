@@ -6,7 +6,6 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "./components/PageComponent";
 
 export default function FlowPage(): JSX.Element {
-  console.log("FlowPage");
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId
   );
@@ -18,7 +17,7 @@ export default function FlowPage(): JSX.Element {
   useEffect(() => {
     setCurrentFlowId(id!);
   }, [id]);
-
+  console.log("FlowPage")
   return (
     <>
       <Header />
