@@ -1,11 +1,9 @@
-from typing import TYPE_CHECKING, Coroutine, Optional
+from typing import Coroutine, Optional
 
 from langflow.interface.run import build_sorted_vertices
 from langflow.services.base import Service
+from langflow.services.cache.base import CacheService
 from langflow.services.session.utils import compute_dict_hash, session_id_generator
-
-if TYPE_CHECKING:
-    from langflow.services.cache.base import CacheService
 
 
 class SessionService(Service):
