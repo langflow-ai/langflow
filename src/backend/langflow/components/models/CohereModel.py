@@ -1,3 +1,6 @@
+from typing import Optional
+
+
 from langchain_community.chat_models.cohere import ChatCohere
 from pydantic.v1 import SecretStr
 
