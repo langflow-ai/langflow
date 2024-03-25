@@ -863,7 +863,7 @@ export async function getGlobalVariables(): Promise<{
   [key: string]: { id: string; provider: string };
 }> {
   const globalVariables = {};
-  (await api.get(`${BASE_URL_API}credentials/`)).data.forEach((element) => {
+  (await api.get(`${BASE_URL_API}variables/`)).data.forEach((element) => {
     globalVariables[element.name] = {
       id: element.id,
       provider: element.provider,
@@ -881,7 +881,7 @@ export async function registerGlobalVariable({
   value: string;
   provider?: string;
 }): Promise<AxiosResponse<{ name: string; id: string; provider: string }>> {
-  return await api.post(`${BASE_URL_API}credentials/`, {
+  return await api.post(`${BASE_URL_API}variables/`, {
     name,
     value,
     provider,
@@ -889,7 +889,7 @@ export async function registerGlobalVariable({
 }
 
 export async function deleteGlobalVariable(id: string) {
-  api.delete(`${BASE_URL_API}credentials/${id}`);
+  api.delete(`${BASE_URL_API}variables/${id}`);
 }
 
 export async function updateGlobalVariable(
@@ -897,7 +897,7 @@ export async function updateGlobalVariable(
   value: string,
   id: string
 ) {
-  api.patch(`${BASE_URL_API}credentials/${id}`, {
+  api.patch(`${BASE_URL_API}variables/${id}`, {
     name,
     value,
   });

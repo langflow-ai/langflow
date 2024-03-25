@@ -5,10 +5,7 @@ from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.database.utils import initialize_database
 from langflow.services.manager import service_manager
 from langflow.services.schema import ServiceType
-from langflow.services.settings.constants import (
-    DEFAULT_SUPERUSER,
-    DEFAULT_SUPERUSER_PASSWORD,
-)
+from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from langflow.services.socket.utils import set_socketio_server
 
 from .deps import get_db_service, get_session, get_settings_service
@@ -22,9 +19,7 @@ def get_factories_and_deps():
     from langflow.services.database import factory as database_factory
     from langflow.services.monitor import factory as monitor_factory
     from langflow.services.plugins import factory as plugins_factory
-    from langflow.services.session import (
-        factory as session_service_factory,
-    )  # type: ignore
+    from langflow.services.session import factory as session_service_factory  # type: ignore
     from langflow.services.settings import factory as settings_factory
     from langflow.services.socket import factory as socket_factory
     from langflow.services.storage import factory as storage_factory
@@ -54,7 +49,7 @@ def get_factories_and_deps():
         (plugins_factory.PluginServiceFactory(), [ServiceType.SETTINGS_SERVICE]),
         (store_factory.StoreServiceFactory(), [ServiceType.SETTINGS_SERVICE]),
         (
-            credentials_factory.CredentialServiceFactory(),
+            credentials_factory.VariableServiceFactory(),
             [ServiceType.SETTINGS_SERVICE],
         ),
         (
@@ -191,14 +186,7 @@ def initialize_session_service():
     """
     Initialize the session manager.
     """
-    from langflow.services.cache import factory as cache_factory
-    from langflow.services.session import (
-        factory as session_service_factory,
-    )  # type: ignore
-
-    initialize_settings_service()
-
-    service_manager.register_factory(cache_factory.CacheServiceFactory(), dependencies=[ServiceType.SETTINGS_SERVICE])
+    from langflow.services.session import factory as session_service_factory
 
     service_manager.register_factory(
         session_service_factory.SessionServiceFactory(),
