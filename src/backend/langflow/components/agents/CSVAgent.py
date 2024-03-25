@@ -29,5 +29,6 @@ class CSVAgentComponent(CustomComponent):
             llm=llm,
             path=path,
             agent_type=agent_type,
-            agent_executor_kwargs=dict(handle_parsing_errors=handle_parsing_errors, verbose=True),
+            verbose=True,
+            agent_executor_kwargs=dict(handle_parsing_errors=handle_parsing_errors),
         )
