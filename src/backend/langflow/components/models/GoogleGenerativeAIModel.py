@@ -3,7 +3,7 @@ from typing import Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic.v1 import SecretStr
 
-from langflow.components.models.base.model import LCModelComponent
+from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import RangeSpec, Text
 
 
