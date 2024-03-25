@@ -588,7 +588,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
-    console.log("newFlowBuildStatus", newFlowBuildStatus);
     nodeIdList.forEach((id) => {
       newFlowBuildStatus[id] = {
         status,
