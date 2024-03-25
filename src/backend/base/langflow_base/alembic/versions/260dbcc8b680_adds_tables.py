@@ -169,10 +169,4 @@ def downgrade() -> None:
             batch_op.drop_index(batch_op.f("ix_user_username"), if_exists=True)
 
         op.drop_table("user")
-
-    if "flowstyle" in existing_tables:
-        op.drop_table("flowstyle")
-
-    if "component" in existing_tables:
-        op.drop_table("component")
     # ### end Alembic commands ###
