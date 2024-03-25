@@ -1,7 +1,7 @@
 import asyncio
 from collections import defaultdict, deque
 from itertools import chain
-from typing import TYPE_CHECKING, Dict, Generator, List, Optional, Type, Union
+from typing import TYPE_CHECKING, Coroutine, Dict, Generator, List, Optional, Type, Union
 
 from loguru import logger
 
@@ -387,6 +387,7 @@ class Graph:
 
         self.in_degree_map = self.build_in_degree()
         self.parent_child_map = self.build_parent_child_map()
+        self.run_manager.build_run_map(self)
 
     def reset_inactivated_vertices(self):
         """
@@ -648,8 +649,30 @@ class Graph:
             raise ValueError(f"Vertex {vertex_id} not found")
 
     async def build_vertex(
-        self, chat_service, vertex_id: str, inputs: Optional[Dict[str, str]] = None, user_id: Optional[str] = None
+        self,
+        lock: asyncio.Lock,
+        set_cache_coro: Coroutine,
+        vertex_id: str,
+        inputs: Optional[Dict[str, str]] = None,
+        user_id: Optional[str] = None,
     ):
+        """
+        Builds a vertex in the graph.
+
+        Args:
+            lock (asyncio.Lock): A lock to synchronize access to the graph.
+            set_cache_coro (Coroutine): A coroutine to set the cache.
+            vertex_id (str): The ID of the vertex to build.
+            inputs (Optional[Dict[str, str]]): Optional dictionary of inputs for the vertex. Defaults to None.
+            user_id (Optional[str]): Optional user ID. Defaults to None.
+
+        Returns:
+            Tuple: A tuple containing the next runnable vertices, top level vertices, result dictionary,
+            parameters, validity flag, artifacts, and the built vertex.
+
+        Raises:
+            ValueError: If no result is found for the vertex.
+        """
         vertex = self.get_vertex(vertex_id)
         try:
             if not vertex.frozen or not vertex._built:
@@ -664,14 +687,29 @@ class Graph:
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
 
-            next_runnable_vertices = await self.run_manager.get_next_runnable_vertices(
-                self, vertex, vertex_id, chat_service, self.flow_id
+            next_runnable_vertices, top_level_vertices = await self.get_next_and_top_level_vertices(
+                lock, set_cache_coro, vertex
             )
-            top_level_vertices = self.run_manager.get_top_level_vertices(self, next_runnable_vertices)
             return next_runnable_vertices, top_level_vertices, result_dict, params, valid, artifacts, vertex
         except Exception as exc:
             logger.exception(f"Error building vertex: {exc}")
             raise exc
+
+    async def get_next_and_top_level_vertices(self, lock: asyncio.Lock, set_cache_coro: Coroutine, vertex: Vertex):
+        """
+        Retrieves the next runnable vertices and the top level vertices for a given vertex.
+
+        Args:
+            lock (asyncio.Lock): The lock used to synchronize access to the graph.
+            set_cache_coro (Coroutine): The coroutine used to set the cache for the graph.
+            vertex (Vertex): The vertex for which to retrieve the next runnable and top level vertices.
+
+        Returns:
+            Tuple[List[Vertex], List[Vertex]]: A tuple containing the next runnable vertices and the top level vertices.
+        """
+        next_runnable_vertices = await self.run_manager.get_next_runnable_vertices(lock, set_cache_coro, self, vertex)
+        top_level_vertices = self.run_manager.get_top_level_vertices(self, next_runnable_vertices)
+        return next_runnable_vertices, top_level_vertices
 
     def get_vertex_edges(
         self,
@@ -1111,7 +1149,7 @@ class Graph:
         # save the only the rest
         self.vertices_layers = vertices_layers[1:]
         self.vertices_to_run = {vertex_id for vertex_id in chain.from_iterable(vertices_layers)}
-        self.build_run_map()
+        self.build_graph_maps()
         # Return just the first layer
         return first_layer
 
@@ -1167,7 +1205,7 @@ class Graph:
         This checks the direct predecessors of each successor to identify any that are
         immediately runnable, expanding the search to ensure progress can be made.
         """
-        self.run_manager.find_runnable_predecessors_for_successors(vertex_id)
+        return self.run_manager.find_runnable_predecessors_for_successors(vertex_id)
 
     def remove_from_predecessors(self, vertex_id: str):
         self.run_manager.remove_from_predecessors(vertex_id)

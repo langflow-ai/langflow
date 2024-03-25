@@ -1,10 +1,10 @@
+import asyncio
 from collections import defaultdict
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Coroutine, List
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
     from langflow.graph.vertex.base import Vertex
-    from langflow.services.chat.service import ChatService
 
 
 class RunnableVerticesManager:
@@ -42,7 +42,7 @@ class RunnableVerticesManager:
         for vertex_id, predecessors in graph.predecessor_map.items():
             for predecessor in predecessors:
                 self.run_map[predecessor].append(vertex_id)
-        self.run_predecessors = {k: set(v) for k, v in self.run_map.items()}
+        self.run_predecessors = graph.predecessor_map.copy()
 
     def update_vertex_run_state(self, vertex_id: str, is_runnable: bool):
         """Updates the runnable state of a vertex."""
@@ -51,13 +51,12 @@ class RunnableVerticesManager:
         else:
             self.vertices_to_run.discard(vertex_id)
 
-    @staticmethod
     async def get_next_runnable_vertices(
+        self,
+        lock: asyncio.Lock,
+        set_cache_coro: Coroutine,
         graph: "Graph",
         vertex: "Vertex",
-        vertex_id: str,
-        chat_service: "ChatService",
-        flow_id: str,
     ):
         """
         Retrieves the next runnable vertices in the graph for a given vertex.
@@ -73,19 +72,19 @@ class RunnableVerticesManager:
             list: A list of IDs of the next runnable vertices.
 
         """
-        async with chat_service._cache_locks[flow_id] as lock:
-            graph.remove_from_predecessors(vertex_id)
+        async with lock:
+            graph.remove_from_predecessors(vertex.id)
             direct_successors_ready = [v for v in vertex.successors_ids if graph.is_vertex_runnable(v)]
             if not direct_successors_ready:
                 # No direct successors ready, look for runnable predecessors of successors
-                next_runnable_vertices = graph.find_runnable_predecessors_for_successors(vertex_id)
+                next_runnable_vertices = self.find_runnable_predecessors_for_successors(vertex.id)
             else:
                 next_runnable_vertices = direct_successors_ready
 
             for v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
                 graph.vertices_to_run.remove(v_id)
                 graph.remove_from_predecessors(v_id)
-            await chat_service.set_cache(flow_id=flow_id, data=graph, lock=lock)
+            await set_cache_coro(data=graph, lock=lock)
         return next_runnable_vertices
 
     @staticmethod
