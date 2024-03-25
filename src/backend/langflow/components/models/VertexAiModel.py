@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from langchain_core.messages.base import BaseMessage
 
-from langflow.components.models.base.model import LCModelComponent
+from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Text
 
 

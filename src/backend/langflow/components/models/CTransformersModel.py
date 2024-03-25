@@ -2,7 +2,7 @@ from typing import Dict, Optional
 
 from langchain_community.llms.ctransformers import CTransformers
 
-from langflow.components.models.base.model import LCModelComponent
+from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Text
 
 

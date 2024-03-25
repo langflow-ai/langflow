@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional
 
 from langchain_community.llms.llamacpp import LlamaCpp
 
-from langflow.components.models.base.model import LCModelComponent
+from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Text
 
 
