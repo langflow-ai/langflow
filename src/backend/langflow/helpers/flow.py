@@ -136,7 +136,7 @@ async def flow_function({func_args}):
     compiled_func = compile(func_body, "<string>", "exec")
     local_scope = {}
     exec(compiled_func, globals(), local_scope)
-    return local_scope["dynamic_flow_function"]
+    return local_scope["flow_function"]
 
 
 def build_function_and_schema(flow_record: Record, graph: "Graph") -> Tuple[Callable, BaseModel]:
@@ -189,5 +189,7 @@ def build_schema_from_inputs(name: str, inputs: List[tuple[str, str, str]]) -> B
     """
     fields = {}
     for input_ in inputs:
-        fields[input_[1]] = (str, Field(default="", description=input_[2]))
+        field_name = input_.display_name.lower().replace(" ", "_")
+        description = input_.description
+        fields[field_name] = (str, Field(default="", description=description))
     return create_model(name, **fields)
