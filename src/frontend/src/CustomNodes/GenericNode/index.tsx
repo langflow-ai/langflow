@@ -291,8 +291,6 @@ export default function GenericNode({
       );
     }
   };
-  console.log("GenericNode");
-
   const getSpecificClassFromBuildStatus = (
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
@@ -342,7 +340,6 @@ export default function GenericNode({
     showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full";
 
   const memoizedNodeToolbarComponent = useMemo(() => {
-    console.log('Calculating memoizedNodeToolbarComponent');
     return (
       <NodeToolbar>
         <NodeToolbarComponent

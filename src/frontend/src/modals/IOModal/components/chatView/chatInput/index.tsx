@@ -25,14 +25,6 @@ export default function ChatInput({
     }
   }, [lockChat, inputRef]);
 
-  /*   function handleChange(value: number) {
-    console.log(value);
-    if (value > 0) {
-      setRepeat(value);
-    } else {
-      setRepeat(1);
-    }
-  } */
 
   useEffect(() => {
     if (inputRef.current) {

@@ -50,7 +50,6 @@ export default function Page({
   flow: FlowType;
   view?: boolean;
 }): JSX.Element {
-  console.log("Page");
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const autoSaveCurrentFlow = useFlowsManagerStore(
     (state) => state.autoSaveCurrentFlow
@@ -275,7 +274,6 @@ export default function Page({
 
   useEffect(() => {
     setSHowCanvas(Object.keys(templates).length > 0 && Object.keys(types).length > 0)
-    console.log("showCanvas")
   }, [templates, types])
 
   const onConnectMod = useCallback(

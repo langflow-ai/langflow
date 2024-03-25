@@ -45,7 +45,6 @@ export default function NodeToolbarComponent({
   onCloseAdvancedModal,
   isOutdated,
 }: nodeToolbarPropsType): JSX.Element {
-  console.log(Math.random())
   const nodeLength = Object.keys(data.node!.template).filter(
     (templateField) =>
       templateField.charAt(0) !== "_" &&
