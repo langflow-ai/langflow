@@ -7,6 +7,7 @@ from loguru import logger
 
 from langflow.graph.edge.base import ContractEdge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
+from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
@@ -67,6 +68,7 @@ class Graph:
         self.inactive_vertices: set = set()
         self.edges: List[ContractEdge] = []
         self.vertices: List[Vertex] = []
+        self.run_manager = RunnableVerticesManager()
         self._build_graph()
         self.build_graph_maps()
         self.define_vertices_lists()
@@ -427,30 +429,6 @@ class Graph:
     def __setstate__(self, state):
         self.__init__(**state)
 
-    def build_in_degree(self):
-        in_degree = defaultdict(int)
-        for edge in self.edges:
-            in_degree[edge.target_id] += 1
-        return in_degree
-
-    def build_adjacency_maps(self):
-        """Returns the adjacency maps for the graph."""
-        predecessor_map = defaultdict(list)
-        successor_map = defaultdict(list)
-        for edge in self.edges:
-            predecessor_map[edge.target_id].append(edge.source_id)
-            successor_map[edge.source_id].append(edge.target_id)
-        return predecessor_map, successor_map
-
-    def build_run_map(self):
-        run_map = defaultdict(list)
-        # The run map gets the predecessor_map and maps the info like this:
-        # {vertex_id: every id that contains the vertex_id in the predecessor_map}
-        for vertex_id, predecessors in self.predecessor_map.items():
-            for predecessor in predecessors:
-                run_map[predecessor].append(vertex_id)
-        return run_map
-
     @classmethod
     def from_payload(cls, payload: Dict, flow_id: Optional[str] = None) -> "Graph":
         """
@@ -668,6 +646,32 @@ class Graph:
             return self.vertex_map[vertex_id]
         except KeyError:
             raise ValueError(f"Vertex {vertex_id} not found")
+
+    async def build_vertex(
+        self, chat_service, vertex_id: str, inputs: Optional[Dict[str, str]] = None, user_id: Optional[str] = None
+    ):
+        vertex = self.get_vertex(vertex_id)
+        try:
+            if not vertex.frozen or not vertex._built:
+                inputs_dict = inputs.model_dump() if inputs else {}
+                await vertex.build(user_id=user_id, inputs=inputs_dict)
+
+            if vertex.result is not None:
+                params = vertex._built_object_repr()
+                valid = True
+                result_dict = vertex.result
+                artifacts = vertex.artifacts
+            else:
+                raise ValueError(f"No result found for vertex {vertex_id}")
+
+            next_runnable_vertices = await self.run_manager.get_next_runnable_vertices(
+                self, vertex, vertex_id, chat_service, self.flow_id
+            )
+            top_level_vertices = self.run_manager.get_top_level_vertices(self, next_runnable_vertices)
+            return next_runnable_vertices, top_level_vertices, result_dict, params, valid, artifacts, vertex
+        except Exception as exc:
+            logger.exception(f"Error building vertex: {exc}")
+            raise exc
 
     def get_vertex_edges(
         self,
@@ -1107,40 +1111,9 @@ class Graph:
         # save the only the rest
         self.vertices_layers = vertices_layers[1:]
         self.vertices_to_run = {vertex_id for vertex_id in chain.from_iterable(vertices_layers)}
-        self.run_map, self.run_predecessors = (
-            self.build_run_map(),
-            self.predecessor_map.copy(),
-        )
-
+        self.build_run_map()
         # Return just the first layer
         return first_layer
-
-    def is_vertex_runnable(self, vertex_id: str) -> bool:
-        """Returns whether a vertex is runnable."""
-        return vertex_id in self.vertices_to_run and not self.run_predecessors.get(vertex_id)
-
-    def find_runnable_predecessors_for_successors(self, vertex_id: str) -> List[str]:
-        """
-        For each successor of the current vertex, find runnable predecessors if any.
-        This checks the direct predecessors of each successor to identify any that are
-        immediately runnable, expanding the search to ensure progress can be made.
-        """
-        runnable_vertices = []
-        visited = set()
-
-        for successor_id in self.run_map.get(vertex_id, []):
-            for predecessor_id in self.run_predecessors.get(successor_id, []):
-                if predecessor_id not in visited and self.is_vertex_runnable(predecessor_id):
-                    runnable_vertices.append(predecessor_id)
-                    visited.add(predecessor_id)
-
-        return runnable_vertices
-
-    def remove_from_predecessors(self, vertex_id: str):
-        predecessors = self.run_map.get(vertex_id, [])
-        for predecessor in predecessors:
-            if vertex_id in self.run_predecessors[predecessor]:
-                self.run_predecessors[predecessor].remove(vertex_id)
 
     def sort_interface_components_first(self, vertices_layers: List[List[str]]) -> List[List[str]]:
         """Sorts the vertices in the graph so that vertices containing ChatInput or ChatOutput come first."""
@@ -1171,3 +1144,45 @@ class Graph:
 
         sorted_vertices = [sort_layer_by_avg_build_time(layer) for layer in vertices_layers]
         return sorted_vertices
+
+    def is_vertex_runnable(self, vertex_id: str) -> bool:
+        """Returns whether a vertex is runnable."""
+        return self.run_manager.is_vertex_runnable(vertex_id)
+
+    def build_run_map(self):
+        """
+        Builds the run map for the graph.
+
+        This method is responsible for building the run map for the graph,
+        which maps each node in the graph to its corresponding run function.
+
+        Returns:
+            None
+        """
+        self.run_manager.build_run_map(self)
+
+    def find_runnable_predecessors_for_successors(self, vertex_id: str) -> List[str]:
+        """
+        For each successor of the current vertex, find runnable predecessors if any.
+        This checks the direct predecessors of each successor to identify any that are
+        immediately runnable, expanding the search to ensure progress can be made.
+        """
+        self.run_manager.find_runnable_predecessors_for_successors(vertex_id)
+
+    def remove_from_predecessors(self, vertex_id: str):
+        self.run_manager.remove_from_predecessors(vertex_id)
+
+    def build_in_degree(self):
+        in_degree = defaultdict(int)
+        for edge in self.edges:
+            in_degree[edge.target_id] += 1
+        return in_degree
+
+    def build_adjacency_maps(self):
+        """Returns the adjacency maps for the graph."""
+        predecessor_map = defaultdict(list)
+        successor_map = defaultdict(list)
+        for edge in self.edges:
+            predecessor_map[edge.target_id].append(edge.source_id)
+            successor_map[edge.source_id].append(edge.target_id)
+        return predecessor_map, successor_map
