@@ -30,6 +30,10 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
             },
+            "system_message": {
+                "display_name": "System Message",
+                "info": "System message to pass to the model.",
+            },
         }
 
     def build(
@@ -41,6 +45,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         huggingfacehub_api_token: Optional[str] = None,
         model_kwargs: Optional[dict] = None,
         stream: bool = False,
+        system_message: Optional[str] = None,
     ) -> Text:
         try:
             llm = HuggingFaceEndpoint(  # type: ignore
@@ -53,4 +58,4 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not connect to HuggingFace Endpoints API.") from e
         output = ChatHuggingFace(llm=llm)
-        return self.get_result(output=output, stream=stream, input_value=input_value)
+        return self.get_chat_result(output, stream, input_value, system_message)
