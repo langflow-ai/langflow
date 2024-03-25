@@ -707,4 +707,5 @@ export type toolbarSelectItemProps = {
     valueClasses?: string;
   };
   dataTestId: string;
+  ping?: boolean;
 };

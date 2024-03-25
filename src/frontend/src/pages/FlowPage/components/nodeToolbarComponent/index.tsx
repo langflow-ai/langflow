@@ -477,6 +477,7 @@ export default function NodeToolbarComponent({
                     value={"Update"}
                     icon={"Code"}
                     dataTestId="update-button-modal"
+                    ping={isOutdated}
                   />
                 </SelectItem>
               )}
