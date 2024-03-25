@@ -5,8 +5,8 @@ from alembic import context
 from loguru import logger
 from sqlalchemy import engine_from_config, pool
 
-from langflow.services.database.models import *  # noqa
-from langflow.services.database.service import SQLModel
+from langflow_base.services.database.models import *  # noqa
+from langflow_base.services.database.service import SQLModel
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -64,13 +64,13 @@ def run_migrations_online() -> None:
     """
 
     try:
-        from langflow.services.database.factory import DatabaseServiceFactory
-        from langflow.services.deps import get_db_service
-        from langflow.services.manager import (
+        from langflow_base.services.database.factory import DatabaseServiceFactory
+        from langflow_base.services.deps import get_db_service
+        from langflow_base.services.manager import (
             initialize_settings_service,
             service_manager,
         )
-        from langflow.services.schema import ServiceType
+        from langflow_base.services.schema import ServiceType
 
         initialize_settings_service()
         service_manager.register_factory(

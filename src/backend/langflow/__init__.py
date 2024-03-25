@@ -1,10 +1,7 @@
 from importlib import metadata
 
-from langflow.interface.custom.custom_component import CustomComponent
-
-# Deactivate cache manager for now
-# from langflow.services.cache import cache_service
-from langflow.processing.load import load_flow_from_json
+from langflow_base.interface.custom.custom_component import CustomComponent
+from langflow_base.processing.process import load_flow_from_json
 
 try:
     __version__ = metadata.version(__package__)
