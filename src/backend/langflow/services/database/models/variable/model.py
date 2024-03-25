@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime,timezone
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 def utc_now():
-    return datetime.now(datetime.UTC)
+    return datetime.now(timezone.utc)
 
 
 class VariableBase(SQLModel):
