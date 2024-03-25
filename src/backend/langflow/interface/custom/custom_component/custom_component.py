@@ -1,7 +1,6 @@
 import operator
 from pathlib import Path
-from typing import (TYPE_CHECKING, Any, Callable, ClassVar, List, Optional,
-                    Sequence, Union)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Sequence, Union
 from uuid import UUID
 
 import yaml
@@ -12,14 +11,14 @@ from sqlmodel import select
 
 from langflow.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
-    extract_union_types_from_generic_alias)
+    extract_union_types_from_generic_alias,
+)
 from langflow.interface.custom.custom_component.component import Component
 from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_storage_service, get_variable_service
-                                    get_variable_service)
 from langflow.services.storage.service import StorageService
 from langflow.utils import validate
 

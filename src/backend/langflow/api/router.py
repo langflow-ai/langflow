@@ -12,6 +12,7 @@ from langflow.api.v1 import (
     store_router,
     users_router,
     validate_router,
+    variables_router,
 )
 
 router = APIRouter(
