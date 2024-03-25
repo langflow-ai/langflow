@@ -6,13 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
-from langflow.api.utils import (
-    build_and_cache_graph,
-    format_elapsed_time,
-    format_exception_message,
-    get_next_runnable_vertices,
-    get_top_level_vertices,
-)
+from langflow.api.utils import build_and_cache_graph, format_elapsed_time, format_exception_message
 from langflow.api.v1.schemas import (
     InputValueRequest,
     ResultDataResponse,
@@ -147,23 +141,21 @@ async def build_vertex(
             graph = cache.get("result")
         result_data_response = ResultDataResponse(results={})
         duration = ""
-
-        vertex = graph.get_vertex(vertex_id)
         try:
-            if not vertex.frozen or not vertex._built:
-                inputs_dict = inputs.model_dump() if inputs else {}
-                await vertex.build(user_id=current_user.id, inputs=inputs_dict)
-
-            if vertex.result is not None:
-                params = vertex._built_object_repr()
-                valid = True
-                result_dict = vertex.result
-                artifacts = vertex.artifacts
-            else:
-                raise ValueError(f"No result found for vertex {vertex_id}")
-
-            next_runnable_vertices = await get_next_runnable_vertices(graph, vertex, vertex_id, chat_service, flow_id)
-            top_level_vertices = get_top_level_vertices(graph, next_runnable_vertices)
+            (
+                next_runnable_vertices,
+                top_level_vertices,
+                result_dict,
+                params,
+                valid,
+                artifacts,
+                vertex,
+            ) = await graph.build_vertex(
+                chat_service=chat_service,
+                vertex_id=vertex_id,
+                user_id=current_user.id,
+                inputs=inputs.model_dump() if inputs else {},
+            )
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
         except Exception as exc:
