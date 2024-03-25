@@ -84,7 +84,10 @@ endif
 build_and_run:
 	echo 'Removing dist folder'
 	rm -rf dist
-	make build && poetry run pip install dist/*.tar.gz && poetry run langflow run
+	make build_base
+	make build
+	poetry run pip install dist/*.tar.gz
+	poetry run langflow run
 
 build_and_install:
 	echo 'Removing dist folder'
@@ -93,7 +96,7 @@ build_and_install:
 
 build_frontend:
 	cd src/frontend && CI='' npm run build
-	cp -r src/frontend/build src/backend/base/frontend
+	cp -r src/frontend/build src/backend/base/langflow_base/frontend
 
 build:
 	poetry build --format sdist
@@ -101,8 +104,8 @@ build:
 build_base:
 	make install_frontend
 	make build_frontend
-	cd src/backend/base poetry build --format sdist
-	rm -rf src/backend/base/frontend
+	cd src/backend/base && poetry build --format sdist
+	rm -rf src/backend/base/langflow_base/frontend
 
 dev:
 	make install_frontend

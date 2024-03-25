@@ -25,9 +25,8 @@ documentation = "https://docs.langflow.org"
 langflow = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
-
-
 python = ">=3.10,<3.12"
+langflow-base = "0.0.8"
 duckdb = "^0.9.2"
 beautifulsoup4 = "^4.12.2"
 google-search-results = "^2.4.1"
