@@ -7,7 +7,7 @@ from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.chroma import Chroma
 
 from langflow import CustomComponent
-from langflow.schema.schema import Record
+from langflow_base.schema.schema import Record
 
 
 class ChromaComponent(CustomComponent):

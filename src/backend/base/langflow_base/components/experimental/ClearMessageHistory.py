@@ -1,5 +1,5 @@
 from langflow import CustomComponent
-from langflow.memory import delete_messages, get_messages
+from langflow_base.memory import delete_messages, get_messages
 
 
 class ClearMessageHistoryComponent(CustomComponent):

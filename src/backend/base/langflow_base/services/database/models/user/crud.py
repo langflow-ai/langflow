@@ -3,8 +3,8 @@ from typing import Optional, Union
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
-from langflow.services.database.models.user.model import User, UserUpdate
-from langflow.services.deps import get_session
+from langflow_base.services.database.models.user.model import User, UserUpdate
+from langflow_base.services.deps import get_session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import Session, select

@@ -6,7 +6,7 @@ from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import VectorStore, Weaviate
 
 from langflow import CustomComponent
-from langflow.schema.schema import Record
+from langflow_base.schema.schema import Record
 
 
 class WeaviateVectorStoreComponent(CustomComponent):

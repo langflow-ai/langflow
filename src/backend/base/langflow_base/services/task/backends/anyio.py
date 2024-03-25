@@ -4,7 +4,7 @@ from typing import Any, Callable, Optional, Tuple
 import anyio
 from loguru import logger
 
-from langflow.services.task.backends.base import TaskBackend
+from langflow_base.services.task.backends.base import TaskBackend
 
 
 class AnyIOTaskResult:

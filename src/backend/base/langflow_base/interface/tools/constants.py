@@ -8,8 +8,8 @@ from langchain.agents.load_tools import (
 )
 from langchain.tools.json.tool import JsonSpec
 
-from langflow.interface.importing.utils import import_class
-from langflow.interface.tools.custom import PythonFunctionTool
+from langflow_base.interface.importing.utils import import_class
+from langflow_base.interface.tools.custom import PythonFunctionTool
 
 FILE_TOOLS = {"JsonSpec": JsonSpec}
 CUSTOM_TOOLS = {

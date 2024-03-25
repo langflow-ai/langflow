@@ -2,8 +2,8 @@ from typing import Optional
 
 from langchain_community.chat_models.bedrock import BedrockChat
 
-from langflow.components.models.base.model import LCModelComponent
-from langflow.field_typing import Text
+from langflow_base.components.models.base.model import LCModelComponent
+from langflow_base.field_typing import Text
 
 
 class AmazonBedrockComponent(LCModelComponent):

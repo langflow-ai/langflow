@@ -4,7 +4,7 @@ from langchain.chains import RetrievalQAWithSourcesChain
 from langchain_core.documents import Document
 
 from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel, BaseMemory, BaseRetriever, Text
+from langflow_base.field_typing import BaseLanguageModel, BaseMemory, BaseRetriever, Text
 
 
 class RetrievalQAWithSourcesChainComponent(CustomComponent):

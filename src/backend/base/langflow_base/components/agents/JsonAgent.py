@@ -1,6 +1,6 @@
 from langflow import CustomComponent
 from langchain.agents import AgentExecutor, create_json_agent
-from langflow.field_typing import (
+from langflow_base.field_typing import (
     BaseLanguageModel,
 )
 from langchain_community.agent_toolkits.json.toolkit import JsonToolkit

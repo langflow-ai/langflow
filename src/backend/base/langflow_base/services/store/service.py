@@ -6,23 +6,23 @@ import httpx
 from httpx import HTTPError, HTTPStatusError
 from loguru import logger
 
-from langflow.services.base import Service
-from langflow.services.store.exceptions import APIKeyError, FilterError, ForbiddenError
-from langflow.services.store.schema import (
+from langflow_base.services.base import Service
+from langflow_base.services.store.exceptions import APIKeyError, FilterError, ForbiddenError
+from langflow_base.services.store.schema import (
     CreateComponentResponse,
     DownloadComponentResponse,
     ListComponentResponse,
     ListComponentResponseModel,
     StoreComponentCreate,
 )
-from langflow.services.store.utils import (
+from langflow_base.services.store.utils import (
     process_component_data,
     process_tags_for_post,
     update_components_with_user_data,
 )
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
+    from langflow_base.services.settings.service import SettingsService
 
 from contextlib import asynccontextmanager
 from contextvars import ContextVar

@@ -3,8 +3,8 @@ from typing import List, Optional
 from langchain_community.vectorstores.mongodb_atlas import MongoDBAtlasVectorSearch
 
 from langflow import CustomComponent
-from langflow.field_typing import Embeddings, NestedDict
-from langflow.schema.schema import Record
+from langflow_base.field_typing import Embeddings, NestedDict
+from langflow_base.schema.schema import Record
 
 
 class MongoDBAtlasComponent(CustomComponent):

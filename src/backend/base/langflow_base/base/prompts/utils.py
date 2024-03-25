@@ -3,10 +3,10 @@ from langchain.prompts import PromptTemplate
 from langchain_core.documents import Document
 from loguru import logger
 
-from langflow.api.v1.base import INVALID_NAMES, check_input_variables
-from langflow.interface.utils import extract_input_variables_from_prompt
-from langflow.schema import Record
-from langflow.template.field.prompt import DefaultPromptField
+from langflow_base.api.v1.base import INVALID_NAMES, check_input_variables
+from langflow_base.interface.utils import extract_input_variables_from_prompt
+from langflow_base.schema import Record
+from langflow_base.template.field.prompt import DefaultPromptField
 
 
 def dict_values_to_string(d: dict) -> dict:

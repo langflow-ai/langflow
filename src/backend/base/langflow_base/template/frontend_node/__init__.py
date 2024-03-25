@@ -1,4 +1,4 @@
-from langflow.template.frontend_node import (
+from langflow_base.template.frontend_node import (
     agents,
     chains,
     embeddings,

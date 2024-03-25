@@ -2,9 +2,9 @@ import warnings
 from typing import Optional, Union
 
 from langflow import CustomComponent
-from langflow.field_typing import Text
-from langflow.memory import add_messages
-from langflow.schema import Record
+from langflow_base.field_typing import Text
+from langflow_base.memory import add_messages
+from langflow_base.schema import Record
 
 
 class ChatComponent(CustomComponent):

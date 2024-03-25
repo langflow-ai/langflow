@@ -3,8 +3,8 @@ from typing import Optional
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
-from langflow.components.models.base.model import LCModelComponent
-from langflow.field_typing import NestedDict, Text
+from langflow_base.components.models.base.model import LCModelComponent
+from langflow_base.field_typing import NestedDict, Text
 
 
 class OpenAIModelComponent(LCModelComponent):

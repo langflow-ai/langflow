@@ -10,8 +10,8 @@ from langchain.prompts import PromptTemplate
 from langchain.tools import BaseTool
 from langchain_core.language_models.chat_models import BaseChatModel
 
-from langflow.interface.custom.custom_component import CustomComponent
-from langflow.interface.wrappers.base import wrapper_creator
+from langflow_base.interface.custom.custom_component import CustomComponent
+from langflow_base.interface.wrappers.base import wrapper_creator
 
 
 def import_module(module_path: str) -> Any:
@@ -93,7 +93,7 @@ def import_class(class_path: str) -> Any:
 
 def import_prompt(prompt: str) -> Type[PromptTemplate]:
     """Import prompt from prompt name"""
-    from langflow.interface.prompts.custom import CUSTOM_PROMPTS
+    from langflow_base.interface.prompts.custom import CUSTOM_PROMPTS
 
     if prompt == "ZeroShotPrompt":
         return import_class("langchain.prompts.PromptTemplate")
@@ -127,7 +127,7 @@ def import_llm(llm: str) -> BaseLanguageModel:
 
 def import_tool(tool: str) -> BaseTool:
     """Import tool from tool name"""
-    from langflow.interface.tools.base import tool_creator
+    from langflow_base.interface.tools.base import tool_creator
 
     if tool in tool_creator.type_to_loader_dict:
         return tool_creator.type_to_loader_dict[tool]["fcn"]
@@ -137,7 +137,7 @@ def import_tool(tool: str) -> BaseTool:
 
 def import_chain(chain: str) -> Type[Chain]:
     """Import chain from chain name"""
-    from langflow.interface.chains.custom import CUSTOM_CHAINS
+    from langflow_base.interface.chains.custom import CUSTOM_CHAINS
 
     if chain in CUSTOM_CHAINS:
         return CUSTOM_CHAINS[chain]

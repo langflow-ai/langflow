@@ -3,9 +3,9 @@ from typing import List, Optional
 import chromadb  # type: ignore
 from langchain_community.vectorstores.chroma import Chroma
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.field_typing import Embeddings, Text
-from langflow.schema import Record
+from langflow_base.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow_base.field_typing import Embeddings, Text
+from langflow_base.schema import Record
 
 
 class ChromaSearchComponent(LCVectorStoreComponent):

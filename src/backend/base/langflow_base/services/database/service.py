@@ -10,12 +10,12 @@ from sqlalchemy import inspect
 from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, SQLModel, create_engine, select, text
 
-from langflow.services.base import Service
-from langflow.services.database import models  # noqa
-from langflow.services.database.models.user.crud import get_user_by_username
-from langflow.services.database.utils import Result, TableResults
-from langflow.services.deps import get_settings_service
-from langflow.services.utils import teardown_superuser
+from langflow_base.services.base import Service
+from langflow_base.services.database import models  # noqa
+from langflow_base.services.database.models.user.crud import get_user_by_username
+from langflow_base.services.database.utils import Result, TableResults
+from langflow_base.services.deps import get_settings_service
+from langflow_base.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Engine

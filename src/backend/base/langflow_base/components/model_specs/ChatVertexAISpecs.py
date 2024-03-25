@@ -4,7 +4,7 @@ from langchain.llms import BaseLLM
 from langchain_community.chat_models.vertexai import ChatVertexAI
 from langchain_core.messages.base import BaseMessage
 from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel
+from langflow_base.field_typing import BaseLanguageModel
 
 
 class ChatVertexAIComponent(CustomComponent):

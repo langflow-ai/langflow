@@ -1,9 +1,9 @@
 from typing import Optional
 
 from langchain.agents import types
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.template.base import Template
+from langflow_base.template.field.base import TemplateField
+from langflow_base.template.frontend_node.base import FrontendNode
+from langflow_base.template.template.base import Template
 
 NON_CHAT_AGENTS = {
     agent_type: agent_class

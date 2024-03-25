@@ -1,7 +1,7 @@
-from langflow.graph.edge.base import Edge
-from langflow.graph.graph.base import Graph
-from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import (
+from langflow_base.graph.edge.base import Edge
+from langflow_base.graph.graph.base import Graph
+from langflow_base.graph.vertex.base import Vertex
+from langflow_base.graph.vertex.types import (
     AgentVertex,
     ChainVertex,
     DocumentLoaderVertex,

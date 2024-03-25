@@ -2,7 +2,7 @@ from typing import Any, Optional, Union
 
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
-from langflow.utils.constants import PYTHON_BASIC_TYPES
+from langflow_base.utils.constants import PYTHON_BASIC_TYPES
 from loguru import logger
 
 
@@ -14,7 +14,7 @@ async def invoke_lc_runnable(
     built_object: Runnable, inputs: dict, has_external_output: bool, session_id: Optional[str] = None, **kwargs
 ) -> Union[str, BaseMessage]:
     # Setup callbacks for asynchronous execution
-    from langflow.processing.base import setup_callbacks
+    from langflow_base.processing.base import setup_callbacks
 
     callbacks = setup_callbacks(sync=False, trace_id=session_id, **kwargs)
 

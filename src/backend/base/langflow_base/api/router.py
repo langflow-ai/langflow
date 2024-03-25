@@ -1,7 +1,7 @@
 # Router for base api
 from fastapi import APIRouter
 
-from langflow.api.v1 import (
+from langflow_base.api.v1 import (
     api_key_router,
     chat_router,
     credentials_router,

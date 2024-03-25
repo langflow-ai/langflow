@@ -1,7 +1,7 @@
 from pydantic.v1.types import SecretStr
 from langflow import CustomComponent
 from typing import Optional, Union, Callable
-from langflow.field_typing import BaseLanguageModel
+from langflow_base.field_typing import BaseLanguageModel
 from langchain_community.chat_models.anthropic import ChatAnthropic
 
 

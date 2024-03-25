@@ -1,3 +1,3 @@
-from langflow.interface.agents.base import AgentCreator
+from langflow_base.interface.agents.base import AgentCreator
 
 __all__ = ["AgentCreator"]

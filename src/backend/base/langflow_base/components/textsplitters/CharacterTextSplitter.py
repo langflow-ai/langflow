@@ -3,8 +3,8 @@ from typing import List
 from langchain.text_splitter import CharacterTextSplitter
 
 from langflow import CustomComponent
-from langflow.schema.schema import Record
-from langflow.utils.util import unescape_string
+from langflow_base.schema.schema import Record
+from langflow_base.utils.util import unescape_string
 
 
 class CharacterTextSplitterComponent(CustomComponent):

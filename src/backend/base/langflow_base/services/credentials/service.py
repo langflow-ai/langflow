@@ -2,14 +2,14 @@ from typing import TYPE_CHECKING, Optional, Union
 from uuid import UUID
 
 from fastapi import Depends
-from langflow.services.auth import utils as auth_utils
-from langflow.services.base import Service
-from langflow.services.database.models.credential.model import Credential
-from langflow.services.deps import get_session
+from langflow_base.services.auth import utils as auth_utils
+from langflow_base.services.base import Service
+from langflow_base.services.database.models.credential.model import Credential
+from langflow_base.services.deps import get_session
 from sqlmodel import Session, select
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
+    from langflow_base.services.settings.service import SettingsService
 
 
 class CredentialService(Service):

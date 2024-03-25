@@ -6,7 +6,7 @@ from langchain_community.vectorstores.redis import Redis
 from langchain_core.retrievers import BaseRetriever
 
 from langflow import CustomComponent
-from langflow.schema.schema import Record
+from langflow_base.schema.schema import Record
 
 
 class RedisComponent(CustomComponent):

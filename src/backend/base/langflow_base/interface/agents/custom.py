@@ -21,7 +21,7 @@ from langchain_experimental.agents.agent_toolkits.pandas.prompt import PREFIX as
 from langchain_experimental.agents.agent_toolkits.pandas.prompt import SUFFIX_WITH_DF as PANDAS_SUFFIX
 from langchain_experimental.tools.python.tool import PythonAstREPLTool
 
-from langflow.interface.base import CustomAgentExecutor
+from langflow_base.interface.base import CustomAgentExecutor
 
 
 class JsonAgent(CustomAgentExecutor):

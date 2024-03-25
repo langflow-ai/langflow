@@ -4,21 +4,21 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
-from langflow.api.v1.schemas import ApiKeyCreateRequest, ApiKeysResponse
-from langflow.services.auth import utils as auth_utils
+from langflow_base.api.v1.schemas import ApiKeyCreateRequest, ApiKeysResponse
+from langflow_base.services.auth import utils as auth_utils
 
 # Assuming you have these methods in your service layer
-from langflow.services.database.models.api_key.crud import (
+from langflow_base.services.database.models.api_key.crud import (
     create_api_key,
     delete_api_key,
     get_api_keys,
 )
-from langflow.services.database.models.api_key.model import (
+from langflow_base.services.database.models.api_key.model import (
     ApiKeyCreate,
     UnmaskedApiKeyRead,
 )
-from langflow.services.database.models.user.model import User
-from langflow.services.deps import (
+from langflow_base.services.database.models.user.model import User
+from langflow_base.services.deps import (
     get_session,
     get_settings_service,
 )

@@ -6,7 +6,7 @@ import orjson
 from langchain.agents import ZeroShotAgent
 from langchain.schema import BaseOutputParser, Document
 
-from langflow.services.database.models.base import orjson_dumps
+from langflow_base.services.database.models.base import orjson_dumps
 
 
 def handle_node_type(node_type, class_object, params: Dict):

@@ -7,12 +7,12 @@ from loguru import logger
 from sqlmodel import Session, text
 
 if TYPE_CHECKING:
-    from langflow.services.database.service import DatabaseService
+    from langflow_base.services.database.service import DatabaseService
 
 
 def initialize_database(fix_migration: bool = False):
     logger.debug("Initializing database")
-    from langflow.services.deps import get_db_service
+    from langflow_base.services.deps import get_db_service
 
     database_service: "DatabaseService" = get_db_service()
     try:

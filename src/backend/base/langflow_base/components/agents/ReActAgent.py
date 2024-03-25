@@ -3,7 +3,7 @@
 # import dspy
 
 # from langflow import CustomComponent
-# from langflow.field_typing import Text
+# from langflow_base.field_typing import Text
 
 
 # class ReActAgentComponent(CustomComponent):

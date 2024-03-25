@@ -2,12 +2,12 @@ from typing import Callable, Dict, List, Optional
 
 from langchain.agents import agent_toolkits
 
-from langflow.interface.base import LangChainTypeCreator
-from langflow.interface.importing.utils import import_class, import_module
-from langflow.services.deps import get_settings_service
+from langflow_base.interface.base import LangChainTypeCreator
+from langflow_base.interface.importing.utils import import_class, import_module
+from langflow_base.services.deps import get_settings_service
 
 from loguru import logger
-from langflow.utils.util import build_template_from_class
+from langflow_base.utils.util import build_template_from_class
 
 
 class ToolkitCreator(LangChainTypeCreator):

@@ -1,6 +1,6 @@
 from pathlib import Path
-from langflow.services.settings.service import SettingsService
-from langflow.services.factory import ServiceFactory
+from langflow_base.services.settings.service import SettingsService
+from langflow_base.services.factory import ServiceFactory
 
 
 class SettingsServiceFactory(ServiceFactory):

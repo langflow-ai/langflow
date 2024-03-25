@@ -1,14 +1,14 @@
 from typing import ClassVar, Dict, List, Optional, Type
 
-from langflow.interface.base import LangChainTypeCreator
-from langflow.interface.custom_lists import memory_type_to_cls_dict
-from langflow.services.deps import get_settings_service
+from langflow_base.interface.base import LangChainTypeCreator
+from langflow_base.interface.custom_lists import memory_type_to_cls_dict
+from langflow_base.services.deps import get_settings_service
 
-from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.frontend_node.memories import MemoryFrontendNode
+from langflow_base.template.frontend_node.base import FrontendNode
+from langflow_base.template.frontend_node.memories import MemoryFrontendNode
 from loguru import logger
-from langflow.utils.util import build_template_from_class, build_template_from_method
-from langflow.custom.customs import get_custom_nodes
+from langflow_base.utils.util import build_template_from_class, build_template_from_method
+from langflow_base.custom.customs import get_custom_nodes
 
 
 class MemoryCreator(LangChainTypeCreator):

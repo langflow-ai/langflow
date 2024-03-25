@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING
 
-from langflow.services.credentials.service import CredentialService
-from langflow.services.factory import ServiceFactory
+from langflow_base.services.credentials.service import CredentialService
+from langflow_base.services.factory import ServiceFactory
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
+    from langflow_base.services.settings.service import SettingsService
 
 
 class CredentialServiceFactory(ServiceFactory):

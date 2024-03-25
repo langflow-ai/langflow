@@ -1,7 +1,7 @@
 from langflow import CustomComponent
 from typing import Union, Callable
 from langchain.agents import AgentExecutor
-from langflow.field_typing import BaseLanguageModel
+from langflow_base.field_typing import BaseLanguageModel
 from langchain_community.agent_toolkits.sql.base import create_sql_agent
 from langchain.sql_database import SQLDatabase
 from langchain_community.agent_toolkits import SQLDatabaseToolkit

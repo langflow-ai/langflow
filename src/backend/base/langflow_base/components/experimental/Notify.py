@@ -1,7 +1,7 @@
 from typing import Optional
 
 from langflow import CustomComponent
-from langflow.schema import Record
+from langflow_base.schema import Record
 
 
 class NotifyComponent(CustomComponent):

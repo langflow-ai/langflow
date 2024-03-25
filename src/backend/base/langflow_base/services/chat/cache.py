@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from typing import Any, Awaitable, Callable, List, Optional
-from langflow.services.base import Service
+from langflow_base.services.base import Service
 
 import pandas as pd
 from PIL import Image

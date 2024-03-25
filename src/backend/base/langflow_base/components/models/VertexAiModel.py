@@ -2,8 +2,8 @@ from typing import List, Optional
 
 from langchain_core.messages.base import BaseMessage
 
-from langflow.components.models.base.model import LCModelComponent
-from langflow.field_typing import Text
+from langflow_base.components.models.base.model import LCModelComponent
+from langflow_base.field_typing import Text
 
 
 class ChatVertexAIComponent(LCModelComponent):

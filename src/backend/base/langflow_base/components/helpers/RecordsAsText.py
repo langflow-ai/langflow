@@ -1,7 +1,7 @@
 from langflow import CustomComponent
-from langflow.field_typing import Text
-from langflow.helpers.record import records_to_text
-from langflow.schema import Record
+from langflow_base.field_typing import Text
+from langflow_base.helpers.record import records_to_text
+from langflow_base.schema import Record
 
 
 class RecordsAsTextComponent(CustomComponent):

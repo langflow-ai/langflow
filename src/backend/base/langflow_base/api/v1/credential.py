@@ -4,11 +4,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
-from langflow.services.auth import utils as auth_utils
-from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.credential import Credential, CredentialCreate, CredentialRead, CredentialUpdate
-from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session, get_settings_service
+from langflow_base.services.auth import utils as auth_utils
+from langflow_base.services.auth.utils import get_current_active_user
+from langflow_base.services.database.models.credential import Credential, CredentialCreate, CredentialRead, CredentialUpdate
+from langflow_base.services.database.models.user.model import User
+from langflow_base.services.deps import get_session, get_settings_service
 
 router = APIRouter(prefix="/credentials", tags=["Credentials"])
 

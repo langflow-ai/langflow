@@ -1,9 +1,9 @@
 from typing import List, Optional
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.components.vectorstores.Qdrant import QdrantComponent
-from langflow.field_typing import Embeddings, NestedDict, Text
-from langflow.schema import Record
+from langflow_base.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow_base.components.vectorstores.Qdrant import QdrantComponent
+from langflow_base.field_typing import Embeddings, NestedDict, Text
+from langflow_base.schema import Record
 
 
 class QdrantSearchComponent(QdrantComponent, LCVectorStoreComponent):

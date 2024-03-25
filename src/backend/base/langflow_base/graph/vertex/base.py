@@ -16,25 +16,25 @@ from typing import (
 
 from loguru import logger
 
-from langflow.graph.schema import (
+from langflow_base.graph.schema import (
     INPUT_COMPONENTS,
     INPUT_FIELD_NAME,
     OUTPUT_COMPONENTS,
     InterfaceComponentTypes,
     ResultData,
 )
-from langflow.graph.utils import UnbuiltObject, UnbuiltResult
-from langflow.graph.vertex.utils import generate_result
-from langflow.interface.initialize import loading
-from langflow.interface.listing import lazy_load_dict
-from langflow.services.deps import get_storage_service
-from langflow.utils.constants import DIRECT_TYPES
-from langflow.utils.schemas import ChatOutputResponse
-from langflow.utils.util import sync_to_async, unescape_string
+from langflow_base.graph.utils import UnbuiltObject, UnbuiltResult
+from langflow_base.graph.vertex.utils import generate_result
+from langflow_base.interface.initialize import loading
+from langflow_base.interface.listing import lazy_load_dict
+from langflow_base.services.deps import get_storage_service
+from langflow_base.utils.constants import DIRECT_TYPES
+from langflow_base.utils.schemas import ChatOutputResponse
+from langflow_base.utils.util import sync_to_async, unescape_string
 
 if TYPE_CHECKING:
-    from langflow.graph.edge.base import ContractEdge
-    from langflow.graph.graph.base import Graph
+    from langflow_base.graph.edge.base import ContractEdge
+    from langflow_base.graph.graph.base import Graph
 
 
 class VertexStates(str, Enum):

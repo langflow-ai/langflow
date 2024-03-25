@@ -30,7 +30,7 @@ from .range_spec import RangeSpec
 
 
 def _import_template_field():
-    from langflow.template.field.base import TemplateField
+    from langflow_base.template.field.base import TemplateField
 
     return TemplateField
 

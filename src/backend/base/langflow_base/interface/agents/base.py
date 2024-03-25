@@ -2,14 +2,14 @@ from typing import ClassVar, Dict, List, Optional
 
 from langchain.agents import types
 
-from langflow.custom.customs import get_custom_nodes
-from langflow.interface.agents.custom import CUSTOM_AGENTS
-from langflow.interface.base import LangChainTypeCreator
-from langflow.services.deps import get_settings_service
+from langflow_base.custom.customs import get_custom_nodes
+from langflow_base.interface.agents.custom import CUSTOM_AGENTS
+from langflow_base.interface.base import LangChainTypeCreator
+from langflow_base.services.deps import get_settings_service
 
-from langflow.template.frontend_node.agents import AgentFrontendNode
+from langflow_base.template.frontend_node.agents import AgentFrontendNode
 from loguru import logger
-from langflow.utils.util import build_template_from_class, build_template_from_method
+from langflow_base.utils.util import build_template_from_class, build_template_from_method
 
 
 class AgentCreator(LangChainTypeCreator):

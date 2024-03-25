@@ -18,26 +18,26 @@ from langchain_core.documents import Document
 from pydantic import BaseModel
 from sqlmodel import select
 
-from langflow.interface.custom.code_parser.utils import (
+from langflow_base.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
 )
-from langflow.interface.custom.custom_component.component import Component
-from langflow.schema import Record
-from langflow.schema.dotdict import dotdict
-from langflow.services.database.models.flow import Flow
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import (
+from langflow_base.interface.custom.custom_component.component import Component
+from langflow_base.schema import Record
+from langflow_base.schema.dotdict import dotdict
+from langflow_base.services.database.models.flow import Flow
+from langflow_base.services.database.utils import session_getter
+from langflow_base.services.deps import (
     get_credential_service,
     get_db_service,
     get_storage_service,
 )
-from langflow.services.storage.service import StorageService
-from langflow.utils import validate
+from langflow_base.services.storage.service import StorageService
+from langflow_base.utils import validate
 
 if TYPE_CHECKING:
-    from langflow.graph.graph.base import Graph
-    from langflow.graph.vertex.base import Vertex
+    from langflow_base.graph.graph.base import Graph
+    from langflow_base.graph.vertex.base import Vertex
 
 
 class CustomComponent(Component):
@@ -332,8 +332,8 @@ class CustomComponent(Component):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> "Graph":
-        from langflow.graph.graph.base import Graph
-        from langflow.processing.process import process_tweaks
+        from langflow_base.graph.graph.base import Graph
+        from langflow_base.processing.process import process_tweaks
 
         db_service = get_db_service()
         with session_getter(db_service) as session:

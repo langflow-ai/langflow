@@ -6,9 +6,9 @@ from emoji import demojize, purely_emoji  # type: ignore
 from loguru import logger
 from sqlmodel import select
 
-from langflow.interface.types import get_all_components
-from langflow.services.database.models.flow.model import Flow, FlowCreate
-from langflow.services.deps import get_settings_service, session_scope
+from langflow_base.interface.types import get_all_components
+from langflow_base.services.database.models.flow.model import Flow, FlowCreate
+from langflow_base.services.deps import get_settings_service, session_scope
 
 STARTER_FOLDER_NAME = "Starter Projects"
 

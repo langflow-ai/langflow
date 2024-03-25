@@ -3,7 +3,7 @@ from typing import Optional
 from langchain.chains import ConversationChain
 
 from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel, BaseMemory, Text
+from langflow_base.field_typing import BaseLanguageModel, BaseMemory, Text
 
 
 class ConversationChainComponent(CustomComponent):

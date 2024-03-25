@@ -3,11 +3,11 @@ from typing import Any, Dict, List, Optional, Type
 from langchain import vectorstores
 from loguru import logger
 
-from langflow.interface.base import LangChainTypeCreator
-from langflow.interface.importing.utils import import_class
-from langflow.services.deps import get_settings_service
-from langflow.template.frontend_node.vectorstores import VectorStoreFrontendNode
-from langflow.utils.util import build_template_from_method
+from langflow_base.interface.base import LangChainTypeCreator
+from langflow_base.interface.importing.utils import import_class
+from langflow_base.services.deps import get_settings_service
+from langflow_base.template.frontend_node.vectorstores import VectorStoreFrontendNode
+from langflow_base.utils.util import build_template_from_method
 
 
 class VectorstoreCreator(LangChainTypeCreator):

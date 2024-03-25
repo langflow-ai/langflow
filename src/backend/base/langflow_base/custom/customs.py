@@ -1,4 +1,4 @@
-from langflow.template import frontend_node
+from langflow_base.template import frontend_node
 
 # These should always be instantiated
 CUSTOM_NODES = {

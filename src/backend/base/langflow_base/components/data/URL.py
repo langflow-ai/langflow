@@ -3,7 +3,7 @@ from typing import Any, Dict
 from langchain_community.document_loaders.web_base import WebBaseLoader
 
 from langflow import CustomComponent
-from langflow.schema import Record
+from langflow_base.schema import Record
 
 
 class URLComponent(CustomComponent):

@@ -6,8 +6,8 @@ from langchain_community.vectorstores.supabase import SupabaseVectorStore
 from supabase.client import Client, create_client
 
 from langflow import CustomComponent
-from langflow.field_typing import Embeddings, NestedDict
-from langflow.schema.schema import Record
+from langflow_base.field_typing import Embeddings, NestedDict
+from langflow_base.schema.schema import Record
 
 
 class SupabaseComponent(CustomComponent):

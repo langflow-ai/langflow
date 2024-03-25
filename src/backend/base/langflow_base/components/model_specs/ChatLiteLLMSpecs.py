@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, Optional, Union
 from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
 
 from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel
+from langflow_base.field_typing import BaseLanguageModel
 
 
 class ChatLiteLLMComponent(CustomComponent):

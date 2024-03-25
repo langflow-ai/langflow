@@ -6,19 +6,19 @@ import duckdb
 from loguru import logger
 from platformdirs import user_cache_dir
 
-from langflow.services.base import Service
-from langflow.services.monitor.schema import (
+from langflow_base.services.base import Service
+from langflow_base.services.monitor.schema import (
     MessageModel,
     TransactionModel,
     VertexBuildModel,
 )
-from langflow.services.monitor.utils import (
+from langflow_base.services.monitor.utils import (
     add_row_to_table,
     drop_and_create_table_if_schema_mismatch,
 )
 
 if TYPE_CHECKING:
-    from langflow.services.settings.manager import SettingsService
+    from langflow_base.services.settings.manager import SettingsService
 
 
 class MonitorService(Service):

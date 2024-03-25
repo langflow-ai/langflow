@@ -2,8 +2,8 @@ from typing import Dict, Optional
 
 from langchain_community.llms.ctransformers import CTransformers
 
-from langflow.components.models.base.model import LCModelComponent
-from langflow.field_typing import Text
+from langflow_base.components.models.base.model import LCModelComponent
+from langflow_base.field_typing import Text
 
 
 class CTransformersComponent(LCModelComponent):

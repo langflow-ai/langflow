@@ -1,6 +1,6 @@
 from langchain_core.documents import Document
 
-from langflow.schema import Record
+from langflow_base.schema import Record
 
 
 def docs_to_records(documents: list[Document]) -> list[Record]:

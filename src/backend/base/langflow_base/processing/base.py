@@ -4,8 +4,8 @@ from langchain.agents.agent import AgentExecutor
 from langchain.callbacks.base import BaseCallbackHandler
 from loguru import logger
 
-from langflow.processing.process import fix_memory_inputs, format_actions
-from langflow.services.deps import get_plugins_service
+from langflow_base.processing.process import fix_memory_inputs, format_actions
+from langflow_base.services.deps import get_plugins_service
 
 if TYPE_CHECKING:
     from langfuse.callback import CallbackHandler  # type: ignore
@@ -22,7 +22,7 @@ def setup_callbacks(sync, trace_id, **kwargs):
 
 
 def get_langfuse_callback(trace_id):
-    from langflow.services.deps import get_plugins_service
+    from langflow_base.services.deps import get_plugins_service
 
     logger.debug("Initializing langfuse callback")
     if langfuse := get_plugins_service().get("langfuse"):

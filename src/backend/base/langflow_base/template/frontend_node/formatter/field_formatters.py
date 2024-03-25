@@ -1,10 +1,10 @@
 import re
 from typing import ClassVar, Dict, Optional
 
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
-from langflow.template.frontend_node.formatter.base import FieldFormatter
-from langflow.utils.constants import ANTHROPIC_MODELS, CHAT_OPENAI_MODELS, OPENAI_MODELS
+from langflow_base.template.field.base import TemplateField
+from langflow_base.template.frontend_node.constants import FORCE_SHOW_FIELDS
+from langflow_base.template.frontend_node.formatter.base import FieldFormatter
+from langflow_base.utils.constants import ANTHROPIC_MODELS, CHAT_OPENAI_MODELS, OPENAI_MODELS
 
 
 class OpenAIAPIKeyFormatter(FieldFormatter):

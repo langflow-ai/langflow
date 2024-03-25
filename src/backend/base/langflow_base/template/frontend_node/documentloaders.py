@@ -1,7 +1,7 @@
 from typing import ClassVar, Dict, Optional
 
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
+from langflow_base.template.field.base import TemplateField
+from langflow_base.template.frontend_node.base import FrontendNode
 
 
 def build_file_field(fileTypes: list, name: str = "file_path") -> TemplateField:

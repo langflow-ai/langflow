@@ -3,12 +3,12 @@ from typing import TYPE_CHECKING, Any
 import socketio  # type: ignore
 from loguru import logger
 
-from langflow.services.base import Service
-from langflow.services.deps import get_chat_service
-from langflow.services.socket.utils import build_vertex, get_vertices
+from langflow_base.services.base import Service
+from langflow_base.services.deps import get_chat_service
+from langflow_base.services.socket.utils import build_vertex, get_vertices
 
 if TYPE_CHECKING:
-    from langflow.services.cache.service import BaseCacheService
+    from langflow_base.services.cache.service import BaseCacheService
 
 
 class SocketIOService(Service):

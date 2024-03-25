@@ -1,8 +1,8 @@
 from typing import Optional, Union
 
-from langflow.base.io.chat import ChatComponent
-from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow_base.base.io.chat import ChatComponent
+from langflow_base.field_typing import Text
+from langflow_base.schema import Record
 
 
 class ChatInput(ChatComponent):

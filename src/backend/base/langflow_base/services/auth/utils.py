@@ -9,11 +9,11 @@ from jose import JWTError, jwt
 from sqlmodel import Session
 from starlette.websockets import WebSocket
 
-from langflow.services.database.models.api_key.crud import check_key
-from langflow.services.database.models.api_key.model import ApiKey
-from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
-from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session, get_settings_service
+from langflow_base.services.database.models.api_key.crud import check_key
+from langflow_base.services.database.models.api_key.model import ApiKey
+from langflow_base.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
+from langflow_base.services.database.models.user.model import User
+from langflow_base.services.deps import get_session, get_settings_service
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
 

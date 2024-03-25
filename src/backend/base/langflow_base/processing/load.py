@@ -2,8 +2,8 @@ import json
 from pathlib import Path
 from typing import Optional, Union
 
-from langflow.graph import Graph
-from langflow.processing.process import process_tweaks
+from langflow_base.graph import Graph
+from langflow_base.processing.process import process_tweaks
 
 
 def load_flow_from_json(flow: Union[Path, str, dict], tweaks: Optional[dict] = None) -> Graph:

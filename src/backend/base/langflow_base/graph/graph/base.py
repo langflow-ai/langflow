@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, Dict, Generator, List, Optional, Type, Union
 
 from loguru import logger
 
-from langflow.graph.edge.base import ContractEdge
-from langflow.graph.graph.constants import lazy_load_vertex_dict
-from langflow.graph.graph.state_manager import GraphStateManager
-from langflow.graph.graph.utils import process_flow
-from langflow.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes, RunOutputs
-from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import (
+from langflow_base.graph.edge.base import ContractEdge
+from langflow_base.graph.graph.constants import lazy_load_vertex_dict
+from langflow_base.graph.graph.state_manager import GraphStateManager
+from langflow_base.graph.graph.utils import process_flow
+from langflow_base.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes, RunOutputs
+from langflow_base.graph.vertex.base import Vertex
+from langflow_base.graph.vertex.types import (
     ChatVertex,
     FileToolVertex,
     LLMVertex,
@@ -19,11 +19,11 @@ from langflow.graph.vertex.types import (
     StateVertex,
     ToolkitVertex,
 )
-from langflow.interface.tools.constants import FILE_TOOLS
-from langflow.schema import Record
+from langflow_base.interface.tools.constants import FILE_TOOLS
+from langflow_base.schema import Record
 
 if TYPE_CHECKING:
-    from langflow.graph.schema import ResultData
+    from langflow_base.graph.schema import ResultData
 
 
 class Graph:

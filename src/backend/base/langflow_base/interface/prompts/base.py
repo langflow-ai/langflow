@@ -2,14 +2,14 @@ from typing import Dict, List, Optional, Type
 
 from langchain import prompts
 
-from langflow.custom.customs import get_custom_nodes
-from langflow.interface.base import LangChainTypeCreator
-from langflow.interface.importing.utils import import_class
-from langflow.services.deps import get_settings_service
+from langflow_base.custom.customs import get_custom_nodes
+from langflow_base.interface.base import LangChainTypeCreator
+from langflow_base.interface.importing.utils import import_class
+from langflow_base.services.deps import get_settings_service
 
-from langflow.template.frontend_node.prompts import PromptFrontendNode
+from langflow_base.template.frontend_node.prompts import PromptFrontendNode
 from loguru import logger
-from langflow.utils.util import build_template_from_class
+from langflow_base.utils.util import build_template_from_class
 
 
 class PromptCreator(LangChainTypeCreator):
@@ -29,7 +29,7 @@ class PromptCreator(LangChainTypeCreator):
                 for prompt_name in prompts.__all__
             }
             # Merge CUSTOM_PROMPTS into self.type_dict
-            from langflow.interface.prompts.custom import CUSTOM_PROMPTS
+            from langflow_base.interface.prompts.custom import CUSTOM_PROMPTS
 
             self.type_dict.update(CUSTOM_PROMPTS)
             # Now filter according to settings.prompts

@@ -3,9 +3,9 @@ import os
 import yaml
 from loguru import logger
 
-from langflow.services.base import Service
-from langflow.services.settings.auth import AuthSettings
-from langflow.services.settings.base import Settings
+from langflow_base.services.base import Service
+from langflow_base.services.settings.auth import AuthSettings
+from langflow_base.services.settings.base import Settings
 
 
 class SettingsService(Service):

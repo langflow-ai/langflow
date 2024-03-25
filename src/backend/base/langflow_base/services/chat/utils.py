@@ -3,9 +3,9 @@ from typing import Any
 from langchain.agents import AgentExecutor
 from langchain.chains.base import Chain
 from langchain_core.runnables import Runnable
-from langflow.api.v1.schemas import ChatMessage
-from langflow.interface.utils import try_setting_streaming_options
-from langflow.processing.base import get_result_and_steps
+from langflow_base.api.v1.schemas import ChatMessage
+from langflow_base.interface.utils import try_setting_streaming_options
+from langflow_base.processing.base import get_result_and_steps
 from loguru import logger
 
 LANGCHAIN_RUNNABLES = (Chain, Runnable, AgentExecutor)

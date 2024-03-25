@@ -1,4 +1,4 @@
-from langflow.services.cache.service import (
+from langflow_base.services.cache.service import (
     AsyncInMemoryCache,
     BaseCacheService,
     RedisCache,

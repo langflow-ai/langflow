@@ -3,7 +3,7 @@ from typing import List
 from langchain_core.documents import Document
 
 from langflow import CustomComponent
-from langflow.schema import Record
+from langflow_base.schema import Record
 
 
 class DocumentToRecordComponent(CustomComponent):

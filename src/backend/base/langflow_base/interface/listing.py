@@ -1,5 +1,5 @@
-from langflow.services.deps import get_settings_service
-from langflow.utils.lazy_load import LazyLoadDictBase
+from langflow_base.services.deps import get_settings_service
+from langflow_base.utils.lazy_load import LazyLoadDictBase
 
 
 class AllTypesDict(LazyLoadDictBase):
@@ -18,7 +18,7 @@ class AllTypesDict(LazyLoadDictBase):
         }
 
     def get_type_dict(self):
-        from langflow.interface.types import get_all_types_dict
+        from langflow_base.interface.types import get_all_types_dict
 
         settings_service = get_settings_service()
         return get_all_types_dict(settings_service.settings.COMPONENTS_PATH)

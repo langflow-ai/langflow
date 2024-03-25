@@ -2,10 +2,10 @@ from typing import List, Optional
 
 from langchain.embeddings.base import Embeddings
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.components.vectorstores.Weaviate import WeaviateVectorStoreComponent
-from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow_base.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow_base.components.vectorstores.Weaviate import WeaviateVectorStoreComponent
+from langflow_base.field_typing import Text
+from langflow_base.schema import Record
 
 
 class WeaviateSearchVectorStore(WeaviateVectorStoreComponent, LCVectorStoreComponent):

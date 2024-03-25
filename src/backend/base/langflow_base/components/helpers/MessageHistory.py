@@ -1,8 +1,8 @@
 from typing import List, Optional
 
 from langflow import CustomComponent
-from langflow.memory import get_messages
-from langflow.schema import Record
+from langflow_base.memory import get_messages
+from langflow_base.schema import Record
 
 
 class MessageHistoryComponent(CustomComponent):

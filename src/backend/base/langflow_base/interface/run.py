@@ -2,7 +2,7 @@ from typing import Dict, Tuple
 
 from loguru import logger
 
-from langflow.graph import Graph
+from langflow_base.graph import Graph
 
 
 async def build_sorted_vertices(data_graph, flow_id: str) -> Tuple[Graph, Dict]:

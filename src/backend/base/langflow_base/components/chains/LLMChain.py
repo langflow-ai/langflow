@@ -3,7 +3,7 @@ from typing import Optional
 from langchain.chains import LLMChain
 
 from langflow import CustomComponent
-from langflow.field_typing import (
+from langflow_base.field_typing import (
     BaseLanguageModel,
     BaseMemory,
     BasePromptTemplate,

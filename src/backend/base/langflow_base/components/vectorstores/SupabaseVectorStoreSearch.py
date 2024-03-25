@@ -3,9 +3,9 @@ from typing import List
 from langchain_community.vectorstores.supabase import SupabaseVectorStore
 from supabase.client import Client, create_client
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.field_typing import Embeddings, Text
-from langflow.schema import Record
+from langflow_base.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow_base.field_typing import Embeddings, Text
+from langflow_base.schema import Record
 
 
 class SupabaseSearchComponent(LCVectorStoreComponent):

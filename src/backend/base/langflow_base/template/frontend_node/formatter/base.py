@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from langflow.template.field.base import TemplateField
+from langflow_base.template.field.base import TemplateField
 from pydantic import BaseModel
 
 

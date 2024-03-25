@@ -5,7 +5,7 @@ from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain_core.documents import Document
 
 from langflow import CustomComponent
-from langflow.field_typing import BaseMemory, BaseRetriever, Text
+from langflow_base.field_typing import BaseMemory, BaseRetriever, Text
 
 
 class RetrievalQAComponent(CustomComponent):

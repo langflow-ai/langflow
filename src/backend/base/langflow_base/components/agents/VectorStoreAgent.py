@@ -2,7 +2,7 @@ from langflow import CustomComponent
 from langchain.agents import AgentExecutor, create_vectorstore_agent
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreToolkit
 from typing import Union, Callable
-from langflow.field_typing import BaseLanguageModel
+from langflow_base.field_typing import BaseLanguageModel
 
 
 class VectorStoreAgentComponent(CustomComponent):

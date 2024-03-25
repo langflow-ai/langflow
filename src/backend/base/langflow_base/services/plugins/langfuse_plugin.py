@@ -1,7 +1,7 @@
 from typing import Optional
 
-from langflow.services.deps import get_settings_service
-from langflow.services.plugins.base import CallbackPlugin
+from langflow_base.services.deps import get_settings_service
+from langflow_base.services.plugins.base import CallbackPlugin
 from loguru import logger
 
 

@@ -4,10 +4,10 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
-from langflow.services.database.models.credential.schema import CredentialType
+from langflow_base.services.database.models.credential.schema import CredentialType
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.user import User
+    from langflow_base.services.database.models.user import User
 
 
 class CredentialBase(SQLModel):

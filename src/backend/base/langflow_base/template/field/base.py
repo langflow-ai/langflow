@@ -9,7 +9,7 @@ from pydantic import (
     model_serializer,
 )
 
-from langflow.field_typing.range_spec import RangeSpec
+from langflow_base.field_typing.range_spec import RangeSpec
 
 
 class TemplateField(BaseModel):

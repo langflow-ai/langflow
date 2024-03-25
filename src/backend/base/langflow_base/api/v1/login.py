@@ -2,14 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
-from langflow.api.v1.schemas import Token
-from langflow.services.auth.utils import (
+from langflow_base.api.v1.schemas import Token
+from langflow_base.services.auth.utils import (
     authenticate_user,
     create_refresh_token,
     create_user_longterm_token,
     create_user_tokens,
 )
-from langflow.services.deps import get_session, get_settings_service
+from langflow_base.services.deps import get_session, get_settings_service
 
 router = APIRouter(tags=["Login"])
 

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from langflow.template.field.base import TemplateField
+from langflow_base.template.field.base import TemplateField
 
 
 class DefaultPromptField(TemplateField):

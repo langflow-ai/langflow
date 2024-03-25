@@ -3,7 +3,7 @@ from typing import Optional, Union
 from langchain.llms import BaseLLM
 from langchain_community.chat_models.openai import ChatOpenAI
 from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel, NestedDict
+from langflow_base.field_typing import BaseLanguageModel, NestedDict
 
 
 class ChatOpenAIComponent(CustomComponent):

@@ -8,7 +8,7 @@ import yaml
 from pydantic import model_validator, validator
 from pydantic_settings import BaseSettings
 
-from langflow.utils.logger import logger
+from langflow_base.utils.logger import logger
 
 BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
 

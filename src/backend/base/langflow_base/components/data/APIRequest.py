@@ -5,7 +5,7 @@ from typing import List, Optional
 import httpx
 
 from langflow import CustomComponent
-from langflow.schema import Record
+from langflow_base.schema import Record
 
 
 class APIRequest(CustomComponent):

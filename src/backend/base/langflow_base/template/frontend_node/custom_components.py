@@ -1,12 +1,12 @@
 from typing import Optional
 
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.template.base import Template
+from langflow_base.template.field.base import TemplateField
+from langflow_base.template.frontend_node.base import FrontendNode
+from langflow_base.template.template.base import Template
 
 DEFAULT_CUSTOM_COMPONENT_CODE = """from langflow import CustomComponent
 from typing import Optional, List, Dict, Union
-from langflow.field_typing import (
+from langflow_base.field_typing import (
     AgentExecutor,
     BaseChatMemory,
     BaseLanguageModel,

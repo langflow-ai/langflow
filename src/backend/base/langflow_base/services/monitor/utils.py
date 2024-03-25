@@ -4,10 +4,10 @@ import duckdb
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.services.deps import get_monitor_service
+from langflow_base.services.deps import get_monitor_service
 
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import ResultDataResponse
+    from langflow_base.api.v1.schemas import ResultDataResponse
 
 
 INDEX_KEY = "index"
@@ -115,7 +115,7 @@ async def log_message(
     artifacts: Optional[dict] = None,
 ):
     try:
-        from langflow.graph.vertex.base import Vertex
+        from langflow_base.graph.vertex.base import Vertex
 
         if isinstance(session_id, Vertex):
             session_id = await session_id.build()  # type: ignore

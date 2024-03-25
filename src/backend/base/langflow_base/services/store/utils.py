@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING, List
 import httpx
 
 if TYPE_CHECKING:
-    from langflow.services.store.schema import ListComponentResponse
-    from langflow.services.store.service import StoreService
+    from langflow_base.services.store.schema import ListComponentResponse
+    from langflow_base.services.store.service import StoreService
 
 
 def process_tags_for_post(component_dict):

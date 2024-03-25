@@ -1,7 +1,7 @@
 from typing import Optional
 
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
+from langflow_base.template.field.base import TemplateField
+from langflow_base.template.frontend_node.base import FrontendNode
 
 
 class EmbeddingFrontendNode(FrontendNode):

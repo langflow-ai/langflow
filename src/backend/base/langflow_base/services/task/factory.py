@@ -1,5 +1,5 @@
-from langflow.services.task.service import TaskService
-from langflow.services.factory import ServiceFactory
+from langflow_base.services.task.service import TaskService
+from langflow_base.services.factory import ServiceFactory
 
 
 class TaskServiceFactory(ServiceFactory):

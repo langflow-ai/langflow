@@ -8,8 +8,8 @@ from cachetools import TTLCache, cachedmethod, keys
 from fastapi import HTTPException
 from loguru import logger
 
-from langflow.interface.custom.eval import eval_custom_component_code
-from langflow.interface.custom.schema import (
+from langflow_base.interface.custom.eval import eval_custom_component_code
+from langflow_base.interface.custom.schema import (
     CallableCodeDetails,
     ClassCodeDetails,
     MissingDefault,
@@ -21,7 +21,7 @@ class CodeSyntaxError(HTTPException):
 
 
 def get_data_type():
-    from langflow.field_typing import Data
+    from langflow_base.field_typing import Data
 
     return Data
 

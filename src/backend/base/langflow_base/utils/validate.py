@@ -4,7 +4,7 @@ import importlib
 from types import FunctionType
 from typing import Dict, List, Optional, Union
 
-from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+from langflow_base.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
 
 
 def add_type_ignores():

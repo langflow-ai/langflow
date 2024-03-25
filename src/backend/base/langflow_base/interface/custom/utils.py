@@ -10,24 +10,24 @@ from fastapi import HTTPException
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.field_typing.range_spec import RangeSpec
-from langflow.interface.custom.attributes import ATTR_FUNC_MAPPING
-from langflow.interface.custom.code_parser.utils import extract_inner_type
-from langflow.interface.custom.custom_component import CustomComponent
-from langflow.interface.custom.directory_reader.utils import (
+from langflow_base.field_typing.range_spec import RangeSpec
+from langflow_base.interface.custom.attributes import ATTR_FUNC_MAPPING
+from langflow_base.interface.custom.code_parser.utils import extract_inner_type
+from langflow_base.interface.custom.custom_component import CustomComponent
+from langflow_base.interface.custom.directory_reader.utils import (
     build_custom_component_list_from_path,
     determine_component_name,
     merge_nested_dicts_with_renaming,
 )
-from langflow.interface.custom.eval import eval_custom_component_code
-from langflow.interface.custom.schema import MissingDefault
-from langflow.schema import dotdict
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.custom_components import (
+from langflow_base.interface.custom.eval import eval_custom_component_code
+from langflow_base.interface.custom.schema import MissingDefault
+from langflow_base.schema import dotdict
+from langflow_base.template.field.base import TemplateField
+from langflow_base.template.frontend_node.custom_components import (
     CustomComponentFrontendNode,
 )
-from langflow.utils import validate
-from langflow.utils.util import get_base_classes
+from langflow_base.utils import validate
+from langflow_base.utils.util import get_base_classes
 
 
 class UpdateBuildConfigError(Exception):

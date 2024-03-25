@@ -10,15 +10,15 @@ from langchain_core.runnables.base import Runnable
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.graph.graph.base import Graph
-from langflow.graph.schema import INPUT_FIELD_NAME, RunOutputs
-from langflow.graph.vertex.base import Vertex
-from langflow.interface.custom.custom_component import CustomComponent
-from langflow.interface.run import get_memory_key, update_memory_keys
-from langflow.services.session.service import SessionService
+from langflow_base.graph.graph.base import Graph
+from langflow_base.graph.schema import INPUT_FIELD_NAME, RunOutputs
+from langflow_base.graph.vertex.base import Vertex
+from langflow_base.interface.custom.custom_component import CustomComponent
+from langflow_base.interface.run import get_memory_key, update_memory_keys
+from langflow_base.services.session.service import SessionService
 
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import InputValueRequest, Tweaks
+    from langflow_base.api.v1.schemas import InputValueRequest, Tweaks
 
 
 def fix_memory_inputs(langchain_object):

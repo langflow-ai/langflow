@@ -6,7 +6,7 @@ from typing import Callable, List, Optional, Text
 
 import yaml
 
-from langflow.schema.schema import Record
+from langflow_base.schema.schema import Record
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable

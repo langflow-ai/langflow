@@ -1,7 +1,7 @@
 from typing import List
 
 from langflow import CustomComponent
-from langflow.schema import Record
+from langflow_base.schema import Record
 
 
 class ListFlowsComponent(CustomComponent):

@@ -1,8 +1,8 @@
 from typing import List
 
 from langflow import CustomComponent
-from langflow.schema import Record
-from langflow.utils.constants import LOADERS_INFO
+from langflow_base.schema import Record
+from langflow_base.utils.constants import LOADERS_INFO
 
 
 class FileLoaderComponent(CustomComponent):

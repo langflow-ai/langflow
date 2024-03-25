@@ -3,10 +3,10 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from asgiref.sync import async_to_sync
 from celery.exceptions import SoftTimeLimitExceeded  # type: ignore
 
-from langflow.core.celery_app import celery_app
+from langflow_base.core.celery_app import celery_app
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
+    from langflow_base.graph.vertex.base import Vertex
 
 
 @celery_app.task(acks_late=True)

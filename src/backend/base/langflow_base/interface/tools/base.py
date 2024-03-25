@@ -6,22 +6,22 @@ from langchain.agents.load_tools import (
     _LLM_TOOLS,
 )
 
-from langflow.custom import customs
-from langflow.interface.base import LangChainTypeCreator
-from langflow.interface.tools.constants import (
+from langflow_base.custom import customs
+from langflow_base.interface.base import LangChainTypeCreator
+from langflow_base.interface.tools.constants import (
     ALL_TOOLS_NAMES,
     CUSTOM_TOOLS,
     FILE_TOOLS,
     OTHER_TOOLS,
 )
-from langflow.interface.tools.util import get_tool_params
-from langflow.services.deps import get_settings_service
+from langflow_base.interface.tools.util import get_tool_params
+from langflow_base.services.deps import get_settings_service
 
-from langflow.template.field.base import TemplateField
-from langflow.template.template.base import Template
-from langflow.utils import util
-from langflow.utils.util import build_template_from_class
-from langflow.utils.logger import logger
+from langflow_base.template.field.base import TemplateField
+from langflow_base.template.template.base import Template
+from langflow_base.utils import util
+from langflow_base.utils.util import build_template_from_class
+from langflow_base.utils.logger import logger
 
 TOOL_INPUTS = {
     "str": TemplateField(

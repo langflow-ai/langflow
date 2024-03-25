@@ -4,8 +4,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
 from langflow import CustomComponent
-from langflow.schema import Record
-from langflow.utils.util import build_loader_repr_from_records, unescape_string
+from langflow_base.schema import Record
+from langflow_base.utils.util import build_loader_repr_from_records, unescape_string
 
 
 class RecursiveCharacterTextSplitterComponent(CustomComponent):

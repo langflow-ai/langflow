@@ -3,20 +3,20 @@ from collections import defaultdict
 from fastapi import APIRouter, HTTPException
 from loguru import logger
 
-from langflow.api.v1.base import (
+from langflow_base.api.v1.base import (
     Code,
     CodeValidationResponse,
     PromptValidationResponse,
     ValidatePromptRequest,
 )
-from langflow.base.prompts.utils import (
+from langflow_base.base.prompts.utils import (
     add_new_variables_to_template,
     get_old_custom_fields,
     remove_old_variables_from_template,
     update_input_variables_field,
     validate_prompt,
 )
-from langflow.utils.validate import validate_code
+from langflow_base.utils.validate import validate_code
 
 # build router
 router = APIRouter(prefix="/validate", tags=["Validate"])

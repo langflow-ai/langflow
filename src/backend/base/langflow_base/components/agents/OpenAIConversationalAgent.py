@@ -10,7 +10,7 @@ from langchain.schema.memory import BaseMemory
 from langchain.tools import Tool
 from langchain_community.chat_models import ChatOpenAI
 from langflow import CustomComponent
-from langflow.field_typing.range_spec import RangeSpec
+from langflow_base.field_typing.range_spec import RangeSpec
 
 
 class ConversationalAgent(CustomComponent):

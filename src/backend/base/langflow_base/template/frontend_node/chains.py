@@ -1,9 +1,9 @@
 from typing import Optional
 
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.frontend_node.constants import QA_CHAIN_TYPES
-from langflow.template.template.base import Template
+from langflow_base.template.field.base import TemplateField
+from langflow_base.template.frontend_node.base import FrontendNode
+from langflow_base.template.frontend_node.constants import QA_CHAIN_TYPES
+from langflow_base.template.template.base import Template
 
 
 class ChainFrontendNode(FrontendNode):

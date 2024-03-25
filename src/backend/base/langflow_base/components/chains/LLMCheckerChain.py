@@ -1,7 +1,7 @@
 from langchain.chains import LLMCheckerChain
 
 from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel, Text
+from langflow_base.field_typing import BaseLanguageModel, Text
 
 
 class LLMCheckerChainComponent(CustomComponent):

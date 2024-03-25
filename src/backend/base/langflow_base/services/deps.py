@@ -1,21 +1,21 @@
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Generator
 
-from langflow.services import ServiceType, service_manager
+from langflow_base.services import ServiceType, service_manager
 
 if TYPE_CHECKING:
-    from langflow.services.cache.service import BaseCacheService
-    from langflow.services.chat.service import ChatService
-    from langflow.services.credentials.service import CredentialService
-    from langflow.services.database.service import DatabaseService
-    from langflow.services.monitor.service import MonitorService
-    from langflow.services.plugins.service import PluginService
-    from langflow.services.session.service import SessionService
-    from langflow.services.settings.service import SettingsService
-    from langflow.services.socket.service import SocketIOService
-    from langflow.services.storage.service import StorageService
-    from langflow.services.store.service import StoreService
-    from langflow.services.task.service import TaskService
+    from langflow_base.services.cache.service import BaseCacheService
+    from langflow_base.services.chat.service import ChatService
+    from langflow_base.services.credentials.service import CredentialService
+    from langflow_base.services.database.service import DatabaseService
+    from langflow_base.services.monitor.service import MonitorService
+    from langflow_base.services.plugins.service import PluginService
+    from langflow_base.services.session.service import SessionService
+    from langflow_base.services.settings.service import SettingsService
+    from langflow_base.services.socket.service import SocketIOService
+    from langflow_base.services.storage.service import StorageService
+    from langflow_base.services.store.service import StoreService
+    from langflow_base.services.task.service import TaskService
     from sqlmodel import Session
 
 
@@ -40,7 +40,7 @@ def get_settings_service() -> "SettingsService":
         return service_manager.get(ServiceType.SETTINGS_SERVICE)  # type: ignore
     except ValueError:
         # initialize settings service
-        from langflow.services.manager import initialize_settings_service
+        from langflow_base.services.manager import initialize_settings_service
 
         initialize_settings_service()
         return service_manager.get(ServiceType.SETTINGS_SERVICE)  # type: ignore

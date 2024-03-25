@@ -2,10 +2,10 @@ from typing import List
 
 from langchain.embeddings.base import Embeddings
 
-from langflow.components.vectorstores.base.model import LCVectorStoreComponent
-from langflow.components.vectorstores.pgvector import PGVectorComponent
-from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow_base.components.vectorstores.base.model import LCVectorStoreComponent
+from langflow_base.components.vectorstores.pgvector import PGVectorComponent
+from langflow_base.field_typing import Text
+from langflow_base.schema import Record
 
 
 class PGVectorSearchComponent(PGVectorComponent, LCVectorStoreComponent):

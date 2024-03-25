@@ -13,7 +13,7 @@
 
 from langchain_core.documents import Document
 from langflow import CustomComponent
-from langflow.services.database.models.base import orjson_dumps
+from langflow_base.services.database.models.base import orjson_dumps
 
 
 class JSONDocumentBuilder(CustomComponent):

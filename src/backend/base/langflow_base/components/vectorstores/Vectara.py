@@ -8,8 +8,8 @@ from langchain_community.vectorstores.vectara import Vectara
 from langchain_core.vectorstores import VectorStore
 
 from langflow import CustomComponent
-from langflow.field_typing import BaseRetriever
-from langflow.schema.schema import Record
+from langflow_base.field_typing import BaseRetriever
+from langflow_base.schema.schema import Record
 
 
 class VectaraComponent(CustomComponent):

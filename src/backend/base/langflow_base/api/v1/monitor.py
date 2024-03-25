@@ -1,9 +1,9 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from langflow.services.deps import get_monitor_service
-from langflow.services.monitor.schema import VertexBuildMapModel
-from langflow.services.monitor.service import MonitorService
+from langflow_base.services.deps import get_monitor_service
+from langflow_base.services.monitor.schema import VertexBuildMapModel
+from langflow_base.services.monitor.service import MonitorService
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
 

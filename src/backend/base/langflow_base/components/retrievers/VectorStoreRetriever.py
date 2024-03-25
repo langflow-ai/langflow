@@ -1,7 +1,7 @@
 from langchain_core.vectorstores import VectorStoreRetriever
 
 from langflow import CustomComponent
-from langflow.field_typing import VectorStore
+from langflow_base.field_typing import VectorStore
 
 
 class VectoStoreRetrieverComponent(CustomComponent):

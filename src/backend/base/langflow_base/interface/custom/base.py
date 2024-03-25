@@ -1,11 +1,11 @@
 from typing import Any, Dict, List, Optional, Type
 
 
-from langflow.interface.base import LangChainTypeCreator
+from langflow_base.interface.base import LangChainTypeCreator
 
-# from langflow.interface.custom.custom import CustomComponent
-from langflow.interface.custom.custom_component import CustomComponent
-from langflow.template.frontend_node.custom_components import (
+# from langflow_base.interface.custom.custom import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+from langflow_base.template.frontend_node.custom_components import (
     CustomComponentFrontendNode,
 )
 from loguru import logger
@@ -29,7 +29,7 @@ class CustomComponentCreator(LangChainTypeCreator):
         return self.type_dict
 
     def get_signature(self, name: str) -> Optional[Dict]:
-        from langflow.custom.customs import get_custom_nodes
+        from langflow_base.custom.customs import get_custom_nodes
 
         try:
             if name in get_custom_nodes(self.type_name).keys():

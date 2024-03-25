@@ -1,16 +1,16 @@
 from typing import TYPE_CHECKING
 
-from langflow.services.cache.service import (
+from langflow_base.services.cache.service import (
     AsyncInMemoryCache,
     BaseCacheService,
     RedisCache,
     ThreadingInMemoryCache,
 )
-from langflow.services.factory import ServiceFactory
-from langflow.utils.logger import logger
+from langflow_base.services.factory import ServiceFactory
+from langflow_base.utils.logger import logger
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
+    from langflow_base.services.settings.service import SettingsService
 
 
 class CacheServiceFactory(ServiceFactory):

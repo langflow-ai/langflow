@@ -4,11 +4,11 @@ from typing import ClassVar, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field, field_serializer, model_serializer
 
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
-from langflow.template.frontend_node.formatter import field_formatters
-from langflow.template.template.base import Template
-from langflow.utils import constants
+from langflow_base.template.field.base import TemplateField
+from langflow_base.template.frontend_node.constants import FORCE_SHOW_FIELDS
+from langflow_base.template.frontend_node.formatter import field_formatters
+from langflow_base.template.template.base import Template
+from langflow_base.utils import constants
 
 
 class FieldFormatters(BaseModel):

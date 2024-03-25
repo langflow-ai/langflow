@@ -6,16 +6,16 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from langflow.api.v1.schemas import UsersResponse
-from langflow.services.auth.utils import (
+from langflow_base.api.v1.schemas import UsersResponse
+from langflow_base.services.auth.utils import (
     get_current_active_superuser,
     get_current_active_user,
     get_password_hash,
     verify_password,
 )
-from langflow.services.database.models.user import User, UserCreate, UserRead, UserUpdate
-from langflow.services.database.models.user.crud import get_user_by_id, update_user
-from langflow.services.deps import get_session, get_settings_service
+from langflow_base.services.database.models.user import User, UserCreate, UserRead, UserUpdate
+from langflow_base.services.database.models.user.crud import get_user_by_id, update_user
+from langflow_base.services.deps import get_session, get_settings_service
 
 router = APIRouter(tags=["Users"], prefix="/users")
 

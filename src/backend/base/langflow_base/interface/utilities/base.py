@@ -3,12 +3,12 @@ from typing import Dict, List, Optional, Type
 from langchain_community import utilities
 from loguru import logger
 
-from langflow.custom.customs import get_custom_nodes
-from langflow.interface.base import LangChainTypeCreator
-from langflow.interface.importing.utils import import_class
-from langflow.services.deps import get_settings_service
-from langflow.template.frontend_node.utilities import UtilitiesFrontendNode
-from langflow.utils.util import build_template_from_class
+from langflow_base.custom.customs import get_custom_nodes
+from langflow_base.interface.base import LangChainTypeCreator
+from langflow_base.interface.importing.utils import import_class
+from langflow_base.services.deps import get_settings_service
+from langflow_base.template.frontend_node.utilities import UtilitiesFrontendNode
+from langflow_base.utils.util import build_template_from_class
 
 
 class UtilityCreator(LangChainTypeCreator):

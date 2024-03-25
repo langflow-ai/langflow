@@ -1,5 +1,5 @@
 from langflow import CustomComponent
-from langflow.field_typing import Data
+from langflow_base.field_typing import Data
 
 
 class Component(CustomComponent):

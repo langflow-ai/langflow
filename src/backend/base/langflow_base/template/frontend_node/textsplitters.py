@@ -1,5 +1,5 @@
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
+from langflow_base.template.field.base import TemplateField
+from langflow_base.template.frontend_node.base import FrontendNode
 from langchain.text_splitter import Language
 
 

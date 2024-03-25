@@ -5,9 +5,9 @@ from uuid import UUID, uuid4
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.api_key import ApiKey
-    from langflow.services.database.models.credential import Credential
-    from langflow.services.database.models.flow import Flow
+    from langflow_base.services.database.models.api_key import ApiKey
+    from langflow_base.services.database.models.credential import Credential
+    from langflow_base.services.database.models.flow import Flow
 
 
 class User(SQLModel, table=True):

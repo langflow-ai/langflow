@@ -2,8 +2,8 @@ import asyncio
 from collections import defaultdict
 from typing import Any, Optional
 
-from langflow.services.base import Service
-from langflow.services.deps import get_cache_service
+from langflow_base.services.base import Service
+from langflow_base.services.deps import get_cache_service
 
 
 class ChatService(Service):

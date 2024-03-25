@@ -9,8 +9,8 @@ from langchain.base_language import BaseLanguageModel
 from loguru import logger
 from PIL.Image import Image
 
-from langflow.services.chat.config import ChatConfig
-from langflow.services.deps import get_settings_service
+from langflow_base.services.chat.config import ChatConfig
+from langflow_base.services.deps import get_settings_service
 
 
 def load_file_into_dict(file_path: str) -> dict:
@@ -101,7 +101,7 @@ def setup_llm_caching():
 def set_langchain_cache(settings):
     from langchain.globals import set_llm_cache
 
-    from langflow.interface.importing.utils import import_class
+    from langflow_base.interface.importing.utils import import_class
 
     if cache_type := os.getenv("LANGFLOW_LANGCHAIN_CACHE"):
         try:

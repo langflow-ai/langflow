@@ -3,7 +3,7 @@ from typing import List, Optional
 from langchain.text_splitter import Language
 
 from langflow import CustomComponent
-from langflow.schema.schema import Record
+from langflow_base.schema.schema import Record
 
 
 class LanguageRecursiveTextSplitterComponent(CustomComponent):

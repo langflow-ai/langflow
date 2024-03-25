@@ -2,7 +2,7 @@ from typing import Callable, Optional, Union
 
 from langchain.retrievers import MultiQueryRetriever
 from langflow import CustomComponent
-from langflow.field_typing import BaseLLM, BaseRetriever, PromptTemplate
+from langflow_base.field_typing import BaseLLM, BaseRetriever, PromptTemplate
 
 
 class MultiQueryRetrieverComponent(CustomComponent):

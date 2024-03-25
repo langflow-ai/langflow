@@ -1,6 +1,6 @@
 from langflow import CustomComponent
 from langchain.schema import Document
-from langflow.services.database.models.base import orjson_dumps
+from langflow_base.services.database.models.base import orjson_dumps
 from langchain_community.utilities.searchapi import SearchApiAPIWrapper
 from typing import Optional
 

@@ -3,10 +3,10 @@ from typing import Any, Dict, List, Optional
 # from langchain_community.chat_models import ChatOllama
 from langchain_community.chat_models import ChatOllama
 
-from langflow.components.models.base.model import LCModelComponent
+from langflow_base.components.models.base.model import LCModelComponent
 
 # from langchain.chat_models import ChatOllama
-from langflow.field_typing import Text
+from langflow_base.field_typing import Text
 
 # whe When a callback component is added to Langflow, the comment must be uncommented.
 # from langchain.callbacks.manager import CallbackManager

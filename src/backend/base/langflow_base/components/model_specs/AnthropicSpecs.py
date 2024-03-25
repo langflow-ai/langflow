@@ -4,7 +4,7 @@ from langchain_community.llms.anthropic import Anthropic
 from pydantic.v1 import SecretStr
 
 from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel, NestedDict
+from langflow_base.field_typing import BaseLanguageModel, NestedDict
 
 
 class AnthropicComponent(CustomComponent):

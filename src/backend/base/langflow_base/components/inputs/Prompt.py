@@ -1,7 +1,7 @@
 from langchain_core.prompts import PromptTemplate
 
 from langflow import CustomComponent
-from langflow.field_typing import Prompt, TemplateField, Text
+from langflow_base.field_typing import Prompt, TemplateField, Text
 
 
 class PromptComponent(CustomComponent):
@@ -20,7 +20,7 @@ class PromptComponent(CustomComponent):
         template: Prompt,
         **kwargs,
     ) -> Text:
-        from langflow.base.prompts.utils import dict_values_to_string
+        from langflow_base.base.prompts.utils import dict_values_to_string
 
         prompt_template = PromptTemplate.from_template(Text(template))
         kwargs = dict_values_to_string(kwargs)

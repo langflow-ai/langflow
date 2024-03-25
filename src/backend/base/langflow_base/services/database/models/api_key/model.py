@@ -6,7 +6,7 @@ from pydantic import validator
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.user import User
+    from langflow_base.services.database.models.user import User
 
 
 class ApiKeyBase(SQLModel):

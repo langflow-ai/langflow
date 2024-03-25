@@ -7,8 +7,8 @@ from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.pinecone import Pinecone
 
 from langflow import CustomComponent
-from langflow.field_typing import Embeddings
-from langflow.schema.schema import Record
+from langflow_base.field_typing import Embeddings
+from langflow_base.schema.schema import Record
 
 
 class PineconeComponent(CustomComponent):

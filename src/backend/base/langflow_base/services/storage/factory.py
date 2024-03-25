@@ -1,12 +1,12 @@
 from typing import TYPE_CHECKING
 
-from langflow.services.factory import ServiceFactory
-from langflow.services.storage.service import StorageService
+from langflow_base.services.factory import ServiceFactory
+from langflow_base.services.storage.service import StorageService
 from loguru import logger
 
 if TYPE_CHECKING:
-    from langflow.services.session.service import SessionService
-    from langflow.services.settings.service import SettingsService
+    from langflow_base.services.session.service import SessionService
+    from langflow_base.services.settings.service import SettingsService
 
 
 class StorageServiceFactory(ServiceFactory):

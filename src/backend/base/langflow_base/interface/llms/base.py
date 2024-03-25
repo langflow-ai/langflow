@@ -2,11 +2,11 @@ from typing import Dict, List, Optional, Type
 
 from loguru import logger
 
-from langflow.interface.base import LangChainTypeCreator
-from langflow.interface.custom_lists import llm_type_to_cls_dict
-from langflow.services.deps import get_settings_service
-from langflow.template.frontend_node.llms import LLMFrontendNode
-from langflow.utils.util import build_template_from_class
+from langflow_base.interface.base import LangChainTypeCreator
+from langflow_base.interface.custom_lists import llm_type_to_cls_dict
+from langflow_base.services.deps import get_settings_service
+from langflow_base.template.frontend_node.llms import LLMFrontendNode
+from langflow_base.utils.util import build_template_from_class
 
 
 class LLMCreator(LangChainTypeCreator):

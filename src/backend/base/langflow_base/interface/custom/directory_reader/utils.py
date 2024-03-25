@@ -1,7 +1,7 @@
 from loguru import logger
 
-from langflow.interface.custom.directory_reader import DirectoryReader
-from langflow.template.frontend_node.custom_components import (
+from langflow_base.interface.custom.directory_reader import DirectoryReader
+from langflow_base.template.frontend_node.custom_components import (
     CustomComponentFrontendNode,
 )
 

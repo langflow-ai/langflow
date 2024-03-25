@@ -3,12 +3,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from langflow.api.utils import check_langflow_version
-from langflow.services.auth import utils as auth_utils
-from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_settings_service, get_store_service
-from langflow.services.store.exceptions import CustomException
-from langflow.services.store.schema import (
+from langflow_base.api.utils import check_langflow_version
+from langflow_base.services.auth import utils as auth_utils
+from langflow_base.services.database.models.user.model import User
+from langflow_base.services.deps import get_settings_service, get_store_service
+from langflow_base.services.store.exceptions import CustomException
+from langflow_base.services.store.schema import (
     CreateComponentResponse,
     DownloadComponentResponse,
     ListComponentResponseModel,
@@ -16,7 +16,7 @@ from langflow.services.store.schema import (
     TagResponse,
     UsersLikesResponse,
 )
-from langflow.services.store.service import StoreService
+from langflow_base.services.store.service import StoreService
 
 router = APIRouter(prefix="/store", tags=["Components Store"])
 

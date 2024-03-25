@@ -1,4 +1,4 @@
-from langflow.services.storage.constants import EXTENSION_TO_CONTENT_TYPE
+from langflow_base.services.storage.constants import EXTENSION_TO_CONTENT_TYPE
 
 
 def build_content_type_from_extension(extension: str):

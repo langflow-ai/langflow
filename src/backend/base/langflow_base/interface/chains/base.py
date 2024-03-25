@@ -1,13 +1,13 @@
 from typing import Any, ClassVar, Dict, List, Optional, Type
 
-from langflow.custom.customs import get_custom_nodes
-from langflow.interface.base import LangChainTypeCreator
-from langflow.interface.importing.utils import import_class
-from langflow.services.deps import get_settings_service
+from langflow_base.custom.customs import get_custom_nodes
+from langflow_base.interface.base import LangChainTypeCreator
+from langflow_base.interface.importing.utils import import_class
+from langflow_base.services.deps import get_settings_service
 
-from langflow.template.frontend_node.chains import ChainFrontendNode
+from langflow_base.template.frontend_node.chains import ChainFrontendNode
 from loguru import logger
-from langflow.utils.util import build_template_from_class, build_template_from_method
+from langflow_base.utils.util import build_template_from_class, build_template_from_method
 from langchain import chains
 from langchain_experimental.sql import SQLDatabaseChain
 
@@ -35,7 +35,7 @@ class ChainCreator(LangChainTypeCreator):
             self.type_dict: dict[str, Any] = {
                 chain_name: import_class(f"langchain.chains.{chain_name}") for chain_name in chains.__all__
             }
-            from langflow.interface.chains.custom import CUSTOM_CHAINS
+            from langflow_base.interface.chains.custom import CUSTOM_CHAINS
 
             self.type_dict["SQLDatabaseChain"] = SQLDatabaseChain
 

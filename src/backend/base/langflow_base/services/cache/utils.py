@@ -10,7 +10,7 @@ from fastapi import UploadFile
 from platformdirs import user_cache_dir
 
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import BuildStatus
+    from langflow_base.api.v1.schemas import BuildStatus
 
 CACHE: Dict[str, Any] = {}
 

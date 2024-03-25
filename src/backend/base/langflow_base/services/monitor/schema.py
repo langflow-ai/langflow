@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Optional
 from pydantic import BaseModel, Field, field_serializer, validator
 
 if TYPE_CHECKING:
-    from langflow.schema import Record
+    from langflow_base.schema import Record
 
 
 class TransactionModel(BaseModel):

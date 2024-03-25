@@ -14,29 +14,29 @@ from langchain_core.documents import Document
 from loguru import logger
 from pydantic import ValidationError
 
-from langflow.interface.custom.eval import eval_custom_component_code
-from langflow.interface.custom.utils import get_function
-from langflow.interface.custom_lists import CUSTOM_NODES
-from langflow.interface.importing.utils import import_by_type
-from langflow.interface.initialize.llm import initialize_vertexai
-from langflow.interface.initialize.utils import (
+from langflow_base.interface.custom.eval import eval_custom_component_code
+from langflow_base.interface.custom.utils import get_function
+from langflow_base.interface.custom_lists import CUSTOM_NODES
+from langflow_base.interface.importing.utils import import_by_type
+from langflow_base.interface.initialize.llm import initialize_vertexai
+from langflow_base.interface.initialize.utils import (
     handle_format_kwargs,
     handle_node_type,
     handle_partial_variables,
 )
-from langflow.interface.initialize.vector_store import vecstore_initializer
-from langflow.interface.output_parsers.base import output_parser_creator
-from langflow.interface.retrievers.base import retriever_creator
-from langflow.interface.toolkits.base import toolkits_creator
-from langflow.interface.utils import load_file_into_dict
-from langflow.interface.wrappers.base import wrapper_creator
-from langflow.schema.schema import Record
-from langflow.utils import validate
-from langflow.utils.util import unescape_string
+from langflow_base.interface.initialize.vector_store import vecstore_initializer
+from langflow_base.interface.output_parsers.base import output_parser_creator
+from langflow_base.interface.retrievers.base import retriever_creator
+from langflow_base.interface.toolkits.base import toolkits_creator
+from langflow_base.interface.utils import load_file_into_dict
+from langflow_base.interface.wrappers.base import wrapper_creator
+from langflow_base.schema.schema import Record
+from langflow_base.utils import validate
+from langflow_base.utils.util import unescape_string
 
 if TYPE_CHECKING:
     from langflow import CustomComponent
-    from langflow.graph.vertex.base import Vertex
+    from langflow_base.graph.vertex.base import Vertex
 
 
 async def instantiate_class(
@@ -247,7 +247,7 @@ def instantiate_retriever(node_type, class_object, params):
 
 
 def instantiate_chains(node_type, class_object: Type[Chain], params: Dict):
-    from langflow.interface.chains.base import chain_creator
+    from langflow_base.interface.chains.base import chain_creator
 
     if "retriever" in params and hasattr(params["retriever"], "as_retriever"):
         params["retriever"] = params["retriever"].as_retriever()
@@ -261,7 +261,7 @@ def instantiate_chains(node_type, class_object: Type[Chain], params: Dict):
 
 
 def instantiate_agent(node_type, class_object: Type[agent_module.Agent], params: Dict):
-    from langflow.interface.agents.base import agent_creator
+    from langflow_base.interface.agents.base import agent_creator
 
     if node_type in agent_creator.from_method_nodes:
         method = agent_creator.from_method_nodes[node_type]

@@ -1,8 +1,8 @@
-from langflow.services.base import Service
+from langflow_base.services.base import Service
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
+    from langflow_base.services.settings.service import SettingsService
 
 
 class AuthService(Service):

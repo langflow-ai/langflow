@@ -1,7 +1,7 @@
 from langchain_core.runnables import Runnable
 
 from langflow import CustomComponent
-from langflow.field_typing import Text
+from langflow_base.field_typing import Text
 
 
 class RunnableExecComponent(CustomComponent):

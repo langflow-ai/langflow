@@ -3,10 +3,10 @@ from typing import Dict, Optional, Type, Union
 from langchain.chains import ConversationChain
 from langchain.memory.buffer import ConversationBufferMemory
 from langchain.schema import BaseMemory
-from langflow.interface.base import CustomChain
+from langflow_base.interface.base import CustomChain
 from pydantic.v1 import Field, root_validator
 from langchain.chains.question_answering import load_qa_chain
-from langflow.interface.utils import extract_input_variables_from_prompt
+from langflow_base.interface.utils import extract_input_variables_from_prompt
 from langchain.base_language import BaseLanguageModel
 
 DEFAULT_SUFFIX = """"

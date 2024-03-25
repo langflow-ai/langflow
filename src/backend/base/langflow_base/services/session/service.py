@@ -1,11 +1,11 @@
 from typing import TYPE_CHECKING, Optional
 
-from langflow.interface.run import build_sorted_vertices
-from langflow.services.base import Service
-from langflow.services.session.utils import compute_dict_hash, session_id_generator
+from langflow_base.interface.run import build_sorted_vertices
+from langflow_base.services.base import Service
+from langflow_base.services.session.utils import compute_dict_hash, session_id_generator
 
 if TYPE_CHECKING:
-    from langflow.services.cache.base import BaseCacheService
+    from langflow_base.services.cache.base import BaseCacheService
 
 
 class SessionService(Service):

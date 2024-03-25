@@ -1,21 +1,21 @@
 from cachetools import LRUCache, cached
 
-from langflow.interface.agents.base import agent_creator
-from langflow.interface.chains.base import chain_creator
-from langflow.interface.custom.directory_reader.utils import (
+from langflow_base.interface.agents.base import agent_creator
+from langflow_base.interface.chains.base import chain_creator
+from langflow_base.interface.custom.directory_reader.utils import (
     merge_nested_dicts_with_renaming,
 )
-from langflow.interface.custom.utils import build_custom_components
-from langflow.interface.document_loaders.base import documentloader_creator
-from langflow.interface.embeddings.base import embedding_creator
-from langflow.interface.llms.base import llm_creator
-from langflow.interface.memories.base import memory_creator
-from langflow.interface.output_parsers.base import output_parser_creator
-from langflow.interface.retrievers.base import retriever_creator
-from langflow.interface.text_splitters.base import textsplitter_creator
-from langflow.interface.toolkits.base import toolkits_creator
-from langflow.interface.tools.base import tool_creator
-from langflow.interface.wrappers.base import wrapper_creator
+from langflow_base.interface.custom.utils import build_custom_components
+from langflow_base.interface.document_loaders.base import documentloader_creator
+from langflow_base.interface.embeddings.base import embedding_creator
+from langflow_base.interface.llms.base import llm_creator
+from langflow_base.interface.memories.base import memory_creator
+from langflow_base.interface.output_parsers.base import output_parser_creator
+from langflow_base.interface.retrievers.base import retriever_creator
+from langflow_base.interface.text_splitters.base import textsplitter_creator
+from langflow_base.interface.toolkits.base import toolkits_creator
+from langflow_base.interface.tools.base import tool_creator
+from langflow_base.interface.wrappers.base import wrapper_creator
 
 
 # Used to get the base_classes list

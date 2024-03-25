@@ -1,9 +1,9 @@
 from typing import Optional
 
-from langflow.services.database.models.base import orjson_dumps
-from langflow.template.field.base import TemplateField
-from langflow.template.frontend_node.base import FrontendNode
-from langflow.template.frontend_node.constants import CTRANSFORMERS_DEFAULT_CONFIG, OPENAI_API_BASE_INFO
+from langflow_base.services.database.models.base import orjson_dumps
+from langflow_base.template.field.base import TemplateField
+from langflow_base.template.frontend_node.base import FrontendNode
+from langflow_base.template.frontend_node.constants import CTRANSFORMERS_DEFAULT_CONFIG, OPENAI_API_BASE_INFO
 
 
 class LLMFrontendNode(FrontendNode):

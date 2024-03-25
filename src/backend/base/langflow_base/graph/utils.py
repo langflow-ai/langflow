@@ -3,7 +3,7 @@ from typing import Any, Union
 from langchain_core.documents import Document
 from pydantic import BaseModel
 
-from langflow.interface.utils import extract_input_variables_from_prompt
+from langflow_base.interface.utils import extract_input_variables_from_prompt
 
 
 class UnbuiltObject:

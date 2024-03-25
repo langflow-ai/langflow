@@ -3,7 +3,7 @@ import asyncio
 import threading
 from typing import Optional
 
-from langflow.services.base import Service
+from langflow_base.services.base import Service
 
 
 class BaseCacheService(Service):

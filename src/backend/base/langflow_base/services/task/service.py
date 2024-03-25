@@ -2,18 +2,18 @@ from typing import TYPE_CHECKING, Any, Callable, Coroutine
 
 from loguru import logger
 
-from langflow.services.base import Service
-from langflow.services.task.backends.anyio import AnyIOBackend
-from langflow.services.task.backends.base import TaskBackend
-from langflow.services.task.utils import get_celery_worker_status
+from langflow_base.services.base import Service
+from langflow_base.services.task.backends.anyio import AnyIOBackend
+from langflow_base.services.task.backends.base import TaskBackend
+from langflow_base.services.task.utils import get_celery_worker_status
 
 if TYPE_CHECKING:
-    from langflow.services.settings.service import SettingsService
+    from langflow_base.services.settings.service import SettingsService
 
 
 def check_celery_availability():
     try:
-        from langflow.worker import celery_app
+        from langflow_base.worker import celery_app
 
         status = get_celery_worker_status(celery_app)
         logger.debug(f"Celery status: {status}")
@@ -48,7 +48,7 @@ class TaskService(Service):
 
     def get_backend(self) -> TaskBackend:
         if self.use_celery:
-            from langflow.services.task.backends.celery import CeleryBackend
+            from langflow_base.services.task.backends.celery import CeleryBackend
 
             logger.debug("Using Celery backend")
             return CeleryBackend()

@@ -3,8 +3,8 @@ from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field, field_serializer
 
-from langflow.graph.utils import serialize_field
-from langflow.utils.schemas import ChatOutputResponse, ContainsEnumMeta
+from langflow_base.graph.utils import serialize_field
+from langflow_base.utils.schemas import ChatOutputResponse, ContainsEnumMeta
 
 
 class ResultData(BaseModel):

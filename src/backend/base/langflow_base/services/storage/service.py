@@ -1,11 +1,11 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
-from langflow.services.base import Service
+from langflow_base.services.base import Service
 
 if TYPE_CHECKING:
-    from langflow.services.session.service import SessionService
-    from langflow.services.settings.service import SettingsService
+    from langflow_base.services.session.service import SessionService
+    from langflow_base.services.settings.service import SettingsService
 
 
 class StorageService(Service):

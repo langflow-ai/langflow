@@ -6,28 +6,28 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
-from langflow.api.utils import (
+from langflow_base.api.utils import (
     build_and_cache_graph,
     format_elapsed_time,
     format_exception_message,
     get_next_runnable_vertices,
     get_top_level_vertices,
 )
-from langflow.api.v1.schemas import (
+from langflow_base.api.v1.schemas import (
     InputValueRequest,
     ResultDataResponse,
     StreamData,
     VertexBuildResponse,
     VerticesOrderResponse,
 )
-from langflow.services.auth.utils import get_current_active_user
-from langflow.services.chat.service import ChatService
-from langflow.services.deps import get_chat_service, get_session, get_session_service
-from langflow.services.monitor.utils import log_vertex_build
+from langflow_base.services.auth.utils import get_current_active_user
+from langflow_base.services.chat.service import ChatService
+from langflow_base.services.deps import get_chat_service, get_session, get_session_service
+from langflow_base.services.monitor.utils import log_vertex_build
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.types import ChatVertex
-    from langflow.services.session.service import SessionService
+    from langflow_base.graph.vertex.types import ChatVertex
+    from langflow_base.services.session.service import SessionService
 
 router = APIRouter(tags=["Chat"])
 
@@ -37,7 +37,7 @@ async def try_running_celery_task(vertex, user_id):
     # and set the task_id to the local vertex
     # if it fails, run the task locally
     try:
-        from langflow.worker import build_vertex
+        from langflow_base.worker import build_vertex
 
         task = build_vertex.delay(vertex)
         vertex.task_id = task.id
