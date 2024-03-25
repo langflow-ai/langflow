@@ -1,6 +1,7 @@
 import operator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Sequence, Union
+from typing import (TYPE_CHECKING, Any, Callable, ClassVar, List, Optional,
+                    Sequence, Union)
 from uuid import UUID
 
 import yaml
@@ -11,14 +12,14 @@ from sqlmodel import select
 
 from langflow.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
-    extract_union_types_from_generic_alias,
-)
+    extract_union_types_from_generic_alias)
 from langflow.interface.custom.custom_component.component import Component
 from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_credential_service, get_db_service, get_storage_service
+from langflow.services.deps import get_db_service, get_storage_service, get_variable_service
+                                    get_variable_service)
 from langflow.services.storage.service import StorageService
 from langflow.utils import validate
 
@@ -372,30 +373,30 @@ class CustomComponent(Component):
         def get_credential(name: str):
             if hasattr(self, "_user_id") and not self._user_id:
                 raise ValueError(f"User id is not set for {self.__class__.__name__}")
-            credential_service = get_credential_service()  # Get service instance
+            variable_service = get_variable_service()  # Get service instance
             # Retrieve and decrypt the credential by name for the current user
             db_service = get_db_service()
             with session_getter(db_service) as session:
-                return credential_service.get_credential(user_id=self._user_id or "", name=name, session=session)
+                return variable_service.get_credential(user_id=self._user_id or "", name=name, session=session)
 
         return get_credential
 
     def list_key_names(self):
         """
-        Lists the names of the credentials for the current user.
+        Lists the names of the variables for the current user.
 
         Raises:
             ValueError: If the user id is not set.
 
         Returns:
-            List[str]: The names of the credentials for the current user.
+            List[str]: The names of the variables for the current user.
         """
         if hasattr(self, "_user_id") and not self._user_id:
             raise ValueError(f"User id is not set for {self.__class__.__name__}")
-        credential_service = get_credential_service()
+        variable_service = get_variable_service()
         db_service = get_db_service()
         with session_getter(db_service) as session:
-            return credential_service.list_credentials(user_id=self._user_id, session=session)
+            return variable_service.list_variables(user_id=self._user_id, session=session)
 
     def index(self, value: int = 0):
         """
