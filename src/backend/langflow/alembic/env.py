@@ -66,15 +66,13 @@ def run_migrations_online() -> None:
     try:
         from langflow.services.database.factory import DatabaseServiceFactory
         from langflow.services.deps import get_db_service
-        from langflow.services.manager import (
-            initialize_settings_service,
-            service_manager,
-        )
+        from langflow.services.manager import (initialize_settings_service,
+                                               service_manager)
         from langflow.services.schema import ServiceType
 
         initialize_settings_service()
         service_manager.register_factory(
-            DatabaseServiceFactory(), [ServiceType.SETTINGS_SERVICE]
+            DatabaseServiceFactory()
         )
         connectable = get_db_service().engine
     except Exception as e:
