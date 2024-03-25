@@ -5,14 +5,14 @@ from langflow.services.base import Service
 from langflow.services.session.utils import compute_dict_hash, session_id_generator
 
 if TYPE_CHECKING:
-    from langflow.services.cache.base import BaseCacheService
+    from langflow.services.cache.base import CacheService
 
 
 class SessionService(Service):
     name = "session_service"
 
     def __init__(self, cache_service):
-        self.cache_service: "BaseCacheService" = cache_service
+        self.cache_service: "CacheService" = cache_service
 
     async def load_session(self, key, flow_id: str, data_graph: Optional[dict] = None):
         # Check if the data is cached
