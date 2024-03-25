@@ -93,7 +93,7 @@ async def get_vertices(
         # and return the same structure but only with the ids
         run_id = uuid.uuid4()
         graph.set_run_id(run_id)
-        return VerticesOrderResponse(ids=first_layer, run_id=run_id)
+        return VerticesOrderResponse(ids=first_layer, run_id=run_id, vertices_to_run=list(graph.vertices_to_run))
 
     except Exception as exc:
         logger.error(f"Error checking build status: {exc}")
