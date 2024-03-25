@@ -33,6 +33,10 @@ class CTransformersComponent(LCModelComponent):
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
             },
+            "system_message": {
+                "display_name": "System Message",
+                "info": "System message to pass to the model.",
+            },
         }
 
     def build(
@@ -52,4 +56,4 @@ class CTransformersComponent(LCModelComponent):
             config=config,  # noqa
         )
 
-        return self.get_result(output=output, stream=stream, input_value=input_value)
+        return self.get_result(runnable=output, stream=stream, input_value=input_value)
