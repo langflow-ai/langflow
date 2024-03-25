@@ -748,6 +748,7 @@ export const NATIVE_CATEGORIES = [
   "models",
   "helpers",
   "experimental",
+  "agents",
 ];
 
 export const SAVE_DEBOUNCE_TIME = 500;

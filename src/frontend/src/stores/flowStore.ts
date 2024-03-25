@@ -442,16 +442,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const setErrorData = useAlertStore.getState().setErrorData;
     const setNoticeData = useAlertStore.getState().setNoticeData;
     function validateSubgraph(nodes: string[]) {
-      const errors = validateNodes(
+      const errorsObjs = validateNodes(
         get().nodes.filter((node) => nodes.includes(node.id)),
         get().edges
       );
+
+      const errors = errorsObjs.map((obj) => obj.errors).flat();
       if (errors.length > 0) {
         setErrorData({
           title: MISSED_ERROR_ALERT,
           list: errors,
         });
         get().setIsBuilding(false);
+        const ids = errorsObjs.map((obj) => obj.id).flat();
+
+        get().updateBuildStatus(ids, BuildStatus.ERROR);
         throw new Error("Invalid nodes");
       }
     }
@@ -490,6 +495,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           verticesIds: newIds,
           verticesLayers: newLayers,
           runId: runId,
+          verticesToRun: get().verticesBuild!.verticesToRun,
         });
         get().updateBuildStatus(
           vertexBuildData.top_level_vertices,
@@ -542,7 +548,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           .filter(Boolean) as string[];
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
-      validateNodes: validateSubgraph,
+      onValidateNodes: validateSubgraph,
     });
     get().setIsBuilding(false);
     get().revertBuiltStatusFromBuilding();
@@ -559,6 +565,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       verticesIds: string[];
       verticesLayers: VertexLayerElementType[][];
       runId: string;
+      verticesToRun: string[];
     } | null
   ) => {
     set({ verticesBuild: vertices });
@@ -588,7 +595,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
-    console.log("newFlowBuildStatus", newFlowBuildStatus);
+
     nodeIdList.forEach((id) => {
       newFlowBuildStatus[id] = {
         status,

@@ -6,10 +6,7 @@ from passlib.context import CryptContext
 from pydantic import Field, SecretStr, validator
 from pydantic_settings import BaseSettings
 
-from langflow.services.settings.constants import (
-    DEFAULT_SUPERUSER,
-    DEFAULT_SUPERUSER_PASSWORD,
-)
+from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
 
 
@@ -22,8 +19,8 @@ class AuthSettings(BaseSettings):
         frozen=False,
     )
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 12 * 7
+    ACCESS_TOKEN_EXPIRE_SECONDS: int = 60 * 60  # 1 hour
+    REFRESH_TOKEN_EXPIRE_SECONDS: int = 60 * 60 * 24 * 7  # 7 days
 
     # API Key to execute /process endpoint
     API_KEY_ALGORITHM: str = "HS256"

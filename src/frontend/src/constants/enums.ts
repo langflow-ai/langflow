@@ -12,6 +12,7 @@ export enum BuildStatus {
   TO_BUILD = "TO_BUILD",
   BUILT = "BUILT",
   INACTIVE = "INACTIVE",
+  ERROR = "ERROR",
 }
 
 export enum InputOutput {

@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 # from langchain_community.chat_models import ChatOllama
 from langchain_community.chat_models import ChatOllama
 
-from langflow.components.models.base.model import LCModelComponent
+from langflow.base.models.model import LCModelComponent
 
 # from langchain.chat_models import ChatOllama
 from langflow.field_typing import Text
@@ -171,6 +171,10 @@ class ChatOllamaComponent(LCModelComponent):
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
             },
+            "system_message": {
+                "display_name": "System Message",
+                "info": "System message to pass to the model.",
+            },
         }
 
     def build(
@@ -204,6 +208,7 @@ class ChatOllamaComponent(LCModelComponent):
         top_k: Optional[int] = None,
         top_p: Optional[int] = None,
         stream: bool = False,
+        system_message: Optional[str] = None,
     ) -> Text:
         if not base_url:
             base_url = "http://localhost:11434"
@@ -258,4 +263,4 @@ class ChatOllamaComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not initialize Ollama LLM.") from e
 
-        return self.get_result(output=output, stream=stream, input_value=input_value)
+        return self.get_chat_result(output, stream, input_value, system_message)

@@ -3,30 +3,16 @@ import asyncio
 import inspect
 import types
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    AsyncIterator,
-    Callable,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-)
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
 
 from loguru import logger
 
-from langflow.graph.schema import (
-    INPUT_COMPONENTS,
-    INPUT_FIELD_NAME,
-    OUTPUT_COMPONENTS,
-    InterfaceComponentTypes,
-    ResultData,
-)
+from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import generate_result
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
+from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.deps import get_storage_service
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.schemas import ChatOutputResponse
@@ -60,6 +46,7 @@ class Vertex:
         self.will_stream = False
         self.updated_raw_params = False
         self.id: str = data["id"]
+        self.base_name = self.id.split("-")[0]
         self.is_state = False
         self.is_input = any(input_component_name in self.id for input_component_name in INPUT_COMPONENTS)
         self.is_output = any(output_component_name in self.id for output_component_name in OUTPUT_COMPONENTS)
@@ -161,6 +148,7 @@ class Vertex:
             "_data": self._data,
             "params": {},
             "base_type": self.base_type,
+            "base_name": self.base_name,
             "is_task": self.is_task,
             "id": self.id,
             "_built_object": UnbuiltObject(),
@@ -181,6 +169,7 @@ class Vertex:
         self.frozen = state.get("frozen", False)
         self.is_input = state.get("is_input", False)
         self.is_output = state.get("is_output", False)
+        self.base_name = state["base_name"]
         self._parse_data()
         if "_built_object" in state:
             self._built_object = state["_built_object"]
@@ -206,6 +195,8 @@ class Vertex:
         self.data = self._data["data"]
         self.output = self.data["node"]["base_classes"]
         self.display_name = self.data["node"].get("display_name", self.id.split("-")[0])
+
+        self.description = self.data["node"].get("description", "")
         self.frozen = self.data["node"].get("frozen", False)
         self.selected_output_type = self.data["node"].get("selected_output_type")
         self.is_input = self.data["node"].get("is_input") or self.is_input
@@ -309,10 +300,16 @@ class Vertex:
                 # value.get('value') is the file name
                 if file_path := value.get("file_path"):
                     storage_service = get_storage_service()
-                    flow_id, file_name = file_path.split("/")
-                    full_path = storage_service.build_full_path(flow_id, file_name)
+                    try:
+                        flow_id, file_name = file_path.split("/")
+                        full_path = storage_service.build_full_path(flow_id, file_name)
+                    except ValueError as e:
+                        if "too many values to unpack" in str(e):
+                            full_path = file_path
+                        else:
+                            raise e
                     params[key] = full_path
-                else:
+                elif value.get("required"):
                     raise ValueError(f"File path not found for {self.display_name}")
             elif value.get("type") in DIRECT_TYPES and params.get(key) is None:
                 val = value.get("value")
@@ -401,19 +398,18 @@ class Vertex:
         Returns:
             List[str]: The extracted messages.
         """
-        messages = []
-        for key, artifact in artifacts.items():
-            if not isinstance(artifact, dict):
-                continue
-            if "message" in artifact:
-                chat_output_response = ChatOutputResponse(
-                    message=artifact["message"],
-                    sender=artifact.get("sender"),
-                    sender_name=artifact.get("sender_name"),
-                    session_id=artifact.get("session_id"),
+        try:
+            messages = [
+                ChatOutputResponse(
+                    message=artifacts["message"],
+                    sender=artifacts.get("sender"),
+                    sender_name=artifacts.get("sender_name"),
+                    session_id=artifacts.get("session_id"),
                     component_id=self.id,
-                )
-                messages.append(chat_output_response.model_dump(exclude_none=True))
+                ).model_dump(exclude_none=True)
+            ]
+        except KeyError:
+            messages = []
 
         return messages
 

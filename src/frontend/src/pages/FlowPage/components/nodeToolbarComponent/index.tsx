@@ -274,7 +274,7 @@ export default function NodeToolbarComponent({
         event.key === "g"
       ) {
         event.preventDefault();
-        handleSelectChange("ungroup")
+        handleSelectChange("ungroup");
       }
       if (
         selected &&

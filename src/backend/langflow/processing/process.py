@@ -1,20 +1,15 @@
-import asyncio
-from typing import TYPE_CHECKING, Any, Coroutine, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from langchain.agents import AgentExecutor
-from langchain.chains.base import Chain
-from langchain.schema import AgentAction, Document
-from langchain_community.vectorstores import VectorStore
-from langchain_core.messages import AIMessage
-from langchain_core.runnables.base import Runnable
+from langchain.schema import AgentAction
 from loguru import logger
 from pydantic import BaseModel
 
 from langflow.graph.graph.base import Graph
-from langflow.graph.schema import INPUT_FIELD_NAME, RunOutputs
+from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
-from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.run import get_memory_key, update_memory_keys
+from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.session.service import SessionService
 
 if TYPE_CHECKING:
@@ -124,73 +119,6 @@ def update_inputs_dict(inputs: dict, artifacts: Dict[str, Any]) -> dict:
     return inputs
 
 
-async def process_runnable(runnable: Runnable, inputs: Union[dict, List[dict]]):
-    if isinstance(inputs, List) and hasattr(runnable, "abatch"):
-        result = await runnable.abatch(inputs)
-    elif isinstance(inputs, dict) and hasattr(runnable, "ainvoke"):
-        result = await runnable.ainvoke(inputs)
-    else:
-        raise ValueError(f"Runnable {runnable} does not support inputs of type {type(inputs)}")
-    # Check if the result is a list of AIMessages
-    if isinstance(result, list) and all(isinstance(r, AIMessage) for r in result):
-        result = [r.content for r in result]
-    elif isinstance(result, AIMessage):
-        result = result.content
-    return result
-
-
-async def process_inputs_dict(built_object: Union[Chain, VectorStore, Runnable], inputs: dict):
-    if isinstance(built_object, Chain):
-        if inputs is None:
-            raise ValueError("Inputs must be provided for a Chain")
-        logger.debug("Generating result and thought")
-        result = get_result_and_thought(built_object, inputs)
-
-        logger.debug("Generated result and thought")
-    elif isinstance(built_object, VectorStore) and "query" in inputs:
-        if isinstance(inputs, dict) and "search_type" not in inputs:
-            inputs["search_type"] = "similarity"
-            logger.info("search_type not provided, using default value: similarity")
-        result = built_object.search(**inputs)
-    elif isinstance(built_object, Document):
-        result = built_object.dict()
-    elif isinstance(built_object, Runnable):
-        result = await process_runnable(built_object, inputs)
-        if isinstance(result, list):
-            result = [r.content if hasattr(r, "content") else r for r in result]
-        elif hasattr(result, "content"):
-            result = result.content
-        else:
-            result = result
-    elif hasattr(built_object, "run") and isinstance(built_object, CustomComponent):
-        result = built_object.run(inputs)
-    else:
-        result = None
-
-    return result
-
-
-async def process_inputs_list(built_object: Runnable, inputs: List[dict]):
-    return await process_runnable(built_object, inputs)
-
-
-async def generate_result(built_object: Union[Chain, VectorStore, Runnable], inputs: Union[dict, List[dict]]):
-    if isinstance(inputs, dict):
-        result = await process_inputs_dict(built_object, inputs)
-    elif isinstance(inputs, List) and isinstance(built_object, Runnable):
-        result = await process_inputs_list(built_object, inputs)
-    else:
-        raise ValueError(f"Invalid inputs type: {type(inputs)}")
-
-    if result is None:
-        logger.warning(f"Unknown built_object type: {type(built_object)}")
-        if isinstance(built_object, Coroutine):
-            result = asyncio.run(built_object)
-        result = built_object
-
-    return result
-
-
 class Result(BaseModel):
     result: Any
     session_id: str
@@ -208,11 +136,7 @@ async def run_graph(
 ) -> tuple[List[RunOutputs], str]:
     """Run the graph and generate the result"""
     inputs = inputs or []
-    if isinstance(graph, dict):
-        graph_data = graph
-        graph = Graph.from_payload(graph, flow_id=flow_id)
-    else:
-        graph_data = graph._graph_data
+    graph_data = graph._graph_data
     if session_id is None and session_service is not None:
         session_id_str = session_service.generate_key(session_id=flow_id, data_graph=graph_data)
     elif session_id is not None:
@@ -221,22 +145,25 @@ async def run_graph(
         raise ValueError("session_id or session_service must be provided")
     components = []
     inputs_list = []
+    types = []
     for input_value_request in inputs:
         if input_value_request.input_value is None:
             logger.warning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
             input_value_request.input_value = ""
         components.append(input_value_request.components or [])
         inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
+        types.append(input_value_request.type)
 
-    run_outputs = await graph.run(
+    run_outputs = await graph.arun(
         inputs_list,
         components,
+        types,
         outputs or [],
         stream=stream,
         session_id=session_id_str or "",
     )
     if session_id_str and session_service:
-        session_service.update_session(session_id_str, (graph, artifacts))
+        await session_service.update_session(session_id_str, (graph, artifacts))
     return run_outputs, session_id_str
 
 
@@ -262,7 +189,10 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
         return
 
     for tweak_name, tweak_value in node_tweaks.items():
-        if tweak_name and tweak_value and tweak_name in template_data:
+        if tweak_name not in template_data:
+            logger.warning(f"Node {node.get('id')} does not have a tweak named {tweak_name}")
+            continue
+        if tweak_name in template_data:
             key = tweak_name if tweak_name == "file_path" else "value"
             template_data[tweak_name][key] = tweak_value
 
@@ -290,17 +220,20 @@ def process_tweaks(graph_data: Dict[str, Any], tweaks: Union["Tweaks", Dict[str,
 
     nodes = validate_input(graph_data, tweaks)
     nodes_map = {node.get("id"): node for node in nodes}
+    nodes_display_name_map = {node.get("data", {}).get("node", {}).get("display_name"): node for node in nodes}
 
     all_nodes_tweaks = {}
     for key, value in tweaks.items():
         if isinstance(value, dict):
             if node := nodes_map.get(key):
                 apply_tweaks(node, value)
+            elif node := nodes_display_name_map.get(key):
+                apply_tweaks(node, value)
         else:
             all_nodes_tweaks[key] = value
-
-    for node in nodes:
-        apply_tweaks(node, all_nodes_tweaks)
+    if all_nodes_tweaks:
+        for node in nodes:
+            apply_tweaks(node, all_nodes_tweaks)
 
     return graph_data
 

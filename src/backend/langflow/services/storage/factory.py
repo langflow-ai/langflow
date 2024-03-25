@@ -1,19 +1,18 @@
-from typing import TYPE_CHECKING
-
-from langflow.services.factory import ServiceFactory
-from langflow.services.storage.service import StorageService
 from loguru import logger
 
-if TYPE_CHECKING:
-    from langflow.services.session.service import SessionService
-    from langflow.services.settings.service import SettingsService
+from langflow.services.factory import ServiceFactory
+from langflow.services.session.service import SessionService
+from langflow.services.settings.service import SettingsService
+from langflow.services.storage.service import StorageService
 
 
 class StorageServiceFactory(ServiceFactory):
     def __init__(self):
-        super().__init__(StorageService)
+        super().__init__(
+            StorageService,
+        )
 
-    def create(self, session_service: "SessionService", settings_service: "SettingsService"):
+    def create(self, session_service: SessionService, settings_service: SettingsService):
         storage_type = settings_service.settings.STORAGE_TYPE
         if storage_type.lower() == "local":
             from .local import LocalStorageService

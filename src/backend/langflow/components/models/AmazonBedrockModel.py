@@ -2,7 +2,7 @@ from typing import Optional
 
 from langchain_community.chat_models.bedrock import BedrockChat
 
-from langflow.components.models.base.model import LCModelComponent
+from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Text
 
 
@@ -36,6 +36,7 @@ class AmazonBedrockComponent(LCModelComponent):
             "cache": {"display_name": "Cache"},
             "code": {"advanced": True},
             "input_value": {"display_name": "Input"},
+            "system_message": {"display_name": "System Message", "info": "System message to pass to the model."},
             "stream": {
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
@@ -45,6 +46,7 @@ class AmazonBedrockComponent(LCModelComponent):
     def build(
         self,
         input_value: Text,
+        system_message: Optional[str] = None,
         model_id: str = "anthropic.claude-instant-v1",
         credentials_profile_name: Optional[str] = None,
         region_name: Optional[str] = None,
@@ -67,4 +69,4 @@ class AmazonBedrockComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not connect to AmazonBedrock API.") from e
 
-        return self.get_result(output=output, stream=stream, input_value=input_value)
+        return self.get_chat_result(output, stream, input_value, system_message)

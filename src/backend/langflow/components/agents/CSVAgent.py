@@ -1,6 +1,7 @@
-from langflow import CustomComponent
-from langflow.field_typing import BaseLanguageModel, AgentExecutor
 from langchain_experimental.agents.agent_toolkits.csv.base import create_csv_agent
+
+from langflow import CustomComponent
+from langflow.field_typing import AgentExecutor, BaseLanguageModel
 
 
 class CSVAgentComponent(CustomComponent):
@@ -12,12 +13,20 @@ class CSVAgentComponent(CustomComponent):
         return {
             "llm": {"display_name": "LLM", "type": BaseLanguageModel},
             "path": {"display_name": "Path", "field_type": "file", "suffixes": [".csv"], "file_types": [".csv"]},
+            "handle_parse_errors": {"display_name": "Handle Parse Errors", "advanced": True},
+            "agent_type": {
+                "display_name": "Agent Type",
+                "options": ["zero-shot-react-description", "openai-functions", "openai-tools"],
+            },
         }
 
     def build(
-        self,
-        llm: BaseLanguageModel,
-        path: str,
+        self, llm: BaseLanguageModel, path: str, handle_parse_errors: bool = True, agent_type: str = "openai-tools"
     ) -> AgentExecutor:
         # Instantiate and return the CSV agent class with the provided llm and path
-        return create_csv_agent(llm=llm, path=path)
+        return create_csv_agent(
+            llm=llm,
+            path=path,
+            agent_type=agent_type,
+            agent_executor_kwargs=dict(handle_parse_errors=handle_parse_errors),
+        )

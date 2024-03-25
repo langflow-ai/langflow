@@ -14,16 +14,11 @@ from langchain_core.documents import Document
 from loguru import logger
 from pydantic import ValidationError
 
+from langflow.custom.customs import CUSTOM_NODES
 from langflow.interface.custom.eval import eval_custom_component_code
-from langflow.interface.custom.utils import get_function
-from langflow.interface.custom_lists import CUSTOM_NODES
 from langflow.interface.importing.utils import import_by_type
 from langflow.interface.initialize.llm import initialize_vertexai
-from langflow.interface.initialize.utils import (
-    handle_format_kwargs,
-    handle_node_type,
-    handle_partial_variables,
-)
+from langflow.interface.initialize.utils import handle_format_kwargs, handle_node_type, handle_partial_variables
 from langflow.interface.initialize.vector_store import vecstore_initializer
 from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.retrievers.base import retriever_creator
@@ -58,6 +53,8 @@ async def instantiate_class(
     logger.debug(f"Instantiating {vertex_type} of type {base_type}")
     if not base_type:
         raise ValueError("No base type provided for vertex")
+    if base_type == "custom_components":
+        return await instantiate_custom_component(params, user_id, vertex)
     class_object = import_by_type(_type=base_type, name=vertex_type)
     return await instantiate_based_on_type(
         class_object=class_object,
@@ -135,8 +132,6 @@ async def instantiate_based_on_type(
         return instantiate_memory(node_type, class_object, params)
     elif base_type == "custom_components":
         return await instantiate_custom_component(
-            node_type,
-            class_object,
             params,
             user_id,
             vertex,
@@ -147,7 +142,7 @@ async def instantiate_based_on_type(
         return class_object(**params)
 
 
-async def instantiate_custom_component(node_type, class_object, params, user_id, vertex):
+async def instantiate_custom_component(params, user_id, vertex):
     params_copy = params.copy()
     class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
     custom_component: "CustomComponent" = class_object(
@@ -289,6 +284,8 @@ def instantiate_tool(node_type, class_object: Type[BaseTool], params: Dict):
             raise ValueError("Invalid file")
         return class_object(**params)
     elif node_type == "PythonFunctionTool":
+        from langflow.interface.custom.utils import get_function
+
         params["func"] = get_function(params.get("code"))
         return class_object(**params)
     elif node_type == "PythonFunction":

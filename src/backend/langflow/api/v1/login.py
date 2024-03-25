@@ -10,6 +10,7 @@ from langflow.services.auth.utils import (
     create_user_tokens,
 )
 from langflow.services.deps import get_session, get_settings_service
+from langflow.services.settings.manager import SettingsService
 
 router = APIRouter(tags=["Login"])
 
@@ -41,7 +42,7 @@ async def login_to_get_access_token(
             httponly=auth_settings.REFRESH_HTTPONLY,
             samesite=auth_settings.REFRESH_SAME_SITE,
             secure=auth_settings.REFRESH_SECURE,
-            expires=auth_settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+            expires=auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS,
         )
         response.set_cookie(
             "access_token_lf",
@@ -49,7 +50,7 @@ async def login_to_get_access_token(
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
-            expires=auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            expires=auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
         )
         return tokens
     else:
@@ -75,7 +76,7 @@ async def auto_login(
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
-            expires=auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            expires=None,  # Set to None to make it a session cookie
         )
         return tokens
 
@@ -89,7 +90,9 @@ async def auto_login(
 
 
 @router.post("/refresh")
-async def refresh_token(request: Request, response: Response, settings_service=Depends(get_settings_service)):
+async def refresh_token(
+    request: Request, response: Response, settings_service: "SettingsService" = Depends(get_settings_service)
+):
     auth_settings = settings_service.auth_settings
 
     token = request.cookies.get("refresh_token_lf")
@@ -102,7 +105,7 @@ async def refresh_token(request: Request, response: Response, settings_service=D
             httponly=auth_settings.REFRESH_HTTPONLY,
             samesite=auth_settings.REFRESH_SAME_SITE,
             secure=auth_settings.REFRESH_SECURE,
-            expires=auth_settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+            expires=auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS,
         )
         response.set_cookie(
             "access_token_lf",
@@ -110,7 +113,7 @@ async def refresh_token(request: Request, response: Response, settings_service=D
             httponly=auth_settings.ACCESS_HTTPONLY,
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
-            expires=auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            expires=auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
         )
         return tokens
     else:

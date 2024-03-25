@@ -3,7 +3,7 @@ from typing import Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic.v1 import SecretStr
 
-from langflow.components.models.base.model import LCModelComponent
+from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import RangeSpec, Text
 
 
@@ -56,6 +56,10 @@ class GoogleGenerativeAIComponent(LCModelComponent):
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
             },
+            "system_message": {
+                "display_name": "System Message",
+                "info": "System message to pass to the model.",
+            },
         }
 
     def build(
@@ -69,6 +73,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
         top_p: Optional[float] = None,
         n: Optional[int] = 1,
         stream: bool = False,
+        system_message: Optional[str] = None,
     ) -> Text:
         output = ChatGoogleGenerativeAI(
             model=model,
@@ -79,4 +84,4 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             n=n or 1,
             google_api_key=SecretStr(google_api_key),
         )
-        return self.get_result(output=output, stream=stream, input_value=input_value)
+        return self.get_chat_result(output, stream, input_value, system_message)

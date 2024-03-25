@@ -102,10 +102,7 @@ export default function Page({
       const clonedNodes = cloneDeep(nodes);
       const clonedEdges = cloneDeep(edges);
       const clonedSelection = cloneDeep(lastSelection);
-      updateIds(
-        { nodes: clonedNodes, edges: clonedEdges },
-        clonedSelection!
-      );
+      updateIds({ nodes: clonedNodes, edges: clonedEdges }, clonedSelection!);
       const { newFlow, removedEdges } = generateFlow(
         clonedSelection!,
         clonedNodes,
@@ -489,7 +486,7 @@ export default function Page({
               isVisible={selectionMenuVisible}
               nodes={lastSelection?.nodes}
               onClick={() => {
-                handleGroupNode()
+                handleGroupNode();
               }}
             />
           </ReactFlow>

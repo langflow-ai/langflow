@@ -1,16 +1,16 @@
 import ast
 import json
 from typing import AsyncIterator, Callable, Dict, Iterator, List, Optional, Union
-
 import yaml
 from langchain_core.messages import AIMessage
 from loguru import logger
 
-from langflow.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes
+from langflow.graph.schema import InterfaceComponentTypes
 from langflow.graph.utils import UnbuiltObject, flatten_list, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema import Record
+from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.monitor.utils import log_vertex_build
 from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import unescape_string
