@@ -333,7 +333,7 @@ def encrypt_api_key(api_key: str, settings_service=Depends(get_settings_service)
     fernet = get_fernet(settings_service)
     # Two-way encryption
     encrypted_key = fernet.encrypt(api_key.encode())
-    return encrypted_key
+    return encrypted_key.decode()
 
 
 def decrypt_api_key(encrypted_api_key: str, settings_service=Depends(get_settings_service)):
