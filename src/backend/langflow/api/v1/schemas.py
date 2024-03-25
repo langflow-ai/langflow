@@ -228,6 +228,7 @@ class ApiKeyCreateRequest(BaseModel):
 class VerticesOrderResponse(BaseModel):
     ids: List[str]
     run_id: UUID
+    vertices_to_run: List[str]
 
 
 class ResultDataResponse(BaseModel):
