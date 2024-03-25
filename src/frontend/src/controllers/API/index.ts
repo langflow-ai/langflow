@@ -860,13 +860,13 @@ export async function requestLogout() {
 }
 
 export async function getGlobalVariables(): Promise<{
-  [key: string]: { id: string; provider: string };
+  [key: string]: { id: string; type: string };
 }> {
   const globalVariables = {};
   (await api.get(`${BASE_URL_API}variables/`)).data.forEach((element) => {
     globalVariables[element.name] = {
       id: element.id,
-      provider: element.provider,
+      type: element.type,
     };
   });
   return globalVariables;
@@ -875,16 +875,16 @@ export async function getGlobalVariables(): Promise<{
 export async function registerGlobalVariable({
   name,
   value,
-  provider,
+  type,
 }: {
   name: string;
   value: string;
-  provider?: string;
-}): Promise<AxiosResponse<{ name: string; id: string; provider: string }>> {
+  type?: string;
+}): Promise<AxiosResponse<{ name: string; id: string; type: string }>> {
   return await api.post(`${BASE_URL_API}variables/`, {
     name,
     value,
-    provider,
+    type,
   });
 }
 
