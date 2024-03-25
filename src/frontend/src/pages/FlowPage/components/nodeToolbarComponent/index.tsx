@@ -617,12 +617,12 @@ export default function NodeToolbarComponent({
             open={showModalAdvanced}
             setOpen={setShowModalAdvanced}
           />
-          <ShareModal
+          {showconfirmShare&&<ShareModal
             open={showconfirmShare}
             setOpen={setShowconfirmShare}
             is_component={true}
             component={flowComponent!}
-          />
+          />}
           {hasCode && (
             <div className="hidden">
               <CodeAreaComponent
