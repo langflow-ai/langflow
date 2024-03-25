@@ -17,7 +17,7 @@ from .deps import get_db_service, get_session, get_settings_service
 
 def get_factories():
     service_names = [ServiceType(service_type).value.replace("_service", "") for service_type in ServiceType]
-    base_module = "langflow.services"
+    base_module = "langflow_base.services"
     factories = []
 
     for name in service_names:

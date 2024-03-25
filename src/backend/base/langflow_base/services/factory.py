@@ -61,7 +61,7 @@ def infer_service_types(factory_class: Type[ServiceFactory], available_services=
 
 @cached(cache=LRUCache(maxsize=1))
 def import_all_services_into_a_dict():
-    # Services are all in langflow.services.{service_name}.service
+    # Services are all in langflow_base.services.{service_name}.service
     # and are subclass of Service
     # We want to import all of them and put them in a dict
     # to use as globals
@@ -71,7 +71,7 @@ def import_all_services_into_a_dict():
     for service_type in ServiceType:
         try:
             service_name = ServiceType(service_type).value.replace("_service", "")
-            module_name = f"langflow.services.{service_name}.service"
+            module_name = f"langflow_base.services.{service_name}.service"
             module = importlib.import_module(module_name)
             for name, obj in inspect.getmembers(module, inspect.isclass):
                 if issubclass(obj, Service) and obj is not Service:

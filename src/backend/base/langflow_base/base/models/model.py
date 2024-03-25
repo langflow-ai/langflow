@@ -4,7 +4,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
 
 
 class LCModelComponent(CustomComponent):

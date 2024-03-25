@@ -122,7 +122,7 @@ if __name__ == "__main__":
 
     configure()
     uvicorn.run(
-        "langflow.main:create_app",
+        "langflow_base.main:create_app",
         host="127.0.0.1",
         port=7860,
         workers=get_number_of_workers(),

@@ -26,7 +26,7 @@ class DatabaseService(Service):
 
     def __init__(self, database_url: str):
         self.database_url = database_url
-        # This file is in langflow.services.database.manager.py
+        # This file is in langflow_base.services.database.manager.py
         # the ini is in langflow
         langflow_dir = Path(__file__).parent.parent.parent
         self.script_location = langflow_dir / "alembic"

@@ -271,7 +271,7 @@ def get_default_imports(code_string):
     }
     langflow_imports = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     necessary_imports = find_names_in_code(code_string, langflow_imports)
-    langflow_module = importlib.import_module("langflow.field_typing")
+    langflow_module = importlib.import_module("langflow_base.field_typing")
     default_imports.update({name: getattr(langflow_module, name) for name in necessary_imports})
 
     return default_imports
