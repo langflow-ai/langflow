@@ -1,13 +1,13 @@
 from typing import List
 
-from langchain.agents import AgentExecutor, create_xml_agent
+from langchain.agents import create_xml_agent
 from langchain_core.prompts import PromptTemplate
 
-from langflow import CustomComponent
+from langflow.base.agents.agent import LCAgentComponent
 from langflow.field_typing import BaseLLM, BaseMemory, Text, Tool
 
 
-class XMLAgentComponent(CustomComponent):
+class XMLAgentComponent(LCAgentComponent):
     display_name = "XMLAgent"
     description = "Construct an XML agent from an LLM and tools."
 
@@ -57,7 +57,7 @@ class XMLAgentComponent(CustomComponent):
                 "display_name": "Memory",
                 "info": "Memory to use for the agent.",
             },
-            "inputs": {
+            "input_value": {
                 "display_name": "Inputs",
                 "info": "Input text to pass to the agent.",
             },
@@ -65,7 +65,7 @@ class XMLAgentComponent(CustomComponent):
 
     async def build(
         self,
-        inputs: str,
+        input_value: str,
         llm: BaseLLM,
         tools: List[Tool],
         prompt: str,
@@ -84,13 +84,6 @@ class XMLAgentComponent(CustomComponent):
         prompt_template = PromptTemplate.from_template(prompt)
         input_variables = prompt_template.input_variables
         agent = create_xml_agent(llm, tools, prompt_template, tools_renderer=render_tool_description)
-        runnable = AgentExecutor.from_agent_and_tools(
-            agent=agent, tools=tools, verbose=True, memory=memory, handle_parsing_errors=handle_parsing_errors
-        )
-        input_dict = {"input": inputs}
-        for var in input_variables:
-            if var not in ["agent_scratchpad", "input"]:
-                input_dict[var] = ""
-        result = await runnable.ainvoke(input_dict)
+        result = await self.run_agent(agent, input_value, input_variables, tools, memory, handle_parsing_errors)
         self.status = result
-        return result.get("output")
+        return result
