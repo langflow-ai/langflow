@@ -5,12 +5,12 @@ from langchain.schema import AgentAction
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.graph.graph.base import Graph
-from langflow.graph.schema import RunOutputs
-from langflow.graph.vertex.base import Vertex
-from langflow.interface.run import get_memory_key, update_memory_keys
-from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.session.service import SessionService
+from langflow_base.graph.graph.base import Graph
+from langflow_base.graph.schema import RunOutputs
+from langflow_base.graph.vertex.base import Vertex
+from langflow_base.interface.run import get_memory_key, update_memory_keys
+from langflow_base.schema.schema import INPUT_FIELD_NAME
+from langflow_base.services.session.service import SessionService
 
 if TYPE_CHECKING:
     from langflow_base.api.v1.schemas import InputValueRequest, Tweaks

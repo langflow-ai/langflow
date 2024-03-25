@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Type, get_type_hints
 from cachetools import LRUCache, cached
 from loguru import logger
 
-from langflow.services.schema import ServiceType
+from langflow_base.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from langflow_base.services.base import Service
@@ -65,7 +65,7 @@ def import_all_services_into_a_dict():
     # and are subclass of Service
     # We want to import all of them and put them in a dict
     # to use as globals
-    from langflow.services.base import Service
+    from langflow_base.services.base import Service
 
     services = {}
     for service_type in ServiceType:

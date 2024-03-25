@@ -2,7 +2,7 @@ import ast
 import json
 
 from langflow import CustomComponent
-from langflow.schema import Record
+from langflow_base.schema import Record
 
 
 class JSONInputComponent(CustomComponent):

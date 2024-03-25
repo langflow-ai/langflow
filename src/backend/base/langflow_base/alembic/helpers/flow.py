@@ -3,13 +3,13 @@ from typing import TYPE_CHECKING, Any, Callable, Coroutine, List, Optional, Tupl
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import select
 
-from langflow.schema.schema import INPUT_FIELD_NAME, Record
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import session_scope
+from langflow_base.schema.schema import INPUT_FIELD_NAME, Record
+from langflow_base.services.database.models.flow.model import Flow
+from langflow_base.services.deps import session_scope
 
 if TYPE_CHECKING:
-    from langflow.graph.graph.base import Graph
-    from langflow.graph.vertex.base import Vertex
+    from langflow_base.graph.graph.base import Graph
+    from langflow_base.graph.vertex.base import Vertex
 
 INPUT_TYPE_MAP = {
     "ChatInput": {"type_hint": "Optional[str]", "default": '""'},
@@ -36,8 +36,8 @@ def list_flows(*, user_id: Optional[str] = None) -> List[Record]:
 async def load_flow(
     user_id: str, flow_id: Optional[str] = None, flow_name: Optional[str] = None, tweaks: Optional[dict] = None
 ) -> "Graph":
-    from langflow.graph.graph.base import Graph
-    from langflow.processing.process import process_tweaks
+    from langflow_base.graph.graph.base import Graph
+    from langflow_base.processing.process import process_tweaks
 
     if not flow_id and not flow_name:
         raise ValueError("Flow ID or Flow Name is required")
@@ -126,7 +126,7 @@ def generate_function_for_flow(inputs: List["Vertex"], flow_id: str) -> Coroutin
 from typing import Optional
 async def flow_function({func_args}):
     tweaks = {{ {arg_mappings} }}
-    from langflow.helpers.flow import run_flow
+    from langflow_base.helpers.flow import run_flow
     from langchain_core.tools import ToolException
     try:
         return await run_flow(

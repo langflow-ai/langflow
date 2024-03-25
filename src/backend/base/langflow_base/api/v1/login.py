@@ -9,8 +9,8 @@ from langflow_base.services.auth.utils import (
     create_user_longterm_token,
     create_user_tokens,
 )
-from langflow.services.deps import get_session, get_settings_service
-from langflow.services.settings.manager import SettingsService
+from langflow_base.services.deps import get_session, get_settings_service
+from langflow_base.services.settings.manager import SettingsService
 
 router = APIRouter(tags=["Login"])
 

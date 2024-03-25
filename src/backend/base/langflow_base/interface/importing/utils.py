@@ -10,7 +10,7 @@ from langchain.prompts import PromptTemplate
 from langchain.tools import BaseTool
 from langchain_core.language_models.chat_models import BaseChatModel
 
-from langflow.interface.wrappers.base import wrapper_creator
+from langflow_base.interface.wrappers.base import wrapper_creator
 
 
 def import_module(module_path: str) -> Any:

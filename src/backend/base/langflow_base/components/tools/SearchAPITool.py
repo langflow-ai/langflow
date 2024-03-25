@@ -2,7 +2,7 @@ from langchain_community.tools.searchapi import SearchAPIRun
 from langchain_community.utilities.searchapi import SearchApiAPIWrapper
 
 from langflow import CustomComponent
-from langflow.field_typing import Tool
+from langflow_base.field_typing import Tool
 
 
 class SearchApiToolComponent(CustomComponent):

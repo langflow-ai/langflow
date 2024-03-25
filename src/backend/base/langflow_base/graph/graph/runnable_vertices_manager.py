@@ -3,8 +3,8 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Coroutine, List
 
 if TYPE_CHECKING:
-    from langflow.graph.graph.base import Graph
-    from langflow.graph.vertex.base import Vertex
+    from langflow_base.graph.graph.base import Graph
+    from langflow_base.graph.vertex.base import Vertex
 
 
 class RunnableVerticesManager:

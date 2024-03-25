@@ -1,9 +1,9 @@
 from typing import Coroutine, Optional
 
-from langflow.interface.run import build_sorted_vertices
-from langflow.services.base import Service
-from langflow.services.cache.base import CacheService
-from langflow.services.session.utils import compute_dict_hash, session_id_generator
+from langflow_base.interface.run import build_sorted_vertices
+from langflow_base.services.base import Service
+from langflow_base.services.cache.base import CacheService
+from langflow_base.services.session.utils import compute_dict_hash, session_id_generator
 
 
 class SessionService(Service):

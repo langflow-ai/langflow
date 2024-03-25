@@ -3,9 +3,9 @@ from typing import TYPE_CHECKING, Dict
 from loguru import logger
 
 if TYPE_CHECKING:
-    from langflow.services.base import Service
-    from langflow.services.factory import ServiceFactory
-    from langflow.services.schema import ServiceType
+    from langflow_base.services.base import Service
+    from langflow_base.services.factory import ServiceFactory
+    from langflow_base.services.schema import ServiceType
 
 
 class ServiceManager:
@@ -105,8 +105,8 @@ def initialize_session_service():
     """
     Initialize the session manager.
     """
-    from langflow.services.cache import factory as cache_factory
-    from langflow.services.session import (
+    from langflow_base.services.cache import factory as cache_factory
+    from langflow_base.services.session import (
         factory as session_service_factory,
     )  # type: ignore
 

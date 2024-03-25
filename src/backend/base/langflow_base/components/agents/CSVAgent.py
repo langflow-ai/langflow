@@ -1,7 +1,7 @@
 from langchain_experimental.agents.agent_toolkits.csv.base import create_csv_agent
 
 from langflow import CustomComponent
-from langflow.field_typing import AgentExecutor, BaseLanguageModel
+from langflow_base.field_typing import AgentExecutor, BaseLanguageModel
 
 
 class CSVAgentComponent(CustomComponent):

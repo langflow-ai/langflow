@@ -8,21 +8,21 @@ from cachetools import TTLCache, cachedmethod
 from langchain_core.documents import Document
 from pydantic import BaseModel
 
-from langflow.helpers.flow import list_flows, load_flow, run_flow
-from langflow.interface.custom.code_parser.utils import (
+from langflow_base.helpers.flow import list_flows, load_flow, run_flow
+from langflow_base.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
 )
-from langflow.interface.custom.custom_component.component import Component
-from langflow.schema import dotdict
-from langflow.schema.schema import Record
-from langflow.services.deps import get_credential_service, get_storage_service, session_scope
-from langflow.utils import validate
+from langflow_base.interface.custom.custom_component.component import Component
+from langflow_base.schema import dotdict
+from langflow_base.schema.schema import Record
+from langflow_base.services.deps import get_credential_service, get_storage_service, session_scope
+from langflow_base.utils import validate
 
 if TYPE_CHECKING:
-    from langflow.graph.graph.base import Graph
-    from langflow.graph.vertex.base import Vertex
-    from langflow.services.storage.service import StorageService
+    from langflow_base.graph.graph.base import Graph
+    from langflow_base.graph.vertex.base import Vertex
+    from langflow_base.services.storage.service import StorageService
 
 
 class CustomComponent(Component):

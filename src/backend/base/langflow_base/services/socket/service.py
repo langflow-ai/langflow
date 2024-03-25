@@ -8,7 +8,7 @@ from langflow_base.services.deps import get_chat_service
 from langflow_base.services.socket.utils import build_vertex, get_vertices
 
 if TYPE_CHECKING:
-    from langflow.services.cache.service import CacheService
+    from langflow_base.services.cache.service import CacheService
 
 
 class SocketIOService(Service):

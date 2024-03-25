@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING
 
-from langflow.services.factory import ServiceFactory
-from langflow.services.session.service import SessionService
+from langflow_base.services.factory import ServiceFactory
+from langflow_base.services.session.service import SessionService
 
 if TYPE_CHECKING:
-    from langflow.services.cache.service import CacheService
+    from langflow_base.services.cache.service import CacheService
 
 
 class SessionServiceFactory(ServiceFactory):

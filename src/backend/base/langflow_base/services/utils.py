@@ -4,13 +4,13 @@ import inspect
 from loguru import logger
 from sqlmodel import Session, select
 
-from langflow.services.auth.utils import create_super_user, verify_password
-from langflow.services.database.utils import initialize_database
-from langflow.services.factory import ServiceFactory
-from langflow.services.manager import service_manager
-from langflow.services.schema import ServiceType
-from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
-from langflow.services.socket.utils import set_socketio_server
+from langflow_base.services.auth.utils import create_super_user, verify_password
+from langflow_base.services.database.utils import initialize_database
+from langflow_base.services.factory import ServiceFactory
+from langflow_base.services.manager import service_manager
+from langflow_base.services.schema import ServiceType
+from langflow_base.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from langflow_base.services.socket.utils import set_socketio_server
 
 from .deps import get_db_service, get_session, get_settings_service
 
@@ -163,8 +163,8 @@ def initialize_session_service():
     """
     Initialize the session manager.
     """
-    from langflow.services.cache import factory as cache_factory
-    from langflow.services.session import factory as session_service_factory  # type: ignore
+    from langflow_base.services.cache import factory as cache_factory
+    from langflow_base.services.session import factory as session_service_factory  # type: ignore
 
     initialize_settings_service()
 

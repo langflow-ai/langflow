@@ -3,8 +3,8 @@ from typing import Optional
 from langchain_community.chat_models.huggingface import ChatHuggingFace
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 
-from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import Text
+from langflow_base.base.models.model import LCModelComponent
+from langflow_base.field_typing import Text
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):

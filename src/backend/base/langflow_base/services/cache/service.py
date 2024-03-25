@@ -7,8 +7,8 @@ from typing import Optional
 
 from loguru import logger
 
-from langflow.services.base import Service
-from langflow.services.cache.base import AsyncBaseCacheService, CacheService
+from langflow_base.services.base import Service
+from langflow_base.services.cache.base import AsyncBaseCacheService, CacheService
 
 
 class ThreadingInMemoryCache(CacheService, Service):

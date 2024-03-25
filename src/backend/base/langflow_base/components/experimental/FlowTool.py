@@ -4,10 +4,10 @@ from langchain_core.tools import StructuredTool
 from loguru import logger
 
 from langflow import CustomComponent
-from langflow.field_typing import Tool
-from langflow.graph.graph.base import Graph
-from langflow.helpers.flow import build_function_and_schema
-from langflow.schema.dotdict import dotdict
+from langflow_base.field_typing import Tool
+from langflow_base.graph.graph.base import Graph
+from langflow_base.helpers.flow import build_function_and_schema
+from langflow_base.schema.dotdict import dotdict
 
 
 class FlowToolComponent(CustomComponent):

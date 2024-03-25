@@ -2,8 +2,8 @@ from typing import Optional
 
 from langchain_openai import ChatOpenAI
 
-from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import NestedDict, Text
+from langflow_base.base.models.model import LCModelComponent
+from langflow_base.field_typing import NestedDict, Text
 
 
 class OpenAIModelComponent(LCModelComponent):

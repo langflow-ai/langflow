@@ -14,20 +14,20 @@ from langchain_core.documents import Document
 from loguru import logger
 from pydantic import ValidationError
 
-from langflow.custom.customs import CUSTOM_NODES
-from langflow.interface.custom.eval import eval_custom_component_code
-from langflow.interface.importing.utils import import_by_type
-from langflow.interface.initialize.llm import initialize_vertexai
-from langflow.interface.initialize.utils import handle_format_kwargs, handle_node_type, handle_partial_variables
-from langflow.interface.initialize.vector_store import vecstore_initializer
-from langflow.interface.output_parsers.base import output_parser_creator
-from langflow.interface.retrievers.base import retriever_creator
-from langflow.interface.toolkits.base import toolkits_creator
-from langflow.interface.utils import load_file_into_dict
-from langflow.interface.wrappers.base import wrapper_creator
-from langflow.schema.schema import Record
-from langflow.utils import validate
-from langflow.utils.util import unescape_string
+from langflow_base.custom.customs import CUSTOM_NODES
+from langflow_base.interface.custom.eval import eval_custom_component_code
+from langflow_base.interface.importing.utils import import_by_type
+from langflow_base.interface.initialize.llm import initialize_vertexai
+from langflow_base.interface.initialize.utils import handle_format_kwargs, handle_node_type, handle_partial_variables
+from langflow_base.interface.initialize.vector_store import vecstore_initializer
+from langflow_base.interface.output_parsers.base import output_parser_creator
+from langflow_base.interface.retrievers.base import retriever_creator
+from langflow_base.interface.toolkits.base import toolkits_creator
+from langflow_base.interface.utils import load_file_into_dict
+from langflow_base.interface.wrappers.base import wrapper_creator
+from langflow_base.schema.schema import Record
+from langflow_base.utils import validate
+from langflow_base.utils.util import unescape_string
 
 if TYPE_CHECKING:
     from langflow_base.interface.custom.custom_component import CustomComponent
@@ -285,7 +285,7 @@ def instantiate_tool(node_type, class_object: Type[BaseTool], params: Dict):
             raise ValueError("Invalid file")
         return class_object(**params)
     elif node_type == "PythonFunctionTool":
-        from langflow.interface.custom.utils import get_function
+        from langflow_base.interface.custom.utils import get_function
 
         params["func"] = get_function(params.get("code"))
         return class_object(**params)

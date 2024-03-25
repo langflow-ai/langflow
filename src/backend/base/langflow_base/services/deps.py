@@ -6,18 +6,18 @@ from langflow_base.services import ServiceType, service_manager
 if TYPE_CHECKING:
     from sqlmodel import Session
 
-    from langflow.services.cache.service import CacheService
-    from langflow.services.chat.service import ChatService
-    from langflow.services.credentials.service import CredentialService
-    from langflow.services.database.service import DatabaseService
-    from langflow.services.monitor.service import MonitorService
-    from langflow.services.plugins.service import PluginService
-    from langflow.services.session.service import SessionService
-    from langflow.services.settings.service import SettingsService
-    from langflow.services.socket.service import SocketIOService
-    from langflow.services.storage.service import StorageService
-    from langflow.services.store.service import StoreService
-    from langflow.services.task.service import TaskService
+    from langflow_base.services.cache.service import CacheService
+    from langflow_base.services.chat.service import ChatService
+    from langflow_base.services.credentials.service import CredentialService
+    from langflow_base.services.database.service import DatabaseService
+    from langflow_base.services.monitor.service import MonitorService
+    from langflow_base.services.plugins.service import PluginService
+    from langflow_base.services.session.service import SessionService
+    from langflow_base.services.settings.service import SettingsService
+    from langflow_base.services.socket.service import SocketIOService
+    from langflow_base.services.storage.service import StorageService
+    from langflow_base.services.store.service import StoreService
+    from langflow_base.services.task.service import TaskService
 
 
 def get_socket_service() -> "SocketIOService":

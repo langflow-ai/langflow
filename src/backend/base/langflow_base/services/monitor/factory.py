@@ -1,6 +1,6 @@
-from langflow.services.factory import ServiceFactory
-from langflow.services.monitor.service import MonitorService
-from langflow.services.settings.service import SettingsService
+from langflow_base.services.factory import ServiceFactory
+from langflow_base.services.monitor.service import MonitorService
+from langflow_base.services.settings.service import SettingsService
 
 
 class MonitorServiceFactory(ServiceFactory):

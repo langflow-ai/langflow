@@ -5,17 +5,17 @@ from typing import TYPE_CHECKING, Coroutine, Dict, Generator, List, Optional, Ty
 
 from loguru import logger
 
-from langflow.graph.edge.base import ContractEdge
-from langflow.graph.graph.constants import lazy_load_vertex_dict
-from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
-from langflow.graph.graph.state_manager import GraphStateManager
-from langflow.graph.graph.utils import process_flow
-from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
-from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import ChatVertex, FileToolVertex, LLMVertex, RoutingVertex, StateVertex, ToolkitVertex
-from langflow.interface.tools.constants import FILE_TOOLS
-from langflow.schema import Record
-from langflow.schema.schema import INPUT_FIELD_NAME
+from langflow_base.graph.edge.base import ContractEdge
+from langflow_base.graph.graph.constants import lazy_load_vertex_dict
+from langflow_base.graph.graph.runnable_vertices_manager import RunnableVerticesManager
+from langflow_base.graph.graph.state_manager import GraphStateManager
+from langflow_base.graph.graph.utils import process_flow
+from langflow_base.graph.schema import InterfaceComponentTypes, RunOutputs
+from langflow_base.graph.vertex.base import Vertex
+from langflow_base.graph.vertex.types import ChatVertex, FileToolVertex, LLMVertex, RoutingVertex, StateVertex, ToolkitVertex
+from langflow_base.interface.tools.constants import FILE_TOOLS
+from langflow_base.schema import Record
+from langflow_base.schema.schema import INPUT_FIELD_NAME
 
 if TYPE_CHECKING:
     from langflow_base.graph.schema import ResultData

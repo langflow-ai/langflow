@@ -3,8 +3,8 @@ from typing import List
 from langchain.agents import create_xml_agent
 from langchain_core.prompts import PromptTemplate
 
-from langflow.base.agents.agent import LCAgentComponent
-from langflow.field_typing import BaseLLM, BaseMemory, Text, Tool
+from langflow_base.base.agents.agent import LCAgentComponent
+from langflow_base.field_typing import BaseLLM, BaseMemory, Text, Tool
 
 
 class XMLAgentComponent(LCAgentComponent):

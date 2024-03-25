@@ -64,11 +64,11 @@ def run_migrations_online() -> None:
     """
 
     try:
-        from langflow.services.database.factory import DatabaseServiceFactory
-        from langflow.services.deps import get_db_service
-        from langflow.services.manager import (initialize_settings_service,
+        from langflow_base.services.database.factory import DatabaseServiceFactory
+        from langflow_base.services.deps import get_db_service
+        from langflow_base.services.manager import (initialize_settings_service,
                                                service_manager)
-        from langflow.services.schema import ServiceType
+        from langflow_base.services.schema import ServiceType
 
         initialize_settings_service()
         service_manager.register_factory(

@@ -6,8 +6,8 @@ from passlib.context import CryptContext
 from pydantic import Field, SecretStr, validator
 from pydantic_settings import BaseSettings
 
-from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
-from langflow.services.settings.utils import read_secret_from_file, write_secret_to_file
+from langflow_base.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from langflow_base.services.settings.utils import read_secret_from_file, write_secret_to_file
 
 
 class AuthSettings(BaseSettings):

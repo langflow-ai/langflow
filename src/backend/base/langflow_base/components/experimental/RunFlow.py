@@ -1,9 +1,9 @@
 from typing import Any, List, Optional
 
 from langflow import CustomComponent
-from langflow.field_typing import NestedDict, Text
-from langflow.graph.schema import ResultData
-from langflow.schema import Record, dotdict
+from langflow_base.field_typing import NestedDict, Text
+from langflow_base.graph.schema import ResultData
+from langflow_base.schema import Record, dotdict
 
 
 class RunFlowComponent(CustomComponent):

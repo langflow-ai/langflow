@@ -3,11 +3,11 @@ from typing import Any, List, Optional, Text, Tuple
 from loguru import logger
 
 from langflow import CustomComponent
-from langflow.graph.graph.base import Graph
-from langflow.graph.schema import ResultData, RunOutputs
-from langflow.schema import Record
-from langflow.schema.dotdict import dotdict
-from langflow.template.field.base import TemplateField
+from langflow_base.graph.graph.base import Graph
+from langflow_base.graph.schema import ResultData, RunOutputs
+from langflow_base.schema import Record
+from langflow_base.schema.dotdict import dotdict
+from langflow_base.template.field.base import TemplateField
 
 
 class SubFlowComponent(CustomComponent):
