@@ -96,10 +96,13 @@ build_frontend:
 	cp -r src/frontend/build src/backend/langflow/frontend
 
 build:
+	poetry build --format sdist
+
+build_base:
 	make install_frontend
 	make build_frontend
-	poetry build --format sdist
-	rm -rf src/backend/langflow/frontend
+	cd src/backend/base poetry build --format sdist
+	rm -rf src/backend/base/frontend
 
 dev:
 	make install_frontend
