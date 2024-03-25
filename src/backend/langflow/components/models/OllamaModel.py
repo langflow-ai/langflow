@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 # from langchain_community.chat_models import ChatOllama
 from langchain_community.chat_models import ChatOllama
 
-from langflow.components.models.base.model import LCModelComponent
+from langflow.base.models.model import LCModelComponent
 
 # from langchain.chat_models import ChatOllama
 from langflow.field_typing import Text
