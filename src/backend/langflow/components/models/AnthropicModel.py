@@ -53,12 +53,17 @@ class AnthropicLLM(LCModelComponent):
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
             },
+            "system_message": {
+                "display_name": "System Message",
+                "info": "System message to pass to the model.",
+            },
         }
 
     def build(
         self,
         model: str,
         input_value: Text,
+        system_message: Optional[str] = None,
         anthropic_api_key: Optional[str] = None,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
@@ -80,4 +85,4 @@ class AnthropicLLM(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not connect to Anthropic API.") from e
 
-        return self.get_result(output=output, stream=stream, input_value=input_value)
+        return self.get_chat_result(output, stream, input_value, system_message)

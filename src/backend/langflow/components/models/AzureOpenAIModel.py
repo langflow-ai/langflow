@@ -79,6 +79,14 @@ class AzureChatOpenAIComponent(LCModelComponent):
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
             },
+            "system_message": {
+                "display_name": "System Message",
+                "info": "System message to pass to the model.",
+            },
+            "system_message": {
+                "display_name": "System Message",
+                "info": "System message to pass to the model.",
+            },
         }
 
     def build(
@@ -89,6 +97,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
         azure_deployment: str,
         api_key: str,
         api_version: str,
+        system_message: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: Optional[int] = 1000,
         stream: bool = False,
@@ -107,4 +116,4 @@ class AzureChatOpenAIComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not connect to AzureOpenAI API.") from e
 
-        return self.get_result(output=output, stream=stream, input_value=input_value)
+        return self.get_chat_result(output, stream, input_value, system_message)

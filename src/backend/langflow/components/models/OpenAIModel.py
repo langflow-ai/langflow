@@ -62,6 +62,10 @@ class OpenAIModelComponent(LCModelComponent):
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
             },
+            "system_message": {
+                "display_name": "System Message",
+                "info": "System message to pass to the model.",
+            },
         }
 
     def build(
@@ -74,6 +78,7 @@ class OpenAIModelComponent(LCModelComponent):
         openai_api_key: Optional[str] = None,
         temperature: float = 0.7,
         stream: bool = False,
+        system_message: Optional[str] = None,
     ) -> Text:
         if not openai_api_base:
             openai_api_base = "https://api.openai.com/v1"
@@ -86,4 +91,4 @@ class OpenAIModelComponent(LCModelComponent):
             temperature=temperature,
         )
 
-        return self.get_result(output=output, stream=stream, input_value=input_value)
+        return self.get_chat_result(output, stream, input_value, system_message)

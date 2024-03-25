@@ -63,6 +63,10 @@ class ChatVertexAIComponent(LCModelComponent):
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
             },
+            "system_message": {
+                "display_name": "System Message",
+                "info": "System message to pass to the model.",
+            },
         }
 
     def build(
@@ -79,6 +83,7 @@ class ChatVertexAIComponent(LCModelComponent):
         top_p: float = 0.95,
         verbose: bool = False,
         stream: bool = False,
+        system_message: Optional[str] = None,
     ) -> Text:
         try:
             from langchain_google_vertexai import ChatVertexAI  # type: ignore
@@ -99,4 +104,4 @@ class ChatVertexAIComponent(LCModelComponent):
             verbose=verbose,
         )
 
-        return self.get_result(output=output, stream=stream, input_value=input_value)
+        return self.get_chat_result(output, stream, input_value, system_message)

@@ -74,6 +74,10 @@ class QianfanChatEndpointComponent(LCModelComponent):
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
             },
+            "system_message": {
+                "display_name": "System Message",
+                "info": "System message to pass to the model.",
+            },
         }
 
     def build(
@@ -87,6 +91,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
         penalty_score: Optional[float] = None,
         endpoint: Optional[str] = None,
         stream: bool = False,
+        system_message: Optional[str] = None,
     ) -> Text:
         try:
             output = QianfanChatEndpoint(  # type: ignore
@@ -101,4 +106,4 @@ class QianfanChatEndpointComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not connect to Baidu Qianfan API.") from e
 
-        return self.get_result(output=output, stream=stream, input_value=input_value)
+        return self.get_chat_result(output, stream, input_value, system_message)
