@@ -159,7 +159,7 @@ async def build_vertex(
                 set_cache_coro=set_cache_coro,
                 vertex_id=vertex_id,
                 user_id=current_user.id,
-                inputs=inputs.model_dump() if inputs else {},
+                inputs_dict=inputs.model_dump() if inputs else {},
             )
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
