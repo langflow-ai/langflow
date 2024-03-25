@@ -1,6 +1,7 @@
 from langchain_community.agent_toolkits.openapi.toolkit import BaseToolkit, OpenAPIToolkit
 from langchain_community.utilities.requests import TextRequestsWrapper
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.field_typing import AgentExecutor
 
 

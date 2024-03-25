@@ -4,7 +4,8 @@ from langflow_base.template.field.base import TemplateField
 from langflow_base.template.frontend_node.base import FrontendNode
 from langflow_base.template.template.base import Template
 
-DEFAULT_CUSTOM_COMPONENT_CODE = """from langflow import CustomComponent
+DEFAULT_CUSTOM_COMPONENT_CODE = """from langflow_base.interface.custom.custom_component import CustomComponent
+
 from typing import Optional, List, Dict, Union
 from langflow_base.field_typing import (
     AgentExecutor,

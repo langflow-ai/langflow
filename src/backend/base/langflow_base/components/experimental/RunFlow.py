@@ -1,6 +1,7 @@
 from typing import List, Optional
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.field_typing import NestedDict, Text
 from langflow_base.graph.schema import ResultData
 from langflow_base.schema import Record

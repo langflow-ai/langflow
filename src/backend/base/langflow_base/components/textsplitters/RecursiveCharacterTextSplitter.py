@@ -3,7 +3,8 @@ from typing import Optional
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.schema import Record
 from langflow_base.utils.util import build_loader_repr_from_records, unescape_string
 

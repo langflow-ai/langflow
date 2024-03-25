@@ -1,5 +1,6 @@
 from typing import List
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 import json
 from langchain.schema import BaseRetriever
 from langchain.schema.vectorstore import VectorStore

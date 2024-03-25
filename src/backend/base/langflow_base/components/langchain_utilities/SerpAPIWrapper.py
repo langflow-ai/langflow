@@ -1,7 +1,8 @@
 from typing import Callable, Union
 
 from langchain_community.utilities.serpapi import SerpAPIWrapper
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 
 class SerpAPIWrapperComponent(CustomComponent):

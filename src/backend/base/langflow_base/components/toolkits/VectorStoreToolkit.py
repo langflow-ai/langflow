@@ -1,4 +1,5 @@
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreToolkit
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
 from langflow_base.field_typing import (

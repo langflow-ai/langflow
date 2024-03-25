@@ -3,7 +3,8 @@ from typing import List, Optional
 from langchain.llms.base import BaseLLM
 from langchain_community.llms.ollama import Ollama
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 
 class OllamaLLM(CustomComponent):

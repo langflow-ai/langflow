@@ -1,7 +1,8 @@
 from typing import Optional
 
 from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.field_typing import BaseLanguageModel, RangeSpec
 from pydantic.v1.types import SecretStr
 

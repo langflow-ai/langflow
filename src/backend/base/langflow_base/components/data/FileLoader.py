@@ -1,6 +1,7 @@
 from typing import List
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.schema import Record
 from langflow_base.utils.constants import LOADERS_INFO
 

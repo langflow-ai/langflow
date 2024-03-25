@@ -9,7 +9,8 @@ from langchain.prompts.chat import MessagesPlaceholder
 from langchain.schema.memory import BaseMemory
 from langchain.tools import Tool
 from langchain_community.chat_models import ChatOpenAI
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.field_typing.range_spec import RangeSpec
 
 

@@ -4,7 +4,8 @@ from typing import Dict
 # If this class does not exist, you would need to create it or import the appropriate class from another module
 from langchain_community.utilities.google_serper import GoogleSerperAPIWrapper
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 
 class GoogleSerperAPIWrapperComponent(CustomComponent):

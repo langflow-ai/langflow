@@ -4,7 +4,8 @@ from langchain_community.chat_models.anthropic import ChatAnthropic
 from langchain.llms.base import BaseLanguageModel
 from pydantic.v1 import SecretStr
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 
 class AnthropicLLM(CustomComponent):

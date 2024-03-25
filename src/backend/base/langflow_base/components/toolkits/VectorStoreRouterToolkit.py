@@ -1,4 +1,5 @@
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from typing import List, Union
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreRouterToolkit
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo

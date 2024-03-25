@@ -1,7 +1,8 @@
 from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
 from langchain_experimental.sql.base import SQLDatabase
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.field_typing import Text
 
 

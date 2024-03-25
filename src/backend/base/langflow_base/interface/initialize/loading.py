@@ -35,7 +35,8 @@ from langflow_base.utils import validate
 from langflow_base.utils.util import unescape_string
 
 if TYPE_CHECKING:
-    from langflow import CustomComponent
+    from langflow_base.interface.custom.custom_component import CustomComponent
+
     from langflow_base.graph.vertex.base import Vertex
 
 

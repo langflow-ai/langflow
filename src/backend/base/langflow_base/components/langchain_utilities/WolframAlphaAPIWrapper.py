@@ -1,7 +1,8 @@
 from typing import Callable, Union
 
 from langchain_community.utilities.wolfram_alpha import WolframAlphaAPIWrapper
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 # Since all the fields in the JSON have show=False, we will only create a basic component
 # without any configurable fields.

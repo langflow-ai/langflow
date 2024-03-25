@@ -7,7 +7,8 @@ from langchain_community.embeddings import FakeEmbeddings
 from langchain_community.vectorstores.vectara import Vectara
 from langchain_core.vectorstores import VectorStore
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.field_typing import BaseRetriever
 from langflow_base.schema.schema import Record
 

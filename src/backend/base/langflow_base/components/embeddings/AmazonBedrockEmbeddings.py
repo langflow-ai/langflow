@@ -4,7 +4,8 @@ from langchain.embeddings.base import Embeddings
 from langchain_community.embeddings import BedrockEmbeddings
 
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 
 class AmazonBedrockEmeddingsComponent(CustomComponent):

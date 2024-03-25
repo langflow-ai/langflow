@@ -2,7 +2,8 @@ from typing import List
 
 from langchain.text_splitter import CharacterTextSplitter
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.schema.schema import Record
 from langflow_base.utils.util import unescape_string
 

@@ -2,7 +2,8 @@ from typing import List
 
 from langchain_core.documents import Document
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.schema import Record
 
 

@@ -1,4 +1,5 @@
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langchain.schema import Document
 from langflow_base.services.database.models.base import orjson_dumps
 from langchain_community.utilities.searchapi import SearchApiAPIWrapper

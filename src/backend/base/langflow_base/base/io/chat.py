@@ -1,7 +1,7 @@
 import warnings
 from typing import Optional, Union
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
 from langflow_base.field_typing import Text
 from langflow_base.memory import add_messages
 from langflow_base.schema import Record

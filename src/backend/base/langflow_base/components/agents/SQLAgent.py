@@ -1,4 +1,5 @@
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from typing import Union, Callable
 from langchain.agents import AgentExecutor
 from langflow_base.field_typing import BaseLanguageModel

@@ -4,7 +4,8 @@ from langchain.chains.combine_documents.base import BaseCombineDocumentsChain
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain_core.documents import Document
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.field_typing import BaseMemory, BaseRetriever, Text
 
 

@@ -5,7 +5,8 @@ from langchain.agents.agent_toolkits.base import BaseToolkit
 from langchain.tools import Tool
 from metaphor_python import Metaphor  # type: ignore
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 
 class MetaphorToolkit(CustomComponent):

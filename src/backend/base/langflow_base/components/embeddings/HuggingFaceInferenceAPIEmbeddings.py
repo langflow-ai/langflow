@@ -1,7 +1,8 @@
 from typing import Dict, Optional
 
 from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEmbeddings
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from pydantic.v1.types import SecretStr
 
 

@@ -1,5 +1,6 @@
 from typing import Optional
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langchain.llms.baidu_qianfan_endpoint import QianfanLLMEndpoint
 from langchain.llms.base import BaseLLM
 

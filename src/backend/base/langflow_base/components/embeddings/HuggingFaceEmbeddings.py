@@ -1,4 +1,5 @@
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from typing import Optional, Dict
 from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 

@@ -3,7 +3,8 @@ from typing import List, Optional, Union
 from langchain.llms import BaseLLM
 from langchain_community.chat_models.vertexai import ChatVertexAI
 from langchain_core.messages.base import BaseMessage
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.field_typing import BaseLanguageModel
 
 

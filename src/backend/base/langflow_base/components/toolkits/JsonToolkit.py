@@ -1,4 +1,5 @@
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langchain_community.tools.json.tool import JsonSpec
 from langchain_community.agent_toolkits.json.toolkit import JsonToolkit
 

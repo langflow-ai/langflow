@@ -4,7 +4,8 @@ from typing import List, Optional
 
 import httpx
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.schema import Record
 
 

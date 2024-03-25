@@ -2,7 +2,8 @@ from typing import List, Optional
 
 from langchain_community.vectorstores.mongodb_atlas import MongoDBAtlasVectorSearch
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.field_typing import Embeddings, NestedDict
 from langflow_base.schema.schema import Record
 

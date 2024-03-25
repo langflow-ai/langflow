@@ -4,7 +4,8 @@ from langchain.schema import BaseRetriever
 from langchain_community.retrievers import MetalRetriever
 from metal_sdk.metal import Metal  # type: ignore
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 
 class MetalRetrieverComponent(CustomComponent):

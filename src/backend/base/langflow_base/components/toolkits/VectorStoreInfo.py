@@ -3,7 +3,8 @@ from typing import Callable, Union
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
 from langchain_community.vectorstores import VectorStore
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 
 class VectorStoreInfoComponent(CustomComponent):

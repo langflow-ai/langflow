@@ -4,7 +4,8 @@ from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEn
 from langchain.llms.base import BaseLLM
 from pydantic.v1 import SecretStr
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 
 class QianfanChatEndpointComponent(CustomComponent):

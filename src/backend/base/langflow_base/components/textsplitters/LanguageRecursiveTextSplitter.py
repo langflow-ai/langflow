@@ -2,7 +2,8 @@ from typing import List, Optional
 
 from langchain.text_splitter import Language
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.schema.schema import Record
 
 

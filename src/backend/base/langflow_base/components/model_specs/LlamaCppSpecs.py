@@ -1,5 +1,6 @@
 from typing import Optional, List, Dict, Any
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langchain_community.llms.llamacpp import LlamaCpp
 
 

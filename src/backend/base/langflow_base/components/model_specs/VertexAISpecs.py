@@ -1,4 +1,5 @@
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langchain.llms import BaseLLM
 from typing import Optional, Union, Callable, Dict
 from langchain_community.llms.vertexai import VertexAI

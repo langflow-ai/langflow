@@ -5,7 +5,8 @@ from langchain.embeddings.base import Embeddings
 from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import VectorStore, Weaviate
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.schema.schema import Record
 
 

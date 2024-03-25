@@ -5,7 +5,8 @@ from langchain_community.chat_models import ChatOllama
 from langchain_core.language_models.chat_models import BaseChatModel
 
 # from langchain.chat_models import ChatOllama
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 # whe When a callback component is added to Langflow, the comment must be uncommented.
 # from langchain.callbacks.manager import CallbackManager

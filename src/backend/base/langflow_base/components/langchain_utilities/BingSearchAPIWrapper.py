@@ -1,4 +1,5 @@
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 # Assuming `BingSearchAPIWrapper` is a class that exists in the context
 # and has the appropriate methods and attributes.

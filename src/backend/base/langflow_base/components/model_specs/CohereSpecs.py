@@ -1,6 +1,7 @@
 from langchain_community.llms.cohere import Cohere
 from langchain_core.language_models.base import BaseLanguageModel
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 
 class CohereComponent(CustomComponent):

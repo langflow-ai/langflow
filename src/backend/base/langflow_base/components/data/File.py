@@ -1,6 +1,7 @@
 from typing import Any, Dict, List
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_record
 from langflow_base.schema import Record
 

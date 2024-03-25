@@ -3,7 +3,8 @@ from typing import Optional
 from langchain.schema import BaseRetriever
 from langchain_community.retrievers import AmazonKendraRetriever
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 
 class AmazonKendraRetrieverComponent(CustomComponent):

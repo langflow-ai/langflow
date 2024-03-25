@@ -3,7 +3,8 @@ from typing import Optional
 from langchain.llms.base import BaseLanguageModel
 from langchain_community.chat_models.azure_openai import AzureChatOpenAI
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 
 class AzureChatOpenAISpecsComponent(CustomComponent):

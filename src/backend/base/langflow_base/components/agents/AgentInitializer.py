@@ -1,7 +1,8 @@
 from typing import Callable, List, Optional, Union
 
 from langchain.agents import AgentExecutor, AgentType, initialize_agent, types
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.field_typing import BaseChatMemory, BaseLanguageModel, Tool
 
 

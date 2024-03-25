@@ -2,7 +2,8 @@ from typing import Dict, Optional
 
 from langchain_community.llms.ctransformers import CTransformers
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 
 
 class CTransformersComponent(CustomComponent):

@@ -2,7 +2,8 @@ from typing import Any, Callable, Dict, Optional, Union
 
 from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
 
-from langflow import CustomComponent
+from langflow_base.interface.custom.custom_component import CustomComponent
+
 from langflow_base.field_typing import BaseLanguageModel
 
 
