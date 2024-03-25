@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from langflow.api import router
+from langflow.initial_setup.setup import create_or_update_starter_projects
 from langflow.interface.utils import setup_llm_caching
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
@@ -24,6 +25,7 @@ def get_lifespan(fix_migration=False, socketio_server=None):
         )
         setup_llm_caching()
         LangfuseInstance.update()
+        create_or_update_starter_projects()
         yield
         teardown_services()
 

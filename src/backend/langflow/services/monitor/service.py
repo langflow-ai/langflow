@@ -105,6 +105,12 @@ class MonitorService(Service):
         with duckdb.connect(str(self.db_path)) as conn:
             conn.execute(query)
 
+    def delete_messages(self, session_id: str):
+        query = f"DELETE FROM messages WHERE session_id = '{session_id}'"
+
+        with duckdb.connect(str(self.db_path)) as conn:
+            conn.execute(query)
+
     def add_message(self, message: MessageModel):
         self.add_row("messages", message)
 

@@ -1,4 +1,6 @@
-from typing import Any
+import asyncio
+from collections import defaultdict
+from typing import Any, Optional
 
 from langflow.services.base import Service
 from langflow.services.deps import get_cache_service
@@ -8,30 +10,30 @@ class ChatService(Service):
     name = "chat_service"
 
     def __init__(self):
+        self._cache_locks = defaultdict(asyncio.Lock)
         self.cache_service = get_cache_service()
 
-    def set_cache(self, client_id: str, data: Any) -> bool:
+    async def set_cache(self, flow_id: str, data: Any, lock: Optional[asyncio.Lock] = None) -> bool:
         """
         Set the cache for a client.
         """
         # client_id is the flow id but that already exists in the cache
         # so we need to change it to something else
-
         result_dict = {
             "result": data,
             "type": type(data),
         }
-        self.cache_service.upsert(client_id, result_dict)
-        return client_id in self.cache_service
+        await self.cache_service.upsert(flow_id, result_dict, lock=lock or self._cache_locks[flow_id])
+        return flow_id in self.cache_service
 
-    def get_cache(self, client_id: str) -> Any:
+    async def get_cache(self, flow_id: str, lock: Optional[asyncio.Lock] = None) -> Any:
         """
         Get the cache for a client.
         """
-        return self.cache_service.get(client_id)
+        return await self.cache_service.get(flow_id, lock=lock or self._cache_locks[flow_id])
 
-    def clear_cache(self, client_id: str):
+    async def clear_cache(self, flow_id: str, lock: Optional[asyncio.Lock] = None):
         """
         Clear the cache for a client.
         """
-        self.cache_service.delete(client_id)
+        await self.cache_service.delete(flow_id, lock=lock or self._cache_locks[flow_id])

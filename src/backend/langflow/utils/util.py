@@ -5,10 +5,15 @@ from functools import wraps
 from typing import Any, Dict, List, Optional, Union
 
 from docstring_parser import parse
-from langchain_core.documents import Document
 
+from langflow.schema.schema import Record
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
+
+
+def unescape_string(s: str):
+    # Replace escaped new line characters with actual new line characters
+    return s.replace("\\n", "\n")
 
 
 def remove_ansi_escape_codes(text):
@@ -86,7 +91,8 @@ def build_template_from_class(name: str, type_to_cls_dict: Dict, add_function: b
                         if name_ == "default_factory":
                             try:
                                 variables[class_field_items]["default"] = get_default_factory(
-                                    module=_class.__base__.__module__, function=value_
+                                    module=_class.__base__.__module__,
+                                    function=value_,
                                 )
                             except Exception:
                                 variables[class_field_items]["default"] = None
@@ -145,8 +151,8 @@ def build_template_from_method(
                 "_type": _type,
                 **{
                     name: {
-                        "default": param.default if param.default != param.empty else None,
-                        "type": param.annotation if param.annotation != param.empty else None,
+                        "default": (param.default if param.default != param.empty else None),
+                        "type": (param.annotation if param.annotation != param.empty else None),
                         "required": param.default == param.empty,
                     }
                     for name, param in params.items()
@@ -243,7 +249,7 @@ def format_dict(dictionary: Dict[str, Any], class_name: Optional[str] = None) ->
     """
 
     for key, value in dictionary.items():
-        if key == "_type":
+        if key in ["_type"]:
             continue
 
         _type: Union[str, type] = get_type(value)
@@ -439,10 +445,20 @@ def add_options_to_field(value: Dict[str, Any], class_name: Optional[str], key: 
         value["value"] = options_map[class_name][0]
 
 
-def build_loader_repr_from_documents(documents: List[Document]) -> str:
-    if documents:
-        avg_length = sum(len(doc.page_content) for doc in documents) / len(documents)
-        return f"""{len(documents)} documents
-        \nAvg. Document Length (characters): {int(avg_length)}
-        Documents: {documents[:3]}..."""
-    return "0 documents"
+def build_loader_repr_from_records(records: List[Record]) -> str:
+    """
+    Builds a string representation of the loader based on the given records.
+
+    Args:
+        records (List[Record]): A list of records.
+
+    Returns:
+        str: A string representation of the loader.
+
+    """
+    if records:
+        avg_length = sum(len(doc.text) for doc in records) / len(records)
+        return f"""{len(records)} records
+        \nAvg. Record Length (characters): {int(avg_length)}
+        Records: {records[:3]}..."""
+    return "0 records"

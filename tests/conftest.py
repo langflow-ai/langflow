@@ -11,13 +11,14 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from langflow.graph.graph.base import Graph
+from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
 def pytest_configure():
     pytest.BASIC_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "basic_example.json"
     pytest.COMPLEX_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "complex_example.json"
+    pytest.COMPLEX_DEPS_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "complex_deps_example.json"
     pytest.OPENAPI_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "Openapi.json"
     pytest.GROUPED_CHAT_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "grouped_chat.json"
     pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "one_group_chat.json"
@@ -190,6 +192,16 @@ def json_vector_store():
         return f.read()
 
 
+@pytest.fixture
+def complex_graph_with_groups():
+    with open(pytest.COMPLEX_DEPS_EXAMPLE_PATH, "r") as f:
+        flow_graph = json.load(f)
+    data_graph = flow_graph["data"]
+    nodes = data_graph["nodes"]
+    edges = data_graph["edges"]
+    return Graph(nodes, edges)
+
+
 @pytest.fixture(name="client", autouse=True)
 def client_fixture(session: Session, monkeypatch):
     # Set the database url to a test database
@@ -250,7 +262,7 @@ def active_user(client):
             is_superuser=False,
         )
         # check if user exists
-        if active_user := session.query(User).filter(User.username == user.username).first():
+        if active_user := session.exec(select(User).where(User.username == user.username)).first():
             return active_user
         session.add(user)
         session.commit()
@@ -355,9 +367,31 @@ def created_api_key(active_user):
     )
     db_manager = get_db_service()
     with session_getter(db_manager) as session:
-        if existing_api_key := session.query(ApiKey).filter(ApiKey.api_key == api_key.api_key).first():
+        if existing_api_key := session.exec(select(ApiKey).where(ApiKey.api_key == api_key.api_key)).first():
             return existing_api_key
         session.add(api_key)
         session.commit()
         session.refresh(api_key)
     return api_key
+
+
+@pytest.fixture(name="starter_project")
+def get_starter_project(active_user):
+    # once the client is created, we can get the starter project
+    with session_getter(get_db_service()) as session:
+        flow = session.exec(select(Flow).where(Flow.folder == STARTER_FOLDER_NAME)).first()
+        if not flow:
+            raise ValueError("No starter project found")
+
+        new_flow_create = FlowCreate(
+            name=flow.name,
+            description=flow.description,
+            data=flow.data,
+            user_id=active_user.id,
+        )
+        new_flow = Flow.model_validate(new_flow_create, from_attributes=True)
+        session.add(new_flow)
+        session.commit()
+        session.refresh(new_flow)
+        new_flow_dict = new_flow.model_dump()
+    return new_flow_dict

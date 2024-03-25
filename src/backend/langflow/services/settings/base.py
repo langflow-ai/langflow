@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     DEV: bool = False
     DATABASE_URL: Optional[str] = None
-    CACHE_TYPE: str = "memory"
+    CACHE_TYPE: str = "async"
     REMOVE_API_KEYS: bool = False
     COMPONENTS_PATH: List[str] = []
     LANGCHAIN_CACHE: str = "InMemoryCache"
@@ -64,6 +64,8 @@ class Settings(BaseSettings):
     LIKE_WEBHOOK_URL: Optional[str] = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
     STORAGE_TYPE: str = "local"
+
+    CELERY_ENABLED: bool = False
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):

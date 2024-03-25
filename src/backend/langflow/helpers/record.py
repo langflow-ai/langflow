@@ -16,7 +16,7 @@ def docs_to_records(documents: list[Document]) -> list[Record]:
     return [Record.from_document(document) for document in documents]
 
 
-def records_to_text(template: str, records: list[Record]) -> list[str]:
+def records_to_text(template: str, records: list[Record]) -> str:
     """
     Converts a list of Records to a list of texts.
 
@@ -30,8 +30,5 @@ def records_to_text(template: str, records: list[Record]) -> list[str]:
         records = [records]
     # Check if there are any format strings in the template
 
-    formated_records = [
-        template.format(text=record.text, data=record.data, **record.data)
-        for record in records
-    ]
+    formated_records = [template.format(data=record.data, **record.data) for record in records]
     return "\n".join(formated_records)

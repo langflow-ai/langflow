@@ -1,14 +1,12 @@
 import time
+from uuid import uuid4
 
 import pytest
+from fastapi import status
 from fastapi.testclient import TestClient
 
 from langflow.interface.custom.directory_reader.directory_reader import DirectoryReader
-from langflow.interface.tools.constants import CUSTOM_TOOLS
-from langflow.services.auth.utils import get_password_hash
-from langflow.services.database.models.api_key.model import ApiKey
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, get_settings_service
+from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
 
 
@@ -29,10 +27,7 @@ def poll_task_status(client, headers, href, max_attempts=20, sleep_time=1):
             href,
             headers=headers,
         )
-        if (
-            task_status_response.status_code == 200
-            and task_status_response.json()["status"] == "SUCCESS"
-        ):
+        if task_status_response.status_code == 200 and task_status_response.json()["status"] == "SUCCESS":
             return task_status_response.json()
         time.sleep(sleep_time)
     return None  # Return None if task did not complete in time
@@ -113,29 +108,6 @@ PROMPT_REQUEST = {
         },
     },
 }
-
-
-@pytest.fixture
-def created_api_key(active_user):
-    hashed = get_password_hash("random_key")
-    api_key = ApiKey(
-        name="test_api_key",
-        user_id=active_user.id,
-        api_key="random_key",
-        hashed_api_key=hashed,
-    )
-    db_manager = get_db_service()
-    with session_getter(db_manager) as session:
-        if (
-            existing_api_key := session.query(ApiKey)
-            .filter(ApiKey.api_key == api_key.api_key)
-            .first()
-        ):
-            return existing_api_key
-        session.add(api_key)
-        session.commit()
-        session.refresh(api_key)
-    return api_key
 
 
 # def test_process_flow_invalid_api_key(client, flow, monkeypatch):
@@ -296,17 +268,13 @@ def test_get_all(client: TestClient, logged_in_headers):
     dir_reader = DirectoryReader(settings.COMPONENTS_PATH[0])
     files = dir_reader.get_files()
     # json_response is a dict of dicts
-    all_names = [
-        component_name
-        for _, components in response.json().items()
-        for component_name in components
-    ]
+    all_names = [component_name for _, components in response.json().items() for component_name in components]
     json_response = response.json()
     # We need to test the custom nodes
     assert len(all_names) > len(files)
-    assert "Prompt" in json_response["prompts"]
-    # All CUSTOM_TOOLS(dict) should be in the response
-    assert all(tool in json_response["tools"] for tool in CUSTOM_TOOLS.keys())
+    assert "ChatInput" in json_response["inputs"]
+    assert "Prompt" in json_response["inputs"]
+    assert "ChatOutput" in json_response["outputs"]
 
 
 def test_post_validate_code(client: TestClient):
@@ -425,276 +393,165 @@ def test_various_prompts(client, prompt, expected_input_variables):
 
 
 def test_get_vertices_flow_not_found(client, logged_in_headers):
-    response = client.get(
-        "/api/v1/build/nonexistent_id/vertices", headers=logged_in_headers
-    )
-    assert (
-        response.status_code == 500
-    )  # Or whatever status code you've set for invalid ID
+    response = client.get("/api/v1/build/nonexistent_id/vertices", headers=logged_in_headers)
+    assert response.status_code == 500  # Or whatever status code you've set for invalid ID
 
 
 def test_get_vertices(client, added_flow_with_prompt_and_history, logged_in_headers):
     flow_id = added_flow_with_prompt_and_history["id"]
-    response = client.get(
-        f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers
-    )
+    response = client.get(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
     assert response.status_code == 200
     assert "ids" in response.json()
     # The response should contain the list in this order
     # ['ConversationBufferMemory-Lu2Nb', 'PromptTemplate-5Q0W8', 'ChatOpenAI-vy7fV', 'LLMChain-UjBh1']
     # The important part is before the - (ConversationBufferMemory, PromptTemplate, ChatOpenAI, LLMChain)
-    ids = [inner_id.split("-")[0] for _id in response.json()["ids"] for inner_id in _id]
+    ids = [_id.split("-")[0] for _id in response.json()["ids"]]
     assert ids == [
         "ChatOpenAI",
         "PromptTemplate",
         "ConversationBufferMemory",
-        "LLMChain",
     ]
 
 
 def test_build_vertex_invalid_flow_id(client, logged_in_headers):
-    response = client.post(
-        "/api/v1/build/nonexistent_id/vertices/vertex_id", headers=logged_in_headers
-    )
+    response = client.post("/api/v1/build/nonexistent_id/vertices/vertex_id", headers=logged_in_headers)
     assert response.status_code == 500
 
 
-def test_build_vertex_invalid_vertex_id(
-    client, added_flow_with_prompt_and_history, logged_in_headers
-):
+def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_history, logged_in_headers):
     flow_id = added_flow_with_prompt_and_history["id"]
-    response = client.post(
-        f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers
-    )
+    response = client.post(f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers)
     assert response.status_code == 500
 
 
-# TODO: Add flow with new components
-# def test_build_all_vertices_in_sequence_with_chat_input(
-#     client, added_flow_chat_input, logged_in_headers
-# ):
-#     flow_id = added_flow_chat_input["id"]
-
-#     # First, get all the vertices in the correct sequence
-#     response = client.get(
-#         f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers
-#     )
-#     assert response.status_code == 200
-#     assert "ids" in response.json()
-#     vertex_ids = response.json()["ids"]
-
-#     # Now, iterate through each vertex and build it
-#     for layer in vertex_ids:
-#         for vertex_id in layer:
-#             response = client.post(
-#                 f"/api/v1/build/{flow_id}/vertices/{vertex_id}",
-#                 headers=logged_in_headers,
-#             )
-#             json_response = response.json()
-#             assert (
-#                 response.status_code == 200
-#             ), f"Failed at vertex {vertex_id}: {json_response}"
-#             assert "valid" in json_response
-#             assert json_response["valid"], json_response["params"]
+def test_successful_run(client, starter_project, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = starter_project["id"]
+    response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
+    assert response.status_code == status.HTTP_200_OK, response.text
+    # Add more assertions here to validate the response content
+    json_response = response.json()
+    assert "session_id" in json_response
+    assert "outputs" in json_response
+    outer_outputs = json_response["outputs"]
+    assert len(outer_outputs) == 1
+    outputs_dict = outer_outputs[0]
+    assert len(outputs_dict) == 2
+    assert "inputs" in outputs_dict
+    assert "outputs" in outputs_dict
+    assert outputs_dict.get("inputs") == {"input_value": ""}
+    assert isinstance(outputs_dict.get("outputs"), list)
+    assert len(outputs_dict.get("outputs")) == 2
+    ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
+    assert all([id in ids for id in ["TextOutput-fTp5e", "ChatOutput-AVN8s"]])
+    display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
+    assert all([name in display_names for name in ["Prompt Output", "Chat Output"]])
+    inner_results = [output.get("results").get("result") for output in outputs_dict.get("outputs")]
+    expected_results = ["Write a press release \n\n- Cars\n- Bottle\n\n\nAnswer:\n\n", ""]
+    assert all([result in inner_results for result in expected_results])
 
 
-# def test_build_all_vertices_in_sequence_with_two_outputs(
-#     client, added_flow_two_outputs, logged_in_headers
-# ):
-#     """This tests the case where a node has two outputs, one of which is Text and the other (in this case) is
-#     a LLMChain. We need to make sure the correct output is passed in both cases."""
-#     flow_id = added_flow_two_outputs["id"]
-
-#     # First, get all the vertices in the correct sequence
-#     response = client.get(
-#         f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers
-#     )
-#     assert response.status_code == 200
-#     assert "ids" in response.json()
-#     vertex_ids = response.json()["ids"]
-
-#     # Now, iterate through each vertex and build it
-#     for vertex_id in vertex_ids:
-#         response = client.post(
-#             f"/api/v1/build/{flow_id}/vertices/{vertex_id}", headers=logged_in_headers
-#         )
-#         json_response = response.json()
-#         assert (
-#             response.status_code == 200
-#         ), f"Failed at vertex {vertex_id}: {json_response}"
-#         assert "valid" in json_response
-#         assert json_response["valid"], json_response["params"]
+def test_run_with_inputs_and_outputs(client, starter_project, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = starter_project["id"]
+    payload = {
+        "inputs": [{"components": ["component1"], "input_value": "value1"}],
+        "outputs": ["Component Name", "component_id"],
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    # Validate the response structure and content
 
 
-# def test_basic_chat_in_process(client, flow, created_api_key):
-#     # Run the /api/v1/process/{flow_id} endpoint
-#     headers = {"x-api-key": created_api_key.api_key}
-#     post_data = {"inputs": {"text": "Hi, My name is Gabriel"}}
-#     response = client.post(
-#         f"api/v1/process/{flow.get('id')}",
-#         headers=headers,
-#         json=post_data,
-#     )
-#     assert response.status_code == 200, response.json()
-#     # Check the response
-#     assert "Gabriel" in response.json()["result"]["text"]
-#     # session_id should be returned
-#     assert "session_id" in response.json()
-#     assert response.json()["session_id"] is not None
-#     # New request with the same session_id
-#     # asking "What is my name?" should return "Gabriel"
-#     post_data = {
-#         "inputs": {"text": "What is my name?"},
-#         "session_id": response.json()["session_id"],
-#     }
-#     response = client.post(
-#         f"api/v1/process/{flow.get('id')}",
-#         headers=headers,
-#         json=post_data,
-#     )
-#     assert response.status_code == 200, response.json()
-#     assert "Gabriel" in response.json()["result"]["text"]
+def test_invalid_flow_id(client, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = "invalid-flow-id"
+    response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    # Check if the error detail is as expected
 
 
-# def test_basic_chat_different_session_ids(client, flow, created_api_key):
-#     # Run the /api/v1/process/{flow_id} endpoint
-#     headers = {"x-api-key": created_api_key.api_key}
-#     post_data = {"inputs": {"text": "Hi, My name is Gabriel"}}
-#     response = client.post(
-#         f"api/v1/process/{flow.get('id')}",
-#         headers=headers,
-#         json=post_data,
-#     )
-#     assert response.status_code == 200, response.json()
-#     # Check the response
-#     assert "Gabriel" in response.json()["result"]["text"]
-#     # session_id should be returned
-#     assert "session_id" in response.json()
-#     assert response.json()["session_id"] is not None
-#     session_id1 = response.json()["session_id"]
-#     # New request with a different session_id
-#     # asking "What is my name?" should return "Gabriel"
-#     post_data = {
-#         "inputs": {"text": "What is my name?"},
-#     }
-#     response = client.post(
-#         f"api/v1/process/{flow.get('id')}",
-#         headers=headers,
-#         json=post_data,
-#     )
-#     assert response.status_code == 200, response.json()
-#     assert "Gabriel" not in response.json()["result"]["text"]
-#     assert session_id1 != response.json()["session_id"]
+def test_run_flow_with_caching_success(client: TestClient, starter_project, created_api_key):
+    flow_id = starter_project["id"]
+    headers = {"x-api-key": created_api_key.api_key}
+    payload = {
+        "inputs": [
+            {"components": ["component1"], "input_value": "value1"},
+            {"components": ["component3"], "input_value": "value2"},
+        ],
+        "outputs": ["Component Name", "component_id"],
+        "tweaks": {
+            "parameter_name": "value",
+            "Component Name": {"parameter_name": "value"},
+            "component_id": {"parameter_name": "value"},
+        },
+        "stream": False,
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert "outputs" in data
+    assert "session_id" in data
 
 
-# def test_basic_chat_with_two_session_ids_and_names(client, flow, created_api_key):
-#     headers = {"x-api-key": created_api_key.api_key}
-#     flow_id = flow.get("id")
-#     names = ["Gabriel", "John"]
-#     session_ids = []
-
-#     for name in names:
-#         post_data = {"inputs": {"text": f"Hi, My name is {name}"}}
-#         response_json = run_post(client, flow_id, headers, post_data)
-
-#         assert name in response_json["result"]["text"]
-#         assert "session_id" in response_json
-#         assert response_json["session_id"] is not None
-
-#         session_ids.append(response_json["session_id"])
-
-#     for i, name in enumerate(names):
-#         post_data = {
-#             "inputs": {"text": "What is my name?"},
-#             "session_id": session_ids[i],
-#         }
-#         response_json = run_post(client, flow_id, headers, post_data)
-
-#         assert name in response_json["result"]["text"]
+def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created_api_key):
+    invalid_flow_id = uuid4()
+    headers = {"x-api-key": created_api_key.api_key}
+    payload = {"inputs": [], "outputs": [], "tweaks": {}, "stream": False}
+    response = client.post(f"/api/v1/run/{invalid_flow_id}", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    data = response.json()
+    assert "detail" in data
+    assert f"Flow {invalid_flow_id} not found" in data["detail"]
 
 
-# @pytest.mark.async_test
-# def test_vector_store_in_process(
-#     distributed_client, added_vector_store, created_api_key
-# ):
-#     # Run the /api/v1/process/{flow_id} endpoint
-#     headers = {"x-api-key": created_api_key.api_key}
-#     post_data = {"inputs": {"input": "What is Langflow?"}}
-#     response = distributed_client.post(
-#         f"api/v1/process/{added_vector_store.get('id')}",
-#         headers=headers,
-#         json=post_data,
-#     )
-#     assert response.status_code == 200, response.json()
-#     # Check the response
-#     assert "Langflow" in response.json()["result"]["output"]
-#     # session_id should be returned
-#     assert "session_id" in response.json()
-#     assert response.json()["session_id"] is not None
+def test_run_flow_with_caching_invalid_input_format(client: TestClient, starter_project, created_api_key):
+    flow_id = starter_project["id"]
+    headers = {"x-api-key": created_api_key.api_key}
+    payload = {"inputs": [{"invalid_key": "value"}], "outputs": [], "tweaks": {}, "stream": False}
+    # This should raise an http 422 error not validation error
+    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
-# Test function without loop
-# @pytest.mark.async_test
-# def test_async_task_processing(distributed_client, flow, created_api_key):
-#     headers = {"x-api-key": created_api_key.api_key}
-#     post_data = {"inputs": {"text": "Hi, My name is Gabriel"}}
-#     flow = flow.model_dump()
-#     # Run the /api/v1/process/{flow_id} endpoint with sync=False
-#     response = distributed_client.post(
-#         f"api/v1/process/{flow.get('id')}",
-#         headers=headers,
-#         json={**post_data, "sync": False},
-#     )
-#     assert response.status_code == 200, response.json()
-
-#     # Extract the task ID from the response
-#     task = response.json().get("task")
-#     task_id = task.get("id")
-#     task_href = task.get("href")
-#     assert task_id is not None
-#     assert task_href is not None
-#     assert task_href == f"api/v1/task/{task_id}"
-
-#     # Polling the task status using the helper function
-#     task_status_json = poll_task_status(distributed_client, headers, task_href)
-#     assert task_status_json is not None, "Task did not complete in time"
-
-#     # Validate that the task completed successfully and the result is as expected
-#     assert "result" in task_status_json, task_status_json
-#     assert "text" in task_status_json["result"], task_status_json["result"]
-#     assert "Gabriel" in task_status_json["result"]["text"], task_status_json["result"]
+def test_run_flow_with_session_id(client, starter_project, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = starter_project["id"]
+    payload = {
+        "inputs": [{"components": ["component1"], "input_value": "value1"}],
+        "outputs": ["Component Name", "component_id"],
+        "session_id": "test-session-id",
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert "outputs" in data
+    assert "session_id" in data
+    assert data["session_id"] == "test-session-id"
 
 
-# ! Deactivating this until updating the test
-# Test function without loop
-# @pytest.mark.async_test
-# def test_async_task_processing_vector_store(client, added_vector_store, created_api_key):
-#     headers = {"x-api-key": created_api_key.api_key}
-#     post_data = {"inputs": {"input": "How do I upload examples?"}}
+def test_run_flow_with_invalid_session_id(client, starter_project, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = starter_project["id"]
+    payload = {
+        "inputs": [{"components": ["component1"], "input_value": "value1"}],
+        "outputs": ["Component Name", "component_id"],
+        "session_id": "invalid-session-id",
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    data = response.json()
+    assert "detail" in data
+    assert f"Session {payload['session_id']} not found" in data["detail"]
 
-#     # Run the /api/v1/process/{flow_id} endpoint with sync=False
-#     response = client.post(
-#         f"api/v1/process/{added_vector_store.get('id')}",
-#         headers=headers,
-#         json={**post_data, "sync": False},
-#     )
-#     assert response.status_code == 200, response.json()
-#     assert "result" in response.json()
-#     assert "FAILURE" not in response.json()["result"]
 
-#     # Extract the task ID from the response
-#     task = response.json().get("task")
-#     task_id = task.get("id")
-#     task_href = task.get("href")
-#     assert task_id is not None
-#     assert task_href is not None
-#     assert task_href == f"api/v1/task/{task_id}"
-
-#     # Polling the task status using the helper function
-#     task_status_json = poll_task_status(client, headers, task_href)
-#     assert task_status_json is not None, "Task did not complete in time"
-
-#     # Validate that the task completed successfully and the result is as expected
-#     assert "result" in task_status_json, task_status_json
-#     assert "output" in task_status_json["result"], task_status_json["result"]
-#     assert "Langflow" in task_status_json["result"]["output"], task_status_json["result"]
+def test_run_flow_with_invalid_tweaks(client, starter_project, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = starter_project["id"]
+    payload = {
+        "inputs": [{"components": ["component1"], "input_value": "value1"}],
+        "outputs": ["Component Name", "component_id"],
+        "tweaks": {"invalid_tweak": "value"},
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_200_OK

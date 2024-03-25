@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field, field_serializer
 
@@ -13,6 +13,8 @@ class ResultData(BaseModel):
     messages: Optional[list[ChatOutputResponse]] = Field(default_factory=list)
     timedelta: Optional[float] = None
     duration: Optional[str] = None
+    component_display_name: Optional[str] = None
+    component_id: Optional[str] = None
 
     @field_serializer("results")
     def serialize_results(self, value):
@@ -47,4 +49,7 @@ OUTPUT_COMPONENTS = [
     InterfaceComponentTypes.TextOutput,
 ]
 
-INPUT_FIELD_NAME = "input_value"
+
+class RunOutputs(BaseModel):
+    inputs: dict = Field(default_factory=dict)
+    outputs: List[Optional[ResultData]] = Field(default_factory=list)

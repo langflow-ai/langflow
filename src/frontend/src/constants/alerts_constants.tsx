@@ -40,7 +40,7 @@ export const COMPONENTS_ERROR_ALERT = "Error getting components.";
 
 // NOTICE
 export const NOCHATOUTPUT_NOTICE_ALERT =
-  "There is no ChatOutput node in the flow.";
+  "There is no ChatOutput Component in the flow.";
 export const API_WARNING_NOTICE_ALERT =
   "Warning: Critical data, JSON file may include API keys.";
 export const COPIED_NOTICE_ALERT = "API Key copied!";
@@ -58,4 +58,3 @@ export const FLOW_BUILD_SUCCESS_ALERT = `Flow built successfully`;
 export const SAVE_SUCCESS_ALERT = "Changes saved successfully!";
 
 // Generic Node
-

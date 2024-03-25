@@ -31,12 +31,13 @@ class ConversationChainComponent(CustomComponent):
             chain = ConversationChain(llm=llm)
         else:
             chain = ConversationChain(llm=llm, memory=memory)
-        result = chain.invoke(inputs)
-        if hasattr(result, "content") and isinstance(result.content, str):
-            result = result.content
+        result = chain.invoke({"input": input_value})
+        if isinstance(result, dict):
+            result = result.get(chain.output_key, "")  # type: ignore
+
         elif isinstance(result, str):
             result = result
         else:
             result = result.get("response")
         self.status = result
-        return result
+        return str(result)

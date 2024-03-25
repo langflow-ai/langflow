@@ -10,6 +10,8 @@ from langflow.api.utils import (
     build_and_cache_graph,
     format_elapsed_time,
     format_exception_message,
+    get_next_runnable_vertices,
+    get_top_level_vertices,
 )
 from langflow.api.v1.schemas import (
     InputValueRequest,
@@ -54,28 +56,49 @@ async def get_vertices(
     chat_service: "ChatService" = Depends(get_chat_service),
     session=Depends(get_session),
 ):
-    """Check the flow_id is in the flow_data_store."""
+    """
+    Retrieve the vertices order for a given flow.
+
+    Args:
+        flow_id (str): The ID of the flow.
+        stop_component_id (str, optional): The ID of the stop component. Defaults to None.
+        start_component_id (str, optional): The ID of the start component. Defaults to None.
+        chat_service (ChatService, optional): The chat service dependency. Defaults to Depends(get_chat_service).
+        session (Session, optional): The session dependency. Defaults to Depends(get_session).
+
+    Returns:
+        VerticesOrderResponse: The response containing the ordered vertex IDs and the run ID.
+
+    Raises:
+        HTTPException: If there is an error checking the build status.
+    """
     try:
         # First, we need to check if the flow_id is in the cache
         graph = None
-        if cache := chat_service.get_cache(flow_id):
+        if cache := await chat_service.get_cache(flow_id):
             graph = cache.get("result")
-        graph = build_and_cache_graph(flow_id, session, chat_service, graph)
+        graph = await build_and_cache_graph(flow_id, session, chat_service, graph)
         if stop_component_id or start_component_id:
             try:
-                vertices = graph.sort_vertices(stop_component_id, start_component_id)
+                first_layer = graph.sort_vertices(stop_component_id, start_component_id)
             except Exception as exc:
                 logger.error(exc)
-                vertices = graph.sort_vertices()
+                first_layer = graph.sort_vertices()
         else:
-            vertices = graph.sort_vertices()
+            first_layer = graph.sort_vertices()
+        # When we send vertices to the frontend
+        # we need to remove them from the predecessors
+        # so they are not considered for building again
+        # which duplicates the results
+        for vertex_id in first_layer:
+            graph.remove_from_predecessors(vertex_id)
 
         # Now vertices is a list of lists
         # We need to get the id of each vertex
         # and return the same structure but only with the ids
         run_id = uuid.uuid4()
         graph.set_run_id(run_id)
-        return VerticesOrderResponse(ids=vertices, run_id=run_id)
+        return VerticesOrderResponse(ids=first_layer, run_id=run_id)
 
     except Exception as exc:
         logger.error(f"Error checking build status: {exc}")
@@ -92,21 +115,34 @@ async def build_vertex(
     chat_service: "ChatService" = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
 ):
-    """Build a vertex instead of the entire graph."""
-    {"inputs": {"input_value": "some value"}}
+    """Build a vertex instead of the entire graph.
+
+    Args:
+        flow_id (str): The ID of the flow.
+        vertex_id (str): The ID of the vertex to build.
+        background_tasks (BackgroundTasks): The background tasks object for logging.
+        inputs (Optional[InputValueRequest], optional): The input values for the vertex. Defaults to None.
+        chat_service (ChatService, optional): The chat service dependency. Defaults to Depends(get_chat_service).
+        current_user (Any, optional): The current user dependency. Defaults to Depends(get_current_active_user).
+
+    Returns:
+        VertexBuildResponse: The response containing the built vertex information.
+
+    Raises:
+        HTTPException: If there is an error building the vertex.
+
+    """
+
     start_time = time.perf_counter()
-    next_vertices_ids = []
+    next_runnable_vertices = []
+    top_level_vertices = []
     try:
         start_time = time.perf_counter()
-        cache = chat_service.get_cache(flow_id)
+        cache = await chat_service.get_cache(flow_id)
         if not cache:
             # If there's no cache
-            logger.warning(
-                f"No cache found for {flow_id}. Building graph starting at {vertex_id}"
-            )
-            graph = build_and_cache_graph(
-                flow_id=flow_id, session=next(get_session()), chat_service=chat_service
-            )
+            logger.warning(f"No cache found for {flow_id}. Building graph starting at {vertex_id}")
+            graph = await build_and_cache_graph(flow_id=flow_id, session=next(get_session()), chat_service=chat_service)
         else:
             graph = cache.get("result")
         result_data_response = ResultDataResponse(results={})
@@ -125,11 +161,9 @@ async def build_vertex(
                 artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
-            next_vertices_ids = vertex.successors_ids
-            next_vertices_ids = [
-                v for v in next_vertices_ids if graph.should_run_vertex(v)
-            ]
 
+            next_runnable_vertices = await get_next_runnable_vertices(graph, vertex, vertex_id, chat_service, flow_id)
+            top_level_vertices = get_top_level_vertices(graph, next_runnable_vertices)
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
         except Exception as exc:
@@ -140,7 +174,7 @@ async def build_vertex(
             artifacts = {}
             # If there's an error building the vertex
             # we need to clear the cache
-            chat_service.clear_cache(flow_id)
+            await chat_service.clear_cache(flow_id)
 
         # Log the vertex build
         if not vertex.will_stream:
@@ -159,22 +193,23 @@ async def build_vertex(
         result_data_response.duration = duration
         result_data_response.timedelta = timedelta
         vertex.add_build_time(timedelta)
-        inactive_vertices = None
-        if graph.inactive_vertices:
-            inactive_vertices = list(graph.inactive_vertices)
-            graph.reset_inactive_vertices()
-        chat_service.set_cache(flow_id, graph)
+        inactivated_vertices = None
+        inactivated_vertices = list(graph.inactivated_vertices)
+        graph.reset_inactivated_vertices()
+        graph.reset_activated_vertices()
+        await chat_service.set_cache(flow_id, graph)
 
         # graph.stop_vertex tells us if the user asked
         # to stop the build of the graph at a certain vertex
         # if it is in next_vertices_ids, we need to remove other
         # vertices from next_vertices_ids
-        if graph.stop_vertex and graph.stop_vertex in next_vertices_ids:
-            next_vertices_ids = [graph.stop_vertex]
+        if graph.stop_vertex and graph.stop_vertex in next_runnable_vertices:
+            next_runnable_vertices = [graph.stop_vertex]
 
         build_response = VertexBuildResponse(
-            next_vertices_ids=next_vertices_ids,
-            inactive_vertices=inactive_vertices,
+            inactivated_vertices=inactivated_vertices,
+            next_vertices_ids=next_runnable_vertices,
+            top_level_vertices=top_level_vertices,
             valid=valid,
             params=params,
             id=vertex.id,
@@ -187,9 +222,6 @@ async def build_vertex(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-# Now onto an endpoint that is an SSE endpoint
-# it will receive a component_id and a flow_id
-#
 @router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse)
 async def build_vertex_stream(
     flow_id: str,
@@ -198,22 +230,44 @@ async def build_vertex_stream(
     chat_service: "ChatService" = Depends(get_chat_service),
     session_service: "SessionService" = Depends(get_session_service),
 ):
-    """Build a vertex instead of the entire graph."""
+    """Build a vertex instead of the entire graph.
+
+    This function is responsible for building a single vertex instead of the entire graph.
+    It takes the `flow_id` and `vertex_id` as required parameters, and an optional `session_id`.
+    It also depends on the `ChatService` and `SessionService` services.
+
+    If `session_id` is not provided, it retrieves the graph from the cache using the `chat_service`.
+    If `session_id` is provided, it loads the session data using the `session_service`.
+
+    Once the graph is obtained, it retrieves the specified vertex using the `vertex_id`.
+    If the vertex does not support streaming, an error is raised.
+    If the vertex has a built result, it sends the result as a chunk.
+    If the vertex is not frozen or not built, it streams the vertex data.
+    If the vertex has a result, it sends the result as a chunk.
+    If none of the above conditions are met, an error is raised.
+
+    If any exception occurs during the process, an error message is sent.
+    Finally, the stream is closed.
+
+    Returns:
+        A `StreamingResponse` object with the streamed vertex data in text/event-stream format.
+
+    Raises:
+        HTTPException: If an error occurs while building the vertex.
+    """
     try:
 
         async def stream_vertex():
             try:
                 if not session_id:
-                    cache = chat_service.get_cache(flow_id)
+                    cache = await chat_service.get_cache(flow_id)
                     if not cache:
                         # If there's no cache
                         raise ValueError(f"No cache found for {flow_id}.")
                     else:
                         graph = cache.get("result")
                 else:
-                    session_data = await session_service.load_session(
-                        session_id, flow_id=flow_id
-                    )
+                    session_data = await session_service.load_session(session_id, flow_id=flow_id)
                     graph, artifacts = session_data if session_data else (None, None)
                     if not graph:
                         raise ValueError(f"No graph found for {flow_id}.")
@@ -256,7 +310,7 @@ async def build_vertex_stream(
                     raise ValueError(f"No result found for vertex {vertex_id}")
 
             except Exception as exc:
-                logger.error(f"Error building vertex: {exc}")
+                logger.exception(f"Error building vertex: {exc}")
                 yield str(StreamData(event="error", data={"error": str(exc)}))
             finally:
                 logger.debug("Closing stream")

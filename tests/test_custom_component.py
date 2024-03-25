@@ -3,19 +3,21 @@ import types
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
 from langchain_core.documents import Document
+
 from langflow.interface.custom.base import CustomComponent
-from langflow.interface.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
+from langflow.interface.custom.code_parser.code_parser import (
+    CodeParser,
+    CodeSyntaxError,
+)
 from langflow.interface.custom.custom_component.component import (
     Component,
     ComponentCodeNullError,
-    ComponentFunctionEntrypointNameNullError,
 )
 from langflow.services.database.models.flow import Flow, FlowCreate
 
 code_default = """
-from langflow import Prompt
+from langflow.field_typing import Prompt
 from langflow.interface.custom.custom_component import CustomComponent
 
 from langchain.llms.base import BaseLLM
@@ -96,16 +98,6 @@ def test_component_code_null_error():
         component.get_function()
 
 
-def test_component_function_entrypoint_name_null_error():
-    """
-    Test the get_function method raises the ComponentFunctionEntrypointNameNullError
-    when the function_entrypoint_name is empty.
-    """
-    component = Component(code=code_default, function_entrypoint_name="")
-    with pytest.raises(ComponentFunctionEntrypointNameNullError):
-        component.get_function()
-
-
 def test_custom_component_init():
     """
     Test the initialization of the CustomComponent class.
@@ -131,7 +123,7 @@ def test_custom_component_get_function():
     Test the get_function property of the CustomComponent class.
     """
     custom_component = CustomComponent(code="def build(): pass", function_entrypoint_name="build")
-    my_function = custom_component.get_function
+    my_function = custom_component.get_function()
     assert isinstance(my_function, types.FunctionType)
 
 
@@ -373,7 +365,7 @@ def test_custom_component_class_template_validation_no_code():
     raises the HTTPException when the code is None.
     """
     custom_component = CustomComponent(code=None, function_entrypoint_name="build")
-    with pytest.raises(HTTPException):
+    with pytest.raises(TypeError):
         custom_component.get_function()
 
 
@@ -444,7 +436,7 @@ def test_custom_component_build_not_implemented():
 def test_build_config_no_code():
     component = CustomComponent(code=None)
 
-    assert component.get_function_entrypoint_args == ""
+    assert component.get_function_entrypoint_args == []
     assert component.get_function_entrypoint_return_type == []
 
 

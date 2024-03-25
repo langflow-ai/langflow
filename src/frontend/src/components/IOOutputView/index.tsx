@@ -1,4 +1,3 @@
-import { cloneDeep } from "lodash";
 import useFlowStore from "../../stores/flowStore";
 import { IOOutputProps } from "../../types/components";
 import { Textarea } from "../ui/textarea";
@@ -6,6 +5,7 @@ import { Textarea } from "../ui/textarea";
 export default function IOOutputView({
   outputType,
   outputId,
+  left,
 }: IOOutputProps): JSX.Element | undefined {
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
@@ -17,7 +17,7 @@ export default function IOOutputView({
       case "TextOutput":
         return (
           <Textarea
-            className="w-full custom-scroll"
+            className={`w-full custom-scroll ${left ? "" : " h-full"}`}
             placeholder={"Empty"}
             // update to real value on flowPool
             value={
@@ -31,18 +31,14 @@ export default function IOOutputView({
       default:
         return (
           <Textarea
-            className="w-full custom-scroll"
-            placeholder={"Enter text..."}
-            value={node.data.node!.template["input_value"]}
-            onChange={(e) => {
-              e.target.value;
-              if (node) {
-                let newNode = cloneDeep(node);
-                newNode.data.node!.template["input_value"].value =
-                  e.target.value;
-                setNode(node.id, newNode);
-              }
-            }}
+            className={`w-full custom-scroll ${left ? "" : " h-full"}`}
+            placeholder={"Empty"}
+            // update to real value on flowPool
+            value={
+              (flowPool[node.id] ?? [])[(flowPool[node.id]?.length ?? 1) - 1]
+                ?.params ?? ""
+            }
+            readOnly
           />
         );
     }

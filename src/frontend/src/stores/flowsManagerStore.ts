@@ -1,7 +1,11 @@
 import { AxiosError } from "axios";
-import { cloneDeep } from "lodash";
+import { cloneDeep, debounce } from "lodash";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
+import {
+  SAVE_DEBOUNCE_TIME,
+  STARTER_FOLDER_NAME,
+} from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   readFlowsFromDatabase,
@@ -37,6 +41,10 @@ const past = {};
 const future = {};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
+  examples: [],
+  setExamples: (examples: FlowType[]) => {
+    set({ examples });
+  },
   currentFlowId: "",
   setCurrentFlowId: (currentFlowId: string) => {
     set((state) => ({
@@ -62,7 +70,16 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         .then((dbData) => {
           if (dbData) {
             const { data, flows } = processFlows(dbData, false);
-            get().setFlows(flows);
+            get().setExamples(
+              flows.filter(
+                (f) => f.folder === STARTER_FOLDER_NAME && !f.user_id
+              )
+            );
+            get().setFlows(
+              flows.filter(
+                (f) => !(f.folder === STARTER_FOLDER_NAME && !f.user_id)
+              )
+            );
             useTypesStore.setState((state) => ({
               data: { ...state.data, ["saved_components"]: data },
             }));
@@ -71,6 +88,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           }
         })
         .catch((e) => {
+          set({ isLoading: false });
           useAlertStore.getState().setErrorData({
             title: "Could not load flows from database",
           });
@@ -78,23 +96,18 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         });
     });
   },
-  autoSaveCurrentFlow: (nodes: Node[], edges: Edge[], viewport: Viewport) => {
-    // Clear the previous timeout if it exists.
-    if (saveTimeoutId) {
-      clearTimeout(saveTimeoutId);
-    }
-    set({ saveLoading: true });
-    // Set up a new timeout.
-    saveTimeoutId = setTimeout(() => {
+  autoSaveCurrentFlow: debounce(
+    (nodes: Node[], edges: Edge[], viewport: Viewport) => {
+      set({ saveLoading: true });
       if (get().currentFlow) {
         get().saveFlow(
           { ...get().currentFlow!, data: { nodes, edges, viewport } },
           true
         );
       }
-      set({ saveLoading: true });
-    }, 500); // Delay of 500ms because chat message depends on it.
-  },
+    },
+    SAVE_DEBOUNCE_TIME
+  ),
   saveFlow: (flow: FlowType, silent?: boolean) => {
     set({ saveLoading: true });
     return new Promise<void>((resolve, reject) => {

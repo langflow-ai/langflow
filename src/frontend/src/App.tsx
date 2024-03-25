@@ -3,6 +3,7 @@ import "reactflow/dist/style.css";
 import "./App.css";
 
 import { ErrorBoundary } from "react-error-boundary";
+import { useNavigate } from "react-router-dom";
 import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
@@ -18,7 +19,6 @@ import { getHealth } from "./controllers/API";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
-import useFlowStore from "./stores/flowStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
@@ -44,6 +44,9 @@ export default function App() {
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
+  const navigate = useNavigate();
+
+  const [isLoadingHealth, setIsLoadingHealth] = useState(false);
 
   useEffect(() => {
     refreshStars();
@@ -61,22 +64,47 @@ export default function App() {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    checkApplicationHealth();
     // Timer to call getHealth every 5 seconds
     const timer = setInterval(() => {
       getHealth()
         .then(() => {
-          if (fetchError) setFetchError(false);
+          onHealthCheck();
         })
         .catch(() => {
           setFetchError(true);
         });
-    }, 20000);
+    }, 20000); // 20 seconds
 
     // Clean up the timer on component unmount
     return () => {
       clearInterval(timer);
     };
   }, []);
+
+  const checkApplicationHealth = () => {
+    setIsLoadingHealth(true);
+    getHealth()
+      .then(() => {
+        onHealthCheck();
+      })
+      .catch(() => {
+        setFetchError(true);
+      });
+
+    setTimeout(() => {
+      setIsLoadingHealth(false);
+    }, 2000);
+  };
+
+  const onHealthCheck = () => {
+    setFetchError(false);
+    //This condition is necessary to avoid infinite loop on starter page when the application is not healthy
+    if (isLoading === true && window.location.pathname === "/") {
+      navigate("/flows");
+      window.location.reload();
+    }
+  };
 
   return (
     //need parent component with width and height
@@ -87,51 +115,71 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        {fetchError ? (
-          <FetchErrorComponent
-            description={FETCH_ERROR_DESCRIPION}
-            message={FETCH_ERROR_MESSAGE}
-          ></FetchErrorComponent>
-        ) : isLoading ? (
-          <div className="loading-page-panel">
-            <LoadingComponent remSize={50} />
-          </div>
-        ) : (
-          <>
-            <Router />
-          </>
-        )}
+        <>
+          {
+            <FetchErrorComponent
+              description={FETCH_ERROR_DESCRIPION}
+              message={FETCH_ERROR_MESSAGE}
+              openModal={fetchError}
+              setRetry={() => {
+                checkApplicationHealth();
+              }}
+              isLoadingHealth={isLoadingHealth}
+            ></FetchErrorComponent>
+          }
+
+          {isLoading ? (
+            <div className="loading-page-panel">
+              <LoadingComponent remSize={50} />
+            </div>
+          ) : (
+            <>
+              <Router />
+            </>
+          )}
+        </>
       </ErrorBoundary>
       <div></div>
-      <div className="app-div" style={{ zIndex: 999 }}>
-        {tempNotificationList.map((alert) => (
-          <div key={alert.id}>
-            {alert.type === "error" ? (
-              <ErrorAlert
-                key={alert.id}
-                title={alert.title}
-                list={alert.list}
-                id={alert.id}
-                removeAlert={removeAlert}
-              />
-            ) : alert.type === "notice" ? (
-              <NoticeAlert
-                key={alert.id}
-                title={alert.title}
-                link={alert.link}
-                id={alert.id}
-                removeAlert={removeAlert}
-              />
-            ) : (
-              <SuccessAlert
-                key={alert.id}
-                title={alert.title}
-                id={alert.id}
-                removeAlert={removeAlert}
-              />
-            )}
-          </div>
-        ))}
+      <div className="app-div">
+        <div className="flex flex-col-reverse" style={{ zIndex: 999 }}>
+          {tempNotificationList.map((alert) => (
+            <div key={alert.id}>
+              {alert.type === "error" && (
+                <ErrorAlert
+                  key={alert.id}
+                  title={alert.title}
+                  list={alert.list}
+                  id={alert.id}
+                  removeAlert={removeAlert}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="z-40 flex flex-col-reverse">
+          {tempNotificationList.map((alert) => (
+            <div key={alert.id}>
+              {alert.type === "notice" ? (
+                <NoticeAlert
+                  key={alert.id}
+                  title={alert.title}
+                  link={alert.link}
+                  id={alert.id}
+                  removeAlert={removeAlert}
+                />
+              ) : (
+                alert.type === "success" && (
+                  <SuccessAlert
+                    key={alert.id}
+                    title={alert.title}
+                    id={alert.id}
+                    removeAlert={removeAlert}
+                  />
+                )
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

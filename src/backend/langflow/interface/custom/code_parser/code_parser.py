@@ -9,7 +9,11 @@ from fastapi import HTTPException
 from loguru import logger
 
 from langflow.interface.custom.eval import eval_custom_component_code
-from langflow.interface.custom.schema import CallableCodeDetails, ClassCodeDetails
+from langflow.interface.custom.schema import (
+    CallableCodeDetails,
+    ClassCodeDetails,
+    MissingDefault,
+)
 
 
 class CodeSyntaxError(HTTPException):
@@ -174,7 +178,7 @@ class CodeParser:
         args += self.parse_keyword_args(node)
         # Commented out because we don't want kwargs
         # showing up as fields in the frontend
-        # args += self.parse_kwargs(node)
+        args += self.parse_kwargs(node)
 
         return args
 
@@ -185,7 +189,7 @@ class CodeParser:
         num_args = len(node.args.args)
         num_defaults = len(node.args.defaults)
         num_missing_defaults = num_args - num_defaults
-        missing_defaults = [None] * num_missing_defaults
+        missing_defaults = [MissingDefault()] * num_missing_defaults
         default_values = [ast.unparse(default).strip("'") if default else None for default in node.args.defaults]
         # Now check all default values to see if there
         # are any "None" values in the middle

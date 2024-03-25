@@ -9,13 +9,9 @@ from jose import JWTError, jwt
 from sqlmodel import Session
 from starlette.websockets import WebSocket
 
-from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.api_key.crud import check_key
-from langflow.services.database.models.user.crud import (
-    get_user_by_id,
-    get_user_by_username,
-    update_user_last_login_at,
-)
+from langflow.services.database.models.api_key.model import ApiKey
+from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
 
@@ -107,13 +103,13 @@ async def get_current_user_by_jwt(
     if isinstance(token, Coroutine):
         token = await token
 
-    if settings_service.auth_settings.SECRET_KEY is None:
+    if settings_service.auth_settings.SECRET_KEY.get_secret_value() is None:
         raise credentials_exception
 
     try:
         payload = jwt.decode(
             token,
-            settings_service.auth_settings.SECRET_KEY,
+            settings_service.auth_settings.SECRET_KEY.get_secret_value(),
             algorithms=[settings_service.auth_settings.ALGORITHM],
         )
         user_id: UUID = payload.get("sub")  # type: ignore
@@ -183,7 +179,7 @@ def create_token(data: dict, expires_delta: timedelta):
 
     return jwt.encode(
         to_encode,
-        settings_service.auth_settings.SECRET_KEY,
+        settings_service.auth_settings.SECRET_KEY.get_secret_value(),
         algorithm=settings_service.auth_settings.ALGORITHM,
     )
 
@@ -258,13 +254,13 @@ def get_user_id_from_token(token: str) -> UUID:
 def create_user_tokens(user_id: UUID, db: Session = Depends(get_session), update_last_login: bool = False) -> dict:
     settings_service = get_settings_service()
 
-    access_token_expires = timedelta(minutes=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(seconds=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS)
     access_token = create_token(
         data={"sub": str(user_id)},
         expires_delta=access_token_expires,
     )
 
-    refresh_token_expires = timedelta(minutes=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+    refresh_token_expires = timedelta(seconds=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS)
     refresh_token = create_token(
         data={"sub": str(user_id), "type": "rf"},
         expires_delta=refresh_token_expires,
@@ -287,7 +283,7 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
     try:
         payload = jwt.decode(
             refresh_token,
-            settings_service.auth_settings.SECRET_KEY,
+            settings_service.auth_settings.SECRET_KEY.get_secret_value(),
             algorithms=[settings_service.auth_settings.ALGORITHM],
         )
         user_id: UUID = payload.get("sub")  # type: ignore
@@ -326,7 +322,7 @@ def add_padding(s):
 
 
 def get_fernet(settings_service=Depends(get_settings_service)):
-    SECRET_KEY = settings_service.auth_settings.SECRET_KEY
+    SECRET_KEY = settings_service.auth_settings.SECRET_KEY.get_secret_value()
     # It's important that your secret key is 32 url-safe base64-encoded byte
     padded_secret_key = add_padding(SECRET_KEY)
     fernet = Fernet(padded_secret_key)

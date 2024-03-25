@@ -1,5 +1,6 @@
+import { cloneDeep } from "lodash";
 import { useCallback, useEffect, useState } from "react";
-import { NodeToolbar } from "reactflow";
+import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
@@ -9,22 +10,24 @@ import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
 import Xmark from "../../components/ui/xmark";
 import {
+  NATIVE_CATEGORIES,
   RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
-  priorityFields,
 } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
+import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useTypesStore } from "../../stores/typesStore";
+import { APIClassType } from "../../types/api";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
-import { classNames, cn, getFieldTitle } from "../../utils/utils";
+import { classNames, cn, getFieldTitle, sortFields } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
@@ -39,10 +42,13 @@ export default function GenericNode({
   yPos: number;
 }): JSX.Element {
   const types = useTypesStore((state) => state.types);
+  const templates = useTypesStore((state) => state.templates);
   const deleteNode = useFlowStore((state) => state.deleteNode);
   const flowPool = useFlowStore((state) => state.flowPool);
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setNode = useFlowStore((state) => state.setNode);
+  const updateNodeInternals = useUpdateNodeInternals();
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);
@@ -50,6 +56,7 @@ export default function GenericNode({
   const [nodeDescription, setNodeDescription] = useState(
     data.node?.description!
   );
+  const [isOutdated, setIsOutdated] = useState(false);
   const buildStatus = useFlowStore(
     (state) => state.flowBuildStatus[data.id]?.status
   );
@@ -63,6 +70,64 @@ export default function GenericNode({
   const [validationString, setValidationString] = useState<string>("");
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+
+  useEffect(() => {
+    // This one should run only once
+    // first check if data.type in NATIVE_CATEGORIES
+    // if not return
+    if (
+      !NATIVE_CATEGORIES.includes(types[data.type]) ||
+      !data.node?.template?.code?.value
+    )
+      return;
+    const thisNodeTemplate = templates[data.type].template;
+    // if the template does not have a code key
+    // return
+    if (!thisNodeTemplate.code) return;
+    const currentCode = thisNodeTemplate.code?.value;
+    const thisNodesCode = data.node!.template?.code?.value;
+    if (currentCode !== thisNodesCode) {
+      setIsOutdated(true);
+    } else {
+      setIsOutdated(false);
+    }
+    // template.code can be undefined
+  }, [data.node?.template?.code?.value]);
+
+  const updateNodeCode = useCallback(
+    (newNodeClass: APIClassType, code: string, name: string) => {
+      setNode(data.id, (oldNode) => {
+        let newNode = cloneDeep(oldNode);
+
+        newNode.data = {
+          ...newNode.data,
+          node: newNodeClass,
+          description: newNodeClass.description ?? data.node!.description,
+          display_name: newNodeClass.display_name ?? data.node!.display_name,
+        };
+
+        newNode.data.node.template[name].value = code;
+        setIsOutdated(false);
+
+        return newNode;
+      });
+
+      updateNodeInternals(data.id);
+    },
+    [data.id, data.node, setNode, setIsOutdated]
+  );
+
+  if (!data.node!.template) {
+    setErrorData({
+      title: `Error in component ${data.node!.display_name}`,
+      list: [
+        `The component ${data.node!.display_name} has no template.`,
+        `Please contact the developer of the component to fix this issue.`,
+      ],
+    });
+    takeSnapshot();
+    deleteNode(data.id);
+  }
 
   function countHandles(): void {
     let count = Object.keys(data.node!.template)
@@ -146,7 +211,9 @@ export default function GenericNode({
     }
   }, [validationStatus, validationStatus?.params]);
 
-  const showNode = data.showNode ?? true;
+  // const showNode = data.showNode ?? true;
+
+  const [showNode, setShowNode] = useState(data.showNode ?? true);
 
   const nameEditable = true;
 
@@ -208,7 +275,8 @@ export default function GenericNode({
               name="Play"
               className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-green opacity-30 transition-all group-hover:opacity-0"
             />
-          ) : validationStatus && !validationStatus.valid ? (
+          ) : buildStatus === BuildStatus.ERROR ||
+            (validationStatus && !validationStatus.valid) ? (
             <Xmark
               isVisible={true}
               className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-red opacity-100 transition-all group-hover:opacity-0"
@@ -234,7 +302,10 @@ export default function GenericNode({
       // INACTIVE should have its own class
       return "inactive-status";
     }
-    if (buildStatus === BuildStatus.BUILT && isInvalid) {
+    if (
+      (buildStatus === BuildStatus.BUILT && isInvalid) ||
+      buildStatus === BuildStatus.ERROR
+    ) {
       return isDark ? "built-invalid-status-dark" : "built-invalid-status";
     } else if (buildStatus === BuildStatus.BUILDING) {
       return "building-status";
@@ -285,10 +356,13 @@ export default function GenericNode({
               data: { ...old.data, showNode: show },
             }));
           }}
+          setShowState={setShowNode}
           numberOfHandles={handles}
           showNode={showNode}
           openAdvancedModal={false}
           onCloseAdvancedModal={() => {}}
+          updateNodeCode={updateNodeCode}
+          isOutdated={isOutdated}
           selected={selected}
         ></NodeToolbarComponent>
       </NodeToolbar>
@@ -499,60 +573,63 @@ export default function GenericNode({
               )}
             </div>
             {showNode && (
-              <Button variant="secondary" className={"group h-9 px-1.5"}>
-                <div>
-                  <ShadTooltip
-                    content={
-                      buildStatus === BuildStatus.BUILDING ? (
-                        <span> {STATUS_BUILDING} </span>
-                      ) : !validationStatus ? (
-                        <span className="flex">{STATUS_BUILD}</span>
-                      ) : (
-                        <div className="max-h-100">
-                          <div>
-                            {lastRunTime && (
-                              <div className="justify-left flex text-muted-foreground">
-                                <div>{RUN_TIMESTAMP_PREFIX}</div>
-                                <div className="ml-1 text-status-blue">
-                                  {lastRunTime}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          <div className="justify-left flex text-muted-foreground">
-                            <div>Duration:</div>
+              <ShadTooltip
+                content={
+                  buildStatus === BuildStatus.BUILDING ? (
+                    <span> {STATUS_BUILDING} </span>
+                  ) : !validationStatus ? (
+                    <span className="flex">{STATUS_BUILD}</span>
+                  ) : (
+                    <div className="max-h-100 p-2">
+                      <div>
+                        {lastRunTime && (
+                          <div className="justify-left flex font-normal text-muted-foreground">
+                            <div>{RUN_TIMESTAMP_PREFIX}</div>
                             <div className="ml-1 text-status-blue">
-                              {validationStatus?.data.duration}
+                              {lastRunTime}
                             </div>
                           </div>
-                          <hr />
-                          <span className="flex justify-center   text-muted-foreground ">
-                            Output
-                          </span>
-                          <div className="max-h-96 overflow-auto custom-scroll">
-                            {validationString.split("\n").map((line, index) => (
-                              <div key={index}>{line}</div>
-                            ))}
-                          </div>
+                        )}
+                      </div>
+                      <div className="justify-left flex font-normal text-muted-foreground">
+                        <div>Duration:</div>
+                        <div className="mb-3 ml-1 text-status-blue">
+                          {validationStatus?.data.duration}
                         </div>
-                      )
-                    }
-                    side="bottom"
-                  >
-                    <div
-                      onClick={() => {
-                        if (buildStatus === BuildStatus.BUILDING || isBuilding)
-                          return;
-                        setValidationStatus(null);
-                        buildFlow({ stopNodeId: data.id });
-                      }}
-                      className="generic-node-status-position flex items-center justify-center"
-                    >
+                      </div>
+                      <hr />
+                      <span className="mb-2 mt-2   flex justify-center font-semibold text-muted-foreground">
+                        Output
+                      </span>
+                      <div className="max-h-96 overflow-auto font-normal custom-scroll">
+                        {validationString.split("\n").map((line, index) => (
+                          <div className="font-normal" key={index}>
+                            {line}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                }
+                side="bottom"
+              >
+                <Button
+                  onClick={() => {
+                    if (buildStatus === BuildStatus.BUILDING || isBuilding)
+                      return;
+                    setValidationStatus(null);
+                    buildFlow({ stopNodeId: data.id });
+                  }}
+                  variant="secondary"
+                  className={"group h-9 px-1.5"}
+                >
+                  <div>
+                    <div className="generic-node-status-position flex items-center justify-center">
                       {renderIconStatus(buildStatus, validationStatus)}
                     </div>
-                  </ShadTooltip>
-                </div>
-              </Button>
+                  </div>
+                </Button>
+              </ShadTooltip>
             )}
           </div>
         </div>
@@ -636,15 +713,7 @@ export default function GenericNode({
             <>
               {Object.keys(data.node!.template)
                 .filter((templateField) => templateField.charAt(0) !== "_")
-                .sort((a, b) => {
-                  if (priorityFields.has(a.toLowerCase())) {
-                    return -1;
-                  } else if (priorityFields.has(b.toLowerCase())) {
-                    return 1;
-                  } else {
-                    return a.localeCompare(b);
-                  }
-                })
+                .sort((a, b) => sortFields(a, b, data.node?.field_order ?? []))
                 .map((templateField: string, idx) => (
                   <div key={idx}>
                     {data.node!.template[templateField].show &&

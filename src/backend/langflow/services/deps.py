@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Generator
 
 from langflow.services import ServiceType, service_manager
@@ -55,7 +56,30 @@ def get_session() -> Generator["Session", None, None]:
     yield from db_service.get_session()
 
 
-def get_cache_service() -> "CacheService":
+@contextmanager
+def session_scope():
+    """
+    Context manager for managing a session scope.
+
+    Yields:
+        session: The session object.
+
+    Raises:
+        Exception: If an error occurs during the session scope.
+
+    """
+    session = next(get_session())
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def get_cache_service() -> "BaseCacheService":
     return service_manager.get(ServiceType.CACHE_SERVICE)  # type: ignore
 
 

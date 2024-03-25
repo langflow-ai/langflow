@@ -50,9 +50,7 @@ export default function AccordionComponent({
             {trigger}
           </AccordionTrigger>
           <AccordionContent>
-            <div className="AccordionContent flex flex-col">
-              {children}
-            </div>
+            <div className="AccordionContent flex flex-col">{children}</div>
           </AccordionContent>
         </AccordionItem>
       </Accordion>

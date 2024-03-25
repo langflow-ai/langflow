@@ -4,6 +4,7 @@ import Loading from "../../../components/ui/loading";
 import { FlowType } from "../../../types/flow";
 
 import { MISSED_ERROR_ALERT } from "../../../constants/alerts_constants";
+import { BuildStatus } from "../../../constants/enums";
 import useAlertStore from "../../../stores/alertStore";
 import useFlowStore from "../../../stores/flowStore";
 import { validateNodes } from "../../../utils/reactflowUtils";
@@ -22,6 +23,7 @@ export default function BuildTrigger({
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
+  const updateBuildStatus = useFlowStore((state) => state.updateBuildStatus);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const eventClick = isBuilding ? "pointer-events-none" : "";
@@ -32,12 +34,15 @@ export default function BuildTrigger({
       if (isBuilding) {
         return;
       }
-      const errors = validateNodes(nodes, edges);
+      const errorsObjs = validateNodes(nodes, edges);
+      const errors = errorsObjs.flatMap((errorObj) => errorObj.errors);
       if (errors.length > 0) {
         setErrorData({
           title: MISSED_ERROR_ALERT,
           list: errors,
         });
+        const ids = errorsObjs.map((errorObj) => errorObj.id);
+        updateBuildStatus(ids, BuildStatus.ERROR);
         return;
       }
       const minimumLoadingTime = 200; // in milliseconds

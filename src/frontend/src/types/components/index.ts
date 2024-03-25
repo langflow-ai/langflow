@@ -1,4 +1,4 @@
-import { ReactElement, ReactNode } from "react";
+import { ReactElement, ReactNode, SetStateAction } from "react";
 import { ReactFlowJsonObject, XYPosition } from "reactflow";
 import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
 import { ChatMessageType } from "../chat";
@@ -71,6 +71,7 @@ export type KeyPairListComponentType = {
   editNode?: boolean;
   duplicateKey?: boolean;
   editNodeModal?: boolean;
+  isList?: boolean;
 };
 
 export type DictComponentType = {
@@ -106,6 +107,7 @@ export type PromptAreaComponentType = {
 };
 
 export type CodeAreaComponentType = {
+  setOpenModal?: (bool: boolean) => void;
   disabled: boolean;
   onChange: (value: string[] | string) => void;
   value: string;
@@ -489,6 +491,13 @@ export type nodeToolbarPropsType = {
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
   selected: boolean;
+  updateNodeCode?: (
+    newNodeClass: APIClassType,
+    code: string,
+    name: string
+  ) => void;
+  setShowState: (show: boolean | SetStateAction<boolean>) => void;
+  isOutdated?: boolean;
 };
 
 export type parsedDataType = {
@@ -516,6 +525,7 @@ export type modalHeaderType = {
 
 export type codeAreaModalPropsType = {
   setValue: (value: string) => void;
+  setOpenModal?: (bool: boolean) => void;
   value: string;
   nodeClass: APIClassType | undefined;
   setNodeClass: (Class: APIClassType, code?: string) => void | undefined;
@@ -655,6 +665,9 @@ export type ApiKey = {
 export type fetchErrorComponentType = {
   message: string;
   description: string;
+  openModal?: boolean;
+  setRetry: () => void;
+  isLoadingHealth: boolean;
 };
 
 export type dropdownButtonPropsType = {
@@ -666,13 +679,32 @@ export type dropdownButtonPropsType = {
 export type IOInputProps = {
   inputType: string;
   inputId: string;
+  left?: boolean;
 };
 export type IOOutputProps = {
   outputType: string;
   outputId: string;
+  left?: boolean;
 };
 
 export type IOFileInputProps = {
   field: TemplateVariableType;
   updateValue: (e: any, type: string) => void;
+};
+
+export type toolbarSelectItemProps = {
+  isMac: boolean;
+  shift: boolean;
+  keyboardKey: string;
+  value: string;
+  icon: string;
+  styleObj?: {
+    iconClasses?: string;
+    commandClasses?: string;
+    shiftClasses?: string;
+    ctrlClasses?: string;
+    keyClasses?: string;
+    valueClasses?: string;
+  };
+  dataTestId: string;
 };

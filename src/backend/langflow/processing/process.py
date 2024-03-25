@@ -1,20 +1,19 @@
-import asyncio
-from typing import Any, Coroutine, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from langchain.agents import AgentExecutor
-from langchain.chains.base import Chain
-from langchain.schema import AgentAction, Document
-from langchain_community.vectorstores import VectorStore
-from langchain_core.messages import AIMessage
-from langchain_core.runnables.base import Runnable
+from langchain.schema import AgentAction
 from loguru import logger
 from pydantic import BaseModel
 
 from langflow.graph.graph.base import Graph
+from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
-from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.run import get_memory_key, update_memory_keys
+from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.session.service import SessionService
+
+if TYPE_CHECKING:
+    from langflow.api.v1.schemas import InputValueRequest, Tweaks
 
 
 def fix_memory_inputs(langchain_object):
@@ -120,73 +119,6 @@ def update_inputs_dict(inputs: dict, artifacts: Dict[str, Any]) -> dict:
     return inputs
 
 
-async def process_runnable(runnable: Runnable, inputs: Union[dict, List[dict]]):
-    if isinstance(inputs, List) and hasattr(runnable, "abatch"):
-        result = await runnable.abatch(inputs)
-    elif isinstance(inputs, dict) and hasattr(runnable, "ainvoke"):
-        result = await runnable.ainvoke(inputs)
-    else:
-        raise ValueError(f"Runnable {runnable} does not support inputs of type {type(inputs)}")
-    # Check if the result is a list of AIMessages
-    if isinstance(result, list) and all(isinstance(r, AIMessage) for r in result):
-        result = [r.content for r in result]
-    elif isinstance(result, AIMessage):
-        result = result.content
-    return result
-
-
-async def process_inputs_dict(built_object: Union[Chain, VectorStore, Runnable], inputs: dict):
-    if isinstance(built_object, Chain):
-        if inputs is None:
-            raise ValueError("Inputs must be provided for a Chain")
-        logger.debug("Generating result and thought")
-        result = get_result_and_thought(built_object, inputs)
-
-        logger.debug("Generated result and thought")
-    elif isinstance(built_object, VectorStore) and "query" in inputs:
-        if isinstance(inputs, dict) and "search_type" not in inputs:
-            inputs["search_type"] = "similarity"
-            logger.info("search_type not provided, using default value: similarity")
-        result = built_object.search(**inputs)
-    elif isinstance(built_object, Document):
-        result = built_object.dict()
-    elif isinstance(built_object, Runnable):
-        result = await process_runnable(built_object, inputs)
-        if isinstance(result, list):
-            result = [r.content if hasattr(r, "content") else r for r in result]
-        elif hasattr(result, "content"):
-            result = result.content
-        else:
-            result = result
-    elif hasattr(built_object, "run") and isinstance(built_object, CustomComponent):
-        result = built_object.run(inputs)
-    else:
-        result = None
-
-    return result
-
-
-async def process_inputs_list(built_object: Runnable, inputs: List[dict]):
-    return await process_runnable(built_object, inputs)
-
-
-async def generate_result(built_object: Union[Chain, VectorStore, Runnable], inputs: Union[dict, List[dict]]):
-    if isinstance(inputs, dict):
-        result = await process_inputs_dict(built_object, inputs)
-    elif isinstance(inputs, List) and isinstance(built_object, Runnable):
-        result = await process_inputs_list(built_object, inputs)
-    else:
-        raise ValueError(f"Invalid inputs type: {type(inputs)}")
-
-    if result is None:
-        logger.warning(f"Unknown built_object type: {type(built_object)}")
-        if isinstance(built_object, Coroutine):
-            result = asyncio.run(built_object)
-        result = built_object
-
-    return result
-
-
 class Result(BaseModel):
     result: Any
     session_id: str
@@ -197,28 +129,47 @@ async def run_graph(
     flow_id: str,
     stream: bool,
     session_id: Optional[str] = None,
-    inputs: Optional[dict[str, Union[List[str], str]]] = None,
+    inputs: Optional[List["InputValueRequest"]] = None,
+    outputs: Optional[List[str]] = None,
     artifacts: Optional[Dict[str, Any]] = None,
     session_service: Optional[SessionService] = None,
-):
+) -> tuple[List[RunOutputs], str]:
     """Run the graph and generate the result"""
-    if isinstance(graph, dict):
-        graph_data = graph
-        graph = Graph.from_payload(graph, flow_id=flow_id)
+    inputs = inputs or []
+    graph_data = graph._graph_data
+    if session_id is None and session_service is not None:
+        session_id_str = session_service.generate_key(session_id=flow_id, data_graph=graph_data)
+    elif session_id is not None:
+        session_id_str = session_id
     else:
-        graph_data = graph._graph_data
-    if not session_id and session_service is not None:
-        session_id = session_service.generate_key(session_id=flow_id, data_graph=graph_data)
-    if inputs is None:
-        inputs = {}
+        raise ValueError("session_id or session_service must be provided")
+    components = []
+    inputs_list = []
+    types = []
+    for input_value_request in inputs:
+        if input_value_request.input_value is None:
+            logger.warning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
+            input_value_request.input_value = ""
+        components.append(input_value_request.components or [])
+        inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
+        types.append(input_value_request.type)
 
-    outputs = await graph.run(inputs, stream=stream)
-    if session_id and session_service:
-        session_service.update_session(session_id, (graph, artifacts))
-    return outputs, session_id
+    run_outputs = await graph.arun(
+        inputs_list,
+        components,
+        types,
+        outputs or [],
+        stream=stream,
+        session_id=session_id_str or "",
+    )
+    if session_id_str and session_service:
+        await session_service.update_session(session_id_str, (graph, artifacts))
+    return run_outputs, session_id_str
 
 
-def validate_input(graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+def validate_input(
+    graph_data: Dict[str, Any], tweaks: Union["Tweaks", Dict[str, Dict[str, Any]]]
+) -> List[Dict[str, Any]]:
     if not isinstance(graph_data, dict) or not isinstance(tweaks, dict):
         raise ValueError("graph_data and tweaks should be dictionaries")
 
@@ -238,7 +189,10 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
         return
 
     for tweak_name, tweak_value in node_tweaks.items():
-        if tweak_name and tweak_value and tweak_name in template_data:
+        if tweak_name not in template_data:
+            logger.warning(f"Node {node.get('id')} does not have a tweak named {tweak_name}")
+            continue
+        if tweak_name in template_data:
             key = tweak_name if tweak_name == "file_path" else "value"
             template_data[tweak_name][key] = tweak_value
 
@@ -249,28 +203,37 @@ def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: Dict[str, Any]) -> None:
             vertex.params[tweak_name] = tweak_value
 
 
-def process_tweaks(graph_data: Dict[str, Any], tweaks: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+def process_tweaks(graph_data: Dict[str, Any], tweaks: Union["Tweaks", Dict[str, Dict[str, Any]]]) -> Dict[str, Any]:
     """
     This function is used to tweak the graph data using the node id and the tweaks dict.
 
     :param graph_data: The dictionary containing the graph data. It must contain a 'data' key with
                        'nodes' as its child or directly contain 'nodes' key. Each node should have an 'id' and 'data'.
-    :param tweaks: A dictionary where the key is the node id and the value is a dictionary of the tweaks.
-                   The inner dictionary contains the name of a certain parameter as the key and the value to be tweaked.
-
+    :param tweaks: The dictionary containing the tweaks. The keys can be the node id or the name of the tweak.
+                     The values can be a dictionary containing the tweaks for the node or the value of the tweak.
     :return: The modified graph_data dictionary.
 
     :raises ValueError: If the input is not in the expected format.
     """
-    nodes = validate_input(graph_data, tweaks)
+    if not isinstance(tweaks, dict):
+        tweaks = tweaks.model_dump()
 
-    for node in nodes:
-        if isinstance(node, dict) and isinstance(node.get("id"), str):
-            node_id = node["id"]
-            if node_tweaks := tweaks.get(node_id):
-                apply_tweaks(node, node_tweaks)
+    nodes = validate_input(graph_data, tweaks)
+    nodes_map = {node.get("id"): node for node in nodes}
+    nodes_display_name_map = {node.get("data", {}).get("node", {}).get("display_name"): node for node in nodes}
+
+    all_nodes_tweaks = {}
+    for key, value in tweaks.items():
+        if isinstance(value, dict):
+            if node := nodes_map.get(key):
+                apply_tweaks(node, value)
+            elif node := nodes_display_name_map.get(key):
+                apply_tweaks(node, value)
         else:
-            logger.warning("Each node should be a dictionary with an 'id' key of type str")
+            all_nodes_tweaks[key] = value
+    if all_nodes_tweaks:
+        for node in nodes:
+            apply_tweaks(node, all_nodes_tweaks)
 
     return graph_data
 

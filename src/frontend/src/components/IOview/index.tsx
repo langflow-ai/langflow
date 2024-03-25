@@ -20,7 +20,17 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
-export default function IOView({ children, open, setOpen }): JSX.Element {
+export default function IOView({
+  children,
+  open,
+  setOpen,
+  disable,
+}: {
+  children: JSX.Element;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  disable?: boolean;
+}): JSX.Element {
   const inputs = useFlowStore((state) => state.inputs).filter(
     (input) => input.type !== "ChatInput"
   );
@@ -95,9 +105,16 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
 
   return (
     <BaseModal
-      size={haveChat ? (selectedTab === 0 ? "large-thin" : "large") : "small"}
+      size={
+        haveChat || selectedViewField
+          ? selectedTab === 0
+            ? "large-thin"
+            : "large"
+          : "small"
+      }
       open={open}
       setOpen={setOpen}
+      disable={disable}
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
@@ -112,13 +129,13 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
         </div>
       </BaseModal.Header>
       <BaseModal.Content>
-        <div className="flex h-full flex-col">
+        <div className="flex h-full flex-col overflow-hidden">
           <div className="flex-max-width mt-2 h-full">
             {selectedTab !== 0 && (
               <div
                 className={cn(
-                  "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start",
-                  haveChat ? "w-2/6" : "w-full"
+                  "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start transition-all duration-300",
+                  haveChat || selectedViewField ? "w-2/6" : "w-full"
                 )}
               >
                 <Tabs
@@ -168,20 +185,18 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                                   <Badge variant="gray" size="md">
                                     {node.data.node.display_name}
                                   </Badge>
-                                  {haveChat && (
-                                    <div
-                                      className="-mb-1 pr-4"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        setSelectedViewField(input);
-                                      }}
-                                    >
-                                      <IconComponent
-                                        className="h-4 w-4"
-                                        name="ExternalLink"
-                                      ></IconComponent>
-                                    </div>
-                                  )}
+                                  <div
+                                    className="-mb-1 pr-4"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setSelectedViewField(input);
+                                    }}
+                                  >
+                                    <IconComponent
+                                      className="h-4 w-4"
+                                      name="ExternalLink"
+                                    ></IconComponent>
+                                  </div>
                                 </div>
                               }
                               key={index}
@@ -191,6 +206,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                                 <div className="">
                                   {input && (
                                     <IOInputField
+                                      left={true}
                                       inputType={input.type}
                                       inputId={input.id}
                                     />
@@ -236,20 +252,18 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                                       </Badge>
                                     </div>
                                   </ShadTooltip>
-                                  {haveChat && (
-                                    <div
-                                      className="-mb-1 pr-4"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        setSelectedViewField(output);
-                                      }}
-                                    >
-                                      <IconComponent
-                                        className="h-4 w-4"
-                                        name="ExternalLink"
-                                      ></IconComponent>
-                                    </div>
-                                  )}
+                                  <div
+                                    className="-mb-1 pr-4"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setSelectedViewField(output);
+                                    }}
+                                  >
+                                    <IconComponent
+                                      className="h-4 w-4"
+                                      name="ExternalLink"
+                                    ></IconComponent>
+                                  </div>
                                 </div>
                               }
                               key={index}
@@ -259,6 +273,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                                 <div className="">
                                   {output && (
                                     <IOOutputView
+                                      left={true}
                                       outputType={output.type}
                                       outputId={output.id}
                                     />
@@ -274,12 +289,12 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
               </div>
             )}
 
-            {haveChat ? (
+            {haveChat || selectedViewField ? (
               <div className="flex h-full min-w-96 flex-grow">
                 {selectedViewField && (
                   <div
                     className={cn(
-                      "flex h-full w-full flex-col items-start gap-4 p-4",
+                      "flex h-full w-full flex-col items-start gap-4 pt-4",
                       !selectedViewField ? "hidden" : ""
                     )}
                   >
@@ -297,11 +312,13 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
                         (input) => input.id === selectedViewField.id
                       ) ? (
                         <IOInputField
+                          left={false}
                           inputType={selectedViewField.type!}
                           inputId={selectedViewField.id!}
                         />
                       ) : (
                         <IOOutputView
+                          left={false}
                           outputType={selectedViewField.type!}
                           outputId={selectedViewField.id!}
                         />
@@ -332,7 +349,7 @@ export default function IOView({ children, open, setOpen }): JSX.Element {
       </BaseModal.Content>
       <BaseModal.Footer>
         {!haveChat && (
-          <div className="flex w-full justify-end pt-6">
+          <div className="flex w-full justify-end pt-2">
             <Button
               variant={"outline"}
               className="flex gap-2 px-3"

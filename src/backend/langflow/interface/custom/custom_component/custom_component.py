@@ -1,43 +1,28 @@
 import operator
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    List,
-    Optional,
-    Sequence,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Sequence, Union
 from uuid import UUID
 
 import yaml
 from cachetools import TTLCache, cachedmethod
-from fastapi import HTTPException
 from langchain_core.documents import Document
 from pydantic import BaseModel
-from sqlmodel import select
 
+from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.interface.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
 )
 from langflow.interface.custom.custom_component.component import Component
-from langflow.schema import Record
-from langflow.services.database.models.flow import Flow
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import (
-    get_credential_service,
-    get_db_service,
-    get_storage_service,
-)
-from langflow.services.storage.service import StorageService
+from langflow.schema import dotdict
+from langflow.schema.schema import Record
+from langflow.services.deps import get_credential_service, get_storage_service, session_scope
 from langflow.utils import validate
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
     from langflow.graph.vertex.base import Vertex
+    from langflow.services.storage.service import StorageService
 
 
 class CustomComponent(Component):
@@ -75,6 +60,30 @@ class CustomComponent(Component):
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_records: Optional[List[Record]] = None
+
+    def update_state(self, name: str, value: Any):
+        if not self.vertex:
+            raise ValueError("Vertex is not set")
+        try:
+            self.vertex.graph.update_state(name=name, record=value, caller=self.vertex.id)
+        except Exception as e:
+            raise ValueError(f"Error updating state: {e}")
+
+    def append_state(self, name: str, value: Any):
+        if not self.vertex:
+            raise ValueError("Vertex is not set")
+        try:
+            self.vertex.graph.append_state(name=name, record=value, caller=self.vertex.id)
+        except Exception as e:
+            raise ValueError(f"Error appending state: {e}")
+
+    def get_state(self, name: str):
+        if not self.vertex:
+            raise ValueError("Vertex is not set")
+        try:
+            return self.vertex.graph.get_state(name=name)
+        except Exception as e:
+            raise ValueError(f"Error getting state: {e}")
 
     _tree: Optional[dict] = None
 
@@ -117,13 +126,20 @@ class CustomComponent(Component):
     def build_config(self):
         return self.field_config
 
+    def update_build_config(
+        self,
+        build_config: dotdict,
+        field_value: Any,
+        field_name: Optional[str] = None,
+    ):
+        build_config[field_name] = field_value
+        return build_config
+
     @property
     def tree(self):
         return self.get_code_tree(self.code or "")
 
-    def to_records(
-        self, data: Any, text_key: str = "text", data_key: str = "data"
-    ) -> List[Record]:
+    def to_records(self, data: Any, keys: Optional[List[str]] = None, silent_errors: bool = False) -> List[Record]:
         """
         Converts input data into a list of Record objects.
 
@@ -131,8 +147,9 @@ class CustomComponent(Component):
             data (Any): The input data to be converted. It can be a single item or a sequence of items.
             If the input data is a Langchain Document, text_key and data_key are ignored.
 
-            text_key (str, optional): The key to access the text value in each item. Defaults to "text".
-            data_key (str, optional): The key to access the data value in each item. Defaults to "data".
+            keys (List[str], optional): The keys to access the text and data values in each item.
+                It should be a list of strings where the first element is the text key and the second element is the data key.
+                Defaults to None, in which case the default keys "text" and "data" are used.
 
         Returns:
             List[Record]: A list of Record objects.
@@ -141,37 +158,39 @@ class CustomComponent(Component):
             ValueError: If the input data is not of a valid type or if the specified keys are not found in the data.
 
         """
+        if not keys:
+            keys = []
         records = []
         if not isinstance(data, Sequence):
             data = [data]
         for item in data:
+            data_dict = {}
             if isinstance(item, Document):
-                item = {"text": item.page_content, "data": item.metadata}
+                data_dict = item.metadata
+                data_dict["text"] = item.page_content
             elif isinstance(item, BaseModel):
                 model_dump = item.model_dump()
-                if text_key not in model_dump:
-                    raise ValueError(f"Key '{text_key}' not found in BaseModel item.")
-                if data_key not in model_dump:
-                    raise ValueError(f"Key '{data_key}' not found in BaseModel item.")
-                item = {"text": model_dump[text_key], "data": model_dump[data_key]}
+                for key in keys:
+                    if silent_errors:
+                        data_dict[key] = model_dump.get(key, "")
+                    else:
+                        try:
+                            data_dict[key] = model_dump[key]
+                        except KeyError:
+                            raise ValueError(f"Key {key} not found in {item}")
+
             elif isinstance(item, str):
-                item = {"text": item, "data": {}}
+                data_dict = {"text": item}
             elif isinstance(item, dict):
-                if text_key not in item:
-                    raise ValueError(f"Key '{text_key}' not found in dictionary item.")
-                if data_key not in item:
-                    raise ValueError(f"Key '{data_key}' not found in dictionary item.")
-                item = {"text": item[text_key], "data": item[data_key]}
+                data_dict = item.copy()
             else:
                 raise ValueError(f"Invalid data type: {type(item)}")
 
-            records.append(Record(**item))
+            records.append(Record(data=data_dict))
 
         return records
 
-    def create_references_from_records(
-        self, records: List[Record], include_data: bool = False
-    ) -> str:
+    def create_references_from_records(self, records: List[Record], include_data: bool = False) -> str:
         """
         Create references from a list of records.
 
@@ -200,18 +219,7 @@ class CustomComponent(Component):
 
         args = build_method["args"]
         for arg in args:
-            if arg.get("type") == "prompt":
-                raise HTTPException(
-                    status_code=400,
-                    detail={
-                        "error": "Type hint Error",
-                        "traceback": (
-                            "Prompt type is not supported in the build method."
-                            " Try using PromptTemplate instead."
-                        ),
-                    },
-                )
-            elif not arg.get("type") and arg.get("name") != "self":
+            if not arg.get("type") and arg.get("name") != "self":
                 # Set the type to Data
                 arg["type"] = "Data"
         return args
@@ -221,20 +229,14 @@ class CustomComponent(Component):
         if not self.code:
             return {}
 
-        component_classes = [
-            cls
-            for cls in self.tree["classes"]
-            if self.code_class_base_inheritance in cls["bases"]
-        ]
+        component_classes = [cls for cls in self.tree["classes"] if self.code_class_base_inheritance in cls["bases"]]
         if not component_classes:
             return {}
 
         # Assume the first Component class is the one we're interested in
         component_class = component_classes[0]
         build_methods = [
-            method
-            for method in component_class["methods"]
-            if method["name"] == self.function_entrypoint_name
+            method for method in component_class["methods"] if method["name"] == self.function_entrypoint_name
         ]
 
         return build_methods[0] if build_methods else {}
@@ -289,11 +291,9 @@ class CustomComponent(Component):
                 raise ValueError(f"User id is not set for {self.__class__.__name__}")
             credential_service = get_credential_service()  # Get service instance
             # Retrieve and decrypt the credential by name for the current user
-            db_service = get_db_service()
-            with session_getter(db_service) as session:
-                return credential_service.get_credential(
-                    user_id=self._user_id or "", name=name, session=session
-                )
+
+            with session_scope() as session:
+                return credential_service.get_credential(user_id=self._user_id or "", name=name, session=session)
 
         return get_credential
 
@@ -301,11 +301,9 @@ class CustomComponent(Component):
         if hasattr(self, "_user_id") and not self._user_id:
             raise ValueError(f"User id is not set for {self.__class__.__name__}")
         credential_service = get_credential_service()
-        db_service = get_db_service()
-        with session_getter(db_service) as session:
-            return credential_service.list_credentials(
-                user_id=self._user_id, session=session
-            )
+
+        with session_scope() as session:
+            return credential_service.list_credentials(user_id=self._user_id, session=session)
 
     def index(self, value: int = 0):
         """Returns a function that returns the value at the given index in the iterable."""
@@ -319,65 +317,22 @@ class CustomComponent(Component):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> "Graph":
-        from langflow.graph.graph.base import Graph
-        from langflow.processing.process import process_tweaks
-
-        db_service = get_db_service()
-        with session_getter(db_service) as session:
-            graph_data = flow.data if (flow := session.get(Flow, flow_id)) else None
-        if not graph_data:
-            raise ValueError(f"Flow {flow_id} not found")
-        if tweaks:
-            graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-        graph = Graph.from_payload(graph_data, flow_id=flow_id)
-        return graph
+        return await load_flow(flow_id, tweaks)
 
     async def run_flow(
         self,
-        input_value: Union[str, list[str]],
+        inputs: Union[dict, List[dict]] = None,
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
         tweaks: Optional[dict] = None,
     ) -> Any:
-        if not flow_id and not flow_name:
-            raise ValueError("Flow ID or Flow Name is required")
-        if not self._flows_records:
-            self.list_flows()
-        if not flow_id and self._flows_records:
-            flow_ids = [
-                flow.data["id"]
-                for flow in self._flows_records
-                if flow.data["name"] == flow_name
-            ]
-            if not flow_ids:
-                raise ValueError(f"Flow {flow_name} not found")
-            elif len(flow_ids) > 1:
-                raise ValueError(f"Multiple flows found with the name {flow_name}")
-            flow_id = flow_ids[0]
+        return await run_flow(inputs=inputs, flow_id=flow_id, flow_name=flow_name, tweaks=tweaks, user_id=self._user_id)
 
-        if not flow_id:
-            raise ValueError(f"Flow {flow_name} not found")
-
-        graph = await self.load_flow(flow_id, tweaks)
-        input_value_dict = {"input_value": input_value}
-        return await graph.run(input_value_dict, stream=False)
-
-    def list_flows(self, *, get_session: Optional[Callable] = None) -> List[Record]:
+    def list_flows(self) -> List[Record]:
         if not self._user_id:
             raise ValueError("Session is invalid")
         try:
-            get_session = get_session or session_getter
-            db_service = get_db_service()
-            with get_session(db_service) as session:
-                flows = session.exec(
-                    select(Flow)
-                    .where(Flow.user_id == self._user_id)
-                    .where(Flow.is_component == False)
-                ).all()
-
-            flows_records = [flow.to_record() for flow in flows]
-            self._flows_records = flows_records
-            return flows_records
+            return list_flows(user_id=self._user_id)
         except Exception as e:
             raise ValueError(f"Error listing flows: {e}")
 

@@ -1,11 +1,13 @@
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator, model_serializer
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator, model_serializer
 
+from langflow.graph.schema import RunOutputs
+from langflow.schema import dotdict
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
@@ -49,21 +51,22 @@ class ProcessResponse(BaseModel):
 class RunResponse(BaseModel):
     """Run response schema."""
 
-    outputs: Optional[List[Any]] = None
+    outputs: Optional[List[RunOutputs]] = []
     session_id: Optional[str] = None
 
-    @model_serializer(mode="wrap")
-    def serialize(self, handler):
+    @model_serializer(mode="plain")
+    def serialize(self):
         # Serialize all the outputs if they are base models
+        serialized = {"session_id": self.session_id, "outputs": []}
         if self.outputs:
             serialized_outputs = []
             for output in self.outputs:
-                if isinstance(output, BaseModel):
+                if isinstance(output, BaseModel) and not isinstance(output, RunOutputs):
                     serialized_outputs.append(output.model_dump(exclude_none=True))
                 else:
                     serialized_outputs.append(output)
-            self.outputs = serialized_outputs
-        return handler(self)
+            serialized["outputs"] = serialized_outputs
+        return serialized
 
 
 class PreloadResponse(BaseModel):
@@ -158,15 +161,22 @@ class StreamData(BaseModel):
     data: dict
 
     def __str__(self) -> str:
-        return (
-            f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
-        )
+        return f"event: {self.event}\ndata: {orjson_dumps(self.data, indent_2=False)}\n\n"
 
 
-class CustomComponentCode(BaseModel):
+class CustomComponentRequest(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     code: str
-    field: Optional[str] = None
     frontend_node: Optional[dict] = None
+
+
+class UpdateCustomComponentRequest(CustomComponentRequest):
+    field: str
+    field_value: Optional[Union[str, int, float, bool, dict, list]] = None
+    template: dict
+
+    def get_template(self):
+        return dotdict(self.template)
 
 
 class CustomComponentResponseError(BaseModel):
@@ -229,8 +239,9 @@ class ResultDataResponse(BaseModel):
 
 class VertexBuildResponse(BaseModel):
     id: Optional[str] = None
+    inactivated_vertices: Optional[List[str]] = None
     next_vertices_ids: Optional[List[str]] = None
-    inactive_vertices: Optional[List[str]] = None
+    top_level_vertices: Optional[List[str]] = None
     valid: bool
     params: Optional[Any] = Field(default_factory=dict)
     """JSON string of the params."""
@@ -245,4 +256,56 @@ class VerticesBuiltResponse(BaseModel):
 
 
 class InputValueRequest(BaseModel):
-    input_value: str
+    components: Optional[List[str]] = []
+    input_value: Optional[str] = None
+    type: Optional[Literal["chat", "text", "json", "any"]] = Field(
+        "any",
+        description="Defines on which components the input value should be applied. 'any' applies to all input components.",
+    )
+
+    # add an example
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "components": ["components_id", "Component Name"],
+                    "input_value": "input_value",
+                },
+                {"components": ["Component Name"], "input_value": "input_value"},
+                {"input_value": "input_value"},
+                {"type": "chat", "input_value": "input_value"},
+                {"type": "json", "input_value": '{"key": "value"}'},
+            ]
+        },
+        extra="forbid",
+    )
+
+
+class Tweaks(RootModel):
+    root: dict[str, Union[str, dict[str, str]]] = Field(
+        description="A dictionary of tweaks to adjust the flow's execution. Allows customizing flow behavior dynamically. All tweaks are overridden by the input values.",
+    )
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "parameter_name": "value",
+                    "Component Name": {"parameter_name": "value"},
+                    "component_id": {"parameter_name": "value"},
+                }
+            ]
+        }
+    }
+
+    # This should behave like a dict
+    def __getitem__(self, key):
+        return self.root[key]
+
+    def __setitem__(self, key, value):
+        self.root[key] = value
+
+    def __delitem__(self, key):
+        del self.root[key]
+
+    def items(self):
+        return self.root.items()

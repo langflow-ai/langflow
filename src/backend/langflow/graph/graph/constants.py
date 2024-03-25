@@ -5,7 +5,6 @@ from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.memories.base import memory_creator
 from langflow.interface.output_parsers.base import output_parser_creator
-from langflow.interface.prompts.base import prompt_creator
 from langflow.interface.retrievers.base import retriever_creator
 from langflow.interface.text_splitters.base import textsplitter_creator
 from langflow.interface.toolkits.base import toolkits_creator
@@ -34,7 +33,7 @@ class VertexTypesDict(LazyLoadDictBase):
 
     def get_type_dict(self):
         return {
-            **{t: types.PromptVertex for t in prompt_creator.to_list()},
+            # **{t: types.PromptVertex for t in prompt_creator.to_list()},
             **{t: types.AgentVertex for t in agent_creator.to_list()},
             # **{t: types.ChainVertex for t in chain_creator.to_list()},
             **{t: types.ToolVertex for t in tool_creator.to_list()},
@@ -47,10 +46,7 @@ class VertexTypesDict(LazyLoadDictBase):
             **{t: types.DocumentLoaderVertex for t in documentloader_creator.to_list()},
             **{t: types.TextSplitterVertex for t in textsplitter_creator.to_list()},
             **{t: types.OutputParserVertex for t in output_parser_creator.to_list()},
-            **{
-                t: types.CustomComponentVertex
-                for t in custom_component_creator.to_list()
-            },
+            **{t: types.CustomComponentVertex for t in custom_component_creator.to_list()},
             **{t: types.RetrieverVertex for t in retriever_creator.to_list()},
             **{t: types.ChatVertex for t in CHAT_COMPONENTS},
             **{t: types.RoutingVertex for t in ROUTING_COMPONENTS},

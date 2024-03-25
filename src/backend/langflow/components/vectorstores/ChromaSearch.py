@@ -15,7 +15,6 @@ class ChromaSearchComponent(LCVectorStoreComponent):
 
     display_name: str = "Chroma Search"
     description: str = "Search a Chroma collection for similar documents."
-    beta: bool = True
     icon = "Chroma"
 
     def build_config(self):
@@ -35,7 +34,6 @@ class ChromaSearchComponent(LCVectorStoreComponent):
             # "persist": {"display_name": "Persist"},
             "index_directory": {"display_name": "Index Directory"},
             "code": {"show": False, "display_name": "Code"},
-            "documents": {"display_name": "Documents", "is_list": True},
             "embedding": {
                 "display_name": "Embedding",
                 "info": "Embedding model to vectorize inputs (make sure to use same as index)",
@@ -93,8 +91,7 @@ class ChromaSearchComponent(LCVectorStoreComponent):
 
         if chroma_server_host is not None:
             chroma_settings = chromadb.config.Settings(
-                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins
-                or None,
+                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or None,
                 chroma_server_host=chroma_server_host,
                 chroma_server_port=chroma_server_port or None,
                 chroma_server_grpc_port=chroma_server_grpc_port or None,

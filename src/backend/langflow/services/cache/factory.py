@@ -1,6 +1,11 @@
 from typing import TYPE_CHECKING
 
-from langflow.services.cache.service import CacheService, InMemoryCache, RedisCache
+from langflow.services.cache.service import (
+    AsyncInMemoryCache,
+    BaseCacheService,
+    RedisCache,
+    ThreadingInMemoryCache,
+)
 from langflow.services.factory import ServiceFactory
 from langflow.utils.logger import logger
 
@@ -28,10 +33,10 @@ class CacheServiceFactory(ServiceFactory):
             if redis_cache.is_connected():
                 logger.debug("Redis cache is connected")
                 return redis_cache
-            logger.warning(
-                "Redis cache is not connected, falling back to in-memory cache"
-            )
-            return InMemoryCache()
+            logger.warning("Redis cache is not connected, falling back to in-memory cache")
+            return ThreadingInMemoryCache()
 
         elif settings_service.settings.CACHE_TYPE == "memory":
-            return InMemoryCache()
+            return ThreadingInMemoryCache()
+        elif settings_service.settings.CACHE_TYPE == "async":
+            return AsyncInMemoryCache()
