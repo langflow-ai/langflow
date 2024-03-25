@@ -652,7 +652,7 @@ class Graph:
         lock: asyncio.Lock,
         set_cache_coro: Coroutine,
         vertex_id: str,
-        inputs: Optional[Dict[str, str]] = None,
+        inputs_dict: Optional[Dict[str, str]] = None,
         user_id: Optional[str] = None,
     ):
         """
@@ -675,7 +675,6 @@ class Graph:
         vertex = self.get_vertex(vertex_id)
         try:
             if not vertex.frozen or not vertex._built:
-                inputs_dict = inputs.model_dump() if inputs else {}
                 await vertex.build(user_id=user_id, inputs=inputs_dict)
 
             if vertex.result is not None:
