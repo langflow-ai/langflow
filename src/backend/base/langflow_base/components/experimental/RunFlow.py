@@ -1,10 +1,9 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from langflow_base.interface.custom.custom_component import CustomComponent
-
-from langflow_base.field_typing import NestedDict, Text
-from langflow_base.graph.schema import ResultData
-from langflow_base.schema import Record
+from langflow import CustomComponent
+from langflow.field_typing import NestedDict, Text
+from langflow.graph.schema import ResultData
+from langflow.schema import Record, dotdict
 
 
 class RunFlowComponent(CustomComponent):
@@ -16,6 +15,12 @@ class RunFlowComponent(CustomComponent):
         flow_records = self.list_flows()
         return [flow_record.data["name"] for flow_record in flow_records]
 
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+        if field_name == "flow_name":
+            build_config["flow_name"]["options"] = self.get_flow_names()
+
+        return build_config
+
     def build_config(self):
         return {
             "input_value": {
@@ -25,7 +30,8 @@ class RunFlowComponent(CustomComponent):
             "flow_name": {
                 "display_name": "Flow Name",
                 "info": "The name of the flow to run.",
-                "options": self.get_flow_names,
+                "options": [],
+                "refresh_button": True,
             },
             "tweaks": {
                 "display_name": "Tweaks",
@@ -46,7 +52,7 @@ class RunFlowComponent(CustomComponent):
 
     async def build(self, input_value: Text, flow_name: str, tweaks: NestedDict) -> List[Record]:
         results: List[Optional[ResultData]] = await self.run_flow(
-            input_value=input_value, flow_name=flow_name, tweaks=tweaks
+            inputs={"input_value": input_value}, flow_name=flow_name, tweaks=tweaks
         )
         if isinstance(results, list):
             records = []

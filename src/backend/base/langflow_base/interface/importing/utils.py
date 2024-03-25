@@ -10,8 +10,7 @@ from langchain.prompts import PromptTemplate
 from langchain.tools import BaseTool
 from langchain_core.language_models.chat_models import BaseChatModel
 
-from langflow_base.interface.custom.custom_component import CustomComponent
-from langflow_base.interface.wrappers.base import wrapper_creator
+from langflow.interface.wrappers.base import wrapper_creator
 
 
 def import_module(module_path: str) -> Any:
@@ -48,7 +47,6 @@ def import_by_type(_type: str, name: str) -> Any:
         "utilities": import_utility,
         "output_parsers": import_output_parser,
         "retrievers": import_retriever,
-        "custom_components": import_custom_component,
     }
     if _type == "models":
         key = "chat" if "chat" in name.lower() else "llm"
@@ -57,11 +55,6 @@ def import_by_type(_type: str, name: str) -> Any:
         loaded_func = func_dict[_type]
 
     return loaded_func(name)
-
-
-def import_custom_component(custom_component: str) -> CustomComponent:
-    """Import custom component from custom component name"""
-    return import_class("langflow.interface.custom.custom_component.CustomComponent")
 
 
 def import_output_parser(output_parser: str) -> Any:

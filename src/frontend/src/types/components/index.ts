@@ -665,6 +665,9 @@ export type ApiKey = {
 export type fetchErrorComponentType = {
   message: string;
   description: string;
+  openModal?: boolean;
+  setRetry: () => void;
+  isLoadingHealth: boolean;
 };
 
 export type dropdownButtonPropsType = {
@@ -704,4 +707,5 @@ export type toolbarSelectItemProps = {
     valueClasses?: string;
   };
   dataTestId: string;
+  ping?: boolean;
 };

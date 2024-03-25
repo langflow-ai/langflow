@@ -17,18 +17,19 @@ from langflow_base.api.v1.schemas import (
     UpdateCustomComponentRequest,
     UploadFileResponse,
 )
-from langflow_base.graph.schema import RunOutputs
-from langflow_base.interface.custom.custom_component import CustomComponent
-from langflow_base.interface.custom.directory_reader import DirectoryReader
-from langflow_base.interface.custom.utils import build_custom_component_template
-from langflow_base.processing.process import process_tweaks, run_graph
-from langflow_base.services.auth.utils import api_key_security, get_current_active_user
-from langflow_base.services.cache.utils import save_uploaded_file
-from langflow_base.services.database.models.flow import Flow
-from langflow_base.services.database.models.user.model import User
-from langflow_base.services.deps import get_session, get_session_service, get_settings_service, get_task_service
-from langflow_base.services.session.service import SessionService
-from langflow_base.services.task.service import TaskService
+from langflow.graph.graph.base import Graph
+from langflow.graph.schema import RunOutputs
+from langflow.interface.custom.custom_component import CustomComponent
+from langflow.interface.custom.directory_reader import DirectoryReader
+from langflow.interface.custom.utils import build_custom_component_template
+from langflow.processing.process import process_tweaks, run_graph
+from langflow.services.auth.utils import api_key_security, get_current_active_user
+from langflow.services.cache.utils import save_uploaded_file
+from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_session, get_session_service, get_settings_service, get_task_service
+from langflow.services.session.service import SessionService
+from langflow.services.task.service import TaskService
 
 # build router
 router = APIRouter(tags=["Base"])
@@ -53,7 +54,7 @@ def get_all(
 async def run_flow_with_caching(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
-    inputs: Optional[List[InputValueRequest]] = [],
+    inputs: Optional[List[InputValueRequest]] = [InputValueRequest(components=[], input_value="")],
     outputs: Optional[List[str]] = [],
     tweaks: Annotated[Optional[Tweaks], Body(embed=True)] = None,  # noqa: F821
     stream: Annotated[bool, Body(embed=True)] = False,  # noqa: F821
@@ -102,23 +103,13 @@ async def run_flow_with_caching(
         if outputs is None:
             outputs = []
 
+        task_result: List[RunOutputs] = []
+        artifacts = {}
         if session_id:
             session_data = await session_service.load_session(session_id, flow_id=flow_id)
             graph, artifacts = session_data if session_data else (None, None)
-            task_result: List[RunOutputs] = []
-            if not graph:
-                raise ValueError("Graph not found in the session")
-            task_result, session_id = await run_graph(
-                graph=graph,
-                flow_id=flow_id,
-                session_id=session_id,
-                inputs=inputs,
-                outputs=outputs,
-                artifacts=artifacts,
-                session_service=session_service,
-                stream=stream,
-            )
-
+            if graph is None:
+                raise ValueError(f"Session {session_id} not found")
         else:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
@@ -130,28 +121,38 @@ async def run_flow_with_caching(
                 raise ValueError(f"Flow {flow_id} has no data")
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
-            task_result, session_id = await run_graph(
-                graph=graph_data,
-                flow_id=flow_id,
-                session_id=session_id,
-                inputs=inputs,
-                outputs=outputs,
-                artifacts={},
-                session_service=session_service,
-                stream=stream,
-            )
+            graph = Graph.from_payload(graph_data, flow_id=flow_id)
+        task_result, session_id = await run_graph(
+            graph=graph,
+            flow_id=flow_id,
+            session_id=session_id,
+            inputs=inputs,
+            outputs=outputs,
+            artifacts=artifacts,
+            session_service=session_service,
+            stream=stream,
+        )
 
         return RunResponse(outputs=task_result, session_id=session_id)
     except sa.exc.StatementError as exc:
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
         if "badly formed hexadecimal UUID string" in str(exc):
+            logger.error(f"Flow ID {flow_id} is not a valid UUID")
             # This means the Flow ID is not a valid UUID which means it can't find the flow
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
         if f"Flow {flow_id} not found" in str(exc):
+            logger.error(f"Flow {flow_id} not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        elif f"Session {session_id} not found" in str(exc):
+            logger.error(f"Session {session_id} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         else:
+            logger.exception(exc)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
 @router.post(
@@ -309,4 +310,5 @@ async def custom_component_update(
 
         return component_node
     except Exception as exc:
+        logger.exception(exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc

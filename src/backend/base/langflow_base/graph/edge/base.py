@@ -3,10 +3,10 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from langflow_base.graph.edge.utils import build_clean_params
-from langflow_base.graph.schema import INPUT_FIELD_NAME
-from langflow_base.services.deps import get_monitor_service
-from langflow_base.services.monitor.utils import log_message
+from langflow.graph.edge.utils import build_clean_params
+from langflow.schema.schema import INPUT_FIELD_NAME
+from langflow.services.deps import get_monitor_service
+from langflow.services.monitor.utils import log_message
 
 if TYPE_CHECKING:
     from langflow_base.graph.vertex.base import Vertex

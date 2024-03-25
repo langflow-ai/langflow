@@ -2,8 +2,8 @@ from typing import Any, Dict, List, Optional
 
 from langchain_community.llms.llamacpp import LlamaCpp
 
-from langflow_base.components.models.base.model import LCModelComponent
-from langflow_base.field_typing import Text
+from langflow.base.models.model import LCModelComponent
+from langflow.field_typing import Text
 
 
 class LlamaCppComponent(LCModelComponent):
@@ -60,6 +60,10 @@ class LlamaCppComponent(LCModelComponent):
             "stream": {
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
+            },
+            "system_message": {
+                "display_name": "System Message",
+                "info": "System message to pass to the model.",
             },
         }
 
@@ -141,4 +145,4 @@ class LlamaCppComponent(LCModelComponent):
             vocab_only=vocab_only,
         )
 
-        return self.get_result(output=output, stream=stream, input_value=input_value)
+        return self.get_result(runnable=output, stream=stream, input_value=input_value)

@@ -1,6 +1,6 @@
 from langflow_base.services.cache.service import (
     AsyncInMemoryCache,
-    BaseCacheService,
+    CacheService,
     RedisCache,
     ThreadingInMemoryCache,
 )
@@ -12,6 +12,6 @@ __all__ = [
     "service",
     "ThreadingInMemoryCache",
     "AsyncInMemoryCache",
-    "BaseCacheService",
+    "CacheService",
     "RedisCache",
 ]

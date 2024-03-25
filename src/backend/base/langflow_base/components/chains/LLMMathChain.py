@@ -19,6 +19,10 @@ class LLMMathChainComponent(CustomComponent):
             "memory": {"display_name": "Memory"},
             "input_key": {"display_name": "Input Key"},
             "output_key": {"display_name": "Output Key"},
+            "input_value": {
+                "display_name": "Input Value",
+                "info": "The input value to pass to the chain.",
+            },
         }
 
     def build(

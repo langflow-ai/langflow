@@ -7,11 +7,11 @@ from typing import Optional
 
 from loguru import logger
 
-from langflow_base.services.base import Service
-from langflow_base.services.cache.base import AsyncBaseCacheService, BaseCacheService
+from langflow.services.base import Service
+from langflow.services.cache.base import AsyncBaseCacheService, CacheService
 
 
-class ThreadingInMemoryCache(BaseCacheService, Service):
+class ThreadingInMemoryCache(CacheService, Service):
     """
     A simple in-memory cache using an OrderedDict.
 
@@ -179,7 +179,7 @@ class ThreadingInMemoryCache(BaseCacheService, Service):
         return f"InMemoryCache(max_size={self.max_size}, expiration_time={self.expiration_time})"
 
 
-class RedisCache(BaseCacheService, Service):
+class RedisCache(CacheService):
     """
     A Redis-based cache implementation.
 

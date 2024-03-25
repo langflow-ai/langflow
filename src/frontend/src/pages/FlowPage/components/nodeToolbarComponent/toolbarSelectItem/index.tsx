@@ -9,14 +9,18 @@ export default function ToolbarSelectItem({
   icon,
   styleObj,
   dataTestId,
+  ping,
 }: toolbarSelectItemProps) {
   return (
     <div className="flex" data-testid={dataTestId}>
       <ForwardedIconComponent
         name={icon}
-        className={`relative top-0.5 mr-2 h-4 w-4 ${styleObj?.iconClasses}`}
-      />{" "}
-      <span className={styleObj?.valueClasses}>{value}</span>{" "}
+        className={`relative top-0.5 mr-2 h-4 w-4 ${styleObj?.iconClasses} ${
+          ping && "animate-pulse text-green-500"
+        }`}
+      />
+      <span className={styleObj?.valueClasses}>{value}</span>
+
       {isMac ? (
         <ForwardedIconComponent
           name="Command"

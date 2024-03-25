@@ -1,13 +1,8 @@
 from typing import TYPE_CHECKING
 
-from langflow_base.services.cache.service import (
-    AsyncInMemoryCache,
-    BaseCacheService,
-    RedisCache,
-    ThreadingInMemoryCache,
-)
-from langflow_base.services.factory import ServiceFactory
-from langflow_base.utils.logger import logger
+from langflow.services.cache.service import AsyncInMemoryCache, CacheService, RedisCache, ThreadingInMemoryCache
+from langflow.services.factory import ServiceFactory
+from langflow.utils.logger import logger
 
 if TYPE_CHECKING:
     from langflow_base.services.settings.service import SettingsService
@@ -15,7 +10,7 @@ if TYPE_CHECKING:
 
 class CacheServiceFactory(ServiceFactory):
     def __init__(self):
-        super().__init__(BaseCacheService)
+        super().__init__(CacheService)
 
     def create(self, settings_service: "SettingsService"):
         # Here you would have logic to create and configure a CacheService

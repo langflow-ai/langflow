@@ -254,13 +254,13 @@ def get_user_id_from_token(token: str) -> UUID:
 def create_user_tokens(user_id: UUID, db: Session = Depends(get_session), update_last_login: bool = False) -> dict:
     settings_service = get_settings_service()
 
-    access_token_expires = timedelta(minutes=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(seconds=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS)
     access_token = create_token(
         data={"sub": str(user_id)},
         expires_delta=access_token_expires,
     )
 
-    refresh_token_expires = timedelta(minutes=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+    refresh_token_expires = timedelta(seconds=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS)
     refresh_token = create_token(
         data={"sub": str(user_id), "type": "rf"},
         expires_delta=refresh_token_expires,
@@ -333,7 +333,7 @@ def encrypt_api_key(api_key: str, settings_service=Depends(get_settings_service)
     fernet = get_fernet(settings_service)
     # Two-way encryption
     encrypted_key = fernet.encrypt(api_key.encode())
-    return encrypted_key
+    return encrypted_key.decode()
 
 
 def decrypt_api_key(encrypted_api_key: str, settings_service=Depends(get_settings_service)):

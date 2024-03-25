@@ -27,10 +27,6 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
           resolve();
         })
         .catch((error) => {
-          useAlertStore.getState().setErrorData({
-            title: "An error has occurred while fetching types.",
-            list: ["Please refresh the page."],
-          });
           console.error("An error has occurred while fetching types.");
           console.log(error);
           reject();

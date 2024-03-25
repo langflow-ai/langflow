@@ -36,4 +36,4 @@ class ChatService(Service):
         """
         Clear the cache for a client.
         """
-        self.cache_service.delete(flow_id, lock=lock or self._cache_locks[flow_id])
+        await self.cache_service.delete(flow_id, lock=lock or self._cache_locks[flow_id])

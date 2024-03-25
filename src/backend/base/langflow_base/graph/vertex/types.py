@@ -1,19 +1,19 @@
 import ast
 import json
 from typing import AsyncIterator, Callable, Dict, Iterator, List, Optional, Union
-
 import yaml
 from langchain_core.messages import AIMessage
 from loguru import logger
 
-from langflow_base.graph.schema import INPUT_FIELD_NAME, InterfaceComponentTypes
-from langflow_base.graph.utils import UnbuiltObject, flatten_list, serialize_field
-from langflow_base.graph.vertex.base import Vertex
-from langflow_base.interface.utils import extract_input_variables_from_prompt
-from langflow_base.schema import Record
-from langflow_base.services.monitor.utils import log_vertex_build
-from langflow_base.utils.schemas import ChatOutputResponse
-from langflow_base.utils.util import unescape_string
+from langflow.graph.schema import InterfaceComponentTypes
+from langflow.graph.utils import UnbuiltObject, flatten_list, serialize_field
+from langflow.graph.vertex.base import Vertex
+from langflow.interface.utils import extract_input_variables_from_prompt
+from langflow.schema import Record
+from langflow.schema.schema import INPUT_FIELD_NAME
+from langflow.services.monitor.utils import log_vertex_build
+from langflow.utils.schemas import ChatOutputResponse
+from langflow.utils.util import unescape_string
 
 
 class AgentVertex(Vertex):

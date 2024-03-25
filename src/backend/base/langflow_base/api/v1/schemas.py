@@ -1,17 +1,10 @@
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 from uuid import UUID
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    RootModel,
-    field_validator,
-    model_serializer,
-)
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator, model_serializer
 
 from langflow_base.graph.schema import RunOutputs
 from langflow_base.schema import dotdict
@@ -61,18 +54,19 @@ class RunResponse(BaseModel):
     outputs: Optional[List[RunOutputs]] = []
     session_id: Optional[str] = None
 
-    @model_serializer(mode="wrap")
-    def serialize(self, handler):
+    @model_serializer(mode="plain")
+    def serialize(self):
         # Serialize all the outputs if they are base models
+        serialized = {"session_id": self.session_id, "outputs": []}
         if self.outputs:
             serialized_outputs = []
             for output in self.outputs:
-                if isinstance(output, BaseModel):
+                if isinstance(output, BaseModel) and not isinstance(output, RunOutputs):
                     serialized_outputs.append(output.model_dump(exclude_none=True))
                 else:
                     serialized_outputs.append(output)
-            self.outputs = serialized_outputs
-        return handler(self)
+            serialized["outputs"] = serialized_outputs
+        return serialized
 
 
 class PreloadResponse(BaseModel):
@@ -234,6 +228,7 @@ class ApiKeyCreateRequest(BaseModel):
 class VerticesOrderResponse(BaseModel):
     ids: List[str]
     run_id: UUID
+    vertices_to_run: List[str]
 
 
 class ResultDataResponse(BaseModel):
@@ -264,10 +259,14 @@ class VerticesBuiltResponse(BaseModel):
 class InputValueRequest(BaseModel):
     components: Optional[List[str]] = []
     input_value: Optional[str] = None
+    type: Optional[Literal["chat", "text", "json", "any"]] = Field(
+        "any",
+        description="Defines on which components the input value should be applied. 'any' applies to all input components.",
+    )
 
     # add an example
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "components": ["components_id", "Component Name"],
@@ -275,9 +274,12 @@ class InputValueRequest(BaseModel):
                 },
                 {"components": ["Component Name"], "input_value": "input_value"},
                 {"input_value": "input_value"},
+                {"type": "chat", "input_value": "input_value"},
+                {"type": "json", "input_value": '{"key": "value"}'},
             ]
-        }
-    }
+        },
+        extra="forbid",
+    )
 
 
 class Tweaks(RootModel):

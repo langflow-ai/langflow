@@ -19,7 +19,10 @@ class ConversationChainComponent(CustomComponent):
                 "display_name": "Memory",
                 "info": "Memory to load context from. If none is provided, a ConversationBufferMemory will be used.",
             },
-            "code": {"show": False},
+            "input_value": {
+                "display_name": "Input Value",
+                "info": "The input value to pass to the chain.",
+            },
         }
 
     def build(

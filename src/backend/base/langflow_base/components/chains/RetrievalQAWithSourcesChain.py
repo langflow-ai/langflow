@@ -23,6 +23,10 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
             "memory": {"display_name": "Memory"},
             "return_source_documents": {"display_name": "Return Source Documents"},
             "retriever": {"display_name": "Retriever"},
+            "input_value": {
+                "display_name": "Input Value",
+                "info": "The input value to pass to the chain.",
+            },
         }
 
     def build(

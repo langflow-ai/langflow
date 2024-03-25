@@ -4,12 +4,14 @@ from langflow_base.services.factory import ServiceFactory
 from langflow_base.services.socket.service import SocketIOService
 
 if TYPE_CHECKING:
-    from langflow_base.services.cache.service import BaseCacheService
+    from langflow.services.cache.service import CacheService
 
 
 class SocketIOFactory(ServiceFactory):
     def __init__(self):
-        super().__init__(service_class=SocketIOService)
+        super().__init__(
+            service_class=SocketIOService,
+        )
 
-    def create(self, cache_service: "BaseCacheService"):
+    def create(self, cache_service: "CacheService"):
         return SocketIOService(cache_service)

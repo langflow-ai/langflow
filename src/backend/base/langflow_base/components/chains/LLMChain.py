@@ -21,7 +21,6 @@ class LLMChainComponent(CustomComponent):
             "prompt": {"display_name": "Prompt"},
             "llm": {"display_name": "LLM"},
             "memory": {"display_name": "Memory"},
-            "code": {"show": False},
         }
 
     def build(

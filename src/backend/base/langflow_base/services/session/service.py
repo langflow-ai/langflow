@@ -1,18 +1,16 @@
-from typing import TYPE_CHECKING, Optional
+from typing import Coroutine, Optional
 
-from langflow_base.interface.run import build_sorted_vertices
-from langflow_base.services.base import Service
-from langflow_base.services.session.utils import compute_dict_hash, session_id_generator
-
-if TYPE_CHECKING:
-    from langflow_base.services.cache.base import BaseCacheService
+from langflow.interface.run import build_sorted_vertices
+from langflow.services.base import Service
+from langflow.services.cache.base import CacheService
+from langflow.services.session.utils import compute_dict_hash, session_id_generator
 
 
 class SessionService(Service):
     name = "session_service"
 
     def __init__(self, cache_service):
-        self.cache_service: "BaseCacheService" = cache_service
+        self.cache_service: "CacheService" = cache_service
 
     async def load_session(self, key, flow_id: str, data_graph: Optional[dict] = None):
         # Check if the data is cached
@@ -26,7 +24,7 @@ class SessionService(Service):
         # If not cached, build the graph and cache it
         graph, artifacts = await build_sorted_vertices(data_graph, flow_id)
 
-        self.cache_service.set(key, (graph, artifacts))
+        await self.cache_service.set(key, (graph, artifacts))
 
         return graph, artifacts
 
@@ -41,8 +39,14 @@ class SessionService(Service):
             session_id = session_id_generator()
         return self.build_key(session_id, data_graph=data_graph)
 
-    def update_session(self, session_id, value):
-        self.cache_service.set(session_id, value)
+    async def update_session(self, session_id, value):
+        result = self.cache_service.set(session_id, value)
+        # if it is a coroutine, await it
+        if isinstance(result, Coroutine):
+            await result
 
-    def clear_session(self, session_id):
-        self.cache_service.delete(session_id)
+    async def clear_session(self, session_id):
+        result = self.cache_service.delete(session_id)
+        # if it is a coroutine, await it
+        if isinstance(result, Coroutine):
+            await result
