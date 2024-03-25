@@ -1,7 +1,7 @@
 from importlib import metadata
 
 from langflow_base.interface.custom.custom_component import CustomComponent
-from langflow_base.processing.process import load_flow_from_json
+from langflow_base.processing.load import load_flow_from_json
 
 try:
     __version__ = metadata.version(__package__)

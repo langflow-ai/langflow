@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.5"
+version = "0.0.6"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -25,9 +25,9 @@ documentation = "https://docs.langflow.org"
 langflow-base = "langflow_base.__main__:main"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.9,<3.12"
 fastapi = "^0.109.0"
-httpx = "^0.25.0"
+httpx = "^0.24.0"
 uvicorn = "^0.27.0"
 gunicorn = "^21.2.0"
 langchain = "~0.1.0"
