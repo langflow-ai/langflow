@@ -12,6 +12,10 @@ class LLMCheckerChainComponent(CustomComponent):
     def build_config(self):
         return {
             "llm": {"display_name": "LLM"},
+            "input_value": {
+                "display_name": "Input Value",
+                "info": "The input value to pass to the chain.",
+            },
         }
 
     def build(

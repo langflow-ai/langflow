@@ -25,6 +25,10 @@ class SQLGeneratorComponent(CustomComponent):
                 "display_name": "Top K",
                 "info": "The number of results per select statement to return. If 0, no limit.",
             },
+            "input_value": {
+                "display_name": "Input Value",
+                "info": "The input value to pass to the chain.",
+            },
         }
 
     def build(
