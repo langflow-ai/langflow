@@ -28,7 +28,7 @@ format:
 
 lint:
 	make install_backend
-	poetry run mypy src/backend/langflow
+	poetry run mypy src/backend
 	poetry run ruff . --fix
 
 install_frontend:
@@ -69,6 +69,7 @@ frontendc:
 
 install_backend:
 	poetry install --extras deploy
+	poetry run pip install -e src/backend/base/.
 
 backend:
 	make install_backend
@@ -82,26 +83,31 @@ else
 endif
 
 build_and_run:
-	echo 'Removing dist folder'
+	@echo 'Removing dist folder'
 	rm -rf dist
-	make build_base
+	rm -rf src/backend/base/dist
 	make build
-	poetry run pip install dist/*.tar.gz
+	poetry run pip install dist/*.tar.gz && pip install src/backend/base/dist/*.tar.gz
 	poetry run langflow run
 
 build_and_install:
-	echo 'Removing dist folder'
+	@echo 'Removing dist folder'
 	rm -rf dist
-	make build && poetry run pip install dist/*.tar.gz
+	rm -rf src/backend/base/dist
+	make build && poetry run pip install dist/*.tar.gz && pip install src/backend/base/dist/*.tar.gz
 
 build_frontend:
 	cd src/frontend && CI='' npm run build
 	cp -r src/frontend/build src/backend/base/langflow_base/frontend
 
 build:
+	make build_langflow
+	make build_langflow_base
+
+build_langflow:
 	poetry build --format sdist
 
-build_base:
+build_langflow_base:
 	make install_frontend
 	make build_frontend
 	cd src/backend/base && poetry build --format sdist
@@ -117,9 +123,17 @@ else
 		docker compose $(if $(debug),-f docker-compose.debug.yml) up
 endif
 
-publish:
-	make build
+publish_base:
+	make build_langflow_base
+	cd src/backend/base && poetry publish
+
+publish_langflow:
+	make build_langflow
 	poetry publish
+
+publish:
+	make publish_base
+	make publish_langflow
 
 help:
 	@echo '----'
