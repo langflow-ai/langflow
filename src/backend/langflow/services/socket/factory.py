@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING
 
 from langflow.services.factory import ServiceFactory
-from langflow.services.schema import ServiceType
 from langflow.services.socket.service import SocketIOService
 
 if TYPE_CHECKING:
