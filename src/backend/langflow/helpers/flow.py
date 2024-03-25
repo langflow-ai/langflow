@@ -12,9 +12,9 @@ if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
 
 INPUT_TYPE_MAP = {
-    "ChatInput": "str",
-    "TextInput": "str",
-    "JSONInput": "dict",
+    "ChatInput": {"type_hint": "Optional[str]", "default": ""},
+    "TextInput": {"type_hint": "Optional[str]", "default": ""},
+    "JSONInput": {"type_hint": "Optional[dict]", "default": {}},
 }
 
 
@@ -105,7 +105,10 @@ def generate_function_for_flow(inputs: List["Vertex"], flow_id: str) -> Coroutin
         result = function(input1, input2)
     """
     # Prepare function arguments with type hints and default values
-    args = [f"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]}" for input_ in inputs]
+    args = [
+        f"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = {INPUT_TYPE_MAP[input_.base_name]['default']}"
+        for input_ in inputs
+    ]
 
     # Maintain original argument names for constructing the tweaks dictionary
     original_arg_names = [input_.display_name for input_ in inputs]
@@ -120,6 +123,7 @@ def generate_function_for_flow(inputs: List["Vertex"], flow_id: str) -> Coroutin
     )
 
     func_body = f"""
+from typing import Optional
 async def flow_function({func_args}):
     tweaks = {{ {arg_mappings} }}
     from langflow.helpers.flow import run_flow
