@@ -79,7 +79,7 @@ def session_scope():
         session.close()
 
 
-def get_cache_service() -> "BaseCacheService":
+def get_cache_service() -> "CacheService":
     return service_manager.get(ServiceType.CACHE_SERVICE)  # type: ignore
 
 
