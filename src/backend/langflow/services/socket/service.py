@@ -8,13 +8,13 @@ from langflow.services.deps import get_chat_service
 from langflow.services.socket.utils import build_vertex, get_vertices
 
 if TYPE_CHECKING:
-    from langflow.services.cache.service import BaseCacheService
+    from langflow.services.cache.service import CacheService
 
 
 class SocketIOService(Service):
-    name = "socket_io_service"
+    name = "socket_service"
 
-    def __init__(self, cache_service: "BaseCacheService"):
+    def __init__(self, cache_service: "CacheService"):
         self.cache_service = cache_service
 
     def init(self, sio: socketio.AsyncServer):

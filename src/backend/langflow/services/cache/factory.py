@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 class CacheServiceFactory(ServiceFactory):
     def __init__(self):
-        super().__init__(BaseCacheService)
+        super().__init__(CacheService)
 
     def create(self, settings_service: "SettingsService"):
         # Here you would have logic to create and configure a CacheService

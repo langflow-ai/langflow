@@ -6,7 +6,7 @@ from typing import Optional
 from langflow.services.base import Service
 
 
-class BaseCacheService(Service):
+class CacheService(Service):
     """
     Abstract base class for a cache.
     """
