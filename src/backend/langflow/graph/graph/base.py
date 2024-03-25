@@ -387,7 +387,6 @@ class Graph:
 
         self.in_degree_map = self.build_in_degree()
         self.parent_child_map = self.build_parent_child_map()
-        self.run_manager.build_run_map(self)
 
     def reset_inactivated_vertices(self):
         """
@@ -983,6 +982,8 @@ class Graph:
                 successors_result.append(successor)
             return successors_result
 
+        stop_or_start_vertex = self.get_vertex(vertex_id)
+        stop_predecessors = [pre.id for pre in stop_or_start_vertex.predecessors]
         # DFS to collect all vertices that can reach the specified vertex
         while stack:
             current_id = stack.pop()
@@ -1009,7 +1010,7 @@ class Graph:
                                 stack.append(successor.id)
                             else:
                                 excluded.add(successor.id)
-                else:
+                elif current_id not in stop_predecessors:
                     # If the current vertex is not the target vertex, we should add all its successors
                     # to the stack if they are not in visited
                     for successor in current_vertex.successors:
@@ -1149,7 +1150,7 @@ class Graph:
         # save the only the rest
         self.vertices_layers = vertices_layers[1:]
         self.vertices_to_run = {vertex_id for vertex_id in chain.from_iterable(vertices_layers)}
-        self.build_graph_maps()
+        self.build_run_map()
         # Return just the first layer
         return first_layer
 

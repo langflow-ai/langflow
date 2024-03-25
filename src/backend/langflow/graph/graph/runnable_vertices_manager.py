@@ -43,6 +43,7 @@ class RunnableVerticesManager:
             for predecessor in predecessors:
                 self.run_map[predecessor].append(vertex_id)
         self.run_predecessors = graph.predecessor_map.copy()
+        self.vertices_to_run = graph.vertices_to_run
 
     def update_vertex_run_state(self, vertex_id: str, is_runnable: bool):
         """Updates the runnable state of a vertex."""
@@ -73,8 +74,8 @@ class RunnableVerticesManager:
 
         """
         async with lock:
-            graph.remove_from_predecessors(vertex.id)
-            direct_successors_ready = [v for v in vertex.successors_ids if graph.is_vertex_runnable(v)]
+            self.remove_from_predecessors(vertex.id)
+            direct_successors_ready = [v for v in vertex.successors_ids if self.is_vertex_runnable(v)]
             if not direct_successors_ready:
                 # No direct successors ready, look for runnable predecessors of successors
                 next_runnable_vertices = self.find_runnable_predecessors_for_successors(vertex.id)
@@ -82,8 +83,8 @@ class RunnableVerticesManager:
                 next_runnable_vertices = direct_successors_ready
 
             for v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
-                graph.vertices_to_run.remove(v_id)
-                graph.remove_from_predecessors(v_id)
+                self.update_vertex_run_state(v_id, is_runnable=False)
+                self.remove_from_predecessors(v_id)
             await set_cache_coro(data=graph, lock=lock)
         return next_runnable_vertices
 
