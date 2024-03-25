@@ -13,53 +13,29 @@ import Admonition from '@theme/Admonition';
 
 The `Chroma` is a component designed for implementing a Vector Store using Chroma. This component allows users to utilize Chroma for efficient vector storage and retrieval within their language processing workflows.
 
+**Params**
+
+- **Collection Name:** The name of the collection.
+
+- **Persist Directory:** The directory to persist the Vector Store to.
+
+- **Server CORS Allow Origins (Optional):** The CORS allow origins for the Chroma server.
+
+- **Server Host (Optional):** The host for the Chroma server.
+
+- **Server Port (Optional):** The port for the Chroma server.
+
+- **Server gRPC Port (Optional):** The gRPC port for the Chroma server.
+
+- **Server SSL Enabled (Optional):** Whether to enable SSL for the Chroma server.
+
+- **Code (Advanced):** Additional code for the component.
+
+- **Input:** Input data for creating the Vector Store.
+
+- **Embedding:** The embeddings to use for the Vector Store.
+
 For detailed documentation and integration guides, please refer to the [Chroma Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/chroma).
-
-
-**Configuration Options**
-
-The `Chroma` offers various configuration options to customize its behavior. Here are the available options:
-
-- **Collection Name**: The name of the collection.
-- **Persist Directory**: The directory to persist the Vector Store to.
-- **Code**: Advanced option for code settings.
-- **Input**: Specifies the type of input (Document or Record).
-- **Embedding**: Specifies the embedding to use for the Vector Store.
-- **Server CORS Allow Origins**: CORS allow origins for the Chroma server.
-- **Server Host**: The host for the Chroma server.
-- **Server Port**: The port for the Chroma server.
-- **Server gRPC Port**: The gRPC port for the Chroma server.
-- **Server SSL Enabled**: Whether to enable SSL for the Chroma server.
-
-**Methods**
-
-****`build_config()`****
-
-Builds the configuration for the component.
-
-**Returns**
-
-- `dict`: A dictionary containing the configuration options for the component.
-
-****`build()`****
-
-Builds the Vector Store or BaseRetriever object.
-
-**Arguments**
-
-- `collection_name (str)`: The name of the collection.
-- `index_directory (Optional[str])`: The directory to persist the Vector Store to.
-- `chroma_server_ssl_enabled (bool)`: Whether to enable SSL for the Chroma server.
-- `embedding (Optional[Embeddings])`: The embeddings to use for the Vector Store.
-- `inputs (Optional[List[Record]])`: The inputs to use for the Vector Store.
-- `chroma_server_cors_allow_origins (Optional[str])`: The CORS allow origins for the Chroma server.
-- `chroma_server_host (Optional[str])`: The host for the Chroma server.
-- `chroma_server_port (Optional[int])`: The port for the Chroma server.
-- `chroma_server_grpc_port (Optional[int])`: The gRPC port for the Chroma server.
-
-**Returns**
-
-- `Union[VectorStore, BaseRetriever]`: The Vector Store or BaseRetriever object.
 
 ---
 
@@ -68,49 +44,29 @@ Builds the Vector Store or BaseRetriever object.
 
 The `ChromaSearch` is a component designed for searching a Chroma collection for similar documents. This component integrates with Chroma to facilitate efficient document retrieval based on similarity metrics.
 
-The `ChromaSearch` provides several configuration options to customize its behavior:
+**Params**
 
-- **Input**: The input text for the search.
-- **Search Type**: Specifies the type of search (Similarity or MMR).
-- **Collection Name**: The name of the collection.
-- **Index Directory**: The directory where the index is stored.
-- **Embedding**: The embedding model used to vectorize inputs.
-- **Server CORS Allow Origins**: CORS allow origins for the Chroma server.
-- **Server Host**: The host for the Chroma server.
-- **Server Port**: The port for the Chroma server.
-- **Server gRPC Port**: The gRPC port for the Chroma server.
-- **Server SSL Enabled**: Whether to enable SSL for the Chroma server.
+- **Input:** The input text to search for similar documents.
+  
+- **Search Type:** The type of search to perform ("Similarity" or "MMR").
 
-**Methods**
+- **Collection Name:** The name of the Chroma collection.
 
-****`build_config()`****
+- **Index Directory:** The directory where the Chroma index is stored.
 
-Builds the configuration for the component.
+- **Embedding:** The embedding model used to vectorize inputs (make sure to use the same as the index).
 
-**Returns**
+- **Server CORS Allow Origins (Optional):** The CORS allow origins for the Chroma server.
 
-- `dict`: A dictionary containing the configuration options for the component.
+- **Server Host (Optional):** The host for the Chroma server.
 
-****`build()`****
+- **Server Port (Optional):** The port for the Chroma server.
 
-Builds the Vector Store or BaseRetriever object.
+- **Server gRPC Port (Optional):** The gRPC port for the Chroma server.
 
-**Arguments**
+- **Server SSL Enabled (Optional):** Whether SSL is enabled for the Chroma server.
 
-- `input_value (Text)`: The input text for the search.
-- `search_type (str)`: The type of search (Similarity or MMR).
-- `collection_name (str)`: The name of the collection.
-- `embedding (Embeddings)`: The embedding model used to vectorize inputs.
-- `chroma_server_ssl_enabled (bool)`: Whether to enable SSL for the Chroma server.
-- `index_directory (Optional[str])`: The directory where the index is stored.
-- `chroma_server_cors_allow_origins (Optional[str])`: CORS allow origins for the Chroma server.
-- `chroma_server_host (Optional[str])`: The host for the Chroma server.
-- `chroma_server_port (Optional[int])`: The port for the Chroma server.
-- `chroma_server_grpc_port (Optional[int])`: The gRPC port for the Chroma server.
-
-**Returns**
-
-- `List[Record]`: A list of records representing the search results.
+- **Code:** Additional code for the component.
 
 ---
 
@@ -118,32 +74,19 @@ Builds the Vector Store or BaseRetriever object.
 
 The `FAISS` is a component designed for ingesting documents into a FAISS Vector Store. It facilitates efficient document indexing and retrieval using the FAISS library.
 
+**Params**
+
+- **Embedding:** The embedding model used to vectorize inputs.
+
+- **Input:** The input documents to ingest into the FAISS Vector Store.
+
+- **Folder Path:** The path to save the FAISS index. It will be relative to where Langflow is running.
+
+- **Index Name:** The name of the FAISS index.
+
+- **Code:** Additional code for the component.
+
 For detailed documentation and integration guides, please refer to the [FAISS Component Documentation](https://faiss.ai/index.html).
-
-**Methods**
-
-****`build_config()`****
-
-Builds the configuration for the component.
-
-**Returns**
-
-- `dict`: A dictionary containing the configuration options for the component.
-
-****`build()`****
-
-Builds the Vector Store or BaseRetriever object.
-
-**Arguments**
-
-- `embedding (Embeddings)`: The embeddings to use for the Vector Store.
-- `inputs (List[Record])`: The inputs to ingest into FAISS.
-- `folder_path (str)`: The path to save the FAISS index. It will be relative to where Langflow is running.
-- `index_name (str, optional)`: The name of the FAISS index. Default is "langflow_index".
-
-**Returns**
-
-- `Union[VectorStore, FAISS, BaseRetriever]`: The Vector Store, FAISS, or BaseRetriever object.
 
 ---
 
@@ -151,30 +94,17 @@ Builds the Vector Store or BaseRetriever object.
 
 The `FAISSSearch` is a component for searching a FAISS Vector Store for similar documents. It enables efficient document retrieval based on similarity metrics using FAISS.
 
-**Methods**
+**Params**
 
-****`build_config()`****
+- **Embedding:** The embedding model used by the FAISS Vector Store.
 
-Builds the configuration for the component.
+- **Folder Path:** The path from which to load the FAISS index. It will be relative to where Langflow is running.
 
-**Returns**
+- **Input:** The input value to search for similar documents.
 
-- `dict`: A dictionary containing the configuration options for the component.
+- **Index Name:** The name of the FAISS index.
 
-****`build()`****
-
-Builds the Vector Store or BaseRetriever object.
-
-**Arguments**
-
-- `input_value (Text)`: The input text for the search.
-- `embedding (Embeddings)`: The embeddings to use for the Vector Store.
-- `folder_path (str)`: The path where the FAISS index is saved. Relative to where Langflow is running.
-- `index_name (str, optional)`: The name of the FAISS index. Default is "langflow_index".
-
-**Returns**
-
-- `List[Record]`: A list of records representing the search results.
+- **Code:** Additional code for the component.
 
 ---
 
@@ -183,33 +113,23 @@ Builds the Vector Store or BaseRetriever object.
 
 The `MongoDBAtlas` is a component used to construct a MongoDB Atlas Vector Search vector store from raw documents. It facilitates the creation of MongoDB Atlas-based vector stores for efficient document storage and retrieval.
 
-**Methods**
+**Params**
 
-****`build_config()`****
+- **Embedding:** The embedding model used by the MongoDB Atlas Vector Search.
 
-Builds the configuration for the component.
+- **Input:** The input documents or records.
 
-**Returns**
+- **Collection Name:** The name of the collection in the MongoDB Atlas database.
 
-- `dict`: A dictionary containing the configuration options for the component.
+- **Database Name:** The name of the database in MongoDB Atlas.
 
-****`build()`****
+- **Index Name:** The name of the index in MongoDB Atlas.
 
-Builds the MongoDB Atlas Vector Search object.
+- **MongoDB Atlas Cluster URI:** The URI of the MongoDB Atlas cluster.
 
-**Arguments**
+- **Search Kwargs:** Additional search arguments for MongoDB Atlas.
 
-- `embedding (Embeddings)`: The embeddings to use for the vector store.
-- `inputs (Optional[List[Record]])`: The input records or documents.
-- `collection_name (str)`: The name of the collection in the database.
-- `db_name (str)`: The name of the database.
-- `index_name (str)`: The name of the index.
-- `mongodb_atlas_cluster_uri (str)`: The URI for the MongoDB Atlas cluster.
-- `search_kwargs (Optional[NestedDict])`: Additional search arguments (advanced).
-
-**Returns**
-
-- `MongoDBAtlasVectorSearch`: The MongoDB Atlas Vector Search object.
+- **Code:** Additional code for the component.
 
 <Admonition type="note" title="Note">
     <p>
@@ -223,34 +143,25 @@ Builds the MongoDB Atlas Vector Search object.
 
 The `MongoDBAtlasSearch` is a component for searching a MongoDB Atlas Vector Store for similar documents. It extends the functionality of the MongoDBAtlasComponent to provide efficient document retrieval based on similarity metrics.
 
-**Methods**
+**Params**
 
-****`build_config()`****
+- **Search Type:** The type of search to perform. Options: "Similarity", "MMR".
 
-Builds the configuration for the component.
+- **Input:** The input value to search for.
 
-**Returns**
+- **Embedding:** The embedding model used by the MongoDB Atlas Vector Store.
 
-- `dict`: A dictionary containing the configuration options for the component.
+- **Collection Name:** The name of the collection in the MongoDB Atlas database.
 
-****`build()`****
+- **Database Name:** The name of the database in MongoDB Atlas.
 
-Builds the MongoDB Atlas Vector Search object and performs the search operation.
+- **Index Name:** The name of the index in MongoDB Atlas.
 
-**Arguments**
+- **MongoDB Atlas Cluster URI:** The URI of the MongoDB Atlas cluster.
 
-- `input_value (Text)`: The input text for the search.
-- `search_type (str)`: The type of search (Similarity or MMR).
-- `embedding (Embeddings)`: The embeddings to use for the vector store.
-- `collection_name (str)`: The name of the collection in the database.
-- `db_name (str)`: The name of the database.
-- `index_name (str)`: The name of the index.
-- `mongodb_atlas_cluster_uri (str)`: The URI for the MongoDB Atlas cluster.
-- `search_kwargs (Optional[NestedDict])`: Additional search arguments (advanced).
+- **Search Kwargs:** Additional search arguments for MongoDB Atlas.
 
-**Returns**
-
-- `List[Record]`: A list of records representing the search results.
+- **Code:** Additional code for the component.
 
 ---
 
@@ -258,32 +169,20 @@ Builds the MongoDB Atlas Vector Search object and performs the search operation.
 
 The `PGVector` is a component for implementing a Vector Store using PostgreSQL. It allows users to store and retrieve vectors efficiently within a PostgreSQL database.
 
+**Params**
+
+- **Input:** The input value to use for the Vector Store.
+
+- **Embedding:** The embedding model used by the Vector Store.
+
+- **PostgreSQL Server Connection String:** The URL for the PostgreSQL server.
+
+- **Table:** The name of the table in the PostgreSQL database.
+
+- **Code:** Additional code for the component.
+
 For detailed documentation and integration guides, please refer to the [PGVector Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/pgvector).
 
-**Methods**
-
-****`build_config()`****
-
-Builds the configuration for the component.
-
-**Returns**
-
-- `dict`: A dictionary containing the configuration options for the component.
-
-****`build()`****
-
-Builds the Vector Store object.
-
-**Arguments**
-
-- `embedding (Embeddings)`: The embeddings to use for the Vector Store.
-- `pg_server_url (str)`: The connection string for the PostgreSQL server.
-- `collection_name (str)`: The name of the table in PostgreSQL.
-- `inputs (Optional[Record])`: The input records or documents.
-
-**Returns**
-
-- `Union[VectorStore, BaseRetriever]`: The Vector Store or BaseRetriever object.
 
 <Admonition type="note" title="Note">
     <p>
@@ -297,68 +196,45 @@ Builds the Vector Store object.
 
 The `PGVectorSearch` is a component for searching a PGVector Store for similar documents. It extends the functionality of the PGVectorComponent to provide efficient document retrieval based on similarity metrics.
 
-**Methods**
+**Params**
 
-****`build_config()`****
+- **Input:** The input value to search for.
 
-Builds the configuration for the component.
+- **Embedding:** The embedding model used by the Vector Store.
 
-**Returns**
+- **PostgreSQL Server Connection String:** The URL for the PostgreSQL server.
 
-- `dict`: A dictionary containing the configuration options for the component.
+- **Table:** The name of the table in the PostgreSQL database.
 
-****`build()`****
+- **Search Type:** The type of search to perform (e.g., "Similarity", "MMR").
 
-Builds the Vector Store object and performs the search operation.
-
-**Arguments**
-
-- `input_value (Text)`: The input text value to search for.
-- `embedding (Embeddings)`: The embeddings to use for the Vector Store.
-- `search_type (str)`: The type of search (Similarity or MMR).
-- `pg_server_url (str)`: The connection string for the PostgreSQL server.
-- `collection_name (str)`: The name of the table in PostgreSQL.
-
-**Returns**
-
-- `List[Record]`: A list of records representing the search results.
+- **Code:** Additional code for the component.
 
 ---
 
 ### Pinecone
 
-**Overview**
-
 The `Pinecone` is a component used to construct a Pinecone wrapper from raw documents. It facilitates the creation of Pinecone-based vector indexes for efficient document storage and retrieval.
 
-**Methods**
+**Params**
 
-****`build_config()`****
+- **Input:** The input documents or records.
 
-Builds the configuration for the component.
+- **Embedding:** The embedding model used by Pinecone.
 
-**Returns**
+- **Index Name:** The name of the index in Pinecone.
 
-- `dict`: A dictionary containing the configuration options for the component.
+- **Namespace:** The namespace in Pinecone.
 
-****`build()`****
+- **Pinecone API Key:** The API key for Pinecone.
 
-Builds the Pinecone Vector Store object.
+- **Pinecone Environment:** The environment for Pinecone.
 
-**Arguments**
+- **Search Kwargs:** Additional search keyword arguments for Pinecone.
 
-- `embedding (Embeddings)`: The embeddings to use for the vector store.
-- `pinecone_env (str)`: The environment for Pinecone.
-- `inputs (Optional[List[Record]])`: The input records or documents.
-- `text_key (str)`: The key for the text content in the documents.
-- `pool_threads (int)`: The number of threads to use for parallel operations.
-- `index_name (Optional[str])`: The name of the index in Pinecone.
-- `pinecone_api_key (Optional[str])`: The API key for Pinecone.
-- `namespace (Optional[str])`: The namespace for the index.
+- **Pool Threads:** The number of threads to use for Pinecone.
 
-**Returns**
-
-- `Union[VectorStore, Pinecone, BaseRetriever]`: The Vector Store, Pinecone, or BaseRetriever object.
+- **Code:** Additional code for the component.
 
 <Admonition type="note" title="Note">
     <p>
@@ -372,35 +248,27 @@ Builds the Pinecone Vector Store object.
 
 The `PineconeSearch` is a component used to search a Pinecone Vector Store for similar documents. It extends the functionality of the `PineconeComponent` to provide efficient document retrieval based on similarity metrics.
 
-**Methods**
+**Params**
 
-****`build_config()`****
+- **Search Type:** The type of search to perform (e.g., Similarity, MMR).
 
-Builds the configuration for the component.
+- **Input Value:** The input value to search for.
 
-**Returns**
+- **Embedding:** The embedding model used by Pinecone.
 
-- `dict`: A dictionary containing the configuration options for the component.
+- **Index Name:** The name of the index in Pinecone.
 
-****`build()`****
+- **Namespace:** The namespace in Pinecone.
 
-Builds the Vector Store object and performs the search operation.
+- **Pinecone API Key:** The API key for Pinecone.
 
-**Arguments**
+- **Pinecone Environment:** The environment for Pinecone.
 
-- `input_value (Text)`: The input text value to search for.
-- `embedding (Embeddings)`: The embeddings to use for the vector store.
-- `pinecone_env (str)`: The environment for Pinecone.
-- `text_key (str)`: The key for the text content in the documents.
-- `pool_threads (int)`: The number of threads to use for parallel operations.
-- `index_name (Optional[str])`: The name of the index in Pinecone.
-- `pinecone_api_key (Optional[str])`: The API key for Pinecone.
-- `namespace (Optional[str])`: The namespace for the index.
-- `search_type (str)`: The type of search (Similarity or MMR).
+- **Search Kwargs:** Additional search keyword arguments for Pinecone.
 
-**Returns**
+- **Pool Threads:** The number of threads to use for Pinecone.
 
-- `List[Record]`: A list of records representing the search results.
+- **Code:** Additional code for the component.
 
 ---
 
@@ -408,50 +276,43 @@ Builds the Vector Store object and performs the search operation.
 
 The `Qdrant` is a component used to construct a Qdrant wrapper from a list of texts. It allows for efficient similarity search and retrieval operations based on the provided embeddings.
 
-**Methods**
+**Params**
 
-****`build_config()`****
-
-Builds the configuration for the component.
-
-**Returns**
-
-- `dict`: A dictionary containing the configuration options for the component.
-
-****`build()`****
-
-Builds the Vector Store object and performs the search operation.
-
-**Arguments**
-
-- `embedding (Embeddings)`: The embeddings to use for the Vector Store.
-- `collection_name (str)`: The name of the collection in Qdrant.
-- `inputs (Optional[Record])`: The input documents or records.
-- `api_key (Optional[str])`: The API key for accessing Qdrant (optional).
-- `content_payload_key (str)`: The key for the content payload in the documents.
-- `distance_func (str)`: The distance function to use (default: Cosine).
-- `grpc_port (int)`: The gRPC port for communication with Qdrant.
-- `https (bool)`: Whether to use HTTPS for communication.
-- `host (Optional[str])`: The host URL for Qdrant.
-- `location (Optional[str])`: The location of the Qdrant service.
-- `metadata_payload_key (str)`: The key for the metadata payload in the documents.
-- `path (Optional[str])`: The path for the Qdrant service.
-- `port (Optional[int])`: The port for communication with Qdrant.
-- `prefer_grpc (bool)`: Whether to prefer gRPC communication.
-- `prefix (Optional[str])`: The prefix for the Qdrant service.
-- `search_kwargs (Optional[NestedDict])`: Additional search keyword arguments.
-- `timeout (Optional[int])`: The timeout for communication with Qdrant.
-- `url (Optional[str])`: The URL for communication with Qdrant.
-
-**Returns**
-
-- `Union[VectorStore, Qdrant, BaseRetriever]`: The constructed Vector Store or Qdrant object.
-
-<Admonition type="note" title="Note">
-    <p>
-        Ensure that the required Qdrant service parameters are properly configured.
-    </p>
-</Admonition>
+- **Input:** The input documents or records.
+  
+- **Embedding:** The embedding model used by Qdrant.
+  
+- **API Key:** The API key for Qdrant (password field).
+  
+- **Collection Name:** The name of the collection in Qdrant.
+  
+- **Content Payload Key:** The key for the content payload in the documents (advanced).
+  
+- **Distance Function:** The distance function to use in Qdrant (advanced).
+  
+- **gRPC Port:** The gRPC port for Qdrant (advanced).
+  
+- **Host:** The host for Qdrant (advanced).
+  
+- **HTTPS:** Enable HTTPS for Qdrant (advanced).
+  
+- **Location:** The location for Qdrant (advanced).
+  
+- **Metadata Payload Key:** The key for the metadata payload in the documents (advanced).
+  
+- **Path:** The path for Qdrant (advanced).
+  
+- **Port:** The port for Qdrant (advanced).
+  
+- **Prefer gRPC:** Prefer gRPC for Qdrant (advanced).
+  
+- **Prefix:** The prefix for Qdrant (advanced).
+  
+- **Search Kwargs:** Additional search keyword arguments for Qdrant (advanced).
+  
+- **Timeout:** The timeout for Qdrant (advanced).
+  
+- **URL:** The URL for Qdrant (advanced).
 
 ---
 
@@ -459,45 +320,45 @@ Builds the Vector Store object and performs the search operation.
 
 The `QdrantSearch` is a component used to search a Qdrant Vector Store for similar documents. It extends the functionality of the `QdrantComponent` to provide efficient document retrieval based on similarity metrics.
 
-**Methods**
+**Params**
 
-****`build_config()`****
+- **Search Type:** The type of search to perform (e.g., Similarity, MMR).
 
-Builds the configuration for the component.
+- **Input Value:** The input value to search for.
 
-**Returns**
+- **Embedding:** The embedding model used by Qdrant.
 
-- `dict`: A dictionary containing the configuration options for the component.
+- **API Key:** The API key for Qdrant (password field).
 
-****`build()`****
+- **Collection Name:** The name of the collection in Qdrant.
 
-Builds the Vector Store object and performs the search operation.
+- **Content Payload Key:** The key for the content payload in the documents (advanced).
 
-**Arguments**
+- **Distance Function:** The distance function to use in Qdrant (advanced).
 
-- `input_value (Text)`: The input text value to search for.
-- `embedding (Embeddings)`: The embeddings to use for the vector store.
-- `collection_name (str)`: The name of the collection in Qdrant.
-- `search_type (str)`: The type of search (Similarity or MMR).
-- `api_key (Optional[str])`: The API key for Qdrant.
-- `content_payload_key (str)`: The key for the content payload in the documents.
-- `distance_func (str)`: The distance function to use.
-- `grpc_port (int)`: The gRPC port for communication.
-- `https (bool)`: Whether to use HTTPS or not.
-- `host (Optional[str])`: The host address.
-- `location (Optional[str])`: The location for Qdrant.
-- `metadata_payload_key (str)`: The key for the metadata payload in the documents.
-- `path (Optional[str])`: The path for Qdrant.
-- `port (Optional[int])`: The port for communication.
-- `prefer_grpc (bool)`: Whether to prefer gRPC or not.
-- `prefix (Optional[str])`: The prefix for Qdrant.
-- `search_kwargs (Optional[NestedDict])`: Additional search keyword arguments.
-- `timeout (Optional[int])`: The timeout value.
-- `url (Optional[str])`: The URL for Qdrant.
+- **gRPC Port:** The gRPC port for Qdrant (advanced).
 
-**Returns**
+- **Host:** The host for Qdrant (advanced).
 
-- `List[Record]`: A list of records representing the search results.
+- **HTTPS:** Enable HTTPS for Qdrant (advanced).
+
+- **Location:** The location for Qdrant (advanced).
+
+- **Metadata Payload Key:** The key for the metadata payload in the documents (advanced).
+
+- **Path:** The path for Qdrant (advanced).
+
+- **Port:** The port for Qdrant (advanced).
+
+- **Prefer gRPC:** Prefer gRPC for Qdrant (advanced).
+
+- **Prefix:** The prefix for Qdrant (advanced).
+
+- **Search Kwargs:** Additional search keyword arguments for Qdrant (advanced).
+
+- **Timeout:** The timeout for Qdrant (advanced).
+
+- **URL:** The URL for Qdrant (advanced).
 
 ---
 
@@ -505,33 +366,21 @@ Builds the Vector Store object and performs the search operation.
 
 The `Redis` is a component for implementing a Vector Store using Redis. It provides functionality to store and retrieve vectors efficiently from a Redis database.
 
+**Params**
+
+- **Index Name:** The name of the index in Redis (default: your_index).
+
+- **Input:** The input data to build the Redis Vector Store (input types: Document, Record).
+
+- **Embedding:** The embedding model used by Redis.
+
+- **Schema:** The schema file (.yaml) to define the structure of the documents (optional).
+
+- **Redis Server Connection String:** The connection string for the Redis server.
+
+- **Redis Index:** The name of the Redis index (optional).
+
 For detailed documentation, please refer to the [Redis Documentation](https://python.langchain.com/docs/integrations/vectorstores/redis).
-
-**Methods**
-
-****`build_config()`****
-
-Builds the configuration for the component.
-
-**Returns**
-
-- `dict`: A dictionary containing the configuration options for the component.
-
-****`build(embedding: Embeddings, redis_server_url: str, redis_index_name: str, schema: Optional[str] = None, inputs: Optional[Record] = None) -> Union[VectorStore, BaseRetriever]`****
-
-Builds the Vector Store or BaseRetriever object.
-
-**Arguments**
-
-- `embedding (Embeddings)`: The embeddings to use for the Vector Store.
-- `redis_server_url (str)`: The URL for the Redis server.
-- `redis_index_name (str)`: The name of the Redis index.
-- `schema (Optional[str])`: The schema for the documents (required if no documents are provided).
-- `inputs (Optional[Record])`: The documents to use for the Vector Store.
-
-**Returns**
-
-- `Union[VectorStore, BaseRetriever]`: The Vector Store object or BaseRetriever object.
 
 <Admonition type="note" title="Note">
     <p>
@@ -545,32 +394,21 @@ Builds the Vector Store or BaseRetriever object.
 
 The `RedisSearch` is a component for searching a Redis Vector Store for similar documents.
 
-**Methods**
+**Params**
 
-****`build_config()`****
+- **Search Type:** The type of search to perform (e.g., Similarity, MMR).
 
-Builds the configuration for the component.
+- **Input Value:** The input value to search for.
 
-**Returns**
+- **Index Name:** The name of the index in Redis (default: your_index).
 
-- `dict`: A dictionary containing the configuration options for the component.
+- **Embedding:** The embedding model used by Redis.
 
-****`build(input_value: Text, search_type: str, embedding: Embeddings, redis_server_url: str, redis_index_name: str, schema: Optional[str] = None) -> List[Record]`****
+- **Schema:** The schema file (.yaml) to define the structure of the documents (optional).
 
-Builds the Vector Store object and performs the search operation.
+- **Redis Server Connection String:** The connection string for the Redis server.
 
-**Arguments**
-
-- `input_value (Text)`: The input value to search for.
-- `search_type (str)`: The type of search to perform.
-- `embedding (Embeddings)`: The embeddings to use for the Vector Store.
-- `redis_server_url (str)`: The URL for the Redis server.
-- `redis_index_name (str)`: The name of the Redis index.
-- `schema (Optional[str])`: The schema for the documents (required if no documents are provided).
-
-**Returns**
-
-- `List[Record]`: The list of records containing similar documents.
+- **Redis Index:** The name of the Redis index (optional).
 
 ---
 
@@ -578,33 +416,21 @@ Builds the Vector Store object and performs the search operation.
 
 The `Supabase` is a component for initializing a Supabase Vector Store from texts and embeddings.
 
-**Methods**
+**Params**
 
-****`build_config()`****
-
-Builds the configuration for the component.
-
-**Returns**
-
-- `dict`: A dictionary containing the configuration options for the component.
-
-****`build(embedding: Embeddings, inputs: Optional[List[Record]] = None, query_name: str = "", search_kwargs: NestedDict = {}, supabase_service_key: str = "", supabase_url: str = "", table_name: str = "") -> Union[VectorStore, SupabaseVectorStore, BaseRetriever]`****
-
-Builds the Vector Store object initialized from texts and embeddings.
-
-**Arguments**
-
-- `embedding (Embeddings)`: The embeddings to use for the Vector Store.
-- `inputs (Optional[List[Record]])`: The list of records or documents to use for initializing the Vector Store.
-- `query_name (str)`: The name of the query.
-- `search_kwargs (NestedDict)`: Additional keyword arguments for search operations (optional).
-- `supabase_service_key (str)`: The Supabase service key.
-- `supabase_url (str)`: The URL for the Supabase instance.
-- `table_name (str)`: The name of the table in the Supabase instance.
-
-**Returns**
-
-- `Union[VectorStore, SupabaseVectorStore, BaseRetriever]`: The initialized Vector Store object.
+- **Input:** The input documents or records.
+  
+- **Embedding:** The embedding model used by Supabase.
+  
+- **Query Name:** The name of the query (optional).
+  
+- **Search Kwargs:** Additional search keyword arguments for Supabase (advanced).
+  
+- **Supabase Service Key:** The service key for Supabase.
+  
+- **Supabase URL:** The URL for the Supabase instance.
+  
+- **Table Name:** The name of the table in Supabase (advanced).
 
 <Admonition type="note" title="Note">
     <p>
@@ -618,33 +444,23 @@ Builds the Vector Store object initialized from texts and embeddings.
 
 The `SupabaseSearch` is a component for searching a Supabase Vector Store for similar documents.
 
-**Methods**
+**Params**
 
-****`build_config()`****
-
-Builds the configuration for the component.
-
-**Returns**
-
-- `dict`: A dictionary containing the configuration options for the component.
-
-****`build(input_value: Text, search_type: str, embedding: Embeddings, query_name: str = "", supabase_service_key: str = "", supabase_url: str = "", table_name: str = "") -> List[Record]`****
-
-Searches for similar documents in the Supabase Vector Store.
-
-**Arguments**
-
-- `input_value (Text)`: The input text to search for.
-- `search_type (str)`: The type of search (e.g., "Similarity" or "MMR").
-- `embedding (Embeddings)`: The embeddings to use for the search.
-- `query_name (str)`: The name of the query (optional).
-- `supabase_service_key (str)`: The Supabase service key.
-- `supabase_url (str)`: The URL for the Supabase instance.
-- `table_name (str)`: The name of the table in the Supabase instance.
-
-**Returns**
-
-- `List[Record]`: A list of records representing the similar documents found in the Supabase Vector Store.
+- **Search Type:** The type of search to perform (e.g., Similarity, MMR).
+  
+- **Input Value:** The input value to search for.
+  
+- **Embedding:** The embedding model used by Supabase.
+  
+- **Query Name:** The name of the query (optional).
+  
+- **Search Kwargs:** Additional search keyword arguments for Supabase (advanced).
+  
+- **Supabase Service Key:** The service key for Supabase.
+  
+- **Supabase URL:** The URL for the Supabase instance.
+  
+- **Table Name:** The name of the table in Supabase (advanced).
 
 ---
 
@@ -652,26 +468,19 @@ Searches for similar documents in the Supabase Vector Store.
 
 The `Vectara` is a component for implementing a Vector Store using Vectara.
 
+**Params**
+
+- **Vectara Customer ID:** The customer ID for Vectara.
+
+- **Vectara Corpus ID:** The corpus ID for Vectara.
+
+- **Vectara API Key:** The API key for Vectara.
+
+- **Files Url:** The URL(s) of the file(s) to be used for initializing the Vectara Vector Store (optional).
+
+- **Input:** The input data to be upserted to the corpus (optional).
+
 For detailed documentation and integration guides, please refer to the [Vectara Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/vectara).
-
-
-**Methods**
-
-****`build(vectara_customer_id: str, vectara_corpus_id: str, vectara_api_key: str, files_url: Optional[List[str]] = None, inputs: Optional[Record] = None) -> Union[VectorStore, BaseRetriever]`****
-
-Builds the Vector Store or BaseRetriever object.
-
-**Arguments**
-
-- `vectara_customer_id (str)`: The customer ID for Vectara.
-- `vectara_corpus_id (str)`: The corpus ID for Vectara.
-- `vectara_api_key (str)`: The API key for Vectara.
-- `files_url (Optional[List[str]])`: The URLs of files to be processed by Vectara (optional).
-- `inputs (Optional[Record])`: Input records or documents to be processed by Vectara (optional).
-
-**Returns**
-
-- `Union[VectorStore, BaseRetriever]`: The Vector Store or BaseRetriever object.
 
 <Admonition type="note" title="Note">
     <p>
@@ -685,74 +494,44 @@ Builds the Vector Store or BaseRetriever object.
 
 The `VectaraSearch` is a component for searching a Vectara Vector Store for similar documents.
 
-**Methods**
+**Params**
 
-****`build(input_value: Text, search_type: str, vectara_customer_id: str, vectara_corpus_id: str, vectara_api_key: str) -> List[Record]`****
+- **Search Type:** The type of search to perform (e.g., Similarity, MMR).
 
-Searches the Vectara Vector Store for similar documents.
+- **Input Value:** The input value to search for.
 
-**Arguments**
+- **Vectara Customer ID:** The customer ID for Vectara.
 
-- `input_value (Text)`: The input text to search for similarities.
-- `search_type (str)`: The type of search to perform (options: "Similarity", "MMR").
-- `vectara_customer_id (str)`: The customer ID for Vectara.
-- `vectara_corpus_id (str)`: The corpus ID for Vectara.
-- `vectara_api_key (str)`: The API key for Vectara.
+- **Vectara Corpus ID:** The corpus ID for Vectara.
 
-**Returns**
+- **Vectara API Key:** The API key for Vectara.
 
-- `List[Record]`: A list of records representing similar documents found in the Vectara Vector Store.
-
-**Field Configuration**
-
-- `search_type`: Display name: Search Type, Options: ["Similarity", "MMR"].
-- `input_value`: Display name: Input.
-- `vectara_customer_id`: Display name: Vectara Customer ID.
-- `vectara_corpus_id`: Display name: Vectara Corpus ID.
-- `vectara_api_key`: Display name: Vectara API Key, Password: True.
-- `files_url`: Display name: Files URL, Info: Make vectara object using URL of files (optional).
-
+- **Files Url:** The URL(s) of the file(s) to be used for initializing the Vectara Vector Store (optional).
 ---
 
 ### Weaviate
 
 The `Weaviate` is a component for implementing a Vector Store using Weaviate.
 
+**Params**
+
+- **Weaviate URL:** The URL of the Weaviate instance (default: http://localhost:8080).
+  
+- **Search By Text:** Boolean indicating whether to search by text (default: False).
+
+- **API Key:** The API key for authentication (optional).
+
+- **Index name:** The name of the index in Weaviate (optional).
+
+- **Text Key:** The key used to extract text from documents (default: "text").
+
+- **Input:** The input document or record.
+
+- **Embedding:** The embedding model used by Weaviate.
+
+- **Attributes:** Additional attributes to consider during indexing (optional).
+
 For detailed documentation and integration guides, please refer to the [Weaviate Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/weaviate).
-
-
-**Methods**
-
-****`build(url: str, search_by_text: bool = False, api_key: Optional[str] = None, index_name: Optional[str] = None, text_key: str = "text", embedding: Optional[Embeddings] = None, inputs: Optional[Record] = None, attributes: Optional[list] = None) -> Union[VectorStore, BaseRetriever]`****
-
-Builds the Vector Store or BaseRetriever object using Weaviate.
-
-**Arguments**
-
-- `url (str)`: The URL of the Weaviate instance.
-- `search_by_text (bool)`: Whether to enable text-based search.
-- `api_key (Optional[str])`: The API key for authentication (optional).
-- `index_name (Optional[str])`: The name of the index (optional).
-- `text_key (str)`: The key representing text data in documents (default: "text").
-- `embedding (Optional[Embeddings])`: The embeddings to use for the Vector Store (optional).
-- `inputs (Optional[Record])`: The documents to use for the Vector Store (optional).
-- `attributes (Optional[list])`: Additional attributes to consider (optional).
-
-**Returns**
-
-- `Union[VectorStore, BaseRetriever]`: The Vector Store or BaseRetriever object.
-
-**Field Configuration**
-
-- `url`: Display name: Weaviate URL, Value: "http://localhost:8080".
-- `api_key`: Display name: API Key, Password: True, Required: False.
-- `index_name`: Display name: Index name, Required: False.
-- `text_key`: Display name: Text Key, Value: "text", Required: False, Advanced: True.
-- `inputs`: Display name: Input, Input Types: ["Document", "Record"].
-- `embedding`: Display name: Embedding, Required: False.
-- `attributes`: Display name: Attributes, Required: False, Is List: True, Field Type: "str", Advanced: True.
-- `search_by_text`: Display name: Search By Text, Field Type: "bool", Advanced: True.
-- `code`: Show: False.
 
 <Admonition type="note" title="Note">
     <p>
@@ -766,35 +545,22 @@ Builds the Vector Store or BaseRetriever object using Weaviate.
 
 The `WeaviateSearch` component facilitates searching a Weaviate Vector Store for similar documents.
 
-**Configuration**
+**Params**
 
-The `WeaviateSearch` component can be configured using the following parameters:
+- **Search Type:** The type of search to perform (e.g., Similarity, MMR).
 
-- **Search Type**: Specifies the type of search operation to perform. Options include "Similarity" and "MMR".
-- **Input**: The input text utilized for the search operation.
-- **Weaviate URL**: URL of the Weaviate server. Default is "http://localhost:8080".
-- **API Key**: (Optional) API key required for authentication with the Weaviate server.
-- **Index Name**: (Optional) Name of the index to search within the Weaviate server.
-- **Text Key**: (Optional) Key representing the text field in the indexed documents. Default is "text".
-- **Embedding**: The embedding used for representing text documents.
-- **Attributes**: (Optional) Additional attributes considered during the search operation.
-- **Search By Text**: (Optional) When enabled, the search operation is performed based on the input text.
-- **Code**: (Hidden) This parameter is not visible in the configuration.
+- **Input Value:** The input value to search for.
 
-**Build Method**
+- **Weaviate URL:** The URL of the Weaviate instance (default: http://localhost:8080).
+  
+- **Search By Text:** Boolean indicating whether to search by text (default: False).
 
-The `build` method of the `WeaviateSearchVectorStore` component constructs the search functionality. It accepts the following parameters:
+- **API Key:** The API key for authentication (optional).
 
-- **input_value**: The input text for the search operation.
-- **search_type**: Specifies the type of search operation, either "Similarity" or "MMR".
-- **url**: The URL of the Weaviate server.
-- **search_by_text**: (Optional) If set to `True`, the search operation is performed based on the input text.
-- **api_key**: (Optional) API key for authentication with the Weaviate server.
-- **index_name**: (Optional) Name of the index to search within the Weaviate server.
-- **text_key**: (Optional) Key representing the text field in the indexed documents.
-- **embedding**: The embedding used for representing text documents.
-- **attributes**: (Optional) Additional attributes considered during the search operation.
+- **Index name:** The name of the index in Weaviate (optional).
 
-**Return Value**
+- **Text Key:** The key used to extract text from documents (default: "text").
 
-The `build` method returns a list of records containing documents similar to the input text based on the specified search type. If the Weaviate index fails to load, a `ValueError` is raised.
+- **Embedding:** The embedding model used by Weaviate.
+
+- **Attributes:** Additional attributes to consider during indexing (optional).
