@@ -172,7 +172,4 @@ def downgrade() -> None:
 
     if "flowstyle" in existing_tables:
         op.drop_table("flowstyle")
-
-    if "component" in existing_tables:
-        op.drop_table("component")
     # ### end Alembic commands ###
