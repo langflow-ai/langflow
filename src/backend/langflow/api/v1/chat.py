@@ -1,5 +1,6 @@
 import time
 import uuid
+from functools import partial
 from typing import TYPE_CHECKING, Annotated, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
@@ -141,7 +142,10 @@ async def build_vertex(
             graph = cache.get("result")
         result_data_response = ResultDataResponse(results={})
         duration = ""
+        vertex = graph.get_vertex(vertex_id)
         try:
+            lock = chat_service._cache_locks[flow_id]
+            set_cache_coro = partial(chat_service.set_cache, flow_id=flow_id)
             (
                 next_runnable_vertices,
                 top_level_vertices,
@@ -151,7 +155,8 @@ async def build_vertex(
                 artifacts,
                 vertex,
             ) = await graph.build_vertex(
-                chat_service=chat_service,
+                lock=lock,
+                set_cache_coro=set_cache_coro,
                 vertex_id=vertex_id,
                 user_id=current_user.id,
                 inputs=inputs.model_dump() if inputs else {},
