@@ -83,7 +83,7 @@ python-jose = "^3.3.0"
 metaphor-python = "^0.1.11"
 pydantic = "^2.5.0"
 pydantic-settings = "^2.1.0"
-zep-python = "1.5.0"
+zep-python = "*"
 pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
 loguru = "^0.7.1"
 langfuse = "^2.9.0"
@@ -115,6 +115,7 @@ dspy-ai = "^2.4.0"
 crewai = "^0.22.5"
 langchain-anthropic = "^0.1.4"
 python-docx = "^1.1.0"
+langchain-astradb = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.1"
