@@ -502,7 +502,6 @@ export default function CodeTabsComponent({
                                               <div className="mx-auto">
                                                 <Dropdown
                                                   editNode={true}
-                                                  apiModal={true}
                                                   options={
                                                     node.data.node.template[
                                                       templateField
