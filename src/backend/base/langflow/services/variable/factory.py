@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
-from langflow.services.credentials.service import VariableService
 from langflow.services.factory import ServiceFactory
+from langflow.services.variable.service import VariableService
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
