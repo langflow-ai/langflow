@@ -74,6 +74,7 @@ frontendc:
 install_backend:
 	@echo 'Installing backend dependencies'
 	@sh ./scripts/setup/update_poetry.sh 1.8.2
+	@sh ./scripts/setup/setup_env.sh
 	@poetry install --extras deploy
 
 backend:
