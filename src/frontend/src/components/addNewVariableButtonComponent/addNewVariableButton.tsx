@@ -70,16 +70,16 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             }}
             placeholder="Insert a name for the variable..."
           ></Input>
-          {/* <Label>Type (optional) </Label>
+          <Label>Type</Label>
           <InputComponent
             setSelectedOption={(e) => {
               setType(e);
             }}
             selectedOption={type}
             password={false}
-            options={["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]}
-            placeholder="Choose a type between the environment variables..."
-          ></InputComponent> */}
+            options={["Variable", "Credential"]}
+            placeholder="Choose a type for the variable..."
+          ></InputComponent>
           <Label>Value</Label>
           <Textarea
             value={value}
