@@ -53,14 +53,18 @@ else
 endif
 
 run_cli:
-	make install_frontend
-	make build_frontend
-	poetry run langflow run --path src/frontend/build
+	@echo 'Running the CLI'
+	@make install_frontend > /dev/null
+	@echo 'Building the frontend'
+	@make build_frontend > /dev/null
+	poetry run langflow run --path src/frontend/build --host $(host) --port $(port)
 
 run_cli_debug:
-	make install_frontend
-	make build_frontend
-	poetry run langflow run --path src/frontend/build --log-level debug
+	@echo 'Running the CLI in debug mode'
+	@make install_frontend > /dev/null
+	@echo 'Building the frontend'
+	@make build_frontend > /dev/null
+	poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port)
 
 setup_devcontainer:
 	make init
