@@ -59,11 +59,11 @@ run_cli:
 	@make build_frontend > /dev/null
 	@echo 'Install backend dependencies'
 	@make install_backend > /dev/null
-ifdef env
-	poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file $(env)
-else
-	poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file .env
-endif
+	ifdef env
+		poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file $(env)
+	else
+		poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file .env
+	endif
 
 run_cli_debug:
 	@echo 'Running the CLI in debug mode'
@@ -72,11 +72,12 @@ run_cli_debug:
 	@make build_frontend > /dev/null
 	@echo 'Install backend dependencies'
 	@make install_backend > /dev/null
-ifdef env
-    poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file $(env)
-else
-    poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file .env
-endif
+	ifdef env
+		poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file $(env)
+	else
+		poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file .env
+	endif
+
 setup_devcontainer:
 	make init
 	make build_frontend
