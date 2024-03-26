@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.10"
+version = "0.0.11"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -17,15 +17,16 @@ repository = "https://github.com/logspace-ai/langflow"
 license = "MIT"
 readme = "README.md"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
-packages = [{ include = "langflow_base" }]
-include = ["pyproject.toml", "README.md", "langflow_base/**/*"]
+packages = [{ include = "langflow" }]
+include = ["pyproject.toml", "README.md", "langflow/**/*"]
 documentation = "https://docs.langflow.org"
 
 [tool.poetry.scripts]
-langflow-base = "langflow_base.__main__:main"
+langflow-base = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
+
 fastapi = "^0.109.0"
 httpx = "^0.24.0"
 uvicorn = "^0.27.0"
