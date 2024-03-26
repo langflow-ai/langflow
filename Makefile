@@ -2,9 +2,12 @@
 
 all: help
 
+setup_poetry_plugin:
+	poetry self add poetry-monorepo-dependency-plugin
+
 setup_poetry:
 	pipx install poetry
-	poetry self add poetry-monorepo-dependency-plugin
+	make setup_poetry_plugin
 
 init:
 	@echo 'Installing backend dependencies'
