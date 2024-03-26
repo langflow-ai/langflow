@@ -346,6 +346,7 @@ export default function CodeTabsComponent({
                                                   </div>
                                                 ) : (
                                                   <InputGlobalComponent
+                                                    editNode={true}
                                                     disabled={false}
                                                     onChange={(target) => {
                                                       if (node.data) {
