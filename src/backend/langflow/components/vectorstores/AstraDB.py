@@ -16,7 +16,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
             "inputs": {"display_name": "Inputs", "info": "Inputs to AstraDB"},
             "embedding": {"display_name": "Embedding", "info": "Embedding to use"},
             "collection_name": {"display_name": "Collection Name", "info": "Collection name"},
-            "token": {"display_name": "Token", "info": "Token to use"},
+            "token": {"display_name": "Token", "info": "Token to use", "password": True},
             "api_endpoint": {"display_name": "API Endpoint", "info": "API Endpoint to use"},
             "namespace": {"display_name": "Namespace", "info": "Namespace to use", "advanced": True},
             "metric": {"display_name": "Metric", "info": "Metric to use", "advanced": True},
