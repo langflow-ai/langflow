@@ -2,6 +2,10 @@
 
 all: help
 
+setup_poetry:
+	pipx install poetry
+	poetry self add poetry-monorepo-dependency-plugin
+
 init:
 	@echo 'Installing backend dependencies'
 	make install_backend
@@ -98,20 +102,20 @@ build_and_install:
 
 build_frontend:
 	cd src/frontend && CI='' npm run build
-	cp -r src/frontend/build src/backend/base/langflow_base/frontend
+	cp -r src/frontend/build src/backend/base/langflow/frontend
 
 build:
-	make build_langflow
 	make build_langflow_base
+	make build_langflow
 
 build_langflow:
-	poetry build --format sdist
+	poetry build-rewrite-path-deps --version-pinning-strategy=semver
 
 build_langflow_base:
 	make install_frontend
 	make build_frontend
-	cd src/backend/base && poetry build --format sdist
-	rm -rf src/backend/base/langflow_base/frontend
+	cd src/backend/base && poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	rm -rf src/backend/base/langflow/frontend
 
 dev:
 	make install_frontend
