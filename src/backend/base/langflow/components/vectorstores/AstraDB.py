@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from langchain_astradb import AstraDBVectorStore
 
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, VectorStore
 from langflow.schema import Record
 
