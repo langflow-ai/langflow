@@ -505,7 +505,7 @@ const EditNodeModal = forwardRef(
                                       }
                                       dynamic={
                                         data.node!.template[templateParam]
-                                          .dynamic ?? false
+                                          ?.dynamic ?? false
                                       }
                                       setNodeClass={(nodeClass) => {
                                         data.node = nodeClass;

@@ -442,6 +442,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().nodes.filter((node) => nodes.includes(node.id)),
         get().edges
       );
+
       const errors = errorsObjs.map((obj) => obj.errors).flat();
       if (errors.length > 0) {
         setErrorData({
@@ -450,7 +451,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         });
         get().setIsBuilding(false);
         const ids = errorsObjs.map((obj) => obj.id).flat();
-        console.log("ids", ids);
+
         get().updateBuildStatus(ids, BuildStatus.ERROR);
         throw new Error("Invalid nodes");
       }
@@ -490,6 +491,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           verticesIds: newIds,
           verticesLayers: newLayers,
           runId: runId,
+          verticesToRun: get().verticesBuild!.verticesToRun,
         });
         get().updateBuildStatus(
           vertexBuildData.top_level_vertices,
@@ -559,6 +561,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       verticesIds: string[];
       verticesLayers: VertexLayerElementType[][];
       runId: string;
+      verticesToRun: string[];
     } | null
   ) => {
     set({ verticesBuild: vertices });
@@ -588,7 +591,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
-    console.log("newFlowBuildStatus", newFlowBuildStatus);
+
     nodeIdList.forEach((id) => {
       newFlowBuildStatus[id] = {
         status,

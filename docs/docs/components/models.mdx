@@ -1,0 +1,464 @@
+import Admonition from '@theme/Admonition';
+
+# Models
+
+<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
+    <p>
+        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
+    </p>
+</Admonition>
+
+### AmazonBedrock
+
+This component facilitates the generation of text using the LLM (Large Language Model) model from Amazon Bedrock.
+
+**Params**
+
+- **Input Value:** Specifies the input text for text generation.
+
+- **System Message (Optional):** A system message to pass to the model.
+
+- **Model ID (Optional):** Specifies the model ID to be used for text generation. Defaults to _`"anthropic.claude-instant-v1"`_. Available options include:
+    - _`"ai21.j2-grande-instruct"`_
+    - _`"ai21.j2-jumbo-instruct"`_
+    - _`"ai21.j2-mid"`_
+    - _`"ai21.j2-mid-v1"`_
+    - _`"ai21.j2-ultra"`_
+    - _`"ai21.j2-ultra-v1"`_
+    - _`"anthropic.claude-instant-v1"`_
+    - _`"anthropic.claude-v1"`_
+    - _`"anthropic.claude-v2"`_
+    - _`"cohere.command-text-v14"`_
+
+- **Credentials Profile Name (Optional):** Specifies the name of the credentials profile.
+
+- **Region Name (Optional):** Specifies the region name.
+
+- **Model Kwargs (Optional):** Additional keyword arguments for the model.
+
+- **Endpoint URL (Optional):** Specifies the endpoint URL.
+
+- **Streaming (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
+
+- **Cache (Optional):** Specifies whether to cache the response.
+
+- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
+
+<Admonition type="note" title="Note">
+    <p>
+        Ensure that necessary credentials are provided to connect to the Amazon Bedrock API. If connection fails, a ValueError will be raised.
+    </p>
+</Admonition>
+
+
+---
+
+### AnthropicLLM
+
+This component allows the generation of text using Anthropic Chat&Completion large language models.
+
+**Params**
+
+- **Model Name:** Specifies the name of the Anthropic model to be used for text generation. Available options include:
+    - _`"claude-2.1"`_
+    - _`"claude-2.0"`_
+    - _`"claude-instant-1.2"`_
+    - _`"claude-instant-1"`_
+
+- **Anthropic API Key:** Your Anthropic API key.
+
+- **Max Tokens (Optional):** Specifies the maximum number of tokens to generate. Defaults to _`256`_.
+
+- **Temperature (Optional):** Specifies the sampling temperature. Defaults to _`0.7`_.
+
+- **API Endpoint (Optional):** Specifies the endpoint of the Anthropic API. Defaults to _`"https://api.anthropic.com"`_ if not specified.
+
+- **Input Value:** Specifies the input text for text generation.
+
+- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
+
+- **System Message (Optional):** A system message to pass to the model.
+
+For detailed documentation and integration guides, please refer to the [Anthropic Component Documentation](https://python.langchain.com/docs/integrations/chat/anthropic).
+
+---
+
+### AzureChatOpenAI
+
+This component allows the generation of text using the LLM (Large Language Model) model from Azure OpenAI.
+
+**Params**
+
+- **Model Name:** Specifies the name of the Azure OpenAI model to be used for text generation. Available options include:
+    - _`"gpt-35-turbo"`_
+    - _`"gpt-35-turbo-16k"`_
+    - _`"gpt-35-turbo-instruct"`_
+    - _`"gpt-4"`_
+    - _`"gpt-4-32k"`_
+    - _`"gpt-4-vision"`_
+
+- **Azure Endpoint:** Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`.
+
+- **Deployment Name:** Specifies the name of the deployment.
+
+- **API Version:** Specifies the version of the Azure OpenAI API to be used. Available options include:
+    - _`"2023-03-15-preview"`_
+    - _`"2023-05-15"`_
+    - _`"2023-06-01-preview"`_
+    - _`"2023-07-01-preview"`_
+    - _`"2023-08-01-preview"`_
+    - _`"2023-09-01-preview"`_
+    - _`"2023-12-01-preview"`_
+
+- **API Key:** Your Azure OpenAI API key.
+
+- **Temperature (Optional):** Specifies the sampling temperature. Defaults to _`0.7`_.
+
+- **Max Tokens (Optional):** Specifies the maximum number of tokens to generate. Defaults to _`1000`_.
+
+- **Input Value:** Specifies the input text for text generation.
+
+- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
+
+- **System Message (Optional):** A system message to pass to the model.
+
+For detailed documentation and integration guides, please refer to the [Azure OpenAI Component Documentation](https://python.langchain.com/docs/integrations/llms/azure_openai).
+
+
+---
+
+### QianfanChatEndpoint
+
+This component facilitates the generation of text using Baidu Qianfan chat models.
+
+**Params**
+
+- **Model Name:** Specifies the name of the Qianfan chat model to be used for text generation. Available options include:
+    - _`"ERNIE-Bot"`_
+    - _`"ERNIE-Bot-turbo"`_
+    - _`"BLOOMZ-7B"`_
+    - _`"Llama-2-7b-chat"`_
+    - _`"Llama-2-13b-chat"`_
+    - _`"Llama-2-70b-chat"`_
+    - _`"Qianfan-BLOOMZ-7B-compressed"`_
+    - _`"Qianfan-Chinese-Llama-2-7B"`_
+    - _`"ChatGLM2-6B-32K"`_
+    - _`"AquilaChat-7B"`_
+
+- **Qianfan Ak:** Your Baidu Qianfan access key, obtainable from [here](https://cloud.baidu.com/product/wenxinworkshop).
+
+- **Qianfan Sk:** Your Baidu Qianfan secret key, obtainable from [here](https://cloud.baidu.com/product/wenxinworkshop).
+
+- **Top p (Optional):** Model parameter. Specifies the top-p value. Only supported in ERNIE-Bot and ERNIE-Bot-turbo models. Defaults to _`0.8`_.
+
+- **Temperature (Optional):** Model parameter. Specifies the sampling temperature. Only supported in ERNIE-Bot and ERNIE-Bot-turbo models. Defaults to _`0.95`_.
+
+- **Penalty Score (Optional):** Model parameter. Specifies the penalty score. Only supported in ERNIE-Bot and ERNIE-Bot-turbo models. Defaults to _`1.0`_.
+
+- **Endpoint (Optional):** Endpoint of the Qianfan LLM, required if custom model is used.
+
+- **Input Value:** Specifies the input text for text generation.
+
+- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
+
+- **System Message (Optional):** A system message to pass to the model.
+
+---
+
+### Cohere
+
+This component enables text generation using Cohere large language models.
+
+**Params**
+
+- **Cohere API Key:** Your Cohere API key.
+
+- **Max Tokens (Optional):** Specifies the maximum number of tokens to generate. Defaults to _`256`_.
+
+- **Temperature (Optional):** Specifies the sampling temperature. Defaults to _`0.75`_.
+
+- **Input Value:** Specifies the input text for text generation.
+
+- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
+
+- **System Message (Optional):** A system message to pass to the model.
+
+---
+
+### CTransformers
+
+This component allows the generation of text using CTransformers large language models.
+
+**Params**
+
+- **Model:** Specifies the CTransformers model to be used for text generation.
+
+- **Model File (Optional):** Path to the model file if using a custom model. Should be a _.bin_ file.
+
+- **Model Type:** Specifies the type of the CTransformers model.
+
+- **Config (Optional):** Additional configuration parameters for the model. It should be provided as a JSON object. 
+    
+    Defaults to:
+    
+     `{"top_k":40,"top_p":0.95,"temperature":0.8,"repetition_penalty":1.1,"last_n_tokens":64,"seed":-1,"max_new_tokens":256,"stop":"","stream":"False","reset":"True","batch_size":8,"threads":-1,"context_length":-1,"gpu_layers":0}`.
+
+- **Input Value:** Specifies the input text for text generation.
+
+- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
+
+- **System Message (Optional):** A system message to pass to the model.
+
+---
+
+### Google Generative AI
+
+This component enables text generation using Google Generative AI.
+
+**Params**
+
+- **Google API Key:** Your Google API key to use for the Google Generative AI.
+
+- **Model:** The name of the model to use. Supported examples are _`"gemini-pro"`_ and _`"gemini-pro-vision"`_.
+
+- **Max Output Tokens (Optional):** The maximum number of tokens to generate.
+
+- **Temperature:** Run inference with this temperature. Must be in the closed interval [0.0, 1.0].
+
+- **Top K (Optional):** Decode using top-k sampling: consider the set of top_k most probable tokens. Must be positive.
+
+- **Top P (Optional):** The maximum cumulative probability of tokens to consider when sampling.
+
+- **N (Optional):** Number of chat completions to generate for each prompt. Note that the API may not return the full n completions if duplicates are generated.
+
+- **Input Value:** The input to the model.
+
+- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
+
+- **System Message (Optional):** A system message to pass to the model.
+
+---
+
+### Hugging Face API
+
+This component facilitates text generation using LLM models from the Hugging Face Inference API.
+
+**Params**
+
+- **Endpoint URL:** The URL of the Hugging Face Inference API endpoint. Should be provided along with necessary authentication credentials.
+
+- **Task:** Specifies the task for text generation. Options include _`"text2text-generation"`_, _`"text-generation"`_, and _`"summarization"`_.
+
+- **API Token:** The API token required for authentication with the Hugging Face Hub.
+
+- **Model Keyword Arguments (Optional):** Additional keyword arguments for the model. Should be provided as a Python dictionary.
+
+- **Input Value:** The input text for text generation.
+
+- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
+
+- **System Message (Optional):** A system message to pass to the model.
+
+---
+
+### LlamaCpp 
+
+The `LlamaCpp` is a component for generating text using the llama.cpp model.
+
+**Params**
+
+- **Model Path:** The path to the llama.cpp model file. This should be provided as a file type input.
+
+- **Input Value:** The input text for text generation.
+
+- **Grammar (Optional):** The grammar for text generation.
+
+- **Cache (Optional):** Specifies whether to cache the generated text.
+
+- **Client (Optional):** The client to use for text generation.
+
+- **Echo (Optional):** Specifies whether to echo the generated text. Defaults to _`False`_.
+
+- **F16 KV:** Specifies whether to use F16 key-value pairs. Defaults to _`True`_.
+
+- **Grammar Path (Optional):** The path to the grammar file.
+
+- **Last N Tokens Size (Optional):** The size of the last N tokens. Defaults to _`64`_.
+
+- **Logits All:** Specifies whether to include logits for all tokens. Defaults to _`False`_.
+
+- **Logprobs (Optional):** The log probabilities for text generation.
+
+- **Lora Base (Optional):** The base URL for Lora.
+
+- **Lora Path (Optional):** The path for Lora.
+
+- **Max Tokens (Optional):** The maximum number of tokens to generate. Defaults to _`256`_.
+
+- **Metadata (Optional):** Additional metadata for the model.
+
+- **Model Kwargs:** Additional keyword arguments for the model. Should be provided as a Python dictionary.
+
+- **N Batch (Optional):** The batch size. Defaults to _`8`_.
+
+- **N Ctx:** The context size. Defaults to _`512`_.
+
+- **N GPU Layers (Optional):** The number of GPU layers.
+
+- **N Parts:** The number of parts.
+
+- **N Threads (Optional):** The number of threads. Defaults to _`1`_.
+
+- **Repeat Penalty (Optional):** The repeat penalty for text generation. Defaults to _`1.1`_.
+
+- **Rope Freq Base:** The base frequency for rope.
+
+- **Rope Freq Scale:** The scale frequency for rope.
+
+- **Seed:** The seed for random generation.
+
+- **Stop (Optional):** The stop words for text generation.
+
+- **Streaming:** Specifies whether to stream the response from the model. Defaults to _`True`_.
+
+- **Suffix (Optional):** The suffix for text generation.
+
+- **Tags (Optional):** The tags for text generation.
+
+- **Temperature (Optional):** The temperature for text generation. Defaults to _`0.8`_.
+
+- **Top K (Optional):** The top K tokens to consider for text generation. Defaults to _`40`_.
+
+- **Top P (Optional):** The top P probability threshold for text generation. Defaults to _`0.95`_.
+
+- **Use Mlock:** Specifies whether to use Mlock. Defaults to _`False`_.
+
+- **Use Mmap (Optional):** Specifies whether to use Mmap. Defaults to _`True`_.
+
+- **Verbose:** Specifies whether to enable verbose mode. Defaults to _`True`_.
+
+- **Vocab Only:** Specifies whether to include vocabulary only.
+
+- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
+
+For more information, please refer to the [documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/llamacpp).
+
+---
+
+### ChatOllama
+
+This component facilitates text generation using the Local LLM model for chat with Ollama.
+
+**Params**
+
+- **Base URL:** The endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.
+
+- **Model Name:** The name of the model to use. Refer to [https://ollama.ai/library](https://ollama.ai/library) for more models.
+
+- **Input Value:** The input text for text generation.
+
+- **Mirostat:** Enable/disable Mirostat sampling for controlling perplexity.
+
+- **Mirostat Eta (Optional):** The learning rate for the Mirostat algorithm. (Default: 0.1)
+
+- **Mirostat Tau (Optional):** Controls the balance between coherence and diversity of the output. (Default: 5.0)
+
+- **Repeat Last N (Optional):** How far back the model looks to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)
+
+- **Verbose (Optional):** Whether to print out response text.
+
+- **Cache (Optional):** Enable or disable caching. Defaults to _`False`_.
+
+- **Context Window Size (Optional):** Size of the context window for generating tokens. (Default: 2048)
+
+- **Number of GPUs (Optional):** Number of GPUs to use for computation. (Default: 1 on macOS, 0 to disable)
+
+- **Format (Optional):** Specify the format of the output (e.g., json).
+
+- **Metadata (Optional):** Metadata to add to the run trace.
+
+- **Number of Threads (Optional):** Number of threads to use during computation. (Default: detected for optimal performance)
+
+- **Repeat Penalty (Optional):** Penalty for repetitions in generated text. (Default: 1.1)
+
+- **Stop Tokens (Optional):** List of tokens to signal the model to stop generating text.
+
+- **System (Optional):** System to use for generating text.
+
+- **Tags (Optional):** Tags to add to the run trace.
+
+- **Temperature (Optional):** Controls the creativity of model responses. Defaults to _`0.8`_.
+
+- **Template (Optional):** Template to use for generating text.
+
+- **TFS Z (Optional):** Tail free sampling value. (Default: 1)
+
+- **Timeout (Optional):** Timeout for the request stream.
+
+- **Top K (Optional):** Limits token selection to top K. (Default: 40)
+
+- **Top P (Optional):** Works together with top-k. (Default: 0.9)
+
+- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
+
+- **System Message (Optional):** System message to pass to the model.
+
+---
+
+### OpenAIModel
+
+This component facilitates text generation using OpenAI's models.
+
+**Params**
+
+- **Input Value:** The input text for text generation.
+
+- **Max Tokens (Optional):** The maximum number of tokens to generate. Defaults to _`256`_.
+
+- **Model Kwargs (Optional):** Additional keyword arguments for the model. Should be provided as a nested dictionary.
+
+- **Model Name (Optional):** The name of the model to use. Defaults to _`gpt-4-1106-preview`_. Supported options include: _`gpt-4-turbo-preview`_, _`gpt-4-0125-preview`_, _`gpt-4-1106-preview`_, _`gpt-4-vision-preview`_, _`gpt-3.5-turbo-0125`_, _`gpt-3.5-turbo-1106`_.
+
+- **OpenAI API Base (Optional):** The base URL of the OpenAI API. Defaults to _`https://api.openai.com/v1`_.
+
+- **OpenAI API Key (Optional):** The API key for accessing the OpenAI API. 
+
+- **Temperature:** Controls the creativity of model responses. Defaults to _`0.7`_.
+
+- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
+
+- **System Message (Optional):** System message to pass to the model.
+
+---
+
+### ChatVertexAI
+
+The `ChatVertexAI` is a component for generating text using Vertex AI Chat large language models API.
+
+**Params**
+
+- **Input Value:** The input text for text generation.
+
+- **Credentials:** The JSON file containing the credentials for accessing the Vertex AI Chat API.
+
+- **Project:** The name of the project associated with the Vertex AI Chat API.
+
+- **Examples (Optional):** List of examples to provide context for text generation.
+
+- **Location:** The location of the Vertex AI Chat API service. Defaults to _`us-central1`_.
+
+- **Max Output Tokens:** The maximum number of tokens to generate. Defaults to _`128`_.
+
+- **Model Name:** The name of the model to use. Defaults to _`chat-bison`_.
+
+- **Temperature:** Controls the creativity of model responses. Defaults to _`0.0`_.
+
+- **Top K:** Limits token selection to top K. Defaults to _`40`_.
+
+- **Top P:** Works together with top-k. Defaults to _`0.95`_.
+
+- **Verbose:** Whether to print out response text. Defaults to _`False`_.
+
+- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
+
+- **System Message (Optional):** System message to pass to the model.
