@@ -120,7 +120,7 @@ test("InputComponent", async ({ page }) => {
   await page.getByTestId("input-collection_name-edit").click();
   await page
     .getByTestId("input-collection_name-edit")
-    .fill("NEW_collection_name_test_123123123!@#$&*(&%$@");
+    .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
@@ -143,7 +143,7 @@ test("InputComponent", async ({ page }) => {
 
     let value = await page.getByTestId("input-collection_name").inputValue();
 
-    if (value != "NEW_collection_name_test_123123123!@#$&*(&%$@") {
+    if (value != "NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe") {
       expect(false).toBeTruthy();
     }
   }
