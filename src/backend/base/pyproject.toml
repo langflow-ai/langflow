@@ -26,7 +26,6 @@ langflow-base = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
-
 fastapi = "^0.109.0"
 httpx = "^0.25"
 uvicorn = "^0.27.0"
@@ -52,6 +51,20 @@ docstring-parser = "^0.15"
 python-jose = "^3.3.0"
 pandas = "2.2.0"
 multiprocess = "^0.70.14"
+opentelemetry-api = "^1.23.0"
+opentelemetry-sdk = "^1.23.0"
+opentelemetry-exporter-otlp = "^1.23.0"
+opentelemetry-instrumentation-fastapi = "^0.44b0"
+opentelemetry-instrumentation-httpx = "^0.44b0"
+opentelemetry-instrumentation-asgi = "^0.44b0"
+duckdb = "^0.10.1"
+python-socketio = "^5.11.0"
+python-docx = "^1.1.0"
+jq = { version = "^1.7.0", markers = "sys_platform != 'win32'" }
+pypdf = "^4.1.0"
+chromadb = "^0.4.23"
+langchain-anthropic = "^0.1.4"
+langchain-astradb = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.21.1"
