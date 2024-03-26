@@ -127,6 +127,10 @@ else
 		docker compose $(if $(debug),-f docker-compose.debug.yml) up
 endif
 
+lock:
+	cd src/backend/base && poetry lock
+	poetry lock
+
 publish_base:
 	make build_langflow_base
 	cd src/backend/base && poetry publish
