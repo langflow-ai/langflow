@@ -142,10 +142,18 @@ else
 		docker compose $(if $(debug),-f docker-compose.debug.yml) up
 endif
 
-lock:
+lock_base:
 	cd src/backend/base && poetry lock
+
+lock_langflow:
 	poetry lock
 
+lock:
+# Run both in parallel
+	# cd src/backend/base && poetry lock
+	# poetry lock
+	@echo 'Locking dependencies'
+	@make -j2 lock_base lock_langflow
 publish_base:
 	make build_langflow_base
 	cd src/backend/base && poetry publish
