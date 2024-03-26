@@ -10,7 +10,10 @@
             "height": 631,
             "id": "ChatOpenAI-Hz56M",
             "type": "genericNode",
-            "position": { "x": 543.1816229116944, "y": 942.891611351432 },
+            "position": {
+              "x": 543.1816229116944,
+              "y": 942.891611351432
+            },
             "data": {
               "type": "ChatOpenAI",
               "node": {
@@ -238,7 +241,10 @@
             "height": 387,
             "id": "AgentInitializer-QiQ4x",
             "type": "genericNode",
-            "position": { "x": 1036.6064439140812, "y": 645.1919693466587 },
+            "position": {
+              "x": 1036.6064439140812,
+              "y": 645.1919693466587
+            },
             "data": {
               "type": "AgentInitializer",
               "node": {
@@ -299,7 +305,10 @@
                   "_type": "initialize_agent"
                 },
                 "description": "Construct a zero shot agent from an LLM and tools.",
-                "base_classes": ["AgentExecutor", "function"],
+                "base_classes": [
+                  "AgentExecutor",
+                  "function"
+                ],
                 "display_name": "AgentInitializer"
               },
               "id": "AgentInitializer-QiQ4x",
@@ -316,7 +325,10 @@
             "height": 437,
             "id": "PythonFunctionTool-kX99N",
             "type": "genericNode",
-            "position": { "x": 553.050119331742, "y": 412.9533535948685 },
+            "position": {
+              "x": 553.050119331742,
+              "y": 412.9533535948685
+            },
             "data": {
               "type": "PythonFunctionTool",
               "node": {
@@ -360,7 +372,9 @@
                   "_type": "PythonFunctionTool"
                 },
                 "description": "Python function to be executed.",
-                "base_classes": ["Tool"],
+                "base_classes": [
+                  "Tool"
+                ],
                 "display_name": "PythonFunctionTool"
               },
               "id": "PythonFunctionTool-kX99N",
@@ -380,7 +394,9 @@
             "sourceHandle": "{œbaseClassesœ:[œSerializableœ,œBaseChatModelœ,œChatOpenAIœ,œBaseLanguageModelœ],œdataTypeœ:œChatOpenAIœ,œidœ:œChatOpenAI-Hz56Mœ}",
             "target": "AgentInitializer-QiQ4x",
             "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œAgentInitializer-QiQ4xœ,œinputTypesœ:null,œtypeœ:œBaseLanguageModelœ}",
-            "style": { "stroke": "#555" },
+            "style": {
+              "stroke": "#555"
+            },
             "className": "stroke-gray-900  stroke-connection",
             "animated": false,
             "id": "reactflow__edge-ChatOpenAI-Hz56M{œbaseClassesœ:[œSerializableœ,œBaseChatModelœ,œChatOpenAIœ,œBaseLanguageModelœ],œdataTypeœ:œChatOpenAIœ,œidœ:œChatOpenAI-Hz56Mœ}-AgentInitializer-QiQ4x{œfieldNameœ:œllmœ,œidœ:œAgentInitializer-QiQ4xœ,œinputTypesœ:null,œtypeœ:œBaseLanguageModelœ}",
@@ -409,14 +425,18 @@
             "sourceHandle": "{œbaseClassesœ:[œToolœ],œdataTypeœ:œPythonFunctionToolœ,œidœ:œPythonFunctionTool-kX99Nœ}",
             "target": "AgentInitializer-QiQ4x",
             "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgentInitializer-QiQ4xœ,œinputTypesœ:null,œtypeœ:œToolœ}",
-            "style": { "stroke": "#555" },
+            "style": {
+              "stroke": "#555"
+            },
             "className": "stroke-gray-900  stroke-connection",
             "animated": false,
             "id": "reactflow__edge-PythonFunctionTool-kX99N{œbaseClassesœ:[œToolœ],œdataTypeœ:œPythonFunctionToolœ,œidœ:œPythonFunctionTool-kX99Nœ}-AgentInitializer-QiQ4x{œfieldNameœ:œtoolsœ,œidœ:œAgentInitializer-QiQ4xœ,œinputTypesœ:null,œtypeœ:œToolœ}",
             "selected": false,
             "data": {
               "sourceHandle": {
-                "baseClasses": ["Tool"],
+                "baseClasses": [
+                  "Tool"
+                ],
                 "dataType": "PythonFunctionTool",
                 "id": "PythonFunctionTool-kX99N"
               },
@@ -446,7 +466,10 @@
           {
             "id": "CustomComponent-w4WCp",
             "type": "genericNode",
-            "position": { "x": 536, "y": 337 },
+            "position": {
+              "x": 536,
+              "y": 337
+            },
             "data": {
               "type": "CustomComponent",
               "node": {
@@ -456,7 +479,7 @@
                     "placeholder": "",
                     "show": true,
                     "multiline": true,
-                    "value": "from langflow import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
+                    "value": "from langflow.custom import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
                     "password": false,
                     "name": "code",
                     "advanced": false,
@@ -478,11 +501,18 @@
               },
               "id": "CustomComponent-w4WCp"
             },
-            "positionAbsolute": { "x": 536, "y": 337 }
+            "positionAbsolute": {
+              "x": 536,
+              "y": 337
+            }
           }
         ],
         "edges": [],
-        "viewport": { "x": 0, "y": 0, "zoom": 1 }
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
       },
       "id": "e43cf2c8-cd64-4936-8170-b207a8b109c4",
       "user_id": "6f6ebc2c-9e7a-4c35-84fc-51760db10d9b"
@@ -497,7 +527,10 @@
             "height": 631,
             "id": "ChatOpenAI-7GFF0",
             "type": "genericNode",
-            "position": { "x": 543.1816229116944, "y": 942.891611351432 },
+            "position": {
+              "x": 543.1816229116944,
+              "y": 942.891611351432
+            },
             "data": {
               "type": "ChatOpenAI",
               "node": {
@@ -725,7 +758,10 @@
             "height": 387,
             "id": "AgentInitializer-YJgqs",
             "type": "genericNode",
-            "position": { "x": 1036.6064439140812, "y": 645.1919693466587 },
+            "position": {
+              "x": 1036.6064439140812,
+              "y": 645.1919693466587
+            },
             "data": {
               "type": "AgentInitializer",
               "node": {
@@ -786,7 +822,10 @@
                   "_type": "initialize_agent"
                 },
                 "description": "Construct a zero shot agent from an LLM and tools.",
-                "base_classes": ["AgentExecutor", "function"],
+                "base_classes": [
+                  "AgentExecutor",
+                  "function"
+                ],
                 "display_name": "AgentInitializer"
               },
               "id": "AgentInitializer-YJgqs",
@@ -803,7 +842,10 @@
             "height": 437,
             "id": "PythonFunctionTool-gqQDg",
             "type": "genericNode",
-            "position": { "x": 553.050119331742, "y": 412.9533535948685 },
+            "position": {
+              "x": 553.050119331742,
+              "y": 412.9533535948685
+            },
             "data": {
               "type": "PythonFunctionTool",
               "node": {
@@ -847,7 +889,9 @@
                   "_type": "PythonFunctionTool"
                 },
                 "description": "Python function to be executed.",
-                "base_classes": ["Tool"],
+                "base_classes": [
+                  "Tool"
+                ],
                 "display_name": "PythonFunctionTool"
               },
               "id": "PythonFunctionTool-gqQDg",
@@ -867,7 +911,9 @@
             "sourceHandle": "{œbaseClassesœ:[œSerializableœ,œBaseChatModelœ,œChatOpenAIœ,œBaseLanguageModelœ],œdataTypeœ:œChatOpenAIœ,œidœ:œChatOpenAI-7GFF0œ}",
             "target": "AgentInitializer-YJgqs",
             "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œAgentInitializer-YJgqsœ,œinputTypesœ:null,œtypeœ:œBaseLanguageModelœ}",
-            "style": { "stroke": "#555" },
+            "style": {
+              "stroke": "#555"
+            },
             "className": "stroke-gray-900  stroke-connection",
             "animated": false,
             "id": "reactflow__edge-ChatOpenAI-7GFF0{œbaseClassesœ:[œSerializableœ,œBaseChatModelœ,œChatOpenAIœ,œBaseLanguageModelœ],œdataTypeœ:œChatOpenAIœ,œidœ:œChatOpenAI-7GFF0œ}-AgentInitializer-YJgqs{œfieldNameœ:œllmœ,œidœ:œAgentInitializer-YJgqsœ,œinputTypesœ:null,œtypeœ:œBaseLanguageModelœ}",
@@ -896,14 +942,18 @@
             "sourceHandle": "{œbaseClassesœ:[œToolœ],œdataTypeœ:œPythonFunctionToolœ,œidœ:œPythonFunctionTool-gqQDgœ}",
             "target": "AgentInitializer-YJgqs",
             "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgentInitializer-YJgqsœ,œinputTypesœ:null,œtypeœ:œToolœ}",
-            "style": { "stroke": "#555" },
+            "style": {
+              "stroke": "#555"
+            },
             "className": "stroke-gray-900  stroke-connection",
             "animated": false,
             "id": "reactflow__edge-PythonFunctionTool-gqQDg{œbaseClassesœ:[œToolœ],œdataTypeœ:œPythonFunctionToolœ,œidœ:œPythonFunctionTool-gqQDgœ}-AgentInitializer-YJgqs{œfieldNameœ:œtoolsœ,œidœ:œAgentInitializer-YJgqsœ,œinputTypesœ:null,œtypeœ:œToolœ}",
             "selected": false,
             "data": {
               "sourceHandle": {
-                "baseClasses": ["Tool"],
+                "baseClasses": [
+                  "Tool"
+                ],
                 "dataType": "PythonFunctionTool",
                 "id": "PythonFunctionTool-gqQDg"
               },
@@ -933,7 +983,10 @@
           {
             "id": "CustomComponent-iF9Zr",
             "type": "genericNode",
-            "position": { "x": 536, "y": 337 },
+            "position": {
+              "x": 536,
+              "y": 337
+            },
             "data": {
               "type": "CustomComponent",
               "node": {
@@ -943,7 +996,7 @@
                     "placeholder": "",
                     "show": true,
                     "multiline": true,
-                    "value": "from langflow import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
+                    "value": "from langflow.custom import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
                     "password": false,
                     "name": "code",
                     "advanced": false,
@@ -965,11 +1018,18 @@
               },
               "id": "CustomComponent-iF9Zr"
             },
-            "positionAbsolute": { "x": 536, "y": 337 }
+            "positionAbsolute": {
+              "x": 536,
+              "y": 337
+            }
           }
         ],
         "edges": [],
-        "viewport": { "x": 0, "y": 0, "zoom": 1 }
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
       },
       "id": "88a0e6a1-8144-4bff-b28c-d312ae5c8a10",
       "user_id": "6f6ebc2c-9e7a-4c35-84fc-51760db10d9b"
@@ -984,7 +1044,10 @@
             "height": 631,
             "id": "ChatOpenAI-cljAK",
             "type": "genericNode",
-            "position": { "x": 543.1816229116944, "y": 942.891611351432 },
+            "position": {
+              "x": 543.1816229116944,
+              "y": 942.891611351432
+            },
             "data": {
               "type": "ChatOpenAI",
               "node": {
@@ -1212,7 +1275,10 @@
             "height": 387,
             "id": "AgentInitializer-grV0u",
             "type": "genericNode",
-            "position": { "x": 1036.6064439140812, "y": 645.1919693466587 },
+            "position": {
+              "x": 1036.6064439140812,
+              "y": 645.1919693466587
+            },
             "data": {
               "type": "AgentInitializer",
               "node": {
@@ -1273,7 +1339,10 @@
                   "_type": "initialize_agent"
                 },
                 "description": "Construct a zero shot agent from an LLM and tools.",
-                "base_classes": ["AgentExecutor", "function"],
+                "base_classes": [
+                  "AgentExecutor",
+                  "function"
+                ],
                 "display_name": "AgentInitializer"
               },
               "id": "AgentInitializer-grV0u",
@@ -1290,7 +1359,10 @@
             "height": 437,
             "id": "PythonFunctionTool-SctM2",
             "type": "genericNode",
-            "position": { "x": 553.050119331742, "y": 412.9533535948685 },
+            "position": {
+              "x": 553.050119331742,
+              "y": 412.9533535948685
+            },
             "data": {
               "type": "PythonFunctionTool",
               "node": {
@@ -1334,7 +1406,9 @@
                   "_type": "PythonFunctionTool"
                 },
                 "description": "Python function to be executed.",
-                "base_classes": ["Tool"],
+                "base_classes": [
+                  "Tool"
+                ],
                 "display_name": "PythonFunctionTool"
               },
               "id": "PythonFunctionTool-SctM2",
@@ -1354,7 +1428,9 @@
             "sourceHandle": "{œbaseClassesœ:[œSerializableœ,œBaseChatModelœ,œChatOpenAIœ,œBaseLanguageModelœ],œdataTypeœ:œChatOpenAIœ,œidœ:œChatOpenAI-cljAKœ}",
             "target": "AgentInitializer-grV0u",
             "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œAgentInitializer-grV0uœ,œinputTypesœ:null,œtypeœ:œBaseLanguageModelœ}",
-            "style": { "stroke": "#555" },
+            "style": {
+              "stroke": "#555"
+            },
             "className": "stroke-gray-900  stroke-connection",
             "animated": false,
             "id": "reactflow__edge-ChatOpenAI-cljAK{œbaseClassesœ:[œSerializableœ,œBaseChatModelœ,œChatOpenAIœ,œBaseLanguageModelœ],œdataTypeœ:œChatOpenAIœ,œidœ:œChatOpenAI-cljAKœ}-AgentInitializer-grV0u{œfieldNameœ:œllmœ,œidœ:œAgentInitializer-grV0uœ,œinputTypesœ:null,œtypeœ:œBaseLanguageModelœ}",
@@ -1383,14 +1459,18 @@
             "sourceHandle": "{œbaseClassesœ:[œToolœ],œdataTypeœ:œPythonFunctionToolœ,œidœ:œPythonFunctionTool-SctM2œ}",
             "target": "AgentInitializer-grV0u",
             "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgentInitializer-grV0uœ,œinputTypesœ:null,œtypeœ:œToolœ}",
-            "style": { "stroke": "#555" },
+            "style": {
+              "stroke": "#555"
+            },
             "className": "stroke-gray-900  stroke-connection",
             "animated": false,
             "id": "reactflow__edge-PythonFunctionTool-SctM2{œbaseClassesœ:[œToolœ],œdataTypeœ:œPythonFunctionToolœ,œidœ:œPythonFunctionTool-SctM2œ}-AgentInitializer-grV0u{œfieldNameœ:œtoolsœ,œidœ:œAgentInitializer-grV0uœ,œinputTypesœ:null,œtypeœ:œToolœ}",
             "selected": false,
             "data": {
               "sourceHandle": {
-                "baseClasses": ["Tool"],
+                "baseClasses": [
+                  "Tool"
+                ],
                 "dataType": "PythonFunctionTool",
                 "id": "PythonFunctionTool-SctM2"
               },
@@ -1420,7 +1500,10 @@
           {
             "id": "CustomComponent-z5kAP",
             "type": "genericNode",
-            "position": { "x": 536, "y": 337 },
+            "position": {
+              "x": 536,
+              "y": 337
+            },
             "data": {
               "type": "CustomComponent",
               "node": {
@@ -1430,7 +1513,7 @@
                     "placeholder": "",
                     "show": true,
                     "multiline": true,
-                    "value": "from langflow import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
+                    "value": "from langflow.custom import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
                     "password": false,
                     "name": "code",
                     "advanced": false,
@@ -1452,11 +1535,18 @@
               },
               "id": "CustomComponent-z5kAP"
             },
-            "positionAbsolute": { "x": 536, "y": 337 }
+            "positionAbsolute": {
+              "x": 536,
+              "y": 337
+            }
           }
         ],
         "edges": [],
-        "viewport": { "x": 0, "y": 0, "zoom": 1 }
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
       },
       "id": "3128b556-35c7-4ced-a834-70fbeb1a410f",
       "user_id": "6f6ebc2c-9e7a-4c35-84fc-51760db10d9b"
@@ -1469,7 +1559,10 @@
           {
             "id": "CustomComponent-ZieNZ",
             "type": "genericNode",
-            "position": { "x": 536, "y": 337 },
+            "position": {
+              "x": 536,
+              "y": 337
+            },
             "data": {
               "type": "CustomComponent",
               "node": {
@@ -1479,7 +1572,7 @@
                     "placeholder": "",
                     "show": true,
                     "multiline": true,
-                    "value": "from langflow import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
+                    "value": "from langflow.custom import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
                     "password": false,
                     "name": "code",
                     "advanced": false,
@@ -1501,11 +1594,18 @@
               },
               "id": "CustomComponent-ZieNZ"
             },
-            "positionAbsolute": { "x": 536, "y": 337 }
+            "positionAbsolute": {
+              "x": 536,
+              "y": 337
+            }
           }
         ],
         "edges": [],
-        "viewport": { "x": 0, "y": 0, "zoom": 1 }
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
       },
       "id": "d3f2c379-9df5-49a0-b33d-d855c2085949",
       "user_id": "6f6ebc2c-9e7a-4c35-84fc-51760db10d9b"
@@ -1518,7 +1618,10 @@
           {
             "id": "CustomComponent-CcHG0",
             "type": "genericNode",
-            "position": { "x": 536, "y": 337 },
+            "position": {
+              "x": 536,
+              "y": 337
+            },
             "data": {
               "type": "CustomComponent",
               "node": {
@@ -1528,7 +1631,7 @@
                     "placeholder": "",
                     "show": true,
                     "multiline": true,
-                    "value": "from langflow import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
+                    "value": "from langflow.custom import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
                     "password": false,
                     "name": "code",
                     "advanced": false,
@@ -1550,11 +1653,18 @@
               },
               "id": "CustomComponent-CcHG0"
             },
-            "positionAbsolute": { "x": 536, "y": 337 }
+            "positionAbsolute": {
+              "x": 536,
+              "y": 337
+            }
           }
         ],
         "edges": [],
-        "viewport": { "x": 0, "y": 0, "zoom": 1 }
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
       },
       "id": "74afff1f-b540-43d5-bc66-d18f39d65d57",
       "user_id": "6f6ebc2c-9e7a-4c35-84fc-51760db10d9b"
@@ -1567,7 +1677,10 @@
           {
             "id": "CustomComponent-Q8qSr",
             "type": "genericNode",
-            "position": { "x": 536, "y": 337 },
+            "position": {
+              "x": 536,
+              "y": 337
+            },
             "data": {
               "type": "CustomComponent",
               "node": {
@@ -1577,7 +1690,7 @@
                     "placeholder": "",
                     "show": true,
                     "multiline": true,
-                    "value": "from langflow import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
+                    "value": "from langflow.custom import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
                     "password": false,
                     "name": "code",
                     "advanced": false,
@@ -1599,11 +1712,18 @@
               },
               "id": "CustomComponent-Q8qSr"
             },
-            "positionAbsolute": { "x": 536, "y": 337 }
+            "positionAbsolute": {
+              "x": 536,
+              "y": 337
+            }
           }
         ],
         "edges": [],
-        "viewport": { "x": 0, "y": 0, "zoom": 1 }
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
       },
       "id": "b0b1c893-6194-4748-ae10-b5f604b271c2",
       "user_id": "6f6ebc2c-9e7a-4c35-84fc-51760db10d9b"
@@ -1616,7 +1736,10 @@
           {
             "id": "CustomComponent-Lgoca",
             "type": "genericNode",
-            "position": { "x": 536, "y": 337 },
+            "position": {
+              "x": 536,
+              "y": 337
+            },
             "data": {
               "type": "CustomComponent",
               "node": {
@@ -1626,7 +1749,7 @@
                     "placeholder": "",
                     "show": true,
                     "multiline": true,
-                    "value": "from langflow import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
+                    "value": "from langflow.custom import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
                     "password": false,
                     "name": "code",
                     "advanced": false,
@@ -1648,11 +1771,18 @@
               },
               "id": "CustomComponent-Lgoca"
             },
-            "positionAbsolute": { "x": 536, "y": 337 }
+            "positionAbsolute": {
+              "x": 536,
+              "y": 337
+            }
           }
         ],
         "edges": [],
-        "viewport": { "x": 0, "y": 0, "zoom": 1 }
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
       },
       "id": "edf1051d-509b-46a2-84c6-b94bdcdc3a4f",
       "user_id": "6f6ebc2c-9e7a-4c35-84fc-51760db10d9b"
@@ -1665,7 +1795,10 @@
           {
             "id": "CustomComponent-6OJGW",
             "type": "genericNode",
-            "position": { "x": 536, "y": 337 },
+            "position": {
+              "x": 536,
+              "y": 337
+            },
             "data": {
               "type": "CustomComponent",
               "node": {
@@ -1675,7 +1808,7 @@
                     "placeholder": "",
                     "show": true,
                     "multiline": true,
-                    "value": "from langflow import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
+                    "value": "from langflow.custom import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
                     "password": false,
                     "name": "code",
                     "advanced": false,
@@ -1697,11 +1830,18 @@
               },
               "id": "CustomComponent-6OJGW"
             },
-            "positionAbsolute": { "x": 536, "y": 337 }
+            "positionAbsolute": {
+              "x": 536,
+              "y": 337
+            }
           }
         ],
         "edges": [],
-        "viewport": { "x": 0, "y": 0, "zoom": 1 }
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
       },
       "id": "65b2a4e0-4084-418a-aa86-ee914acb0ab5",
       "user_id": "6f6ebc2c-9e7a-4c35-84fc-51760db10d9b"
@@ -1714,7 +1854,10 @@
           {
             "id": "CustomComponent-tcE83",
             "type": "genericNode",
-            "position": { "x": 536, "y": 337 },
+            "position": {
+              "x": 536,
+              "y": 337
+            },
             "data": {
               "type": "CustomComponent",
               "node": {
@@ -1724,7 +1867,7 @@
                     "placeholder": "",
                     "show": true,
                     "multiline": true,
-                    "value": "from langflow import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
+                    "value": "from langflow.custom import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
                     "password": false,
                     "name": "code",
                     "advanced": false,
@@ -1746,11 +1889,18 @@
               },
               "id": "CustomComponent-tcE83"
             },
-            "positionAbsolute": { "x": 536, "y": 337 }
+            "positionAbsolute": {
+              "x": 536,
+              "y": 337
+            }
           }
         ],
         "edges": [],
-        "viewport": { "x": 0, "y": 0, "zoom": 1 }
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
       },
       "id": "534e412b-d37b-4133-8029-e5ed139fd55c",
       "user_id": "6f6ebc2c-9e7a-4c35-84fc-51760db10d9b"
@@ -1765,7 +1915,10 @@
             "height": 631,
             "id": "ChatOpenAI-mQEi3",
             "type": "genericNode",
-            "position": { "x": 543.1816229116944, "y": 942.891611351432 },
+            "position": {
+              "x": 543.1816229116944,
+              "y": 942.891611351432
+            },
             "data": {
               "type": "ChatOpenAI",
               "node": {
@@ -1993,7 +2146,10 @@
             "height": 387,
             "id": "AgentInitializer-EE8R4",
             "type": "genericNode",
-            "position": { "x": 1036.6064439140812, "y": 645.1919693466587 },
+            "position": {
+              "x": 1036.6064439140812,
+              "y": 645.1919693466587
+            },
             "data": {
               "type": "AgentInitializer",
               "node": {
@@ -2054,7 +2210,10 @@
                   "_type": "initialize_agent"
                 },
                 "description": "Construct a zero shot agent from an LLM and tools.",
-                "base_classes": ["AgentExecutor", "function"],
+                "base_classes": [
+                  "AgentExecutor",
+                  "function"
+                ],
                 "display_name": "AgentInitializer"
               },
               "id": "AgentInitializer-EE8R4",
@@ -2071,7 +2230,10 @@
             "height": 437,
             "id": "PythonFunctionTool-YKkDL",
             "type": "genericNode",
-            "position": { "x": 553.050119331742, "y": 412.9533535948685 },
+            "position": {
+              "x": 553.050119331742,
+              "y": 412.9533535948685
+            },
             "data": {
               "type": "PythonFunctionTool",
               "node": {
@@ -2115,7 +2277,9 @@
                   "_type": "PythonFunctionTool"
                 },
                 "description": "Python function to be executed.",
-                "base_classes": ["Tool"],
+                "base_classes": [
+                  "Tool"
+                ],
                 "display_name": "PythonFunctionTool"
               },
               "id": "PythonFunctionTool-YKkDL",
@@ -2135,7 +2299,9 @@
             "sourceHandle": "{œbaseClassesœ:[œSerializableœ,œBaseChatModelœ,œChatOpenAIœ,œBaseLanguageModelœ],œdataTypeœ:œChatOpenAIœ,œidœ:œChatOpenAI-mQEi3œ}",
             "target": "AgentInitializer-EE8R4",
             "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œAgentInitializer-EE8R4œ,œinputTypesœ:null,œtypeœ:œBaseLanguageModelœ}",
-            "style": { "stroke": "#555" },
+            "style": {
+              "stroke": "#555"
+            },
             "className": "stroke-gray-900  stroke-connection",
             "animated": false,
             "id": "reactflow__edge-ChatOpenAI-mQEi3{œbaseClassesœ:[œSerializableœ,œBaseChatModelœ,œChatOpenAIœ,œBaseLanguageModelœ],œdataTypeœ:œChatOpenAIœ,œidœ:œChatOpenAI-mQEi3œ}-AgentInitializer-EE8R4{œfieldNameœ:œllmœ,œidœ:œAgentInitializer-EE8R4œ,œinputTypesœ:null,œtypeœ:œBaseLanguageModelœ}",
@@ -2164,14 +2330,18 @@
             "sourceHandle": "{œbaseClassesœ:[œToolœ],œdataTypeœ:œPythonFunctionToolœ,œidœ:œPythonFunctionTool-YKkDLœ}",
             "target": "AgentInitializer-EE8R4",
             "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgentInitializer-EE8R4œ,œinputTypesœ:null,œtypeœ:œToolœ}",
-            "style": { "stroke": "#555" },
+            "style": {
+              "stroke": "#555"
+            },
             "className": "stroke-gray-900  stroke-connection",
             "animated": false,
             "id": "reactflow__edge-PythonFunctionTool-YKkDL{œbaseClassesœ:[œToolœ],œdataTypeœ:œPythonFunctionToolœ,œidœ:œPythonFunctionTool-YKkDLœ}-AgentInitializer-EE8R4{œfieldNameœ:œtoolsœ,œidœ:œAgentInitializer-EE8R4œ,œinputTypesœ:null,œtypeœ:œToolœ}",
             "selected": false,
             "data": {
               "sourceHandle": {
-                "baseClasses": ["Tool"],
+                "baseClasses": [
+                  "Tool"
+                ],
                 "dataType": "PythonFunctionTool",
                 "id": "PythonFunctionTool-YKkDL"
               },
@@ -2201,7 +2371,10 @@
           {
             "id": "CustomComponent-T38LS",
             "type": "genericNode",
-            "position": { "x": 536, "y": 337 },
+            "position": {
+              "x": 536,
+              "y": 337
+            },
             "data": {
               "type": "CustomComponent",
               "node": {
@@ -2211,7 +2384,7 @@
                     "placeholder": "",
                     "show": true,
                     "multiline": true,
-                    "value": "from langflow import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
+                    "value": "from langflow.custom import CustomComponent\n\nfrom langchain.llms.base import BaseLLM\nfrom langchain.chains import LLMChain\nfrom langchain.prompts import PromptTemplate\nfrom langchain.schema import Document\n\nimport requests\n\nclass YourComponent(CustomComponent):\n    display_name: str = \"Custom Component\"\n    description: str = \"Create any custom component you want!\"\n\n    def build_config(self):\n        return { \"url\": { \"multiline\": True, \"required\": True } }\n\n    def build(self, url: str, llm: BaseLLM, prompt: PromptTemplate) -> Document:\n        response = requests.get(url)\n        chain = LLMChain(llm=llm, prompt=prompt)\n        result = chain.run(response.text[:300])\n        return Document(page_content=str(result))\n",
                     "password": false,
                     "name": "code",
                     "advanced": false,
@@ -2233,11 +2406,18 @@
               },
               "id": "CustomComponent-T38LS"
             },
-            "positionAbsolute": { "x": 536, "y": 337 }
+            "positionAbsolute": {
+              "x": 536,
+              "y": 337
+            }
           }
         ],
         "edges": [],
-        "viewport": { "x": 0, "y": 0, "zoom": 1 }
+        "viewport": {
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        }
       },
       "id": "ec36a3b7-7b5f-4663-983c-833bcec4d851",
       "user_id": "6f6ebc2c-9e7a-4c35-84fc-51760db10d9b"
@@ -2252,7 +2432,10 @@
             "height": 631,
             "id": "ChatOpenAI-E1XSb",
             "type": "genericNode",
-            "position": { "x": 543.1816229116944, "y": 942.891611351432 },
+            "position": {
+              "x": 543.1816229116944,
+              "y": 942.891611351432
+            },
             "data": {
               "type": "ChatOpenAI",
               "node": {
@@ -2480,7 +2663,10 @@
             "height": 387,
             "id": "AgentInitializer-goPm2",
             "type": "genericNode",
-            "position": { "x": 1036.6064439140812, "y": 645.1919693466587 },
+            "position": {
+              "x": 1036.6064439140812,
+              "y": 645.1919693466587
+            },
             "data": {
               "type": "AgentInitializer",
               "node": {
@@ -2541,7 +2727,10 @@
                   "_type": "initialize_agent"
                 },
                 "description": "Construct a zero shot agent from an LLM and tools.",
-                "base_classes": ["AgentExecutor", "function"],
+                "base_classes": [
+                  "AgentExecutor",
+                  "function"
+                ],
                 "display_name": "AgentInitializer"
               },
               "id": "AgentInitializer-goPm2",
@@ -2558,7 +2747,10 @@
             "height": 437,
             "id": "PythonFunctionTool-SQikY",
             "type": "genericNode",
-            "position": { "x": 553.050119331742, "y": 412.9533535948685 },
+            "position": {
+              "x": 553.050119331742,
+              "y": 412.9533535948685
+            },
             "data": {
               "type": "PythonFunctionTool",
               "node": {
@@ -2602,7 +2794,9 @@
                   "_type": "PythonFunctionTool"
                 },
                 "description": "Python function to be executed.",
-                "base_classes": ["Tool"],
+                "base_classes": [
+                  "Tool"
+                ],
                 "display_name": "PythonFunctionTool"
               },
               "id": "PythonFunctionTool-SQikY",
@@ -2622,7 +2816,9 @@
             "sourceHandle": "{œbaseClassesœ:[œSerializableœ,œBaseChatModelœ,œChatOpenAIœ,œBaseLanguageModelœ],œdataTypeœ:œChatOpenAIœ,œidœ:œChatOpenAI-E1XSbœ}",
             "target": "AgentInitializer-goPm2",
             "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œAgentInitializer-goPm2œ,œinputTypesœ:null,œtypeœ:œBaseLanguageModelœ}",
-            "style": { "stroke": "#555" },
+            "style": {
+              "stroke": "#555"
+            },
             "className": "stroke-gray-900  stroke-connection",
             "animated": false,
             "id": "reactflow__edge-ChatOpenAI-E1XSb{œbaseClassesœ:[œSerializableœ,œBaseChatModelœ,œChatOpenAIœ,œBaseLanguageModelœ],œdataTypeœ:œChatOpenAIœ,œidœ:œChatOpenAI-E1XSbœ}-AgentInitializer-goPm2{œfieldNameœ:œllmœ,œidœ:œAgentInitializer-goPm2œ,œinputTypesœ:null,œtypeœ:œBaseLanguageModelœ}",
@@ -2651,14 +2847,18 @@
             "sourceHandle": "{œbaseClassesœ:[œToolœ],œdataTypeœ:œPythonFunctionToolœ,œidœ:œPythonFunctionTool-SQikYœ}",
             "target": "AgentInitializer-goPm2",
             "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgentInitializer-goPm2œ,œinputTypesœ:null,œtypeœ:œToolœ}",
-            "style": { "stroke": "#555" },
+            "style": {
+              "stroke": "#555"
+            },
             "className": "stroke-gray-900  stroke-connection",
             "animated": false,
             "id": "reactflow__edge-PythonFunctionTool-SQikY{œbaseClassesœ:[œToolœ],œdataTypeœ:œPythonFunctionToolœ,œidœ:œPythonFunctionTool-SQikYœ}-AgentInitializer-goPm2{œfieldNameœ:œtoolsœ,œidœ:œAgentInitializer-goPm2œ,œinputTypesœ:null,œtypeœ:œToolœ}",
             "selected": false,
             "data": {
               "sourceHandle": {
-                "baseClasses": ["Tool"],
+                "baseClasses": [
+                  "Tool"
+                ],
                 "dataType": "PythonFunctionTool",
                 "id": "PythonFunctionTool-SQikY"
               },

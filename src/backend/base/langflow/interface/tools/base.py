@@ -1,11 +1,12 @@
 from typing import Dict, List, Optional
 
 from langchain.agents.load_tools import _EXTRA_LLM_TOOLS, _EXTRA_OPTIONAL_TOOLS, _LLM_TOOLS
-
-from langflow.custom import customs
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.tools.constants import ALL_TOOLS_NAMES, CUSTOM_TOOLS, FILE_TOOLS, OTHER_TOOLS
 from langflow.interface.tools.util import get_tool_params
+from langflow.legacy_custom import customs
+from langflow.interface.tools.util import get_tool_params
+from langflow.legacy_custom import customs
 from langflow.services.deps import get_settings_service
 from langflow.template.field.base import TemplateField
 from langflow.template.template.base import Template

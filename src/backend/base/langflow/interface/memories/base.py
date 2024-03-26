@@ -2,9 +2,9 @@ from typing import ClassVar, Dict, List, Optional, Type
 
 from loguru import logger
 
-from langflow.custom.customs import get_custom_nodes
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import memory_type_to_cls_dict
+from langflow.legacy_custom.customs import get_custom_nodes
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.frontend_node.memories import MemoryFrontendNode

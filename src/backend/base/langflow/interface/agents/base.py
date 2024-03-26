@@ -3,9 +3,9 @@ from typing import ClassVar, Dict, List, Optional
 from langchain.agents import types
 from loguru import logger
 
-from langflow.custom.customs import get_custom_nodes
 from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.base import LangChainTypeCreator
+from langflow.legacy_custom.customs import get_custom_nodes
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.agents import AgentFrontendNode
 from langflow.utils.util import build_template_from_class, build_template_from_method

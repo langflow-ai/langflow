@@ -6,9 +6,7 @@ from langflow.interface.base import LangChainTypeCreator
 
 # from langflow.interface.custom.custom import CustomComponent
 from langflow.interface.custom.custom_component import CustomComponent
-from langflow.template.frontend_node.custom_components import (
-    CustomComponentFrontendNode,
-)
+from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 
 
 class CustomComponentCreator(LangChainTypeCreator):
@@ -27,7 +25,7 @@ class CustomComponentCreator(LangChainTypeCreator):
         return self.type_dict
 
     def get_signature(self, name: str) -> Optional[Dict]:
-        from langflow.custom.customs import get_custom_nodes
+        from langflow.legacy_custom.customs import get_custom_nodes
 
         try:
             if name in get_custom_nodes(self.type_name).keys():

@@ -429,7 +429,7 @@ export function getPythonCode(
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
   const inputs = buildInputs();
-  return `from langflow import load_flow_from_json
+  return `from langflow.load import load_flow_from_json
 TWEAKS = ${
     tweak && tweak.length > 0
       ? buildTweakObject(tweak)

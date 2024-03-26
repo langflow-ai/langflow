@@ -2,7 +2,7 @@ from typing import Any, List, Optional, Text, Tuple
 
 from loguru import logger
 
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import ResultData, RunOutputs
 from langflow.schema import Record

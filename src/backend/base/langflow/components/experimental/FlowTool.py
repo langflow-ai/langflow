@@ -3,7 +3,7 @@ from typing import Any, List, Optional, Text
 from langchain_core.tools import StructuredTool
 from loguru import logger
 
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.helpers.flow import build_function_and_schema

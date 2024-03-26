@@ -239,7 +239,7 @@ async def create_upload_file(
 # get endpoint to return version of langflow
 @router.get("/version")
 def get_version():
-    from langflow import __version__
+    from langflow.version import __version__
 
     return {"version": __version__}
 

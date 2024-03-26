@@ -38,7 +38,7 @@ async def instantiate_class(
     user_id=None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
-    from langflow.custom.customs import CUSTOM_NODES
+    from langflow.legacy_custom.customs import CUSTOM_NODES
 
     vertex_type = vertex.vertex_type
     base_type = vertex.base_type
