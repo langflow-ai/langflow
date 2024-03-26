@@ -616,9 +616,7 @@ export default function ParameterComponent({
                   disabled={disabled}
                   name={name}
                   data={data}
-                  button_text={
-                    data.node?.template[name].refresh_button_text ?? "Refresh"
-                  }
+                  button_text={data.node?.template[name].refresh_button_text}
                   className="extra-side-bar-buttons ml-2 mt-1"
                   handleUpdateValues={handleRefreshButtonPress}
                   id={"refresh-button-" + name}

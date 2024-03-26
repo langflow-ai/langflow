@@ -1,0 +1,32 @@
+# Inputs and Outputs
+
+TL;DR: Inputs and Outputs are a category of components that are used to define where data comes in and out of your flow. They also
+dynamically change the Interaction Panel and can be renamed to make it easier to build and maintain your flows.
+
+## Introduction
+
+Langflow 1.0 introduces new categories of components called Inputs and Outputs. They are used to make it easier to understand and interact with your flows.
+
+Let's take a look at the what they are and how they work.
+
+## Inputs
+
+Some Input components output Text, others Record, and others both (you pick). They can be used to input data into any field that accepts Text or Record data.
+
+{/* Show pictures of Chat Input into Prompt and Chat Input into File Path in a file loader component */}
+
+As with all components, they can be renamed to help you identify them more easily in the Interaction Panel and while using the API.
+
+{/* Show picture of renaming a Chat Input component and the Interaction Panel */}
+
+The difference between Chat Input and other Input components is the format of the output, the number of configurable fields, and the way they are displayed in the Interaction Panel.
+
+Chat Input components can output Text or Record. When you want to pass the sender name, or sender to the next component, you can use the Record output, and when you want to pass the message only you can use the Text output. This is useful when saving the message to a database or a memory system like Zep.
+
+You can find out more about it and the other Inputs [here](../components/inputs).
+
+## Outputs
+
+Some Output components output Text, others Record, and others both (you pick), just like the Inputs. They can be used to output data from any field that outputs Text or Record data.
+
+{/* Show pictures of Prompt into Chat Output and File Path in a file loader component into Chat Output */}

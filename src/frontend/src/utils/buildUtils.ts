@@ -53,6 +53,7 @@ export async function updateVerticesOrder(
   verticesLayers: VertexLayerElementType[][];
   verticesIds: string[];
   runId: string;
+  verticesToRun: string[];
 }> {
   return new Promise(async (resolve, reject) => {
     const setErrorData = useAlertStore.getState().setErrorData;
@@ -60,7 +61,6 @@ export async function updateVerticesOrder(
     try {
       orderResponse = await getVerticesOrder(flowId, startNodeId, stopNodeId);
     } catch (error: any) {
-      console.log(error);
       setErrorData({
         title: "Oops! Looks like you missed something",
         list: [error.response?.data?.detail ?? "Unknown Error"],
@@ -77,30 +77,16 @@ export async function updateVerticesOrder(
       });
 
     const runId = orderResponse.data.run_id;
-    // if (nodeId) {
-    //   for (let i = 0; i < verticesOrder.length; i += 1) {
-    //     const innerArray = verticesOrder[i];
-    //     const idIndex = innerArray.indexOf(nodeId);
-    //     if (idIndex !== -1) {
-    //       // If there's a nodeId, we want to run just that component and not the entire layer
-    //       // because a layer contains dependencies for the next layer
-    //       // and we are stopping at the layer that contains the nodeId
-    //       verticesLayers.push([innerArray[idIndex]]);
-    //       break; // Stop searching after finding the first occurrence
-    //     }
-    //     // If the targetId is not found, include the entire inner array
-    //     verticesLayers.push(innerArray);
-    //   }
-    // } else {
-    //   verticesLayers = verticesOrder;
-    // }
+    const verticesToRun = orderResponse.data.vertices_to_run;
+
     const verticesIds = orderResponse.data.ids;
     useFlowStore.getState().updateVerticesBuild({
       verticesLayers,
       verticesIds,
       runId,
+      verticesToRun,
     });
-    resolve({ verticesLayers, verticesIds, runId });
+    resolve({ verticesLayers, verticesIds, runId, verticesToRun });
   });
 }
 
@@ -122,25 +108,28 @@ export async function buildVertices({
   if (startNodeId && stopNodeId) {
     return;
   }
+
   if (!verticesBuild || startNodeId || stopNodeId) {
-    verticesBuild = await updateVerticesOrder(flowId, startNodeId, stopNodeId);
+    let verticesOrderResponse = await updateVerticesOrder(
+      flowId,
+      startNodeId,
+      stopNodeId
+    );
+    if (onValidateNodes) {
+      try {
+        onValidateNodes(verticesOrderResponse.verticesToRun);
+      } catch (e) {
+        return;
+      }
+    }
+    if (onGetOrderSuccess) onGetOrderSuccess();
+    verticesBuild = useFlowStore.getState().verticesBuild;
   }
 
   const verticesIds = verticesBuild?.verticesIds!;
   const verticesLayers = verticesBuild?.verticesLayers!;
   const runId = verticesBuild?.runId!;
   let stop = false;
-
-  if (onGetOrderSuccess) onGetOrderSuccess();
-
-  if (onValidateNodes) {
-    try {
-      const nodes = useFlowStore.getState().nodes;
-      onValidateNodes(nodes.map((node) => node.id));
-    } catch (e) {
-      return;
-    }
-  }
 
   useFlowStore.getState().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
   useFlowStore.getState().setIsBuilding(true);
