@@ -10053,4 +10053,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "88956526bbd7f6c1f01294859ca83944964ed35a74e51f8c35f3be95aa7ef801"
+content-hash = "5c98ec89f0dbbf60bc4bbcb3d9ea4b84176b8af34b54dd3c77c817ba132b49a1"
