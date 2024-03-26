@@ -72,8 +72,9 @@ frontendc:
 	make run_frontend
 
 install_backend:
-	poetry install --extras deploy
-	poetry run pip install -e src/backend/base/.
+	@echo 'Installing backend dependencies'
+	@sh ./scripts/setup/update_poetry.sh 1.8.2
+	@poetry install --extras deploy
 
 backend:
 	make install_backend
