@@ -70,7 +70,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             }}
             placeholder="Insert a name for the variable..."
           ></Input>
-          <Label>Type</Label>
+          <Label>Type (optional)</Label>
           <InputComponent
             setSelectedOption={(e) => {
               setType(e);
