@@ -29,7 +29,6 @@ The `Chroma` is a component designed for implementing a Vector Store using Chrom
 
 - **Server SSL Enabled (Optional):** Whether to enable SSL for the Chroma server.
 
-- **Code (Advanced):** Additional code for the component.
 
 - **Input:** Input data for creating the Vector Store.
 
@@ -47,7 +46,7 @@ The `ChromaSearch` is a component designed for searching a Chroma collection for
 **Params**
 
 - **Input:** The input text to search for similar documents.
-  
+
 - **Search Type:** The type of search to perform ("Similarity" or "MMR").
 
 - **Collection Name:** The name of the Chroma collection.
@@ -66,11 +65,10 @@ The `ChromaSearch` is a component designed for searching a Chroma collection for
 
 - **Server SSL Enabled (Optional):** Whether SSL is enabled for the Chroma server.
 
-- **Code:** Additional code for the component.
 
 ---
 
-### FAISS 
+### FAISS
 
 The `FAISS` is a component designed for ingesting documents into a FAISS Vector Store. It facilitates efficient document indexing and retrieval using the FAISS library.
 
@@ -84,7 +82,6 @@ The `FAISS` is a component designed for ingesting documents into a FAISS Vector 
 
 - **Index Name:** The name of the FAISS index.
 
-- **Code:** Additional code for the component.
 
 For detailed documentation and integration guides, please refer to the [FAISS Component Documentation](https://faiss.ai/index.html).
 
@@ -104,7 +101,6 @@ The `FAISSSearch` is a component for searching a FAISS Vector Store for similar 
 
 - **Index Name:** The name of the FAISS index.
 
-- **Code:** Additional code for the component.
 
 ---
 
@@ -129,7 +125,6 @@ The `MongoDBAtlas` is a component used to construct a MongoDB Atlas Vector Searc
 
 - **Search Kwargs:** Additional search arguments for MongoDB Atlas.
 
-- **Code:** Additional code for the component.
 
 <Admonition type="note" title="Note">
     <p>
@@ -161,11 +156,10 @@ The `MongoDBAtlasSearch` is a component for searching a MongoDB Atlas Vector Sto
 
 - **Search Kwargs:** Additional search arguments for MongoDB Atlas.
 
-- **Code:** Additional code for the component.
 
 ---
 
-### PGVector 
+### PGVector
 
 The `PGVector` is a component for implementing a Vector Store using PostgreSQL. It allows users to store and retrieve vectors efficiently within a PostgreSQL database.
 
@@ -179,7 +173,6 @@ The `PGVector` is a component for implementing a Vector Store using PostgreSQL. 
 
 - **Table:** The name of the table in the PostgreSQL database.
 
-- **Code:** Additional code for the component.
 
 For detailed documentation and integration guides, please refer to the [PGVector Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/pgvector).
 
@@ -208,7 +201,6 @@ The `PGVectorSearch` is a component for searching a PGVector Store for similar d
 
 - **Search Type:** The type of search to perform (e.g., "Similarity", "MMR").
 
-- **Code:** Additional code for the component.
 
 ---
 
@@ -234,7 +226,6 @@ The `Pinecone` is a component used to construct a Pinecone wrapper from raw docu
 
 - **Pool Threads:** The number of threads to use for Pinecone.
 
-- **Code:** Additional code for the component.
 
 <Admonition type="note" title="Note">
     <p>
@@ -268,50 +259,49 @@ The `PineconeSearch` is a component used to search a Pinecone Vector Store for s
 
 - **Pool Threads:** The number of threads to use for Pinecone.
 
-- **Code:** Additional code for the component.
 
 ---
 
-### Qdrant 
+### Qdrant
 
 The `Qdrant` is a component used to construct a Qdrant wrapper from a list of texts. It allows for efficient similarity search and retrieval operations based on the provided embeddings.
 
 **Params**
 
 - **Input:** The input documents or records.
-  
+
 - **Embedding:** The embedding model used by Qdrant.
-  
+
 - **API Key:** The API key for Qdrant (password field).
-  
+
 - **Collection Name:** The name of the collection in Qdrant.
-  
+
 - **Content Payload Key:** The key for the content payload in the documents (advanced).
-  
+
 - **Distance Function:** The distance function to use in Qdrant (advanced).
-  
+
 - **gRPC Port:** The gRPC port for Qdrant (advanced).
-  
+
 - **Host:** The host for Qdrant (advanced).
-  
+
 - **HTTPS:** Enable HTTPS for Qdrant (advanced).
-  
+
 - **Location:** The location for Qdrant (advanced).
-  
+
 - **Metadata Payload Key:** The key for the metadata payload in the documents (advanced).
-  
+
 - **Path:** The path for Qdrant (advanced).
-  
+
 - **Port:** The port for Qdrant (advanced).
-  
+
 - **Prefer gRPC:** Prefer gRPC for Qdrant (advanced).
-  
+
 - **Prefix:** The prefix for Qdrant (advanced).
-  
+
 - **Search Kwargs:** Additional search keyword arguments for Qdrant (advanced).
-  
+
 - **Timeout:** The timeout for Qdrant (advanced).
-  
+
 - **URL:** The URL for Qdrant (advanced).
 
 ---
@@ -419,17 +409,17 @@ The `Supabase` is a component for initializing a Supabase Vector Store from text
 **Params**
 
 - **Input:** The input documents or records.
-  
+
 - **Embedding:** The embedding model used by Supabase.
-  
+
 - **Query Name:** The name of the query (optional).
-  
+
 - **Search Kwargs:** Additional search keyword arguments for Supabase (advanced).
-  
+
 - **Supabase Service Key:** The service key for Supabase.
-  
+
 - **Supabase URL:** The URL for the Supabase instance.
-  
+
 - **Table Name:** The name of the table in Supabase (advanced).
 
 <Admonition type="note" title="Note">
@@ -447,19 +437,19 @@ The `SupabaseSearch` is a component for searching a Supabase Vector Store for si
 **Params**
 
 - **Search Type:** The type of search to perform (e.g., Similarity, MMR).
-  
+
 - **Input Value:** The input value to search for.
-  
+
 - **Embedding:** The embedding model used by Supabase.
-  
+
 - **Query Name:** The name of the query (optional).
-  
+
 - **Search Kwargs:** Additional search keyword arguments for Supabase (advanced).
-  
+
 - **Supabase Service Key:** The service key for Supabase.
-  
+
 - **Supabase URL:** The URL for the Supabase instance.
-  
+
 - **Table Name:** The name of the table in Supabase (advanced).
 
 ---
@@ -516,7 +506,7 @@ The `Weaviate` is a component for implementing a Vector Store using Weaviate.
 **Params**
 
 - **Weaviate URL:** The URL of the Weaviate instance (default: http://localhost:8080).
-  
+
 - **Search By Text:** Boolean indicating whether to search by text (default: False).
 
 - **API Key:** The API key for authentication (optional).
@@ -552,7 +542,7 @@ The `WeaviateSearch` component facilitates searching a Weaviate Vector Store for
 - **Input Value:** The input value to search for.
 
 - **Weaviate URL:** The URL of the Weaviate instance (default: http://localhost:8080).
-  
+
 - **Search By Text:** Boolean indicating whether to search by text (default: False).
 
 - **API Key:** The API key for authentication (optional).
