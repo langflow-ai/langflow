@@ -261,6 +261,7 @@ const EditNodeModal = forwardRef(
                                     ) : (
                                       <InputGlobalComponent
                                         disabled={disabled}
+                                        editNode={true}
                                         onChange={(value) =>
                                           handleOnNewValue(value, templateParam)
                                         }
