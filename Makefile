@@ -57,6 +57,8 @@ run_cli:
 	@make install_frontend > /dev/null
 	@echo 'Building the frontend'
 	@make build_frontend > /dev/null
+	@echo 'Install backend dependencies'
+	@make install_backend > /dev/null
 ifdef env
 	poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file $(env)
 else
@@ -68,6 +70,8 @@ run_cli_debug:
 	@make install_frontend > /dev/null
 	@echo 'Building the frontend'
 	@make build_frontend > /dev/null
+	@echo 'Install backend dependencies'
+	@make install_backend > /dev/null
 ifdef env
     poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file $(env)
 else
