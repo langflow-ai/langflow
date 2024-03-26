@@ -40,4 +40,6 @@ class LCVectorStoreComponent(CustomComponent):
             docs = vector_store.search(query=input_value, search_type=search_type.lower())
         else:
             raise ValueError("Invalid inputs provided.")
-        return docs_to_records(docs)
+        records = docs_to_records(docs)
+        self.status = records
+        return records
