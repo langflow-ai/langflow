@@ -64,7 +64,9 @@ celery = { extras = ["redis"], version = "^5.3.6", optional = true }
 redis = { version = "^5.0.1", optional = true }
 flower = { version = "^2.0.0", optional = true }
 metaphor-python = "^0.1.11"
-zep-python = "1.5.0"
+pydantic = "^2.5.0"
+pydantic-settings = "^2.1.0"
+zep-python = "*"
 pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
 langfuse = "^2.9.0"
 metal-sdk = "^2.5.0"
@@ -94,6 +96,7 @@ dspy-ai = "^2.4.0"
 crewai = "^0.22.5"
 langchain-anthropic = "^0.1.4"
 python-docx = "^1.1.0"
+langchain-astradb = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
