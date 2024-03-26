@@ -53,15 +53,23 @@ else
 endif
 
 run_cli:
+	make install_frontend
+	make build_frontend
 	poetry run langflow run --path src/frontend/build
 
 run_cli_debug:
+	make install_frontend
+	make build_frontend
 	poetry run langflow run --path src/frontend/build --log-level debug
 
 setup_devcontainer:
 	make init
 	make build_frontend
 	poetry run langflow --path src/frontend/build
+
+setup_env:
+	@sh ./scripts/setup/update_poetry.sh 1.8.2
+	@sh ./scripts/setup/setup_env.sh
 
 frontend:
 	make install_frontend
@@ -73,8 +81,7 @@ frontendc:
 
 install_backend:
 	@echo 'Installing backend dependencies'
-	@sh ./scripts/setup/update_poetry.sh 1.8.2
-	@sh ./scripts/setup/setup_env.sh
+	@make setup_env
 	@poetry install --extras deploy
 
 backend:
@@ -100,13 +107,15 @@ build_and_install:
 	@echo 'Removing dist folder'
 	rm -rf dist
 	rm -rf src/backend/base/dist
-	make build && poetry run pip install dist/*.tar.gz && pip install src/backend/base/dist/*.tar.gz
+	make build && poetry run pip install dist/*.whl && pip install src/backend/base/dist/*.whl --force-reinstall
 
 build_frontend:
 	cd src/frontend && CI='' npm run build
 	cp -r src/frontend/build src/backend/base/langflow/frontend
 
 build:
+	@echo 'Building the project'
+	@make setup_env
 	make build_langflow_base
 	make build_langflow
 
