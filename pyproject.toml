@@ -24,9 +24,12 @@ documentation = "https://docs.langflow.org"
 [tool.poetry.scripts]
 langflow = "langflow.__main__:main"
 
+[tool.poetry-monorepo-dependency-plugin]
+enable = true
+
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-langflow-base = "0.0.10"
+langflow-base = { path = "./src/backend/base", develop = true }
 duckdb = "^0.9.2"
 beautifulsoup4 = "^4.12.2"
 google-search-results = "^2.4.1"
@@ -93,7 +96,6 @@ langchain-anthropic = "^0.1.4"
 python-docx = "^1.1.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest-asyncio = "^0.23.1"
 types-redis = "^4.6.0.5"
 ipykernel = "^6.29.0"
 mypy = "^1.8.0"
