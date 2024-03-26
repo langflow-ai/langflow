@@ -222,7 +222,7 @@ export default function CodeTabsComponent({
                           <div className="api-modal-table-arrangement">
                             <Table className="table-fixed bg-muted outline-1">
                               <TableHeader className="h-10 border-input text-xs font-medium text-ring">
-                                <TableRow className="dark:border-b-muted">
+                                <TableRow className="">
                                   <TableHead className="h-7 text-center">
                                     PARAM
                                   </TableHead>
@@ -247,7 +247,7 @@ export default function CodeTabsComponent({
                                     return (
                                       <TableRow
                                         key={indx}
-                                        className="h-10 dark:border-b-muted"
+                                        className="h-10"
                                       >
                                         <TableCell className="p-0 text-center text-sm text-foreground">
                                           {templateField}
