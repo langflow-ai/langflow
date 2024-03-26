@@ -79,7 +79,12 @@ class VertexBuildModel(BaseModel):
     @field_serializer("data", "artifacts")
     def serialize_dict(v):
         if isinstance(v, dict):
-            # map_dict = to_map(v)
+            # check if the value of each key is a BaseModel or a list of BaseModels
+            for key, value in v.items():
+                if isinstance(value, BaseModel):
+                    v[key] = value.model_dump()
+                elif isinstance(value, list) and all(isinstance(i, BaseModel) for i in value):
+                    v[key] = [i.model_dump() for i in value]
             return json.dumps(v)
         return v
 
@@ -90,6 +95,12 @@ class VertexBuildModel(BaseModel):
                 return json.loads(v)
             except json.JSONDecodeError:
                 return v
+        return v
+
+    @field_serializer("params")
+    def serialize_params(v):
+        if isinstance(v, list) and all(isinstance(i, BaseModel) for i in v):
+            return json.dumps([i.model_dump() for i in v])
         return v
 
     @validator("data", pre=True)
