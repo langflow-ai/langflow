@@ -16,25 +16,25 @@ import { Textarea } from "../ui/textarea";
 export default function AddNewVariableButton({ children }): JSX.Element {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
-  const [provider, setProvider] = useState("");
+  const [type, setType] = useState("");
   const [open, setOpen] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const addGlobalVariable = useGlobalVariablesStore(
     (state) => state.addGlobalVariable
   );
   function handleSaveVariable() {
-    let data: { name: string; value: string; provider?: string } = {
+    let data: { name: string; value: string; type?: string } = {
       name: key,
       value,
     };
-    if (provider) data = { ...data, provider };
+    if (type) data = { ...data, type };
     registerGlobalVariable(data)
       .then((res) => {
-        const { name, id, provider } = res.data;
-        addGlobalVariable(name, id, provider);
+        const { name, id, type } = res.data;
+        addGlobalVariable(name, id, type);
         setKey("");
         setValue("");
-        setProvider("");
+        setType("");
         setOpen(false);
       })
       .catch((error) => {
@@ -62,7 +62,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content>
         <div className="flex h-full w-full flex-col gap-4 align-middle">
-          <Label>Variable name </Label>
+          <Label>Variable Name</Label>
           <Input
             value={key}
             onChange={(e) => {
@@ -70,17 +70,17 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             }}
             placeholder="Insert a name for the variable..."
           ></Input>
-          <Label>Provider (optional) </Label>
+          {/* <Label>Type (optional) </Label>
           <InputComponent
             setSelectedOption={(e) => {
-              setProvider(e);
+              setType(e);
             }}
-            selectedOption={provider}
+            selectedOption={type}
             password={false}
             options={["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]}
-            placeholder="Choose a provider between the environment variables..."
-          ></InputComponent>
-          <Label>Variable Value </Label>
+            placeholder="Choose a type between the environment variables..."
+          ></InputComponent> */}
+          <Label>Value</Label>
           <Textarea
             value={value}
             onChange={(e) => {
