@@ -78,6 +78,7 @@ export type InputGlobalComponentType =
     setDb: (value: boolean) => void,
     name: string,
     data: NodeDataType,
+    editNode?: boolean,
   };
 
 export type KeyPairListComponentType = {

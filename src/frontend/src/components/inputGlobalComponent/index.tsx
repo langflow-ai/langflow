@@ -17,6 +17,7 @@ export default function InputGlobalComponent({
   setDb,
   name,
   data,
+  editNode = false,
 }: InputGlobalComponentType): JSX.Element {
   const globalVariablesEntries = useGlobalVariablesStore(
     (state) => state.globalVariablesEntries
@@ -70,6 +71,7 @@ export default function InputGlobalComponent({
   return (
     <InputComponent
       id={"input-" + name}
+      editNode={editNode}
       disabled={disabled}
       password={data.node?.template[name].password ?? false}
       value={data.node?.template[name].value ?? ""}

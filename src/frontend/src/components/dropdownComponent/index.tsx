@@ -37,7 +37,7 @@ export default function Dropdown({
           >
             {({ open }) => (
               <>
-                <div className={"relative mt-1"}>
+                <div className={"relative"}>
                   <Listbox.Button
                     data-test={`${id ?? ""}`}
                     className={
