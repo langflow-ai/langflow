@@ -125,6 +125,9 @@ def update_template_field(frontend_template, key, value_dict):
             template_field["value"] = ""
         template_field["file_path"] = file_path_value
 
+    if "load_from_db" in value_dict and value_dict["load_from_db"]:
+        template_field["load_from_db"] = value_dict["load_from_db"]
+
 
 def get_file_path_value(file_path):
     """Get the file path value if the file exists, else return empty string."""
