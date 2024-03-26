@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 env:
-  POETRY_VERSION: "1.5.1"
+  POETRY_VERSION: "1.8.2"
 
 jobs:
   if_release:
@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install poetry
-        run: pipx install poetry==$POETRY_VERSION
+        run: pipx install poetry==$POETRY_VERSION && poetry self add poetry-monorepo-dependency-plugin
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:

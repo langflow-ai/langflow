@@ -1,0 +1,1087 @@
+{
+    "name": "Data Ingestion",
+    "icon": ":inbox_tray:",
+    "icon_bg_color": "#FFD700",
+    "description": "This project is the starting point to insert data into a Vector Store. \n\nWe use the Vector Store Chroma but you can replace it with any other Vector Store. \n\nYou start by deciding what type of data you want to load, then you pick a place where you want to store the vectors and run it.\n\nThis will create a vector store in your local environment which you can query using the Chroma Search component.",
+    "data": {
+        "nodes": [
+            {
+                "id": "RecursiveCharacterTextSplitter-jwfyG",
+                "type": "genericNode",
+                "position": {
+                    "x": 1042.4388767006992,
+                    "y": 633.2204634490822
+                },
+                "data": {
+                    "type": "RecursiveCharacterTextSplitter",
+                    "node": {
+                        "template": {
+                            "inputs": {
+                                "type": "Document",
+                                "required": true,
+                                "placeholder": "",
+                                "list": true,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "inputs",
+                                "display_name": "Input",
+                                "advanced": false,
+                                "input_types": [
+                                    "Document",
+                                    "Record"
+                                ],
+                                "dynamic": false,
+                                "info": "The texts to split.",
+                                "title_case": false
+                            },
+                            "chunk_overlap": {
+                                "type": "int",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": 200,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "chunk_overlap",
+                                "display_name": "Chunk Overlap",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "The amount of overlap between chunks.",
+                                "title_case": false
+                            },
+                            "chunk_size": {
+                                "type": "int",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": 1000,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "chunk_size",
+                                "display_name": "Chunk Size",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "The maximum length of each chunk.",
+                                "title_case": false
+                            },
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "from typing import Optional\n\nfrom langchain.text_splitter import RecursiveCharacterTextSplitter\nfrom langchain_core.documents import Document\n\nfrom langflow.custom import CustomComponent\nfrom langflow.schema import Record\nfrom langflow.utils.util import build_loader_repr_from_documents\n\n\nclass RecursiveCharacterTextSplitterComponent(CustomComponent):\n    display_name: str = \"Recursive Character Text Splitter\"\n    description: str = \"Split text into chunks of a specified length.\"\n    documentation: str = (\n        \"https://docs.langflow.org/components/text-splitters#recursivecharactertextsplitter\"\n    )\n\n    def build_config(self):\n        return {\n            \"inputs\": {\n                \"display_name\": \"Input\",\n                \"info\": \"The texts to split.\",\n                \"input_types\": [\"Document\", \"Record\"],\n            },\n            \"separators\": {\n                \"display_name\": \"Separators\",\n                \"info\": 'The characters to split on.\\nIf left empty defaults to [\"\\\\n\\\\n\", \"\\\\n\", \" \", \"\"].',\n                \"is_list\": True,\n            },\n            \"chunk_size\": {\n                \"display_name\": \"Chunk Size\",\n                \"info\": \"The maximum length of each chunk.\",\n                \"field_type\": \"int\",\n                \"value\": 1000,\n            },\n            \"chunk_overlap\": {\n                \"display_name\": \"Chunk Overlap\",\n                \"info\": \"The amount of overlap between chunks.\",\n                \"field_type\": \"int\",\n                \"value\": 200,\n            },\n            \"code\": {\"show\": False},\n        }\n\n    def build(\n        self,\n        inputs: list[Document],\n        separators: Optional[list[str]] = None,\n        chunk_size: Optional[int] = 1000,\n        chunk_overlap: Optional[int] = 200,\n    ) -> list[Record]:\n        \"\"\"\n        Split text into chunks of a specified length.\n\n        Args:\n            separators (list[str]): The characters to split on.\n            chunk_size (int): The maximum length of each chunk.\n            chunk_overlap (int): The amount of overlap between chunks.\n            length_function (function): The function to use to calculate the length of the text.\n\n        Returns:\n            list[str]: The chunks of text.\n        \"\"\"\n\n        if separators == \"\":\n            separators = None\n        elif separators:\n            # check if the separators list has escaped characters\n            # if there are escaped characters, unescape them\n            separators = [x.encode().decode(\"unicode-escape\") for x in separators]\n\n        # Make sure chunk_size and chunk_overlap are ints\n        if isinstance(chunk_size, str):\n            chunk_size = int(chunk_size)\n        if isinstance(chunk_overlap, str):\n            chunk_overlap = int(chunk_overlap)\n        splitter = RecursiveCharacterTextSplitter(\n            separators=separators,\n            chunk_size=chunk_size,\n            chunk_overlap=chunk_overlap,\n        )\n        documents = []\n        for _input in inputs:\n            if isinstance(_input, Record):\n                documents.append(_input.to_lc_document())\n            else:\n                documents.append(_input)\n        docs = splitter.split_documents(documents)\n        self.repr_value = build_loader_repr_from_documents(docs)\n        return self.to_records(docs)\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": false,
+                                "dynamic": true,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "separators": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": true,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "separators",
+                                "display_name": "Separators",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "The characters to split on.\nIf left empty defaults to [\"\\n\\n\", \"\\n\", \" \", \"\"].",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ],
+                                "value": [
+                                    "\\n"
+                                ]
+                            },
+                            "_type": "CustomComponent"
+                        },
+                        "description": "Split text into chunks of a specified length.",
+                        "base_classes": [
+                            "Record"
+                        ],
+                        "display_name": "Recursive Character Text Splitter",
+                        "documentation": "https://docs.langflow.org/components/text-splitters#recursivecharactertextsplitter",
+                        "custom_fields": {
+                            "inputs": null,
+                            "separators": null,
+                            "chunk_size": null,
+                            "chunk_overlap": null
+                        },
+                        "output_types": [
+                            "Record"
+                        ],
+                        "field_formatters": {},
+                        "frozen": false,
+                        "beta": true
+                    },
+                    "id": "RecursiveCharacterTextSplitter-jwfyG"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 509,
+                "positionAbsolute": {
+                    "x": 1042.4388767006992,
+                    "y": 633.2204634490822
+                },
+                "dragging": false
+            },
+            {
+                "id": "Chroma-aFGHF",
+                "type": "genericNode",
+                "position": {
+                    "x": 1641.280676720732,
+                    "y": 356.94961598422196
+                },
+                "data": {
+                    "type": "Chroma",
+                    "node": {
+                        "template": {
+                            "embedding": {
+                                "type": "Embeddings",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "embedding",
+                                "display_name": "Embedding",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "inputs": {
+                                "type": "Record",
+                                "required": false,
+                                "placeholder": "",
+                                "list": true,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "inputs",
+                                "display_name": "Input",
+                                "advanced": false,
+                                "input_types": [
+                                    "Document",
+                                    "Record"
+                                ],
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "chroma_server_cors_allow_origins": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "chroma_server_cors_allow_origins",
+                                "display_name": "Server CORS Allow Origins",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ]
+                            },
+                            "chroma_server_grpc_port": {
+                                "type": "int",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "chroma_server_grpc_port",
+                                "display_name": "Server gRPC Port",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "chroma_server_host": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "chroma_server_host",
+                                "display_name": "Server Host",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ]
+                            },
+                            "chroma_server_port": {
+                                "type": "int",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "chroma_server_port",
+                                "display_name": "Server Port",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "chroma_server_ssl_enabled": {
+                                "type": "bool",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "chroma_server_ssl_enabled",
+                                "display_name": "Server SSL Enabled",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "from typing import List, Optional, Union\n\nimport chromadb  # type: ignore\nfrom langchain.embeddings.base import Embeddings\nfrom langchain.schema import BaseRetriever\nfrom langchain_community.vectorstores import VectorStore\nfrom langchain_community.vectorstores.chroma import Chroma\n\nfrom langflow.custom import CustomComponent\nfrom langflow.schema.schema import Record\n\n\nclass ChromaComponent(CustomComponent):\n    \"\"\"\n    A custom component for implementing a Vector Store using Chroma.\n    \"\"\"\n\n    display_name: str = \"Chroma\"\n    description: str = \"Implementation of Vector Store using Chroma\"\n    documentation = \"https://python.langchain.com/docs/integrations/vectorstores/chroma\"\n    beta: bool = True\n    icon = \"Chroma\"\n\n    def build_config(self):\n        \"\"\"\n        Builds the configuration for the component.\n\n        Returns:\n        - dict: A dictionary containing the configuration options for the component.\n        \"\"\"\n        return {\n            \"collection_name\": {\"display_name\": \"Collection Name\", \"value\": \"langflow\"},\n            \"index_directory\": {\"display_name\": \"Persist Directory\"},\n            \"code\": {\"advanced\": True, \"display_name\": \"Code\"},\n            \"inputs\": {\"display_name\": \"Input\", \"input_types\": [\"Document\", \"Record\"]},\n            \"embedding\": {\"display_name\": \"Embedding\"},\n            \"chroma_server_cors_allow_origins\": {\n                \"display_name\": \"Server CORS Allow Origins\",\n                \"advanced\": True,\n            },\n            \"chroma_server_host\": {\"display_name\": \"Server Host\", \"advanced\": True},\n            \"chroma_server_port\": {\"display_name\": \"Server Port\", \"advanced\": True},\n            \"chroma_server_grpc_port\": {\n                \"display_name\": \"Server gRPC Port\",\n                \"advanced\": True,\n            },\n            \"chroma_server_ssl_enabled\": {\n                \"display_name\": \"Server SSL Enabled\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        collection_name: str,\n        embedding: Embeddings,\n        chroma_server_ssl_enabled: bool,\n        index_directory: Optional[str] = None,\n        inputs: Optional[List[Record]] = None,\n        chroma_server_cors_allow_origins: Optional[str] = None,\n        chroma_server_host: Optional[str] = None,\n        chroma_server_port: Optional[int] = None,\n        chroma_server_grpc_port: Optional[int] = None,\n    ) -> Union[VectorStore, BaseRetriever]:\n        \"\"\"\n        Builds the Vector Store or BaseRetriever object.\n\n        Args:\n        - collection_name (str): The name of the collection.\n        - index_directory (Optional[str]): The directory to persist the Vector Store to.\n        - chroma_server_ssl_enabled (bool): Whether to enable SSL for the Chroma server.\n        - embedding (Optional[Embeddings]): The embeddings to use for the Vector Store.\n        - documents (Optional[Document]): The documents to use for the Vector Store.\n        - chroma_server_cors_allow_origins (Optional[str]): The CORS allow origins for the Chroma server.\n        - chroma_server_host (Optional[str]): The host for the Chroma server.\n        - chroma_server_port (Optional[int]): The port for the Chroma server.\n        - chroma_server_grpc_port (Optional[int]): The gRPC port for the Chroma server.\n\n        Returns:\n        - Union[VectorStore, BaseRetriever]: The Vector Store or BaseRetriever object.\n        \"\"\"\n\n        # Chroma settings\n        chroma_settings = None\n\n        if chroma_server_host is not None:\n            chroma_settings = chromadb.config.Settings(\n                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins\n                or None,\n                chroma_server_host=chroma_server_host,\n                chroma_server_port=chroma_server_port or None,\n                chroma_server_grpc_port=chroma_server_grpc_port or None,\n                chroma_server_ssl_enabled=chroma_server_ssl_enabled,\n            )\n\n        # If documents, then we need to create a Chroma instance using .from_documents\n\n        # Check index_directory and expand it if it is a relative path\n        if index_directory is not None:\n            index_directory = self.resolve_path(index_directory)\n\n        documents = []\n        for _input in inputs:\n            if isinstance(_input, Record):\n                documents.append(_input.to_lc_document())\n            else:\n                documents.append(_input)\n        if documents is not None and embedding is not None:\n            if len(documents) == 0:\n                raise ValueError(\n                    \"If documents are provided, there must be at least one document.\"\n                )\n            chroma = Chroma.from_documents(\n                documents=documents,  # type: ignore\n                persist_directory=index_directory,\n                collection_name=collection_name,\n                embedding=embedding,\n                client_settings=chroma_settings,\n            )\n        else:\n            chroma = Chroma(\n                persist_directory=index_directory,\n                client_settings=chroma_settings,\n                embedding_function=embedding,\n            )\n        return chroma\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "collection_name": {
+                                "type": "str",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": "langflow_contrib",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "collection_name",
+                                "display_name": "Collection Name",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ]
+                            },
+                            "index_directory": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "index_directory",
+                                "display_name": "Persist Directory",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ],
+                                "value": "./chroma_langflow"
+                            },
+                            "_type": "CustomComponent"
+                        },
+                        "description": "Implementation of Vector Store using Chroma",
+                        "icon": "Chroma",
+                        "base_classes": [
+                            "Serializable",
+                            "VectorStore",
+                            "object",
+                            "Runnable",
+                            "BaseRetriever",
+                            "RunnableSerializable",
+                            "Generic"
+                        ],
+                        "display_name": "Chroma",
+                        "documentation": "https://python.langchain.com/docs/integrations/vectorstores/chroma",
+                        "custom_fields": {
+                            "collection_name": null,
+                            "embedding": null,
+                            "chroma_server_ssl_enabled": null,
+                            "index_directory": null,
+                            "inputs": null,
+                            "chroma_server_cors_allow_origins": null,
+                            "chroma_server_host": null,
+                            "chroma_server_port": null,
+                            "chroma_server_grpc_port": null
+                        },
+                        "output_types": [
+                            "VectorStore",
+                            "BaseRetriever"
+                        ],
+                        "field_formatters": {},
+                        "frozen": false,
+                        "beta": true
+                    },
+                    "id": "Chroma-aFGHF"
+                },
+                "selected": true,
+                "width": 384,
+                "height": 495,
+                "positionAbsolute": {
+                    "x": 1641.280676720732,
+                    "y": 356.94961598422196
+                },
+                "dragging": false
+            },
+            {
+                "id": "OpenAIEmbeddings-rbMk3",
+                "type": "genericNode",
+                "position": {
+                    "x": 1053.9472627140208,
+                    "y": -2.5921878249999963
+                },
+                "data": {
+                    "type": "OpenAIEmbeddings",
+                    "node": {
+                        "template": {
+                            "allowed_special": {
+                                "type": "str",
+                                "required": true,
+                                "placeholder": "",
+                                "list": true,
+                                "show": true,
+                                "multiline": false,
+                                "value": [],
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "allowed_special",
+                                "display_name": "Allowed Special",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ]
+                            },
+                            "chunk_size": {
+                                "type": "int",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": 1000,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "chunk_size",
+                                "display_name": "Chunk Size",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "client": {
+                                "type": "Any",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "client",
+                                "display_name": "Client",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "from typing import Any, Callable, Dict, List, Optional, Union\n\nfrom langchain_openai.embeddings.base import OpenAIEmbeddings\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import NestedDict\nfrom pydantic.v1.types import SecretStr\n\n\nclass OpenAIEmbeddingsComponent(CustomComponent):\n    display_name = \"OpenAIEmbeddings\"\n    description = \"OpenAI embedding models\"\n\n    def build_config(self):\n        return {\n            \"allowed_special\": {\n                \"display_name\": \"Allowed Special\",\n                \"advanced\": True,\n                \"field_type\": \"str\",\n                \"is_list\": True,\n            },\n            \"default_headers\": {\n                \"display_name\": \"Default Headers\",\n                \"advanced\": True,\n                \"field_type\": \"dict\",\n            },\n            \"default_query\": {\n                \"display_name\": \"Default Query\",\n                \"advanced\": True,\n                \"field_type\": \"NestedDict\",\n            },\n            \"disallowed_special\": {\n                \"display_name\": \"Disallowed Special\",\n                \"advanced\": True,\n                \"field_type\": \"str\",\n                \"is_list\": True,\n            },\n            \"chunk_size\": {\"display_name\": \"Chunk Size\", \"advanced\": True},\n            \"client\": {\"display_name\": \"Client\", \"advanced\": True},\n            \"deployment\": {\"display_name\": \"Deployment\", \"advanced\": True},\n            \"embedding_ctx_length\": {\n                \"display_name\": \"Embedding Context Length\",\n                \"advanced\": True,\n            },\n            \"max_retries\": {\"display_name\": \"Max Retries\", \"advanced\": True},\n            \"model\": {\n                \"display_name\": \"Model\",\n                \"advanced\": False,\n                \"options\": [\"text-embedding-3-small\", \"text-embedding-3-large\", \"text-embedding-ada-002\"],\n            },\n            \"model_kwargs\": {\"display_name\": \"Model Kwargs\", \"advanced\": True},\n            \"openai_api_base\": {\"display_name\": \"OpenAI API Base\", \"password\": True, \"advanced\": True},\n            \"openai_api_key\": {\"display_name\": \"OpenAI API Key\", \"password\": True},\n            \"openai_api_type\": {\"display_name\": \"OpenAI API Type\", \"advanced\": True, \"password\": True},\n            \"openai_api_version\": {\n                \"display_name\": \"OpenAI API Version\",\n                \"advanced\": True,\n            },\n            \"openai_organization\": {\n                \"display_name\": \"OpenAI Organization\",\n                \"advanced\": True,\n            },\n            \"openai_proxy\": {\"display_name\": \"OpenAI Proxy\", \"advanced\": True},\n            \"request_timeout\": {\"display_name\": \"Request Timeout\", \"advanced\": True},\n            \"show_progress_bar\": {\n                \"display_name\": \"Show Progress Bar\",\n                \"advanced\": True,\n            },\n            \"skip_empty\": {\"display_name\": \"Skip Empty\", \"advanced\": True},\n            \"tiktoken_model_name\": {\"display_name\": \"TikToken Model Name\"},\n            \"tikToken_enable\": {\"display_name\": \"TikToken Enable\", \"advanced\": True},\n        }\n\n    def build(\n        self,\n        default_headers: Optional[Dict[str, str]] = None,\n        default_query: Optional[NestedDict] = {},\n        allowed_special: List[str] = [],\n        disallowed_special: List[str] = [\"all\"],\n        chunk_size: int = 1000,\n        client: Optional[Any] = None,\n        deployment: str = \"text-embedding-3-small\",\n        embedding_ctx_length: int = 8191,\n        max_retries: int = 6,\n        model: str = \"text-embedding-3-small\",\n        model_kwargs: NestedDict = {},\n        openai_api_base: Optional[str] = None,\n        openai_api_key: Optional[str] = \"\",\n        openai_api_type: Optional[str] = None,\n        openai_api_version: Optional[str] = None,\n        openai_organization: Optional[str] = None,\n        openai_proxy: Optional[str] = None,\n        request_timeout: Optional[float] = None,\n        show_progress_bar: bool = False,\n        skip_empty: bool = False,\n        tiktoken_enable: bool = True,\n        tiktoken_model_name: Optional[str] = None,\n    ) -> Union[OpenAIEmbeddings, Callable]:\n        # This is to avoid errors with Vector Stores (e.g Chroma)\n        if disallowed_special == [\"all\"]:\n            disallowed_special = \"all\"  # type: ignore\n\n        api_key = SecretStr(openai_api_key) if openai_api_key else None\n\n        return OpenAIEmbeddings(\n            tiktoken_enabled=tiktoken_enable,\n            default_headers=default_headers,\n            default_query=default_query,\n            allowed_special=set(allowed_special),\n            disallowed_special=\"all\",\n            chunk_size=chunk_size,\n            client=client,\n            deployment=deployment,\n            embedding_ctx_length=embedding_ctx_length,\n            max_retries=max_retries,\n            model=model,\n            model_kwargs=model_kwargs,\n            base_url=openai_api_base,\n            api_key=api_key,\n            openai_api_type=openai_api_type,\n            api_version=openai_api_version,\n            organization=openai_organization,\n            openai_proxy=openai_proxy,\n            timeout=request_timeout,\n            show_progress_bar=show_progress_bar,\n            skip_empty=skip_empty,\n            tiktoken_model_name=tiktoken_model_name,\n        )\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": false,
+                                "dynamic": true,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "default_headers": {
+                                "type": "dict",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "default_headers",
+                                "display_name": "Default Headers",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "default_query": {
+                                "type": "NestedDict",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": {},
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "default_query",
+                                "display_name": "Default Query",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "deployment": {
+                                "type": "str",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": "text-embedding-3-small",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "deployment",
+                                "display_name": "Deployment",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ]
+                            },
+                            "disallowed_special": {
+                                "type": "str",
+                                "required": true,
+                                "placeholder": "",
+                                "list": true,
+                                "show": true,
+                                "multiline": false,
+                                "value": [
+                                    "all"
+                                ],
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "disallowed_special",
+                                "display_name": "Disallowed Special",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ]
+                            },
+                            "embedding_ctx_length": {
+                                "type": "int",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": 8191,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "embedding_ctx_length",
+                                "display_name": "Embedding Context Length",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "max_retries": {
+                                "type": "int",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": 6,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "max_retries",
+                                "display_name": "Max Retries",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "model": {
+                                "type": "str",
+                                "required": true,
+                                "placeholder": "",
+                                "list": true,
+                                "show": true,
+                                "multiline": false,
+                                "value": "text-embedding-3-small",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "options": [
+                                    "text-embedding-3-small",
+                                    "text-embedding-3-large",
+                                    "text-embedding-ada-002"
+                                ],
+                                "name": "model",
+                                "display_name": "Model",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ]
+                            },
+                            "model_kwargs": {
+                                "type": "NestedDict",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": {},
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "model_kwargs",
+                                "display_name": "Model Kwargs",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "openai_api_base": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": true,
+                                "name": "openai_api_base",
+                                "display_name": "OpenAI API Base",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ],
+                                "value": ""
+                            },
+                            "openai_api_key": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": "",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": true,
+                                "name": "openai_api_key",
+                                "display_name": "OpenAI API Key",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ]
+                            },
+                            "openai_api_type": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": true,
+                                "name": "openai_api_type",
+                                "display_name": "OpenAI API Type",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ],
+                                "value": ""
+                            },
+                            "openai_api_version": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "openai_api_version",
+                                "display_name": "OpenAI API Version",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ]
+                            },
+                            "openai_organization": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "openai_organization",
+                                "display_name": "OpenAI Organization",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ]
+                            },
+                            "openai_proxy": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "openai_proxy",
+                                "display_name": "OpenAI Proxy",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ]
+                            },
+                            "request_timeout": {
+                                "type": "float",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "request_timeout",
+                                "display_name": "Request Timeout",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "rangeSpec": {
+                                    "min": -1,
+                                    "max": 1,
+                                    "step": 0.1
+                                },
+                                "title_case": false
+                            },
+                            "show_progress_bar": {
+                                "type": "bool",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "show_progress_bar",
+                                "display_name": "Show Progress Bar",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "skip_empty": {
+                                "type": "bool",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "skip_empty",
+                                "display_name": "Skip Empty",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "tiktoken_enable": {
+                                "type": "bool",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": true,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "tiktoken_enable",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "tiktoken_model_name": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "tiktoken_model_name",
+                                "display_name": "TikToken Model Name",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ]
+                            },
+                            "_type": "CustomComponent"
+                        },
+                        "description": "OpenAI embedding models",
+                        "base_classes": [
+                            "Embeddings",
+                            "OpenAIEmbeddings",
+                            "Callable"
+                        ],
+                        "display_name": "OpenAIEmbeddings",
+                        "documentation": "",
+                        "custom_fields": {
+                            "default_headers": null,
+                            "default_query": null,
+                            "allowed_special": null,
+                            "disallowed_special": null,
+                            "chunk_size": null,
+                            "client": null,
+                            "deployment": null,
+                            "embedding_ctx_length": null,
+                            "max_retries": null,
+                            "model": null,
+                            "model_kwargs": null,
+                            "openai_api_base": null,
+                            "openai_api_key": null,
+                            "openai_api_type": null,
+                            "openai_api_version": null,
+                            "openai_organization": null,
+                            "openai_proxy": null,
+                            "request_timeout": null,
+                            "show_progress_bar": null,
+                            "skip_empty": null,
+                            "tiktoken_enable": null,
+                            "tiktoken_model_name": null
+                        },
+                        "output_types": [
+                            "OpenAIEmbeddings",
+                            "Callable"
+                        ],
+                        "field_formatters": {},
+                        "frozen": false,
+                        "beta": true
+                    },
+                    "id": "OpenAIEmbeddings-rbMk3"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 573,
+                "positionAbsolute": {
+                    "x": 1053.9472627140208,
+                    "y": -2.5921878249999963
+                },
+                "dragging": false
+            },
+            {
+                "id": "URL-5zjQH",
+                "type": "genericNode",
+                "position": {
+                    "x": 567.0838444398559,
+                    "y": 596.6568151511171
+                },
+                "data": {
+                    "type": "URL",
+                    "node": {
+                        "template": {
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "from typing import Any, Dict\n\nfrom langchain_community.document_loaders.web_base import WebBaseLoader\n\nfrom langflow.custom import CustomComponent\nfrom langflow.schema import Record\n\n\nclass URLComponent(CustomComponent):\n    display_name = \"URL\"\n    description = \"Load URLs and convert them to records.\"\n\n    def build_config(self) -> Dict[str, Any]:\n        return {\n            \"urls\": {\"display_name\": \"URL\"},\n        }\n\n    async def build(\n        self,\n        urls: list[str],\n    ) -> Record:\n\n        loader = WebBaseLoader(web_paths=urls)\n        docs = loader.load()\n        records = self.to_records(docs)\n        return records\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": false,
+                                "dynamic": true,
+                                "info": "",
+                                "title_case": false
+                            },
+                            "urls": {
+                                "type": "str",
+                                "required": true,
+                                "placeholder": "",
+                                "list": true,
+                                "show": true,
+                                "multiline": false,
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "urls",
+                                "display_name": "URL",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ],
+                                "value": [
+                                    "https://raw.githubusercontent.com/logspace-ai/langflow/dev/CONTRIBUTING.md"
+                                ]
+                            },
+                            "_type": "CustomComponent"
+                        },
+                        "description": "Load URLs and convert them to records.",
+                        "base_classes": [
+                            "Record"
+                        ],
+                        "display_name": "URL",
+                        "documentation": "",
+                        "custom_fields": {
+                            "urls": null
+                        },
+                        "output_types": [
+                            "Record"
+                        ],
+                        "field_formatters": {},
+                        "frozen": false,
+                        "beta": true
+                    },
+                    "id": "URL-5zjQH"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 289,
+                "dragging": false,
+                "positionAbsolute": {
+                    "x": 567.0838444398559,
+                    "y": 596.6568151511171
+                }
+            }
+        ],
+        "edges": [
+            {
+                "source": "RecursiveCharacterTextSplitter-jwfyG",
+                "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œRecursiveCharacterTextSplitterœ,œidœ:œRecursiveCharacterTextSplitter-jwfyGœ}",
+                "target": "Chroma-aFGHF",
+                "targetHandle": "{œfieldNameœ:œinputsœ,œidœ:œChroma-aFGHFœ,œinputTypesœ:[œDocumentœ,œRecordœ],œtypeœ:œRecordœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "inputs",
+                        "id": "Chroma-aFGHF",
+                        "inputTypes": [
+                            "Document",
+                            "Record"
+                        ],
+                        "type": "Record"
+                    },
+                    "sourceHandle": {
+                        "baseClasses": [
+                            "Record"
+                        ],
+                        "dataType": "RecursiveCharacterTextSplitter",
+                        "id": "RecursiveCharacterTextSplitter-jwfyG"
+                    }
+                },
+                "style": {
+                    "stroke": "#555"
+                },
+                "className": "stroke-gray-900 stroke-connection",
+                "id": "reactflow__edge-RecursiveCharacterTextSplitter-jwfyG{œbaseClassesœ:[œRecordœ],œdataTypeœ:œRecursiveCharacterTextSplitterœ,œidœ:œRecursiveCharacterTextSplitter-jwfyGœ}-Chroma-aFGHF{œfieldNameœ:œinputsœ,œidœ:œChroma-aFGHFœ,œinputTypesœ:[œDocumentœ,œRecordœ],œtypeœ:œRecordœ}"
+            },
+            {
+                "source": "OpenAIEmbeddings-rbMk3",
+                "sourceHandle": "{œbaseClassesœ:[œEmbeddingsœ,œOpenAIEmbeddingsœ,œCallableœ],œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-rbMk3œ}",
+                "target": "Chroma-aFGHF",
+                "targetHandle": "{œfieldNameœ:œembeddingœ,œidœ:œChroma-aFGHFœ,œinputTypesœ:null,œtypeœ:œEmbeddingsœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "embedding",
+                        "id": "Chroma-aFGHF",
+                        "inputTypes": null,
+                        "type": "Embeddings"
+                    },
+                    "sourceHandle": {
+                        "baseClasses": [
+                            "Embeddings",
+                            "OpenAIEmbeddings",
+                            "Callable"
+                        ],
+                        "dataType": "OpenAIEmbeddings",
+                        "id": "OpenAIEmbeddings-rbMk3"
+                    }
+                },
+                "style": {
+                    "stroke": "#555"
+                },
+                "className": "stroke-gray-900 stroke-connection",
+                "id": "reactflow__edge-OpenAIEmbeddings-rbMk3{œbaseClassesœ:[œEmbeddingsœ,œOpenAIEmbeddingsœ,œCallableœ],œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-rbMk3œ}-Chroma-aFGHF{œfieldNameœ:œembeddingœ,œidœ:œChroma-aFGHFœ,œinputTypesœ:null,œtypeœ:œEmbeddingsœ}"
+            },
+            {
+                "source": "URL-5zjQH",
+                "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-5zjQHœ}",
+                "target": "RecursiveCharacterTextSplitter-jwfyG",
+                "targetHandle": "{œfieldNameœ:œinputsœ,œidœ:œRecursiveCharacterTextSplitter-jwfyGœ,œinputTypesœ:[œDocumentœ,œRecordœ],œtypeœ:œDocumentœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "inputs",
+                        "id": "RecursiveCharacterTextSplitter-jwfyG",
+                        "inputTypes": [
+                            "Document",
+                            "Record"
+                        ],
+                        "type": "Document"
+                    },
+                    "sourceHandle": {
+                        "baseClasses": [
+                            "Record"
+                        ],
+                        "dataType": "URL",
+                        "id": "URL-5zjQH"
+                    }
+                },
+                "style": {
+                    "stroke": "#555"
+                },
+                "className": "stroke-foreground stroke-connection",
+                "id": "reactflow__edge-URL-5zjQH{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-5zjQHœ}-RecursiveCharacterTextSplitter-jwfyG{œfieldNameœ:œinputsœ,œidœ:œRecursiveCharacterTextSplitter-jwfyGœ,œinputTypesœ:[œDocumentœ,œRecordœ],œtypeœ:œDocumentœ}"
+            }
+        ],
+        "viewport": {
+            "x": -160.3219973143573,
+            "y": 117.63775645863632,
+            "zoom": 0.48903173672366845
+        }
+    },
+    "is_component": false,
+    "updated_at": "2024-03-05T21:59:59.738081",
+    "folder": null,
+    "id": "7f90dc54-717d-49fe-a43f-c4dc055daa4e",
+    "user_id": "9365dbda-e8cf-4e95-8c84-49f8b6edb44f"
+}

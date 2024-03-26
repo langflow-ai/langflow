@@ -2,6 +2,10 @@
 
 all: help
 
+setup_poetry:
+	pipx install poetry
+	poetry self add poetry-monorepo-dependency-plugin
+
 init:
 	@echo 'Installing backend dependencies'
 	make install_backend
@@ -28,7 +32,7 @@ format:
 
 lint:
 	make install_backend
-	poetry run mypy src/backend/langflow
+	poetry run mypy src/backend
 	poetry run ruff . --fix
 
 install_frontend:
@@ -69,6 +73,7 @@ frontendc:
 
 install_backend:
 	poetry install --extras deploy
+	poetry run pip install -e src/backend/base/.
 
 backend:
 	make install_backend
@@ -82,24 +87,35 @@ else
 endif
 
 build_and_run:
-	echo 'Removing dist folder'
+	@echo 'Removing dist folder'
 	rm -rf dist
-	make build && poetry run pip install dist/*.tar.gz && poetry run langflow run
+	rm -rf src/backend/base/dist
+	make build
+	poetry run pip install dist/*.tar.gz && pip install src/backend/base/dist/*.tar.gz
+	poetry run langflow run
 
 build_and_install:
-	echo 'Removing dist folder'
+	@echo 'Removing dist folder'
 	rm -rf dist
-	make build && poetry run pip install dist/*.tar.gz
+	rm -rf src/backend/base/dist
+	make build && poetry run pip install dist/*.tar.gz && pip install src/backend/base/dist/*.tar.gz
 
 build_frontend:
 	cd src/frontend && CI='' npm run build
-	cp -r src/frontend/build src/backend/langflow/frontend
+	cp -r src/frontend/build src/backend/base/langflow/frontend
 
 build:
+	make build_langflow_base
+	make build_langflow
+
+build_langflow:
+	poetry build-rewrite-path-deps --version-pinning-strategy=semver
+
+build_langflow_base:
 	make install_frontend
 	make build_frontend
-	poetry build --format sdist
-	rm -rf src/backend/langflow/frontend
+	cd src/backend/base && poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	rm -rf src/backend/base/langflow/frontend
 
 dev:
 	make install_frontend
@@ -111,9 +127,17 @@ else
 		docker compose $(if $(debug),-f docker-compose.debug.yml) up
 endif
 
-publish:
-	make build
+publish_base:
+	make build_langflow_base
+	cd src/backend/base && poetry publish
+
+publish_langflow:
+	make build_langflow
 	poetry publish
+
+publish:
+	make publish_base
+	make publish_langflow
 
 help:
 	@echo '----'

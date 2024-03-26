@@ -35,7 +35,7 @@ We will cover how to:
 <summary>Example Code</summary>
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class FlowRunner(CustomComponent):
@@ -75,7 +75,7 @@ class FlowRunner(CustomComponent):
 <CH.Scrollycoding rows={20} className={""}>
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class MyComponent(CustomComponent):
@@ -95,7 +95,7 @@ The typical structure of a Custom Component is composed of _`display_name`_ and 
 ---
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 
 
 # focus
@@ -118,7 +118,7 @@ Let's start by defining our component's _`display_name`_ and _`description`_.
 ---
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 # focus
 from langchain.schema import Document
 
@@ -140,7 +140,7 @@ Second, we will import _`Document`_ from the [_langchain.schema_](https://docs.l
 ---
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 # focus
 from langchain.schema import Document
 
@@ -167,7 +167,7 @@ Now, let's add the [parameters](focus://11[20:55]) and the [return type](focus:/
 ---
 
 ```python focus=13:14
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 
@@ -189,7 +189,7 @@ We can now start writing the _`build`_ method. Let's list available flows in "My
 ---
 
 ```python focus=15:18
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 
@@ -222,7 +222,7 @@ And retrieve a flow that matches the selected name (we'll make a dropdown input 
 ---
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 
@@ -250,7 +250,7 @@ You can load this flow using _`get_flow`_ and set a _`tweaks`_ dictionary to cus
 ---
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 
@@ -287,7 +287,7 @@ The content of a document can be extracted using the _`page_content`_ attribute,
 ---
 
 ```python focus=9:16
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 
@@ -365,4 +365,6 @@ Done! This is what our script and custom component looks like:
     }}
     />
 
-</div>
+</div>import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
+

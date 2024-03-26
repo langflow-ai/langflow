@@ -49,7 +49,7 @@ The Code button shows snippets to use your flow as a Python object or an API.
 Through the Langflow package, you can load a flow from a JSON file and use it as a LangChain object.
 
 ```py
-from langflow import load_flow_from_json
+from langflow.load import load_flow_from_json
 
 flow = load_flow_from_json("path/to/flow.json")
 # Now you can use it like any chain
@@ -66,4 +66,9 @@ The example below shows a Python script making a POST request to a local API end
   style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
 >
   <ReactPlayer playing controls url="/videos/langflow_api.mp4" />
-</div>
+</div>import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+import Admonition from "@theme/Admonition";
+
