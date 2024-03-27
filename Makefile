@@ -46,7 +46,7 @@ format:
 
 lint:
 	make install_backend
-	poetry run mypy src/backend
+	poetry run mypy --namespace-packages -p "langflow"
 	poetry run ruff . --fix
 
 install_frontend:
