@@ -3,6 +3,17 @@
 # Default value for the --ui flag
 ui=false
 
+# Absolute path to the project root directory
+PROJECT_ROOT="../../"
+
+# Check if necessary commands are available
+for cmd in npx poetry fuser; do
+    if ! command -v $cmd &> /dev/null; then
+        echo "Error: Required command '$cmd' is not installed. Aborting."
+        exit 1
+    fi
+done
+
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -23,54 +34,74 @@ done
 terminate_process_by_port() {
     port="$1"
     echo "Terminating process on port: $port"
-    fuser -k -n tcp "$port"  # Forcefully terminate processes using the specified port
-    echo "Process terminated."
+    if ! fuser -k -n tcp "$port"; then
+        echo "Failed to terminate process on port $port. Please check manually."
+    else
+        echo "Process terminated."
+    fi
 }
 
 delete_temp() {
-    cd ../../
-    echo "Deleting temp database"
-    rm temp
-    echo "Temp database deleted."
+    if cd "$PROJECT_ROOT"; then
+        echo "Deleting temp database"
+        rm -f temp && echo "Temp database deleted." || echo "Failed to delete temp database."
+    else
+        echo "Failed to navigate to project root for cleanup."
+    fi
 }
-
 
 # Trap signals to ensure cleanup on script termination
 trap 'terminate_process_by_port 7860; terminate_process_by_port 3000; delete_temp' EXIT
 
-# install playwright if there is not installed yet
-npx playwright install
+# Ensure the script is executed from the project root directory
+if ! cd "$PROJECT_ROOT"; then
+    echo "Error: Failed to navigate to project root directory. Aborting."
+    exit 1
+fi
 
-# Navigate to the project root directory (where the Makefile is located)
-cd ../../
+# Install playwright if not installed yet
+if ! npx playwright install; then
+    echo "Error: Failed to install Playwright. Aborting."
+    exit 1
+fi
 
-# Start the frontend using 'make frontend' in the background
+# Start the frontend
 make frontend &
 
-# Give some time for the frontend to start (adjust sleep duration as needed)
+# Adjust sleep duration as needed
 sleep 10
 
-#install backend 
-poetry install --extras deploy
+# Install backend dependencies
+if ! poetry install; then
+    echo "Error: Failed to install backend dependencies. Aborting."
+    exit 1
+fi
 
-# Start the backend using 'make backend' in the background
-LANGFLOW_DATABASE_URL=sqlite:///./temp LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --env-file .env &
+# Start the backend
+if ! LANGFLOW_DATABASE_URL=sqlite:///./temp LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --env-file .env &; then
+    echo "Error: Failed to start the backend. Aborting."
+    exit 1
+fi
 
-# Give some time for the backend to start (adjust sleep duration as needed)
+# Adjust sleep duration as needed
 sleep 25
 
 # Navigate to the test directory
-cd src/frontend
+if ! cd src/frontend; then
+    echo "Error: Failed to navigate to test directory. Aborting."
+    exit 1
+fi
 
-# Run Playwright tests with or without UI based on the --ui flag
+# Run Playwright tests
 if [ "$ui" = true ]; then
-    PLAYWRIGHT_HTML_REPORT=playwright-report/e2e npx playwright test tests/end-to-end --ui --project=chromium
+    TEST_COMMAND="npx playwright test tests/end-to-end --ui --project=chromium"
 else
-    PLAYWRIGHT_HTML_REPORT=playwright-report/e2e npx playwright test tests/end-to-end --project=chromium
+    TEST_COMMAND="npx playwright test tests/end-to-end --project=chromium"
+fi
+
+if ! PLAYWRIGHT_HTML_REPORT=playwright-report/e2e $TEST_COMMAND; then
+    echo "Error: Playwright tests failed. Aborting."
+    exit 1
 fi
 
 npx playwright show-report
-
-# After the tests are finished, you can add cleanup or teardown logic here if needed
-
-# The trap will automatically terminate processes by port on script exit
