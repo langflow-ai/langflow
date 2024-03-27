@@ -69,7 +69,7 @@ jobs:
       - run: npm ci
       - run: |
           cd src/frontend
-          npxplaywright install --with-deps
+          npx playwright install --with-deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
       - run: |
           cd src/frontend
