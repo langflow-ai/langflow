@@ -89,8 +89,19 @@ class RunnableExecComponent(CustomComponent):
         input_key: str = "input",
         output_key: str = "output",
     ) -> Text:
+        input_dict = {}
+        status = ""
+        if hasattr(runnable, "input_keys"):
+            # Check if input_key is in the runnable's input_keys
+            if input_key in runnable.input_keys:
+                input_dict[input_key] = input_value
+            else:
+                input_dict = {k: input_value for k in runnable.input_keys}
+                status = f"Warning: The input key is not '{input_key}'. The input key is '{runnable.input_keys}'."
+
         result = runnable.invoke({input_key: input_value})
-        result_value, status = self.get_output(result, input_key, output_key)
+        result_value, _status = self.get_output(result, input_key, output_key)
+        status += _status
         status += f"\nOutput: {result_value}\n\nRaw Output: {result}"
         self.status = status
         return result_value
