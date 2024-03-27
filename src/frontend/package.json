@@ -37,6 +37,7 @@
     "base64-js": "^1.5.1",
     "class-variance-authority": "^0.6.1",
     "clsx": "^1.2.1",
+    "cmdk": "^1.0.0",
     "dompurify": "^3.0.5",
     "esbuild": "^0.17.19",
     "framer-motion": "^11.0.6",

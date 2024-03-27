@@ -37,7 +37,7 @@ export default function Dropdown({
           >
             {({ open }) => (
               <>
-                <div className={"relative mt-1"}>
+                <div className={"relative"}>
                   <Listbox.Button
                     data-test={`${id ?? ""}`}
                     className={
@@ -52,7 +52,7 @@ export default function Dropdown({
                     >
                       {internalValue}
                     </span>
-                    <span className={"dropdown-component-arrow"}>
+                    <span className={"dropdown-component-arrow right-0"}>
                       <IconComponent
                         name="ChevronsUpDown"
                         className="dropdown-component-arrow-color"

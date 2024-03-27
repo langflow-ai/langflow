@@ -1,7 +1,6 @@
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from langchain_openai.embeddings.base import OpenAIEmbeddings
-from pydantic.v1.types import SecretStr
 
 from langflow.field_typing import NestedDict
 from langflow.interface.custom.custom_component import CustomComponent
@@ -100,8 +99,6 @@ class OpenAIEmbeddingsComponent(CustomComponent):
         if disallowed_special == ["all"]:
             disallowed_special = "all"  # type: ignore
 
-        api_key = SecretStr(openai_api_key) if openai_api_key else None
-
         return OpenAIEmbeddings(
             tiktoken_enabled=tiktoken_enable,
             default_headers=default_headers,
@@ -116,7 +113,7 @@ class OpenAIEmbeddingsComponent(CustomComponent):
             model=model,
             model_kwargs=model_kwargs,
             base_url=openai_api_base,
-            api_key=api_key,
+            api_key=openai_api_key,
             openai_api_type=openai_api_type,
             api_version=openai_api_version,
             organization=openai_organization,

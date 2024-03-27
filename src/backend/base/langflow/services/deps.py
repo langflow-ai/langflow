@@ -8,7 +8,6 @@ if TYPE_CHECKING:
 
     from langflow.services.cache.service import CacheService
     from langflow.services.chat.service import ChatService
-    from langflow.services.credentials.service import CredentialService
     from langflow.services.database.service import DatabaseService
     from langflow.services.monitor.service import MonitorService
     from langflow.services.plugins.service import PluginService
@@ -18,6 +17,7 @@ if TYPE_CHECKING:
     from langflow.services.storage.service import StorageService
     from langflow.services.store.service import StoreService
     from langflow.services.task.service import TaskService
+    from langflow.services.variable.service import VariableService
 
 
 def get_socket_service() -> "SocketIOService":
@@ -28,8 +28,8 @@ def get_storage_service() -> "StorageService":
     return service_manager.get(ServiceType.STORAGE_SERVICE)  # type: ignore
 
 
-def get_credential_service() -> "CredentialService":
-    return service_manager.get(ServiceType.CREDENTIAL_SERVICE)  # type: ignore
+def get_variable_service() -> "VariableService":
+    return service_manager.get(ServiceType.VARIABLE_SERVICE)  # type: ignore
 
 
 def get_plugins_service() -> "PluginService":

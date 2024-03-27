@@ -10,10 +10,12 @@ from langflow.template.frontend_node import (
     textsplitters,
     tools,
     vectorstores,
+    base,
 )
 
 __all__ = [
     "agents",
+    "base",
     "chains",
     "embeddings",
     "memories",

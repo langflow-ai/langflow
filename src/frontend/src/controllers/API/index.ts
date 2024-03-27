@@ -859,6 +859,50 @@ export async function requestLogout() {
   }
 }
 
+export async function getGlobalVariables(): Promise<{
+  [key: string]: { id: string; type: string };
+}> {
+  const globalVariables = {};
+  (await api.get(`${BASE_URL_API}variables/`)).data.forEach((element) => {
+    globalVariables[element.name] = {
+      id: element.id,
+      type: element.type,
+    };
+  });
+  return globalVariables;
+}
+
+export async function registerGlobalVariable({
+  name,
+  value,
+  type,
+}: {
+  name: string;
+  value: string;
+  type?: string;
+}): Promise<AxiosResponse<{ name: string; id: string; type: string }>> {
+  return await api.post(`${BASE_URL_API}variables/`, {
+    name,
+    value,
+    type,
+  });
+}
+
+export async function deleteGlobalVariable(id: string) {
+  api.delete(`${BASE_URL_API}variables/${id}`);
+}
+
+export async function updateGlobalVariable(
+  name: string,
+  value: string,
+  id: string
+) {
+  api.patch(`${BASE_URL_API}variables/${id}`, {
+    name,
+    value,
+  });
+}
+
 export async function getVerticesOrder(
   flowId: string,
   startNodeId?: string | null,
