@@ -46,14 +46,14 @@ jobs:
       - name: Install playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Install Poetry
+        run: pipx install "poetry==${{ env.POETRY_VERSION }}"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "poetry"
-
-      - name: Install Poetry
-        run: pip install "poetry==${{ env.POETRY_VERSION }}"
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v4
