@@ -1,12 +1,9 @@
 chains:
   LLMChain:
     documentation: "https://api.python.langchain.com/en/latest/chains/langchain.chains.llm.LLMChain.html#langchain.chains.llm.LLMChain"
-    module_import: "from langchain.chains import LLMChain"
-
-
+    module_import: "from langflow.components.chains import LLMChain"
 
 llms:
   ChatOpenAI:
     documentation: "https://api.python.langchain.com/en/latest/chat_models/langchain_community.chat_models.openai.ChatOpenAI.html#langchain_community.chat_models.openai.ChatOpenAI"
-    module_import: "from langchain_community.chat_models import ChatOpenAI"
-
+    module_import: "from langflow.components.llms import ChatOpenAI"
