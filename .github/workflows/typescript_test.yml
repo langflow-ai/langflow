@@ -27,6 +27,7 @@ jobs:
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
+        id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -35,6 +36,7 @@ jobs:
         run: |
           cd src/frontend
           npm ci
+        if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
@@ -48,13 +50,14 @@ jobs:
         run: |
           cd src/frontend
           npx playwright install --with-deps
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        if: ${{ steps.playwright-cache.outputs.cache-hit != 'true' }}
 
       - name: Install Poetry
         run: pipx install "poetry==${{ env.POETRY_VERSION }}"
 
       - name: Set up Python
         uses: actions/setup-python@v5
+        id: setup-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "poetry"
@@ -62,6 +65,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           poetry install
+        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
 
       - name: Run Playwright Tests
         run: |
