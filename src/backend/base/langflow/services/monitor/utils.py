@@ -156,4 +156,4 @@ async def log_vertex_build(
         }
         monitor_service.add_row(table_name="vertex_builds", data=row)
     except Exception as e:
-        logger.error(f"Error logging vertex build: {e}")
+        logger.exception(f"Error logging vertex build: {e}")
