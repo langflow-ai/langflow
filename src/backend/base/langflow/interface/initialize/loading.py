@@ -168,6 +168,8 @@ async def instantiate_custom_component(params, user_id, vertex):
     custom_repr = custom_component.custom_repr()
     if not custom_repr and isinstance(build_result, (dict, Record, str)):
         custom_repr = build_result
+    if not isinstance(custom_repr, str):
+        custom_repr = str(custom_repr)
     return custom_component, build_result, {"repr": custom_repr}
 
 

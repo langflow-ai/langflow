@@ -3,8 +3,10 @@ from langflow.interface.agents.base import agent_creator
 from langflow.interface.custom.base import custom_component_creator
 from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
+from langflow.interface.llms.base import llm_creator
 from langflow.interface.memories.base import memory_creator
 from langflow.interface.output_parsers.base import output_parser_creator
+from langflow.interface.prompts.base import prompt_creator
 from langflow.interface.retrievers.base import retriever_creator
 from langflow.interface.text_splitters.base import textsplitter_creator
 from langflow.interface.toolkits.base import toolkits_creator
@@ -33,13 +35,13 @@ class VertexTypesDict(LazyLoadDictBase):
 
     def get_type_dict(self):
         return {
-            # **{t: types.PromptVertex for t in prompt_creator.to_list()},
+            **{t: types.PromptVertex for t in prompt_creator.to_list()},
             **{t: types.AgentVertex for t in agent_creator.to_list()},
             # **{t: types.ChainVertex for t in chain_creator.to_list()},
             **{t: types.ToolVertex for t in tool_creator.to_list()},
             **{t: types.ToolkitVertex for t in toolkits_creator.to_list()},
             **{t: types.WrapperVertex for t in wrapper_creator.to_list()},
-            # **{t: types.LLMVertex for t in llm_creator.to_list()},
+            **{t: types.LLMVertex for t in llm_creator.to_list()},
             **{t: types.MemoryVertex for t in memory_creator.to_list()},
             **{t: types.EmbeddingVertex for t in embedding_creator.to_list()},
             # **{t: types.VectorStoreVertex for t in vectorstore_creator.to_list()},
