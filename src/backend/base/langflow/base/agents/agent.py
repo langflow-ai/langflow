@@ -1,6 +1,8 @@
 from typing import List, Union
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
+from langchain_core.runnables import Runnable
+
 from langflow.field_typing import BaseMemory, Text, Tool
 from langflow.interface.custom.custom_component import CustomComponent
 
@@ -38,7 +40,7 @@ class LCAgentComponent(CustomComponent):
 
     async def run_agent(
         self,
-        agent: Union[BaseSingleActionAgent, BaseMultiActionAgent, AgentExecutor],
+        agent: Union[Runnable, BaseSingleActionAgent, BaseMultiActionAgent, AgentExecutor],
         inputs: str,
         input_variables: list[str],
         tools: List[Tool],
