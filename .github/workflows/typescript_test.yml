@@ -24,16 +24,16 @@ jobs:
           cd src/frontend
           npm ci
 
+      # Added step to install Poetry
+      - name: Install poetry
+        run: pipx install poetry==$POETRY_VERSION
+
       # Added step to set up Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10" # Specify your Python version
           cache: "poetry"
-
-      # Added step to install Poetry
-      - name: Install poetry
-        run: pipx install poetry==$POETRY_VERSION
 
       # Assuming you have Python dependencies to install via Poetry
       - name: Install Python dependencies
