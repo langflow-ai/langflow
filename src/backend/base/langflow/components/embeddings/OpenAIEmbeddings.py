@@ -1,7 +1,6 @@
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from langchain_openai.embeddings.base import OpenAIEmbeddings
-from pydantic.v1.types import SecretStr
 
 from langflow.field_typing import NestedDict
 from langflow.interface.custom.custom_component import CustomComponent

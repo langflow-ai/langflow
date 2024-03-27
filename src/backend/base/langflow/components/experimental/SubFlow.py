@@ -1,10 +1,11 @@
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional
 
 from loguru import logger
 
 from langflow.custom import CustomComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import ResultData, RunOutputs
+from langflow.graph.vertex.base import Vertex
 from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import TemplateField
@@ -50,7 +51,7 @@ class SubFlowComponent(CustomComponent):
 
         return build_config
 
-    def get_flow_inputs(self, graph: Graph) -> List[Record]:
+    def get_flow_inputs(self, graph: Graph) -> List[Vertex]:
         inputs = []
         for vertex in graph.vertices:
             if vertex.is_input:
@@ -58,13 +59,13 @@ class SubFlowComponent(CustomComponent):
         logger.debug(inputs)
         return inputs
 
-    def add_inputs_to_build_config(self, inputs: List[Tuple], build_config: dotdict):
+    def add_inputs_to_build_config(self, inputs: List[Vertex], build_config: dotdict):
         new_fields: list[TemplateField] = []
-        for input_id, input_display_name, input_description in inputs:
+        for vertex in inputs:
             field = TemplateField(
-                display_name=input_display_name,
-                name=input_id,
-                info=input_description,
+                display_name=vertex.display_name,
+                name=vertex.id,
+                info=vertex.description,
                 field_type="str",
                 default=None,
             )
