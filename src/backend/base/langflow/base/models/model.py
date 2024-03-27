@@ -40,9 +40,9 @@ class LCModelComponent(CustomComponent):
         if input_value:
             messages.append(HumanMessage(content=input_value))
         if stream:
-            result = runnable.stream(messages)
+            return runnable.stream(messages)
         else:
             message = runnable.invoke(messages)
             result = message.content
             self.status = result
-        return result
+            return result
