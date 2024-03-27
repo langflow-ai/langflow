@@ -62,6 +62,7 @@ export type InputListComponentType = {
   onChange: (value: string[]) => void;
   disabled: boolean;
   editNode?: boolean;
+  componentName?: string;
 };
 
 export type KeyPairListComponentType = {

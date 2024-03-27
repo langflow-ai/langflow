@@ -36,7 +36,7 @@ test.describe("drag and drop test", () => {
     );
 
     await page.getByText("Edit Flow").first().click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
 
     const genericNoda = page.getByTestId("div-generic-node");
     const elementCount = await genericNoda.count();

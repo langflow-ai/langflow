@@ -12,7 +12,10 @@ export default function DisclosureComponent({
       {({ open }) => (
         <>
           <div>
-            <Disclosure.Button className="components-disclosure-arrangement">
+            <Disclosure.Button
+              className="components-disclosure-arrangement"
+              data-testid={`disclosure-${title.toLocaleLowerCase()}`}
+            >
               <div className="flex gap-4">
                 {/* BUG ON THIS ICON */}
                 <Icon strokeWidth={1.5} size={22} className="text-primary" />

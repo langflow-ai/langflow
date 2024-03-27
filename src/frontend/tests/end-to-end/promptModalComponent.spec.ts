@@ -5,18 +5,18 @@ test.beforeEach(async ({ page }) => {
 });
 test("PromptTemplateComponent", async ({ page }) => {
   await page.goto("http://localhost:3000/");
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page.locator('//*[@id="new-project-btn"]').click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("prompt");
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page
     .locator('//*[@id="inputsPrompt"]')
@@ -63,7 +63,8 @@ test("PromptTemplateComponent", async ({ page }) => {
 
   await page.getByTestId("save-button-modal").click();
 
-  const replace = await page.getByTestId("replace-button");
+  const replace = await page.getByTestId("replace-button").isVisible();
+
   if (replace) {
     await page.getByTestId("replace-button").click();
   }

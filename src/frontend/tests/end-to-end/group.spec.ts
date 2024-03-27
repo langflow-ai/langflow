@@ -11,7 +11,7 @@ test.describe("group node test", () => {
     await page.locator('//*[@id="new-project-btn"]').click();
 
     await page.getByTestId("blank-flow").click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
 
     // Read your file into a buffer.
     const jsonContent = readFileSync(
@@ -30,7 +30,7 @@ test.describe("group node test", () => {
       return dt;
     }, jsonContent);
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
 
     // Now dispatch
     await page.dispatchEvent(
