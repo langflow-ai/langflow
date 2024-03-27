@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from langchain.agents import create_xml_agent
 from langchain_core.prompts import PromptTemplate
@@ -69,7 +69,7 @@ class XMLAgentComponent(LCAgentComponent):
         llm: BaseLLM,
         tools: List[Tool],
         prompt: str,
-        memory: BaseMemory = None,
+        memory: Optional[BaseMemory] = None,
         tool_template: str = "{name}: {description}",
         handle_parsing_errors: bool = True,
     ) -> Text:

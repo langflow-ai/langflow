@@ -38,7 +38,7 @@ class MongoDBAtlasSearchComponent(MongoDBAtlasComponent, LCVectorStoreComponent)
     ) -> List[Record]:
         search_kwargs = search_kwargs or {}
         vector_store = super().build(
-            connection_string=mongodb_atlas_cluster_uri,
+            mongodb_atlas_cluster_uri=mongodb_atlas_cluster_uri,
             namespace=f"{db_name}.{collection_name}",
             embedding=embedding,
             index_name=index_name,

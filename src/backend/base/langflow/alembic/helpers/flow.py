@@ -178,7 +178,7 @@ def get_flow_inputs(graph: "Graph") -> List["Vertex"]:
     return inputs
 
 
-def build_schema_from_inputs(name: str, inputs: List[tuple[str, str, str]]) -> BaseModel:
+def build_schema_from_inputs(name: str, inputs: List["Vertex"]) -> BaseModel:
     """
     Builds a schema from the given inputs.
 
