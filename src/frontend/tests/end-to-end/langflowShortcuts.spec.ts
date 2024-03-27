@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 test.beforeEach(async ({ page }) => {
-  await page.waitForTimeout(11000);
-  test.setTimeout(120000);
+  // await page.waitForTimeout(11000);
+  // test.setTimeout(120000);
 });
 test("LangflowShortcuts", async ({ page }) => {
   const getUA = await page.evaluate(() => navigator.userAgent);
@@ -13,7 +13,7 @@ test("LangflowShortcuts", async ({ page }) => {
     control = "Meta";
   }
 
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.locator('//*[@id="new-project-btn"]').click();
