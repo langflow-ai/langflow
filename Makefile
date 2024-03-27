@@ -47,9 +47,9 @@ run_frontend:
 
 tests_frontend:
 ifeq ($(UI), true)
-		cd src/frontend && ./run-tests.sh --ui
+		cd src/frontend && npx playwright test --ui --project=chromium
 else
-		cd src/frontend && ./run-tests.sh
+		cd src/frontend && npx playwright test --project=chromium
 endif
 
 run_cli:
