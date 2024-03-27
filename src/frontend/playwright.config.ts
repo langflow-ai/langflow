@@ -69,7 +69,7 @@ export default defineConfig({
       timeout: 120 * 1000,
     },
     {
-      command: "npm run start",
+      command: "npm start",
       port: 3000,
       env: {
         VITE_PROXY_TARGET: "http://127.0.0.1:7860",
