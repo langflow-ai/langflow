@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("IntComponent", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("http:localhost:3000/");
   await page.waitForTimeout(2000);
 
   await page.locator('//*[@id="new-project-btn"]').click();

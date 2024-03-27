@@ -40,9 +40,6 @@ const GITHUB_API_URL = "https://api.github.com";
 
 export async function getRepoStars(owner: string, repo: string) {
   try {
-    if (process.env.CI === "True") {
-      return 100;
-    }
     const response = await api.get(`${GITHUB_API_URL}/repos/${owner}/${repo}`);
     return response.data.stargazers_count;
   } catch (error) {
@@ -92,19 +89,6 @@ export async function postValidatePrompt(
  * @returns {Promise<FlowType[]>} A promise that resolves to an array of FlowType objects.
  */
 export async function getExamples(): Promise<FlowType[]> {
-  debugger;
-  if (process.env.CI === "True") {
-    return new Promise((resolve, reject) => {
-      resolve([
-        {
-          name: "Example",
-          id: "example",
-          data: null,
-          description: "Example description",
-        },
-      ]);
-    });
-  }
   const url =
     "https://api.github.com/repos/logspace-ai/langflow_examples/contents/examples?ref=main";
   const response = await api.get(url);
