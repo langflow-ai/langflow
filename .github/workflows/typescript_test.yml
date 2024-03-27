@@ -47,7 +47,7 @@ jobs:
       - uses: actions/cache@v3
         id: playwright-cache
         with:
-          path: "./ms-playwright"
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
           key: "${{ runner.os }}-playwright-${{ hashFiles('src/frontend/package.json') }}"
           # As a fallback, if the Playwright version has changed, try use the
           # most recently cached version. There's a good chance that at least one
