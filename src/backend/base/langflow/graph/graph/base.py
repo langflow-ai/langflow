@@ -201,7 +201,7 @@ class Graph:
         self,
         inputs: Dict[str, str],
         input_components: list[str],
-        input_type: str,
+        input_type: Literal["chat", "text", "json", "any"] | None,
         outputs: list[str],
         stream: bool,
         session_id: str,
@@ -236,7 +236,7 @@ class Graph:
                     continue
                 # If the input_type is not any and the input_type is not in the vertex id
                 # Example: input_type = "chat" and vertex.id = "OpenAI-19ddn"
-                elif input_type != "any" and input_type not in vertex.id.lower():
+                elif input_type is not None and input_type != "any" and input_type not in vertex.id.lower():
                     continue
                 if vertex is None:
                     raise ValueError(f"Vertex {vertex_id} not found")

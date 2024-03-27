@@ -1,5 +1,6 @@
 from typing import Any, List, Optional
 
+from langflow.helpers.flow import get_flow_inputs
 from loguru import logger
 
 from langflow.custom import CustomComponent
@@ -43,21 +44,13 @@ class SubFlowComponent(CustomComponent):
                     raise ValueError(f"Flow {field_value} not found.")
                 graph = Graph.from_payload(flow_record.data["data"])
                 # Get all inputs from the graph
-                inputs = self.get_flow_inputs(graph)
+                inputs = get_flow_inputs(graph)
                 # Add inputs to the build config
                 build_config = self.add_inputs_to_build_config(inputs, build_config)
             except Exception as e:
                 logger.error(f"Error getting flow {field_value}: {str(e)}")
 
         return build_config
-
-    def get_flow_inputs(self, graph: Graph) -> List[Vertex]:
-        inputs = []
-        for vertex in graph.vertices:
-            if vertex.is_input:
-                inputs.append((vertex.id, vertex.display_name, vertex.description))
-        logger.debug(inputs)
-        return inputs
 
     def add_inputs_to_build_config(self, inputs: List[Vertex], build_config: dotdict):
         new_fields: list[TemplateField] = []
@@ -116,7 +109,7 @@ class SubFlowComponent(CustomComponent):
         run_output = run_outputs[0]
 
         records = []
-        if run_outputs is not None:
+        if run_output is not None:
             for output in run_output.outputs:
                 if output:
                     records.extend(self.build_records_from_result_data(output))
