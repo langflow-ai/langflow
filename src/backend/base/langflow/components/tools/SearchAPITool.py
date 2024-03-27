@@ -34,4 +34,4 @@ class SearchApiToolComponent(CustomComponent):
         tool = SearchAPIRun(api_wrapper=search_api_wrapper)
 
         self.status = tool
-        return tool
+        return tool  # type: ignore
