@@ -2,12 +2,12 @@ import { test } from "@playwright/test";
 
 test.describe("Auto_login tests", () => {
   test("auto_login sign in", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("http:localhost:3000/");
     await page.locator('//*[@id="new-project-btn"]').click();
   });
 
   test("auto_login block_admin", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("http:localhost:3000/");
     await page.locator('//*[@id="new-project-btn"]').click();
     await page.waitForTimeout(5000);
 

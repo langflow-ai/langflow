@@ -11,7 +11,7 @@ test.describe("save component tests", () => {
 
   /// <reference lib="dom"/>
   test("save group component tests", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("http:localhost:3000/");
     await page.locator('//*[@id="new-project-btn"]').click();
 
     await page.getByTestId("blank-flow").click();

@@ -4,7 +4,7 @@ import { readFileSync } from "fs";
 test.describe("drag and drop test", () => {
   /// <reference lib="dom"/>
   test("drop collection", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("http:localhost:3000/");
     await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
     // Read your file into a buffer.
     const jsonContent = readFileSync(

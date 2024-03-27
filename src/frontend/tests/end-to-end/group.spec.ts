@@ -4,7 +4,7 @@ import { readFileSync } from "fs";
 test.describe("group node test", () => {
   /// <reference lib="dom"/>
   test("group and ungroup updating values", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("http:localhost:3000/");
     await page.locator('//*[@id="new-project-btn"]').click();
 
     await page.getByTestId("blank-flow").click();
