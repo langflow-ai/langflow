@@ -7,7 +7,12 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
-from langflow.api.utils import build_and_cache_graph, format_elapsed_time, format_exception_message
+from langflow.api.utils import (
+    build_and_cache_graph,
+    format_elapsed_time,
+    format_exception_message,
+    get_top_level_vertices,
+)
 from langflow.api.v1.schemas import (
     InputValueRequest,
     ResultDataResponse,
@@ -93,7 +98,8 @@ async def get_vertices(
         # and return the same structure but only with the ids
         run_id = uuid.uuid4()
         graph.set_run_id(run_id)
-        return VerticesOrderResponse(ids=first_layer, run_id=run_id, vertices_to_run=list(graph.vertices_to_run))
+        vertices_to_run = list(graph.vertices_to_run) + get_top_level_vertices(graph, graph.vertices_to_run)
+        return VerticesOrderResponse(ids=first_layer, run_id=run_id, vertices_to_run=vertices_to_run)
 
     except Exception as exc:
         logger.error(f"Error checking build status: {exc}")
