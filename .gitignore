@@ -262,3 +262,4 @@ src/backend/base/langflow/frontend/
 .docker
 scratchpad*
 chroma*/*
+stuff/*
