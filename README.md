@@ -2,7 +2,7 @@
 
 # ⛓️ Langflow
 
-<h3>Discover a simpler & smarter way to build around Foundation Models</h3>
+<h3>Langflow customized for urlslab. A simple way to manage all your chatbots and agents</h3>
 
 [![Release Notes](https://img.shields.io/github/release/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/releases)
 [![Contributors](https://img.shields.io/github/contributors/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/contributors)
