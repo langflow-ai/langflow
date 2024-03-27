@@ -69,6 +69,8 @@ async def run_flow(
     flow_name: Optional[str] = None,
     user_id: Optional[str] = None,
 ) -> Any:
+    if not user_id:
+        raise ValueError("Session is invalid")
     graph = await load_flow(user_id, flow_id, flow_name, tweaks)
 
     if inputs is None:
