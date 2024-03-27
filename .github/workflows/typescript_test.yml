@@ -7,9 +7,13 @@ on:
 env:
   POETRY_VERSION: "1.8.2"
 jobs:
-  test:
+  playwright-tests:
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        shardIndex: [1, 2, 3, 4]
+        shardTotal: [4]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -17,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "21"
+          node-version: 21
 
       - name: Install Node.js dependencies
         run: |
@@ -48,11 +52,42 @@ jobs:
       - name: Run tests
         run: |
           cd src/frontend
-          npx playwright test --reporter=list
+          run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload blob report to GitHub Actions Artifacts
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: src/frontend/playwright-report/
-          retention-days: 15
+          name: blob-report-${{ matrix.shardIndex }}
+          path: blob-report
+          retention-days: 1
+  merge-reports:
+    # Merge reports after playwright-tests, even if some shards have failed
+    if: always()
+    needs: [playwright-tests]
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 21
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download blob reports from GitHub Actions Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: Merge into HTML Report
+        run: npx playwright merge-reports --reporter html ./all-blob-reports
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-report--attempt-${{ github.run_attempt }}
+          path: playwright-report
+          retention-days: 14
