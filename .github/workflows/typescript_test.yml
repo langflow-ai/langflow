@@ -66,14 +66,18 @@ jobs:
           path: |
             ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('src/frontend/package-lock.json') }}
-      - run: |
+      - name: Install Frontend dependencies
+        run: |
           cd src/frontend
           npm ci
-      - run: |
+
+      - name: Install Playwright's browser binaries
+        run: |
           cd src/frontend
           npx playwright install --with-deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-      - run: |
+      - name: Install Playwright's dependencies
+        run: |
           cd src/frontend
           npx playwright install-deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
