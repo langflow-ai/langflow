@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
-  await page.waitForTimeout(12000);
-  test.setTimeout(120000);
+  // await page.waitForTimeout(12000);
+  // test.setTimeout(120000);
 });
 test("NestedComponent", async ({ page }) => {
   await page.goto("/");

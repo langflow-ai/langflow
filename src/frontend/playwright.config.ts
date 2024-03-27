@@ -12,7 +12,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
   /* Run tests in files in parallel */
-  fullyParallel: false,
+  fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
@@ -20,6 +20,7 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 2 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+  timeout: 120 * 1000,
   // reporter: [
   //   ["html", { open: "never", outputFolder: "playwright-report/test-results" }],
   // ],
@@ -63,6 +64,7 @@ export default defineConfig({
         LANGFLOW_AUTO_LOGIN: "true",
         VITE_PROXY_TARGET: "http://127.0.0.1:7860",
       },
+      stdout: "ignore",
 
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,

@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 test.beforeEach(async ({ page }) => {
-  await page.waitForTimeout(3000);
-  test.setTimeout(120000);
+  // await page.waitForTimeout(3000);
+  // test.setTimeout(120000);
 });
 test.describe("drag and drop test", () => {
   /// <reference lib="dom"/>
