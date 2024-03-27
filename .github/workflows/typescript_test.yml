@@ -54,5 +54,5 @@ jobs:
         if: always()
         with:
           name: playwright-report
-          path: playwright-report/
+          path: src/frontend/playwright-report/
           retention-days: 15
