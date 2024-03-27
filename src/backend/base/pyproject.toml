@@ -17,7 +17,7 @@ repository = "https://github.com/logspace-ai/langflow"
 license = "MIT"
 readme = "README.md"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
-packages = [{ include = "langflow" }, { include = "py.typed" }]
+packages = [{ include = "langflow" }, { include = "langflow/py.typed" }]
 include = ["pyproject.toml", "README.md", "langflow/**/*"]
 documentation = "https://docs.langflow.org"
 
