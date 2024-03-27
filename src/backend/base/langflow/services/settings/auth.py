@@ -1,5 +1,6 @@
 import secrets
 from pathlib import Path
+from typing import Literal
 
 from loguru import logger
 from passlib.context import CryptContext
@@ -14,7 +15,7 @@ class AuthSettings(BaseSettings):
     # Login settings
     CONFIG_DIR: str
     SECRET_KEY: SecretStr = Field(
-        default=None,
+        default="",
         description="Secret key for JWT. If not provided, a random one will be generated.",
         frozen=False,
     )
@@ -33,13 +34,13 @@ class AuthSettings(BaseSettings):
     SUPERUSER: str = DEFAULT_SUPERUSER
     SUPERUSER_PASSWORD: str = DEFAULT_SUPERUSER_PASSWORD
 
-    REFRESH_SAME_SITE: str = "none"
+    REFRESH_SAME_SITE: Literal["lax", "strict", "none"] = "none"
     """The SameSite attribute of the refresh token cookie."""
     REFRESH_SECURE: bool = True
     """The Secure attribute of the refresh token cookie."""
     REFRESH_HTTPONLY: bool = True
     """The HttpOnly attribute of the refresh token cookie."""
-    ACCESS_SAME_SITE: str = "none"
+    ACCESS_SAME_SITE: Literal["lax", "strict", "none"] = "none"
     """The SameSite attribute of the access token cookie."""
     ACCESS_SECURE: bool = True
     """The Secure attribute of the access token cookie."""

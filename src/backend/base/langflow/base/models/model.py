@@ -4,7 +4,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class LCModelComponent(CustomComponent):
@@ -35,10 +35,10 @@ class LCModelComponent(CustomComponent):
         self, runnable: BaseChatModel, stream: bool, input_value: str, system_message: Optional[str] = None
     ):
         messages = []
-        if system_message:
-            messages.append(SystemMessage(system_message))
         if input_value:
             messages.append(HumanMessage(input_value))
+        if system_message:
+            messages.append(SystemMessage(system_message))
         if stream:
             result = runnable.stream(messages)
         else:

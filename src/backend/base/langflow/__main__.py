@@ -9,9 +9,9 @@ from typing import Optional
 import httpx
 import typer
 from dotenv import load_dotenv
-from multiprocess import (
-    Process,  # type: ignore
-    cpu_count,  # type: ignore
+from multiprocess import (  # noqa
+    Process,  # noqa
+    cpu_count,  # noqa; type: ignore
 )
 from rich import box
 from rich import print as rprint

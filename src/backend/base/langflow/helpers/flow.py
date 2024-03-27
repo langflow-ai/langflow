@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Coroutine, List, Optional, Tuple, Union
 
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import select
@@ -69,6 +69,8 @@ async def run_flow(
     flow_name: Optional[str] = None,
     user_id: Optional[str] = None,
 ) -> Any:
+    if not user_id:
+        raise ValueError("Session is invalid")
     graph = await load_flow(user_id, flow_id, flow_name, tweaks)
 
     if inputs is None:
@@ -77,7 +79,7 @@ async def run_flow(
     inputs_components = []
     types = []
     for input_dict in inputs:
-        inputs_list.append({INPUT_FIELD_NAME: input_dict.get("input_value")})
+        inputs_list.append({INPUT_FIELD_NAME: input_dict.get("input_value", "")})
         inputs_components.append(input_dict.get("components", []))
         types.append(input_dict.get("type", []))
 
@@ -138,12 +140,12 @@ async def flow_function({func_args}):
 """
 
     compiled_func = compile(func_body, "<string>", "exec")
-    local_scope = {}
+    local_scope: dict = {}
     exec(compiled_func, globals(), local_scope)
     return local_scope["flow_function"]
 
 
-def build_function_and_schema(flow_record: Record, graph: "Graph") -> Tuple[Callable, BaseModel]:
+def build_function_and_schema(flow_record: Record, graph: "Graph") -> Tuple[Coroutine, BaseModel]:
     """
     Builds a dynamic function and schema for a given flow.
 
@@ -178,7 +180,7 @@ def get_flow_inputs(graph: "Graph") -> List["Vertex"]:
     return inputs
 
 
-def build_schema_from_inputs(name: str, inputs: List[tuple[str, str, str]]) -> BaseModel:
+def build_schema_from_inputs(name: str, inputs: List["Vertex"]) -> BaseModel:
     """
     Builds a schema from the given inputs.
 

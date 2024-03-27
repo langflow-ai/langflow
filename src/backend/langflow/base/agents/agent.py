@@ -1,8 +1,8 @@
 from typing import List, Union
 
-from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
+from langchain.agents import (AgentExecutor, BaseMultiActionAgent,
 
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langflow.field_typing import BaseMemory, Text, Tool
 
 

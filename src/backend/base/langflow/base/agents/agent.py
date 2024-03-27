@@ -1,6 +1,6 @@
-from typing import List, Union
+from typing import List, Optional, Union
 
-from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
+from langchain.agents.agent import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent, RunnableMultiActionAgent
 from langchain_core.runnables import Runnable
 
 from langflow.field_typing import BaseMemory, Text, Tool
@@ -44,12 +44,14 @@ class LCAgentComponent(CustomComponent):
         inputs: str,
         input_variables: list[str],
         tools: List[Tool],
-        memory: BaseMemory = None,
+        memory: Optional[BaseMemory] = None,
         handle_parsing_errors: bool = True,
         output_key: str = "output",
     ) -> Text:
         if isinstance(agent, AgentExecutor):
             runnable = agent
+        elif isinstance(agent, Runnable):
+            runnable = RunnableMultiActionAgent(runnable=agent, stream_runnable=False)
         else:
             runnable = AgentExecutor.from_agent_and_tools(
                 agent=agent, tools=tools, verbose=True, memory=memory, handle_parsing_errors=handle_parsing_errors
