@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Text
 
 from langchain_core.tools import StructuredTool
 from loguru import logger
@@ -8,7 +8,6 @@ from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.helpers.flow import build_function_and_schema
 from langflow.schema.dotdict import dotdict
-from langflow.schema.schema import Record
 
 
 class FlowToolComponent(CustomComponent):
@@ -20,7 +19,7 @@ class FlowToolComponent(CustomComponent):
         flow_records = self.list_flows()
         return [flow_record.data["name"] for flow_record in flow_records]
 
-    def get_flow(self, flow_name: str) -> Optional[Record]:
+    def get_flow(self, flow_name: str) -> Optional[Text]:
         """
         Retrieves a flow by its name.
 
@@ -83,4 +82,4 @@ class FlowToolComponent(CustomComponent):
         description_repr = repr(tool.description).strip("'")
         args_str = "\n".join([f"- {arg_name}: {arg_data['description']}" for arg_name, arg_data in tool.args.items()])
         self.status = f"{description_repr}\nArguments:\n{args_str}"
-        return tool  # type: ignore
+        return tool
