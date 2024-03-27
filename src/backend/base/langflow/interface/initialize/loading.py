@@ -38,7 +38,7 @@ async def instantiate_class(
     user_id=None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
-    from langflow.legacy_custom.customs import CUSTOM_NODES
+    from langflow.interface.custom_lists import CUSTOM_NODES
 
     vertex_type = vertex.vertex_type
     base_type = vertex.base_type
@@ -50,7 +50,9 @@ async def instantiate_class(
         if custom_node := CUSTOM_NODES.get(vertex_type):
             if hasattr(custom_node, "initialize"):
                 return custom_node.initialize(**params)
-            return custom_node(**params)
+            if callable(custom_node):
+                return custom_node(**params)
+            raise ValueError(f"Custom node {vertex_type} is not callable")
     logger.debug(f"Instantiating {vertex_type} of type {base_type}")
     if not base_type:
         raise ValueError("No base type provided for vertex")
