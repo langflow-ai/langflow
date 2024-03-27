@@ -399,7 +399,6 @@ const EditNodeModal = forwardRef(
                                     .options ? (
                                   <div className="mx-auto">
                                     <Dropdown
-                                      numberOfOptions={nodeLength}
                                       editNode={true}
                                       options={
                                         myData.node.template[templateParam]
