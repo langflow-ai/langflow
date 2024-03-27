@@ -59,18 +59,9 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "poetry"
 
-      - name: Cache Poetry virtualenv
-        uses: actions/cache@v4
-        id: poetry-cache
-        with:
-          path: ~/.cache/pypoetry
-          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: ${{ runner.os }}-poetry-
-
       - name: Install Python dependencies
         run: |
           poetry install
-        if: steps.poetry-cache.outputs.cache-hit != 'true'
 
       - name: Run Playwright Tests
         run: |
