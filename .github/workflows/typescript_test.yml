@@ -1,0 +1,30 @@
+name: Run frontend tests
+
+on:
+  pull_request:
+    paths:
+      - "src/frontend/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "21"
+
+      - name: Install dependencies
+        run: |
+          cd src/frontend
+          npm ci
+
+      - name: Run tests
+        run: |
+          cd src/frontend
+          chmod +x run-tests.sh
+          ./run-tests.sh
