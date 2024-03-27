@@ -263,3 +263,4 @@ src/backend/base/langflow/frontend/
 scratchpad*
 chroma*/*
 stuff/*
+src/frontend/playwright-report/index.html
