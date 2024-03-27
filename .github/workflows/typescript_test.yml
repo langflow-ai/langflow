@@ -42,7 +42,7 @@ jobs:
         uses: actions/cache@v4
         id: playwright-cache
         with:
-          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          path: src/frontend/${{ env.PLAYWRIGHT_BROWSERS_PATH }}
           key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_BROWSERS_PATH }}-${{ hashFiles('src/frontend/package-lock.json') }}
           restore-keys: ${{ runner.os }}-playwright-
 
