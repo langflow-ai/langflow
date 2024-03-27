@@ -62,12 +62,18 @@ export default defineConfig({
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
         LANGFLOW_AUTO_LOGIN: "true",
-        VITE_PROXY_TARGET: "http://127.0.0.1:7860",
       },
       stdout: "ignore",
 
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
+    },
+    {
+      command: "npm run start",
+      port: 3000,
+      env: {
+        VITE_PROXY_TARGET: "http://127.0.0.1:7860",
+      },
     },
   ],
 });
