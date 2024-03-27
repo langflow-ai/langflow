@@ -11,7 +11,7 @@ env:
   PYTHON_VERSION: "3.10"
   # Define the directory where Playwright browsers will be installed.
   # Adjust if your project uses a different path.
-  PLAYWRIGHT_BROWSERS_PATH: "~/.cache/ms-playwright"
+  PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
 
 jobs:
   setup-and-test:
@@ -45,7 +45,9 @@ jobs:
           restore-keys: ${{ runner.os }}-playwright-
 
       - name: Install playwright browsers
-        run: npx playwright install --with-deps
+        run: |
+          cd src/frontend
+          npx playwright install --with-deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
 
       - name: Install Poetry
