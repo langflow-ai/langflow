@@ -6,7 +6,7 @@ from langflow.field_typing import Embeddings, NestedDict, Text
 from langflow.schema import Record
 
 
-class MongoDBAtlasSearchComponent(MongoDBAtlasComponent, LCVectorStoreComponent):
+class MongoDBAtlasSearchComponent(LCVectorStoreComponent):
     display_name = "MongoDB Atlas Search"
     description = "Search a MongoDB Atlas Vector Store for similar documents."
 
@@ -37,9 +37,10 @@ class MongoDBAtlasSearchComponent(MongoDBAtlasComponent, LCVectorStoreComponent)
         search_kwargs: Optional[NestedDict] = None,
     ) -> List[Record]:
         search_kwargs = search_kwargs or {}
-        vector_store = super().build(
+        vector_store = MongoDBAtlasComponent().build(
             mongodb_atlas_cluster_uri=mongodb_atlas_cluster_uri,
-            namespace=f"{db_name}.{collection_name}",
+            collection_name=collection_name,
+            db_name=db_name,
             embedding=embedding,
             index_name=index_name,
         )

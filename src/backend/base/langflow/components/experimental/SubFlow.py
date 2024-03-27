@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Text, Tuple
+from typing import Any, List, Optional, Tuple
 
 from loguru import logger
 
@@ -20,7 +20,7 @@ class SubFlowComponent(CustomComponent):
         flow_records = self.list_flows()
         return [flow_record.data["name"] for flow_record in flow_records]
 
-    def get_flow(self, flow_name: str) -> Optional[Text]:
+    def get_flow(self, flow_name: str) -> Optional[Record]:
         flow_records = self.list_flows()
         for flow_record in flow_records:
             if flow_record.data["name"] == flow_name:
@@ -110,12 +110,15 @@ class SubFlowComponent(CustomComponent):
             tweaks=tweaks,
             flow_name=flow_name,
         )
+        if not run_outputs:
+            return []
         run_output = run_outputs[0]
 
         records = []
-        for output in run_output.outputs:
-            if output:
-                records.extend(self.build_records_from_result_data(output))
+        if run_outputs is not None:
+            for output in run_output.outputs:
+                if output:
+                    records.extend(self.build_records_from_result_data(output))
 
         self.status = records
         logger.debug(records)

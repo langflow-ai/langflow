@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
@@ -34,11 +34,11 @@ class LCModelComponent(CustomComponent):
     def get_chat_result(
         self, runnable: BaseChatModel, stream: bool, input_value: str, system_message: Optional[str] = None
     ):
-        messages = []
-        if input_value:
-            messages.append(HumanMessage(input_value))
+        messages: list[Union[HumanMessage, SystemMessage]] = []
         if system_message:
-            messages.append(SystemMessage(system_message))
+            messages.append(SystemMessage(content=system_message))
+        if input_value:
+            messages.append(HumanMessage(content=input_value))
         if stream:
             result = runnable.stream(messages)
         else:

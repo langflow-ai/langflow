@@ -15,7 +15,7 @@ class AuthSettings(BaseSettings):
     # Login settings
     CONFIG_DIR: str
     SECRET_KEY: SecretStr = Field(
-        default="",
+        default=SecretStr(""),
         description="Secret key for JWT. If not provided, a random one will be generated.",
         frozen=False,
     )
@@ -86,9 +86,10 @@ class AuthSettings(BaseSettings):
 
         secret_key_path = Path(config_dir) / "secret_key"
 
-        if value:
+        if value and isinstance(value, SecretStr):
             logger.debug("Secret key provided")
-            write_secret_to_file(secret_key_path, value)
+            secret_value = value.get_secret_value()
+            write_secret_to_file(secret_key_path, secret_value)
         else:
             logger.debug("No secret key provided, generating a random one")
 
@@ -104,4 +105,4 @@ class AuthSettings(BaseSettings):
                 write_secret_to_file(secret_key_path, value)
                 logger.debug("Saved secret key")
 
-        return value
+        return value if isinstance(value, SecretStr) else SecretStr(value)

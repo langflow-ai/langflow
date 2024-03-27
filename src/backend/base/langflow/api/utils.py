@@ -164,7 +164,7 @@ def get_is_component_from_data(data: dict):
 
 
 async def check_langflow_version(component: StoreComponentCreate):
-    from langflow import __version__ as current_version
+    from langflow.version import __version__ as current_version
 
     if not component.last_tested_version:
         component.last_tested_version = current_version
