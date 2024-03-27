@@ -43,8 +43,6 @@ export type DropDownComponentType = {
   options: string[];
   onSelect: (value: string) => void;
   editNode?: boolean;
-  apiModal?: boolean;
-  numberOfOptions?: number;
   id?: string;
 };
 export type ParameterComponentType = {

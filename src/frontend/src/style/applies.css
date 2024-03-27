@@ -480,7 +480,7 @@
     @apply absolute inset-y-0 right-0 flex items-center pr-4;
   }
   .dropdown-component-check-icon {
-    @apply h-5 w-5 text-black;
+    @apply h-5 w-5 text-primary;
   }
 
   .edit-flow-arrangement {
