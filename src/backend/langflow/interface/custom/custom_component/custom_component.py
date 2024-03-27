@@ -23,19 +23,13 @@ class CustomComponent(Component):
     """The description of the component. Defaults to None."""
     icon: Optional[str] = None
     """The icon of the component. It should be an emoji. Defaults to None."""
-    code: Optional[str] = None
-    """The code of the component. Defaults to None."""
     field_config: dict = {}
     """The field configuration of the component. Defaults to an empty dictionary."""
     field_order: Optional[List[str]] = None
     """The field order of the component. Defaults to an empty list."""
-    code_class_base_inheritance: ClassVar[str] = "CustomComponent"
     function_entrypoint_name: ClassVar[str] = "build"
     function: Optional[Callable] = None
     repr_value: Optional[Any] = ""
-    user_id: Optional[Union[UUID, str]] = None
-    status: Optional[Any] = None
-    """The status of the component. This is displayed on the frontend. Defaults to None."""
     _tree: Optional[dict] = None
 
     def __init__(self, **data):
