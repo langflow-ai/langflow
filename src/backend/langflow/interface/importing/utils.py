@@ -21,6 +21,10 @@ COMPONENT_CONFIG = {}
 
 def import_module(module_path: str) -> Any:
     """Import module from module path"""
+    if "from" not in module_path:
+        # Import the module using the module path
+        return importlib.import_module(module_path)
+
     # Split the module path into its components
     _, module_path, _, object_name = module_path.split()
 
@@ -47,6 +51,13 @@ def import_by_type(_type: str, name: str) -> Any:
         raise ValueError(f"Invalid component name: {name}")
 
     return import_module(valid_classes.module_import)
+
+
+def get_function(code):
+    """Get the function"""
+    function_name = validate.extract_function_name(code)
+
+    return validate.create_function(code, function_name)
 
 
 def eval_custom_component_code(code: str) -> Type[CustomComponent]:

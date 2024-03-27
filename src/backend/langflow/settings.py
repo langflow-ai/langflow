@@ -5,16 +5,16 @@ from pathlib import Path
 from typing import List, Optional, Dict
 
 import yaml
-from pydantic import model_validator, validator
+from pydantic import model_validator, validator, BaseModel
 from pydantic_settings import BaseSettings
 
 from langflow.utils.logger import logger
 
 # component config path
-COMPONENT_CONFIG_PATH = os.getenv("COMPONENT_CONFIG_PATH", Path(__file__).parent / "component_config.yaml")
+COMPONENT_CONFIG_PATH = os.getenv("COMPONENT_CONFIG_PATH", str(Path(__file__).parent / "component_config.yaml"))
 
 
-class ConfigurableComponent:
+class ConfigurableComponent(BaseModel):
     name: str
     module_import: str
     documentation: Optional[str]
@@ -28,13 +28,6 @@ class Settings(BaseSettings):
     class Config:
         validate_assignment = True
         extra = "ignore"
-
-    @model_validator(mode="after")
-    def validate_lists(cls, values):
-        for key, value in values.items():
-            if key != "dev" and not value:
-                values[key] = []
-        return values
 
     def get_components_with_category(self, category: str) -> List[ConfigurableComponent]:
         return self.COMPONENTS.get(category, [])
@@ -65,18 +58,24 @@ def load_settings_from_yaml(file_path: str) -> Settings:
 
         components = {}
 
-        for category, component_val in components_dict:
-            for component, val in component_val.items():
-                if category not in settings.COMPONENTS:
+        for category in components_dict:
+            for component in components_dict[category]:
+                if category not in components:
                     components[category] = []
-                components[category].append(ConfigurableComponent(
+
+                c = ConfigurableComponent(
                     name=component,
-                    module_import_command=val.get("module_import"),
-                    documentation=val.get("documentation")
-                ))
+                    module_import=components_dict[category][component].get("module_import"),
+                    documentation=components_dict[category][component].get("documentation")
+                )
+                components[category].append(c)
                 logger.debug(f"Loading {category}, {component} from {file_path}")
 
-    return Settings(**components)
+    return Settings(
+        DEV=os.getenv("DEV", False),
+        CACHE=os.getenv("CACHE", "InMemoryCache"),
+        COMPONENTS=components
+    )
 
 
 settings = load_settings_from_yaml(COMPONENT_CONFIG_PATH)
