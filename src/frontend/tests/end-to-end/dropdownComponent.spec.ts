@@ -4,7 +4,7 @@ test.beforeEach(async ({ page }) => {
   test.setTimeout(120000);
 });
 test("dropDownComponent", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(2000);
 
   await page.locator('//*[@id="new-project-btn"]').click();
@@ -255,6 +255,6 @@ class AmazonBedrockComponent(CustomComponent):
 
   `;
   await page.locator("textarea").fill(emptyOptionsCode);
-  await page.getByRole('button', { name: 'Check & Save' }).click();
+  await page.getByRole("button", { name: "Check & Save" }).click();
   await page.getByText("No parameters are available for display.").isVisible();
-})
+});

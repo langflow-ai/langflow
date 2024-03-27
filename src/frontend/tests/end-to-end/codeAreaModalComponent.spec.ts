@@ -4,7 +4,7 @@ test.beforeEach(async ({ page }) => {
   test.setTimeout(120000);
 });
 test("CodeAreaModalComponent", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(2000);
 
   await page.locator('//*[@id="new-project-btn"]').click();
