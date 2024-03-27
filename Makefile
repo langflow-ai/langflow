@@ -6,6 +6,20 @@ setup_poetry:
 	pipx install poetry
 	poetry self add poetry-monorepo-dependency-plugin
 
+add:
+	@echo 'Adding dependencies'
+ifdef devel
+	cd src/backend/base && poetry add --group dev $(devel)
+endif
+
+ifdef main
+	poetry add $(main)
+endif
+
+ifdef base
+	cd src/backend/base && poetry add $(base)
+endif
+
 init:
 	@echo 'Installing backend dependencies'
 	make install_backend
@@ -59,11 +73,12 @@ run_cli:
 	@make build_frontend > /dev/null
 	@echo 'Install backend dependencies'
 	@make install_backend > /dev/null
-	ifdef env
-		poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file $(env)
-	else
-		poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file .env
-	endif
+ifdef env
+	poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file $(env)
+else
+	poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file .env
+endif
+
 
 run_cli_debug:
 	@echo 'Running the CLI in debug mode'
@@ -72,11 +87,11 @@ run_cli_debug:
 	@make build_frontend > /dev/null
 	@echo 'Install backend dependencies'
 	@make install_backend > /dev/null
-	ifdef env
-		poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file $(env)
-	else
-		poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file .env
-	endif
+ifdef env
+	poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file $(env)
+else
+	poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file .env
+endif
 
 setup_devcontainer:
 	make init
