@@ -38,19 +38,33 @@ jobs:
           npm ci
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
+      # Attempt to restore the correct Playwright browser binaries based on the
+      # currently installed version of Playwright (The browser binary versions
+      # may change with Playwright versions).
+      # Note: Playwright's cache directory is hard coded because that's what it
+      # says to do in the docs. There doesn't appear to be a command that prints
+      # it out for us.
+      - uses: actions/cache@v3
         id: playwright-cache
         with:
-          path: src/frontend/${{ env.PLAYWRIGHT_BROWSERS_PATH }}
-          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_BROWSERS_PATH }}-${{ hashFiles('src/frontend/package-lock.json') }}
-          restore-keys: ${{ runner.os }}-playwright-
+          path: "~/.cache/ms-playwright"
+          key: "${{ runner.os }}-playwright-${{ hashFiles('src/frontend/package.json') }}"
+          # As a fallback, if the Playwright version has changed, try use the
+          # most recently cached version. There's a good chance that at least one
+          # of the browser binary versions haven't been updated, so Playwright can
+          # skip installing that in the next step.
+          # Note: When falling back to an old cache, `cache-hit` (used below)
+          # will be `false`. This allows us to restore the potentially out of
+          # date cache, but still let Playwright decide if it needs to download
+          # new binaries or not.
+          restore-keys: |
+            ${{ runner.os }}-playwright-
 
-      - name: Install playwright browsers
-        run: |
-          cd src/frontend
-          npx playwright install --with-deps
-        if: ${{ steps.playwright-cache.outputs.cache-hit != 'true' }}
+      # If the Playwright browser binaries weren't able to be restored, we tell
+      # paywright to install everything for us.
+      - name: Install Playwright's dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps
 
       - name: Install Poetry
         run: pipx install "poetry==${{ env.POETRY_VERSION }}"
