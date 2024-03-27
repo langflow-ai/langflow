@@ -102,6 +102,6 @@ class RunnableExecComponent(CustomComponent):
         result = runnable.invoke({input_key: input_value})
         result_value, _status = self.get_output(result, input_key, output_key)
         status += _status
-        status += f"\nOutput: {result_value}\n\nRaw Output: {result}"
+        status += f"\n\nOutput: {result_value}\n\nRaw Output: {result}"
         self.status = status
         return result_value
