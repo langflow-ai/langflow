@@ -1,0 +1,173 @@
+import Admonition from '@theme/Admonition';
+
+# Helpers
+
+### Custom Component
+
+This component serves as a template for creating your own custom components.
+
+**Params**
+
+- **Display Name:** Parameter
+
+**Usage**
+
+To use this component, provide the required parameter as specified.
+
+Learn more about [Custom Component](http://docs.langflow.org/components/custom).
+
+---
+
+### Documents to Records
+
+This component converts documents to records.
+
+**Params**
+
+- **Documents:**
+  - **Display Name:** Documents
+
+**Usage**
+
+To use this component, provide a list of documents to be converted into records.
+
+---
+
+### Unique ID Generator
+
+This component generates a unique ID.
+
+**Params**
+
+- **Value:**
+  - **Display Name:** Value
+  - **Real Time Refresh:** True
+
+**Usage**
+
+To use this component, simply retrieve the generated unique ID from the provided value parameter.
+
+---
+
+### Message History
+
+This component is used to retrieve stored messages from the message history.
+
+**Params**
+
+- **Sender Type:**
+  - **Display Name:** Sender Type
+  - **Options:** Machine, User, Machine and User
+
+- **Sender Name:**
+  - **Display Name:** Sender Name
+
+- **Number of Messages:**
+  - **Display Name:** Number of Messages
+  - **Info:** Number of messages to retrieve.
+
+- **Session ID:**
+  - **Display Name:** Session ID
+  - **Info:** Session ID of the chat history.
+  - **Input Types:** Text
+
+**Usage**
+
+To use this component, configure the parameters as needed to retrieve messages from the message history.
+
+---
+
+### Python Function
+
+**Params**
+
+- **Code:**
+  - **Display Name:** Code
+  - **Info:** The code for the function.
+  - **Show:** True
+
+**Usage**
+
+To use this component, provide the Python code for the function you want to define.
+
+---
+
+### Records to Text
+
+This component converts records into a single piece of text using a template.
+
+**Params**
+
+- **Records:**
+  - **Display Name:** Records
+  - **Info:** The records to convert to text.
+
+- **Template:**
+  - **Display Name:** Template
+    - **Info:** The template to use for formatting the records. It can contain the keys `{text}`, `{data}` or any other key in the Record.
+
+**Usage**
+
+To use this component, provide the records you want to convert to text along with a template for formatting.
+
+---
+
+### SearchApi
+
+This component provides access to the real-time search engine results API.
+
+**Params**
+
+- **Engine:**
+  - **Display Name:** Engine
+  - **Info:** The search engine to use.
+
+- **Parameters:**
+  - **Display Name:** Parameters
+  - **Info:** The parameters to send with the request.
+
+- **API Key:**
+  - **Display Name:** API Key
+  - **Info:** The API key to use SearchApi.
+  - **Required:** True
+  - **Password:** True
+
+Learn more about [SearchApi Documentation](https://www.searchapi.io/docs/google).
+
+---
+
+### Text to Record
+
+This component enables the creation of a record from text data.
+
+**Params**
+
+- **Data:**
+  - **Display Name:** Data
+  - **Info:** The data to convert to a record.
+  - **Input Types:** Text
+
+**Usage**
+
+To use this component, provide the text data to convert into a record.
+
+---
+
+### Update Record
+
+This component updates a record with new data.
+
+**Params**
+
+- **Record:**
+  - **Display Name:** Record
+  - **Info:** The record to update.
+
+- **New Data:**
+  - **Display Name:** New Data
+  - **Info:** The new data to update the record with.
+  - **Input Types:** Text
+
+**Usage**
+
+To use this component, provide the record to be updated along with the new data.
