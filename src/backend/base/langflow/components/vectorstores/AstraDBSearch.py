@@ -74,7 +74,7 @@ class AstraDBSearchComponent(AstraDBVectorStoreComponent, LCVectorStoreComponent
         self,
         embedding: Embeddings,
         collection_name: str,
-        input_value: Optional[Text] = None,
+        input_value: Text,
         search_type: str = "Similarity",
         token: Optional[str] = None,
         api_endpoint: Optional[str] = None,
