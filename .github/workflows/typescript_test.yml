@@ -64,6 +64,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
+          poetry env use ${{ env.PYTHON_VERSION }}
           poetry install
         if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
 
