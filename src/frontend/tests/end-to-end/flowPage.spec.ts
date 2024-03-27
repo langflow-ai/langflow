@@ -1,18 +1,23 @@
 import { Page, test } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
-  await page.waitForTimeout(6000);
-  test.setTimeout(120000);
+  // await page.waitForTimeout(6000);
+  // test.setTimeout(120000);
 });
 
 test.describe("Flow Page tests", () => {
   async function goToFlowPage(page: Page) {
-    await page.goto("http://localhost:3000/");
+    await page.goto("/");
     await page.getByRole("button", { name: "New Project" }).click();
   }
 
   test("save", async ({ page }) => {
+<<<<<<< HEAD
     await page.goto("http://localhost:3000/");
     await page.waitForTimeout(1000);
+=======
+    await page.goto("/");
+    await page.waitForTimeout(2000);
+>>>>>>> zustand/io/migration
 
     await page.locator('//*[@id="new-project-btn"]').click();
     await page.waitForTimeout(1000);

@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 test.beforeEach(async ({ page }) => {
-  await page.waitForTimeout(3000);
-  test.setTimeout(120000);
+  // await page.waitForTimeout(3000);
+  // test.setTimeout(120000);
 });
 test.describe("drag and drop test", () => {
   /// <reference lib="dom"/>
   test("drop collection", async ({ page }) => {
-    await page.goto("http:localhost:3000/");
+    await page.goto("/");
     await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
     // Read your file into a buffer.
     const jsonContent = readFileSync(

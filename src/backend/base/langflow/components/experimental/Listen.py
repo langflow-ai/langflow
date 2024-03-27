@@ -2,9 +2,9 @@ from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
 
 
-class GetNotifiedComponent(CustomComponent):
-    display_name = "Get Notified"
-    description = "A component to get notified by Notify component."
+class ListenComponent(CustomComponent):
+    display_name = "Listen"
+    description = "A component to listen for a notification."
     beta: bool = True
 
     def build_config(self):

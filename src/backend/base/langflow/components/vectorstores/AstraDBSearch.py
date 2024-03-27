@@ -9,6 +9,8 @@ from langflow.schema import Record
 class AstraDBSearchComponent(AstraDBVectorStoreComponent, LCVectorStoreComponent):
     display_name = "AstraDB Search"
     description = "Searches an existing AstraDB Vector Store"
+    icon = "AstraDB"
+    field_order = ["token", "api_endpoint", "collection_name", "input_value", "embedding"]
 
     def build_config(self):
         return {

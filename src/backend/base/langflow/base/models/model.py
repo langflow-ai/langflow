@@ -35,10 +35,10 @@ class LCModelComponent(CustomComponent):
         self, runnable: BaseChatModel, stream: bool, input_value: str, system_message: Optional[str] = None
     ):
         messages = []
-        if input_value:
-            messages.append(HumanMessage(input_value))
         if system_message:
             messages.append(SystemMessage(system_message))
+        if input_value:
+            messages.append(HumanMessage(input_value))
         if stream:
             result = runnable.stream(messages)
         else:

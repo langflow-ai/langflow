@@ -32,12 +32,15 @@ jobs:
           pipx install poetry==$POETRY_VERSION
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
+        id: setup-python
         with:
           python-version: ${{ matrix.python-version }}
           cache: poetry
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
+          poetry env use ${{ matrix.python-version }}
           poetry install
+        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
       - name: Analysing the code with our lint
         run: |
           make lint
