@@ -26,7 +26,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    // baseURL: "http://127.0.0.1:3000",
+    baseURL: "http://127.0.0.1:3000",
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
@@ -42,6 +42,10 @@ export default defineConfig({
     {
       name: "firefox",
       use: { ...devices["Desktop Firefox"] },
+    },
+    {
+      name: "cleanup db",
+      testMatch: /global\.Teardown\.ts/,
     },
 
     // {
@@ -69,18 +73,20 @@ export default defineConfig({
     //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     // },
   ],
-
   /* Run your local dev server before starting the tests */
-  // webServer: [
-  //   {
-  //     command: "npm run backend",
-  //     reuseExistingServer: !process.env.CI,
-  //     timeout: 120 * 1000,
-  //   },
-  //   {
-  //     command: "npm run start",
-  //     url: "http://127.0.0.1:3000",
-  //     reuseExistingServer: !process.env.CI,
-  //   },
-  // ],
+  webServer: [
+    {
+      command:
+        "poetry run uvicorn --factory langflow.main:create_app --host 127.0.0.1 --port 7860",
+      port: 7860,
+      env: {
+        LANGFLOW_DATABASE_URL: "sqlite:///./temp",
+        LANGFLOW_AUTO_LOGIN: "true",
+        VITE_PROXY_TARGET: "http://127.0.0.1:7860",
+      },
+
+      reuseExistingServer: !process.env.CI,
+      timeout: 15000,
+    },
+  ],
 });

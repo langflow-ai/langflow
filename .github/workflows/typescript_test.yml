@@ -48,7 +48,8 @@ jobs:
       - name: Run tests
         run: |
           cd src/frontend
-          ./run-tests.sh
+          npx playwright test --reporter=list
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
