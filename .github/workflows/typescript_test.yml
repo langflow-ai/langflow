@@ -41,7 +41,17 @@ jobs:
           poetry install
 
       # Running tests as before
+
+      - name: Install playwright browsers
+        run: npx playwright install --with-deps
+
       - name: Run tests
         run: |
           cd src/frontend
           ./run-tests.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 15

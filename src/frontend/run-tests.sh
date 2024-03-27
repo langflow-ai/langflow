@@ -66,7 +66,7 @@ if ! npx playwright install; then
 fi
 
 # Start the frontend
-make frontend &
+make frontend > /dev/null 2>&1 &
 
 # Adjust sleep duration as needed
 sleep 10
@@ -78,17 +78,22 @@ if ! poetry install; then
 fi
 
 # Start the backend
-if ! LANGFLOW_DATABASE_URL=sqlite:///./temp LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --env-file .env &; then
-    echo "Error: Failed to start the backend. Aborting."
-    exit 1
-fi
-
+LANGFLOW_DATABASE_URL=sqlite:///./temp LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser > /dev/null 2>&1 &
+backend_pid=$!  # Capture PID of the backend process
 # Adjust sleep duration as needed
 sleep 25
 
 # Navigate to the test directory
 if ! cd src/frontend; then
     echo "Error: Failed to navigate to test directory. Aborting."
+    kill $backend_pid  # Terminate the backend process if navigation fails
+    echo "Backend process terminated."
+    exit 1
+fi
+
+# Check if backend is running
+if ! lsof -i :7860; then
+    echo "Error: Backend is not running. Aborting."
     exit 1
 fi
 
@@ -104,4 +109,10 @@ if ! PLAYWRIGHT_HTML_REPORT=playwright-report/e2e $TEST_COMMAND; then
     exit 1
 fi
 
-npx playwright show-report
+if [ "$ui" = true ]; then
+    echo "Opening Playwright report..."
+    npx playwright show-report
+fi
+
+
+trap 'terminate_process_by_port 7860; terminate_process_by_port 3000; delete_temp; kill $backend_pid 2>/dev/null' EXIT
