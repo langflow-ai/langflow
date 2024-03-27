@@ -1,9 +1,6 @@
 import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
-test.beforeEach(async ({ page }) => {
-  // await page.waitForTimeout(11000);
-  // test.setTimeout(120000);
-});
+
 test("LangflowShortcuts", async ({ page }) => {
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);

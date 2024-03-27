@@ -1,8 +1,5 @@
 import { expect, test } from "@playwright/test";
-test.beforeEach(async ({ page }) => {
-  // await page.waitForTimeout(4000);
-  // test.setTimeout(120000);
-});
+
 test("dropDownComponent", async ({ page }) => {
   await page.goto("/");
   await page.waitForTimeout(2000);

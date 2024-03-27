@@ -1,9 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
-test.beforeEach(async ({ page }) => {
-  // await page.waitForTimeout(7000);
-  // test.setTimeout(120000);
-});
+
 test.describe("group node test", () => {
   /// <reference lib="dom"/>
   test("group and ungroup updating values", async ({ page }) => {
