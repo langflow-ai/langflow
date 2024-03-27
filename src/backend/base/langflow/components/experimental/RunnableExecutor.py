@@ -22,6 +22,7 @@ class RunnableExecComponent(CustomComponent):
             "runnable": {
                 "display_name": "Runnable",
                 "info": "The runnable to execute.",
+                "input_types": ["Chain", "AgentExecutor", "Agent", "Runnable"],
             },
             "output_key": {
                 "display_name": "Output Key",
