@@ -58,6 +58,7 @@ import {
   GitBranchPlus,
   GitFork,
   GithubIcon,
+  Globe,
   Group,
   Hammer,
   Heart,
@@ -138,6 +139,7 @@ import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
+import { AstraDBIcon } from "../icons/AstraDB";
 import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
 import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
@@ -311,6 +313,7 @@ export const nodeIconsLucide: iconsType = {
   Amazon: AWSIcon,
   Anthropic: AnthropicIcon,
   ChatAnthropic: AnthropicIcon,
+  AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
   Cohere: CohereIcon,
@@ -416,6 +419,7 @@ export const nodeIconsLucide: iconsType = {
   PlusCircle,
   PlusSquare,
   Code2,
+  Globe,
   Variable,
   Snowflake,
   Store,

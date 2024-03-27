@@ -450,7 +450,7 @@
     @apply text-muted-foreground;
   }
   .dropdown-component-arrow {
-    @apply pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2;
+    @apply pointer-events-none absolute inset-y-0 flex items-center pr-2;
   }
   .dropdown-component-arrow-color {
     @apply h-5 w-5 text-accent-foreground;

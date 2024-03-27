@@ -6,6 +6,20 @@ setup_poetry:
 	pipx install poetry
 	poetry self add poetry-monorepo-dependency-plugin
 
+add:
+	@echo 'Adding dependencies'
+ifdef devel
+	cd src/backend/base && poetry add --group dev $(devel)
+endif
+
+ifdef main
+	poetry add $(main)
+endif
+
+ifdef base
+	cd src/backend/base && poetry add $(base)
+endif
+
 init:
 	@echo 'Installing backend dependencies'
 	make install_backend
@@ -32,7 +46,7 @@ format:
 
 lint:
 	make install_backend
-	poetry run mypy src/backend
+	poetry run mypy --namespace-packages -p "langflow"
 	poetry run ruff . --fix
 
 install_frontend:
@@ -47,9 +61,9 @@ run_frontend:
 
 tests_frontend:
 ifeq ($(UI), true)
-		cd src/frontend && ./run-tests.sh --ui
+		cd src/frontend && npx playwright test --ui --project=chromium
 else
-		cd src/frontend && ./run-tests.sh
+		cd src/frontend && npx playwright test --project=chromium
 endif
 
 run_cli:
@@ -57,22 +71,28 @@ run_cli:
 	@make install_frontend > /dev/null
 	@echo 'Building the frontend'
 	@make build_frontend > /dev/null
+	@echo 'Install backend dependencies'
+	@make install_backend > /dev/null
 ifdef env
 	poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file $(env)
 else
 	poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file .env
 endif
 
+
 run_cli_debug:
 	@echo 'Running the CLI in debug mode'
 	@make install_frontend > /dev/null
 	@echo 'Building the frontend'
 	@make build_frontend > /dev/null
+	@echo 'Install backend dependencies'
+	@make install_backend > /dev/null
 ifdef env
-    poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file $(env)
+	poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file $(env)
 else
-    poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file .env
+	poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file .env
 endif
+
 setup_devcontainer:
 	make init
 	make build_frontend

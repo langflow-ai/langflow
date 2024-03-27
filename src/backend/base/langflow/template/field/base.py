@@ -7,6 +7,7 @@ from langflow.field_typing.range_spec import RangeSpec
 
 class TemplateField(BaseModel):
     model_config = ConfigDict()
+
     field_type: str = Field(default="str", serialization_alias="type")
     """The type of field this is. Default is a string."""
 
@@ -69,6 +70,8 @@ class TemplateField(BaseModel):
     range_spec: Optional[RangeSpec] = Field(default=None, serialization_alias="rangeSpec")
     """Range specification for the field. Defaults to None."""
 
+    load_from_db: bool = False
+    """Specifies if the field should be loaded from the database. Defaults to False."""
     title_case: bool = False
     """Specifies if the field should be displayed in title case. Defaults to True."""
 

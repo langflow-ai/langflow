@@ -6,7 +6,6 @@ import AccordionComponent from "../../components/AccordionComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import Dropdown from "../../components/dropdownComponent";
 import FloatComponent from "../../components/floatComponent";
-import InputComponent from "../../components/inputComponent";
 import InputFileComponent from "../../components/inputFileComponent";
 import InputListComponent from "../../components/inputListComponent";
 import IntComponent from "../../components/intComponent";
@@ -39,6 +38,7 @@ import {
 import { classNames } from "../../utils/utils";
 import DictComponent from "../dictComponent";
 import IconComponent from "../genericIconComponent";
+import InputGlobalComponent from "../inputGlobalComponent";
 import KeypairListComponent from "../keypairListComponent";
 
 export default function CodeTabsComponent({
@@ -54,6 +54,7 @@ export default function CodeTabsComponent({
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const dark = useDarkStore((state) => state.dark);
   const unselectAll = useFlowStore((state) => state.unselectAll);
+  const setNode = useFlowStore((state) => state.setNode);
 
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
@@ -344,38 +345,31 @@ export default function CodeTabsComponent({
                                                     />
                                                   </div>
                                                 ) : (
-                                                  <InputComponent
+                                                  <InputGlobalComponent
                                                     editNode={true}
                                                     disabled={false}
-                                                    password={
-                                                      node.data.node.template[
-                                                        templateField
-                                                      ].password ?? false
-                                                    }
-                                                    value={
-                                                      !node.data.node.template[
-                                                        templateField
-                                                      ].value ||
-                                                      node.data.node.template[
-                                                        templateField
-                                                      ].value === ""
-                                                        ? ""
-                                                        : node.data.node
-                                                            .template[
-                                                            templateField
-                                                          ].value
-                                                    }
                                                     onChange={(target) => {
-                                                      setData((old) => {
-                                                        let newInputList =
-                                                          cloneDeep(old);
-                                                        newInputList![
-                                                          i
-                                                        ].data.node.template[
-                                                          templateField
-                                                        ].value = target;
-                                                        return newInputList;
-                                                      });
+                                                      if (node.data) {
+                                                        setNode(
+                                                          node.data.id,
+                                                          (oldNode) => {
+                                                            let newNode =
+                                                              cloneDeep(
+                                                                oldNode
+                                                              );
+
+                                                            newNode.data = {
+                                                              ...newNode.data,
+                                                            };
+
+                                                            newNode.data.node.template[
+                                                              templateField
+                                                            ].value = target;
+
+                                                            return newNode;
+                                                          }
+                                                        );
+                                                      }
                                                       tweaks.buildTweakObject!(
                                                         node["data"]["id"],
                                                         target,
@@ -384,6 +378,25 @@ export default function CodeTabsComponent({
                                                         ]
                                                       );
                                                     }}
+                                                    setDb={(value) => {
+                                                      setNode(
+                                                        node.data.id,
+                                                        (oldNode) => {
+                                                          let newNode =
+                                                            cloneDeep(oldNode);
+                                                          newNode.data = {
+                                                            ...newNode.data,
+                                                          };
+                                                          newNode.data.node.template[
+                                                            templateField
+                                                          ].load_from_db =
+                                                            value;
+                                                          return newNode;
+                                                        }
+                                                      );
+                                                    }}
+                                                    name={templateField}
+                                                    data={node.data}
                                                   />
                                                 )}
                                               </div>

@@ -29,8 +29,8 @@ from langflow.utils import validate
 from langflow.utils.util import unescape_string
 
 if TYPE_CHECKING:
+    from langflow.custom import CustomComponent
     from langflow.graph.vertex.base import Vertex
-    from langflow.interface.custom.custom_component import CustomComponent
 
 
 async def instantiate_class(
@@ -38,7 +38,7 @@ async def instantiate_class(
     user_id=None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
-    from langflow.legacy_custom.customs import CUSTOM_NODES
+    from langflow.interface.custom_lists import CUSTOM_NODES
 
     vertex_type = vertex.vertex_type
     base_type = vertex.base_type
@@ -50,7 +50,9 @@ async def instantiate_class(
         if custom_node := CUSTOM_NODES.get(vertex_type):
             if hasattr(custom_node, "initialize"):
                 return custom_node.initialize(**params)
-            return custom_node(**params)
+            if callable(custom_node):
+                return custom_node(**params)
+            raise ValueError(f"Custom node {vertex_type} is not callable")
     logger.debug(f"Instantiating {vertex_type} of type {base_type}")
     if not base_type:
         raise ValueError("No base type provided for vertex")
@@ -143,6 +145,21 @@ async def instantiate_based_on_type(
         return class_object(**params)
 
 
+def update_params_with_load_from_db_fields(custom_component: "CustomComponent", params, load_from_db_fields):
+    # For each field in load_from_db_fields, we will check if it's in the params
+    # and if it is, we will get the value from the custom_component.keys(name)
+    # and update the params with the value
+    for field in load_from_db_fields:
+        if field in params:
+            try:
+                key = custom_component.keys(params[field])
+                params[field] = key if key else params[field]
+            except Exception as exc:
+                logger.error(f"Failed to get value for {field} from custom component. Error: {exc}")
+                pass
+    return params
+
+
 async def instantiate_custom_component(params, user_id, vertex):
     params_copy = params.copy()
     class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
@@ -152,6 +169,7 @@ async def instantiate_custom_component(params, user_id, vertex):
         vertex=vertex,
         selected_output_type=vertex.selected_output_type,
     )
+    params_copy = update_params_with_load_from_db_fields(custom_component, params_copy, vertex.load_from_db_fields)
 
     if "retriever" in params_copy and hasattr(params_copy["retriever"], "as_retriever"):
         params_copy["retriever"] = params_copy["retriever"].as_retriever()
@@ -168,6 +186,8 @@ async def instantiate_custom_component(params, user_id, vertex):
     custom_repr = custom_component.custom_repr()
     if not custom_repr and isinstance(build_result, (dict, Record, str)):
         custom_repr = build_result
+    if not isinstance(custom_repr, str):
+        custom_repr = str(custom_repr)
     return custom_component, build_result, {"repr": custom_repr}
 
 

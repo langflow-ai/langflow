@@ -505,6 +505,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
 
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
+
+      const verticesIds = get().verticesBuild?.verticesIds;
+      const newFlowBuildStatus = { ...get().flowBuildStatus };
+      // filter out the vertices that are not status
+      const verticesToUpdate = verticesIds?.filter(
+        (id) => newFlowBuildStatus[id]?.status !== BuildStatus.BUILT
+      );
+
+      if (verticesToUpdate) {
+        useFlowStore.getState().updateBuildStatus(verticesToUpdate, status);
+      }
     }
     await buildVertices({
       input_value,
@@ -591,7 +602,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
-
     nodeIdList.forEach((id) => {
       newFlowBuildStatus[id] = {
         status,

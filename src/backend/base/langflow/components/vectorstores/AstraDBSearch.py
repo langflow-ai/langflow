@@ -6,9 +6,11 @@ from langflow.field_typing import Embeddings, Text
 from langflow.schema import Record
 
 
-class AstraDBSearchComponent(AstraDBVectorStoreComponent, LCVectorStoreComponent):
+class AstraDBSearchComponent(LCVectorStoreComponent):
     display_name = "AstraDB Search"
     description = "Searches an existing AstraDB Vector Store"
+    icon = "AstraDB"
+    field_order = ["token", "api_endpoint", "collection_name", "input_value", "embedding"]
 
     def build_config(self):
         return {
@@ -74,7 +76,7 @@ class AstraDBSearchComponent(AstraDBVectorStoreComponent, LCVectorStoreComponent
         self,
         embedding: Embeddings,
         collection_name: str,
-        input_value: Optional[Text] = None,
+        input_value: Text,
         search_type: str = "Similarity",
         token: Optional[str] = None,
         api_endpoint: Optional[str] = None,
@@ -90,7 +92,7 @@ class AstraDBSearchComponent(AstraDBVectorStoreComponent, LCVectorStoreComponent
         metadata_indexing_exclude: Optional[List[str]] = None,
         collection_indexing_policy: Optional[dict] = None,
     ) -> List[Record]:
-        vector_store = super().build(
+        vector_store = AstraDBVectorStoreComponent().build(
             embedding=embedding,
             collection_name=collection_name,
             token=token,
