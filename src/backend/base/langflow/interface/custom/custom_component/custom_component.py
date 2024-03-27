@@ -423,11 +423,13 @@ class CustomComponent(Component):
         return validate.create_function(self.code, self.function_entrypoint_name)
 
     async def load_flow(self, flow_id: str, tweaks: Optional[dict] = None) -> "Graph":
-        return await load_flow(flow_id, tweaks)
+        if not self._user_id:
+            raise ValueError("Session is invalid")
+        return await load_flow(user_id=self._user_id, flow_id=flow_id, tweaks=tweaks)
 
     async def run_flow(
         self,
-        inputs: Union[dict, List[dict]] = None,
+        inputs: Optional[Union[dict, List[dict]]] = None,
         flow_id: Optional[str] = None,
         flow_name: Optional[str] = None,
         tweaks: Optional[dict] = None,

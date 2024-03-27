@@ -1,7 +1,7 @@
 import asyncio
 from collections import defaultdict, deque
 from itertools import chain
-from typing import TYPE_CHECKING, Coroutine, Dict, Generator, List, Optional, Type, Union
+from typing import TYPE_CHECKING, Callable, Coroutine, Dict, Generator, List, Literal, Optional, Type, Union
 
 from loguru import logger
 
@@ -269,9 +269,9 @@ class Graph:
 
     def run(
         self,
-        inputs: Dict[str, str],
-        input_components: Optional[list[str]] = None,
-        types: Optional[list[str]] = None,
+        inputs: list[Dict[str, str]],
+        input_components: Optional[list[list[str]]] = None,
+        types: Optional[list[Literal["chat", "text", "json", "any"] | None]] = None,
         outputs: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         stream: bool = False,
@@ -309,7 +309,7 @@ class Graph:
         self,
         inputs: list[Dict[str, str]],
         inputs_components: Optional[list[list[str]]] = None,
-        types: Optional[list[str]] = None,
+        types: Optional[list[Literal["chat", "text", "json", "any"] | None]] = None,
         outputs: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         stream: bool = False,
@@ -338,8 +338,12 @@ class Graph:
             inputs = [{}]
         # Length of all should be the as inputs length
         # just add empty lists to complete the length
+        if inputs_components is None:
+            inputs_components = []
         for _ in range(len(inputs) - len(inputs_components)):
             inputs_components.append([])
+        if types is None:
+            types = []
         for _ in range(len(inputs) - len(types)):
             types.append("any")
         for run_inputs, components, input_type in zip(inputs, inputs_components, types):
@@ -650,7 +654,7 @@ class Graph:
     async def build_vertex(
         self,
         lock: asyncio.Lock,
-        set_cache_coro: Coroutine,
+        set_cache_coro: Callable[["Graph", asyncio.Lock], Coroutine],
         vertex_id: str,
         inputs_dict: Optional[Dict[str, str]] = None,
         user_id: Optional[str] = None,
@@ -693,7 +697,9 @@ class Graph:
             logger.exception(f"Error building vertex: {exc}")
             raise exc
 
-    async def get_next_and_top_level_vertices(self, lock: asyncio.Lock, set_cache_coro: Coroutine, vertex: Vertex):
+    async def get_next_and_top_level_vertices(
+        self, lock: asyncio.Lock, set_cache_coro: Callable[["Graph", asyncio.Lock], Coroutine], vertex: Vertex
+    ):
         """
         Retrieves the next runnable vertices and the top level vertices for a given vertex.
 

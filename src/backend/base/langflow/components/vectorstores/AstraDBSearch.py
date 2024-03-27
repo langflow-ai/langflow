@@ -6,7 +6,7 @@ from langflow.field_typing import Embeddings, Text
 from langflow.schema import Record
 
 
-class AstraDBSearchComponent(AstraDBVectorStoreComponent, LCVectorStoreComponent):
+class AstraDBSearchComponent(LCVectorStoreComponent):
     display_name = "AstraDB Search"
     description = "Searches an existing AstraDB Vector Store"
 
@@ -90,7 +90,7 @@ class AstraDBSearchComponent(AstraDBVectorStoreComponent, LCVectorStoreComponent
         metadata_indexing_exclude: Optional[List[str]] = None,
         collection_indexing_policy: Optional[dict] = None,
     ) -> List[Record]:
-        vector_store = super().build(
+        vector_store = AstraDBVectorStoreComponent().build(
             embedding=embedding,
             collection_name=collection_name,
             token=token,

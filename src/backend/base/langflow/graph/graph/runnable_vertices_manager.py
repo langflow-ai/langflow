@@ -85,7 +85,7 @@ class RunnableVerticesManager:
             for v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
                 self.update_vertex_run_state(v_id, is_runnable=False)
                 self.remove_from_predecessors(v_id)
-            await set_cache_coro(data=graph, lock=lock)
+            await set_cache_coro(graph, lock)
         return next_runnable_vertices
 
     @staticmethod

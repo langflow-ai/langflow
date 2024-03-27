@@ -1,6 +1,6 @@
 from typing import List, Optional, Union
 
-from langchain.agents.agent import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent, RunnableMultiActionAgent
+from langchain.agents.agent import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_core.runnables import Runnable
 
 from langflow.field_typing import BaseMemory, Text, Tool
@@ -50,11 +50,13 @@ class LCAgentComponent(CustomComponent):
     ) -> Text:
         if isinstance(agent, AgentExecutor):
             runnable = agent
-        elif isinstance(agent, Runnable):
-            runnable = RunnableMultiActionAgent(runnable=agent, stream_runnable=False)
         else:
             runnable = AgentExecutor.from_agent_and_tools(
-                agent=agent, tools=tools, verbose=True, memory=memory, handle_parsing_errors=handle_parsing_errors
+                agent=agent,  # type: ignore
+                tools=tools,
+                verbose=True,
+                memory=memory,
+                handle_parsing_errors=handle_parsing_errors,
             )
         input_dict = {"input": inputs}
         for var in input_variables:
@@ -70,4 +72,5 @@ class LCAgentComponent(CustomComponent):
             else:
                 raise ValueError("Output key not found in result. Tried 'output'.")
 
-        return result.get("output")
+        output: str = result.get("output")
+        return output
