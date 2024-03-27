@@ -38,6 +38,7 @@ jobs:
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
+        id: playwright-cache
         with:
           path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
           key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
@@ -45,6 +46,7 @@ jobs:
 
       - name: Install playwright browsers
         run: npx playwright install --with-deps
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
 
       - name: Install Poetry
         run: pipx install "poetry==${{ env.POETRY_VERSION }}"
@@ -57,6 +59,7 @@ jobs:
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v4
+        id: poetry-cache
         with:
           path: ~/.cache/pypoetry
           key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
@@ -65,6 +68,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           poetry install
+        if: steps.poetry-cache.outputs.cache-hit != 'true'
 
       - name: Run Playwright Tests
         run: |
