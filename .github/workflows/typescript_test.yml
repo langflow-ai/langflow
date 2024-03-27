@@ -48,7 +48,7 @@ jobs:
         id: playwright-cache
         with:
           path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
-          key: "${{ runner.os }}-playwright-${{ hashFiles('src/frontend/package.json') }}"
+          key: "${{ runner.os }}-playwright-${{ hashFiles('src/frontend/package-lock.json') }}"
           # As a fallback, if the Playwright version has changed, try use the
           # most recently cached version. There's a good chance that at least one
           # of the browser binary versions haven't been updated, so Playwright can
