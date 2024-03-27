@@ -1,11 +1,16 @@
 import { expect, test } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
-  await page.waitForTimeout(8000);
-  test.setTimeout(120000);
+  // await page.waitForTimeout(8000);
+  // test.setTimeout(120000);
 });
 test("InputComponent", async ({ page }) => {
+<<<<<<< HEAD
   await page.goto("http://localhost:3000/");
   await page.waitForTimeout(1000);
+=======
+  await page.goto("/");
+  await page.waitForTimeout(2000);
+>>>>>>> zustand/io/migration
 
   await page.locator('//*[@id="new-project-btn"]').click();
   await page.waitForTimeout(1000);
@@ -120,7 +125,7 @@ test("InputComponent", async ({ page }) => {
   await page.getByTestId("input-collection_name-edit").click();
   await page
     .getByTestId("input-collection_name-edit")
-    .fill("NEW_collection_name_test_123123123!@#$&*(&%$@");
+    .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
@@ -143,7 +148,7 @@ test("InputComponent", async ({ page }) => {
 
     let value = await page.getByTestId("input-collection_name").inputValue();
 
-    if (value != "NEW_collection_name_test_123123123!@#$&*(&%$@") {
+    if (value != "NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe") {
       expect(false).toBeTruthy();
     }
   }

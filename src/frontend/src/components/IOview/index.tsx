@@ -129,7 +129,7 @@ export default function IOView({
         </div>
       </BaseModal.Header>
       <BaseModal.Content>
-        <div className="flex h-full flex-col overflow-hidden">
+        <div className="flex h-full flex-col ">
           <div className="flex-max-width mt-2 h-full">
             {selectedTab !== 0 && (
               <div

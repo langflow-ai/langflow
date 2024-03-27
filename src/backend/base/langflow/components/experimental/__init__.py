@@ -1,6 +1,6 @@
 from .ClearMessageHistory import ClearMessageHistoryComponent
 from .ExtractDataFromRecord import ExtractKeyFromRecordComponent
-from .GetNotified import GetNotifiedComponent
+from .Listen import GetNotifiedComponent
 from .ListFlows import ListFlowsComponent
 from .MergeRecords import MergeRecordsComponent
 from .Notify import NotifyComponent

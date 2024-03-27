@@ -1,11 +1,16 @@
 import { expect, test } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
-  await page.waitForTimeout(9000);
-  test.setTimeout(120000);
+  // await page.waitForTimeout(9000);
+  // test.setTimeout(120000);
 });
 test("IntComponent", async ({ page }) => {
+<<<<<<< HEAD
   await page.goto("http://localhost:3000/");
   await page.waitForTimeout(1000);
+=======
+  await page.goto("/");
+  await page.waitForTimeout(2000);
+>>>>>>> zustand/io/migration
 
   await page.locator('//*[@id="new-project-btn"]').click();
   await page.waitForTimeout(1000);

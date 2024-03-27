@@ -22,6 +22,7 @@ class RunnableExecComponent(CustomComponent):
             "runnable": {
                 "display_name": "Runnable",
                 "info": "The runnable to execute.",
+                "input_types": ["Chain", "AgentExecutor", "Agent", "Runnable"],
             },
             "output_key": {
                 "display_name": "Output Key",
@@ -31,9 +32,9 @@ class RunnableExecComponent(CustomComponent):
 
     def build(
         self,
-        input_key: str,
         input_value: Text,
         runnable: Runnable,
+        input_key: str = "input",
         output_key: str = "output",
     ) -> Text:
         result = runnable.invoke({input_key: input_value})
