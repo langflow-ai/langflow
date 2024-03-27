@@ -15,7 +15,7 @@ on:
       - "src/backend/**"
 
 env:
-  POETRY_VERSION: "1.5.0"
+  POETRY_VERSION: "1.8.2"
 
 jobs:
   build:

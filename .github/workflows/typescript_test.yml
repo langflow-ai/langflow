@@ -4,7 +4,8 @@ on:
   pull_request:
     paths:
       - "src/frontend/**"
-
+env:
+  POETRY_VERSION: "1.8.2"
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -25,22 +26,14 @@ jobs:
 
       # Added step to set up Python
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10" # Specify your Python version
+          cache: "poetry"
 
       # Added step to install Poetry
-      - name: Install Poetry
-        run: |
-          pipx install poetry
-
-      # Ensuring the Poetry bin directory is in PATH
-      - name: Add Poetry to PATH
-        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Configure Poetry
-        run: |
-          poetry config virtualenvs.create false
+      - name: Install poetry
+        run: pipx install poetry==$POETRY_VERSION
 
       # Assuming you have Python dependencies to install via Poetry
       - name: Install Python dependencies
@@ -51,5 +44,4 @@ jobs:
       - name: Run tests
         run: |
           cd src/frontend
-          chmod +x run-tests.sh
           ./run-tests.sh
