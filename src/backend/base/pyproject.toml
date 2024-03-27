@@ -17,9 +17,10 @@ repository = "https://github.com/logspace-ai/langflow"
 license = "MIT"
 readme = "README.md"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
-packages = [{ include = "langflow" }]
+packages = [{ include = "langflow" }, { include = "py.typed" }]
 include = ["pyproject.toml", "README.md", "langflow/**/*"]
 documentation = "https://docs.langflow.org"
+
 
 [tool.poetry.scripts]
 langflow-base = "langflow.__main__:main"
@@ -105,6 +106,11 @@ console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning"]
 log_cli = true
 markers = ["async_test"]
+
+[tool.mypy]
+namespace_packages = true
+mypy_path = "langflow"
+ignore_missing_imports = true
 
 
 [tool.ruff]
