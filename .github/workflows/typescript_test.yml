@@ -43,7 +43,7 @@ jobs:
         id: playwright-cache
         with:
           path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_BROWSERS_PATH }}-${{ hashFiles('src/frontend/package-lock.json') }}
           restore-keys: ${{ runner.os }}-playwright-
 
       - name: Install playwright browsers
