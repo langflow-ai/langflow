@@ -111,14 +111,21 @@ build:
 	make build_langflow_base
 	make build_langflow
 
-build_langflow:
-	poetry build-rewrite-path-deps --version-pinning-strategy=semver
-
 build_langflow_base:
 	make install_frontend
 	make build_frontend
 	cd src/backend/base && poetry build-rewrite-path-deps --version-pinning-strategy=semver
 	rm -rf src/backend/base/langflow/frontend
+
+build_langflow_backup:
+	poetry lock && poetry build-rewrite-path-deps --version-pinning-strategy=semver
+
+build_langflow:
+	python update_dependencies.py
+	poetry lock
+	poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	mv pyproject.toml2 pyproject.toml
+	mv poetry.lock2 poetry.lock
 
 dev:
 	make install_frontend
