@@ -10,11 +10,11 @@ from langflow.schema import Record
 
 class APIRequest(CustomComponent):
     display_name: str = "API Request"
-    description: str = "Make an HTTP request to the given URL."
+    description: str = "Make HTTP requests given one or more URLs."
     output_types: list[str] = ["Record"]
     documentation: str = "https://docs.langflow.org/components/utilities#api-request"
     field_config = {
-        "urls": {"display_name": "URLs", "info": "The URLs to make the request to."},
+        "urls": {"display_name": "URLs", "info": "URLs to make requests to."},
         "method": {
             "display_name": "Method",
             "info": "The HTTP method to use.",

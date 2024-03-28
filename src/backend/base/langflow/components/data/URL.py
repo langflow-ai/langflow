@@ -8,7 +8,7 @@ from langflow.schema import Record
 
 class URLComponent(CustomComponent):
     display_name = "URL"
-    description = "Load URLs and convert them to records."
+    description = "Fetch text content given one or more URLs."
 
     def build_config(self) -> Dict[str, Any]:
         return {
@@ -22,4 +22,5 @@ class URLComponent(CustomComponent):
         loader = WebBaseLoader(web_paths=urls)
         docs = loader.load()
         records = self.to_records(docs)
+        self.status = records
         return records
