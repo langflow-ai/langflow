@@ -17,15 +17,17 @@ class AnthropicLLM(LCModelComponent):
             "model": {
                 "display_name": "Model Name",
                 "options": [
+                    "claude-3-opus-20240229",
+                    "claude-3-sonnet-20240229",
+                    "claude-3-haiku-20240307",
                     "claude-2.1",
                     "claude-2.0",
                     "claude-instant-1.2",
                     "claude-instant-1",
-                    # Add more models as needed
                 ],
                 "info": "https://python.langchain.com/docs/integrations/chat/anthropic",
                 "required": True,
-                "value": "claude-2.1",
+                "value": "claude-3-opus-20240229",
             },
             "anthropic_api_key": {
                 "display_name": "Anthropic API Key",
@@ -43,8 +45,8 @@ class AnthropicLLM(LCModelComponent):
                 "field_type": "float",
                 "value": 0.7,
             },
-            "api_endpoint": {
-                "display_name": "API Endpoint",
+            "anthropic_api_url": {
+                "display_name": "Anthropic API URL",
                 "info": "Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
             },
             "code": {"show": False},
@@ -67,12 +69,12 @@ class AnthropicLLM(LCModelComponent):
         anthropic_api_key: Optional[str] = None,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
-        api_endpoint: Optional[str] = None,
+        anthropic_api_url: Optional[str] = None,
         stream: bool = False,
     ) -> Text:
         # Set default API endpoint if not provided
-        if not api_endpoint:
-            api_endpoint = "https://api.anthropic.com"
+        if not anthropic_api_url:
+            anthropic_api_url = "https://api.anthropic.com"
 
         try:
             output = ChatAnthropic(
@@ -80,7 +82,7 @@ class AnthropicLLM(LCModelComponent):
                 anthropic_api_key=(SecretStr(anthropic_api_key) if anthropic_api_key else None),
                 max_tokens_to_sample=max_tokens,  # type: ignore
                 temperature=temperature,
-                anthropic_api_url=api_endpoint,
+                anthropic_api_url=anthropic_api_url,
             )
         except Exception as e:
             raise ValueError("Could not connect to Anthropic API.") from e
