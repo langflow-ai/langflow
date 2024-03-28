@@ -282,7 +282,7 @@ export default function ExtraSidebar(): JSX.Element {
                     </div>
                   </div>
                 )}
-                {index === PRIORITY_SIDEBAR_ORDER.length - 1 && (
+                {index === PRIORITY_SIDEBAR_ORDER.length - 2 && (
                   <>
                     <a
                       target={"_blank"}
@@ -306,9 +306,6 @@ export default function ExtraSidebar(): JSX.Element {
                         </div>
                       </div>
                     </a>
-                    <div className="p-2 px-4 text-sm font-semibold" key={index}>
-                      Legacy Components
-                    </div>
                   </>
                 )}
                 <DisclosureComponent
