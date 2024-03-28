@@ -125,7 +125,7 @@ class Result(BaseModel):
 
 
 async def run_graph(
-    graph: Union["Graph", dict],
+    graph: "Graph",
     flow_id: str,
     stream: bool,
     session_id: Optional[str] = None,

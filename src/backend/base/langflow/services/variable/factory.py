@@ -1,15 +1,15 @@
 from typing import TYPE_CHECKING
 
-from langflow.services.credentials.service import CredentialService
 from langflow.services.factory import ServiceFactory
+from langflow.services.variable.service import VariableService
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
 
-class CredentialServiceFactory(ServiceFactory):
+class VariableServiceFactory(ServiceFactory):
     def __init__(self):
-        super().__init__(CredentialService)
+        super().__init__(VariableService)
 
     def create(self, settings_service: "SettingsService"):
-        return CredentialService(settings_service)
+        return VariableService(settings_service)

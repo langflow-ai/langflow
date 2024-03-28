@@ -46,9 +46,7 @@
                 "dynamic": false,
                 "info": "",
                 "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
+                "input_types": ["Text"]
               },
               "name": {
                 "type": "str",
@@ -66,9 +64,7 @@
                 "dynamic": false,
                 "info": "",
                 "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
+                "input_types": ["Text"]
               },
               "return_direct": {
                 "type": "bool",
@@ -90,10 +86,7 @@
               "_type": "PythonFunctionTool"
             },
             "description": "Python function to be executed.",
-            "base_classes": [
-              "BaseTool",
-              "Tool"
-            ],
+            "base_classes": ["BaseTool", "Tool"],
             "display_name": "PythonFunctionTool",
             "documentation": "",
             "custom_fields": {},
@@ -208,9 +201,7 @@
                 "dynamic": false,
                 "info": "",
                 "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
+                "input_types": ["Text"]
               },
               "code": {
                 "type": "code",
@@ -269,10 +260,7 @@
               "max_iterations": null,
               "memory": null
             },
-            "output_types": [
-              "AgentExecutor",
-              "Callable"
-            ],
+            "output_types": ["AgentExecutor", "Callable"],
             "field_formatters": {},
             "pinned": false,
             "beta": true
@@ -372,9 +360,7 @@
                 "dynamic": false,
                 "info": "",
                 "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
+                "input_types": ["Text"]
               },
               "openai_api_base": {
                 "type": "str",
@@ -392,9 +378,7 @@
                 "dynamic": false,
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
                 "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
+                "input_types": ["Text"]
               },
               "openai_api_key": {
                 "type": "str",
@@ -412,9 +396,7 @@
                 "dynamic": false,
                 "info": "",
                 "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
+                "input_types": ["Text"]
               },
               "temperature": {
                 "type": "float",
@@ -462,10 +444,7 @@
               "openai_api_key": null,
               "temperature": null
             },
-            "output_types": [
-              "BaseLanguageModel",
-              "BaseLLM"
-            ],
+            "output_types": ["BaseLanguageModel", "BaseLLM"],
             "field_formatters": {},
             "pinned": false,
             "beta": true
@@ -528,10 +507,7 @@
             "type": "Tool"
           },
           "sourceHandle": {
-            "baseClasses": [
-              "BaseTool",
-              "Tool"
-            ],
+            "baseClasses": ["BaseTool", "Tool"],
             "dataType": "PythonFunctionTool",
             "id": "PythonFunctionTool-RfJui"
           }

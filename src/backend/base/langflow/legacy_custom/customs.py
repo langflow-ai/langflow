@@ -1,7 +1,7 @@
 from langflow.template import frontend_node
 
 # These should always be instantiated
-CUSTOM_NODES = {
+CUSTOM_NODES: dict[str, dict[str, frontend_node.base.FrontendNode]] = {
     # "prompts": {
     #     "ZeroShotPrompt": frontend_node.prompts.ZeroShotPromptNode(),
     # },

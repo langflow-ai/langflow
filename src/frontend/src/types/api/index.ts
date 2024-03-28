@@ -177,3 +177,6 @@ export type CodeErrorDataTypeAPI = {
 export type ResponseErrorTypeAPI = {
   response: { data: { detail: CodeErrorDataTypeAPI } };
 };
+export type ResponseErrorDetailAPI = {
+  response: { data: { detail: string } };
+};
