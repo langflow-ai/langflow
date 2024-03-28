@@ -12,7 +12,7 @@ class FileComponent(CustomComponent):
 
     def build_config(self) -> Dict[str, Any]:
         return {
-            "paths": {
+            "path": {
                 "display_name": "Path",
                 "field_type": "file",
                 "file_types": TEXT_FILE_TYPES,
