@@ -28,7 +28,7 @@ langflow-base = "langflow.__main__:main"
 python = ">=3.9,<3.12"
 
 fastapi = "^0.109.0"
-httpx = "^0.24.0"
+httpx = "^0.25.2"
 uvicorn = "^0.27.0"
 gunicorn = "^21.2.0"
 langchain = "~0.1.0"
