@@ -7,7 +7,7 @@ from langflow.schema import Record
 
 class ChatOutput(ChatComponent):
     display_name = "Chat Output"
-    description = "Used to send a message to the chat."
+    description = "Used to send a chat message."
     icon = "ChatOutput"
 
     def build(
