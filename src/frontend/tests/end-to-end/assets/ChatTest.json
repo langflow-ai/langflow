@@ -1,403 +1,358 @@
 {
-    "id": "3f5e860d-1676-4fba-9d86-06db9f51e43a",
-    "data": {
-        "nodes": [
-            {
-                "id": "ChatInput-7hPDT",
-                "type": "genericNode",
-                "position": {
-                    "x": 687,
-                    "y": 41.9375
-                },
-                "data": {
-                    "type": "ChatInput",
-                    "node": {
-                        "template": {
-                            "code": {
-                                "type": "code",
-                                "required": true,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": true,
-                                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Used to get user input from the chat.\"\n    icon = \"ChatInput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n    ) -> Union[Text, Record]:\n        return super().build(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n        )\n",
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "code",
-                                "advanced": true,
-                                "dynamic": true,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false
-                            },
-                            "input_value": {
-                                "type": "str",
-                                "required": false,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": true,
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "input_value",
-                                "display_name": "Message",
-                                "advanced": false,
-                                "input_types": [
-                                    "Text"
-                                ],
-                                "dynamic": false,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false
-                            },
-                            "return_record": {
-                                "type": "bool",
-                                "required": false,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": false,
-                                "value": false,
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "return_record",
-                                "display_name": "Return Record",
-                                "advanced": false,
-                                "dynamic": false,
-                                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
-                                "load_from_db": false,
-                                "title_case": false
-                            },
-                            "sender": {
-                                "type": "str",
-                                "required": false,
-                                "placeholder": "",
-                                "list": true,
-                                "show": true,
-                                "multiline": false,
-                                "value": "User",
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "options": [
-                                    "Machine",
-                                    "User"
-                                ],
-                                "name": "sender",
-                                "display_name": "Sender Type",
-                                "advanced": false,
-                                "dynamic": false,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false,
-                                "input_types": [
-                                    "Text"
-                                ]
-                            },
-                            "sender_name": {
-                                "type": "str",
-                                "required": false,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": false,
-                                "value": "User",
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "sender_name",
-                                "display_name": "Sender Name",
-                                "advanced": false,
-                                "dynamic": false,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false,
-                                "input_types": [
-                                    "Text"
-                                ]
-                            },
-                            "session_id": {
-                                "type": "str",
-                                "required": false,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": false,
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "session_id",
-                                "display_name": "Session ID",
-                                "advanced": true,
-                                "dynamic": false,
-                                "info": "If provided, the message will be stored in the memory.",
-                                "load_from_db": false,
-                                "title_case": false,
-                                "input_types": [
-                                    "Text"
-                                ]
-                            },
-                            "_type": "CustomComponent"
-                        },
-                        "description": "Used to get user input from the chat.",
-                        "icon": "ChatInput",
-                        "base_classes": [
-                            "Text",
-                            "object",
-                            "str",
-                            "Record"
-                        ],
-                        "display_name": "Chat Input",
-                        "documentation": "",
-                        "custom_fields": {
-                            "sender": null,
-                            "sender_name": null,
-                            "input_value": null,
-                            "session_id": null,
-                            "return_record": null
-                        },
-                        "output_types": [
-                            "Text",
-                            "Record"
-                        ],
-                        "field_formatters": {},
-                        "frozen": false,
-                        "field_order": [],
-                        "beta": false
-                    },
-                    "id": "ChatInput-7hPDT"
-                },
-                "selected": false,
-                "width": 384,
-                "height": 569,
-                "positionAbsolute": {
-                    "x": 687,
-                    "y": 41.9375
-                },
-                "dragging": false
+  "id": "3f5e860d-1676-4fba-9d86-06db9f51e43a",
+  "data": {
+    "nodes": [
+      {
+        "id": "ChatInput-7hPDT",
+        "type": "genericNode",
+        "position": {
+          "x": 687,
+          "y": 41.9375
+        },
+        "data": {
+          "type": "ChatInput",
+          "node": {
+            "template": {
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Used to get user input from the chat.\"\n    icon = \"ChatInput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n    ) -> Union[Text, Record]:\n        return super().build(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n        )\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "input_value": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "input_value",
+                "display_name": "Message",
+                "advanced": false,
+                "input_types": ["Text"],
+                "dynamic": false,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "return_record": {
+                "type": "bool",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "return_record",
+                "display_name": "Return Record",
+                "advanced": false,
+                "dynamic": false,
+                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "sender": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": true,
+                "show": true,
+                "multiline": false,
+                "value": "User",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "options": ["Machine", "User"],
+                "name": "sender",
+                "display_name": "Sender Type",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "sender_name": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": "User",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "sender_name",
+                "display_name": "Sender Name",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "session_id": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "session_id",
+                "display_name": "Session ID",
+                "advanced": true,
+                "dynamic": false,
+                "info": "If provided, the message will be stored in the memory.",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "_type": "CustomComponent"
             },
-            {
-                "id": "ChatOutput-4sm9Z",
-                "type": "genericNode",
-                "position": {
-                    "x": 4.939451516507972,
-                    "y": 103.3695231904992
-                },
-                "data": {
-                    "type": "ChatOutput",
-                    "node": {
-                        "template": {
-                            "code": {
-                                "type": "code",
-                                "required": true,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": true,
-                                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Used to send a message to the chat.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n    ) -> Union[Text, Record]:\n        return super().build(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n        )\n",
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "code",
-                                "advanced": true,
-                                "dynamic": true,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false
-                            },
-                            "input_value": {
-                                "type": "str",
-                                "required": false,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": true,
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "input_value",
-                                "display_name": "Message",
-                                "advanced": false,
-                                "input_types": [
-                                    "Text"
-                                ],
-                                "dynamic": false,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false
-                            },
-                            "return_record": {
-                                "type": "bool",
-                                "required": false,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": false,
-                                "value": false,
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "return_record",
-                                "display_name": "Return Record",
-                                "advanced": false,
-                                "dynamic": false,
-                                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
-                                "load_from_db": false,
-                                "title_case": false
-                            },
-                            "sender": {
-                                "type": "str",
-                                "required": false,
-                                "placeholder": "",
-                                "list": true,
-                                "show": true,
-                                "multiline": false,
-                                "value": "Machine",
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "options": [
-                                    "Machine",
-                                    "User"
-                                ],
-                                "name": "sender",
-                                "display_name": "Sender Type",
-                                "advanced": false,
-                                "dynamic": false,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false,
-                                "input_types": [
-                                    "Text"
-                                ]
-                            },
-                            "sender_name": {
-                                "type": "str",
-                                "required": false,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": false,
-                                "value": "AI",
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "sender_name",
-                                "display_name": "Sender Name",
-                                "advanced": false,
-                                "dynamic": false,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false,
-                                "input_types": [
-                                    "Text"
-                                ]
-                            },
-                            "session_id": {
-                                "type": "str",
-                                "required": false,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": false,
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "session_id",
-                                "display_name": "Session ID",
-                                "advanced": true,
-                                "dynamic": false,
-                                "info": "If provided, the message will be stored in the memory.",
-                                "load_from_db": false,
-                                "title_case": false,
-                                "input_types": [
-                                    "Text"
-                                ]
-                            },
-                            "_type": "CustomComponent"
-                        },
-                        "description": "Used to send a message to the chat.",
-                        "icon": "ChatOutput",
-                        "base_classes": [
-                            "Text",
-                            "object",
-                            "str",
-                            "Record"
-                        ],
-                        "display_name": "Chat Output",
-                        "documentation": "",
-                        "custom_fields": {
-                            "sender": null,
-                            "sender_name": null,
-                            "input_value": null,
-                            "session_id": null,
-                            "return_record": null
-                        },
-                        "output_types": [
-                            "Text",
-                            "Record"
-                        ],
-                        "field_formatters": {},
-                        "frozen": false,
-                        "field_order": [],
-                        "beta": false
-                    },
-                    "id": "ChatOutput-4sm9Z"
-                },
-                "selected": true,
-                "width": 384,
-                "height": 569,
-                "positionAbsolute": {
-                    "x": 4.939451516507972,
-                    "y": 103.3695231904992
-                },
-                "dragging": false
-            }
-        ],
-        "edges": [
-            {
-                "source": "ChatOutput-4sm9Z",
-                "sourceHandle": "{œbaseClassesœ:[œTextœ,œobjectœ,œstrœ,œRecordœ],œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-4sm9Zœ}",
-                "target": "ChatInput-7hPDT",
-                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatInput-7hPDTœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
-                "data": {
-                    "targetHandle": {
-                        "fieldName": "input_value",
-                        "id": "ChatInput-7hPDT",
-                        "inputTypes": [
-                            "Text"
-                        ],
-                        "type": "str"
-                    },
-                    "sourceHandle": {
-                        "baseClasses": [
-                            "Text",
-                            "object",
-                            "str",
-                            "Record"
-                        ],
-                        "dataType": "ChatOutput",
-                        "id": "ChatOutput-4sm9Z"
-                    }
-                },
-                "style": {
-                    "stroke": "#555"
-                },
-                "className": "stroke-gray-900 stroke-connection",
-                "id": "reactflow__edge-ChatOutput-4sm9Z{œbaseClassesœ:[œTextœ,œobjectœ,œstrœ,œRecordœ],œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-4sm9Zœ}-ChatInput-7hPDT{œfieldNameœ:œinput_valueœ,œidœ:œChatInput-7hPDTœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
-            }
-        ],
-        "viewport": {
-            "x": 316.78239920440234,
-            "y": 182.84104875768622,
-            "zoom": 0.6070974421975234
-        }
-    },
-    "description": "flow to test ChatInput and output",
-    "name": "ChatITest",
-    "last_tested_version": "1.0.0a0",
-    "is_component": false
+            "description": "Used to get user input from the chat.",
+            "icon": "ChatInput",
+            "base_classes": ["Text", "object", "str", "Record"],
+            "display_name": "Chat Input",
+            "documentation": "",
+            "custom_fields": {
+              "sender": null,
+              "sender_name": null,
+              "input_value": null,
+              "session_id": null,
+              "return_record": null
+            },
+            "output_types": ["Text", "Record"],
+            "field_formatters": {},
+            "frozen": false,
+            "field_order": [],
+            "beta": false
+          },
+          "id": "ChatInput-7hPDT"
+        },
+        "selected": false,
+        "width": 384,
+        "height": 569,
+        "positionAbsolute": {
+          "x": 687,
+          "y": 41.9375
+        },
+        "dragging": false
+      },
+      {
+        "id": "ChatOutput-4sm9Z",
+        "type": "genericNode",
+        "position": {
+          "x": 4.939451516507972,
+          "y": 103.3695231904992
+        },
+        "data": {
+          "type": "ChatOutput",
+          "node": {
+            "template": {
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Used to send a message to the chat.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n    ) -> Union[Text, Record]:\n        return super().build(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n        )\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "input_value": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "input_value",
+                "display_name": "Message",
+                "advanced": false,
+                "input_types": ["Text"],
+                "dynamic": false,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "return_record": {
+                "type": "bool",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "return_record",
+                "display_name": "Return Record",
+                "advanced": false,
+                "dynamic": false,
+                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "sender": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": true,
+                "show": true,
+                "multiline": false,
+                "value": "Machine",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "options": ["Machine", "User"],
+                "name": "sender",
+                "display_name": "Sender Type",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "sender_name": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": "AI",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "sender_name",
+                "display_name": "Sender Name",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "session_id": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "session_id",
+                "display_name": "Session ID",
+                "advanced": true,
+                "dynamic": false,
+                "info": "If provided, the message will be stored in the memory.",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "_type": "CustomComponent"
+            },
+            "description": "Used to send a message to the chat.",
+            "icon": "ChatOutput",
+            "base_classes": ["Text", "object", "str", "Record"],
+            "display_name": "Chat Output",
+            "documentation": "",
+            "custom_fields": {
+              "sender": null,
+              "sender_name": null,
+              "input_value": null,
+              "session_id": null,
+              "return_record": null
+            },
+            "output_types": ["Text", "Record"],
+            "field_formatters": {},
+            "frozen": false,
+            "field_order": [],
+            "beta": false
+          },
+          "id": "ChatOutput-4sm9Z"
+        },
+        "selected": true,
+        "width": 384,
+        "height": 569,
+        "positionAbsolute": {
+          "x": 4.939451516507972,
+          "y": 103.3695231904992
+        },
+        "dragging": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "ChatOutput-4sm9Z",
+        "sourceHandle": "{œbaseClassesœ:[œTextœ,œobjectœ,œstrœ,œRecordœ],œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-4sm9Zœ}",
+        "target": "ChatInput-7hPDT",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatInput-7hPDTœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatInput-7hPDT",
+            "inputTypes": ["Text"],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "baseClasses": ["Text", "object", "str", "Record"],
+            "dataType": "ChatOutput",
+            "id": "ChatOutput-4sm9Z"
+          }
+        },
+        "style": {
+          "stroke": "#555"
+        },
+        "className": "stroke-gray-900 stroke-connection",
+        "id": "reactflow__edge-ChatOutput-4sm9Z{œbaseClassesœ:[œTextœ,œobjectœ,œstrœ,œRecordœ],œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-4sm9Zœ}-ChatInput-7hPDT{œfieldNameœ:œinput_valueœ,œidœ:œChatInput-7hPDTœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+      }
+    ],
+    "viewport": {
+      "x": 316.78239920440234,
+      "y": 182.84104875768622,
+      "zoom": 0.6070974421975234
+    }
+  },
+  "description": "flow to test ChatInput and output",
+  "name": "ChatITest",
+  "last_tested_version": "1.0.0a0",
+  "is_component": false
 }
