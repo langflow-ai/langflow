@@ -21,6 +21,7 @@ class ChatComponent(CustomComponent):
             "sender": {
                 "options": ["Machine", "User"],
                 "display_name": "Sender Type",
+                "advanced": True,
             },
             "sender_name": {"display_name": "Sender Name"},
             "session_id": {
@@ -31,6 +32,7 @@ class ChatComponent(CustomComponent):
             "return_record": {
                 "display_name": "Return Record",
                 "info": "Return the message as a record containing the sender, sender_name, and session_id.",
+                "advanced": True,
             },
         }
 
