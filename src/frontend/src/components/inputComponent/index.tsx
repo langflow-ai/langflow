@@ -127,7 +127,8 @@ export default function InputComponent({
                   if (password) {
                     // check if all chars are •
                     if (
-                      e.target.value.split("").every((char) => char === "•") && e.target.value !== ""
+                      e.target.value.split("").every((char) => char === "•") &&
+                      e.target.value !== ""
                     ) {
                       setErrorData({
                         title: `Invalid characters: ${e.target.value}`,
