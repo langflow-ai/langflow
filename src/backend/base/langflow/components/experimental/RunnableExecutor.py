@@ -82,13 +82,19 @@ class RunnableExecComponent(CustomComponent):
 
         return result_value, status
 
-    def build(
-        self,
-        input_value: Text,
-        runnable: Runnable,
-        input_key: str = "input",
-        output_key: str = "output",
-    ) -> Text:
+    def get_input_dict(self, runnable, input_key, input_value):
+        """
+        Returns a dictionary containing the input key-value pair for the given runnable.
+
+        Args:
+            runnable: The runnable object.
+            input_key: The key for the input value.
+            input_value: The value for the input key.
+
+        Returns:
+            input_dict: A dictionary containing the input key-value pair.
+            status: A status message indicating if the input key is not in the runnable's input keys.
+        """
         input_dict = {}
         status = ""
         if hasattr(runnable, "input_keys"):
@@ -98,8 +104,17 @@ class RunnableExecComponent(CustomComponent):
             else:
                 input_dict = {k: input_value for k in runnable.input_keys}
                 status = f"Warning: The input key is not '{input_key}'. The input key is '{runnable.input_keys}'."
+        return input_dict, status
 
-        result = runnable.invoke({input_key: input_value})
+    def build(
+        self,
+        input_value: Text,
+        runnable: Runnable,
+        input_key: str = "input",
+        output_key: str = "output",
+    ) -> Text:
+        input_dict, status = self.get_input_dict(runnable, input_key, input_value)
+        result = runnable.invoke(input_dict)
         result_value, _status = self.get_output(result, input_key, output_key)
         status += _status
         status += f"\n\nOutput: {result_value}\n\nRaw Output: {result}"
