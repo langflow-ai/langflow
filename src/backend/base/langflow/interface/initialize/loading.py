@@ -152,7 +152,7 @@ def update_params_with_load_from_db_fields(custom_component: "CustomComponent", 
     for field in load_from_db_fields:
         if field in params:
             try:
-                key = custom_component.keys(params[field])
+                key = custom_component.variables(params[field])
                 params[field] = key if key else params[field]
             except Exception as exc:
                 logger.error(f"Failed to get value for {field} from custom component. Error: {exc}")

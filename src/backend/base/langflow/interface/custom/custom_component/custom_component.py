@@ -359,26 +359,26 @@ class CustomComponent(Component):
         return self.build_template_config()
 
     @property
-    def keys(self):
+    def variables(self):
         """
-        Returns the credential for the current user with the specified name.
+        Returns the variable for the current user with the specified name.
 
         Raises:
             ValueError: If the user id is not set.
 
         Returns:
-            The credential for the current user with the specified name.
+            The variable for the current user with the specified name.
         """
 
-        def get_credential(name: str):
+        def get_variable(name: str):
             if hasattr(self, "_user_id") and not self._user_id:
                 raise ValueError(f"User id is not set for {self.__class__.__name__}")
             variable_service = get_variable_service()  # Get service instance
-            # Retrieve and decrypt the credential by name for the current user
+            # Retrieve and decrypt the variable by name for the current user
             with session_scope() as session:
-                return variable_service.get_credential(user_id=self._user_id or "", name=name, session=session)
+                return variable_service.get_variable(user_id=self._user_id or "", name=name, session=session)
 
-        return get_credential
+        return get_variable
 
     def list_key_names(self):
         """
