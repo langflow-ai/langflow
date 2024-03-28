@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_record
 from langflow.interface.custom.custom_component import CustomComponent
@@ -13,7 +13,7 @@ class FileComponent(CustomComponent):
     def build_config(self) -> Dict[str, Any]:
         return {
             "paths": {
-                "display_name": "Paths",
+                "display_name": "Path",
                 "field_type": "file",
                 "file_types": TEXT_FILE_TYPES,
                 "info": f"Supported file types: {', '.join(TEXT_FILE_TYPES)}",
@@ -39,9 +39,9 @@ class FileComponent(CustomComponent):
 
     def build(
         self,
-        paths: List[str],
+        path: str,
         silent_errors: bool = False,
-    ) -> List[Record]:
-        records = [self.load_file(path, silent_errors) for path in paths]
-        self.status = records
-        return records
+    ) -> Record:
+        record = self.load_file(path, silent_errors)
+        self.status = record
+        return record
