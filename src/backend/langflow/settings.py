@@ -40,6 +40,9 @@ class Settings(BaseSettings):
 
         return ret_map
 
+    def get_categories(self) -> Dict[str, List[ConfigurableComponent]]:
+        return self.COMPONENTS
+
     def get_component_setting(self, component: str) -> Optional[ConfigurableComponent]:
         return self.get_all_components().get(component)
 

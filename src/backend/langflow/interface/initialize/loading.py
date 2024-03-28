@@ -24,7 +24,8 @@ async def instantiate_class(node_type: str, base_type: str, params: Dict, user_i
     # Instantiate the class based on the type
     # NOTE: there will be no validation for now since the types are loaded from config.yaml
     # return await instantiate_based_on_type(class_object, base_type, node_type, params, user_id=user_id)
-    return class_object(**params)
+    c = class_object()
+    return c.build(**params)
 
 
 def convert_params_to_sets(params):

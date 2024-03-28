@@ -7,7 +7,7 @@ from langflow.graph.edge.base import Edge
 from langflow.graph.graph.constants import lazy_load_vertex_dict
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import FileToolVertex, LLMVertex, ToolkitVertex
+from langflow.graph.vertex.types import FileToolVertex, LLMVertex, ToolkitVertex, CustomComponentVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.utils import payload
 
@@ -209,14 +209,12 @@ class Graph:
             edges.append(Edge(source, target, edge))
         return edges
 
-    def _get_vertex_class(self, vertex_type: str, vertex_base_type: str) -> Type[Vertex]:
+    def _get_vertex_class(self, vertex_type: str) -> Type[Vertex]:
         """Returns the vertex class based on the vertex type."""
         if vertex_type in FILE_TOOLS:
             return FileToolVertex
-        if vertex_base_type == "CustomComponent":
-            return lazy_load_vertex_dict.get_custom_component_vertex_type()
 
-        if vertex_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
+        if vertex_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[vertex_base_type]
         return (
             lazy_load_vertex_dict.VERTEX_TYPE_MAP[vertex_type]
@@ -230,10 +228,9 @@ class Graph:
         for vertex in self._vertices:
             vertex_data = vertex["data"]
             vertex_type: str = vertex_data["type"]  # type: ignore
-            vertex_base_type: str = vertex_data["node"]["template"]["_type"]  # type: ignore
 
-            VertexClass = self._get_vertex_class(vertex_type, vertex_base_type)
-            vertex_instance = VertexClass(vertex, graph=self)
+            # VertexClass = self._get_vertex_class(vertex_type)
+            vertex_instance = CustomComponentVertex(vertex, graph=self)
             vertex_instance.set_top_level(self.top_level_vertices)
             vertices.append(vertex_instance)
 

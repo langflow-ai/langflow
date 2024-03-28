@@ -1,6 +1,9 @@
+import os
 from pathlib import Path
 from langflow.services.settings.service import SettingsService
 from langflow.services.factory import ServiceFactory
+
+component_config_path = os.getenv("COMPONENT_CONFIG_PATH", str(Path(__file__).parent / "component_config.yaml"))
 
 
 class SettingsServiceFactory(ServiceFactory):
@@ -9,5 +12,4 @@ class SettingsServiceFactory(ServiceFactory):
 
     def create(self):
         # Here you would have logic to create and configure a SettingsService
-        langflow_dir = Path(__file__).parent.parent.parent
-        return SettingsService.load_settings_from_yaml(str(langflow_dir / "config.yaml"))
+        return SettingsService.load_settings_from_yaml(component_config_path)

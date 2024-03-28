@@ -28,7 +28,6 @@ class VertexTypesDict(LazyLoadDictBase):
         langchain_types_dict = self.get_type_dict()
         return {
             **langchain_types_dict,
-            "Custom": ["Custom Tool", "Python Function"],
         }
 
     def get_custom_component_vertex_type(self):
@@ -36,21 +35,7 @@ class VertexTypesDict(LazyLoadDictBase):
 
     def get_type_dict(self):
         return {
-            **{t: types.PromptVertex for t in prompt_creator.to_list()},
-            **{t: types.AgentVertex for t in agent_creator.to_list()},
-            **{t: types.ChainVertex for t in chain_creator.to_list()},
-            **{t: types.ToolVertex for t in tool_creator.to_list()},
-            **{t: types.ToolkitVertex for t in toolkits_creator.to_list()},
-            **{t: types.WrapperVertex for t in wrapper_creator.to_list()},
-            **{t: types.LLMVertex for t in llm_creator.to_list()},
-            **{t: types.MemoryVertex for t in memory_creator.to_list()},
-            **{t: types.EmbeddingVertex for t in embedding_creator.to_list()},
-            # **{t: types.VectorStoreVertex for t in vectorstore_creator.to_list()},
-            **{t: types.DocumentLoaderVertex for t in documentloader_creator.to_list()},
-            **{t: types.TextSplitterVertex for t in textsplitter_creator.to_list()},
-            **{t: types.OutputParserVertex for t in output_parser_creator.to_list()},
             **{t: types.CustomComponentVertex for t in custom_component_creator.to_list()},
-            **{t: types.RetrieverVertex for t in retriever_creator.to_list()},
         }
 
 

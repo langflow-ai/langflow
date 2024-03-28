@@ -13,6 +13,8 @@ from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils import validate
 
+from langflow.settings import settings
+
 
 def import_module(module_path: str) -> Any:
     """Import module from module path"""
@@ -32,31 +34,11 @@ def import_by_type(_type: str, name: str) -> Any:
     """Import class by type and name"""
     if _type is None:
         raise ValueError(f"Type cannot be None. Check if {name} is in the config file.")
-    func_dict = {
-        "agents": import_agent,
-        "prompts": import_prompt,
-        "llms": {"llm": import_llm, "chat": import_chat_llm},
-        "tools": import_tool,
-        "chains": import_chain,
-        "toolkits": import_toolkit,
-        "wrappers": import_wrapper,
-        "memory": import_memory,
-        "embeddings": import_embedding,
-        "vectorstores": import_vectorstore,
-        "documentloaders": import_documentloader,
-        "textsplitters": import_textsplitter,
-        "utilities": import_utility,
-        "output_parsers": import_output_parser,
-        "retrievers": import_retriever,
-        "custom_components": import_custom_component,
-    }
-    if _type == "llms":
-        key = "chat" if "chat" in name.lower() else "llm"
-        loaded_func = func_dict[_type][key]  # type: ignore
-    else:
-        loaded_func = func_dict[_type]
 
-    return loaded_func(name)
+
+    # fetching all components from settings
+    components = settings.get_all_components()
+    return import_module(components[name].module_import)
 
 
 def import_custom_component(custom_component: str) -> CustomComponent:
