@@ -6,7 +6,7 @@ from langflow.field_typing import Text
 
 class TextOutput(TextComponent):
     display_name = "Text Output"
-    description = "Used to pass text output to the next component."
+    description = "Used to send a text output."
 
     field_config = {
         "input_value": {"display_name": "Value"},
