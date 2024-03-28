@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any, Dict, List
 
 from langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_record
@@ -26,7 +27,8 @@ class FileComponent(CustomComponent):
 
     def load_file(self, path: str, silent_errors: bool = False) -> Record:
         resolved_path = self.resolve_path(path)
-        extension = resolved_path.split(".")[-1]
+        path_obj = Path(resolved_path)
+        extension = path_obj.suffix[1:].lower()
         if extension == "doc":
             raise ValueError("doc files are not supported. Please save as .docx")
         if extension not in TEXT_FILE_TYPES:
