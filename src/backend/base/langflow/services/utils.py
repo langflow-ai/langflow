@@ -186,7 +186,7 @@ def initialize_services(fix_migration: bool = False, socketio_server=None):
             service_manager.register_factory(factory)
         except Exception as exc:
             logger.exception(exc)
-            raise RuntimeError("Could not initialize services. Please check your settings.") from exc
+            logger.error(f"Error initializing {factory}: {exc}")
 
     # Test cache connection
     service_manager.get(ServiceType.CACHE_SERVICE)
