@@ -499,7 +499,7 @@ export default function NodeToolbarComponent({
                   />
                 </SelectItem>
               )}
-              {!hasStore && (
+              {!hasStore || !hasApiKey || !validApiKey && (
                 <SelectItem value={"Download"}>
                   <div className="flex">
                     <IconComponent
