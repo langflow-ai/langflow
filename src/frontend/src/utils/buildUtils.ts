@@ -119,6 +119,10 @@ export async function buildVertices({
       try {
         onValidateNodes(verticesOrderResponse.verticesToRun);
       } catch (e) {
+        if (onBuildComplete) {
+          onBuildComplete(false);
+          useFlowStore.getState().setIsBuilding(false);
+        }
         return;
       }
     }
