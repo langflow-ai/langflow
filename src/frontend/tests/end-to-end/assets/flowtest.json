@@ -62,27 +62,21 @@
                 "name": "text_input",
                 "display_name": "Text Input",
                 "advanced": false,
-                "input_types": [
-                  "str"
-                ],
+                "input_types": ["str"],
                 "dynamic": false,
                 "info": "",
                 "value": ""
               },
               "_type": "CustomComponent"
             },
-            "base_classes": [
-              "str"
-            ],
+            "base_classes": ["str"],
             "display_name": "text checkpoint",
             "documentation": "http://docs.langflow.org/components/custom",
             "custom_fields": {
               "save_path": null,
               "text_input": null
             },
-            "output_types": [
-              "str"
-            ],
+            "output_types": ["str"],
             "field_formatters": {},
             "beta": true
           },
@@ -161,18 +155,14 @@
               "_type": "CustomComponent"
             },
             "description": "Converts audio to text using OpenAI's Whisper.",
-            "base_classes": [
-              "str"
-            ],
+            "base_classes": ["str"],
             "display_name": "Whisper Transcriber",
             "documentation": "",
             "custom_fields": {
               "OpenAIKey": null,
               "audio": null
             },
-            "output_types": [
-              "str"
-            ],
+            "output_types": ["str"],
             "field_formatters": {},
             "beta": true
           },
@@ -196,15 +186,11 @@
           "targetHandle": {
             "fieldName": "text_input",
             "id": "CustomComponent-MtJjl",
-            "inputTypes": [
-              "str"
-            ],
+            "inputTypes": ["str"],
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": [
-              "str"
-            ],
+            "baseClasses": ["str"],
             "dataType": "CustomComponent",
             "id": "CustomComponent-7NQoq"
           }

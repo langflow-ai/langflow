@@ -246,10 +246,7 @@ export default function CodeTabsComponent({
                                   )
                                   .map((templateField, indx) => {
                                     return (
-                                      <TableRow
-                                        key={indx}
-                                        className="h-10"
-                                      >
+                                      <TableRow key={indx} className="h-10">
                                         <TableCell className="p-0 text-center text-sm text-foreground">
                                           {templateField}
                                         </TableCell>

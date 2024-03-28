@@ -4,12 +4,12 @@ import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import { ResponseErrorDetailAPI } from "../../types/api";
+import { InputGlobalComponentType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import AddNewVariableButton from "../addNewVariableButtonComponent/addNewVariableButton";
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import { CommandItem } from "../ui/command";
-import { InputGlobalComponentType } from "../../types/components";
 
 export default function InputGlobalComponent({
   disabled,
