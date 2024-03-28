@@ -732,12 +732,12 @@ export const PRIORITY_SIDEBAR_ORDER = [
   "saved_components",
   "inputs",
   "outputs",
-  "prompts",
   "data",
   "prompt",
   "models",
+  "vectorstores",
+  "vectorsearch",
   "helpers",
-  "experimental",
 ];
 export const NATIVE_CATEGORIES = [
   "inputs",
