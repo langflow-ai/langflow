@@ -383,7 +383,7 @@ export default function ParameterComponent({
         <div
           className={
             "flex w-full items-center truncate text-sm" +
-            (left ? "" : " text-end")
+            (left ? "" : " justify-end")
           }
         >
           {!left && data.node?.frozen && (
