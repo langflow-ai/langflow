@@ -182,9 +182,16 @@ export default function IOView({
                             <AccordionComponent
                               trigger={
                                 <div className="file-component-badge-div">
-                                  <Badge variant="gray" size="md">
-                                    {node.data.node.display_name}
-                                  </Badge>
+                                  <ShadTooltip
+                                    content={input.id}
+                                    styleClasses="z-50"
+                                  >
+                                    <div>
+                                      <Badge variant="gray" size="md">
+                                        {node.data.node.display_name}
+                                      </Badge>
+                                    </div>
+                                  </ShadTooltip>
                                   <div
                                     className="-mb-1 pr-4"
                                     onClick={(event) => {

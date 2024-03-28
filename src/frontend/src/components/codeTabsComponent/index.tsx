@@ -36,6 +36,7 @@ import {
   hasDuplicateKeys,
 } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
+import ShadTooltip from "../ShadTooltipComponent";
 import DictComponent from "../dictComponent";
 import IconComponent from "../genericIconComponent";
 import InputGlobalComponent from "../inputGlobalComponent";
@@ -216,7 +217,15 @@ export default function CodeTabsComponent({
                         node["data"]["id"]
                       ) && (
                         <AccordionComponent
-                          trigger={node["data"]["id"]}
+                          trigger={
+                            <ShadTooltip
+                              side="top"
+                              styleClasses="z-50"
+                              content={node["data"]["id"]}
+                            >
+                              <div>{node["data"]["node"]["display_name"]}</div>
+                            </ShadTooltip>
+                          }
                           open={openAccordion}
                           keyValue={node["data"]["id"]}
                         >
