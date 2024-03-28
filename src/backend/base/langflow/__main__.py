@@ -285,7 +285,12 @@ def run_langflow(host, port, log_level, options, app):
             # MacOS requires an env variable to be set to use gunicorn
             import uvicorn
 
-            uvicorn.run(app, host=host, port=port, log_level=log_level)
+            uvicorn.run(
+                app,
+                host=host,
+                port=port,
+                log_level=log_level.lower(),
+            )
         else:
             from langflow.server import LangflowApplication
 

@@ -6,9 +6,9 @@ import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import DictComponent from "../../../../components/dictComponent";
 import Dropdown from "../../../../components/dropdownComponent";
 import FloatComponent from "../../../../components/floatComponent";
-import IconComponent from "../../../../components/genericIconComponent";
-import InputComponent from "../../../../components/inputComponent";
+import { default as IconComponent } from "../../../../components/genericIconComponent";
 import InputFileComponent from "../../../../components/inputFileComponent";
+import InputGlobalComponent from "../../../../components/inputGlobalComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import IntComponent from "../../../../components/intComponent";
 import KeypairListComponent from "../../../../components/keypairListComponent";
@@ -71,6 +71,7 @@ export default function ParameterComponent({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
+
   const [isLoading, setIsLoading] = useState(false);
   const flow = currentFlow?.data?.nodes ?? null;
 
@@ -400,9 +401,8 @@ export default function ParameterComponent({
       <>
         <div
           className={
-            "w-full truncate text-sm" +
-            (left ? "" : " flex items-center justify-end gap-2") +
-            (info !== "" ? " flex items-center" : "")
+            "flex w-full items-center truncate text-sm" +
+            (left ? "" : " justify-end")
           }
         >
           {!left && data.node?.frozen && (
@@ -559,12 +559,21 @@ export default function ParameterComponent({
                     (data.node?.template[name].refresh_button ? "w-5/6" : "")
                   }
                 >
-                  <InputComponent
-                    id={"input-" + name}
+                  <InputGlobalComponent
                     disabled={disabled}
-                    password={data.node?.template[name].password ?? false}
-                    value={data.node?.template[name].value ?? ""}
                     onChange={handleOnNewValue}
+                    setDb={(value) => {
+                      setNode(data.id, (oldNode) => {
+                        let newNode = cloneDeep(oldNode);
+                        newNode.data = {
+                          ...newNode.data,
+                        };
+                        newNode.data.node.template[name].load_from_db = value;
+                        return newNode;
+                      });
+                    }}
+                    name={name}
+                    data={data}
                   />
                 </div>
                 {data.node?.template[name].refresh_button && (

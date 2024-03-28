@@ -6,8 +6,8 @@ import DictComponent from "../../components/dictComponent";
 import Dropdown from "../../components/dropdownComponent";
 import FloatComponent from "../../components/floatComponent";
 import IconComponent from "../../components/genericIconComponent";
-import InputComponent from "../../components/inputComponent";
 import InputFileComponent from "../../components/inputFileComponent";
+import InputGlobalComponent from "../../components/inputGlobalComponent";
 import InputListComponent from "../../components/inputListComponent";
 import IntComponent from "../../components/intComponent";
 import KeypairListComponent from "../../components/keypairListComponent";
@@ -28,7 +28,9 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   limitScrollFieldsModal,
 } from "../../constants/constants";
+import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
+import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import { NodeDataType } from "../../types/flow";
 import {
   convertObjToArray,
@@ -58,6 +60,10 @@ const EditNodeModal = forwardRef(
 
     const edges = useFlowStore((state) => state.edges);
     const setNode = useFlowStore((state) => state.setNode);
+    const setNoticeData = useAlertStore((state) => state.setNoticeData);
+    const globalVariablesEntries = useGlobalVariablesStore(
+      (state) => state.globalVariablesEntries
+    );
 
     function changeAdvanced(n) {
       setMyData((old) => {
@@ -254,28 +260,23 @@ const EditNodeModal = forwardRef(
                                         }}
                                       />
                                     ) : (
-                                      <InputComponent
-                                        id={
-                                          "input-" +
-                                          myData.node.template[templateParam]
-                                            .name
-                                        }
-                                        editNode={true}
+                                      <InputGlobalComponent
                                         disabled={disabled}
-                                        password={
-                                          myData.node.template[templateParam]
-                                            .password ?? false
+                                        editNode={true}
+                                        onChange={(value) =>
+                                          handleOnNewValue(value, templateParam)
                                         }
-                                        value={
-                                          myData.node.template[templateParam]
-                                            .value ?? ""
-                                        }
-                                        onChange={(value) => {
-                                          handleOnNewValue(
-                                            value,
-                                            templateParam
-                                          );
+                                        setDb={(value) => {
+                                          setMyData((oldData) => {
+                                            let newData = cloneDeep(oldData);
+                                            newData.node!.template[
+                                              templateParam
+                                            ].load_from_db = value;
+                                            return newData;
+                                          });
                                         }}
+                                        name={templateParam}
+                                        data={myData}
                                       />
                                     )}
                                   </div>
@@ -403,7 +404,6 @@ const EditNodeModal = forwardRef(
                                     .options ? (
                                   <div className="mx-auto">
                                     <Dropdown
-                                      numberOfOptions={nodeLength}
                                       editNode={true}
                                       options={
                                         myData.node.template[templateParam]

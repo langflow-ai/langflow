@@ -125,6 +125,9 @@ def update_template_field(frontend_template, key, value_dict):
             template_field["value"] = ""
         template_field["file_path"] = file_path_value
 
+    if "load_from_db" in value_dict and value_dict["load_from_db"]:
+        template_field["load_from_db"] = value_dict["load_from_db"]
+
 
 def get_file_path_value(file_path):
     """Get the file path value if the file exists, else return empty string."""
@@ -161,7 +164,7 @@ def get_is_component_from_data(data: dict):
 
 
 async def check_langflow_version(component: StoreComponentCreate):
-    from langflow import __version__ as current_version
+    from langflow.version.version import __version__ as current_version  # type: ignore
 
     if not component.last_tested_version:
         component.last_tested_version = current_version

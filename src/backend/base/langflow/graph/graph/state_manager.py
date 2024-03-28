@@ -1,44 +1,27 @@
-from collections import defaultdict
-from threading import Lock
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
+from langflow.services.deps import get_state_service
 from loguru import logger
+
+if TYPE_CHECKING:
+    from langflow.services.state.service import StateService
 
 
 class GraphStateManager:
     def __init__(self):
-        self.states = {}
-        self.observers = defaultdict(list)
-        self.lock = Lock()
+        self.state_service: "StateService" = get_state_service()
 
     def append_state(self, key, new_state, run_id: str):
-        with self.lock:
-            if run_id not in self.states:
-                self.states[run_id] = {}
-            if key not in self.states[run_id]:
-                self.states[run_id][key] = []
-            elif not isinstance(self.states[key], list):
-                self.states[run_id][key] = [self.states[key]]
-            self.states[run_id][key].append(new_state)
-            self.notify_append_observers(key, new_state)
+        self.state_service.append_state(key, new_state, run_id)
 
     def update_state(self, key, new_state, run_id: str):
-        with self.lock:
-            if run_id not in self.states:
-                self.states[run_id] = {}
-            if key not in self.states[run_id]:
-                self.states[run_id][key] = {}
-            self.states[run_id][key] = new_state
-            self.notify_observers(key, new_state)
+        self.state_service.update_state(key, new_state, run_id)
 
     def get_state(self, key, run_id: str):
-        with self.lock:
-            return self.states.get(run_id, {}).get(key, "")
+        return self.state_service.get_state(key, run_id)
 
     def subscribe(self, key, observer: Callable):
-        with self.lock:
-            if observer not in self.observers[key]:
-                self.observers[key].append(observer)
+        self.state_service.subscribe(key, observer)
 
     def notify_observers(self, key, new_state):
         for callback in self.observers[key]:

@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from langchain_astradb import AstraDBVectorStore
+from langchain_astradb.utils.astradb import SetupMode
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, VectorStore
@@ -85,6 +86,10 @@ class AstraDBVectorStoreComponent(CustomComponent):
         metadata_indexing_exclude: Optional[List[str]] = None,
         collection_indexing_policy: Optional[dict] = None,
     ) -> VectorStore:
+        try:
+            setup_mode_value = SetupMode[setup_mode.upper()]
+        except KeyError:
+            raise ValueError(f"Invalid setup mode: {setup_mode}")
         if inputs:
             documents = [_input.to_lc_document() for _input in inputs]
 
@@ -100,7 +105,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
                 bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,
                 bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,
                 bulk_delete_concurrency=bulk_delete_concurrency,
-                setup_mode=setup_mode,
+                setup_mode=setup_mode_value,
                 pre_delete_collection=pre_delete_collection,
                 metadata_indexing_include=metadata_indexing_include,
                 metadata_indexing_exclude=metadata_indexing_exclude,
@@ -118,7 +123,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
                 bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,
                 bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,
                 bulk_delete_concurrency=bulk_delete_concurrency,
-                setup_mode=setup_mode,
+                setup_mode=setup_mode_value,
                 pre_delete_collection=pre_delete_collection,
                 metadata_indexing_include=metadata_indexing_include,
                 metadata_indexing_exclude=metadata_indexing_exclude,
