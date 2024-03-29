@@ -17,6 +17,7 @@ class ChatOutput(ChatComponent):
         input_value: Optional[str] = None,
         session_id: Optional[str] = None,
         return_record: Optional[bool] = False,
+        record_template: Optional[str] = "{text}",
     ) -> Union[Text, Record]:
         return super().build(
             sender=sender,
@@ -24,4 +25,5 @@ class ChatOutput(ChatComponent):
             input_value=input_value,
             session_id=session_id,
             return_record=return_record,
+            record_template=record_template,
         )
