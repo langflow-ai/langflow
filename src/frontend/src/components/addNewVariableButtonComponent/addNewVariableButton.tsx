@@ -77,7 +77,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             }}
             selectedOption={type}
             password={false}
-            options={["Variable", "Credential"]}
+            options={["Generic", "Credential"]}
             placeholder="Choose a type for the variable..."
           ></InputComponent>
           <Label>Value</Label>
@@ -92,7 +92,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>
-        <Button onClick={handleSaveVariable}>Save variable</Button>
+        <Button onClick={handleSaveVariable}>Save Variable</Button>
       </BaseModal.Footer>
     </BaseModal>
   );
