@@ -52,7 +52,9 @@ export default function Dropdown({
                   editNode ? "input-edit-node" : "py-2"
                 )}
               >
-                {value
+                {(value &&
+                value !== "" &&
+                options.find((option) => option === value))
                   ? options.find((option) => option === value)
                   : "Choose an option..."}
                 <ForwardedIconComponent
