@@ -8,6 +8,16 @@ class TextInput(TextComponent):
     display_name = "Text Input"
     description = "Capture Text or Record and send text inputs."
 
+    def build_config(self):
+        return {
+            "input_value": {
+                "display_name": "Value",
+                "input_types": ["Record"],
+                "info": "Text or Record to be passed as input.",
+            },
+            "record_template": {"display_name": "Record Template", "multiline": True},
+        }
+
     def build(
         self,
         input_value: Optional[str] = "",

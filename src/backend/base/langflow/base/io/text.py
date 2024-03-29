@@ -12,7 +12,7 @@ class TextComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "input_value": {"display_name": "Value", "input_types": ["Record"]},
+            "input_value": {"display_name": "Value", "input_types": ["Record"], "info": "Text or Record to be passed."},
             "record_template": {"display_name": "Record Template", "multiline": True},
         }
 
