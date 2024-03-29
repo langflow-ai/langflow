@@ -5,7 +5,6 @@ import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
-import { PRIORITY_SIDEBAR_ORDER } from "../../../../constants/constants";
 import ExportModal from "../../../../modals/exportModal";
 import ShareModal from "../../../../modals/shareModal";
 import useAlertStore from "../../../../stores/alertStore";
@@ -282,32 +281,7 @@ export default function ExtraSidebar(): JSX.Element {
                     </div>
                   </div>
                 )}
-                {index === PRIORITY_SIDEBAR_ORDER.length - 2 && (
-                  <>
-                    <a
-                      target={"_blank"}
-                      href="https://langflow.store"
-                      className="components-disclosure-arrangement"
-                    >
-                      <div className="flex gap-4">
-                        {/* BUG ON THIS ICON */}
-                        <SparklesIcon
-                          strokeWidth={1.5}
-                          className="w-[22px] text-primary"
-                        />
 
-                        <span className="components-disclosure-title">
-                          Discover More
-                        </span>
-                      </div>
-                      <div className="components-disclosure-div">
-                        <div>
-                          <LinkIcon className="h-4 w-4 text-foreground" />
-                        </div>
-                      </div>
-                    </a>
-                  </>
-                )}
                 <DisclosureComponent
                   openDisc={
                     getFilterEdge.length !== 0 || search.length !== 0
@@ -368,6 +342,32 @@ export default function ExtraSidebar(): JSX.Element {
                       ))}
                   </div>
                 </DisclosureComponent>
+                {index === Object.keys(dataFilter).length - 1 && (
+                  <>
+                    <a
+                      target={"_blank"}
+                      href="https://langflow.store"
+                      className="components-disclosure-arrangement"
+                    >
+                      <div className="flex gap-4">
+                        {/* BUG ON THIS ICON */}
+                        <SparklesIcon
+                          strokeWidth={1.5}
+                          className="w-[22px] text-primary"
+                        />
+
+                        <span className="components-disclosure-title">
+                          Discover More
+                        </span>
+                      </div>
+                      <div className="components-disclosure-div">
+                        <div>
+                          <LinkIcon className="h-4 w-4 text-foreground" />
+                        </div>
+                      </div>
+                    </a>
+                  </>
+                )}
               </>
             ) : (
               <div key={index}></div>
