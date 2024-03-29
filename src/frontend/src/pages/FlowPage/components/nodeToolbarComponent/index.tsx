@@ -31,7 +31,6 @@ import {
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
-import { iconClasses } from "@mui/material";
 
 export default function NodeToolbarComponent({
   data,
@@ -86,7 +85,9 @@ export default function NodeToolbarComponent({
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
-  const [flowComponent, setFlowComponent] = useState<FlowType>(createFlowComponent(cloneDeep(data), version));
+  const [flowComponent, setFlowComponent] = useState<FlowType>(
+    createFlowComponent(cloneDeep(data), version)
+  );
 
   const openInNewTab = (url) => {
     window.open(url, "_blank", "noreferrer");
@@ -286,7 +287,13 @@ export default function NodeToolbarComponent({
         event.preventDefault();
         setShowconfirmShare((state) => !state);
       }
-      if (selected && (event.ctrlKey || event.metaKey) && event.shiftKey &&  event.key === "q") {
+
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey &&
+        event.key === "Q"
+      ) {
         event.preventDefault();
         if (isMinimal) {
           setShowState((show) => !show);
@@ -512,7 +519,9 @@ export default function NodeToolbarComponent({
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
                     icon="Download"
                     styleObj={{ iconClasses: "relative top-0.5 mr-2 h-4 w-4" }}
-                    keyboardKey={"J"} dataTestId={"Dowload-button-nodeToolbar"} />
+                    keyboardKey={"J"}
+                    dataTestId={"Dowload-button-nodeToolbar"}
+                  />
                 </SelectItem>
               )}
               <SelectItem
@@ -534,8 +543,8 @@ export default function NodeToolbarComponent({
                     icon={showNode ? "Minimize2" : "Maximize2"}
                     value={showNode ? "Minimize" : "Expand"}
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={true} 
-                    keyboardKey={"Q"} 
+                    shift={true}
+                    keyboardKey={"Q"}
                     dataTestId={"minimize-button-nodeToolbar"}
                   />
                 </SelectItem>
