@@ -31,6 +31,7 @@ import {
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
+import { iconClasses } from "@mui/material";
 
 export default function NodeToolbarComponent({
   data,
@@ -341,6 +342,10 @@ export default function NodeToolbarComponent({
           title: `${data.id} docs is not available at the moment.`,
         });
       }
+      if (selected && (event.ctrlKey || event.metaKey) && event.key === "j") {
+        event.preventDefault();
+        downloadNode(flowComponent!);
+      }
     }
 
     document.addEventListener("keydown", onKeyDown);
@@ -501,13 +506,13 @@ export default function NodeToolbarComponent({
               )}
               {(!hasStore || !hasApiKey || !validApiKey) && (
                 <SelectItem value={"Download"}>
-                  <div className="flex">
-                    <IconComponent
-                      name="Download"
-                      className="relative top-0.5 mr-2 h-4 w-4"
-                    />{" "}
-                    Download{" "}
-                  </div>{" "}
+                  <ToolbarSelectItem
+                    value="Download"
+                    shift={false}
+                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                    icon="Download"
+                    styleObj={{ iconClasses: "relative top-0.5 mr-2 h-4 w-4" }}
+                    keyboardKey={"j"} dataTestId={"Dowload-button-nodeToolbar"} />
                 </SelectItem>
               )}
               <SelectItem
