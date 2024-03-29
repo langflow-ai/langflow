@@ -211,9 +211,11 @@ export default function GenericNode({
     }
   }, [validationStatus, validationStatus?.params]);
 
-  // const showNode = data.showNode ?? true;
-
   const [showNode, setShowNode] = useState(data.showNode ?? true);
+
+  useEffect(() => {
+    setShowNode(data.showNode ?? true);
+  }, [data.showNode]);
 
   const nameEditable = true;
 
@@ -438,7 +440,7 @@ export default function GenericNode({
                             event.preventDefault();
                           }}
                           data-testid={"title-" + data.node?.display_name}
-                          className="generic-node-tooltip-div text-primary"
+                          className="generic-node-tooltip-div cursor-text text-primary"
                         >
                           {data.node?.display_name}
                         </div>

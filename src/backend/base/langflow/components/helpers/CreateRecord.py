@@ -2,16 +2,16 @@ from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
 
 
-class TextToRecordComponent(CustomComponent):
-    display_name = "Text to Record"
-    description = "A component to create a record from Text."
+class CreateRecordComponent(CustomComponent):
+    display_name = "Create Record"
+    description = "A component to create a record."
     beta: bool = True
 
     def build_config(self):
         return {
             "data": {
                 "display_name": "Data",
-                "info": "The data to convert to a record.",
+                "info": "Data to contruct the record.",
                 "input_types": ["Text"],
             }
         }

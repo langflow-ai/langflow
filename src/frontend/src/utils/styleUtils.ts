@@ -236,6 +236,7 @@ export const nodeColors: { [char: string]: string } = {
   embeddings: "#42BAA7",
   documentloaders: "#7AAE42",
   vectorstores: "#AA8742",
+  vectorsearch: "#AA8742",
   textsplitters: "#B47CB5",
   toolkits: "#DB2C2C",
   wrappers: "#E6277A",
@@ -248,6 +249,7 @@ export const nodeColors: { [char: string]: string } = {
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
+  Record:"#31a3cc"
 };
 
 export const nodeNames: { [char: string]: string } = {
@@ -267,6 +269,7 @@ export const nodeNames: { [char: string]: string } = {
   embeddings: "Embeddings",
   documentloaders: "Loaders",
   vectorstores: "Vector Stores",
+  vectorsearch: "Vector Search",
   toolkits: "Toolkits",
   wrappers: "Wrappers",
   textsplitters: "Text Splitters",
@@ -369,6 +372,7 @@ export const nodeIconsLucide: iconsType = {
   saved_components: GradientSave,
   documentloaders: Paperclip,
   vectorstores: Layers,
+  vectorsearch: Search,
   toolkits: Package2,
   textsplitters: Scissors,
   wrappers: Gift,
@@ -387,7 +391,6 @@ export const nodeIconsLucide: iconsType = {
   Trash2,
   Boxes,
   Network,
-  X,
   XCircle,
   Info,
   CheckCircle2,

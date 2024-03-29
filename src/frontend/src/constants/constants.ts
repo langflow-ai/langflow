@@ -107,7 +107,7 @@ export const CODE_DIALOG_SUBTITLE =
  * @constant
  */
 export const CHAT_FORM_DIALOG_SUBTITLE =
-  "Set up the input variables defined in prompt templates. Interact with agents and chains.";
+  "Adjust or overwrite input values, inspect outputs or interact through the chat console.";
 
 /**
  * The base text for subtitle of Edit Node Dialog
@@ -732,12 +732,12 @@ export const PRIORITY_SIDEBAR_ORDER = [
   "saved_components",
   "inputs",
   "outputs",
-  "prompts",
   "data",
   "prompt",
   "models",
+  "vectorstores",
+  "vectorsearch",
   "helpers",
-  "experimental",
 ];
 export const NATIVE_CATEGORIES = [
   "inputs",

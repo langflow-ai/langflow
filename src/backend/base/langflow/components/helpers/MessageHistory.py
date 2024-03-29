@@ -7,7 +7,7 @@ from langflow.schema import Record
 
 class MessageHistoryComponent(CustomComponent):
     display_name = "Message History"
-    description = "Used to retrieve stored messages."
+    description = "Used to retrieve stored chat messages."
     beta: bool = True
 
     def build_config(self):
@@ -30,7 +30,7 @@ class MessageHistoryComponent(CustomComponent):
 
     def build(
         self,
-        sender: Optional[str] = None,
+        sender: Optional[str] = "Machine",
         sender_name: Optional[str] = None,
         session_id: Optional[str] = None,
         n_messages: int = 5,
