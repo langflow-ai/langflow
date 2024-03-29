@@ -8,9 +8,15 @@ class TextOutput(TextComponent):
     display_name = "Text Output"
     description = "Used to send a text output."
 
-    field_config = {
-        "input_value": {"display_name": "Value"},
-    }
+    def build_config(self):
+        return {
+            "input_value": {
+                "display_name": "Value",
+                "input_types": ["Record"],
+                "info": "Text or Record to be passed as output.",
+            },
+            "record_template": {"display_name": "Record Template", "multiline": True},
+        }
 
-    def build(self, input_value: Optional[Text] = "") -> Text:
-        return super().build(input_value=input_value)
+    def build(self, input_value: Optional[Text] = "", record_template: str = "{text}") -> Text:
+        return super().build(input_value=input_value, record_template=record_template)
