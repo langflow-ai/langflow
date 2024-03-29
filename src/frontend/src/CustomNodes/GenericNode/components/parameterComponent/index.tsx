@@ -605,7 +605,7 @@ export default function ParameterComponent({
                 isLoading={isLoading}
                 options={data.node.template[name].options}
                 onSelect={handleOnNewValue}
-                value={data.node.template[name].value ?? "Choose an option"}
+                value={data.node.template[name].value}
                 id={"dropdown-" + name}
               />
             </div>
