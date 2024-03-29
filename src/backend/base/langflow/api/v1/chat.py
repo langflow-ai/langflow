@@ -12,6 +12,7 @@ from langflow.api.utils import (
     format_elapsed_time,
     format_exception_message,
     get_top_level_vertices,
+    parse_exception,
 )
 from langflow.api.v1.schemas import (
     InputValueRequest,
@@ -314,7 +315,10 @@ async def build_vertex_stream(
 
             except Exception as exc:
                 logger.exception(f"Error building vertex: {exc}")
-                yield str(StreamData(event="error", data={"error": str(exc)}))
+                exc_message = parse_exception(exc)
+                if exc_message == "The message must be an iterator or an async iterator.":
+                    exc_message = "This stream has already been closed."
+                yield str(StreamData(event="error", data={"error": exc_message}))
             finally:
                 logger.debug("Closing stream")
                 yield str(StreamData(event="close", data={"message": "Stream closed"}))
