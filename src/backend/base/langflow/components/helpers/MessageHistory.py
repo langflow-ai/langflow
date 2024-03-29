@@ -30,7 +30,7 @@ class MessageHistoryComponent(CustomComponent):
 
     def build(
         self,
-        sender: Optional[str] = None,
+        sender: Optional[str] = "Machine",
         sender_name: Optional[str] = None,
         session_id: Optional[str] = None,
         n_messages: int = 5,
