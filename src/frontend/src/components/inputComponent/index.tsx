@@ -120,7 +120,10 @@ export default function InputComponent({
                     : "",
                   editNode ? " input-edit-node " : "",
                   password && setSelectedOption ? "pr-16" : "",
-                  (!password && setSelectedOption) || (password && !setSelectedOption) ? "pr-8" : "",
+                  (!password && setSelectedOption) ||
+                    (password && !setSelectedOption)
+                    ? "pr-8"
+                    : "",
 
                   className!
                 )}
@@ -184,18 +187,32 @@ export default function InputComponent({
                           setShowOptions(false);
                         }}
                       >
-                        <div className="flex w-full items-center justify-between">
+                        <div className="group flex w-full items-center justify-between">
                           <div className="flex items-center">
-                            <ForwardedIconComponent
-                              name="Check"
+                            <div
                               className={cn(
-                                "mr-2 h-4 w-4 text-primary",
+                                "relative mr-2 h-4 w-4",
                                 selectedOption === option
                                   ? "opacity-100"
                                   : "opacity-0"
                               )}
-                              aria-hidden="true"
-                            />
+                            >
+                              <div className="absolute opacity-100 transition-all group-hover:opacity-0">
+                                <ForwardedIconComponent
+                                  name="Check"
+                                  className="mr-2 h-4 w-4 text-primary"
+                                  aria-hidden="true"
+                                />
+                              </div>
+                              <div className="absolute opacity-0 transition-all group-hover:opacity-100">
+                                <ForwardedIconComponent
+                                  name="X"
+                                  className="mr-2 h-4 w-4 text-status-red"
+                                  aria-hidden="true"
+                                />
+                              </div>
+                            </div>
+
                             {option}
                           </div>
                           {optionButton && optionButton(option)}
