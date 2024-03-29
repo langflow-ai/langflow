@@ -301,3 +301,10 @@ def get_top_level_vertices(graph, vertices_ids):
         else:
             top_level_vertices.append(vertex_id)
     return top_level_vertices
+
+
+def parse_exception(exc):
+    """Parse the exception message."""
+    if hasattr(exc, "body"):
+        return exc.body["message"]
+    return str(exc)
