@@ -2,7 +2,7 @@ from typing import Optional
 
 from langchain_community.embeddings.cohere import CohereEmbeddings
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class CohereEmbeddingsComponent(CustomComponent):

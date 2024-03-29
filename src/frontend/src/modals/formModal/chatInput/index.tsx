@@ -33,7 +33,7 @@ export default function ChatInput({
     <div className="relative">
       <Textarea
         onKeyDown={(event) => {
-          if (event.key === "Enter" && !lockChat && !event.shiftKey) {
+          if (event.key === "Enter" && !event.nativeEvent.isComposing && !lockChat && !event.shiftKey) {
             sendMessage();
           }
         }}
