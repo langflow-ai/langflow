@@ -117,7 +117,7 @@
     @apply relative inline-flex w-full items-center justify-center rounded-md bg-background px-2 py-2 text-foreground transition-all duration-500 ease-in-out;
   }
   .header-menubar-item {
-    @apply relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer;
+    @apply relative flex cursor-default cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50;
   }
   .extra-side-bar-buttons:hover {
     @apply hover:bg-muted;
@@ -183,8 +183,18 @@
   .disabled-message-button-icon {
     @apply fill-chat-trigger-disabled stroke-chat-trigger-disabled stroke-1;
   }
+  .parent-disclosure-arrangement {
+    @apply flex w-full select-none items-center justify-between border-y border-y-input bg-background px-3 py-2;
+  }
   .components-disclosure-arrangement {
     @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
+  }
+  .components-disclosure-arrangement-child {
+    /* different color than the non child */
+    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
+  }
+  .parent-disclosure-title {
+    @apply p-2 px-2 text-sm font-semibold;
   }
   .components-disclosure-title {
     @apply flex items-center text-sm text-primary;
