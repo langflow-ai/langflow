@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Type
+from typing import Any, Dict, Type, Optional
 
 import orjson
 from loguru import logger
@@ -13,7 +13,7 @@ def get_class_from_node_type(node_type: str) -> Type:
     pass
 
 
-async def instantiate_class(node_type: str, base_type: str, params: Dict, user_id=None) -> Any:
+async def instantiate_class(node_type: str, base_type: str, global_flow_params: Optional[Any], params: Dict, user_id=None) -> Any:
     """Instantiate class from module type and key, and params"""
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
@@ -25,6 +25,7 @@ async def instantiate_class(node_type: str, base_type: str, params: Dict, user_i
     # NOTE: there will be no validation for now since the types are loaded from config.yaml
     # return await instantiate_based_on_type(class_object, base_type, node_type, params, user_id=user_id)
     c = class_object()
+    c.global_flow_params = global_flow_params
     return c.build(**params)
 
 

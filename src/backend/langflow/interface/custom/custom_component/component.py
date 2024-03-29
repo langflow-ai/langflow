@@ -27,14 +27,18 @@ class Component:
     _function_entrypoint_name: str = "build"
     field_config: dict = {}
     _user_id: Optional[str]
+    global_flow_params: Optional[Any] = None
 
     def __init__(self, **data):
         self.cache = TTLCache(maxsize=1024, ttl=60)
         for key, value in data.items():
             if key == "user_id":
                 setattr(self, "_user_id", value)
+            elif key == "global_flow_params":
+                setattr(self, "global_flow_params", value)
             else:
                 setattr(self, key, value)
+
 
         # Validate the emoji at the icon field
         if hasattr(self, "icon") and self.icon:

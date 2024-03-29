@@ -27,6 +27,7 @@ class Vertex:
         self.graph = graph
         self.id: str = data["id"]
         self._data = data
+        self._global_flow_params = graph.global_flow_params
         self.base_type: Optional[str] = base_type
         self._parse_data()
         self._built_object = UnbuiltObject()
@@ -321,6 +322,7 @@ class Vertex:
             result = await loading.instantiate_class(
                 node_type=self.vertex_type,
                 base_type=self.base_type,
+                global_flow_params=self._global_flow_params,
                 params=self.params,
                 user_id=user_id,
             )

@@ -1,18 +1,19 @@
 import asyncio
 import json
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Any
 
 from langflow.graph import Graph
 from langflow.processing.process import fix_memory_inputs, process_tweaks
 
 
-def load_flow_from_json(flow: Union[Path, str, dict], tweaks: Optional[dict] = None, build=True):
+def load_flow_from_json(flow: Union[Path, str, dict], tweaks: Optional[dict] = None, global_flow_params: Optional[Any]=None, build=True):
     """
     Load flow from a JSON file or a JSON object.
 
     :param flow: JSON file path or JSON object
     :param tweaks: Optional tweaks to be processed
+    :param global_flow_params: Optional global flow parameters
     :param build: If True, build the graph, otherwise return the graph object
     :return: Langchain object or Graph object depending on the build parameter
     """
@@ -31,7 +32,7 @@ def load_flow_from_json(flow: Union[Path, str, dict], tweaks: Optional[dict] = N
         graph_data = process_tweaks(graph_data, tweaks)
     nodes = graph_data["nodes"]
     edges = graph_data["edges"]
-    graph = Graph(nodes, edges)
+    graph = Graph(nodes, edges, global_flow_params=global_flow_params)
 
     if build:
         langchain_object = asyncio.run(graph.build())

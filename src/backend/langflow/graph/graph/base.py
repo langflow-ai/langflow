@@ -1,4 +1,4 @@
-from typing import Dict, Generator, List, Type, Union
+from typing import Dict, Generator, List, Type, Union, Optional, Any
 
 from langchain.chains.base import Chain
 from loguru import logger
@@ -19,6 +19,7 @@ class Graph:
         self,
         nodes: List[Dict],
         edges: List[Dict[str, str]],
+        global_flow_params: Optional[Any] = None,
     ) -> None:
         self._vertices = nodes
         self._edges = edges
@@ -32,6 +33,7 @@ class Graph:
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
+        self.global_flow_params = global_flow_params
         self._build_graph()
 
     def __getstate__(self):
