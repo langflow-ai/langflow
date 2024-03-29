@@ -2,9 +2,8 @@ import { Disclosure } from "@headlessui/react";
 import IconComponent from "../../../../components/genericIconComponent";
 import { DisclosureComponentType } from "../../../../types/components";
 
-export default function DisclosureComponent({
+export default function ParentDisclosureComponent({
   button: { title, Icon, buttons = [] },
-  isChild = true,
   children,
   openDisc,
 }: DisclosureComponentType): JSX.Element {
@@ -13,17 +12,9 @@ export default function DisclosureComponent({
       {({ open }) => (
         <>
           <div>
-            <Disclosure.Button
-              className={
-                isChild
-                  ? "components-disclosure-arrangement-child"
-                  : "components-disclosure-arrangement"
-              }
-            >
-              <div className={"flex gap-4" + (isChild ? " pl-4" : "")}>
-                {/* BUG ON THIS ICON */}
-                <Icon strokeWidth={1.5} size={22} className="text-primary" />
-                <span className="components-disclosure-title">{title}</span>
+            <Disclosure.Button className="parent-disclosure-arrangement">
+              <div className="flex gap-4">
+                <span className="parent-disclosure-title">{title}</span>
               </div>
               <div className="components-disclosure-div">
                 {buttons.map((btn, index) => (
