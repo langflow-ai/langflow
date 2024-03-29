@@ -249,6 +249,7 @@ export const nodeColors: { [char: string]: string } = {
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
+  Record:"#31a3cc"
 };
 
 export const nodeNames: { [char: string]: string } = {
@@ -390,7 +391,6 @@ export const nodeIconsLucide: iconsType = {
   Trash2,
   Boxes,
   Network,
-  X,
   XCircle,
   Info,
   CheckCircle2,
