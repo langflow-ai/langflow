@@ -7,7 +7,7 @@ from langflow.schema import Record
 
 class ChatOutput(ChatComponent):
     display_name = "Chat Output"
-    description = "Used to send a message to the chat."
+    description = "Used to send a chat message."
     icon = "ChatOutput"
 
     def build(
@@ -17,6 +17,7 @@ class ChatOutput(ChatComponent):
         input_value: Optional[str] = None,
         session_id: Optional[str] = None,
         return_record: Optional[bool] = False,
+        record_template: Optional[str] = "{text}",
     ) -> Union[Text, Record]:
         return super().build(
             sender=sender,
@@ -24,4 +25,5 @@ class ChatOutput(ChatComponent):
             input_value=input_value,
             session_id=session_id,
             return_record=return_record,
+            record_template=record_template,
         )

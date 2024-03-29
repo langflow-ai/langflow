@@ -4,7 +4,7 @@ from langflow.schema import Record
 
 class UpdateRecordComponent(CustomComponent):
     display_name = "Update Record"
-    description = "Updates a record with new data."
+    description = "Updates a Record with new data. Akin to a Python dictionary update."
 
     def build_config(self):
         return {

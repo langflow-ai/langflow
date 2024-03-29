@@ -4,9 +4,9 @@ from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
 
 
-class RecordsAsTextComponent(CustomComponent):
-    display_name = "Records to Text"
-    description = "Converts Records into single piece of text using a template."
+class RecordsToTextComponent(CustomComponent):
+    display_name = "Records To Text"
+    description = "Convert Records into plain text using a pre-defined template."
 
     def build_config(self):
         return {

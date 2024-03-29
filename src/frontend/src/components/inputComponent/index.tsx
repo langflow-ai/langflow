@@ -99,12 +99,16 @@ export default function InputComponent({
                 type="text"
                 onBlur={onInputLostFocus}
                 value={
-                  selectedOption !== "" || !onChange ? selectedOption : value
+                  (selectedOption !== "" || !onChange) && setSelectedOption
+                    ? selectedOption
+                    : value
                 }
                 autoFocus={autoFocus}
                 disabled={disabled}
                 onClick={() => {
-                  (selectedOption !== "" || !onChange) && setShowOptions(true);
+                  (selectedOption !== "" || !onChange) &&
+                    setSelectedOption &&
+                    setShowOptions(true);
                 }}
                 required={required}
                 className={classNames(
@@ -115,8 +119,12 @@ export default function InputComponent({
                     ? " text-clip password "
                     : "",
                   editNode ? " input-edit-node " : "",
-                  password && selectedOption === "" && editNode ? "pr-8" : "",
-                  password && selectedOption === "" && !editNode ? "pr-10" : "",
+                  password && setSelectedOption ? "pr-16" : "",
+                  (!password && setSelectedOption) ||
+                    (password && !setSelectedOption)
+                    ? "pr-8"
+                    : "",
+
                   className!
                 )}
                 placeholder={password && editNode ? "Key" : placeholder}
@@ -179,18 +187,32 @@ export default function InputComponent({
                           setShowOptions(false);
                         }}
                       >
-                        <div className="flex w-full items-center justify-between">
+                        <div className="group flex w-full items-center justify-between">
                           <div className="flex items-center">
-                            <ForwardedIconComponent
-                              name="Check"
+                            <div
                               className={cn(
-                                "mr-2 h-4 w-4 text-primary",
+                                "relative mr-2 h-4 w-4",
                                 selectedOption === option
                                   ? "opacity-100"
                                   : "opacity-0"
                               )}
-                              aria-hidden="true"
-                            />
+                            >
+                              <div className="absolute opacity-100 transition-all group-hover:opacity-0">
+                                <ForwardedIconComponent
+                                  name="Check"
+                                  className="mr-2 h-4 w-4 text-primary"
+                                  aria-hidden="true"
+                                />
+                              </div>
+                              <div className="absolute opacity-0 transition-all group-hover:opacity-100">
+                                <ForwardedIconComponent
+                                  name="X"
+                                  className="mr-2 h-4 w-4 text-status-red"
+                                  aria-hidden="true"
+                                />
+                              </div>
+                            </div>
+
                             {option}
                           </div>
                           {optionButton && optionButton(option)}
@@ -206,10 +228,12 @@ export default function InputComponent({
           <div
             className={cn(
               "pointer-events-auto absolute inset-y-0 h-full w-full cursor-pointer",
-              selectedOption !== "" || !onChange ? "" : "hidden"
+              (selectedOption !== "" || !onChange) && setSelectedOption
+                ? ""
+                : "hidden"
             )}
             onClick={
-              selectedOption !== "" || !onChange
+              (selectedOption !== "" || !onChange) && setSelectedOption
                 ? (e) => {
                     setShowOptions((old) => !old);
                     e.preventDefault();
@@ -221,30 +245,32 @@ export default function InputComponent({
         </>
       )}
 
-      <span
-        className={cn(
-          password && selectedOption === "" ? "right-8" : "right-0",
-          "absolute inset-y-0 flex items-center pr-2.5"
-        )}
-      >
-        <button
-          onClick={() => {
-            setShowOptions(!showOptions);
-          }}
+      {setSelectedOption && (
+        <span
           className={cn(
-            selectedOption !== ""
-              ? "text-medium-indigo"
-              : "text-muted-foreground",
-            "hover:text-accent-foreground"
+            password && selectedOption === "" ? "right-8" : "right-0",
+            "absolute inset-y-0 flex items-center pr-2.5"
           )}
         >
-          <ForwardedIconComponent
-            name={optionsIcon}
-            className={"h-4 w-4"}
-            aria-hidden="true"
-          />
-        </button>
-      </span>
+          <button
+            onClick={() => {
+              setShowOptions(!showOptions);
+            }}
+            className={cn(
+              selectedOption !== ""
+                ? "text-medium-indigo"
+                : "text-muted-foreground",
+              "hover:text-accent-foreground"
+            )}
+          >
+            <ForwardedIconComponent
+              name={optionsIcon}
+              className={"h-4 w-4"}
+              aria-hidden="true"
+            />
+          </button>
+        </span>
+      )}
 
       {password && selectedOption === "" && (
         <button

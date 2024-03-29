@@ -6,7 +6,7 @@ from langflow.interface.custom.custom_component import CustomComponent
 
 class UUIDGeneratorComponent(CustomComponent):
     documentation: str = "http://docs.langflow.org/components/custom"
-    display_name = "Unique ID Generator"
+    display_name = "ID Generator"
     description = "Generates a unique ID."
 
     def update_build_config(

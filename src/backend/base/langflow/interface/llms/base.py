@@ -4,6 +4,7 @@ from loguru import logger
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import llm_type_to_cls_dict
+from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.llms import LLMFrontendNode
 from langflow.utils.util import build_template_from_class
 
@@ -33,10 +34,11 @@ class LLMCreator(LangChainTypeCreator):
             return None
 
     def to_list(self) -> List[str]:
+        settings_service = get_settings_service()
         return [
             llm.__name__
             for llm in self.type_to_loader_dict.values()
-            # if llm.__name__ in settings_service.settings.LLMS or settings_service.settings.DEV
+            if llm.__name__ in settings_service.settings.LLMS or settings_service.settings.DEV
         ]
 
 
