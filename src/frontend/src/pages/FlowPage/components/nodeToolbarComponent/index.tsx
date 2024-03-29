@@ -86,7 +86,7 @@ export default function NodeToolbarComponent({
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
-  const [flowComponent, setFlowComponent] = useState<FlowType>();
+  const [flowComponent, setFlowComponent] = useState<FlowType>(createFlowComponent(cloneDeep(data), version));
 
   const openInNewTab = (url) => {
     window.open(url, "_blank", "noreferrer");
@@ -286,7 +286,7 @@ export default function NodeToolbarComponent({
         event.preventDefault();
         setShowconfirmShare((state) => !state);
       }
-      if (selected && (event.ctrlKey || event.metaKey) && event.key === "q") {
+      if (selected && (event.ctrlKey || event.metaKey) && event.shiftKey &&  event.key === "q") {
         event.preventDefault();
         if (isMinimal) {
           setShowState((show) => !show);
@@ -512,7 +512,7 @@ export default function NodeToolbarComponent({
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
                     icon="Download"
                     styleObj={{ iconClasses: "relative top-0.5 mr-2 h-4 w-4" }}
-                    keyboardKey={"j"} dataTestId={"Dowload-button-nodeToolbar"} />
+                    keyboardKey={"J"} dataTestId={"Dowload-button-nodeToolbar"} />
                 </SelectItem>
               )}
               <SelectItem
@@ -530,24 +530,14 @@ export default function NodeToolbarComponent({
               </SelectItem>
               {isMinimal && (
                 <SelectItem value={"show"}>
-                  <div className="flex">
-                    <IconComponent
-                      name={showNode ? "Minimize2" : "Maximize2"}
-                      className="relative top-0.5 mr-2 h-4 w-4"
-                    />
-                    {showNode ? "Minimize" : "Expand"}
-                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                      <IconComponent
-                        name="Command"
-                        className="absolute right-[1.25rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                      ></IconComponent>
-                    ) : (
-                      <span className="absolute right-[1.30rem] top-[0.40em] stroke-2">
-                        Ctrl +{" "}
-                      </span>
-                    )}
-                    <span className="absolute right-2 top-[0.46em]">Q</span>
-                  </div>
+                  <ToolbarSelectItem
+                    icon={showNode ? "Minimize2" : "Maximize2"}
+                    value={showNode ? "Minimize" : "Expand"}
+                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                    shift={true} 
+                    keyboardKey={"Q"} 
+                    dataTestId={"minimize-button-nodeToolbar"}
+                  />
                 </SelectItem>
               )}
               {isGroup && (
