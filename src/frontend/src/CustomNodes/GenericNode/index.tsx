@@ -211,9 +211,11 @@ export default function GenericNode({
     }
   }, [validationStatus, validationStatus?.params]);
 
-  // const showNode = data.showNode ?? true;
-
   const [showNode, setShowNode] = useState(data.showNode ?? true);
+
+  useEffect(() => {
+    setShowNode(data.showNode ?? true);
+  }, [data.showNode]);
 
   const nameEditable = true;
 
