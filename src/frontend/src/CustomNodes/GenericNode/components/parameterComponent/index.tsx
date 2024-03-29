@@ -465,7 +465,7 @@ export default function ParameterComponent({
         {left === true &&
         type === "str" &&
         !data.node?.template[name].options ? (
-          <div className="mt-2 w-full">
+          <div className="w-full">
             {data.node?.template[name].list ? (
               <div
                 className={
