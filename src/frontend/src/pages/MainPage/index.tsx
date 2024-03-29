@@ -105,6 +105,8 @@ export default function HomePage(): JSX.Element {
             firstButtonName="New Project"
             onFirstBtnClick={() => setOpenModal(true)}
             options={dropdownOptions}
+            plusButton={true}
+            dropdownOptions={false}
           />
         </div>
       }
