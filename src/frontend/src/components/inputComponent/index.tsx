@@ -119,9 +119,9 @@ export default function InputComponent({
                     ? " text-clip password "
                     : "",
                   editNode ? " input-edit-node " : "",
-                  password && selectedOption === "" && editNode ? "pr-16" : "",
-                  password && selectedOption === "" && !editNode ? "pr-16" : "",
-                  !password && selectedOption === "" ? "pr-8" : "",
+                  password && setSelectedOption ? "pr-16" : "",
+                  (!password && setSelectedOption) || (password && !setSelectedOption) ? "pr-8" : "",
+
                   className!
                 )}
                 placeholder={password && editNode ? "Key" : placeholder}
