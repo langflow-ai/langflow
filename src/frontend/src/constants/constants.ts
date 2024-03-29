@@ -739,6 +739,7 @@ export const PRIORITY_SIDEBAR_ORDER = [
   "helpers",
   "vectorstores",
   "vectorsearch",
+  "embeddings",
 ];
 export const NATIVE_CATEGORIES = [
   "inputs",
