@@ -120,7 +120,7 @@ export default function IOView({
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
       <BaseModal.Header description={CHAT_FORM_DIALOG_SUBTITLE}>
         <div className="flex items-center">
-          <span className="pr-2">Chat</span>
+          <span className="pr-2">Interaction Panel</span>
           <IconComponent
             name="prompts"
             className="h-6 w-6 pl-1 text-foreground"
