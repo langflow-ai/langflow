@@ -237,10 +237,28 @@ class CodeParser:
 
     def parse_return_statement(self, node: ast.FunctionDef) -> bool:
         """
-        Parses the return statement of a function or method node.
+        Parses the return statement of a function or method node, including nested returns.
         """
 
-        return any(isinstance(n, ast.Return) for n in node.body)
+        def has_return(node):
+            if isinstance(node, ast.Return):
+                return True
+            elif isinstance(node, ast.If):
+                return any(has_return(child) for child in node.body) or any(has_return(child) for child in node.orelse)
+            elif isinstance(node, ast.Try):
+                return (
+                    any(has_return(child) for child in node.body)
+                    or any(has_return(child) for child in node.handlers)
+                    or any(has_return(child) for child in node.finalbody)
+                )
+            elif isinstance(node, (ast.For, ast.While)):
+                return any(has_return(child) for child in node.body) or any(has_return(child) for child in node.orelse)
+            elif isinstance(node, ast.With):
+                return any(has_return(child) for child in node.body)
+            else:
+                return False
+
+        return any(has_return(child) for child in node.body)
 
     def parse_assign(self, stmt):
         """
