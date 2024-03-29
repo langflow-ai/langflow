@@ -440,7 +440,7 @@ export default function GenericNode({
                             event.preventDefault();
                           }}
                           data-testid={"title-" + data.node?.display_name}
-                          className="generic-node-tooltip-div text-primary"
+                          className="generic-node-tooltip-div cursor-text text-primary"
                         >
                           {data.node?.display_name}
                         </div>
