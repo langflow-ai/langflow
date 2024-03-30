@@ -19,7 +19,17 @@ test("LLMChain - Tooltip", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
 
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
+
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
   await page.getByTitle("fit view").click();
 
   await page
@@ -104,7 +114,17 @@ test("LLMChain - Filter", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
 
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
+
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
   await page.getByTitle("fit view").click();
 
   await page.waitForTimeout(500);
@@ -125,7 +145,7 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("disclosure-models")).toBeVisible();
   await expect(page.getByTestId("disclosure-model specs")).toBeVisible();
 
-  await expect(page.getByTestId("modelsAzureOpenAI")).toBeVisible();
+  await expect(page.getByTestId("modelsAzure OpenAI")).toBeVisible();
   await expect(page.getByTestId("model_specsAmazon Bedrock")).toBeVisible();
   await expect(page.getByTestId("model_specsAnthropic")).toBeVisible();
   await expect(page.getByTestId("model_specsAnthropicLLM")).toBeVisible();
@@ -136,14 +156,12 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("model_specsChatOpenAI")).toBeVisible();
   await expect(page.getByTestId("model_specsChatVertexAI")).toBeVisible();
   await expect(page.getByTestId("model_specsCohere")).toBeVisible();
-  await expect(page.getByTestId("model_specsCTransformers")).toBeVisible();
   await expect(
     page.getByTestId("model_specsGoogle Generative AI")
   ).toBeVisible();
   await expect(
     page.getByTestId("model_specsHugging Face Inference API")
   ).toBeVisible();
-  await expect(page.getByTestId("model_specsLlamaCpp")).toBeVisible();
   await expect(page.getByTestId("model_specsOllama")).toBeVisible();
   await expect(
     page.getByTestId("model_specsQianfanChatEndpoint")
@@ -156,7 +174,7 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("model_specsVertexAI")).not.toBeVisible();
   await expect(page.getByTestId("model_specsCTransformers")).not.toBeVisible();
   await expect(page.getByTestId("model_specsAmazon Bedrock")).not.toBeVisible();
-  await expect(page.getByTestId("modelsAzureOpenAI")).not.toBeVisible();
+  await expect(page.getByTestId("modelsAzure OpenAI")).not.toBeVisible();
   await expect(page.getByTestId("model_specsAnthropic")).not.toBeVisible();
   await expect(page.getByTestId("model_specsAnthropicLLM")).not.toBeVisible();
   await expect(
@@ -204,23 +222,19 @@ test("LLMChain - Filter", async ({ page }) => {
 
   await expect(
     page.getByTestId("memoriesConversationBufferMemory")
-  ).not.toBeVisible();
+  ).toBeVisible();
   await expect(
     page.getByTestId("memoriesConversationBufferWindowMemory")
-  ).not.toBeVisible();
+  ).toBeVisible();
   await expect(
     page.getByTestId("memoriesConversationEntityMemory")
-  ).not.toBeVisible();
-  await expect(
-    page.getByTestId("memoriesConversationKGMemory")
-  ).not.toBeVisible();
-  await expect(
-    page.getByTestId("memoriesConversationKGMemory")
-  ).not.toBeVisible();
+  ).toBeVisible();
+  await expect(page.getByTestId("memoriesConversationKGMemory")).toBeVisible();
+  await expect(page.getByTestId("memoriesConversationKGMemory")).toBeVisible();
   await expect(
     page.getByTestId("memoriesConversationSummaryMemory")
-  ).not.toBeVisible();
+  ).toBeVisible();
   await expect(
     page.getByTestId("memoriesVectorStoreRetrieverMemory")
-  ).not.toBeVisible();
+  ).toBeVisible();
 });

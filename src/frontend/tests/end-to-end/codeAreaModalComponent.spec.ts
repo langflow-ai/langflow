@@ -20,7 +20,17 @@ test("CodeAreaModalComponent", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
 
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
+
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
   await page.getByTestId("div-generic-node").click();
   await page.getByTestId("code-button-modal").click();
 
@@ -47,6 +57,8 @@ test("CodeAreaModalComponent", async ({ page }) => {
   await page.locator("textarea").fill(wCode);
   await page.locator("textarea").fill(code);
   await page.locator('//*[@id="checkAndSaveBtn"]').click();
+  await page.waitForTimeout(1000);
+
   expect(await page.getByText("Code is ready to run").isVisible()).toBeTruthy();
   await page.getByTestId("code-button-modal").click();
   expect(await page.locator('//*[@id="codeValue"]').inputValue()).toBe(

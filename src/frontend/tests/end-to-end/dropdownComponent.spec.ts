@@ -16,33 +16,49 @@ test("dropDownComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("model_specsAmazon Bedrock")
+    .getByTestId("modelsAmazon Bedrock")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
 
-  await page.getByTestId("dropdown-model_id-display").click();
-  await page.getByTestId("ai21.j2-grande-instruct-0-option").click();
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
 
-  let value = await page.getByTestId("dropdown-model_id-display").innerText();
-  if (value !== "ai21.j2-grande-instruct") {
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
+  await page.getByTestId("title-Amazon Bedrock").click();
+
+  await page.getByTestId("dropdown-model_id").click();
+
+  await page.getByTestId("ai21.j2-mid-v1-10-option").click();
+
+  let value = await page
+    .getByTestId("value-dropdown-model_id")
+    .first()
+    .innerText();
+  if (value !== "ai21.j2-mid-v1") {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("dropdown-model_id-display").click();
-  await page.getByTestId("ai21.j2-jumbo-instruct-1-option").click();
+  await page.getByTestId("dropdown-model_id").click();
+  await page.getByTestId("anthropic.claude-v2:1-6-option").click();
 
-  value = await page.getByTestId("dropdown-model_id-display").innerText();
-  if (value !== "ai21.j2-jumbo-instruct") {
+  value = await page.getByTestId("dropdown-model_id").innerText();
+  if (value !== "anthropic.claude-v2:1") {
     expect(false).toBeTruthy();
   }
 
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  value = await page.getByTestId("dropdown-edit-model_id-display").innerText();
-  if (value !== "ai21.j2-jumbo-instruct") {
+  value = await page.getByTestId("dropdown-edit-model_id").innerText();
+  if (value !== "anthropic.claude-v2:1") {
     expect(false).toBeTruthy();
   }
 
@@ -92,16 +108,6 @@ test("dropDownComponent", async ({ page }) => {
     await page.locator('//*[@id="showregion_name"]').isChecked()
   ).toBeTruthy();
 
-  await page.locator('//*[@id="showstreaming"]').click();
-  expect(
-    await page.locator('//*[@id="showstreaming"]').isChecked()
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showstreaming"]').click();
-  expect(
-    await page.locator('//*[@id="showstreaming"]').isChecked()
-  ).toBeTruthy();
-
   // showmodel_id
   await page.locator('//*[@id="showmodel_id"]').click();
   expect(await page.locator('//*[@id="showmodel_id"]').isChecked()).toBeFalsy();
@@ -158,15 +164,11 @@ test("dropDownComponent", async ({ page }) => {
     await page.locator('//*[@id="showregion_name"]').isChecked()
   ).toBeTruthy();
 
-  await page.locator('//*[@id="showstreaming"]').click();
-  expect(
-    await page.locator('//*[@id="showstreaming"]').isChecked()
-  ).toBeFalsy();
+  await page.locator('//*[@id="showstream"]').click();
+  expect(await page.locator('//*[@id="showstream"]').isChecked()).toBeFalsy();
 
-  await page.locator('//*[@id="showstreaming"]').click();
-  expect(
-    await page.locator('//*[@id="showstreaming"]').isChecked()
-  ).toBeTruthy();
+  await page.locator('//*[@id="showstream"]').click();
+  expect(await page.locator('//*[@id="showstream"]').isChecked()).toBeTruthy();
 
   // showmodel_id
   await page.locator('//*[@id="showmodel_id"]').click();
@@ -178,18 +180,18 @@ test("dropDownComponent", async ({ page }) => {
     await page.locator('//*[@id="showmodel_id"]').isChecked()
   ).toBeTruthy();
 
-  await page.getByTestId("dropdown-edit-model_id-display").click();
-  await page.getByTestId("ai21.j2-ultra-v1-5-option").click();
+  await page.getByTestId("dropdown-edit-model_id").click();
+  await page.getByTestId("ai21.j2-mid-v1-10-option").click();
 
-  value = await page.getByTestId("dropdown-edit-model_id-display").innerText();
-  if (value !== "ai21.j2-ultra-v1") {
+  value = await page.getByTestId("dropdown-edit-model_id").innerText();
+  if (value !== "ai21.j2-mid-v1") {
     expect(false).toBeTruthy();
   }
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
-  value = await page.getByTestId("dropdown-model_id-display").innerText();
-  if (value !== "ai21.j2-ultra-v1") {
+  value = await page.getByTestId("dropdown-model_id").innerText();
+  if (value !== "ai21.j2-mid-v1") {
     expect(false).toBeTruthy();
   }
   await page.getByTestId("code-button-modal").click();

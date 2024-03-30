@@ -21,7 +21,17 @@ test("IntComponent", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
 
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
+
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
   await page.getByTestId("int-input-max_tokens").click();
   await page
     .getByTestId("int-input-max_tokens")
@@ -41,6 +51,19 @@ test("IntComponent", async ({ page }) => {
   if (value != "0") {
     expect(false).toBeTruthy();
   }
+
+  await page.getByTestId("title-OpenAI").click();
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
+
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
+
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
 
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();

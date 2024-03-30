@@ -20,24 +20,34 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("llamacpp");
+  await page.getByPlaceholder("Search").fill("ollama");
 
   await page.waitForTimeout(1000);
 
   await page
-    .locator('//*[@id="model_specsLlamaCpp"]')
+    .getByTestId("modelsOllama")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
 
-  await page.getByTestId("title-LlamaCpp").click();
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
+
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
+  await page.getByTestId("title-Ollama").click();
   await page.keyboard.press(`${control}+e`);
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
-  await page.getByTestId("title-LlamaCpp").click();
+  await page.getByTestId("title-Ollama").click();
   await page.keyboard.press(`${control}+d`);
 
-  let numberOfNodes = await page.getByTestId("title-LlamaCpp").count();
+  let numberOfNodes = await page.getByTestId("title-Ollama").count();
   if (numberOfNodes != 2) {
     expect(false).toBeTruthy();
   }
@@ -49,18 +59,18 @@ test("LangflowShortcuts", async ({ page }) => {
     .click();
   await page.keyboard.press("Backspace");
 
-  numberOfNodes = await page.getByTestId("title-LlamaCpp").count();
+  numberOfNodes = await page.getByTestId("title-Ollama").count();
   if (numberOfNodes != 1) {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("title-LlamaCpp").click();
+  await page.getByTestId("title-Ollama").click();
   await page.keyboard.press(`${control}+c`);
 
-  await page.getByTestId("title-LlamaCpp").click();
+  await page.getByTestId("title-Ollama").click();
   await page.keyboard.press(`${control}+v`);
 
-  numberOfNodes = await page.getByTestId("title-LlamaCpp").count();
+  numberOfNodes = await page.getByTestId("title-Ollama").count();
   if (numberOfNodes != 2) {
     expect(false).toBeTruthy();
   }
@@ -72,15 +82,15 @@ test("LangflowShortcuts", async ({ page }) => {
     .click();
   await page.keyboard.press("Backspace");
 
-  await page.getByTestId("title-LlamaCpp").click();
+  await page.getByTestId("title-Ollama").click();
   await page.keyboard.press(`${control}+x`);
 
-  numberOfNodes = await page.getByTestId("title-LlamaCpp").count();
+  numberOfNodes = await page.getByTestId("title-Ollama").count();
   if (numberOfNodes != 0) {
     expect(false).toBeTruthy();
   }
   await page.keyboard.press(`${control}+v`);
-  numberOfNodes = await page.getByTestId("title-LlamaCpp").count();
+  numberOfNodes = await page.getByTestId("title-Ollama").count();
   if (numberOfNodes != 1) {
     expect(false).toBeTruthy();
   }
