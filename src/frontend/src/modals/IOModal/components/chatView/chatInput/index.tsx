@@ -100,7 +100,7 @@ export default function ChatInput({
               />
             ) : noInput ? (
               <IconComponent
-                name="Play"
+                name="Zap"
                 className="form-modal-play-icon"
                 aria-hidden="true"
               />
