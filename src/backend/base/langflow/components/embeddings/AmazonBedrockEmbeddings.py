@@ -7,12 +7,8 @@ from langflow.interface.custom.custom_component import CustomComponent
 
 
 class AmazonBedrockEmeddingsComponent(CustomComponent):
-    """
-    A custom component for implementing an Embeddings Model using Amazon Bedrock.
-    """
-
     display_name: str = "Amazon Bedrock Embeddings"
-    description: str = "Embeddings model from Amazon Bedrock."
+    description: str = "Generate embeddings using Amazon Bedrock models."
     documentation = "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/bedrock"
 
     def build_config(self):

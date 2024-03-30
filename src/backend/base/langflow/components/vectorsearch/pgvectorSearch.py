@@ -9,10 +9,6 @@ from langflow.schema import Record
 
 
 class PGVectorSearchComponent(PGVectorComponent, LCVectorStoreComponent):
-    """
-    A custom component for implementing a Vector Store using PostgreSQL.
-    """
-
     display_name: str = "PGVector Search"
     description: str = "Search a PGVector Store for similar documents."
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/pgvector"

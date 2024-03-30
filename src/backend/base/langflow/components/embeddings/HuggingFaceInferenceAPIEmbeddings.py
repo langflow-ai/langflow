@@ -7,8 +7,8 @@ from langflow.interface.custom.custom_component import CustomComponent
 
 
 class HuggingFaceInferenceAPIEmbeddingsComponent(CustomComponent):
-    display_name = "HuggingFaceInferenceAPIEmbeddings"
-    description = "HuggingFace sentence_transformers embedding models, API version."
+    display_name = "Hugging Face API Embeddings"
+    description = "Generate embeddings using Hugging Face Inference API models."
     documentation = "https://github.com/huggingface/text-embeddings-inference"
     icon = "HuggingFace"
 

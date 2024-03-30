@@ -7,12 +7,8 @@ from langflow.interface.custom.custom_component import CustomComponent
 
 
 class OllamaEmbeddingsComponent(CustomComponent):
-    """
-    A custom component for implementing an Embeddings Model using Ollama.
-    """
-
     display_name: str = "Ollama Embeddings"
-    description: str = "Embeddings model from Ollama."
+    description: str = "Generate embeddings using Ollama models."
     documentation = "https://python.langchain.com/docs/integrations/text_embedding/ollama"
 
     def build_config(self):
