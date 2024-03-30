@@ -318,9 +318,10 @@ class CustomComponent(Component):
             return_type = extract_inner_type_from_generic_alias(return_type)
 
         # If the return type is not a Union, then we just return it as a list
-        if not hasattr(return_type, "__origin__") or return_type.__origin__ != Union:
+        inner_type = return_type[0] if isinstance(return_type, list) else return_type
+        if not hasattr(inner_type, "__origin__") or inner_type.__origin__ != Union:
             return return_type if isinstance(return_type, list) else [return_type]
-        # If the return type is a Union, then we need to parse itx
+        # If the return type is a Union, then we need to parse it
         return_type = extract_union_types_from_generic_alias(return_type)
         return return_type
 
