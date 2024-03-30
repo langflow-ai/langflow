@@ -603,8 +603,7 @@ class Graph:
         # This is a hack to make sure that the LLM vertex is sent to
         # the toolkit vertex
         self._build_vertex_params()
-        # remove invalid vertices
-        self._validate_vertices()
+
         # Now that we have the vertices and edges
         # We need to map the vertices that are connected to
         # to ChatVertex instances
@@ -630,14 +629,6 @@ class Graph:
             for vertex in self.vertices:
                 if isinstance(vertex, ToolkitVertex):
                     vertex.params["llm"] = llm_vertex
-
-    def _validate_vertices(self) -> None:
-        """Check that all vertices have edges"""
-        if len(self.vertices) == 1:
-            return
-        for vertex in self.vertices:
-            if not self._validate_vertex(vertex):
-                raise ValueError(f"{vertex.display_name} is not connected to any other components")
 
     def _validate_vertex(self, vertex: Vertex) -> bool:
         """Validates a vertex."""

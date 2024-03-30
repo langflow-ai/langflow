@@ -16,8 +16,13 @@ class TextOutput(TextComponent):
                 "input_types": ["Record"],
                 "info": "Text or Record to be passed as output.",
             },
-            "record_template": {"display_name": "Record Template", "multiline": True},
+            "record_template": {
+                "display_name": "Record Template",
+                "multiline": True,
+                "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
+                "advanced": True,
+            },
         }
 
-    def build(self, input_value: Optional[Text] = "", record_template: str = "{text}") -> Text:
+    def build(self, input_value: Optional[Text] = "", record_template: str = "") -> Text:
         return super().build(input_value=input_value, record_template=record_template)
