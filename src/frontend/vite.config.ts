@@ -1,7 +1,6 @@
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vite";
 import svgr from "vite-plugin-svgr";
-import MillionCompiler from "@million/lint";
 const apiRoutes = ["^/api/v1/", "/health"];
 
 // Use environment variable to determine the target.

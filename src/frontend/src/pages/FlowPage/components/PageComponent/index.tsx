@@ -12,7 +12,6 @@ import ReactFlow, {
   updateEdge,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
-import FlowToolbar from "../../../../components/chatComponent";
 import {
   INVALID_SELECTION_ERROR_ALERT,
   UPLOAD_ALERT_LIST,
@@ -58,8 +57,9 @@ export default function Page({
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [showCanvas, setSHowCanvas] = useState(Object.keys(templates).length > 0 &&
-    Object.keys(types).length > 0)
+  const [showCanvas, setSHowCanvas] = useState(
+    Object.keys(templates).length > 0 && Object.keys(types).length > 0
+  );
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
@@ -273,8 +273,10 @@ export default function Page({
   }, []);
 
   useEffect(() => {
-    setSHowCanvas(Object.keys(templates).length > 0 && Object.keys(types).length > 0)
-  }, [templates, types])
+    setSHowCanvas(
+      Object.keys(templates).length > 0 && Object.keys(types).length > 0
+    );
+  }, [templates, types]);
 
   const onConnectMod = useCallback(
     (params: Connection) => {
@@ -437,7 +439,6 @@ export default function Page({
   }
 
   return (
-
     <div className="h-full w-full" ref={reactFlowWrapper}>
       {showCanvas ? (
         <div id="react-flow-id" className="h-full w-full">
@@ -491,8 +492,7 @@ export default function Page({
         </div>
       ) : (
         <></>
-        )}
+      )}
     </div>
-
   );
 }

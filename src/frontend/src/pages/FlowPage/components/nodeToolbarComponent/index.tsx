@@ -631,22 +631,24 @@ export default function NodeToolbarComponent({
           )}
           {hasCode && (
             <div className="hidden">
-              {openModal&& <CodeAreaComponent
-                open={openModal}
-                setOpen={setOpenModal}
-                readonly={
-                  data.node?.flow && data.node.template[name].dynamic
-                    ? true
-                    : false
-                }
-                dynamic={data.node?.template[name].dynamic ?? false}
-                setNodeClass={handleNodeClass}
-                nodeClass={data.node}
-                disabled={false}
-                value={data.node?.template[name].value ?? ""}
-                onChange={handleOnNewValue}
-                id={"code-input-node-toolbar-" + name}
-              />}
+              {openModal && (
+                <CodeAreaComponent
+                  open={openModal}
+                  setOpen={setOpenModal}
+                  readonly={
+                    data.node?.flow && data.node.template[name].dynamic
+                      ? true
+                      : false
+                  }
+                  dynamic={data.node?.template[name].dynamic ?? false}
+                  setNodeClass={handleNodeClass}
+                  nodeClass={data.node}
+                  disabled={false}
+                  value={data.node?.template[name].value ?? ""}
+                  onChange={handleOnNewValue}
+                  id={"code-input-node-toolbar-" + name}
+                />
+              )}
             </div>
           )}
         </span>

@@ -402,7 +402,9 @@ export default function ParameterComponent({
               {title}
             </span>
           )}
-          <span className={(info === "" ? "" : "ml-1 ") + " text-status-red pl-1"}>
+          <span
+            className={(info === "" ? "" : "ml-1 ") + " pl-1 text-status-red"}
+          >
             {required ? "*" : ""}
           </span>
           <div className="">
