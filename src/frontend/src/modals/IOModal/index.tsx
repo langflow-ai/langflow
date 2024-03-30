@@ -51,25 +51,25 @@ export default function IOModal({
   );
   const haveChat = chatInput || chatOutput;
   const [selectedTab, setSelectedTab] = useState(
-    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0
+    outputs.length > 0 ? 2 : inputs.length > 0 ? 1 : 0
   );
 
-  function startView(){
-    if(!chatInput && !chatOutput){
-      if(outputs.length > 0){
+  function startView() {
+    if (!chatInput && !chatOutput) {
+      if (outputs.length > 0) {
         return outputs[0];
       }
-      else{
+      else {
         return inputs[0];
       }
     }
-    else{
+    else {
       return undefined
     }
   }
 
   const [selectedViewField, setSelectedViewField] = useState<
-    { type: string; id: string }|undefined
+    { type: string; id: string } | undefined
   >(startView());
 
   const buildFlow = useFlowStore((state) => state.buildFlow);
@@ -116,7 +116,7 @@ export default function IOModal({
 
   useEffect(() => {
     setSelectedViewField(startView());
-    setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
+    setSelectedTab(outputs.length > 0 ? 2 : inputs.length > 0 ? 1 : 0);
   }, [inputs.length, outputs.length]);
 
   return (
@@ -316,7 +316,7 @@ export default function IOModal({
                   )}
                 >
                   <div className="font-xl flex items-center justify-center gap-3 font-semibold">
-                    {( haveChat &&<button onClick={() => setSelectedViewField(undefined)}>
+                    {(haveChat && <button onClick={() => setSelectedViewField(undefined)}>
                       <IconComponent
                         name={"ArrowLeft"}
                         className="h-6 w-6"
