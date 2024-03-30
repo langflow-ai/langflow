@@ -359,9 +359,7 @@ export default function ExtraSidebar(): JSX.Element {
             )
           )}{" "}
         <ParentDisclosureComponent
-          openDisc={
-            getFilterEdge.length !== 0 || search.length !== 0 ? true : false
-          }
+          openDisc={false}
           key={"Extended"}
           button={{
             title: "Extended",
