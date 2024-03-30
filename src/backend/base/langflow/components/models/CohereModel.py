@@ -1,6 +1,5 @@
 from typing import Optional
 
-
 from langchain_community.chat_models.cohere import ChatCohere
 from pydantic.v1 import SecretStr
 
@@ -14,6 +13,15 @@ class CohereComponent(LCModelComponent):
     documentation = "https://python.langchain.com/docs/modules/model_io/models/llms/integrations/cohere"
 
     icon = "Cohere"
+
+    field_order = [
+        "cohere_api_key",
+        "max_tokens",
+        "temperature",
+        "input_value",
+        "system_message",
+        "stream",
+    ]
 
     def build_config(self):
         return {

@@ -13,6 +13,19 @@ class QianfanChatEndpointComponent(LCModelComponent):
     documentation: str = "https://python.langchain.com/docs/integrations/chat/baidu_qianfan_endpoint."
     icon = "BaiduQianfan"
 
+    field_order = [
+        "model",
+        "qianfan_ak",
+        "qianfan_sk",
+        "top_p",
+        "temperature",
+        "penalty_score",
+        "endpoint",
+        "input_value",
+        "system_message",
+        "stream",
+    ]
+
     def build_config(self):
         return {
             "model": {

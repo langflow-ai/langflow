@@ -45,7 +45,7 @@ def record_to_string(record: Record) -> str:
     Returns:
         str: The record as a string.
     """
-    return record.text
+    return record.get_text()
 
 
 def document_to_string(document: Document) -> str:

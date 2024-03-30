@@ -9,10 +9,6 @@ from langflow.schema import Record
 
 
 class ChromaSearchComponent(LCVectorStoreComponent):
-    """
-    A custom component for implementing a Vector Store using Chroma.
-    """
-
     display_name: str = "Chroma Search"
     description: str = "Search a Chroma collection for similar documents."
     icon = "Chroma"

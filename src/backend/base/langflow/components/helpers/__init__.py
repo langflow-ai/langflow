@@ -1,8 +1,8 @@
+from .CreateRecord import CreateRecordComponent
 from .CustomComponent import Component
 from .DocumentToRecord import DocumentToRecordComponent
 from .IDGenerator import UUIDGeneratorComponent
 from .MessageHistory import MessageHistoryComponent
-from .TextToRecord import TextToRecordComponent
 from .UpdateRecord import UpdateRecordComponent
 
 __all__ = [
@@ -12,6 +12,6 @@ __all__ = [
     "UUIDGeneratorComponent",
     "PythonFunctionComponent",
     "RecordsToTextComponent",
-    "TextToRecordComponent",
+    "CreateRecordComponent",
     "MessageHistoryComponent",
 ]

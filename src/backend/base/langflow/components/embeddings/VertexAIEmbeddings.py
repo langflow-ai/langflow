@@ -6,8 +6,8 @@ from langflow.interface.custom.custom_component import CustomComponent
 
 
 class VertexAIEmbeddingsComponent(CustomComponent):
-    display_name = "VertexAIEmbeddings"
-    description = "Google Cloud VertexAI embedding models."
+    display_name = "VertexAI Embeddings"
+    description = "Generate embeddings using Google Cloud VertexAI models."
 
     def build_config(self):
         return {
