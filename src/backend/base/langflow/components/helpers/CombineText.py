@@ -5,6 +5,7 @@ from langflow.field_typing import Text
 class CombineTextComponent(CustomComponent):
     display_name = "Combine Text"
     description = "Concatenate multiple text sources into a single text chunk using a specified delimiter."
+    icon = "merge"
 
     def build_config(self):
         return {
@@ -18,5 +19,7 @@ class CombineTextComponent(CustomComponent):
             },
         }
 
-    def build(self, texts: str, delimiter: str = " ") -> Text:
-        return delimiter.join(texts)
+    def build(self, texts: list[str], delimiter: str = " ") -> Text:
+        combined = delimiter.join(texts)
+        self.status = combined
+        return combined
