@@ -16,7 +16,7 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
             "llm": {"display_name": "LLM"},
             "chain_type": {
                 "display_name": "Chain Type",
-                "options": ["stuff", "map_reduce", "map_rerank", "refine"],
+                "options": ["Stuff", "Map Reduce", "Refine", "Map Rerank"],
                 "info": "The type of chain to use to combined Documents.",
             },
             "memory": {"display_name": "Memory"},
@@ -37,6 +37,7 @@ class RetrievalQAWithSourcesChainComponent(CustomComponent):
         memory: Optional[BaseMemory] = None,
         return_source_documents: Optional[bool] = True,
     ) -> Text:
+        chain_type = chain_type.lower().replace(" ", "_")
         runnable = RetrievalQAWithSourcesChain.from_chain_type(
             llm=llm,
             chain_type=chain_type,
