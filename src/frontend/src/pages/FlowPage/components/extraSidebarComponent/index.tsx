@@ -277,15 +277,23 @@ export default function ExtraSidebar(): JSX.Element {
         >
           <IconComponent
             name={search ? "X" : "Search"}
-            className={`h-5 w-5 stroke-[1.5] text-primary ${
-              search ? "cursor-pointer" : "cursor-default"
-            }`}
+            className={`h-5 w-5 stroke-[1.5] text-primary ${search ? "cursor-pointer" : "cursor-default"
+              }`}
             aria-hidden="true"
           />
         </div>
       </div>
       <Separator />
       <div className="side-bar-components-div-arrangement">
+        <div
+          className="parent-disclosure-arrangement"
+        >
+          <div className="flex gap-4 items-center align-middle">
+            <span className="parent-disclosure-title">
+              Core Components
+            </span>
+          </div>
+        </div>
         {Object.keys(dataFilter)
           .sort(sortKeys)
           .filter((x) => PRIORITY_SIDEBAR_ORDER.includes(x))
@@ -325,7 +333,7 @@ export default function ExtraSidebar(): JSX.Element {
                           <SidebarDraggableComponent
                             sectionName={SBSectionName as string}
                             apiClass={dataFilter[SBSectionName][SBItemName]}
-                            key={index+ SBItemName}
+                            key={index + SBItemName}
                             onDragStart={(event) =>
                               onDragStart(event, {
                                 //split type to remove type in nodes saved with same name removing it's
@@ -344,7 +352,7 @@ export default function ExtraSidebar(): JSX.Element {
                             }
                             official={
                               dataFilter[SBSectionName][SBItemName].official ===
-                              false
+                                false
                                 ? false
                                 : true
                             }
@@ -436,33 +444,33 @@ export default function ExtraSidebar(): JSX.Element {
                   </DisclosureComponent>
                   {index ===
                     Object.keys(dataFilter).length -
-                      PRIORITY_SIDEBAR_ORDER.length +
-                      1 && (
-                    <>
-                      <a
-                        target={"_blank"}
-                        href="https://langflow.store"
-                        className="components-disclosure-arrangement"
-                      >
-                        <div className="flex gap-4 pl-2">
-                          {/* BUG ON THIS ICON */}
-                          <SparklesIcon
-                            strokeWidth={1.5}
-                            className="w-[22px] text-primary"
-                          />
+                    PRIORITY_SIDEBAR_ORDER.length +
+                    1 && (
+                      <>
+                        <a
+                          target={"_blank"}
+                          href="https://langflow.store"
+                          className="components-disclosure-arrangement"
+                        >
+                          <div className="flex gap-4 pl-2">
+                            {/* BUG ON THIS ICON */}
+                            <SparklesIcon
+                              strokeWidth={1.5}
+                              className="w-[22px] text-primary"
+                            />
 
-                          <span className="components-disclosure-title">
-                            Discover More
-                          </span>
-                        </div>
-                        <div className="components-disclosure-div">
-                          <div>
-                            <LinkIcon className="h-4 w-4 text-foreground" />
+                            <span className="components-disclosure-title">
+                              Discover More
+                            </span>
                           </div>
-                        </div>
-                      </a>
-                    </>
-                  )}
+                          <div className="components-disclosure-div">
+                            <div>
+                              <LinkIcon className="h-4 w-4 text-foreground" />
+                            </div>
+                          </div>
+                        </a>
+                      </>
+                    )}
                 </>
               ) : (
                 <div key={index}></div>
