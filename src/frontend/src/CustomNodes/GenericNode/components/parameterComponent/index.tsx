@@ -88,7 +88,6 @@ export default function ParameterComponent({
   const myData = useTypesStore((state) => state.data);
 
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
-  console.log(title, color);
 
   const handleRefreshButtonPress = async (name, data) => {
     setIsLoading(true);
@@ -359,7 +358,7 @@ export default function ParameterComponent({
                 !showNode ? "mt-0" : ""
               )}
               style={{
-                borderColor: color??nodeColors.unknown,
+                borderColor: color ?? nodeColors.unknown,
               }}
               onClick={() => {
                 setFilterEdge(groupedEdge.current);
@@ -454,7 +453,7 @@ export default function ParameterComponent({
                     "h-3 w-3 rounded-full border-2 bg-background"
                   )}
                   style={{
-                    borderColor: color?? nodeColors.unknown,
+                    borderColor: color ?? nodeColors.unknown,
                   }}
                   onClick={() => {
                     setFilterEdge(groupedEdge.current);
