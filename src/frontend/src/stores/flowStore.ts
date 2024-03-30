@@ -529,9 +529,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       onGetOrderSuccess: () => {
         setNoticeData({ title: "Running components" });
       },
-      onBuildComplete: () => {
+      onBuildComplete: (allNodesValid) => {
         const nodeId = startNodeId || stopNodeId;
-        if (nodeId) {
+        if (nodeId && allNodesValid) {
           setSuccessData({
             title: `${
               get().nodes.find((node) => node.id === nodeId)?.data.node
