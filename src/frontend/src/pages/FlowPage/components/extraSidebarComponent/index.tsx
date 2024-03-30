@@ -1,6 +1,7 @@
 import { cloneDeep } from "lodash";
 import { LinkIcon, SparklesIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import AccordionComponent from "../../../../components/AccordionComponent";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
@@ -234,6 +235,20 @@ export default function ExtraSidebar(): JSX.Element {
     []
   );
 
+  const getIcon = useMemo(() => {
+    return (SBSectionName: string) => {
+      if (nodeIconsLucide[SBSectionName]) {
+        return (
+          <IconComponent
+            name={SBSectionName}
+            strokeWidth={1.5}
+            className="w-[22px] text-primary"
+          />
+        );
+      }
+    };
+  }, []);
+
   return (
     <div className="side-bar-arrangement">
       <div className="side-bar-search-div-placement">
@@ -310,7 +325,7 @@ export default function ExtraSidebar(): JSX.Element {
                           <SidebarDraggableComponent
                             sectionName={SBSectionName as string}
                             apiClass={dataFilter[SBSectionName][SBItemName]}
-                            key={index}
+                            key={index+ SBItemName}
                             onDragStart={(event) =>
                               onDragStart(event, {
                                 //split type to remove type in nodes saved with same name removing it's

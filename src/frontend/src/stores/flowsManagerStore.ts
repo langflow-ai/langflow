@@ -56,7 +56,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   setFlows: (flows: FlowType[]) => {
     set({
       flows,
-      currentFlow: flows.find((flow) => flow.id === get().currentFlowId),
+      // currentFlow: flows.find((flow) => flow.id === get().currentFlowId),
     });
   },
   currentFlow: undefined,

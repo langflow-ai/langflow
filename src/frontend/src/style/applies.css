@@ -187,7 +187,7 @@
     @apply flex w-full select-none items-center justify-between border-y border-y-input bg-background px-3 py-2;
   }
   .components-disclosure-arrangement {
-    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
+    @apply -mt-px flex w-full select-none items-center justify-between border-y border-t-2 border-y-input bg-muted px-3 py-2;
   }
   .components-disclosure-arrangement-child {
     /* different color than the non child */

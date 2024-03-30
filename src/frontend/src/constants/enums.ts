@@ -14,3 +14,8 @@ export enum BuildStatus {
   INACTIVE = "INACTIVE",
   ERROR = "ERROR",
 }
+
+export enum InputOutput {
+  INPUT = "input",
+  OUTPUT = "output",
+}
