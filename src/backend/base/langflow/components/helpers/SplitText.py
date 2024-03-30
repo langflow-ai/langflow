@@ -9,7 +9,7 @@ from langchain_core.documents import Document
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
 from langflow.field_typing import Text
-from langflow.utils.util import unescape_string
+from langflow.utils.util import build_loader_repr_from_records, unescape_string
 
 
 class SplitTextComponent(CustomComponent):
@@ -25,18 +25,18 @@ class SplitTextComponent(CustomComponent):
             },
             "separators": {
                 "display_name": "Separators",
-                "info": 'The characters to split on.\nIf left empty defaults to [" "].',
+                "info": 'The characters to split on. Defaults to [" "].',
                 "is_list": True,
             },
             "chunk_size": {
-                "display_name": "Chunk Size",
-                "info": "The maximum length of each chunk.",
+                "display_name": "Max Chunk Size",
+                "info": "The maximum length (in number of characters) of each chunk.",
                 "field_type": "int",
                 "value": 1000,
             },
             "chunk_overlap": {
                 "display_name": "Chunk Overlap",
-                "info": "The amount of overlap between chunks.",
+                "info": "The amount of character overlap between chunks.",
                 "field_type": "int",
                 "value": 200,
             },
@@ -54,6 +54,7 @@ class SplitTextComponent(CustomComponent):
         chunk_overlap: Optional[int] = 200,
         recursive: bool = False,
     ) -> list[Record]:
+
         separators = [unescape_string(x) for x in separators]
 
         # Make sure chunk_size and chunk_overlap are ints

@@ -16,7 +16,7 @@ class MessageHistoryComponent(CustomComponent):
                 "options": ["Machine", "User", "Machine and User"],
                 "display_name": "Sender Type",
             },
-            "sender_name": {"display_name": "Sender Name"},
+            "sender_name": {"display_name": "Sender Name", "advanced": True},
             "n_messages": {
                 "display_name": "Number of Messages",
                 "info": "Number of messages to retrieve.",
