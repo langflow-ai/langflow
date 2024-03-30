@@ -74,12 +74,11 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             onChange={handleDescriptionChange}
             value={description!}
             placeholder="Flow description"
-            className="mt-2 max-h-[100px] font-normal resize-none"
+            className="mt-2 max-h-[100px] resize-none font-normal"
             rows={3}
             onDoubleClickCapture={(event) => {
               handleFocus(event);
             }}
-            
           />
         ) : (
           <span
