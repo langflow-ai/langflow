@@ -890,8 +890,7 @@ class Graph:
         # and then build the edges
         # if we can't find a vertex, we raise an error
 
-        edges: List[ContractEdge] = []
-        edges_added = set()
+        edges: set[ContractEdge] = set()
         for edge in self._edges:
             source = self.get_vertex(edge["source"])
             target = self.get_vertex(edge["target"])
@@ -900,13 +899,11 @@ class Graph:
                 raise ValueError(f"Source vertex {edge['source']} not found")
             if target is None:
                 raise ValueError(f"Target vertex {edge['target']} not found")
+            edge = ContractEdge(source, target, edge)
 
-            if (source.id, target.id) in edges_added:
-                continue
+            edges.add(edge)
 
-            edges.append(ContractEdge(source, target, edge))
-            edges_added.add((source.id, target.id))
-        return edges
+        return list(edges)
 
     def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> Type[Vertex]:
         """Returns the node class based on the node type."""
