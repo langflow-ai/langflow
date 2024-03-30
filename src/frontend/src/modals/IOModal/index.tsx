@@ -364,14 +364,14 @@ export default function IOModal({
       </BaseModal.Content>
       <BaseModal.Footer>
         {!haveChat && (
-          <div className="flex w-full justify-end pt-2">
+          <div className="flex w-full justify-end  pt-2">
             <Button
               variant={"outline"}
               className="flex gap-2 px-3"
               onClick={() => sendMessage(1)}
             >
               <IconComponent
-                name={isBuilding ? "Loader2" : "Play"}
+                name={isBuilding ? "Loader2" : "Zap"}
                 className={cn(
                   "h-4 w-4",
                   isBuilding
