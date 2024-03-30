@@ -12,6 +12,7 @@ def get_messages(
     sender_name: Optional[str] = None,
     session_id: Optional[str] = None,
     order_by: Optional[str] = "timestamp",
+    order: Optional[str] = "DESC",
     limit: Optional[int] = None,
 ):
     """
@@ -34,6 +35,7 @@ def get_messages(
         session_id=session_id,
         order_by=order_by,
         limit=limit,
+        order=order,
     )
 
     records: list[Record] = []

@@ -113,6 +113,7 @@ class MonitorService(Service):
         sender_name: Optional[str] = None,
         session_id: Optional[str] = None,
         order_by: Optional[str] = "timestamp",
+        order: Optional[str] = "DESC",
         limit: Optional[int] = None,
     ):
         query = "SELECT sender_name, sender, session_id, message, artifacts, timestamp FROM messages"
@@ -128,7 +129,8 @@ class MonitorService(Service):
             query += " WHERE " + " AND ".join(conditions)
 
         if order_by:
-            query += f" ORDER BY {order_by}"
+            # Make sure the order is from newest to oldest
+            query += f" ORDER BY {order_by} {order.upper()}"
 
         if limit is not None:
             query += f" LIMIT {limit}"
