@@ -141,6 +141,7 @@ export default function ShareModal({
         });
       });
   };
+  console.log("ShareModal");
 
   const handleUpdateComponent = () => {
     handleShareComponent(true);

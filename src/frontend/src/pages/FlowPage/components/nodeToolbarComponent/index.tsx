@@ -35,7 +35,6 @@ import ToolbarSelectItem from "./toolbarSelectItem";
 export default function NodeToolbarComponent({
   data,
   deleteNode,
-  position,
   setShowNode,
   numberOfHandles,
   showNode,
@@ -79,6 +78,7 @@ export default function NodeToolbarComponent({
   const setEdges = useFlowStore((state) => state.setEdges);
   const unselectAll = useFlowStore((state) => state.unselectAll);
   const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
+  const getNodePosition = useFlowStore((state) => state.getNodePosition);
   const flows = useFlowsManagerStore((state) => state.flows);
   const version = useDarkStore((state) => state.version);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -146,7 +146,7 @@ export default function NodeToolbarComponent({
         takeSnapshot();
         expandGroupNode(
           data.id,
-          updateFlowPosition(position, data.node?.flow!),
+          updateFlowPosition(getNodePosition(data.id), data.node?.flow!),
           data.node!.template,
           nodes,
           edges,
@@ -631,7 +631,7 @@ export default function NodeToolbarComponent({
           )}
           {hasCode && (
             <div className="hidden">
-              <CodeAreaComponent
+              {openModal&& <CodeAreaComponent
                 open={openModal}
                 setOpen={setOpenModal}
                 readonly={
@@ -646,7 +646,7 @@ export default function NodeToolbarComponent({
                 value={data.node?.template[name].value ?? ""}
                 onChange={handleOnNewValue}
                 id={"code-input-node-toolbar-" + name}
-              />
+              />}
             </div>
           )}
         </span>

@@ -12,6 +12,7 @@ export default function AccordionComponent({
   children,
   open = [],
   keyValue,
+  sideBar,
 }: AccordionComponentType): JSX.Element {
   const [value, setValue] = useState(
     open.length === 0 ? "" : getOpenAccordion()
@@ -45,7 +46,9 @@ export default function AccordionComponent({
             onClick={() => {
               handleClick();
             }}
-            className="ml-3"
+            className={
+              sideBar ? "w-full bg-muted px-[0.75rem] py-[0.5rem]" : "ml-3"
+            }
           >
             {trigger}
           </AccordionTrigger>
