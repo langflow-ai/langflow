@@ -48,7 +48,7 @@ export default function FlowToolbar(): JSX.Element {
         <button
           disabled={!hasApiKey || !validApiKey || !hasStore}
           className={classNames(
-            "relative inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-500 ease-in-out hover:bg-background hover:bg-hover ",
+            "relative inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-background hover:bg-hover ",
             !hasApiKey || !validApiKey || !hasStore
               ? " button-disable text-muted-foreground  "
               : ""
@@ -101,7 +101,7 @@ export default function FlowToolbar(): JSX.Element {
                 </IOModal>
               ) : (
                 <div
-                  className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-500 ease-in-out ease-in-out`}
+                  className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out ease-in-out`}
                 >
                   <ForwardedIconComponent
                     name="Zap"
@@ -121,7 +121,7 @@ export default function FlowToolbar(): JSX.Element {
                 <ApiModal flow={currentFlow}>
                   <div
                     className={classNames(
-                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-500 ease-in-out hover:bg-hover"
+                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover"
                     )}
                   >
                     <ForwardedIconComponent

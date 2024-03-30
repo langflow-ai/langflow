@@ -119,6 +119,8 @@ export async function buildVertices({
       try {
         onValidateNodes(verticesOrderResponse.verticesToRun);
       } catch (e) {
+        useFlowStore.getState().setIsBuilding(false);
+
         return;
       }
     }

@@ -42,7 +42,7 @@ export default function ChatInput({
               event.key === "Enter" &&
               !lockChat &&
               !saveLoading &&
-              !event.shiftKey
+              !event.shiftKey && !event.nativeEvent.isComposing
             ) {
               sendMessage(repeat);
             }

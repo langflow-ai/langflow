@@ -121,7 +121,7 @@ export default function IOModal({
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
       <BaseModal.Header description={CHAT_FORM_DIALOG_SUBTITLE}>
         <div className="flex items-center">
-          <span className="pr-2">Chat</span>
+          <span className="pr-2">Interaction Panel</span>
           <IconComponent
             name="prompts"
             className="h-6 w-6 pl-1 text-foreground"
@@ -130,7 +130,7 @@ export default function IOModal({
         </div>
       </BaseModal.Header>
       <BaseModal.Content>
-        <div className="flex h-full flex-col overflow-hidden">
+        <div className="flex h-full flex-col ">
           <div className="flex-max-width mt-2 h-full">
             {selectedTab !== 0 && (
               <div
@@ -183,9 +183,16 @@ export default function IOModal({
                             <AccordionComponent
                               trigger={
                                 <div className="file-component-badge-div">
-                                  <Badge variant="gray" size="md">
-                                    {node.data.node.display_name}
-                                  </Badge>
+                                  <ShadTooltip
+                                    content={input.id}
+                                    styleClasses="z-50"
+                                  >
+                                    <div>
+                                      <Badge variant="gray" size="md">
+                                        {node.data.node.display_name}
+                                      </Badge>
+                                    </div>
+                                  </ShadTooltip>
                                   <div
                                     className="-mb-1 pr-4"
                                     onClick={(event) => {

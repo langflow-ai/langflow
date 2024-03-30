@@ -2,6 +2,24 @@
 
 all: help
 
+setup_poetry:
+	pipx install poetry
+	poetry self add poetry-monorepo-dependency-plugin
+
+add:
+	@echo 'Adding dependencies'
+ifdef devel
+	cd src/backend/base && poetry add --group dev $(devel)
+endif
+
+ifdef main
+	poetry add $(main)
+endif
+
+ifdef base
+	cd src/backend/base && poetry add $(base)
+endif
+
 init:
 	@echo 'Installing backend dependencies'
 	make install_backend
@@ -28,7 +46,7 @@ format:
 
 lint:
 	make install_backend
-	poetry run mypy src/backend/langflow
+	poetry run mypy --namespace-packages -p "langflow"
 	poetry run ruff . --fix
 
 install_frontend:
@@ -43,21 +61,46 @@ run_frontend:
 
 tests_frontend:
 ifeq ($(UI), true)
-		cd src/frontend && ./run-tests.sh --ui
+		cd src/frontend && npx playwright test --ui --project=chromium
 else
-		cd src/frontend && ./run-tests.sh
+		cd src/frontend && npx playwright test --project=chromium
 endif
 
 run_cli:
-	poetry run langflow run --path src/frontend/build
+	@echo 'Running the CLI'
+	@make install_frontend > /dev/null
+	@echo 'Building the frontend'
+	@make build_frontend > /dev/null
+	@echo 'Install backend dependencies'
+	@make install_backend > /dev/null
+ifdef env
+	poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file $(env)
+else
+	poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file .env
+endif
+
 
 run_cli_debug:
-	poetry run langflow run --path src/frontend/build --log-level debug
+	@echo 'Running the CLI in debug mode'
+	@make install_frontend > /dev/null
+	@echo 'Building the frontend'
+	@make build_frontend > /dev/null
+	@echo 'Install backend dependencies'
+	@make install_backend > /dev/null
+ifdef env
+	poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file $(env)
+else
+	poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file .env
+endif
 
 setup_devcontainer:
 	make init
 	make build_frontend
 	poetry run langflow --path src/frontend/build
+
+setup_env:
+	@sh ./scripts/setup/update_poetry.sh 1.8.2
+	@sh ./scripts/setup/setup_env.sh
 
 frontend:
 	make install_frontend
@@ -68,38 +111,53 @@ frontendc:
 	make run_frontend
 
 install_backend:
-	poetry install --extras deploy
+	@echo 'Installing backend dependencies'
+	@make setup_env
+	@poetry install --extras deploy
 
 backend:
 	make install_backend
 	@-kill -9 `lsof -t -i:7860`
 ifeq ($(login),1)
 	@echo "Running backend without autologin";
-	poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --env-file .env
+	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env
 else
 	@echo "Running backend with autologin";
-	LANGFLOW_AUTO_LOGIN=True poetry run langflow run --backend-only --port 7860 --host 0.0.0.0 --no-open-browser --env-file .env
+	LANGFLOW_AUTO_LOGIN=True poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env
 endif
 
 build_and_run:
-	echo 'Removing dist folder'
+	@echo 'Removing dist folder'
 	rm -rf dist
-	make build && poetry run pip install dist/*.tar.gz && poetry run langflow run
+	rm -rf src/backend/base/dist
+	make build
+	poetry run pip install dist/*.tar.gz && pip install src/backend/base/dist/*.tar.gz
+	poetry run langflow run
 
 build_and_install:
-	echo 'Removing dist folder'
+	@echo 'Removing dist folder'
 	rm -rf dist
-	make build && poetry run pip install dist/*.tar.gz
+	rm -rf src/backend/base/dist
+	make build && poetry run pip install dist/*.whl && pip install src/backend/base/dist/*.whl --force-reinstall
 
 build_frontend:
 	cd src/frontend && CI='' npm run build
-	cp -r src/frontend/build src/backend/langflow/frontend
+	cp -r src/frontend/build src/backend/base/langflow/frontend
 
 build:
+	@echo 'Building the project'
+	@make setup_env
+	make build_langflow_base
+	make build_langflow
+
+build_langflow:
+	poetry build-rewrite-path-deps --version-pinning-strategy=semver
+
+build_langflow_base:
 	make install_frontend
 	make build_frontend
-	poetry build --format sdist
-	rm -rf src/backend/langflow/frontend
+	cd src/backend/base && poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	rm -rf src/backend/base/langflow/frontend
 
 dev:
 	make install_frontend
@@ -111,9 +169,29 @@ else
 		docker compose $(if $(debug),-f docker-compose.debug.yml) up
 endif
 
-publish:
-	make build
+lock_base:
+	cd src/backend/base && poetry lock
+
+lock_langflow:
+	poetry lock
+
+lock:
+# Run both in parallel
+	# cd src/backend/base && poetry lock
+	# poetry lock
+	@echo 'Locking dependencies'
+	@make -j2 lock_base lock_langflow
+publish_base:
+	make build_langflow_base
+	cd src/backend/base && poetry publish
+
+publish_langflow:
+	make build_langflow
 	poetry publish
+
+publish:
+	make publish_base
+	make publish_langflow
 
 help:
 	@echo '----'

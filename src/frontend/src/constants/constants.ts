@@ -737,7 +737,9 @@ export const PRIORITY_SIDEBAR_ORDER = [
   "prompt",
   "models",
   "helpers",
-  "experimental",
+  "vectorstores",
+  "vectorsearch",
+  "embeddings",
 ];
 export const NATIVE_CATEGORIES = [
   "inputs",

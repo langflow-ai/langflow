@@ -58,6 +58,7 @@ import {
   GitBranchPlus,
   GitFork,
   GithubIcon,
+  Globe,
   Group,
   Hammer,
   Heart,
@@ -115,6 +116,7 @@ import {
   TerminalIcon,
   TerminalSquare,
   TextCursorInput,
+  TextSearch,
   ToyBrick,
   Trash2,
   Type,
@@ -138,6 +140,7 @@ import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
+import { AstraDBIcon } from "../icons/AstraDB";
 import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
 import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
@@ -234,6 +237,7 @@ export const nodeColors: { [char: string]: string } = {
   embeddings: "#42BAA7",
   documentloaders: "#7AAE42",
   vectorstores: "#AA8742",
+  vectorsearch: "#AA8742",
   textsplitters: "#B47CB5",
   toolkits: "#DB2C2C",
   wrappers: "#E6277A",
@@ -265,6 +269,7 @@ export const nodeNames: { [char: string]: string } = {
   embeddings: "Embeddings",
   documentloaders: "Loaders",
   vectorstores: "Vector Stores",
+  vectorsearch: "Vector Search",
   toolkits: "Toolkits",
   wrappers: "Wrappers",
   textsplitters: "Text Splitters",
@@ -311,6 +316,7 @@ export const nodeIconsLucide: iconsType = {
   Amazon: AWSIcon,
   Anthropic: AnthropicIcon,
   ChatAnthropic: AnthropicIcon,
+  AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
   Cohere: CohereIcon,
@@ -366,6 +372,7 @@ export const nodeIconsLucide: iconsType = {
   saved_components: GradientSave,
   documentloaders: Paperclip,
   vectorstores: Layers,
+  vectorsearch: TextSearch,
   toolkits: Package2,
   textsplitters: Scissors,
   wrappers: Gift,
@@ -384,7 +391,6 @@ export const nodeIconsLucide: iconsType = {
   Trash2,
   Boxes,
   Network,
-  X,
   XCircle,
   Info,
   CheckCircle2,
@@ -416,6 +422,7 @@ export const nodeIconsLucide: iconsType = {
   PlusCircle,
   PlusSquare,
   Code2,
+  Globe,
   Variable,
   Snowflake,
   Store,

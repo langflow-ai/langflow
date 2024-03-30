@@ -13,6 +13,41 @@ module.exports = {
     },
     {
       type: "category",
+      label: "What's New",
+      collapsed: false,
+      items: [
+        "whats-new/a-new-chapter-langflow",
+        "whats-new/migrating-to-one-point-zero",
+        "whats-new/customization-control",
+        "whats-new/debugging-reimagined",
+        "whats-new/simplification-standardization",
+      ],
+    },
+    {
+      type: "category",
+      label: "Migration Guides",
+      collapsed: false,
+      items: [
+        "migration/flow-of-data",
+        "migration/inputs-and-outputs",
+        "migration/supported-frameworks",
+        "migration/sidebar-and-interaction-panel",
+        "migration/new-categories-and-components",
+        "migration/text-and-record",
+        "migration/custom-component",
+        "migration/compatibility",
+        "migration/multiple-flows",
+        "migration/component-status-and-data-passing",
+        "migration/connecting-output-components",
+        "migration/renaming-and-editing-components",
+        "migration/passing-tweaks-and-inputs",
+        "migration/global-variables",
+        "migration/experimental-components",
+        "migration/state-management",
+      ],
+    },
+    {
+      type: "category",
       label: "Guidelines",
       collapsed: false,
       items: [
@@ -68,16 +103,6 @@ module.exports = {
         "guides/langfuse_integration",
       ],
     },
-    // {
-    //   type: 'category',
-    //   label: 'Components',
-    //   collapsed: false,
-    //   items: [
-    //     'components/agents', 'components/chains', 'components/loaders', 'components/embeddings', 'components/llms',
-    //     'components/memories', 'components/prompts','components/text-splitters', 'components/toolkits', 'components/tools',
-    //     'components/utilities', 'components/vector-stores', 'components/wrappers',
-    //   ],
-    // },
     {
       type: "category",
       label: "Examples",

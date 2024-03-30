@@ -1170,7 +1170,7 @@ export function downloadNode(NodeFLow: FlowType) {
     type: "application/json",
   });
   element.href = URL.createObjectURL(file);
-  element.download = `${NodeFLow.name}.json`;
+  element.download = `${NodeFLow?.name??"node"}.json`;
   element.click();
 }
 

@@ -8,9 +8,9 @@ import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   autoFocus?: boolean;
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
-  value: string;
+  value?: string;
   disabled?: boolean;
-  onChange: (value: string) => void;
+  onChange?: (value: string) => void;
   password: boolean;
   required?: boolean;
   isForm?: boolean;
@@ -21,6 +21,13 @@ export type InputComponentType = {
   className?: string;
   id?: string;
   blurOnEnter?: boolean;
+  optionsIcon?: string;
+  optionsPlaceholder?: string;
+  options?: string[];
+  optionsButton?: ReactElement;
+  optionButton?: (option: string) => ReactElement;
+  selectedOption?: string;
+  setSelectedOption?: (value: string) => void;
 };
 export type ToggleComponentType = {
   enabled: boolean;
@@ -37,8 +44,6 @@ export type DropDownComponentType = {
   options: string[];
   onSelect: (value: string) => void;
   editNode?: boolean;
-  apiModal?: boolean;
-  numberOfOptions?: number;
   id?: string;
 };
 export type ParameterComponentType = {
@@ -62,6 +67,15 @@ export type InputListComponentType = {
   value: string[];
   onChange: (value: string[]) => void;
   disabled: boolean;
+  editNode?: boolean;
+};
+
+export type InputGlobalComponentType = {
+  disabled: boolean;
+  onChange: (value: string) => void;
+  setDb: (value: boolean) => void;
+  name: string;
+  data: NodeDataType;
   editNode?: boolean;
 };
 
@@ -130,6 +144,21 @@ export type FileComponentType = {
   fileTypes: Array<string>;
   onFileChange: (value: string) => void;
   editNode?: boolean;
+};
+
+export type DisclosureComponentType = {
+  children: ReactNode;
+  openDisc: boolean;
+  isChild?: boolean;
+  button: {
+    title: string;
+    Icon: React.ElementType;
+    buttons?: {
+      Icon: ReactElement;
+      title: string;
+      onClick: (event?: React.MouseEvent) => void;
+    }[];
+  };
 };
 
 export type RangeSpecType = {
@@ -668,6 +697,8 @@ export type dropdownButtonPropsType = {
   firstButtonName: string;
   onFirstBtnClick: () => void;
   options: Array<{ name: string; onBtnClick: () => void }>;
+  plusButton?: boolean;
+  dropdownOptions?: boolean;
 };
 
 export type IOFieldViewProps = {
@@ -707,4 +738,5 @@ export type toolbarSelectItemProps = {
     valueClasses?: string;
   };
   dataTestId: string;
+  ping?: boolean;
 };

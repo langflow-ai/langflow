@@ -225,7 +225,7 @@ const ApiModal = forwardRef(
       <BaseModal open={open} setOpen={setOpen}>
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_CODE_DIALOG}>
-          <span className="pr-2">Code</span>
+          <span className="pr-2">API</span>
           <IconComponent
             name="Code2"
             className="h-6 w-6 pl-1 text-gray-800 dark:text-white"

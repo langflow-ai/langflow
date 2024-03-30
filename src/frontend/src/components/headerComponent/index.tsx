@@ -1,5 +1,6 @@
 import { useContext, useEffect } from "react";
-import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
+import { FaDiscord, FaGithub } from "react-icons/fa";
+import { RiTwitterXFill } from "react-icons/ri";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
@@ -127,7 +128,7 @@ export default function Header(): JSX.Element {
             rel="noreferrer"
             className="text-muted-foreground"
           >
-            <FaTwitter className="side-bar-button-size" />
+            <RiTwitterXFill className="side-bar-button-size" />
           </a>
           <a
             href="https://discord.gg/EqksyE2EX9"
