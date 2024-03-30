@@ -13,8 +13,8 @@ class FileComponent(CustomComponent):
 
     def build_config(self) -> Dict[str, Any]:
         return {
-            "paths": {
-                "display_name": "Paths",
+            "path": {
+                "display_name": "Path",
                 "field_type": "file",
                 "file_types": TEXT_FILE_TYPES,
                 "info": f"Supported file types: {', '.join(TEXT_FILE_TYPES)}",
