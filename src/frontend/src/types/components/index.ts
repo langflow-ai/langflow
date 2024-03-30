@@ -1,5 +1,5 @@
 import { ReactElement, ReactNode, SetStateAction } from "react";
-import { ReactFlowJsonObject, XYPosition } from "reactflow";
+import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
 import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
 import { ChatMessageType } from "../chat";

@@ -2,22 +2,19 @@ import { Group, ToyBrick } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../components/DropdownButtonComponent";
-import NewFlowCardComponent from "../../modals/NewFlowModal/components/NewFlowCardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
 import { Button } from "../../components/ui/button";
-import UndrawCardComponent from "../../modals/NewFlowModal/components/undrawCards";
 import { CONSOLE_ERROR_MSG } from "../../constants/alerts_constants";
 import {
   MY_COLLECTION_DESC,
   USER_PROJECTS_HEADER,
 } from "../../constants/constants";
-import BaseModal from "../../modals/baseModal";
+import NewFlowModal from "../../modals/NewFlowModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { downloadFlows } from "../../utils/reactflowUtils";
-import NewFlowModal from "../../modals/NewFlowModal";
 export default function HomePage(): JSX.Element {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const setCurrentFlowId = useFlowsManagerStore(

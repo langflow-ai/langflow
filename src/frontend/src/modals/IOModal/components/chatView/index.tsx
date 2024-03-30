@@ -15,10 +15,10 @@ import {
   ChatOutputType,
   FlowPoolObjectType,
 } from "../../../../types/chat";
+import { chatViewProps } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
-import { chatViewProps } from "../../../../types/components";
 
 export default function ChatView({
   sendMessage,

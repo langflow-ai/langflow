@@ -345,29 +345,40 @@ export default function GenericNode({
     return (
       <NodeToolbar>
         <NodeToolbarComponent
-        data={data}
-        deleteNode={(id) => {
-          takeSnapshot();
-          deleteNode(id);
-        }}
-        setShowNode={(show) => {
-          setNode(data.id, (old) => ({
-            ...old,
-            data: { ...old.data, showNode: show },
-          }));
-        }}
-        setShowState={setShowNode}
-        numberOfHandles={handles}
-        showNode={showNode}
-        openAdvancedModal={false}
-        onCloseAdvancedModal={() => {}}
-        updateNodeCode={updateNodeCode}
-        isOutdated={isOutdated}
-        selected={selected}
-      />
+          data={data}
+          deleteNode={(id) => {
+            takeSnapshot();
+            deleteNode(id);
+          }}
+          setShowNode={(show) => {
+            setNode(data.id, (old) => ({
+              ...old,
+              data: { ...old.data, showNode: show },
+            }));
+          }}
+          setShowState={setShowNode}
+          numberOfHandles={handles}
+          showNode={showNode}
+          openAdvancedModal={false}
+          onCloseAdvancedModal={() => {}}
+          updateNodeCode={updateNodeCode}
+          isOutdated={isOutdated}
+          selected={selected}
+        />
       </NodeToolbar>
-    )
-  }, [data, deleteNode, takeSnapshot, setNode, setShowNode, handles, showNode, updateNodeCode, isOutdated, selected]);
+    );
+  }, [
+    data,
+    deleteNode,
+    takeSnapshot,
+    setNode,
+    setShowNode,
+    handles,
+    showNode,
+    updateNodeCode,
+    isOutdated,
+    selected,
+  ]);
 
   return (
     <>

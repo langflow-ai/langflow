@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import AccordionComponent from "../../components/AccordionComponent";
-import IOFieldView from "./components/IOFieldView";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
-import ChatView from "./components/chatView";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
@@ -20,11 +18,13 @@ import {
 import { InputOutput } from "../../constants/enums";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { IOModalPropsType } from "../../types/components";
 import { NodeType } from "../../types/flow";
 import { updateVerticesOrder } from "../../utils/buildUtils";
 import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
-import { IOModalPropsType } from "../../types/components";
+import IOFieldView from "./components/IOFieldView";
+import ChatView from "./components/chatView";
 
 export default function IOModal({
   children,
@@ -315,7 +315,10 @@ export default function IOModal({
                           className="h-6 w-6"
                         ></IconComponent>
                       </button>
-                      {selectedViewField.type}
+                      {
+                        nodes.find((node) => node.id === selectedViewField.id)
+                          ?.data.node.display_name
+                      }
                     </div>
                     <div className="h-full w-full">
                       {inputs.some(

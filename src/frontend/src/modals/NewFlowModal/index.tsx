@@ -1,10 +1,13 @@
+import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { newFlowModalPropsType } from "../../types/components";
+import BaseModal from "../baseModal";
 import NewFlowCardComponent from "./components/NewFlowCardComponent";
 import UndrawCardComponent from "./components/undrawCards";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import BaseModal from "../baseModal";
-import { newFlowModalPropsType } from "../../types/components";
 
-export default function NewFlowModal({ open, setOpen }: newFlowModalPropsType): JSX.Element {
+export default function NewFlowModal({
+  open,
+  setOpen,
+}: newFlowModalPropsType): JSX.Element {
   const examples = useFlowsManagerStore((state) => state.examples);
 
   return (
