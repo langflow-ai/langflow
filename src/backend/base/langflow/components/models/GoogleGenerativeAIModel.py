@@ -11,7 +11,19 @@ class GoogleGenerativeAIComponent(LCModelComponent):
     display_name: str = "Google Generative AI"
     description: str = "Generate text using Google Generative AI."
     icon = "GoogleGenerativeAI"
-    icon = "Google"
+
+    field_order = [
+        "google_api_key",
+        "model",
+        "max_output_tokens",
+        "temperature",
+        "top_k",
+        "top_p",
+        "n",
+        "input_value",
+        "system_message",
+        "stream",
+    ]
 
     def build_config(self):
         return {

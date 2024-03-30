@@ -125,7 +125,7 @@ class DocumentLoaderVertex(Vertex):
         # show how many documents are in the list?
 
         if not isinstance(self._built_object, UnbuiltObject):
-            avg_length = sum(len(record.text) for record in self._built_object if hasattr(record, "text")) / len(
+            avg_length = sum(len(record.get_text()) for record in self._built_object if hasattr(record, "text")) / len(
                 self._built_object
             )
             return f"""{self.display_name}({len(self._built_object)} records)

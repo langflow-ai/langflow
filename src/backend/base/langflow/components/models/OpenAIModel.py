@@ -11,6 +11,18 @@ class OpenAIModelComponent(LCModelComponent):
     description = "Generates text using OpenAI LLMs."
     icon = "OpenAI"
 
+    field_order = [
+        "max_tokens",
+        "model_kwargs",
+        "model_name",
+        "openai_api_base",
+        "openai_api_key",
+        "temperature",
+        "input_value",
+        "system_message",
+        "stream",
+    ]
+
     def build_config(self):
         return {
             "input_value": {"display_name": "Input"},

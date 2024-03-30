@@ -25,7 +25,9 @@ export default function DropdownButton({
           <Button
             id="new-project-btn"
             variant="primary"
-            className={"relative" + dropdownOptions ? "" : " pr-10"}
+            className={
+              "relative" + dropdownOptions ? " pl-[12px]" : " pl-[12px] pr-10"
+            }
             onClick={(event) => {
               event.stopPropagation();
               event.preventDefault();

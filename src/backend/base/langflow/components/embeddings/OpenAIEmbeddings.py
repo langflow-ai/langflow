@@ -7,8 +7,8 @@ from langflow.interface.custom.custom_component import CustomComponent
 
 
 class OpenAIEmbeddingsComponent(CustomComponent):
-    display_name = "OpenAIEmbeddings"
-    description = "OpenAI embedding models"
+    display_name = "OpenAI Embeddings"
+    description = "Generate embeddings using OpenAI models."
 
     def build_config(self):
         return {
