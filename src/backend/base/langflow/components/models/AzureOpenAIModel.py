@@ -14,6 +14,19 @@ class AzureChatOpenAIComponent(LCModelComponent):
     beta = False
     icon = "Azure"
 
+    field_order = [
+        "model",
+        "azure_endpoint",
+        "azure_deployment",
+        "api_version",
+        "api_key",
+        "temperature",
+        "max_tokens",
+        "input_value",
+        "system_message",
+        "stream",
+    ]
+
     AZURE_OPENAI_MODELS = [
         "gpt-35-turbo",
         "gpt-35-turbo-16k",
