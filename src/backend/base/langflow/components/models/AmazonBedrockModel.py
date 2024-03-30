@@ -8,7 +8,7 @@ from langflow.field_typing import Text
 
 class AmazonBedrockComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock"
-    description: str = "Generate text using LLM model from Amazon Bedrock."
+    description: str = "Generate text using Amazon Bedrock LLMs."
     icon = "Amazon"
     field_order = [
         "model_id",

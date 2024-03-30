@@ -1,4 +1,5 @@
-from langflow.field_typing import Data
+# from langflow.field_typing import Data
+from langflow.schema import Record
 from langflow.interface.custom.custom_component import CustomComponent
 
 
@@ -11,5 +12,5 @@ class Component(CustomComponent):
     def build_config(self):
         return {"param": {"display_name": "Parameter"}}
 
-    def build(self, param: Data) -> Data:
-        return param
+    def build(self, param: str) -> Record:
+        return Record(data=param)

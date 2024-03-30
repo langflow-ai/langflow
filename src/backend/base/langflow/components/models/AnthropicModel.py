@@ -9,7 +9,7 @@ from langflow.field_typing import Text
 
 class AnthropicLLM(LCModelComponent):
     display_name: str = "Anthropic"
-    description: str = "Generate text using Anthropic Chat&Completion large language models."
+    description: str = "Generate text using Anthropic Chat&Completion LLMs."
     icon = "Anthropic"
 
     def build_config(self):

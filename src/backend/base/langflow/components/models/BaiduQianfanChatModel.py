@@ -9,10 +9,8 @@ from langflow.field_typing import Text
 
 class QianfanChatEndpointComponent(LCModelComponent):
     display_name: str = "Qianfan"
-    description: str = (
-        "Generate text using Baidu Qianfan chat models. Get more detail from "
-        "https://python.langchain.com/docs/integrations/chat/baidu_qianfan_endpoint."
-    )
+    description: str = "Generate text using Baidu Qianfan LLMs."
+    documentation: str = "https://python.langchain.com/docs/integrations/chat/baidu_qianfan_endpoint."
     icon = "BaiduQianfan"
 
     def build_config(self):
