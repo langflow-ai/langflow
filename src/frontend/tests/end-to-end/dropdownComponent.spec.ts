@@ -10,6 +10,7 @@ test("dropDownComponent", async ({ page }) => {
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(1000);
 
+  await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("amazon");
 
@@ -39,7 +40,7 @@ test("dropDownComponent", async ({ page }) => {
   await page.getByTestId("ai21.j2-mid-v1-10-option").click();
 
   let value = await page
-    .getByTestId("value-dropdown-model_id")
+    .getByTestId("value-dropdown-dropdown-model_id")
     .first()
     .innerText();
   if (value !== "ai21.j2-mid-v1") {
