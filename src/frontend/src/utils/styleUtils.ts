@@ -151,6 +151,7 @@ import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
 import { GitBookIcon } from "../icons/GitBook";
 import { GoogleIcon } from "../icons/Google";
+import { GoogleGenerativeAIIcon } from "../icons/GoogleGenerativeAI";
 import {
   GradientInfinity,
   GradientSave,
@@ -328,6 +329,7 @@ export const nodeIconsLucide: iconsType = {
   GoogleSearchResults: GoogleIcon,
   GoogleSearchRun: GoogleIcon,
   Google: GoogleIcon,
+  GoogleGenerativeAI: GoogleGenerativeAIIcon,
   HNLoader: HackerNewsIcon,
   HuggingFaceHub: HuggingFaceIcon,
   HuggingFace: HuggingFaceIcon,
