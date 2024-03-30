@@ -6040,13 +6040,13 @@ xmp = ["defusedxml"]
 
 [[package]]
 name = "pinecone-client"
-version = "3.2.1"
+version = "3.2.2"
 description = "Pinecone client and SDK"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "pinecone_client-3.2.1-py3-none-any.whl", hash = "sha256:e3e7983762509235250b9bcd543ec6283b7dffaed2e899f1631327f2b77859e3"},
-    {file = "pinecone_client-3.2.1.tar.gz", hash = "sha256:8560ffafb13b9c45a92eb9eb77a2db32d5a1fa7903a1db17f7af58ee1058bb60"},
+    {file = "pinecone_client-3.2.2-py3-none-any.whl", hash = "sha256:7e492fdda23c73726bc0cb94c689bb950d06fb94e82b701a0c610c2e830db327"},
+    {file = "pinecone_client-3.2.2.tar.gz", hash = "sha256:887a12405f90ac11c396490f605fc479f31cf282361034d1ae0fccc02ac75bee"},
 ]
 
 [package.dependencies]
@@ -7099,6 +7099,24 @@ tomli = {version = ">=1", markers = "python_version < \"3.11\""}
 
 [package.extras]
 testing = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "pygments (>=2.7.2)", "requests", "setuptools", "xmlschema"]
+
+[[package]]
+name = "pytest-asyncio"
+version = "0.23.6"
+description = "Pytest support for asyncio"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pytest-asyncio-0.23.6.tar.gz", hash = "sha256:ffe523a89c1c222598c76856e76852b787504ddb72dd5d9b6617ffa8aa2cde5f"},
+    {file = "pytest_asyncio-0.23.6-py3-none-any.whl", hash = "sha256:68516fdd1018ac57b846c9846b954f0393b26f094764a28c955eabb0536a4e8a"},
+]
+
+[package.dependencies]
+pytest = ">=7.0.0,<9"
+
+[package.extras]
+docs = ["sphinx (>=5.3)", "sphinx-rtd-theme (>=1.0)"]
+testing = ["coverage (>=6.2)", "hypothesis (>=5.7.1)"]
 
 [[package]]
 name = "pytest-cov"
@@ -10222,4 +10240,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "c259c7ed43f5f6c5e211780da445a10cf1863979b87fb2c6991b1090fbb1fb4a"
+content-hash = "b66acb0ed04e62c9f311828307ac1503bc7a19912753c217d4ea6237f474543a"

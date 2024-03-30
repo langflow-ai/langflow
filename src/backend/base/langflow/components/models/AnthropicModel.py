@@ -12,6 +12,17 @@ class AnthropicLLM(LCModelComponent):
     description: str = "Generate text using Anthropic Chat&Completion LLMs."
     icon = "Anthropic"
 
+    field_order = [
+        "model",
+        "anthropic_api_key",
+        "max_tokens",
+        "temperature",
+        "anthropic_api_url",
+        "input_value",
+        "system_message",
+        "stream",
+    ]
+
     def build_config(self):
         return {
             "model": {

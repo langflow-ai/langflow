@@ -34,10 +34,6 @@ class Component:
             if key == "user_id":
                 setattr(self, "_user_id", value)
             else:
-                if key == "code" and "from langflow import CustomComponent" in value:
-                    value = value.replace(
-                        "from langflow import CustomComponent", "from langflow.custom import CustomComponent"
-                    )
                 setattr(self, key, value)
 
     def __setattr__(self, key, value):

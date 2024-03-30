@@ -6,8 +6,8 @@ from langflow.custom import CustomComponent
 
 
 class CohereEmbeddingsComponent(CustomComponent):
-    display_name = "CohereEmbeddings"
-    description = "Cohere embedding models."
+    display_name = "Cohere Embeddings"
+    description = "Generate embeddings using Cohere models."
 
     def build_config(self):
         return {
