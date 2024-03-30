@@ -7,7 +7,7 @@ from langflow.interface.custom.custom_component import CustomComponent
 class PromptComponent(CustomComponent):
     display_name: str = "Prompt"
     description: str = "Create a prompt template with dynamic variables."
-    icon = "terminal-square"
+    icon = "prompts"
 
     def build_config(self):
         return {
