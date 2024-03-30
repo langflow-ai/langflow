@@ -29,11 +29,12 @@ def records_to_text(template: str, records: list[Record]) -> str:
     if isinstance(records, Record):
         records = [records]
     # Check if there are any format strings in the template
-    if any(not isinstance(record, Record) for record in records):
-        item_that_is_not_record = next((record for record in records if not isinstance(record, Record)), None)
-        raise ValueError(
-            f"All items in the list must be of type Record. Found: {item_that_is_not_record} of type {type(item_that_is_not_record)}."
-        )
+    _records = []
+    for record in records:
+        # If it is not a record, create one with the key "text"
+        if not isinstance(record, Record):
+            record = Record(text=record)
+        _records.append(record)
 
-    formated_records = [template.format(data=record.data, **record.data) for record in records]
+    formated_records = [template.format(data=record.data, **record.data) for record in _records]
     return "\n".join(formated_records)
