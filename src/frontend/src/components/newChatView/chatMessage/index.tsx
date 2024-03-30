@@ -12,7 +12,7 @@ import IconComponent from "../../../components/genericIconComponent";
 import useAlertStore from "../../../stores/alertStore";
 import useFlowStore from "../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../types/components";
-import { classNames } from "../../../utils/utils";
+import { classNames, cn } from "../../../utils/utils";
 import FileCard from "../fileComponent";
 
 export default function ChatMessage({
@@ -123,30 +123,28 @@ export default function ChatMessage({
           chat.isSend ? "" : " "
         )}
       >
-        <div className={classNames("form-modal-chatbot-icon")}>
-          {!chat.isSend ? (
-            <div className="form-modal-chat-image">
-              <div className="form-modal-chat-bot-icon ">
-                <img
-                  src={Robot}
-                  className="form-modal-chat-icon-img"
-                  alt="robot_image"
-                />
-              </div>
-              <span className="truncate text-xs">{chat.sender_name}</span>
-            </div>
-          ) : (
-            <div className="form-modal-chat-image">
-              <div className="form-modal-chat-user-icon ">
-                <img
-                  src={MaleTechnology}
-                  className="form-modal-chat-icon-img"
-                  alt="male_technology"
-                />
-              </div>
-              <span className="truncate text-xs">{chat.sender_name}</span>
-            </div>
+        <div
+          className={classNames(
+            "mr-3 mt-1 flex max-w-16 flex-col items-center gap-1 overflow-hidden px-3 pb-3"
           )}
+        >
+          <div className="flex flex-col items-center gap-1">
+            <div
+              className={cn(
+                "relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl",
+                !chat.isSend ? "bg-chat-bot-icon" : "bg-chat-user-icon"
+              )}
+            >
+              <img
+                src={!chat.isSend ? Robot : MaleTechnology}
+                className="absolute scale-[60%]"
+                alt={!chat.isSend ? "robot_image" : "male_technology"}
+              />
+            </div>
+            <span className="max-w-16 truncate text-xs">
+              {chat.sender_name}
+            </span>
+          </div>
         </div>
         {!chat.isSend ? (
           <div className="form-modal-chat-text-position min-w-96 flex-grow">
