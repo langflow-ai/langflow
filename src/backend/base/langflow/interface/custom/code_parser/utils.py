@@ -36,5 +36,11 @@ def extract_union_types_from_generic_alias(return_type: GenericAlias) -> list:
     Extracts the inner type from a type hint that is a Union.
     """
     if isinstance(return_type, list):
-        return [_inner_arg for _type in return_type for _inner_arg in _type.__args__]
+        return [
+            _inner_arg
+            for _type in return_type
+            for _inner_arg in _type.__args__
+            if _inner_arg not in set((Any, type(None), type(Any)))
+        ]
+
     return list(return_type.__args__)
