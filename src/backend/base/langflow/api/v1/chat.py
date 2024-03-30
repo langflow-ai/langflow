@@ -223,7 +223,8 @@ async def build_vertex(
     except Exception as exc:
         logger.error(f"Error building vertex: {exc}")
         logger.exception(exc)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        message = parse_exception(exc)
+        raise HTTPException(status_code=500, detail=message) from exc
 
 
 @router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse)
