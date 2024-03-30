@@ -315,7 +315,10 @@ export default function IOModal({
                           className="h-6 w-6"
                         ></IconComponent>
                       </button>
-                      {selectedViewField.type}
+                      {
+                        nodes.find((node) => node.id === selectedViewField.id)
+                          ?.data.node.display_name
+                      }
                     </div>
                     <div className="h-full w-full">
                       {inputs.some(
