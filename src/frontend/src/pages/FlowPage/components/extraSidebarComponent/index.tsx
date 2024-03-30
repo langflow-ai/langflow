@@ -444,7 +444,7 @@ export default function ExtraSidebar(): JSX.Element {
                         href="https://langflow.store"
                         className="components-disclosure-arrangement"
                       >
-                        <div className="flex gap-4">
+                        <div className="flex gap-4 pl-2">
                           {/* BUG ON THIS ICON */}
                           <SparklesIcon
                             strokeWidth={1.5}
