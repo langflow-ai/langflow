@@ -249,7 +249,7 @@ class CustomComponent(Component):
             return ""
         markdown_string = "---\n"
         for record in records:
-            markdown_string += f"- Text: {record.text}"
+            markdown_string += f"- Text: {record.get_text()}"
             if include_data:
                 markdown_string += f" Data: {record.data}"
             markdown_string += "\n"
