@@ -35,6 +35,8 @@ class LCModelComponent(CustomComponent):
         self, runnable: BaseChatModel, stream: bool, input_value: str, system_message: Optional[str] = None
     ):
         messages: list[Union[HumanMessage, SystemMessage]] = []
+        if not input_value and not system_message:
+            raise ValueError("The message you want to send to the model is empty.")
         if system_message:
             messages.append(SystemMessage(content=system_message))
         if input_value:
