@@ -13,6 +13,8 @@ class APIRequest(CustomComponent):
     description: str = "Make HTTP requests given one or more URLs."
     output_types: list[str] = ["Record"]
     documentation: str = "https://docs.langflow.org/components/utilities#api-request"
+    icon = "Globe"
+
     field_config = {
         "urls": {"display_name": "URLs", "info": "URLs to make requests to."},
         "method": {
