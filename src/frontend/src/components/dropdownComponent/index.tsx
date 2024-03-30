@@ -52,11 +52,11 @@ export default function Dropdown({
                   editNode ? "input-edit-node" : "py-2"
                 )}
               >
-                <span data-testid={`value-${id ?? ""}`}>
-                  {value
-                    ? options.find((option) => option === value)
-                    : "Choose an option..."}
-                </span>
+                {value &&
+                value !== "" &&
+                options.find((option) => option === value)
+                  ? options.find((option) => option === value)
+                  : "Choose an option..."}
                 <ForwardedIconComponent
                   name="ChevronsUpDown"
                   className="ml-2 h-4 w-4 shrink-0 opacity-50"

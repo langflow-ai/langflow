@@ -8,7 +8,7 @@ from langflow.field_typing import NestedDict, Text
 
 class OpenAIModelComponent(LCModelComponent):
     display_name = "OpenAI"
-    description = "Generates text using OpenAI's models."
+    description = "Generates text using OpenAI LLMs."
     icon = "OpenAI"
 
     def build_config(self):

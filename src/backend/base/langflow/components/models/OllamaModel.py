@@ -14,7 +14,7 @@ from langflow.field_typing import Text
 
 class ChatOllamaComponent(LCModelComponent):
     display_name = "Ollama"
-    description = "Generate text using Local LLM for chat with Ollama."
+    description = "Generate text using Ollama Local LLMs."
     icon = "Ollama"
 
     def build_config(self) -> dict:

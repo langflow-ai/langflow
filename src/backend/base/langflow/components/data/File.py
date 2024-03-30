@@ -7,7 +7,7 @@ from langflow.schema import Record
 
 
 class FileComponent(CustomComponent):
-    display_name = "Files"
+    display_name = "File"
     description = "A generic file loader."
 
     def build_config(self) -> Dict[str, Any]:

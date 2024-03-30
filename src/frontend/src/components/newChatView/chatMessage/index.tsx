@@ -9,6 +9,7 @@ import Robot from "../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../components/SanitizedHTMLWrapper";
 import CodeTabsComponent from "../../../components/codeTabsComponent";
 import IconComponent from "../../../components/genericIconComponent";
+import useAlertStore from "../../../stores/alertStore";
 import useFlowStore from "../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../types/components";
 import { classNames } from "../../../utils/utils";
@@ -33,6 +34,7 @@ export default function ChatMessage({
   const [isStreaming, setIsStreaming] = useState(false);
   const eventSource = useRef<EventSource | undefined>(undefined);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const chatMessageRef = useRef(chatMessage);
 
   // Sync ref with state
@@ -57,7 +59,17 @@ export default function ChatMessage({
         setIsStreaming(false);
         eventSource.current?.close();
         setStreamUrl(undefined);
-        reject(new Error("Streaming failed"));
+        // property data is not available in the event object
+        // so check if the event object has a data property
+        if (event.data) {
+          let parsedData = JSON.parse(event.data);
+          if (parsedData.error) {
+            reject(new Error(parsedData.error));
+          } else
+            reject(new Error("An error occurred while streaming the output"));
+        } else {
+          reject(new Error("An error occurred while streaming the output"));
+        }
       };
       eventSource.current.addEventListener("close", (event) => {
         setStreamUrl(undefined); // Update state to reflect the stream is closed
@@ -79,7 +91,10 @@ export default function ChatMessage({
           }
         })
         .catch((error) => {
-          console.error(error);
+          setErrorData({
+            title: "Streaming Error",
+            list: [error.message],
+          });
           setLockChat(false);
         });
     }

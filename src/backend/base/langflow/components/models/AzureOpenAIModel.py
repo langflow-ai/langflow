@@ -9,7 +9,7 @@ from langflow.field_typing import Text
 
 class AzureChatOpenAIComponent(LCModelComponent):
     display_name: str = "Azure OpenAI"
-    description: str = "Generate text using LLM model from Azure OpenAI."
+    description: str = "Generate text using Azure OpenAI LLMs."
     documentation: str = "https://python.langchain.com/docs/integrations/llms/azure_openai"
     beta = False
     icon = "Azure"

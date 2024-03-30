@@ -4,7 +4,7 @@ from langflow.schema import Record
 
 class CreateRecordComponent(CustomComponent):
     display_name = "Create Record"
-    description = "A component to create a record."
+    description = "Create a Record structure using text-based key/value pairs."
     beta: bool = True
 
     def build_config(self):
