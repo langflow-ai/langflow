@@ -39,11 +39,11 @@ export default function ChatView({
   const outputTypes = outputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
 
-  useEffect(() => {
-    if (!outputTypes.includes("ChatOutput")) {
-      setNoticeData({ title: NOCHATOUTPUT_NOTICE_ALERT });
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (!outputTypes.includes("ChatOutput")) {
+  //     setNoticeData({ title: NOCHATOUTPUT_NOTICE_ALERT });
+  //   }
+  // }, []);
 
   //build chat history
   useEffect(() => {
