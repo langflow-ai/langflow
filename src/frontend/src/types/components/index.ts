@@ -149,6 +149,7 @@ export type FileComponentType = {
 export type DisclosureComponentType = {
   children: ReactNode;
   openDisc: boolean;
+  isChild?: boolean;
   button: {
     title: string;
     Icon: React.ElementType;

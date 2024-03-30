@@ -421,8 +421,8 @@ export default function ParameterComponent({
               {title}
             </span>
           )}
-          <span className={(info === "" ? "" : "ml-1 ") + " text-status-red"}>
-            {required ? " *" : ""}
+          <span className={(info === "" ? "" : "ml-1 ") + " text-status-red pl-1"}>
+            {required ? "*" : ""}
           </span>
           <div className="">
             {info !== "" && (
@@ -487,7 +487,7 @@ export default function ParameterComponent({
         {left === true &&
         type === "str" &&
         !data.node?.template[name].options ? (
-          <div className="mt-2 w-full">
+          <div className="w-full">
             {data.node?.template[name].list ? (
               <div
                 className={
@@ -628,7 +628,7 @@ export default function ParameterComponent({
                 isLoading={isLoading}
                 options={data.node.template[name].options}
                 onSelect={handleOnNewValue}
-                value={data.node.template[name].value ?? "Choose an option"}
+                value={data.node.template[name].value}
                 id={"dropdown-" + name}
               />
             </div>
