@@ -13,7 +13,7 @@ class TextInput(TextComponent):
         return {
             "input_value": {
                 "display_name": "Value",
-                "input_types": ["Text", "Record"],
+                "input_types": ["Record", "Text"],
                 "info": "Text or Record to be passed as input.",
             },
             "record_template": {

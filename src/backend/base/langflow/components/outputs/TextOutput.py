@@ -13,7 +13,7 @@ class TextOutput(TextComponent):
         return {
             "input_value": {
                 "display_name": "Value",
-                "input_types": ["Record"],
+                "input_types": ["Record", "Text"],
                 "info": "Text or Record to be passed as output.",
             },
             "record_template": {
