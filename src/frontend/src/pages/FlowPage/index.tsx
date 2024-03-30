@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
+import FlowToolbar from "../../components/chatComponent";
 import Header from "../../components/headerComponent";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "./components/PageComponent";
 import ExtraSidebar from "./components/extraSidebarComponent";
-import FlowToolbar from "../../components/chatComponent";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setCurrentFlowId = useFlowsManagerStore(
@@ -23,7 +23,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     <>
       <Header />
       <div className="flow-page-positioning">
-        {currentFlow &&
+        {currentFlow && (
           <div className="flex h-full overflow-hidden">
             {!view && <ExtraSidebar />}
             <main className="flex flex-1">
@@ -32,10 +32,9 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                 <Page flow={currentFlow} />
               </div>
               {!view && <FlowToolbar />}
-
             </main>
           </div>
-        }
+        )}
         <a
           target={"_blank"}
           href="https://logspace.ai/"

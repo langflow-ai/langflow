@@ -72,7 +72,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   getNodePosition: (nodeId: string) => {
     const node = get().nodes.find((node) => node.id === nodeId);
-    return node?.position||{x:0,y:0};
+    return node?.position || { x: 0, y: 0 };
   },
   updateFlowPool: (
     nodeId: string,

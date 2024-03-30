@@ -1,9 +1,9 @@
 import { cloneDeep } from "lodash";
+import { Textarea } from "../../../../components/ui/textarea";
 import { InputOutput } from "../../../../constants/enums";
 import useFlowStore from "../../../../stores/flowStore";
 import { IOFieldViewProps } from "../../../../types/components";
 import IOFileInput from "./components/FileInput";
-import { Textarea } from "../../../../components/ui/textarea";
 
 export default function IOFieldView({
   type,

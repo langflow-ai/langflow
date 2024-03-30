@@ -1,11 +1,11 @@
 import { Button } from "../../../../../../components/ui/button";
 
 import { useEffect, useState } from "react";
+import IconComponent from "../../../../../../components/genericIconComponent";
 import { BASE_URL_API } from "../../../../../../constants/constants";
 import { uploadFile } from "../../../../../../controllers/API";
 import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
 import { IOFileInputProps } from "../../../../../../types/components";
-import IconComponent from "../../../../../../components/genericIconComponent";
 
 export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
   //component to handle file upload from chatIO

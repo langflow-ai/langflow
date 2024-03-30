@@ -10,13 +10,19 @@ import { ReactComponent as ChatWithHistory } from "../../../../assets/undraw_mob
 import { ReactComponent as Assistant } from "../../../../assets/undraw_team_collaboration_re_ow29.svg";
 //@ts-ignore
 import { ReactComponent as APIRequest } from "../../../../assets/undraw_real_time_analytics_re_yliv.svg";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardTitle,
+} from "../../../../components/ui/card";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { FlowType } from "../../../../types/flow";
-import { updateIds } from "../../../../utils/reactflowUtils";
-import { Card, CardContent, CardDescription, CardTitle } from "../../../../components/ui/card";
 import { UndrawCardComponentProps } from "../../../../types/components";
+import { updateIds } from "../../../../utils/reactflowUtils";
 
-export default function UndrawCardComponent({ flow }: UndrawCardComponentProps): JSX.Element {
+export default function UndrawCardComponent({
+  flow,
+}: UndrawCardComponentProps): JSX.Element {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const navigate = useNavigate();
 
