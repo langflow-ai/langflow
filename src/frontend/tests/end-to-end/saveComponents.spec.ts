@@ -87,7 +87,7 @@ test.describe("save component tests", () => {
     if (replaceButton) {
       await page.getByTestId("replace-button").click();
     }
-
+    await page.getByTestId("extended-disclosure").click();
     await page.getByPlaceholder("Search").click();
     await page.getByPlaceholder("Search").fill("group");
     await page.waitForTimeout(1000);

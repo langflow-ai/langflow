@@ -9,11 +9,13 @@ test("CodeAreaModalComponent", async ({ page }) => {
 
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(1000);
-
+  await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("pythonfunctiontool");
 
   await page.waitForTimeout(1000);
+
+  await page.getByTestId("extended-disclosure").click();
 
   await page
     .getByTestId("toolsPythonFunctionTool")

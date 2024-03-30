@@ -159,6 +159,7 @@ export type DisclosureComponentType = {
       onClick: (event?: React.MouseEvent) => void;
     }[];
   };
+  testId?: string;
 };
 
 export type RangeSpecType = {

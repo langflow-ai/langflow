@@ -9,7 +9,7 @@ test("NestedComponent", async ({ page }) => {
 
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(1000);
-
+  await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("pinecone");
 
