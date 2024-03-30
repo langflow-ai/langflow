@@ -53,9 +53,24 @@ export default function IOModal({
   const [selectedTab, setSelectedTab] = useState(
     inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0
   );
+
+  function startView(){
+    if(!chatInput && !chatOutput){
+      if(outputs.length > 0){
+        return outputs[0];
+      }
+      else{
+        return inputs[0];
+      }
+    }
+    else{
+      return undefined
+    }
+  }
+
   const [selectedViewField, setSelectedViewField] = useState<
-    { type: string; id: string } | undefined
-  >(undefined);
+    { type: string; id: string }|undefined
+  >(startView());
 
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
@@ -100,7 +115,7 @@ export default function IOModal({
   }
 
   useEffect(() => {
-    setSelectedViewField(undefined);
+    setSelectedViewField(startView());
     setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
   }, [inputs.length, outputs.length]);
 
@@ -129,7 +144,7 @@ export default function IOModal({
             {selectedTab !== 0 && (
               <div
                 className={cn(
-                  "mr-6 flex h-full w-2/6 w-2/6 flex-shrink-0 flex-col justify-start transition-all duration-300"
+                  "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start transition-all duration-300"
                 )}
               >
                 <Tabs
@@ -301,12 +316,12 @@ export default function IOModal({
                   )}
                 >
                   <div className="font-xl flex items-center justify-center gap-3 font-semibold">
-                    <button onClick={() => setSelectedViewField(undefined)}>
+                    {( haveChat &&<button onClick={() => setSelectedViewField(undefined)}>
                       <IconComponent
                         name={"ArrowLeft"}
                         className="h-6 w-6"
                       ></IconComponent>
-                    </button>
+                    </button>)}
                     {
                       nodes.find((node) => node.id === selectedViewField.id)
                         ?.data.node.display_name
