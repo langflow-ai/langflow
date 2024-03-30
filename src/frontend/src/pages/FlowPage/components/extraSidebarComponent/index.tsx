@@ -352,7 +352,7 @@ export default function ExtraSidebar(): JSX.Element {
                         </ShadTooltip>
                       ))}
                   </div>
-                </AccordionComponent>
+                </DisclosureComponent>
               </>
             ) : (
               <div key={index}></div>
