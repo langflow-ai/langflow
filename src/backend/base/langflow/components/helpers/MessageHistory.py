@@ -26,6 +26,12 @@ class MessageHistoryComponent(CustomComponent):
                 "info": "Session ID of the chat history.",
                 "input_types": ["Text"],
             },
+            "order": {
+                "options": ["Ascending", "Descending"],
+                "display_name": "Order",
+                "info": "Order of the messages.",
+                "advanced": True,
+            },
         }
 
     def build(
@@ -34,7 +40,9 @@ class MessageHistoryComponent(CustomComponent):
         sender_name: Optional[str] = None,
         session_id: Optional[str] = None,
         n_messages: int = 5,
+        order: Optional[str] = "Descending",
     ) -> List[Record]:
+        order = "DESC" if order == "Descending" else "ASC"
         if sender == "Machine and User":
             sender = None
         messages = get_messages(
@@ -42,6 +50,7 @@ class MessageHistoryComponent(CustomComponent):
             sender_name=sender_name,
             session_id=session_id,
             limit=n_messages,
+            order=order,
         )
         self.status = messages
         return messages
