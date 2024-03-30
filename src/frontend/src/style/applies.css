@@ -917,7 +917,7 @@
     @apply mr-2 h-5 w-5 rotate-[44deg];
   }
   .form-modal-play-icon {
-    @apply mx-1 h-5 w-5;
+    @apply mx-1 h-5 w-5 fill-inherit;
   }
   .form-modal-chat-position {
     @apply flex-max-width px-2 py-6 pl-4 pr-9;
