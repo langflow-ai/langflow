@@ -106,13 +106,7 @@ export default function IOModal({
 
   return (
     <BaseModal
-      size={
-        haveChat || selectedViewField
-          ? selectedTab === 0
-            ? "large-thin"
-            : "large"
-          : "small"
-      }
+      size={selectedTab === 0 ? "large-thin" : "large"}
       open={open}
       setOpen={setOpen}
       disable={disable}
@@ -135,8 +129,7 @@ export default function IOModal({
             {selectedTab !== 0 && (
               <div
                 className={cn(
-                  "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start transition-all duration-300",
-                  haveChat || selectedViewField ? "w-2/6" : "w-full"
+                  "mr-6 flex h-full w-2/6 w-2/6 flex-shrink-0 flex-col justify-start transition-all duration-300"
                 )}
               >
                 <Tabs
@@ -299,54 +292,54 @@ export default function IOModal({
               </div>
             )}
 
-            {haveChat || selectedViewField ? (
-              <div className="flex h-full min-w-96 flex-grow">
-                {selectedViewField && (
-                  <div
-                    className={cn(
-                      "flex h-full w-full flex-col items-start gap-4 pt-4",
-                      !selectedViewField ? "hidden" : ""
-                    )}
-                  >
-                    <div className="font-xl flex items-center justify-center gap-3 font-semibold">
-                      <button onClick={() => setSelectedViewField(undefined)}>
-                        <IconComponent
-                          name={"ArrowLeft"}
-                          className="h-6 w-6"
-                        ></IconComponent>
-                      </button>
-                      {
-                        nodes.find((node) => node.id === selectedViewField.id)
-                          ?.data.node.display_name
-                      }
-                    </div>
-                    <div className="h-full w-full">
-                      {inputs.some(
-                        (input) => input.id === selectedViewField.id
-                      ) ? (
-                        <IOFieldView
-                          type={InputOutput.INPUT}
-                          left={false}
-                          fieldType={selectedViewField.type!}
-                          fieldId={selectedViewField.id!}
-                        />
-                      ) : (
-                        <IOFieldView
-                          type={InputOutput.OUTPUT}
-                          left={false}
-                          fieldType={selectedViewField.type!}
-                          fieldId={selectedViewField.id!}
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
+            <div className="flex h-full min-w-96 flex-grow">
+              {selectedViewField && (
                 <div
                   className={cn(
-                    "flex h-full w-full",
-                    selectedViewField ? "hidden" : ""
+                    "flex h-full w-full flex-col items-start gap-4 pt-4",
+                    !selectedViewField ? "hidden" : ""
                   )}
                 >
+                  <div className="font-xl flex items-center justify-center gap-3 font-semibold">
+                    <button onClick={() => setSelectedViewField(undefined)}>
+                      <IconComponent
+                        name={"ArrowLeft"}
+                        className="h-6 w-6"
+                      ></IconComponent>
+                    </button>
+                    {
+                      nodes.find((node) => node.id === selectedViewField.id)
+                        ?.data.node.display_name
+                    }
+                  </div>
+                  <div className="h-full w-full">
+                    {inputs.some(
+                      (input) => input.id === selectedViewField.id
+                    ) ? (
+                      <IOFieldView
+                        type={InputOutput.INPUT}
+                        left={false}
+                        fieldType={selectedViewField.type!}
+                        fieldId={selectedViewField.id!}
+                      />
+                    ) : (
+                      <IOFieldView
+                        type={InputOutput.OUTPUT}
+                        left={false}
+                        fieldType={selectedViewField.type!}
+                        fieldId={selectedViewField.id!}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+              <div
+                className={cn(
+                  "flex h-full w-full",
+                  selectedViewField ? "hidden" : ""
+                )}
+              >
+                {haveChat ? (
                   <ChatView
                     sendMessage={sendMessage}
                     chatValue={chatValue}
@@ -354,11 +347,13 @@ export default function IOModal({
                     lockChat={lockChat}
                     setLockChat={setLockChat}
                   />
-                </div>
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center font-thin text-muted-foreground">
+                    Select an IO component to view
+                  </span>
+                )}
               </div>
-            ) : (
-              <div className="absolute bottom-8 right-8"></div>
-            )}
+            </div>
           </div>
         </div>
       </BaseModal.Content>
