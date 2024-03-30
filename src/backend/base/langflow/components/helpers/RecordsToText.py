@@ -6,7 +6,8 @@ from langflow.schema import Record
 
 class RecordsToTextComponent(CustomComponent):
     display_name = "Records To Text"
-    description = "Convert Records into plain text using a pre-defined template."
+    description = "Convert Records into plain text following a specified template."
+    
 
     def build_config(self):
         return {

@@ -8,7 +8,7 @@ from langflow.schema import Record
 
 class URLComponent(CustomComponent):
     display_name = "URL"
-    description = "Fetch text content given one or more URLs."
+    description = "Fetch content from one or more URLs."
 
     def build_config(self) -> Dict[str, Any]:
         return {
