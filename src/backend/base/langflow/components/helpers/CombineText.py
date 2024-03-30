@@ -1,6 +1,7 @@
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.field_typing import Text
 
+
 class CombineTextComponent(CustomComponent):
     display_name = "Combine Text"
     description = "Concatenate two text sources into a single text chunk using a specified delimiter."

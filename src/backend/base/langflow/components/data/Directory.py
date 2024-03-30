@@ -9,7 +9,7 @@ class DirectoryComponent(CustomComponent):
     display_name = "Directory"
     description = "Recursively load files from a directory."
     icon = "folder"
-    
+
     def build_config(self) -> Dict[str, Any]:
         return {
             "path": {"display_name": "Path"},
