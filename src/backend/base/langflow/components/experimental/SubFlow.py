@@ -1,19 +1,19 @@
 from typing import Any, List, Optional
 
-from langflow.helpers.flow import get_flow_inputs
 from loguru import logger
 
 from langflow.custom import CustomComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import ResultData, RunOutputs
 from langflow.graph.vertex.base import Vertex
+from langflow.helpers.flow import get_flow_inputs
 from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import TemplateField
 
 
 class SubFlowComponent(CustomComponent):
-    display_name = "SubFlow"
+    display_name = "Sub Flow"
     description = "Dynamically Generates a Component from a Flow. The output is a list of records with keys 'result' and 'message'."
     beta: bool = True
     field_order = ["flow_name"]
