@@ -12,6 +12,16 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
     description: str = "Generate text using Hugging Face Inference APIs."
     icon = "HuggingFace"
 
+    field_order = [
+        "endpoint_url",
+        "task",
+        "huggingfacehub_api_token",
+        "model_kwargs",
+        "input_value",
+        "system_message",
+        "stream",
+    ]
+
     def build_config(self):
         return {
             "endpoint_url": {"display_name": "Endpoint URL", "password": True},

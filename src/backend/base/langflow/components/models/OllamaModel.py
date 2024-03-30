@@ -17,6 +17,37 @@ class ChatOllamaComponent(LCModelComponent):
     description = "Generate text using Ollama Local LLMs."
     icon = "Ollama"
 
+    field_order = [
+        "base_url",
+        "model",
+        "temperature",
+        "cache",
+        "callback_manager",
+        "callbacks",
+        "format",
+        "metadata",
+        "mirostat",
+        "mirostat_eta",
+        "mirostat_tau",
+        "num_ctx",
+        "num_gpu",
+        "num_thread",
+        "repeat_last_n",
+        "repeat_penalty",
+        "tfs_z",
+        "timeout",
+        "top_k",
+        "top_p",
+        "verbose",
+        "tags",
+        "stop",
+        "system",
+        "template",
+        "input_value",
+        "system_message",
+        "stream",
+    ]
+
     def build_config(self) -> dict:
         return {
             "base_url": {

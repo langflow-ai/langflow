@@ -11,6 +11,22 @@ class ChatVertexAIComponent(LCModelComponent):
     description = "Generate text using Vertex AI LLMs."
     icon = "VertexAI"
 
+    field_order = [
+        "credentials",
+        "project",
+        "examples",
+        "location",
+        "max_output_tokens",
+        "model_name",
+        "temperature",
+        "top_k",
+        "top_p",
+        "verbose",
+        "input_value",
+        "system_message",
+        "stream",
+    ]
+
     def build_config(self):
         return {
             "credentials": {

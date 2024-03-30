@@ -6,8 +6,8 @@ from langflow.interface.custom.custom_component import CustomComponent
 
 
 class HuggingFaceEmbeddingsComponent(CustomComponent):
-    display_name = "HuggingFaceEmbeddings"
-    description = "HuggingFace sentence_transformers embedding models."
+    display_name = "Hugging Face Embeddings"
+    description = "Generate embeddings using HuggingFace models."
     documentation = (
         "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/sentence_transformers"
     )
