@@ -2,6 +2,8 @@ import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { Suspense, forwardRef, lazy, memo } from "react";
 import { IconComponentProps } from "../../types/components";
 import { nodeIconsLucide } from "../../utils/styleUtils";
+import { cn } from "../../utils/utils";
+import Loading from "../ui/loading";
 
 const ForwardedIconComponent = memo(
   forwardRef(
@@ -34,7 +36,9 @@ const ForwardedIconComponent = memo(
         return null; // Render nothing until the icon is loaded
       }
       const fallback = (
-        <div style={{ background: "#ddd", width: 24, height: 24 }} />
+        <div className={cn(className, "flex items-center justify-center")}>
+          <Loading />
+        </div>
       );
       return (
         <Suspense fallback={fallback}>
