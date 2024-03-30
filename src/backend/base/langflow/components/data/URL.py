@@ -10,7 +10,7 @@ class URLComponent(CustomComponent):
     display_name = "URL"
     description = "Fetch content from one or more URLs."
     icon = "layout-template"
-    
+
     def build_config(self) -> Dict[str, Any]:
         return {
             "urls": {"display_name": "URL"},

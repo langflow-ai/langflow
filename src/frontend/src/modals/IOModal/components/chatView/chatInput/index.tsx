@@ -25,7 +25,6 @@ export default function ChatInput({
     }
   }, [lockChat, inputRef]);
 
-
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.style.height = "inherit"; // Reset the height
@@ -42,7 +41,8 @@ export default function ChatInput({
               event.key === "Enter" &&
               !lockChat &&
               !saveLoading &&
-              !event.shiftKey && !event.nativeEvent.isComposing
+              !event.shiftKey &&
+              !event.nativeEvent.isComposing
             ) {
               sendMessage(repeat);
             }

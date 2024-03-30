@@ -72,7 +72,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   getNodePosition: (nodeId: string) => {
     const node = get().nodes.find((node) => node.id === nodeId);
-    return node?.position||{x:0,y:0};
+    return node?.position || { x: 0, y: 0 };
   },
   updateFlowPool: (
     nodeId: string,
@@ -529,9 +529,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       onGetOrderSuccess: () => {
         setNoticeData({ title: "Running components" });
       },
-      onBuildComplete: () => {
+      onBuildComplete: (allNodesValid) => {
         const nodeId = startNodeId || stopNodeId;
-        if (nodeId) {
+        if (nodeId && allNodesValid) {
           setSuccessData({
             title: `${
               get().nodes.find((node) => node.id === nodeId)?.data.node

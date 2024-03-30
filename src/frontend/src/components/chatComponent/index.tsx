@@ -1,13 +1,12 @@
 import { Transition } from "@headlessui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ApiModal from "../../modals/ApiModal";
+import IOModal from "../../modals/IOModal";
 import ShareModal from "../../modals/shareModal";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
-import { ChatType } from "../../types/chat";
 import { classNames } from "../../utils/utils";
-import IOModal from "../../modals/IOModal";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
 

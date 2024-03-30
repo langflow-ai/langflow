@@ -43,17 +43,17 @@ export interface ButtonProps
 
 function toTitleCase(text: string) {
   return text
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false,children, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, children, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     let newChildren = children;
-    if (typeof(children)==="string"){
-      newChildren = toTitleCase(children)
+    if (typeof children === "string") {
+      newChildren = toTitleCase(children);
     }
     return (
       <Comp
@@ -61,7 +61,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         children={newChildren}
         {...props}
-        
       />
     );
   }

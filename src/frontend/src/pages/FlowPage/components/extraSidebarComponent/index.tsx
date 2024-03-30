@@ -1,7 +1,6 @@
 import { cloneDeep } from "lodash";
 import { LinkIcon, SparklesIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import AccordionComponent from "../../../../components/AccordionComponent";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
