@@ -7,6 +7,7 @@ from langflow.field_typing import Text
 class TextOutput(TextComponent):
     display_name = "Text Output"
     description = "Display a text output in the Interaction Panel."
+    icon = "type"
 
     def build_config(self):
         return {
