@@ -1,14 +1,16 @@
-from typing import List, Optional
+from typing import Optional
 
+from langflow.field_typing import Text
+from langflow.helpers.record import records_to_text
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.memory import get_messages
-from langflow.schema import Record
 
 
-class MessageHistoryComponent(CustomComponent):
-    display_name = "Message History"
+class MemoryComponent(CustomComponent):
+    display_name = "Chat Memory"
     description = "Retrieves stored chat messages given a specific Session ID."
     beta: bool = True
+    icon = "history"
 
     def build_config(self):
         return {
@@ -20,6 +22,7 @@ class MessageHistoryComponent(CustomComponent):
             "n_messages": {
                 "display_name": "Number of Messages",
                 "info": "Number of messages to retrieve.",
+                "advanced": True,
             },
             "session_id": {
                 "display_name": "Session ID",
@@ -32,6 +35,12 @@ class MessageHistoryComponent(CustomComponent):
                 "info": "Order of the messages.",
                 "advanced": True,
             },
+            "record_template": {
+                "display_name": "Record Template",
+                "multiline": True,
+                "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
+                "advanced": True,
+            },
         }
 
     def build(
@@ -41,7 +50,8 @@ class MessageHistoryComponent(CustomComponent):
         session_id: Optional[str] = None,
         n_messages: int = 5,
         order: Optional[str] = "Descending",
-    ) -> List[Record]:
+        record_template: Optional[str] = "{sender_name}: {text}",
+    ) -> Text:
         order = "DESC" if order == "Descending" else "ASC"
         if sender == "Machine and User":
             sender = None
@@ -52,5 +62,6 @@ class MessageHistoryComponent(CustomComponent):
             limit=n_messages,
             order=order,
         )
-        self.status = messages
-        return messages
+        messages_str = records_to_text(template=record_template, records=messages)
+        self.status = messages_str
+        return messages_str
