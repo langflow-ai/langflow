@@ -332,7 +332,7 @@ export default function ParameterComponent({
         <div className="flex">
           <ShadTooltip
             styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-            delayDuration={1000}
+            delayDuration={2000}
             content={refHtml.current}
             side={left ? "left" : "right"}
           >
@@ -426,7 +426,7 @@ export default function ParameterComponent({
             <div className="flex">
               <ShadTooltip
                 styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-                delayDuration={0}
+                delayDuration={2000}
                 content={refHtml.current}
                 side={left ? "left" : "right"}
               >
