@@ -18,8 +18,6 @@
 [![HuggingFace Spaces](https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg)](https://huggingface.co/spaces/Logspace/Langflow)
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/logspace-ai/langflow)
 
-The easiest way to create and customize your flow
-
 <a href="https://github.com/logspace-ai/langflow">
 <img width="100%" src="https://github.com/logspace-ai/langflow/blob/dev/docs/static/img/new_langflow_demo.gif"></a>
 
