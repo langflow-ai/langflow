@@ -143,7 +143,7 @@ function BaseModal({
       break;
     case "three-cards":
       minWidth = "min-w-[1066px]";
-      height = "h-[80vh]";
+      height = "";
       break;
     case "large-thin":
       minWidth = "min-w-[65vw]";
