@@ -62,6 +62,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
                 "field_type": "float",
                 "info": "Model params, only supported in ERNIE-Bot and ERNIE-Bot-turbo",
                 "value": 0.8,
+                "advanced": True,
             },
             "temperature": {
                 "display_name": "Temperature",
@@ -74,6 +75,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
                 "field_type": "float",
                 "info": "Model params, only supported in ERNIE-Bot and ERNIE-Bot-turbo",
                 "value": 1.0,
+                "advanced": True,
             },
             "endpoint": {
                 "display_name": "Endpoint",
@@ -84,10 +86,12 @@ class QianfanChatEndpointComponent(LCModelComponent):
             "stream": {
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
+                "advanced": True,
             },
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 
