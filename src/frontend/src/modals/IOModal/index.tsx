@@ -51,7 +51,7 @@ export default function IOModal({
   );
   const haveChat = chatInput || chatOutput;
   const [selectedTab, setSelectedTab] = useState(
-    outputs.length > 0 ? 2 : inputs.length > 0 ? 1 : 0
+    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0
   );
 
   function startView() {
@@ -116,8 +116,8 @@ export default function IOModal({
 
   useEffect(() => {
     setSelectedViewField(startView());
-    setSelectedTab(outputs.length > 0 ? 2 : inputs.length > 0 ? 1 : 0);
-  }, [inputs, inputs.length, outputs, outputs.length]);
+    setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
+  }, [inputs.length, outputs.length, open]);
 
   return (
     <BaseModal
