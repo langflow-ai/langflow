@@ -29,9 +29,11 @@ class CohereComponent(LCModelComponent):
                 "display_name": "Cohere API Key",
                 "type": "password",
                 "password": True,
+                "required": True,
             },
             "max_tokens": {
                 "display_name": "Max Tokens",
+                "advanced": True,
                 "default": 256,
                 "type": "int",
                 "show": True,
@@ -46,10 +48,12 @@ class CohereComponent(LCModelComponent):
             "stream": {
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
+                "advanced": True,
             },
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 

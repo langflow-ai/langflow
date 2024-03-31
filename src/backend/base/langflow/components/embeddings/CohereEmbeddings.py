@@ -16,6 +16,7 @@ class CohereEmbeddingsComponent(CustomComponent):
             "truncate": {"display_name": "Truncate", "advanced": True},
             "max_retries": {"display_name": "Max Retries", "advanced": True},
             "user_agent": {"display_name": "User Agent", "advanced": True},
+            "request_timeout": {"display_name": "Request Timeout", "advanced": True},
         }
 
     def build(

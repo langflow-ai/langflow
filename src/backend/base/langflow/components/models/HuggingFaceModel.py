@@ -33,16 +33,19 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             "model_kwargs": {
                 "display_name": "Model Keyword Arguments",
                 "field_type": "code",
+                "advanced": True,
             },
             "code": {"show": False},
             "input_value": {"display_name": "Input"},
             "stream": {
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
+                "advanced": True,
             },
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 

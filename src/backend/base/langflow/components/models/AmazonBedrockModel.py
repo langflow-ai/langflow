@@ -55,10 +55,15 @@ class AmazonBedrockComponent(LCModelComponent):
             "model_kwargs": {"display_name": "Model Kwargs"},
             "cache": {"display_name": "Cache"},
             "input_value": {"display_name": "Input"},
-            "system_message": {"display_name": "System Message", "info": "System message to pass to the model."},
+            "system_message": {
+                "display_name": "System Message",
+                "info": "System message to pass to the model.",
+                "advanced": True,
+            },
             "stream": {
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
+                "advanced": True,
             },
         }
 
