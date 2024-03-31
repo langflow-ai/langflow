@@ -119,7 +119,7 @@ function BaseModal({
       break;
     case "smaller-h-full":
       minWidth = "min-w-[40vw]";
-      height = "h-full";
+      height = " ";
       break;
     case "small":
       minWidth = "min-w-[40vw]";
