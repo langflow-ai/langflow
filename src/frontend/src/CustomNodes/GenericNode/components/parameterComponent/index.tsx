@@ -662,6 +662,7 @@ export default function ParameterComponent({
         ) : left === true && type === "int" ? (
           <div className="mt-2 w-full">
             <IntComponent
+            rangeSpec={data.node?.template[name].rangeSpec}
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}

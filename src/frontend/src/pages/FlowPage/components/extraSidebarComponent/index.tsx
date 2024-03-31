@@ -377,6 +377,7 @@ export default function ExtraSidebar(): JSX.Element {
               Object.keys(dataFilter[SBSectionName]).length > 0 ? (
                 <>
                   <DisclosureComponent
+                  isChild={false}
                     openDisc={
                       getFilterEdge.length !== 0 || search.length !== 0
                         ? true
@@ -448,7 +449,7 @@ export default function ExtraSidebar(): JSX.Element {
                         href="https://langflow.store"
                         className="components-disclosure-arrangement"
                       >
-                        <div className="flex gap-4 pl-2">
+                        <div className="flex gap-4">
                           {/* BUG ON THIS ICON */}
                           <SparklesIcon
                             strokeWidth={1.5}
