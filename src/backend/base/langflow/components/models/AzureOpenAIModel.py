@@ -73,9 +73,9 @@ class AzureChatOpenAIComponent(LCModelComponent):
             "api_key": {"display_name": "API Key", "required": True, "password": True},
             "temperature": {
                 "display_name": "Temperature",
-                "value": 0.7,
+                "value": 0.1,
                 "field_type": "float",
-                "required": False,
+                "required": True,
             },
             "max_tokens": {
                 "display_name": "Max Tokens",
@@ -90,10 +90,12 @@ class AzureChatOpenAIComponent(LCModelComponent):
             "stream": {
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
+                "advanced": True,
             },
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 
