@@ -26,7 +26,7 @@ export default function ParentDisclosureComponent({
                   <IconComponent
                     name="ChevronsUpDownIcon"
                     className={`${
-                      open || openDisc ? "rotate-90 transform" : ""
+                      open || openDisc ? "" : ""
                     } h-4 w-4 text-foreground`}
                   />
                 </div>
