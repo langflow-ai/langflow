@@ -42,7 +42,7 @@ class ConversationalAgent(CustomComponent):
             "temperature": {
                 "display_name": "Temperature",
                 "value": 0.2,
-                "range_spec": RangeSpec(min=0, max=2, step=0.1),
+                "rangeSpec": RangeSpec(min=0, max=2, step=0.1),
             },
         }
 
