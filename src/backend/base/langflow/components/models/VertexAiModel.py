@@ -78,10 +78,12 @@ class ChatVertexAIComponent(LCModelComponent):
             "stream": {
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
+                "advanced": True,
             },
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 

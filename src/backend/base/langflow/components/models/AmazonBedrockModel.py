@@ -52,7 +52,10 @@ class AmazonBedrockComponent(LCModelComponent):
             "credentials_profile_name": {"display_name": "Credentials Profile Name"},
             "endpoint_url": {"display_name": "Endpoint URL"},
             "region_name": {"display_name": "Region Name"},
-            "model_kwargs": {"display_name": "Model Kwargs"},
+            "model_kwargs": {
+                "display_name": "Model Kwargs",
+                "advanced": True,
+            },
             "cache": {"display_name": "Cache"},
             "input_value": {"display_name": "Input"},
             "system_message": {
