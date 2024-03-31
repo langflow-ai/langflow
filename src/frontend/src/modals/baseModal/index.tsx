@@ -127,6 +127,7 @@ function BaseModal({
       break;
     case "small-h-full":
       minWidth = "min-w-[40vw]";
+      height = " ";
       break;
     case "medium":
       minWidth = "min-w-[60vw]";
@@ -134,10 +135,11 @@ function BaseModal({
       break;
     case "medium-h-full":
       minWidth = "min-w-[60vw]";
+      height = " ";
       break;
     case "large":
-      minWidth = "min-w-[85vw]";
-      height = "h-[70vh]";
+      minWidth = "min-w-[85vw]" ;
+      height = "h-[80vh]";
       break;
     case "three-cards":
       minWidth = "min-w-[1066px]";
@@ -149,6 +151,7 @@ function BaseModal({
       break;
     case "large-h-full":
       minWidth = "min-w-[80vw]";
+      height = " ";
       break;
     default:
       minWidth = "min-w-[80vw]";
@@ -168,12 +171,12 @@ function BaseModal({
       {type === "modal" ? (
         <Modal open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <ModalContent className={cn(minWidth, "duration-300")}>
+          <ModalContent className={cn(minWidth, height, "duration-300")}>
             <div className="truncate-doubleline word-break-break-word">
               {headerChild}
             </div>
             <div
-              className={`flex flex-col ${height!} w-full transition-all duration-300`}
+              className={`flex flex-col w-full transition-all duration-300`}
             >
               {ContentChild}
             </div>
