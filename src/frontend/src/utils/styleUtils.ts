@@ -220,11 +220,11 @@ export const gradients = [
 ];
 
 export const nodeColors: { [char: string]: string } = {
-  inputs: "#4367BF",
+  inputs: "#10B981",
   outputs: "#AA2411",
-  data: "#6344BE",
+  data: "#4367BF",
   prompts: "#4367BF",
-  models: "#AA2411",
+  models: "#6344BE",
   model_specs: "#6344BE",
   chains: "#FE7500",
   Document: "#7AAE42",
