@@ -26,7 +26,7 @@ export default function ChatInput({
   }, [lockChat, inputRef]);
 
   useEffect(() => {
-    if (inputRef.current) {
+    if (inputRef.current && inputRef.current.scrollHeight !== 0) {
       inputRef.current.style.height = "inherit"; // Reset the height
       inputRef.current.style.height = `${inputRef.current.scrollHeight}px`; // Set it to the scrollHeight
     }
