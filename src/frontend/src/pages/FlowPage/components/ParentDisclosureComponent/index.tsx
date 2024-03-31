@@ -14,7 +14,7 @@ export default function ParentDisclosureComponent({
           <div>
             <Disclosure.Button className="parent-disclosure-arrangement">
               <div className="flex gap-4">
-                <span className="parent-disclosure-title">{title}</span>
+                <span className="parent-disclosure-title ">{title}</span>
               </div>
               <div className="components-disclosure-div">
                 {buttons.map((btn, index) => (

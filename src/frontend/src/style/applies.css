@@ -184,17 +184,17 @@
     @apply fill-chat-trigger-disabled stroke-chat-trigger-disabled stroke-1;
   }
   .parent-disclosure-arrangement {
-    @apply flex w-full select-none items-center justify-between border-y border-y-input bg-background px-3 py-2;
+    @apply flex w-full select-none items-center justify-between bg-background px-3 py-1;
   }
   .components-disclosure-arrangement {
-    @apply -mt-px flex w-full select-none items-center justify-between border-y border-t-2 border-y-input bg-muted px-3 py-2;
+    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
   }
   .components-disclosure-arrangement-child {
     /* different color than the non child */
     @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
   }
   .parent-disclosure-title {
-    @apply p-2 px-2 text-sm font-semibold;
+    @apply p-2 px-2 text-sm font-medium;
   }
   .components-disclosure-title {
     @apply flex items-center text-sm text-primary;
