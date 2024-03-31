@@ -1,6 +1,7 @@
 from typing import Any
 
 from langflow.custom import CustomComponent
+from langflow.field_typing.range_spec import RangeSpec
 from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import TemplateField
@@ -20,6 +21,7 @@ class CreateRecordComponent(CustomComponent):
                 return build_config
             existing_fields = {}
             if field_value_int > 15:
+                build_config["number_of_fields"]["value"] = 15
                 raise ValueError("Number of fields cannot exceed 15. Try using a Component to combine two Records.")
             if len(build_config) > len(default_keys) + field_value_int:
                 # back up the existing template fields
@@ -50,6 +52,7 @@ class CreateRecordComponent(CustomComponent):
                 "display_name": "Number of Fields",
                 "info": "Number of fields to be added to the record.",
                 "real_time_refresh": True,
+                "range_spec": RangeSpec(min=1, max=15, step=1),
             },
             "text_key": {
                 "display_name": "Text Key",
