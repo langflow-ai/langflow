@@ -32,6 +32,7 @@ export default function IOModal({
   setOpen,
   disable,
 }: IOModalPropsType): JSX.Element {
+  const allNodes = useFlowStore((state) => state.nodes);
   const inputs = useFlowStore((state) => state.inputs).filter(
     (input) => input.type !== "ChatInput"
   );
@@ -117,7 +118,7 @@ export default function IOModal({
   useEffect(() => {
     setSelectedViewField(startView());
     setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
-  }, [inputs.length, outputs.length, open]);
+  }, [allNodes]);
 
   return (
     <BaseModal
