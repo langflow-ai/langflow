@@ -139,7 +139,7 @@ function BaseModal({
       break;
     case "large":
       minWidth = "min-w-[85vw]" ;
-      height = "h-[80vh]";
+      height = "h-[90vh]";
       break;
     case "three-cards":
       minWidth = "min-w-[1066px]";
@@ -147,7 +147,7 @@ function BaseModal({
       break;
     case "large-thin":
       minWidth = "min-w-[65vw]";
-      height = "h-[70vh]";
+      height = "h-[90vh]";
       break;
     case "large-h-full":
       minWidth = "min-w-[80vw]";
@@ -172,33 +172,33 @@ function BaseModal({
         <Modal open={open} onOpenChange={setOpen}>
           {triggerChild}
           <ModalContent className={cn(minWidth, height, "duration-300")}>
-            <div className="truncate-doubleline word-break-break-word">
+            <div className="truncate-doubleline flex-shrink-0 word-break-break-word">
               {headerChild}
             </div>
             <div
-              className={`flex flex-col w-full transition-all duration-300`}
+              className={`flex flex-col h-full w-full transition-all duration-300`}
             >
               {ContentChild}
             </div>
             {ContentFooter && (
-              <div className="flex flex-row-reverse">{ContentFooter}</div>
+              <div className="flex flex-row-reverse flex-shrink-0">{ContentFooter}</div>
             )}
           </ModalContent>
         </Modal>
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <DialogContent className={cn(minWidth, "duration-300")}>
-            <div className="truncate-doubleline word-break-break-word">
+          <DialogContent className={cn(minWidth, height, "duration-300")}>
+            <div className="truncate-doubleline flex-shrink-0 word-break-break-word">
               {headerChild}
             </div>
             <div
-              className={`flex flex-col ${height!} w-full transition-all duration-300`}
+              className={`flex flex-col h-full w-full transition-all duration-300`}
             >
               {ContentChild}
             </div>
             {ContentFooter && (
-              <div className="flex flex-row-reverse">{ContentFooter}</div>
+              <div className="flex flex-row-reverse flex-shrink-0">{ContentFooter}</div>
             )}
           </DialogContent>
         </Dialog>
