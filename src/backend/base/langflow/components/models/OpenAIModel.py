@@ -68,7 +68,7 @@ class OpenAIModelComponent(LCModelComponent):
                 "display_name": "Temperature",
                 "advanced": False,
                 "required": False,
-                "value": 0.7,
+                "value": 0.1,
             },
             "stream": {
                 "display_name": "Stream",
