@@ -393,7 +393,7 @@ export default function ParameterComponent({
           }
         >
           {!left && data.node?.frozen && (
-            <div>
+            <div className="pr-1">
               <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
             </div>
           )}
