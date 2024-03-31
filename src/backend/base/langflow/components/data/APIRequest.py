@@ -27,12 +27,12 @@ class APIRequest(CustomComponent):
         "headers": {
             "display_name": "Headers",
             "info": "The headers to send with the request.",
-            "input_types": ["dict"],
+            "input_types": ["Record"],
         },
         "body": {
             "display_name": "Body",
             "info": "The body to send with the request (for POST, PATCH, PUT).",
-            "input_types": ["dict"],
+            "input_types": ["Record"],
         },
         "timeout": {
             "display_name": "Timeout",
@@ -47,8 +47,8 @@ class APIRequest(CustomComponent):
         client: httpx.AsyncClient,
         method: str,
         url: str,
-        headers: Optional[dict] = None,
-        body: Optional[dict] = None,
+        headers: Optional[Record] = None,
+        body: Optional[Record] = None,
         timeout: int = 5,
     ) -> Record:
         method = method.upper()
@@ -58,7 +58,9 @@ class APIRequest(CustomComponent):
         data = body if body else None
         payload = json.dumps(data)
         try:
-            response = await client.request(method, url, headers=headers, content=payload, timeout=timeout)
+            response = await client.request(
+                method, url, headers=headers, content=payload, timeout=timeout
+            )
             try:
                 result = response.json()
             except Exception:
@@ -94,24 +96,31 @@ class APIRequest(CustomComponent):
         self,
         method: str,
         urls: List[str],
-        headers: Optional[dict] = None,
-        body: Optional[List[Record]] = None,
+        headers: Optional[Record] = None,
+        body: Optional[Record] = None,
         timeout: int = 5,
     ) -> List[Record]:
         if headers is None:
             headers = {}
+        else:
+            headers = headers.data
+
         bodies = []
         if body:
             if isinstance(body, list):
                 bodies = [b.data for b in body]
             else:
                 bodies = [body.data]
+
         if len(urls) != len(bodies):
             # add bodies with None
             bodies += [None] * (len(urls) - len(bodies))  # type: ignore
         async with httpx.AsyncClient() as client:
             results = await asyncio.gather(
-                *[self.make_request(client, method, u, headers, rec, timeout) for u, rec in zip(urls, bodies)]
+                *[
+                    self.make_request(client, method, u, headers, rec, timeout)
+                    for u, rec in zip(urls, bodies)
+                ]
             )
         self.status = results
         return results
