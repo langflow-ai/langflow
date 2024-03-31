@@ -454,7 +454,7 @@ export default function NodeToolbarComponent({
                     keyboardKey="E"
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
                     shift={false}
-                    value={"Edit"}
+                    value={"Advanced"}
                     icon={"Settings2"}
                     dataTestId="edit-button-modal"
                   />
