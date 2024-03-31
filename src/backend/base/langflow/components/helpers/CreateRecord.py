@@ -52,7 +52,7 @@ class CreateRecordComponent(CustomComponent):
                 "display_name": "Number of Fields",
                 "info": "Number of fields to be added to the record.",
                 "real_time_refresh": True,
-                "range_spec": RangeSpec(min=1, max=15, step=1),
+                "rangeSpec": RangeSpec(min=1, max=15, step=1),
             },
             "text_key": {
                 "display_name": "Text Key",
