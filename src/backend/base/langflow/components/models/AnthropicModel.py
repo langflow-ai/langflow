@@ -49,25 +49,29 @@ class AnthropicLLM(LCModelComponent):
             "max_tokens": {
                 "display_name": "Max Tokens",
                 "field_type": "int",
+                "advanced": True,
                 "value": 256,
             },
             "temperature": {
                 "display_name": "Temperature",
                 "field_type": "float",
-                "value": 0.7,
+                "value": 0.1,
             },
             "anthropic_api_url": {
                 "display_name": "Anthropic API URL",
+                "advanced": True,
                 "info": "Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
             },
             "code": {"show": False},
             "input_value": {"display_name": "Input"},
             "stream": {
                 "display_name": "Stream",
+                "advanced": True,
                 "info": "Stream the response from the model.",
             },
             "system_message": {
                 "display_name": "System Message",
+                "advanced": True,
                 "info": "System message to pass to the model.",
             },
         }

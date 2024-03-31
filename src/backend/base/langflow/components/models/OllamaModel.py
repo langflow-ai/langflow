@@ -53,6 +53,7 @@ class ChatOllamaComponent(LCModelComponent):
             "base_url": {
                 "display_name": "Base URL",
                 "info": "Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
+                "advanced": True,
             },
             "model": {
                 "display_name": "Model Name",
@@ -205,6 +206,7 @@ class ChatOllamaComponent(LCModelComponent):
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 

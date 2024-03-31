@@ -28,7 +28,7 @@ class OpenAIModelComponent(LCModelComponent):
             "input_value": {"display_name": "Input"},
             "max_tokens": {
                 "display_name": "Max Tokens",
-                "advanced": False,
+                "advanced": True,
                 "required": False,
             },
             "model_kwargs": {
@@ -51,7 +51,7 @@ class OpenAIModelComponent(LCModelComponent):
             },
             "openai_api_base": {
                 "display_name": "OpenAI API Base",
-                "advanced": False,
+                "advanced": True,
                 "required": False,
                 "info": (
                     "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\n"
@@ -61,7 +61,7 @@ class OpenAIModelComponent(LCModelComponent):
             "openai_api_key": {
                 "display_name": "OpenAI API Key",
                 "advanced": False,
-                "required": False,
+                "required": True,
                 "password": True,
             },
             "temperature": {
@@ -73,10 +73,12 @@ class OpenAIModelComponent(LCModelComponent):
             "stream": {
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
+                "advanced": True,
             },
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 

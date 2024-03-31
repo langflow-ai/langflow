@@ -34,6 +34,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             "max_output_tokens": {
                 "display_name": "Max Output Tokens",
                 "info": "The maximum number of tokens to generate.",
+                "advanced": True,
             },
             "temperature": {
                 "display_name": "Temperature",
@@ -67,10 +68,12 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             "stream": {
                 "display_name": "Stream",
                 "info": "Stream the response from the model.",
+                "advanced": True,
             },
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 
