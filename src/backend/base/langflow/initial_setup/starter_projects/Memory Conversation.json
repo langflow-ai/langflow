@@ -1,11 +1,11 @@
 {
-    "id": "47968932-831c-46aa-a5f9-28286eb11caf",
+    "id": "08d5cccf-d098-4367-b14b-1078429c9ed9",
     "icon": "🤖",
     "icon_bg_color": "#FFD700",
     "data": {
         "nodes": [
             {
-                "id": "ChatInput-sl6I7",
+                "id": "ChatInput-kOK82",
                 "type": "genericNode",
                 "position": {
                     "x": 1283.2700598313072,
@@ -22,7 +22,7 @@
                                 "list": false,
                                 "show": true,
                                 "multiline": true,
-                                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Capture user inputs from the chat interface.\"\n    icon = \"ChatInput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n    ) -> Union[Text, Record]:\n        return super().build(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n        )\n",
+                                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Interaction Panel.\"\n    icon = \"ChatInput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n    ) -> Union[Text, Record]:\n        return super().build(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n        )\n",
                                 "fileTypes": [],
                                 "file_path": "",
                                 "password": false,
@@ -172,7 +172,7 @@
                         "field_order": [],
                         "beta": false
                     },
-                    "id": "ChatInput-sl6I7"
+                    "id": "ChatInput-kOK82"
                 },
                 "selected": false,
                 "width": 384,
@@ -184,7 +184,7 @@
                 "dragging": false
             },
             {
-                "id": "ChatOutput-8Ougj",
+                "id": "ChatOutput-ImuK8",
                 "type": "genericNode",
                 "position": {
                     "x": 3154.916355514023,
@@ -201,7 +201,7 @@
                                 "list": false,
                                 "show": true,
                                 "multiline": true,
-                                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Used to send a chat message.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n    ) -> Union[Text, Record]:\n        return super().build(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n        )\n",
+                                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Interaction Panel.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n        record_template: Optional[str] = \"{text}\",\n    ) -> Union[Text, Record]:\n        return super().build(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n            record_template=record_template,\n        )\n",
                                 "fileTypes": [],
                                 "file_path": "",
                                 "password": false,
@@ -350,7 +350,7 @@
                         "field_order": [],
                         "beta": false
                     },
-                    "id": "ChatOutput-8Ougj"
+                    "id": "ChatOutput-ImuK8"
                 },
                 "selected": false,
                 "width": 384,
@@ -362,7 +362,7 @@
                 }
             },
             {
-                "id": "MemoryComponent-6sJMc",
+                "id": "MemoryComponent-tbqb9",
                 "type": "genericNode",
                 "position": {
                     "x": 1295.1067823347944,
@@ -554,7 +554,7 @@
                         "field_order": [],
                         "beta": true
                     },
-                    "id": "MemoryComponent-6sJMc",
+                    "id": "MemoryComponent-tbqb9",
                     "description": "Retrieves stored chat messages given a specific Session ID.",
                     "display_name": "Chat Memory"
                 },
@@ -568,7 +568,7 @@
                 }
             },
             {
-                "id": "Prompt-2RGKR",
+                "id": "Prompt-54XGX",
                 "type": "genericNode",
                 "position": {
                     "x": 1894.594426342426,
@@ -585,7 +585,7 @@
                                 "list": false,
                                 "show": true,
                                 "multiline": true,
-                                "value": "from langchain_core.prompts import PromptTemplate\n\nfrom langflow.field_typing import Prompt, TemplateField, Text\nfrom langflow.interface.custom.custom_component import CustomComponent\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"A component for creating prompt templates using dynamic variables.\"\n    icon = \"terminal-square\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Text:\n        from langflow.base.prompts.utils import dict_values_to_string\n\n        prompt_template = PromptTemplate.from_template(Text(template))\n        kwargs = dict_values_to_string(kwargs)\n        kwargs = {k: \"\\n\".join(v) if isinstance(v, list) else v for k, v in kwargs.items()}\n        try:\n            formated_prompt = prompt_template.format(**kwargs)\n        except Exception as exc:\n            raise ValueError(f\"Error formatting prompt: {exc}\") from exc\n        self.status = f'Prompt:\\n\"{formated_prompt}\"'\n        return formated_prompt\n",
+                                "value": "from langchain_core.prompts import PromptTemplate\n\nfrom langflow.field_typing import Prompt, TemplateField, Text\nfrom langflow.interface.custom.custom_component import CustomComponent\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Text:\n        from langflow.base.prompts.utils import dict_values_to_string\n\n        prompt_template = PromptTemplate.from_template(Text(template))\n        kwargs = dict_values_to_string(kwargs)\n        kwargs = {k: \"\\n\".join(v) if isinstance(v, list) else v for k, v in kwargs.items()}\n        try:\n            formated_prompt = prompt_template.format(**kwargs)\n        except Exception as exc:\n            raise ValueError(f\"Error formatting prompt: {exc}\") from exc\n        self.status = f'Prompt:\\n\"{formated_prompt}\"'\n        return formated_prompt\n",
                                 "fileTypes": [],
                                 "file_path": "",
                                 "password": false,
@@ -594,8 +594,7 @@
                                 "dynamic": true,
                                 "info": "",
                                 "load_from_db": false,
-                                "title_case": false,
-                                "display_name": "code"
+                                "title_case": false
                             },
                             "template": {
                                 "type": "prompt",
@@ -702,7 +701,7 @@
                         "beta": false,
                         "error": null
                     },
-                    "id": "Prompt-2RGKR",
+                    "id": "Prompt-54XGX",
                     "description": "A component for creating prompt templates using dynamic variables.",
                     "display_name": "Prompt"
                 },
@@ -716,7 +715,7 @@
                 }
             },
             {
-                "id": "OpenAIModel-vMHjk",
+                "id": "OpenAIModel-NQQmp",
                 "type": "genericNode",
                 "position": {
                     "x": 2534.6473994159896,
@@ -763,8 +762,7 @@
                                 "dynamic": true,
                                 "info": "",
                                 "load_from_db": false,
-                                "title_case": false,
-                                "display_name": "code"
+                                "title_case": false
                             },
                             "max_tokens": {
                                 "type": "int",
@@ -981,7 +979,7 @@
                         ],
                         "beta": false
                     },
-                    "id": "OpenAIModel-vMHjk"
+                    "id": "OpenAIModel-NQQmp"
                 },
                 "selected": false,
                 "width": 384,
@@ -991,95 +989,18 @@
                     "y": 394.72169335336775
                 },
                 "dragging": false
-            },
-            {
-                "id": "CustomComponent-UpYXr",
-                "type": "genericNode",
-                "position": {
-                    "x": 2069.7222137275016,
-                    "y": 1331.3667266758698
-                },
-                "data": {
-                    "type": "CustomComponent",
-                    "node": {
-                        "template": {
-                            "code": {
-                                "type": "code",
-                                "required": true,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": true,
-                                "value": "# from langflow.field_typing import Data\nfrom langflow.schema import Record\nfrom langflow.interface.custom.custom_component import CustomComponent\n\n\nclass Component(CustomComponent):\n    display_name = \"Custom Component\"\n    description = \"Use as a template to create your own component.\"\n    documentation: str = \"http://docs.langflow.org/components/custom\"\n    icon = \"custom_components\"\n\n    def build_config(self):\n        return {\"param\": {\"display_name\": \"Parameter\"}}\n\n    def build(self, param: str) -> Record:\n        return Record(data=param)\n",
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "code",
-                                "advanced": true,
-                                "dynamic": true,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false
-                            },
-                            "param": {
-                                "type": "str",
-                                "required": true,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": false,
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "param",
-                                "display_name": "Parameter",
-                                "advanced": false,
-                                "dynamic": false,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false,
-                                "input_types": [
-                                    "Text"
-                                ]
-                            },
-                            "_type": "CustomComponent"
-                        },
-                        "description": "Use as a template to create your own component.",
-                        "icon": "custom_components",
-                        "base_classes": [
-                            "Record"
-                        ],
-                        "display_name": "Custom Component",
-                        "documentation": "http://docs.langflow.org/components/custom",
-                        "custom_fields": {
-                            "param": null
-                        },
-                        "output_types": [
-                            "Record"
-                        ],
-                        "field_formatters": {},
-                        "frozen": false,
-                        "field_order": [],
-                        "beta": false
-                    },
-                    "id": "CustomComponent-UpYXr"
-                },
-                "selected": true,
-                "width": 384,
-                "height": 289,
-                "dragging": false
             }
         ],
         "edges": [
             {
-                "source": "Prompt-2RGKR",
-                "sourceHandle": "{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-2RGKRœ}",
-                "target": "OpenAIModel-vMHjk",
-                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-vMHjkœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+                "source": "Prompt-54XGX",
+                "sourceHandle": "{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-54XGXœ}",
+                "target": "OpenAIModel-NQQmp",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-NQQmpœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "input_value",
-                        "id": "OpenAIModel-vMHjk",
+                        "id": "OpenAIModel-NQQmp",
                         "inputTypes": [
                             "Text"
                         ],
@@ -1092,26 +1013,26 @@
                             "object"
                         ],
                         "dataType": "Prompt",
-                        "id": "Prompt-2RGKR"
+                        "id": "Prompt-54XGX"
                     }
                 },
                 "style": {
                     "stroke": "#555"
                 },
                 "className": "stroke-gray-900 stroke-connection",
-                "id": "reactflow__edge-Prompt-2RGKR{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-2RGKRœ}-OpenAIModel-vMHjk{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-vMHjkœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-Prompt-54XGX{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-54XGXœ}-OpenAIModel-NQQmp{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-NQQmpœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
                 "selected": false
             },
             {
-                "source": "MemoryComponent-6sJMc",
-                "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-6sJMcœ}",
-                "target": "Prompt-2RGKR",
-                "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-2RGKRœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+                "source": "MemoryComponent-tbqb9",
+                "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-tbqb9œ}",
+                "target": "Prompt-54XGX",
+                "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-54XGXœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "context",
                         "type": "str",
-                        "id": "Prompt-2RGKR",
+                        "id": "Prompt-54XGX",
                         "inputTypes": [
                             "Document",
                             "BaseOutputParser",
@@ -1126,26 +1047,26 @@
                             "object"
                         ],
                         "dataType": "MemoryComponent",
-                        "id": "MemoryComponent-6sJMc"
+                        "id": "MemoryComponent-tbqb9"
                     }
                 },
                 "style": {
                     "stroke": "#555"
                 },
                 "className": "stroke-gray-900 stroke-connection",
-                "id": "reactflow__edge-MemoryComponent-6sJMc{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-6sJMcœ}-Prompt-OFQvB{œfieldNameœ:œcontextœ,œidœ:œPrompt-OFQvBœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-MemoryComponent-tbqb9{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-tbqb9œ}-Prompt-54XGX{œfieldNameœ:œcontextœ,œidœ:œPrompt-54XGXœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
                 "selected": false
             },
             {
-                "source": "ChatInput-sl6I7",
-                "sourceHandle": "{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-sl6I7œ}",
-                "target": "Prompt-2RGKR",
-                "targetHandle": "{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-2RGKRœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+                "source": "ChatInput-kOK82",
+                "sourceHandle": "{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-kOK82œ}",
+                "target": "Prompt-54XGX",
+                "targetHandle": "{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-54XGXœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "user_message",
                         "type": "str",
-                        "id": "Prompt-2RGKR",
+                        "id": "Prompt-54XGX",
                         "inputTypes": [
                             "Document",
                             "BaseOutputParser",
@@ -1161,25 +1082,25 @@
                             "str"
                         ],
                         "dataType": "ChatInput",
-                        "id": "ChatInput-sl6I7"
+                        "id": "ChatInput-kOK82"
                     }
                 },
                 "style": {
                     "stroke": "#555"
                 },
                 "className": "stroke-gray-900 stroke-connection",
-                "id": "reactflow__edge-ChatInput-sl6I7{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-sl6I7œ}-Prompt-OFQvB{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-OFQvBœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-ChatInput-kOK82{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-kOK82œ}-Prompt-54XGX{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-54XGXœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
                 "selected": false
             },
             {
-                "source": "OpenAIModel-vMHjk",
-                "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-vMHjkœ}",
-                "target": "ChatOutput-8Ougj",
-                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8Ougjœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+                "source": "OpenAIModel-NQQmp",
+                "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-NQQmpœ}",
+                "target": "ChatOutput-ImuK8",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ImuK8œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "input_value",
-                        "id": "ChatOutput-8Ougj",
+                        "id": "ChatOutput-ImuK8",
                         "inputTypes": [
                             "Text"
                         ],
@@ -1192,14 +1113,14 @@
                             "object"
                         ],
                         "dataType": "OpenAIModel",
-                        "id": "OpenAIModel-vMHjk"
+                        "id": "OpenAIModel-NQQmp"
                     }
                 },
                 "style": {
                     "stroke": "#555"
                 },
                 "className": "stroke-gray-900 stroke-connection",
-                "id": "reactflow__edge-OpenAIModel-JTpZA{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-JTpZAœ}-ChatOutput-8Ougj{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8Ougjœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-OpenAIModel-NQQmp{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-NQQmpœ}-ChatOutput-ImuK8{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ImuK8œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
                 "selected": false
             }
         ],
