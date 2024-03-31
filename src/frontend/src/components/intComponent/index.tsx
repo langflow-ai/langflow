@@ -9,6 +9,7 @@ import { Input } from "../ui/input";
 export default function IntComponent({
   value,
   onChange,
+  rangeSpec,
   disabled,
   editNode = false,
   id = "",
@@ -32,7 +33,8 @@ export default function IntComponent({
         }}
         type="number"
         step="1"
-        min={0}
+        min={rangeSpec?.min ?? min}
+        max={rangeSpec?.max ?? undefined}
         onInput={(event: React.ChangeEvent<HTMLInputElement>) => {
           if (Number(event.target.value) < min) {
             event.target.value = min.toString();

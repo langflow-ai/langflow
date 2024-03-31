@@ -566,6 +566,11 @@ export default function CodeTabsComponent({
                                                 <IntComponent
                                                   disabled={false}
                                                   editNode={true}
+                                                  rangeSpec={
+                                                    node.data.node.template[
+                                                      templateField
+                                                    ].rangeSpec
+                                                  }
                                                   value={
                                                     !node.data.node.template[
                                                       templateField

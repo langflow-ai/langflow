@@ -170,6 +170,7 @@ export type RangeSpecType = {
 export type IntComponentType = {
   value: string;
   disabled?: boolean;
+  rangeSpec: RangeSpecType;
   onChange: (value: string) => void;
   editNode?: boolean;
   id?: string;
