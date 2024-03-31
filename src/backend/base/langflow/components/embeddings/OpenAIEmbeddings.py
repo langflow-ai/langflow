@@ -57,7 +57,7 @@ class OpenAIEmbeddingsComponent(CustomComponent):
                 "password": True,
                 "advanced": True,
             },
-            "openai_api_key": {"display_name": "OpenAI API Key", "password": True},
+            "openai_api_key": {"display_name": "OpenAI API Key", "password": True, "required": True},
             "openai_api_type": {
                 "display_name": "OpenAI API Type",
                 "advanced": True,
