@@ -513,7 +513,7 @@ export default function NodeToolbarComponent({
                     value={"Share"}
                     icon={"Share3"}
                     styleObj={{
-                      iconClasses: "relative top-0.5 -m-1 mr-1 h-6 w-6",
+                      iconClasses: "relative top-0.5 -m-1 mr-[0.25rem] h-6 w-6",
                     }}
                     dataTestId="share-button-modal"
                   />

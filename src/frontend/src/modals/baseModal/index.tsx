@@ -115,7 +115,7 @@ function BaseModal({
       break;
     case "smaller":
       minWidth = "min-w-[40vw]";
-      height = "h-[11rem]";
+      height = "";
       break;
     case "smaller-h-full":
       minWidth = "min-w-[40vw]";
@@ -123,7 +123,7 @@ function BaseModal({
       break;
     case "small":
       minWidth = "min-w-[40vw]";
-      height = "h-[40vh]";
+      height = "";
       break;
     case "small-h-full":
       minWidth = "min-w-[40vw]";
@@ -131,7 +131,7 @@ function BaseModal({
       break;
     case "medium":
       minWidth = "min-w-[60vw]";
-      height = "h-[60vh]";
+      height = "";
       break;
     case "medium-h-full":
       minWidth = "min-w-[60vw]";
@@ -155,7 +155,7 @@ function BaseModal({
       break;
     default:
       minWidth = "min-w-[80vw]";
-      height = "h-[80vh]";
+      height = "";
       break;
   }
 
@@ -193,7 +193,7 @@ function BaseModal({
               {headerChild}
             </div>
             <div
-              className={`flex flex-col h-full w-full transition-all duration-300`}
+              className={`flex flex-col flex-1 h-full w-full transition-all duration-300`}
             >
               {ContentChild}
             </div>
