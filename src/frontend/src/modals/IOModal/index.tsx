@@ -56,11 +56,11 @@ export default function IOModal({
 
   function startView() {
     if (!chatInput && !chatOutput) {
-      if (outputs.length > 0) {
-        return outputs[0];
+      if (inputs.length > 0) {
+        return inputs[0];
       }
       else {
-        return inputs[0];
+        return outputs[0];
       }
     }
     else {
