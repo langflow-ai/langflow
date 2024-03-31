@@ -326,8 +326,8 @@ export default function NodeToolbarComponent({
       if (
         selected &&
         !isGroup &&
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "e"
+        (event.ctrlKey || event.metaKey) && event.shiftKey&&
+        event.key === "A"
       ) {
         event.preventDefault();
         setShowModalAdvanced((state) => !state);
@@ -475,9 +475,9 @@ export default function NodeToolbarComponent({
               {nodeLength > 0 && (
                 <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
                   <ToolbarSelectItem
-                    keyboardKey="E"
+                    keyboardKey="A"
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={false}
+                    shift={true}
                     value={"Advanced"}
                     icon={"Settings2"}
                     dataTestId="edit-button-modal"
