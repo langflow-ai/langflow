@@ -64,7 +64,6 @@ export default function NodeToolbarComponent({
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
-  const [updateMinimize, setUpdateMinimize] = useState(showNode);
 
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
@@ -268,6 +267,15 @@ export default function NodeToolbarComponent({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if (
+        selected &&
+        (hasApiKey || hasStore) &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "u"
+      ) {
+        event.preventDefault();
+        handleSelectChange("update");
+      }
       if (
         selected &&
         isGroup &&
