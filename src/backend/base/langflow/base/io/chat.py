@@ -113,6 +113,6 @@ class ChatComponent(CustomComponent):
         else:
             result = input_value
         self.status = result
-        if session_id:
+        if session_id and isinstance(result, (Record, str)):
             self.store_message(result, session_id, sender, sender_name)
         return result
