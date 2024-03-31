@@ -477,7 +477,7 @@ export default function Page({
             <Background className="" />
             {!view && (
               <Controls
-                className="bg-muted fill-foreground stroke-foreground text-primary
+                className="[&>button]:bg-muted fill-foreground stroke-foreground text-primary
                    [&>button]:border-b-border hover:[&>button]:bg-border"
               ></Controls>
             )}
