@@ -220,7 +220,7 @@ export const gradients = [
 ];
 
 export const nodeColors: { [char: string]: string } = {
-  inputs: "#9AAE42",
+  inputs: "#4367BF",
   outputs: "#AA2411",
   data: "#6344BE",
   prompts: "#4367BF",
@@ -252,6 +252,9 @@ export const nodeColors: { [char: string]: string } = {
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
+  Records:"#31a3cc",
+  Record:"#31a3cc",
+
 };
 
 export const nodeNames: { [char: string]: string } = {
