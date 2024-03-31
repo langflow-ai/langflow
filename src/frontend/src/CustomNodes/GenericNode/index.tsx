@@ -86,7 +86,11 @@ export default function GenericNode({
     if (!thisNodeTemplate.code) return;
     const currentCode = thisNodeTemplate.code?.value;
     const thisNodesCode = data.node!.template?.code?.value;
-    if (currentCode !== thisNodesCode) {
+    const componentsToIgnore = ["Custom Component", "Prompt"];
+    if (
+      currentCode !== thisNodesCode &&
+      !componentsToIgnore.includes(data.node!.display_name)
+    ) {
       setIsOutdated(true);
     } else {
       setIsOutdated(false);
