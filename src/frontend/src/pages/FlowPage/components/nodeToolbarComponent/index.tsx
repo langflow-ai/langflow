@@ -317,7 +317,7 @@ export default function NodeToolbarComponent({
         selected &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
-        event.key === "C"
+        event.key === "U"
       ) {
         event.preventDefault();
         if (hasCode) return setOpenModal((state) => !state);

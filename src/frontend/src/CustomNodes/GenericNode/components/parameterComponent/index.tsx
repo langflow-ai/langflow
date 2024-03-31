@@ -27,7 +27,11 @@ import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { APIClassType, ResponseErrorTypeAPI } from "../../../../types/api";
+import {
+  APIClassType,
+  ResponseErrorDetailAPI,
+  ResponseErrorTypeAPI,
+} from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
 import {
   handleUpdateValues,
@@ -104,10 +108,11 @@ export default function ParameterComponent({
         });
       }
     } catch (error) {
-      let responseError = error as ResponseErrorTypeAPI;
+      let responseError = error as ResponseErrorDetailAPI;
+
       setErrorData({
         title: "Error while updating the Component",
-        list: [responseError.response.data.detail.error ?? "Unknown error"],
+        list: [responseError.response.data.detail ?? "Unknown error"],
       });
     }
     setIsLoading(false);
@@ -136,10 +141,11 @@ export default function ParameterComponent({
             });
           }
         } catch (error) {
-          let responseError = error as ResponseErrorTypeAPI;
+          let responseError = error as ResponseErrorDetailAPI;
+
           setErrorData({
             title: "Error while updating the Component",
-            list: [responseError.response.data.detail.error ?? "Unknown error"],
+            list: [responseError.response.data.detail ?? "Unknown error"],
           });
         }
         setIsLoading(false);
