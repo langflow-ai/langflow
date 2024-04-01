@@ -23,7 +23,7 @@ from langflow.graph.schema import RunOutputs
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import build_custom_component_template
-from langflow.processing.process import process_tweaks, run_graph
+from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
@@ -52,7 +52,7 @@ def get_all(
 
 
 @router.post("/run/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
-async def simplified_run_flow_with_caching(
+async def simplified_run_flow(
     db: Annotated[Session, Depends(get_session)],
     flow_id: str,
     input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
@@ -66,14 +66,23 @@ async def simplified_run_flow_with_caching(
     ### Parameters:
     - `db` (Session): Database session for executing queries.
     - `flow_id` (str): Unique identifier of the flow to be executed.
-    - `input_request` (SimplifiedAPIRequest): A request model containing:
-        - `input_value` (Optional[str], default=""): Input value to pass to the flow.
-        - `input_type` (Optional[Literal["chat", "text", "any"]], default="chat"): Type of the input value, determining how the input is interpreted.
-        - `output_type` (Optional[Literal["chat", "text", "any", "debug"]], default="chat"): Desired type of output, affecting which components' outputs are included in the response.
-        - `tweaks` (Optional[Tweaks], default=None): Adjustments to the flow's behavior, allowing for custom execution parameters.
-        - `session_id` (Optional[str], default=None): An identifier for reusing session data, aiding in performance for subsequent requests.
+    - `input_request` (SimplifiedAPIRequest): Request object containing input values, types, output selection, tweaks, and session ID.
     - `api_key_user` (User): User object derived from the provided API key, used for authentication.
     - `session_service` (SessionService): Service for managing flow sessions, essential for session reuse and caching.
+
+    ### SimplifiedAPIRequest:
+    - `input_value` (Optional[str], default=""): Input value to pass to the flow.
+    - `input_type` (Optional[Literal["chat", "text", "any"]], default="chat"): Type of the input value, determining how the input is interpreted.
+    - `output_type` (Optional[Literal["chat", "text", "any", "debug"]], default="chat"): Desired type of output, affecting which components' outputs are included in the response. If set to "debug", all outputs are returned.
+    - `output_component` (Optional[str], default=None): Specific component output to retrieve. If provided, only the output of the specified component is returned. This overrides the `output_type` parameter.
+    - `tweaks` (Optional[Tweaks], default=None): Adjustments to the flow's behavior, allowing for custom execution parameters.
+    - `session_id` (Optional[str], default=None): An identifier for reusing session data, aiding in performance for subsequent requests.
+
+
+    ### Tweaks
+    A dictionary of tweaks to customize the flow execution. The tweaks can be used to modify the flow's parameters and components. Tweaks can be overridden by the input values.
+    You can use Component's `id` or Display Name as key to tweak a specific component (e.g., `{"Component Name": {"parameter_name": "value"}}`).
+    You can also use the parameter name as key to tweak all components with that parameter (e.g., `{"parameter_name": "value"}`).
 
     ### Returns:
     - A `RunResponse` object containing the execution results, including selected (or all, based on `output_type`) outputs of the flow and the session ID, facilitating result retrieval and further interactions in a session context.
@@ -128,16 +137,19 @@ async def simplified_run_flow_with_caching(
         # if the output type is debug, we return all outputs
         # if the output type is any, we return all outputs that are either chat or text
         # if the output type is chat or text, we return only the outputs that match the type
-        outputs = [
-            vertex.id
-            for vertex in graph.vertices
-            if input_request.output_type == "debug"
-            or (
-                vertex.is_output
-                and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())
-            )
-        ]
-        task_result, session_id = await run_graph(
+        if input_request.output_component:
+            outputs = [input_request.output_component]
+        else:
+            outputs = [
+                vertex.id
+                for vertex in graph.vertices
+                if input_request.output_type == "debug"
+                or (
+                    vertex.is_output
+                    and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())
+                )
+            ]
+        task_result, session_id = await run_graph_internal(
             graph=graph,
             flow_id=flow_id,
             session_id=input_request.session_id,
@@ -171,7 +183,7 @@ async def simplified_run_flow_with_caching(
 
 
 @router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
-async def experimental_run_flow_with_caching(
+async def experimental_run_flow(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
     inputs: Optional[List[InputValueRequest]] = [InputValueRequest(components=[], input_value="")],
@@ -243,7 +255,7 @@ async def experimental_run_flow_with_caching(
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
             graph = Graph.from_payload(graph_data, flow_id=flow_id)
-        task_result, session_id = await run_graph(
+        task_result, session_id = await run_graph_internal(
             graph=graph,
             flow_id=flow_id,
             session_id=session_id,
