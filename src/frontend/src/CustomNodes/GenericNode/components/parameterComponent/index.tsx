@@ -34,8 +34,8 @@ import {
 } from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
 import {
+  debouncedHandleUpdateValues,
   handleUpdateValues,
-  throttledHandleUpdateValues,
 } from "../../../../utils/parameterUtils";
 import {
   convertObjToArray,
@@ -170,7 +170,7 @@ export default function ParameterComponent({
     if (shouldUpdate) {
       setIsLoading(true);
       try {
-        newTemplate = await throttledHandleUpdateValues(name, data);
+        newTemplate = await debouncedHandleUpdateValues(name, data);
       } catch (error) {
         let responseError = error as ResponseErrorTypeAPI;
         setErrorData({
@@ -662,7 +662,7 @@ export default function ParameterComponent({
         ) : left === true && type === "int" ? (
           <div className="mt-2 w-full">
             <IntComponent
-            rangeSpec={data.node?.template[name].rangeSpec}
+              rangeSpec={data.node?.template[name].rangeSpec}
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
