@@ -11,7 +11,7 @@ export type FlowsManagerStoreType = {
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
   refreshFlows: () => Promise<void>;
-  saveFlow: (flow: FlowType, silent?: boolean) => Promise<void>;
+  saveFlow: (flow: FlowType, silent?: boolean) => Promise<void> | undefined;
   autoSaveCurrentFlow: (
     nodes: Node[],
     edges: Edge[],
