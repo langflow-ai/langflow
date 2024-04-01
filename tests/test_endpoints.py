@@ -537,6 +537,102 @@ def test_successful_run_with_output_type_debug(client, starter_project, created_
     assert len(outputs_dict.get("outputs")) == 7
 
 
+# To test input_type wel'l just set it with output_type debug and check if the value is correct
+def test_successful_run_with_input_type_text(client, starter_project, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = starter_project["id"]
+    payload = {
+        "input_type": "text",
+        "output_type": "debug",
+        "input_value": "value1",
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    assert response.status_code == status.HTTP_200_OK, response.text
+    # Add more assertions here to validate the response content
+    json_response = response.json()
+    assert "session_id" in json_response
+    assert "outputs" in json_response
+    outer_outputs = json_response["outputs"]
+    assert len(outer_outputs) == 1
+    outputs_dict = outer_outputs[0]
+    assert len(outputs_dict) == 2
+    assert "inputs" in outputs_dict
+    assert "outputs" in outputs_dict
+    assert outputs_dict.get("inputs") == {"input_value": "value1"}
+    assert isinstance(outputs_dict.get("outputs"), list)
+    assert len(outputs_dict.get("outputs")) == 7
+    # Now we get all components that contain TextInput in the component_id
+    text_input_outputs = [output for output in outputs_dict.get("outputs") if "TextInput" in output.get("component_id")]
+    assert len(text_input_outputs) == 2
+    # Now we check if the input_value is correct
+    assert all([output.get("results").get("result") == "value1" for output in text_input_outputs]), text_input_outputs
+
+
+# Now do the same for "chat" input type
+def test_successful_run_with_input_type_chat(client, starter_project, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = starter_project["id"]
+    payload = {
+        "input_type": "chat",
+        "output_type": "debug",
+        "input_value": "value1",
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    assert response.status_code == status.HTTP_200_OK, response.text
+    # Add more assertions here to validate the response content
+    json_response = response.json()
+    assert "session_id" in json_response
+    assert "outputs" in json_response
+    outer_outputs = json_response["outputs"]
+    assert len(outer_outputs) == 1
+    outputs_dict = outer_outputs[0]
+    assert len(outputs_dict) == 2
+    assert "inputs" in outputs_dict
+    assert "outputs" in outputs_dict
+    assert outputs_dict.get("inputs") == {"input_value": "value1"}
+    assert isinstance(outputs_dict.get("outputs"), list)
+    assert len(outputs_dict.get("outputs")) == 7
+    # Now we get all components that contain TextInput in the component_id
+    chat_input_outputs = [output for output in outputs_dict.get("outputs") if "ChatInput" in output.get("component_id")]
+    assert len(chat_input_outputs) == 1
+    # Now we check if the input_value is correct
+    assert all([output.get("results").get("result") == "value1" for output in chat_input_outputs]), chat_input_outputs
+
+
+def test_successful_run_with_input_type_any(client, starter_project, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = starter_project["id"]
+    payload = {
+        "input_type": "any",
+        "output_type": "debug",
+        "input_value": "value1",
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    assert response.status_code == status.HTTP_200_OK, response.text
+    # Add more assertions here to validate the response content
+    json_response = response.json()
+    assert "session_id" in json_response
+    assert "outputs" in json_response
+    outer_outputs = json_response["outputs"]
+    assert len(outer_outputs) == 1
+    outputs_dict = outer_outputs[0]
+    assert len(outputs_dict) == 2
+    assert "inputs" in outputs_dict
+    assert "outputs" in outputs_dict
+    assert outputs_dict.get("inputs") == {"input_value": "value1"}
+    assert isinstance(outputs_dict.get("outputs"), list)
+    assert len(outputs_dict.get("outputs")) == 7
+    # Now we get all components that contain TextInput or ChatInput in the component_id
+    any_input_outputs = [
+        output
+        for output in outputs_dict.get("outputs")
+        if "TextInput" in output.get("component_id") or "ChatInput" in output.get("component_id")
+    ]
+    assert len(any_input_outputs) == 3
+    # Now we check if the input_value is correct
+    assert all([output.get("results").get("result") == "value1" for output in any_input_outputs]), any_input_outputs
+
+
 def test_run_with_inputs_and_outputs(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
