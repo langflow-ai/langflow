@@ -2,7 +2,9 @@
 
 ## Installation
 
-You can install Langflow from pip:
+Make sure you have **Python 3.10** installed on your system.
+
+You can install **Langflow** using pip:
 
 ```bash
 pip install langflow
@@ -11,5 +13,5 @@ pip install langflow
 Next, run:
 
 ```bash
-langflow
+langflow run
 ```
