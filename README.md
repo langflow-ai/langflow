@@ -27,6 +27,8 @@ The easiest way to create and customize your flow
 
 ### <b>Locally</b>
 
+Make sure you have Python 3.10 installed on your system.
+
 You can install Langflow from pip:
 
 ```shell
