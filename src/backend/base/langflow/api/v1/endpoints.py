@@ -66,12 +66,7 @@ async def simplified_run_flow(
     ### Parameters:
     - `db` (Session): Database session for executing queries.
     - `flow_id` (str): Unique identifier of the flow to be executed.
-    - `input_request` (SimplifiedAPIRequest): A request model containing:
-        - `input_value` (Optional[str], default=""): Input value to pass to the flow.
-        - `input_type` (Optional[Literal["chat", "text", "any"]], default="chat"): Type of the input value, determining how the input is interpreted.
-        - `output_type` (Optional[Literal["chat", "text", "any", "debug"]], default="chat"): Desired type of output, affecting which components' outputs are included in the response. If set to "debug", all outputs are returned.
-        - `tweaks` (Optional[Tweaks], default=None): Adjustments to the flow's behavior, allowing for custom execution parameters.
-        - `session_id` (Optional[str], default=None): An identifier for reusing session data, aiding in performance for subsequent requests.
+    - `input_request` (SimplifiedAPIRequest): Request object containing input values, types, output selection, tweaks, and session ID.
     - `api_key_user` (User): User object derived from the provided API key, used for authentication.
     - `session_service` (SessionService): Service for managing flow sessions, essential for session reuse and caching.
 
