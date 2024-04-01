@@ -1,9 +1,9 @@
 {
-    "id": "163e4b44-7d18-4166-b7e4-95b04560e255",
+    "id": "6ad5559d-fb66-4fdc-8f98-96f4ac12799d",
     "data": {
         "nodes": [
             {
-                "id": "Prompt-3taIG",
+                "id": "Prompt-Rse03",
                 "type": "genericNode",
                 "position": {
                     "x": 1331.381712783371,
@@ -38,7 +38,7 @@
                                 "list": false,
                                 "show": true,
                                 "multiline": false,
-                                "value": "Reference 1:\n\n{reference_1}\n\n---\n\nReference 2:\n\n{reference_2}\n\n---\n\nReference 3:\n\n{reference_3}\n\n---\n\nStructure:\n\n{structure}\n\n\n---\n\n{instructions}\n\nFinal Blog:\n\n",
+                                "value": "Reference 1:\n\n{reference_1}\n\n---\n\nReference 2:\n\n{reference_2}\n\n---\n\n{instructions}\n\nBlog: \n\n\n",
                                 "fileTypes": [],
                                 "file_path": "",
                                 "password": false,
@@ -106,58 +106,6 @@
                                 "title_case": false,
                                 "type": "str"
                             },
-                            "structure": {
-                                "field_type": "str",
-                                "required": false,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": true,
-                                "value": "Analyzing the Acquisition of SOCCER PLAYER by SOCCER TEAM (anonymized data)\nReflecting on the player's arrival X seasons ago…\nExploring the rationale behind this transfer and its potential impact on team dynamics\nWhat lies ahead? Insights into the revamped lineup and the buzz it generates among supporters\n\nThis analysis delves into the recent acquisition of a soccer player by a prominent team. Here's why this move is noteworthy:\n\nThe player's integration into the team several seasons ago marked a significant turning point.\nExamining the strategic reasoning behind this transfer sheds light on the team's evolving tactics and ambitions.\nA glimpse into the upcoming lineup hints at the team's competitive edge and fan excitement, setting the stage for an exciting season ahead.",
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "structure",
-                                "display_name": "structure",
-                                "advanced": false,
-                                "input_types": [
-                                    "Document",
-                                    "BaseOutputParser",
-                                    "Record",
-                                    "Text"
-                                ],
-                                "dynamic": false,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false,
-                                "type": "str"
-                            },
-                            "reference_3": {
-                                "field_type": "str",
-                                "required": false,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": true,
-                                "value": "",
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "reference_3",
-                                "display_name": "reference_3",
-                                "advanced": false,
-                                "input_types": [
-                                    "Document",
-                                    "BaseOutputParser",
-                                    "Record",
-                                    "Text"
-                                ],
-                                "dynamic": false,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false,
-                                "type": "str"
-                            },
                             "instructions": {
                                 "field_type": "str",
                                 "required": false,
@@ -165,7 +113,7 @@
                                 "list": false,
                                 "show": true,
                                 "multiline": true,
-                                "value": "Given the references and structure provided, write a blog about SOCCER PLAYER being acquired by SOCCER TEAM.",
+                                "value": "",
                                 "fileTypes": [],
                                 "file_path": "",
                                 "password": false,
@@ -191,9 +139,9 @@
                         "is_output": null,
                         "is_composition": null,
                         "base_classes": [
+                            "object",
                             "Text",
-                            "str",
-                            "object"
+                            "str"
                         ],
                         "name": "",
                         "display_name": "Prompt",
@@ -202,8 +150,6 @@
                             "template": [
                                 "reference_1",
                                 "reference_2",
-                                "reference_3",
-                                "structure",
                                 "instructions"
                             ]
                         },
@@ -217,13 +163,13 @@
                         "beta": false,
                         "error": null
                     },
-                    "id": "Prompt-3taIG",
+                    "id": "Prompt-Rse03",
                     "description": "Create a prompt template with dynamic variables.",
                     "display_name": "Prompt"
                 },
                 "selected": false,
                 "width": 384,
-                "height": 762,
+                "height": 571,
                 "dragging": false,
                 "positionAbsolute": {
                     "x": 1331.381712783371,
@@ -231,11 +177,11 @@
                 }
             },
             {
-                "id": "URL-lRph2",
+                "id": "URL-HYPkR",
                 "type": "genericNode",
                 "position": {
-                    "x": 597.7955409467556,
-                    "y": 736.8178220997634
+                    "x": 568.2971412887712,
+                    "y": 700.9983368007821
                 },
                 "data": {
                     "type": "URL",
@@ -280,7 +226,7 @@
                                     "Text"
                                 ],
                                 "value": [
-                                    "https://www.marca.com/en/football/psg/2023/08/15/64dbaa6de2704ea0868b45c8.html"
+                                    "https://www.promptingguide.ai/techniques/prompt_chaining"
                                 ]
                             },
                             "_type": "CustomComponent"
@@ -303,98 +249,19 @@
                         "field_order": [],
                         "beta": false
                     },
-                    "id": "URL-lRph2"
+                    "id": "URL-HYPkR"
                 },
                 "selected": false,
                 "width": 384,
-                "height": 282,
+                "height": 281,
                 "positionAbsolute": {
-                    "x": 597.7955409467556,
-                    "y": 736.8178220997634
+                    "x": 568.2971412887712,
+                    "y": 700.9983368007821
                 },
                 "dragging": false
             },
             {
-                "id": "URL-7Dziz",
-                "type": "genericNode",
-                "position": {
-                    "x": 574.4142139929079,
-                    "y": 1175.2784505900304
-                },
-                "data": {
-                    "type": "URL",
-                    "node": {
-                        "template": {
-                            "code": {
-                                "type": "code",
-                                "required": true,
-                                "placeholder": "",
-                                "list": false,
-                                "show": true,
-                                "multiline": true,
-                                "value": "from typing import Any, Dict\n\nfrom langchain_community.document_loaders.web_base import WebBaseLoader\n\nfrom langflow.interface.custom.custom_component import CustomComponent\nfrom langflow.schema import Record\n\n\nclass URLComponent(CustomComponent):\n    display_name = \"URL\"\n    description = \"Fetch content from one or more URLs.\"\n    icon = \"layout-template\"\n\n    def build_config(self) -> Dict[str, Any]:\n        return {\n            \"urls\": {\"display_name\": \"URL\"},\n        }\n\n    def build(\n        self,\n        urls: list[str],\n    ) -> list[Record]:\n        loader = WebBaseLoader(web_paths=urls)\n        docs = loader.load()\n        records = self.to_records(docs)\n        self.status = records\n        return records\n",
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "code",
-                                "advanced": true,
-                                "dynamic": true,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false
-                            },
-                            "urls": {
-                                "type": "str",
-                                "required": true,
-                                "placeholder": "",
-                                "list": true,
-                                "show": true,
-                                "multiline": false,
-                                "fileTypes": [],
-                                "file_path": "",
-                                "password": false,
-                                "name": "urls",
-                                "display_name": "URL",
-                                "advanced": false,
-                                "dynamic": false,
-                                "info": "",
-                                "load_from_db": false,
-                                "title_case": false,
-                                "input_types": [
-                                    "Text"
-                                ],
-                                "value": [
-                                    "https://www.bbc.com/sport/football/66495833"
-                                ]
-                            },
-                            "_type": "CustomComponent"
-                        },
-                        "description": "Fetch content from one or more URLs.",
-                        "icon": "layout-template",
-                        "base_classes": [
-                            "Record"
-                        ],
-                        "display_name": "URL",
-                        "documentation": "",
-                        "custom_fields": {
-                            "urls": null
-                        },
-                        "output_types": [
-                            "Record"
-                        ],
-                        "field_formatters": {},
-                        "frozen": false,
-                        "field_order": [],
-                        "beta": false
-                    },
-                    "id": "URL-7Dziz"
-                },
-                "selected": false,
-                "width": 384,
-                "height": 282
-            },
-            {
-                "id": "ChatOutput-fi9CW",
+                "id": "ChatOutput-JPlxl",
                 "type": "genericNode",
                 "position": {
                     "x": 2503.8617424688505,
@@ -582,14 +449,14 @@
                         "field_order": [],
                         "beta": false
                     },
-                    "id": "ChatOutput-fi9CW"
+                    "id": "ChatOutput-JPlxl"
                 },
                 "selected": false,
                 "width": 384,
-                "height": 385
+                "height": 383
             },
             {
-                "id": "OpenAIModel-ZD1ks",
+                "id": "OpenAIModel-gi29P",
                 "type": "genericNode",
                 "position": {
                     "x": 1917.7089968570963,
@@ -797,7 +664,7 @@
                                 "list": false,
                                 "show": true,
                                 "multiline": false,
-                                "value": "0.7",
+                                "value": "0.1",
                                 "fileTypes": [],
                                 "file_path": "",
                                 "password": false,
@@ -855,11 +722,11 @@
                         ],
                         "beta": false
                     },
-                    "id": "OpenAIModel-ZD1ks"
+                    "id": "OpenAIModel-gi29P"
                 },
-                "selected": true,
+                "selected": false,
                 "width": 384,
-                "height": 565,
+                "height": 563,
                 "positionAbsolute": {
                     "x": 1917.7089968570963,
                     "y": 575.9186499244129
@@ -867,7 +734,7 @@
                 "dragging": false
             },
             {
-                "id": "URL-jdykB",
+                "id": "URL-2cX90",
                 "type": "genericNode",
                 "position": {
                     "x": 573.961301764604,
@@ -916,7 +783,7 @@
                                     "Text"
                                 ],
                                 "value": [
-                                    "https://ge.globo.com/futebol/futebol-internacional/futebol-saudita/noticia/2024/03/10/zagueiro-do-al-hilal-rasga-elogios-a-neymar-ele-e-incrivel.ghtml"
+                                    "https://www.promptingguide.ai/introduction/basics"
                                 ]
                             },
                             "_type": "CustomComponent"
@@ -939,61 +806,137 @@
                         "field_order": [],
                         "beta": false
                     },
-                    "id": "URL-jdykB"
+                    "id": "URL-2cX90"
                 },
                 "selected": false,
                 "width": 384,
-                "height": 282,
+                "height": 281,
                 "positionAbsolute": {
                     "x": 573.961301764604,
                     "y": 336.41463436122086
+                },
+                "dragging": false
+            },
+            {
+                "id": "TextInput-og8Or",
+                "type": "genericNode",
+                "position": {
+                    "x": 569.9387927203336,
+                    "y": 1095.3352160671316
+                },
+                "data": {
+                    "type": "TextInput",
+                    "node": {
+                        "template": {
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "from typing import Optional\n\nfrom langflow.base.io.text import TextComponent\nfrom langflow.field_typing import Text\n\n\nclass TextInput(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Interaction Panel.\"\n    icon = \"type\"\n\n    def build_config(self):\n        return {\n            \"input_value\": {\n                \"display_name\": \"Value\",\n                \"input_types\": [\"Record\", \"Text\"],\n                \"info\": \"Text or Record to be passed as input.\",\n            },\n            \"record_template\": {\n                \"display_name\": \"Record Template\",\n                \"multiline\": True,\n                \"info\": \"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        input_value: Optional[str] = \"\",\n        record_template: Optional[str] = \"\",\n    ) -> Text:\n        return super().build(input_value=input_value, record_template=record_template)\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "input_value": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": false,
+                                "value": "Use the references above for style to write a new blog/tutorial about prompt engineering techniques. Suggest non-covered topics.",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "input_value",
+                                "display_name": "Value",
+                                "advanced": false,
+                                "input_types": [
+                                    "Record",
+                                    "Text"
+                                ],
+                                "dynamic": false,
+                                "info": "Text or Record to be passed as input.",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "record_template": {
+                                "type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "record_template",
+                                "display_name": "Record Template",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
+                                "load_from_db": false,
+                                "title_case": false,
+                                "input_types": [
+                                    "Text"
+                                ]
+                            },
+                            "_type": "CustomComponent"
+                        },
+                        "description": "Get text inputs from the Interaction Panel.",
+                        "icon": "type",
+                        "base_classes": [
+                            "object",
+                            "Text",
+                            "str"
+                        ],
+                        "display_name": "Instructions",
+                        "documentation": "",
+                        "custom_fields": {
+                            "input_value": null,
+                            "record_template": null
+                        },
+                        "output_types": [
+                            "Text"
+                        ],
+                        "field_formatters": {},
+                        "frozen": false,
+                        "field_order": [],
+                        "beta": false
+                    },
+                    "id": "TextInput-og8Or"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 289,
+                "positionAbsolute": {
+                    "x": 569.9387927203336,
+                    "y": 1095.3352160671316
                 },
                 "dragging": false
             }
         ],
         "edges": [
             {
-                "source": "URL-7Dziz",
-                "target": "Prompt-3taIG",
-                "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-7Dzizœ}",
-                "targetHandle": "{œfieldNameœ:œreference_3œ,œidœ:œPrompt-3taIGœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
-                "id": "reactflow__edge-URL-7Dziz{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-7Dzizœ}-Prompt-3taIG{œfieldNameœ:œreference_3œ,œidœ:œPrompt-3taIGœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
-                "data": {
-                    "targetHandle": {
-                        "fieldName": "reference_3",
-                        "id": "Prompt-3taIG",
-                        "inputTypes": [
-                            "Document",
-                            "BaseOutputParser",
-                            "Record",
-                            "Text"
-                        ],
-                        "type": "str"
-                    },
-                    "sourceHandle": {
-                        "baseClasses": [
-                            "Record"
-                        ],
-                        "dataType": "URL",
-                        "id": "URL-7Dziz"
-                    }
-                },
-                "style": {
-                    "stroke": "#555"
-                },
-                "className": "stroke-gray-900 ",
-                "selected": false
-            },
-            {
-                "source": "URL-lRph2",
-                "target": "Prompt-3taIG",
-                "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-lRph2œ}",
-                "targetHandle": "{œfieldNameœ:œreference_2œ,œidœ:œPrompt-3taIGœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
-                "id": "reactflow__edge-URL-lRph2{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-lRph2œ}-Prompt-3taIG{œfieldNameœ:œreference_2œ,œidœ:œPrompt-3taIGœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+                "source": "URL-HYPkR",
+                "target": "Prompt-Rse03",
+                "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-HYPkRœ}",
+                "targetHandle": "{œfieldNameœ:œreference_2œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-URL-HYPkR{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-HYPkRœ}-Prompt-Rse03{œfieldNameœ:œreference_2œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "reference_2",
-                        "id": "Prompt-3taIG",
+                        "id": "Prompt-Rse03",
                         "inputTypes": [
                             "Document",
                             "BaseOutputParser",
@@ -1007,54 +950,24 @@
                             "Record"
                         ],
                         "dataType": "URL",
-                        "id": "URL-lRph2"
+                        "id": "URL-HYPkR"
                     }
                 },
                 "style": {
                     "stroke": "#555"
                 },
-                "className": "stroke-gray-900 ",
+                "className": "stroke-gray-900 stroke-connection",
                 "selected": false
             },
             {
-                "source": "Prompt-3taIG",
-                "sourceHandle": "{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-3taIGœ}",
-                "target": "OpenAIModel-ZD1ks",
-                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ZD1ksœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+                "source": "OpenAIModel-gi29P",
+                "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gi29Pœ}",
+                "target": "ChatOutput-JPlxl",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JPlxlœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "input_value",
-                        "id": "OpenAIModel-ZD1ks",
-                        "inputTypes": [
-                            "Text"
-                        ],
-                        "type": "str"
-                    },
-                    "sourceHandle": {
-                        "baseClasses": [
-                            "Text",
-                            "str",
-                            "object"
-                        ],
-                        "dataType": "Prompt",
-                        "id": "Prompt-3taIG"
-                    }
-                },
-                "style": {
-                    "stroke": "#555"
-                },
-                "className": "stroke-foreground stroke-connection",
-                "id": "reactflow__edge-Prompt-3taIG{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-3taIGœ}-OpenAIModel-ZD1ks{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ZD1ksœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
-            },
-            {
-                "source": "OpenAIModel-ZD1ks",
-                "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ZD1ksœ}",
-                "target": "ChatOutput-fi9CW",
-                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-fi9CWœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
-                "data": {
-                    "targetHandle": {
-                        "fieldName": "input_value",
-                        "id": "ChatOutput-fi9CW",
+                        "id": "ChatOutput-JPlxl",
                         "inputTypes": [
                             "Text"
                         ],
@@ -1067,24 +980,24 @@
                             "object"
                         ],
                         "dataType": "OpenAIModel",
-                        "id": "OpenAIModel-ZD1ks"
+                        "id": "OpenAIModel-gi29P"
                     }
                 },
                 "style": {
                     "stroke": "#555"
                 },
-                "className": "stroke-foreground stroke-connection",
-                "id": "reactflow__edge-OpenAIModel-ZD1ks{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ZD1ksœ}-ChatOutput-fi9CW{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-fi9CWœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+                "className": "stroke-gray-900 stroke-connection",
+                "id": "reactflow__edge-OpenAIModel-gi29P{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gi29Pœ}-ChatOutput-JPlxl{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JPlxlœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
             },
             {
-                "source": "URL-jdykB",
-                "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-jdykBœ}",
-                "target": "Prompt-3taIG",
-                "targetHandle": "{œfieldNameœ:œreference_1œ,œidœ:œPrompt-3taIGœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+                "source": "URL-2cX90",
+                "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-2cX90œ}",
+                "target": "Prompt-Rse03",
+                "targetHandle": "{œfieldNameœ:œreference_1œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "reference_1",
-                        "id": "Prompt-3taIG",
+                        "id": "Prompt-Rse03",
                         "inputTypes": [
                             "Document",
                             "BaseOutputParser",
@@ -1098,20 +1011,84 @@
                             "Record"
                         ],
                         "dataType": "URL",
-                        "id": "URL-jdykB"
+                        "id": "URL-2cX90"
                     }
                 },
                 "style": {
                     "stroke": "#555"
                 },
-                "className": "stroke-foreground stroke-connection",
-                "id": "reactflow__edge-URL-jdykB{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-jdykBœ}-Prompt-3taIG{œfieldNameœ:œreference_1œ,œidœ:œPrompt-3taIGœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+                "className": "stroke-gray-900 stroke-connection",
+                "id": "reactflow__edge-URL-2cX90{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-2cX90œ}-Prompt-Rse03{œfieldNameœ:œreference_1œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+            },
+            {
+                "source": "TextInput-og8Or",
+                "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-og8Orœ}",
+                "target": "Prompt-Rse03",
+                "targetHandle": "{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "instructions",
+                        "id": "Prompt-Rse03",
+                        "inputTypes": [
+                            "Document",
+                            "BaseOutputParser",
+                            "Record",
+                            "Text"
+                        ],
+                        "type": "str"
+                    },
+                    "sourceHandle": {
+                        "baseClasses": [
+                            "object",
+                            "Text",
+                            "str"
+                        ],
+                        "dataType": "TextInput",
+                        "id": "TextInput-og8Or"
+                    }
+                },
+                "style": {
+                    "stroke": "#555"
+                },
+                "className": "stroke-gray-900 stroke-connection",
+                "id": "reactflow__edge-TextInput-og8Or{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-og8Orœ}-Prompt-Rse03{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+            },
+            {
+                "source": "Prompt-Rse03",
+                "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-Rse03œ}",
+                "target": "OpenAIModel-gi29P",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-gi29Pœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "input_value",
+                        "id": "OpenAIModel-gi29P",
+                        "inputTypes": [
+                            "Text"
+                        ],
+                        "type": "str"
+                    },
+                    "sourceHandle": {
+                        "baseClasses": [
+                            "object",
+                            "Text",
+                            "str"
+                        ],
+                        "dataType": "Prompt",
+                        "id": "Prompt-Rse03"
+                    }
+                },
+                "style": {
+                    "stroke": "#555"
+                },
+                "className": "stroke-gray-900 stroke-connection",
+                "id": "reactflow__edge-Prompt-Rse03{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-Rse03œ}-OpenAIModel-gi29P{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-gi29Pœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+                "selected": false
             }
         ],
         "viewport": {
-            "x": -142.89038264176406,
-            "y": -85.47379699387753,
-            "zoom": 0.6597539594750865
+            "x": -214.14726025721177,
+            "y": -35.83855793844168,
+            "zoom": 0.47344308394045925
         }
     },
     "description": "",
