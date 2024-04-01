@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from langflow.graph import Graph
-from langflow.processing.process import process_tweaks
+from langflow.graph.schema import RunOutputs
+from langflow.processing.process import process_tweaks, run_graph
 
 
 def load_flow_from_json(flow: Union[Path, str, dict], tweaks: Optional[dict] = None) -> Graph:
@@ -31,3 +32,36 @@ def load_flow_from_json(flow: Union[Path, str, dict], tweaks: Optional[dict] = N
 
     graph = Graph.from_payload(graph_data)
     return graph
+
+
+def run_flow_from_json(
+    flow: Union[Path, str, dict],
+    input_value: str,
+    tweaks: Optional[dict] = None,
+    input_type: str = "chat",
+    output_type: str = "chat",
+    output_component: Optional[str] = None,
+) -> List[RunOutputs]:
+    """
+    Runs a JSON flow by loading it from a file or dictionary and executing it with the given input value.
+
+    Args:
+        flow (Union[Path, str, dict]): The path to the JSON file, or the JSON dictionary representing the flow.
+        input_value (str): The input value to be processed by the flow.
+        tweaks (Optional[dict], optional): Optional tweaks to be applied to the flow. Defaults to None.
+        input_type (str, optional): The type of the input value. Defaults to "chat".
+        output_type (str, optional): The type of the output value. Defaults to "chat".
+        output_component (Optional[str], optional): The specific output component to retrieve. Defaults to None.
+
+    Returns:
+        None: The result of running the flow.
+    """
+    graph = load_flow_from_json(flow, tweaks)
+    result = run_graph(
+        graph=graph,
+        input_value=input_value,
+        input_type=input_type,
+        output_type=output_type,
+        output_component=output_component,
+    )
+    return result
