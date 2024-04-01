@@ -56,7 +56,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   setFlows: (flows: FlowType[]) => {
     set({
       flows,
-      // currentFlow: flows.find((flow) => flow.id === get().currentFlowId),
+      currentFlow: flows.find((flow) => flow.id === get().currentFlowId),
     });
   },
   currentFlow: undefined,
@@ -96,18 +96,14 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         });
     });
   },
-  autoSaveCurrentFlow: debounce(
-    (nodes: Node[], edges: Edge[], viewport: Viewport) => {
-      set({ saveLoading: true });
-      if (get().currentFlow) {
-        get().saveFlow(
-          { ...get().currentFlow!, data: { nodes, edges, viewport } },
-          true
-        );
-      }
-    },
-    SAVE_DEBOUNCE_TIME
-  ),
+  autoSaveCurrentFlow: (nodes: Node[], edges: Edge[], viewport: Viewport) => {
+    if (get().currentFlow) {
+      get().saveFlow(
+        { ...get().currentFlow!, data: { nodes, edges, viewport } },
+        true
+      );
+    }
+  },
   saveFlow: debounce((flow: FlowType, silent?: boolean) => {
     set({ saveLoading: true });
     return new Promise<void>((resolve, reject) => {
