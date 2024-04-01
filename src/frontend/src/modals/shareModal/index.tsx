@@ -20,6 +20,7 @@ import {
   downloadNode,
   removeApiKeys,
   removeFileNameFromComponents,
+  removeGlobalVariableFromComponents,
 } from "../../utils/reactflowUtils";
 import { getTagsIds } from "../../utils/storeUtils";
 import ConfirmationModal from "../ConfirmationModal";
@@ -100,6 +101,7 @@ export default function ShareModal({
   const handleShareComponent = async (update = false) => {
     //remove file names from flows before sharing
     removeFileNameFromComponents(component);
+    removeGlobalVariableFromComponents(component);
     const flow: FlowType = removeApiKeys({
       id: component!.id,
       data: component!.data,
