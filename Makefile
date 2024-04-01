@@ -99,11 +99,11 @@ endif
 
 start:
 	@echo 'Running the CLI'
-	@make install_backend
+
 ifeq ($(open_browser),false)
-	poetry run langflow run --path src/frontend/build --log-level $(log_level) --host $(host) --port $(port) --env-file $(env) --no-open-browser
+	@make install_backend && poetry run langflow run --path src/frontend/build --log-level $(log_level) --host $(host) --port $(port) --env-file $(env) --no-open-browser
 else
-	poetry run langflow run --path src/frontend/build --log-level $(log_level) --host $(host) --port $(port) --env-file $(env)
+	@make install_backend && poetry run langflow run --path src/frontend/build --log-level $(log_level) --host $(host) --port $(port) --env-file $(env)
 endif
 
 
