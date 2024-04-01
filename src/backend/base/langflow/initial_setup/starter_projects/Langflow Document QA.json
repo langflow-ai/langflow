@@ -3,7 +3,7 @@
     "data": {
         "nodes": [
             {
-                "id": "Prompt-vKlPy",
+                "id": "Prompt-tHwPf",
                 "type": "genericNode",
                 "position": {
                     "x": 585.7906101139403,
@@ -136,13 +136,13 @@
                         "beta": false,
                         "error": null
                     },
-                    "id": "Prompt-vKlPy",
+                    "id": "Prompt-tHwPf",
                     "description": "A component for creating prompt templates using dynamic variables.",
                     "display_name": "Prompt"
                 },
                 "selected": false,
                 "width": 384,
-                "height": 497,
+                "height": 479,
                 "positionAbsolute": {
                     "x": 585.7906101139403,
                     "y": 117.52115876762832
@@ -150,7 +150,7 @@
                 "dragging": false
             },
             {
-                "id": "File-Osj3J",
+                "id": "File-6TEsD",
                 "type": "genericNode",
                 "position": {
                     "x": -18.636536329280602,
@@ -248,11 +248,11 @@
                         "field_order": [],
                         "beta": false
                     },
-                    "id": "File-Osj3J"
+                    "id": "File-6TEsD"
                 },
                 "selected": false,
                 "width": 384,
-                "height": 281,
+                "height": 282,
                 "positionAbsolute": {
                     "x": -18.636536329280602,
                     "y": 3.951948774836353
@@ -260,11 +260,11 @@
                 "dragging": false
             },
             {
-                "id": "ChatInput-ieEI1",
+                "id": "ChatInput-MsSJ9",
                 "type": "genericNode",
                 "position": {
-                    "x": -8.703779326750464,
-                    "y": 394.2188023139405
+                    "x": -28.80036300619821,
+                    "y": 379.81180230285355
                 },
                 "data": {
                     "type": "ChatInput",
@@ -369,7 +369,7 @@
                                 "advanced": false,
                                 "dynamic": false,
                                 "info": "",
-                                "load_from_db": true,
+                                "load_from_db": false,
                                 "title_case": false,
                                 "input_types": [
                                     "Text"
@@ -424,19 +424,19 @@
                         "field_order": [],
                         "beta": false
                     },
-                    "id": "ChatInput-ieEI1"
+                    "id": "ChatInput-MsSJ9"
                 },
-                "selected": false,
+                "selected": true,
                 "width": 384,
-                "height": 399,
+                "height": 377,
                 "positionAbsolute": {
-                    "x": -8.703779326750464,
-                    "y": 394.2188023139405
+                    "x": -28.80036300619821,
+                    "y": 379.81180230285355
                 },
                 "dragging": false
             },
             {
-                "id": "ChatOutput-bkOKY",
+                "id": "ChatOutput-F5Awj",
                 "type": "genericNode",
                 "position": {
                     "x": 1733.3012915204283,
@@ -601,11 +601,11 @@
                         "field_order": [],
                         "beta": false
                     },
-                    "id": "ChatOutput-bkOKY"
+                    "id": "ChatOutput-F5Awj"
                 },
                 "selected": false,
                 "width": 384,
-                "height": 399,
+                "height": 385,
                 "positionAbsolute": {
                     "x": 1733.3012915204283,
                     "y": 168.76098809939327
@@ -613,7 +613,7 @@
                 "dragging": false
             },
             {
-                "id": "OpenAIModel-m8NS1",
+                "id": "OpenAIModel-Bt067",
                 "type": "genericNode",
                 "position": {
                     "x": 1137.6078582863759,
@@ -879,11 +879,11 @@
                         ],
                         "beta": false
                     },
-                    "id": "OpenAIModel-m8NS1"
+                    "id": "OpenAIModel-Bt067"
                 },
-                "selected": true,
+                "selected": false,
                 "width": 384,
-                "height": 639,
+                "height": 642,
                 "positionAbsolute": {
                     "x": 1137.6078582863759,
                     "y": -14.41920034020356
@@ -893,14 +893,14 @@
         ],
         "edges": [
             {
-                "source": "ChatInput-ieEI1",
-                "sourceHandle": "{œbaseClassesœ:[œstrœ,œRecordœ,œTextœ,œobjectœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-ieEI1œ}",
-                "target": "Prompt-vKlPy",
-                "targetHandle": "{œfieldNameœ:œQuestionœ,œidœ:œPrompt-vKlPyœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+                "source": "ChatInput-MsSJ9",
+                "sourceHandle": "{œbaseClassesœ:[œstrœ,œRecordœ,œTextœ,œobjectœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-MsSJ9œ}",
+                "target": "Prompt-tHwPf",
+                "targetHandle": "{œfieldNameœ:œQuestionœ,œidœ:œPrompt-tHwPfœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "Question",
-                        "id": "Prompt-vKlPy",
+                        "id": "Prompt-tHwPf",
                         "inputTypes": [
                             "Document",
                             "BaseOutputParser",
@@ -917,24 +917,24 @@
                             "object"
                         ],
                         "dataType": "ChatInput",
-                        "id": "ChatInput-ieEI1"
+                        "id": "ChatInput-MsSJ9"
                     }
                 },
                 "style": {
                     "stroke": "#555"
                 },
-                "className": "stroke-foreground stroke-connection",
-                "id": "reactflow__edge-ChatInput-ieEI1{œbaseClassesœ:[œstrœ,œRecordœ,œTextœ,œobjectœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-ieEI1œ}-Prompt-vKlPy{œfieldNameœ:œQuestionœ,œidœ:œPrompt-vKlPyœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+                "className": "stroke-gray-900 stroke-connection",
+                "id": "reactflow__edge-ChatInput-MsSJ9{œbaseClassesœ:[œstrœ,œRecordœ,œTextœ,œobjectœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-MsSJ9œ}-Prompt-tHwPf{œfieldNameœ:œQuestionœ,œidœ:œPrompt-tHwPfœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
             },
             {
-                "source": "File-Osj3J",
-                "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œFileœ,œidœ:œFile-Osj3Jœ}",
-                "target": "Prompt-vKlPy",
-                "targetHandle": "{œfieldNameœ:œDocumentœ,œidœ:œPrompt-vKlPyœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+                "source": "File-6TEsD",
+                "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œFileœ,œidœ:œFile-6TEsDœ}",
+                "target": "Prompt-tHwPf",
+                "targetHandle": "{œfieldNameœ:œDocumentœ,œidœ:œPrompt-tHwPfœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "Document",
-                        "id": "Prompt-vKlPy",
+                        "id": "Prompt-tHwPf",
                         "inputTypes": [
                             "Document",
                             "BaseOutputParser",
@@ -948,24 +948,24 @@
                             "Record"
                         ],
                         "dataType": "File",
-                        "id": "File-Osj3J"
+                        "id": "File-6TEsD"
                     }
                 },
                 "style": {
                     "stroke": "#555"
                 },
-                "className": "stroke-foreground stroke-connection",
-                "id": "reactflow__edge-File-Osj3J{œbaseClassesœ:[œRecordœ],œdataTypeœ:œFileœ,œidœ:œFile-Osj3Jœ}-Prompt-vKlPy{œfieldNameœ:œDocumentœ,œidœ:œPrompt-vKlPyœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+                "className": "stroke-gray-900 stroke-connection",
+                "id": "reactflow__edge-File-6TEsD{œbaseClassesœ:[œRecordœ],œdataTypeœ:œFileœ,œidœ:œFile-6TEsDœ}-Prompt-tHwPf{œfieldNameœ:œDocumentœ,œidœ:œPrompt-tHwPfœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
             },
             {
-                "source": "Prompt-vKlPy",
-                "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-vKlPyœ}",
-                "target": "OpenAIModel-m8NS1",
-                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-m8NS1œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+                "source": "Prompt-tHwPf",
+                "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-tHwPfœ}",
+                "target": "OpenAIModel-Bt067",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Bt067œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "input_value",
-                        "id": "OpenAIModel-m8NS1",
+                        "id": "OpenAIModel-Bt067",
                         "inputTypes": [
                             "Text"
                         ],
@@ -978,24 +978,24 @@
                             "Text"
                         ],
                         "dataType": "Prompt",
-                        "id": "Prompt-vKlPy"
+                        "id": "Prompt-tHwPf"
                     }
                 },
                 "style": {
                     "stroke": "#555"
                 },
-                "className": "stroke-foreground stroke-connection",
-                "id": "reactflow__edge-Prompt-vKlPy{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-vKlPyœ}-OpenAIModel-m8NS1{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-m8NS1œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+                "className": "stroke-gray-900 stroke-connection",
+                "id": "reactflow__edge-Prompt-tHwPf{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-tHwPfœ}-OpenAIModel-Bt067{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Bt067œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
             },
             {
-                "source": "OpenAIModel-m8NS1",
-                "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-m8NS1œ}",
-                "target": "ChatOutput-bkOKY",
-                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-bkOKYœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+                "source": "OpenAIModel-Bt067",
+                "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Bt067œ}",
+                "target": "ChatOutput-F5Awj",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-F5Awjœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
                 "data": {
                     "targetHandle": {
                         "fieldName": "input_value",
-                        "id": "ChatOutput-bkOKY",
+                        "id": "ChatOutput-F5Awj",
                         "inputTypes": [
                             "Text"
                         ],
@@ -1008,24 +1008,24 @@
                             "Text"
                         ],
                         "dataType": "OpenAIModel",
-                        "id": "OpenAIModel-m8NS1"
+                        "id": "OpenAIModel-Bt067"
                     }
                 },
                 "style": {
                     "stroke": "#555"
                 },
-                "className": "stroke-foreground stroke-connection",
-                "id": "reactflow__edge-OpenAIModel-m8NS1{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-m8NS1œ}-ChatOutput-bkOKY{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-bkOKYœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+                "className": "stroke-gray-900 stroke-connection",
+                "id": "reactflow__edge-OpenAIModel-Bt067{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Bt067œ}-ChatOutput-F5Awj{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-F5Awjœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
             }
         ],
         "viewport": {
-            "x": 117.87786652015296,
-            "y": 230.56802566793652,
-            "zoom": 0.39276592817416156
+            "x": 352.20899206064655,
+            "y": 56.054900898593075,
+            "zoom": 0.9023391400011
         }
     },
     "description": "This flow integrates PDF reading with a language model to answer document-specific questions. Ideal for small-scale texts, it facilitates direct queries with immediate insights.",
-    "name": "Document QA ",
+    "name": "Document QA",
     "last_tested_version": "1.0.0a0",
     "is_component": false
 }
