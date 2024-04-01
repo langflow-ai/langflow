@@ -259,7 +259,7 @@ class VerticesBuiltResponse(BaseModel):
 class InputValueRequest(BaseModel):
     components: Optional[List[str]] = []
     input_value: Optional[str] = None
-    type: Optional[Literal["chat", "text", "json", "any"]] = Field(
+    type: Optional[Literal["chat", "text", "any"]] = Field(
         "any",
         description="Defines on which components the input value should be applied. 'any' applies to all input components.",
     )
