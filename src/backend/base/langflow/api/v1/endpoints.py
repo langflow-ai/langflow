@@ -23,7 +23,7 @@ from langflow.graph.schema import RunOutputs
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import build_custom_component_template
-from langflow.processing.process import process_tweaks, run_graph
+from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
@@ -149,7 +149,7 @@ async def simplified_run_flow(
                     and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())
                 )
             ]
-        task_result, session_id = await run_graph(
+        task_result, session_id = await run_graph_internal(
             graph=graph,
             flow_id=flow_id,
             session_id=input_request.session_id,
@@ -255,7 +255,7 @@ async def experimental_run_flow(
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
             graph = Graph.from_payload(graph_data, flow_id=flow_id)
-        task_result, session_id = await run_graph(
+        task_result, session_id = await run_graph_internal(
             graph=graph,
             flow_id=flow_id,
             session_id=session_id,
