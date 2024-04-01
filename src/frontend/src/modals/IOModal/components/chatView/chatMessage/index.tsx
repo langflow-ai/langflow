@@ -110,7 +110,7 @@ export default function ChatMessage({
       >
         <div
           className={classNames(
-            "mr-3 mt-1 flex max-w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3"
+            "mr-3 mt-1 flex w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3"
           )}
         >
           <div className="flex flex-col items-center gap-1">
