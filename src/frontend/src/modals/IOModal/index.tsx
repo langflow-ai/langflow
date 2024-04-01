@@ -116,9 +116,12 @@ export default function IOModal({
   }
 
   useEffect(() => {
-    setSelectedViewField(startView());
-    setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
+    if(selectedTab!==2) setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
   }, [allNodes]);
+
+  useEffect(() => {
+    setSelectedViewField(startView());
+  },[open])
 
   return (
     <BaseModal
