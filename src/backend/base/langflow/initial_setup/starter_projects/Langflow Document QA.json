@@ -1025,7 +1025,7 @@
         }
     },
     "description": "This flow integrates PDF reading with a language model to answer document-specific questions. Ideal for small-scale texts, it facilitates direct queries with immediate insights.",
-    "name": "Document QA ",
+    "name": "Document QA",
     "last_tested_version": "1.0.0a0",
     "is_component": false
 }
