@@ -4,10 +4,10 @@ from pydantic import BaseModel, field_validator
 
 
 class RangeSpec(BaseModel):
+    step_type: Literal["int", "float"] = "float"
     min: float = -1.0
     max: float = 1.0
     step: float = 0.1
-    step_type: Literal["int", "float"] = "float"
 
     @field_validator("max")
     @classmethod
