@@ -28,11 +28,11 @@ export default function NewFlowModal({
           {/* {examples.map((example, idx) => {
             return <UndrawCardComponent key={idx} flow={example} />;
           })} */}
-          <UndrawCardComponent key={1} flow={examples[4]}/>
-          <UndrawCardComponent key={2} flow={examples[2]}/>
-          <UndrawCardComponent key={3} flow={examples[3]}/>
-          <UndrawCardComponent key={5} flow={examples[0]}/>
-          <UndrawCardComponent key={4} flow={examples[1]}/>
+          {examples[4] && <UndrawCardComponent key={1} flow={examples[4]}/>}
+          {examples[2] && <UndrawCardComponent key={2} flow={examples[2]}/>}
+          {examples[3] && <UndrawCardComponent key={3} flow={examples[3]}/>}
+          {examples[0] && <UndrawCardComponent key={5} flow={examples[0]}/>}
+          {examples[1] && <UndrawCardComponent key={4} flow={examples[1]}/>}
 
 
         </div>
