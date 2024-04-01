@@ -4,7 +4,6 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
-
 from langflow.interface.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
@@ -422,19 +421,6 @@ def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_histo
     flow_id = added_flow_with_prompt_and_history["id"]
     response = client.post(f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers)
     assert response.status_code == 500
-
-
-# Helper function to poll task status
-def poll_task_status(client, headers, href, max_attempts=20, sleep_time=1):
-    for _ in range(max_attempts):
-        task_status_response = client.get(
-            href,
-            headers=headers,
-        )
-        if task_status_response.status_code == 200 and task_status_response.json()["status"] == "SUCCESS":
-            return task_status_response.json()
-        time.sleep(sleep_time)
-    return None  # Return None if task did not complete in time
 
 
 def test_successful_run(client, starter_project, created_api_key):
