@@ -1,4 +1,4 @@
-import { throttle } from "lodash";
+import { debounce } from "lodash";
 import { postCustomComponentUpdate } from "../controllers/API";
 import { ResponseErrorTypeAPI } from "../types/api";
 import { NodeDataType } from "../types/flow";
@@ -38,4 +38,4 @@ export const handleUpdateValues = async (name: string, data: NodeDataType) => {
   }
 };
 
-export const throttledHandleUpdateValues = throttle(handleUpdateValues, 10);
+export const debouncedHandleUpdateValues = debounce(handleUpdateValues, 200);

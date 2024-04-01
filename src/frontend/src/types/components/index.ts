@@ -1,5 +1,6 @@
 import { ReactElement, ReactNode, SetStateAction } from "react";
-import { ReactFlowJsonObject, XYPosition } from "reactflow";
+import { ReactFlowJsonObject } from "reactflow";
+import { InputOutput } from "../../constants/enums";
 import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
@@ -171,6 +172,7 @@ export type RangeSpecType = {
 export type IntComponentType = {
   value: string;
   disabled?: boolean;
+  rangeSpec: RangeSpecType;
   onChange: (value: string) => void;
   editNode?: boolean;
   id?: string;
@@ -219,6 +221,8 @@ export type AccordionComponentType = {
   open?: string[];
   trigger?: string | ReactElement;
   keyValue?: string;
+  openDisc?: boolean;
+  sideBar?: boolean;
 };
 export type Side = "top" | "right" | "bottom" | "left";
 
@@ -500,7 +504,6 @@ export type fileCardPropsType = {
 export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
-  position: XYPosition;
   setShowNode: (boolean: any) => void;
   numberOfHandles: number;
   showNode: boolean;
@@ -565,12 +568,6 @@ export type chatMessagePropsType = {
   ) => void;
 };
 
-export type formModalPropsType = {
-  open: boolean;
-  setOpen: Function;
-  flow: FlowType;
-};
-
 export type genericModalPropsType = {
   field_name?: string;
   setValue: (value: string) => void;
@@ -583,6 +580,18 @@ export type genericModalPropsType = {
   children: ReactNode;
   id?: string;
   readonly?: boolean;
+};
+
+export type newFlowModalPropsType = {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+};
+
+export type IOModalPropsType = {
+  children: JSX.Element;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  disable?: boolean;
 };
 
 export type buttonBoxPropsType = {
@@ -695,15 +704,21 @@ export type dropdownButtonPropsType = {
   dropdownOptions?: boolean;
 };
 
-export type IOInputProps = {
-  inputType: string;
-  inputId: string;
+export type IOFieldViewProps = {
+  type: InputOutput;
+  fieldType: string;
+  fieldId: string;
   left?: boolean;
 };
-export type IOOutputProps = {
-  outputType: string;
-  outputId: string;
-  left?: boolean;
+
+export type UndrawCardComponentProps = { flow: FlowType };
+
+export type chatViewProps = {
+  sendMessage: (count?: number) => void;
+  chatValue: string;
+  setChatValue: (value: string) => void;
+  lockChat: boolean;
+  setLockChat: (lock: boolean) => void;
 };
 
 export type IOFileInputProps = {

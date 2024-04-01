@@ -2,8 +2,8 @@ from typing import List, Optional
 
 from langchain_core.messages.base import BaseMessage
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import Text
 
 
 class ChatVertexAIComponent(LCModelComponent):
@@ -77,11 +77,13 @@ class ChatVertexAIComponent(LCModelComponent):
             "input_value": {"display_name": "Input"},
             "stream": {
                 "display_name": "Stream",
-                "info": "Stream the response from the model.",
+                "info": STREAM_INFO_TEXT,
+                "advanced": True,
             },
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 

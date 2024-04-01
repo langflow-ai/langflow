@@ -8,6 +8,7 @@ from langflow.schema import Record
 class DirectoryComponent(CustomComponent):
     display_name = "Directory"
     description = "Recursively load files from a directory."
+    icon = "folder"
 
     def build_config(self) -> Dict[str, Any]:
         return {

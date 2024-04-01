@@ -3,8 +3,8 @@ from typing import Optional
 from langchain_anthropic.chat_models import ChatAnthropic
 from pydantic.v1 import SecretStr
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import Text
 
 
 class AnthropicLLM(LCModelComponent):
@@ -49,25 +49,29 @@ class AnthropicLLM(LCModelComponent):
             "max_tokens": {
                 "display_name": "Max Tokens",
                 "field_type": "int",
+                "advanced": True,
                 "value": 256,
             },
             "temperature": {
                 "display_name": "Temperature",
                 "field_type": "float",
-                "value": 0.7,
+                "value": 0.1,
             },
             "anthropic_api_url": {
                 "display_name": "Anthropic API URL",
+                "advanced": True,
                 "info": "Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
             },
             "code": {"show": False},
             "input_value": {"display_name": "Input"},
             "stream": {
                 "display_name": "Stream",
-                "info": "Stream the response from the model.",
+                "advanced": True,
+                "info": STREAM_INFO_TEXT,
             },
             "system_message": {
                 "display_name": "System Message",
+                "advanced": True,
                 "info": "System message to pass to the model.",
             },
         }

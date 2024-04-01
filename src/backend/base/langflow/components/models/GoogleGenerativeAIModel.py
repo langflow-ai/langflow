@@ -3,8 +3,8 @@ from typing import Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic.v1 import SecretStr
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import RangeSpec, Text
 
 
 class GoogleGenerativeAIComponent(LCModelComponent):
@@ -34,6 +34,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             "max_output_tokens": {
                 "display_name": "Max Output Tokens",
                 "info": "The maximum number of tokens to generate.",
+                "advanced": True,
             },
             "temperature": {
                 "display_name": "Temperature",
@@ -42,7 +43,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             "top_k": {
                 "display_name": "Top K",
                 "info": "Decode using top-k sampling: consider the set of top_k most probable tokens. Must be positive.",
-                "range_spec": RangeSpec(min=0, max=2, step=0.1),
+                "rangeSpec": RangeSpec(min=0, max=2, step=0.1),
                 "advanced": True,
             },
             "top_p": {
@@ -66,11 +67,13 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             "input_value": {"display_name": "Input", "info": "The input to the model."},
             "stream": {
                 "display_name": "Stream",
-                "info": "Stream the response from the model.",
+                "info": STREAM_INFO_TEXT,
+                "advanced": True,
             },
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 

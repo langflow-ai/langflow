@@ -96,19 +96,19 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         });
     });
   },
-  autoSaveCurrentFlow: debounce(
-    (nodes: Node[], edges: Edge[], viewport: Viewport) => {
-      set({ saveLoading: true });
-      if (get().currentFlow) {
-        get().saveFlow(
-          { ...get().currentFlow!, data: { nodes, edges, viewport } },
-          true
-        );
-      }
-    },
-    SAVE_DEBOUNCE_TIME
-  ),
+  autoSaveCurrentFlow: (nodes: Node[], edges: Edge[], viewport: Viewport) => {
+    if (get().currentFlow) {
+      get().saveFlow(
+        { ...get().currentFlow!, data: { nodes, edges, viewport } },
+        true
+      );
+    }
+  },
   saveFlow: (flow: FlowType, silent?: boolean) => {
+    set({ saveLoading: true }); // set saveLoading true immediately
+    return get().saveFlowDebounce(flow, silent); // call the debounced function directly
+  },
+  saveFlowDebounce: debounce((flow: FlowType, silent?: boolean) => {
     set({ saveLoading: true });
     return new Promise<void>((resolve, reject) => {
       updateFlowInDatabase(flow)
@@ -142,7 +142,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           reject(err);
         });
     });
-  },
+  }, SAVE_DEBOUNCE_TIME),
   uploadFlows: () => {
     return new Promise<void>((resolve) => {
       const input = document.createElement("input");

@@ -10,6 +10,16 @@ class ChatInput(ChatComponent):
     description = "Get chat inputs from the Interaction Panel."
     icon = "ChatInput"
 
+    def build_config(self):
+        build_config = super().build_config()
+        build_config["input_value"] = {
+            "input_types": [],
+            "display_name": "Message",
+            "multiline": True,
+        }
+
+        return build_config
+
     def build(
         self,
         sender: Optional[str] = "User",

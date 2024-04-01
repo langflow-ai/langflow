@@ -753,4 +753,4 @@ export const NATIVE_CATEGORIES = [
   "agents",
 ];
 
-export const SAVE_DEBOUNCE_TIME = 500;
+export const SAVE_DEBOUNCE_TIME = 300;

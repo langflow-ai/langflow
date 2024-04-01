@@ -12,6 +12,7 @@ def get_messages(
     sender_name: Optional[str] = None,
     session_id: Optional[str] = None,
     order_by: Optional[str] = "timestamp",
+    order: Optional[str] = "DESC",
     limit: Optional[int] = None,
 ):
     """
@@ -34,10 +35,15 @@ def get_messages(
         session_id=session_id,
         order_by=order_by,
         limit=limit,
+        order=order,
     )
 
     records: list[Record] = []
-
+    # messages_df has a timestamp
+    # it gets the last 5 messages, for example
+    # but now they are ordered from most recent to least recent
+    # so we need to reverse the order
+    messages_df = messages_df[::-1] if order == "DESC" else messages_df
     for row in messages_df.itertuples():
         record = Record(
             data={

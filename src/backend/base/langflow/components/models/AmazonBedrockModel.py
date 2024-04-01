@@ -2,6 +2,7 @@ from typing import Optional
 
 from langchain_community.chat_models.bedrock import BedrockChat
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Text
 
@@ -52,13 +53,21 @@ class AmazonBedrockComponent(LCModelComponent):
             "credentials_profile_name": {"display_name": "Credentials Profile Name"},
             "endpoint_url": {"display_name": "Endpoint URL"},
             "region_name": {"display_name": "Region Name"},
-            "model_kwargs": {"display_name": "Model Kwargs"},
+            "model_kwargs": {
+                "display_name": "Model Kwargs",
+                "advanced": True,
+            },
             "cache": {"display_name": "Cache"},
             "input_value": {"display_name": "Input"},
-            "system_message": {"display_name": "System Message", "info": "System message to pass to the model."},
+            "system_message": {
+                "display_name": "System Message",
+                "info": "System message to pass to the model.",
+                "advanced": True,
+            },
             "stream": {
                 "display_name": "Stream",
-                "info": "Stream the response from the model.",
+                "info": STREAM_INFO_TEXT,
+                "advanced": True,
             },
         }
 

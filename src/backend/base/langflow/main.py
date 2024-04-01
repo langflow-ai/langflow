@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
 
+import nest_asyncio
 import socketio  # type: ignore
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,6 +21,7 @@ from langflow.utils.logger import configure
 def get_lifespan(fix_migration=False, socketio_server=None):
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        nest_asyncio.apply()
         initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
         setup_llm_caching()
         LangfuseInstance.update()
@@ -128,4 +130,5 @@ if __name__ == "__main__":
         workers=get_number_of_workers(),
         log_level="debug",
         reload=True,
+        loop="asyncio",
     )

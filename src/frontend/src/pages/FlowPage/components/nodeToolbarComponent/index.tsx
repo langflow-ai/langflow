@@ -35,7 +35,6 @@ import ToolbarSelectItem from "./toolbarSelectItem";
 export default function NodeToolbarComponent({
   data,
   deleteNode,
-  position,
   setShowNode,
   numberOfHandles,
   showNode,
@@ -65,12 +64,11 @@ export default function NodeToolbarComponent({
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
-  const [updateMinimize, setUpdateMinimize] = useState(showNode);
 
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
-  const frozen = data.node?.frozen ?? false;
+  // const frozen = data.node?.frozen ?? false;
   const paste = useFlowStore((state) => state.paste);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -79,6 +77,7 @@ export default function NodeToolbarComponent({
   const setEdges = useFlowStore((state) => state.setEdges);
   const unselectAll = useFlowStore((state) => state.unselectAll);
   const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
+  const getNodePosition = useFlowStore((state) => state.getNodePosition);
   const flows = useFlowsManagerStore((state) => state.flows);
   const version = useDarkStore((state) => state.version);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -146,7 +145,7 @@ export default function NodeToolbarComponent({
         takeSnapshot();
         expandGroupNode(
           data.id,
-          updateFlowPosition(position, data.node?.flow!),
+          updateFlowPosition(getNodePosition(data.id), data.node?.flow!),
           data.node!.template,
           nodes,
           edges,
@@ -270,6 +269,15 @@ export default function NodeToolbarComponent({
     function onKeyDown(event: KeyboardEvent) {
       if (
         selected &&
+        (hasApiKey || hasStore) &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "u"
+      ) {
+        event.preventDefault();
+        handleSelectChange("update");
+      }
+      if (
+        selected &&
         isGroup &&
         (event.ctrlKey || event.metaKey) &&
         event.key === "g"
@@ -309,7 +317,7 @@ export default function NodeToolbarComponent({
         selected &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
-        event.key === "C"
+        event.key === "U"
       ) {
         event.preventDefault();
         if (hasCode) return setOpenModal((state) => !state);
@@ -318,8 +326,8 @@ export default function NodeToolbarComponent({
       if (
         selected &&
         !isGroup &&
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "e"
+        (event.ctrlKey || event.metaKey) && event.shiftKey&&
+        event.key === "A"
       ) {
         event.preventDefault();
         setShowModalAdvanced((state) => !state);
@@ -399,7 +407,23 @@ export default function NodeToolbarComponent({
             </button>
           </ShadTooltip>
 
-          <ShadTooltip content="Freeze" side="top">
+          <ShadTooltip content={"Duplicate"} side="top">
+            <button
+              data-testid="save-button-modal"
+              className={classNames(
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+              )}
+              onClick={(event) => {
+                event.preventDefault();
+                handleSelectChange("duplicate");
+              }
+            }
+            >
+              <IconComponent name="Copy" className="h-4 w-4" />
+            </button>
+          </ShadTooltip>
+
+          {/* <ShadTooltip content="Freeze" side="top">
             <button
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
@@ -412,7 +436,7 @@ export default function NodeToolbarComponent({
                     ...old.data,
                     node: {
                       ...old.data.node,
-                      frozen: old.data?.node?.frozen ? false : true,
+                      // frozen: old.data?.node?.frozen ? false : true,
                     },
                   },
                 }));
@@ -427,7 +451,7 @@ export default function NodeToolbarComponent({
                 )}
               />
             </button>
-          </ShadTooltip>
+          </ShadTooltip> */}
 
           <Select onValueChange={handleSelectChange} value="">
             <ShadTooltip content="More" side="top">
@@ -451,16 +475,16 @@ export default function NodeToolbarComponent({
               {nodeLength > 0 && (
                 <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
                   <ToolbarSelectItem
-                    keyboardKey="E"
+                    keyboardKey="A"
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={false}
-                    value={"Edit"}
+                    shift={true}
+                    value={"Advanced"}
                     icon={"Settings2"}
                     dataTestId="edit-button-modal"
                   />
                 </SelectItem>
               )}
-              <SelectItem value={"duplicate"}>
+              {/* <SelectItem value={"duplicate"}>
                 <ToolbarSelectItem
                   keyboardKey="D"
                   isMac={navigator.userAgent.toUpperCase().includes("MAC")}
@@ -469,7 +493,7 @@ export default function NodeToolbarComponent({
                   icon={"Copy"}
                   dataTestId="duplicate-button-modal"
                 />
-              </SelectItem>
+              </SelectItem> */}
               <SelectItem value={"copy"}>
                 <ToolbarSelectItem
                   keyboardKey="C"
@@ -505,7 +529,7 @@ export default function NodeToolbarComponent({
                     value={"Share"}
                     icon={"Share3"}
                     styleObj={{
-                      iconClasses: "relative top-0.5 -m-1 mr-1 h-6 w-6",
+                      iconClasses: "relative top-0.5 -m-1 mr-[0.25rem] h-6 w-6",
                     }}
                     dataTestId="share-button-modal"
                   />
@@ -631,22 +655,24 @@ export default function NodeToolbarComponent({
           )}
           {hasCode && (
             <div className="hidden">
-              <CodeAreaComponent
-                open={openModal}
-                setOpen={setOpenModal}
-                readonly={
-                  data.node?.flow && data.node.template[name].dynamic
-                    ? true
-                    : false
-                }
-                dynamic={data.node?.template[name].dynamic ?? false}
-                setNodeClass={handleNodeClass}
-                nodeClass={data.node}
-                disabled={false}
-                value={data.node?.template[name].value ?? ""}
-                onChange={handleOnNewValue}
-                id={"code-input-node-toolbar-" + name}
-              />
+              {openModal && (
+                <CodeAreaComponent
+                  open={openModal}
+                  setOpen={setOpenModal}
+                  readonly={
+                    data.node?.flow && data.node.template[name].dynamic
+                      ? true
+                      : false
+                  }
+                  dynamic={data.node?.template[name].dynamic ?? false}
+                  setNodeClass={handleNodeClass}
+                  nodeClass={data.node}
+                  disabled={false}
+                  value={data.node?.template[name].value ?? ""}
+                  onChange={handleOnNewValue}
+                  id={"code-input-node-toolbar-" + name}
+                />
+              )}
             </div>
           )}
         </span>

@@ -15,7 +15,7 @@ from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import ChatVertex, FileToolVertex, LLMVertex, RoutingVertex, StateVertex, ToolkitVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.schema import Record
-from langflow.schema.schema import INPUT_FIELD_NAME
+from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
@@ -201,7 +201,7 @@ class Graph:
         self,
         inputs: Dict[str, str],
         input_components: list[str],
-        input_type: Literal["chat", "text", "json", "any"] | None,
+        input_type: InputType | None,
         outputs: list[str],
         stream: bool,
         session_id: str,
@@ -271,7 +271,7 @@ class Graph:
         self,
         inputs: list[Dict[str, str]],
         input_components: Optional[list[list[str]]] = None,
-        types: Optional[list[Literal["chat", "text", "json", "any"] | None]] = None,
+        types: Optional[list[InputType | None]] = None,
         outputs: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         stream: bool = False,
@@ -309,7 +309,7 @@ class Graph:
         self,
         inputs: list[Dict[str, str]],
         inputs_components: Optional[list[list[str]]] = None,
-        types: Optional[list[Literal["chat", "text", "json", "any"] | None]] = None,
+        types: Optional[list[InputType | None]] = None,
         outputs: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         stream: bool = False,
@@ -603,8 +603,7 @@ class Graph:
         # This is a hack to make sure that the LLM vertex is sent to
         # the toolkit vertex
         self._build_vertex_params()
-        # remove invalid vertices
-        self._validate_vertices()
+
         # Now that we have the vertices and edges
         # We need to map the vertices that are connected to
         # to ChatVertex instances
@@ -630,14 +629,6 @@ class Graph:
             for vertex in self.vertices:
                 if isinstance(vertex, ToolkitVertex):
                     vertex.params["llm"] = llm_vertex
-
-    def _validate_vertices(self) -> None:
-        """Check that all vertices have edges"""
-        if len(self.vertices) == 1:
-            return
-        for vertex in self.vertices:
-            if not self._validate_vertex(vertex):
-                raise ValueError(f"{vertex.display_name} is not connected to any other components")
 
     def _validate_vertex(self, vertex: Vertex) -> bool:
         """Validates a vertex."""
@@ -890,8 +881,7 @@ class Graph:
         # and then build the edges
         # if we can't find a vertex, we raise an error
 
-        edges: List[ContractEdge] = []
-        edges_added = set()
+        edges: set[ContractEdge] = set()
         for edge in self._edges:
             source = self.get_vertex(edge["source"])
             target = self.get_vertex(edge["target"])
@@ -900,13 +890,11 @@ class Graph:
                 raise ValueError(f"Source vertex {edge['source']} not found")
             if target is None:
                 raise ValueError(f"Target vertex {edge['target']} not found")
+            edge = ContractEdge(source, target, edge)
 
-            if (source.id, target.id) in edges_added:
-                continue
+            edges.add(edge)
 
-            edges.append(ContractEdge(source, target, edge))
-            edges_added.add((source.id, target.id))
-        return edges
+        return list(edges)
 
     def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> Type[Vertex]:
         """Returns the node class based on the node type."""

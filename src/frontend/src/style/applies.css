@@ -184,7 +184,7 @@
     @apply fill-chat-trigger-disabled stroke-chat-trigger-disabled stroke-1;
   }
   .parent-disclosure-arrangement {
-    @apply flex w-full select-none items-center justify-between border-y border-y-input bg-background px-3 py-2;
+    @apply flex w-full select-none items-center justify-between bg-background px-3 py-1;
   }
   .components-disclosure-arrangement {
     @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
@@ -194,7 +194,7 @@
     @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
   }
   .parent-disclosure-title {
-    @apply p-2 px-2 text-sm font-semibold;
+    @apply p-2 px-2 text-sm font-medium;
   }
   .components-disclosure-title {
     @apply flex items-center text-sm text-primary;
@@ -917,7 +917,7 @@
     @apply mr-2 h-5 w-5 rotate-[44deg];
   }
   .form-modal-play-icon {
-    @apply mx-1 h-5 w-5;
+    @apply mx-1 h-5 w-5 fill-current;
   }
   .form-modal-chat-position {
     @apply flex-max-width px-2 py-6 pl-4 pr-9;

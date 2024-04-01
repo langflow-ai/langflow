@@ -12,6 +12,7 @@ from langflow.api.v1.schemas import (
     InputValueRequest,
     ProcessResponse,
     RunResponse,
+    SimplifiedAPIRequest,
     TaskStatusResponse,
     Tweaks,
     UpdateCustomComponentRequest,
@@ -22,7 +23,7 @@ from langflow.graph.schema import RunOutputs
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import build_custom_component_template
-from langflow.processing.process import process_tweaks, run_graph
+from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
@@ -51,7 +52,138 @@ def get_all(
 
 
 @router.post("/run/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
-async def run_flow_with_caching(
+async def simplified_run_flow(
+    db: Annotated[Session, Depends(get_session)],
+    flow_id: str,
+    input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
+    stream: bool = False,
+    api_key_user: User = Depends(api_key_security),
+    session_service: SessionService = Depends(get_session_service),
+):
+    """
+    Executes a specified flow by ID with input customization, performance enhancements through caching, and optional data streaming.
+
+    ### Parameters:
+    - `db` (Session): Database session for executing queries.
+    - `flow_id` (str): Unique identifier of the flow to be executed.
+    - `input_request` (SimplifiedAPIRequest): Request object containing input values, types, output selection, tweaks, and session ID.
+    - `api_key_user` (User): User object derived from the provided API key, used for authentication.
+    - `session_service` (SessionService): Service for managing flow sessions, essential for session reuse and caching.
+
+    ### SimplifiedAPIRequest:
+    - `input_value` (Optional[str], default=""): Input value to pass to the flow.
+    - `input_type` (Optional[Literal["chat", "text", "any"]], default="chat"): Type of the input value, determining how the input is interpreted.
+    - `output_type` (Optional[Literal["chat", "text", "any", "debug"]], default="chat"): Desired type of output, affecting which components' outputs are included in the response. If set to "debug", all outputs are returned.
+    - `output_component` (Optional[str], default=None): Specific component output to retrieve. If provided, only the output of the specified component is returned. This overrides the `output_type` parameter.
+    - `tweaks` (Optional[Tweaks], default=None): Adjustments to the flow's behavior, allowing for custom execution parameters.
+    - `session_id` (Optional[str], default=None): An identifier for reusing session data, aiding in performance for subsequent requests.
+
+
+    ### Tweaks
+    A dictionary of tweaks to customize the flow execution. The tweaks can be used to modify the flow's parameters and components. Tweaks can be overridden by the input values.
+    You can use Component's `id` or Display Name as key to tweak a specific component (e.g., `{"Component Name": {"parameter_name": "value"}}`).
+    You can also use the parameter name as key to tweak all components with that parameter (e.g., `{"parameter_name": "value"}`).
+
+    ### Returns:
+    - A `RunResponse` object containing the execution results, including selected (or all, based on `output_type`) outputs of the flow and the session ID, facilitating result retrieval and further interactions in a session context.
+
+    ### Raises:
+    - HTTPException: 404 if the specified flow ID curl -X 'POST' \
+
+    ### Example:
+    ```bash
+    curl -X 'POST' \
+      'http://<your_server>/run/{flow_id}' \
+      -H 'accept: application/json' \
+      -H 'Content-Type: application/json' \
+      -H 'x-api-key: YOU_API_KEY' \
+      -H '
+      -d '{
+            "input_value": "Sample input",
+            "input_type": "chat",
+            "output_type": "chat",
+            "tweaks": {},
+          }'
+    ```
+
+    This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency, supporting a wide range of applications by allowing for dynamic input and output configuration along with performance optimizations through session management and caching.
+    """
+    session_id = input_request.session_id
+    try:
+        task_result: List[RunOutputs] = []
+        artifacts = {}
+        if input_request.session_id:
+            session_data = await session_service.load_session(input_request.session_id, flow_id=flow_id)
+            graph, artifacts = session_data if session_data else (None, None)
+            if graph is None:
+                raise ValueError(f"Session {input_request.session_id} not found")
+        else:
+            # Get the flow that matches the flow_id and belongs to the user
+            # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
+            flow = db.exec(select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)).first()
+            if flow is None:
+                raise ValueError(f"Flow {flow_id} not found")
+
+            if flow.data is None:
+                raise ValueError(f"Flow {flow_id} has no data")
+            graph_data = flow.data
+            graph_data = process_tweaks(graph_data, input_request.tweaks or {})
+            graph = Graph.from_payload(graph_data, flow_id=flow_id)
+        inputs = [
+            InputValueRequest(components=[], input_value=input_request.input_value, type=input_request.input_type)
+        ]
+        # outputs is a list of all components that should return output
+        # we need to get them by checking their type
+        # if the output type is debug, we return all outputs
+        # if the output type is any, we return all outputs that are either chat or text
+        # if the output type is chat or text, we return only the outputs that match the type
+        if input_request.output_component:
+            outputs = [input_request.output_component]
+        else:
+            outputs = [
+                vertex.id
+                for vertex in graph.vertices
+                if input_request.output_type == "debug"
+                or (
+                    vertex.is_output
+                    and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())
+                )
+            ]
+        task_result, session_id = await run_graph_internal(
+            graph=graph,
+            flow_id=flow_id,
+            session_id=input_request.session_id,
+            inputs=inputs,
+            outputs=outputs,
+            artifacts=artifacts,
+            session_service=session_service,
+            stream=stream,
+        )
+
+        return RunResponse(outputs=task_result, session_id=session_id)
+    except sa.exc.StatementError as exc:
+        # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
+        if "badly formed hexadecimal UUID string" in str(exc):
+            logger.error(f"Flow ID {flow_id} is not a valid UUID")
+            # This means the Flow ID is not a valid UUID which means it can't find the flow
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        if f"Flow {flow_id} not found" in str(exc):
+            logger.error(f"Flow {flow_id} not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        elif f"Session {session_id} not found" in str(exc):
+            logger.error(f"Session {session_id} not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        else:
+            logger.exception(exc)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+
+@router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
+async def experimental_run_flow(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
     inputs: Optional[List[InputValueRequest]] = [InputValueRequest(components=[], input_value="")],
@@ -85,6 +217,7 @@ async def run_flow_with_caching(
     ### Example usage:
     ```json
     POST /run/{flow_id}
+    x-api-key: YOUR_API_KEY
     Payload:
     {
         "inputs": [
@@ -122,7 +255,7 @@ async def run_flow_with_caching(
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
             graph = Graph.from_payload(graph_data, flow_id=flow_id)
-        task_result, session_id = await run_graph(
+        task_result, session_id = await run_graph_internal(
             graph=graph,
             flow_id=flow_id,
             session_id=session_id,

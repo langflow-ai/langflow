@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, List, Optional, Tuple, Union
 
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import select
@@ -63,30 +63,28 @@ def find_flow(flow_name: str, user_id: str) -> Optional[str]:
 
 
 async def run_flow(
-    inputs: Optional[Union[dict, List[dict]]] = None,
+    inputs: Union[dict, List[dict]] = None,
     tweaks: Optional[dict] = None,
     flow_id: Optional[str] = None,
     flow_name: Optional[str] = None,
     user_id: Optional[str] = None,
 ) -> Any:
-    if not user_id:
-        raise ValueError("Session is invalid")
     graph = await load_flow(user_id, flow_id, flow_name, tweaks)
 
     if inputs is None:
         inputs = []
-    inputs_list: list[dict[str, str]] = []
+    inputs_list = []
     inputs_components = []
     types = []
     for input_dict in inputs:
-        inputs_list.append({INPUT_FIELD_NAME: cast(str, input_dict.get("input_value", ""))})
+        inputs_list.append({INPUT_FIELD_NAME: input_dict.get("input_value")})
         inputs_components.append(input_dict.get("components", []))
         types.append(input_dict.get("type", []))
 
     return await graph.arun(inputs_list, inputs_components=inputs_components, types=types)
 
 
-def generate_function_for_flow(inputs: List["Vertex"], flow_id: str) -> Callable[..., Awaitable[Any]]:
+def generate_function_for_flow(inputs: List["Vertex"], flow_id: str) -> Coroutine:
     """
     Generate a dynamic flow function based on the given inputs and flow ID.
 
@@ -140,14 +138,12 @@ async def flow_function({func_args}):
 """
 
     compiled_func = compile(func_body, "<string>", "exec")
-    local_scope: dict = {}
+    local_scope = {}
     exec(compiled_func, globals(), local_scope)
     return local_scope["flow_function"]
 
 
-def build_function_and_schema(
-    flow_record: Record, graph: "Graph"
-) -> Tuple[Callable[..., Awaitable[Any]], Type[BaseModel]]:
+def build_function_and_schema(flow_record: Record, graph: "Graph") -> Tuple[Callable, BaseModel]:
     """
     Builds a dynamic function and schema for a given flow.
 
@@ -182,7 +178,7 @@ def get_flow_inputs(graph: "Graph") -> List["Vertex"]:
     return inputs
 
 
-def build_schema_from_inputs(name: str, inputs: List["Vertex"]) -> Type[BaseModel]:
+def build_schema_from_inputs(name: str, inputs: List[tuple[str, str, str]]) -> BaseModel:
     """
     Builds a schema from the given inputs.
 
@@ -200,4 +196,4 @@ def build_schema_from_inputs(name: str, inputs: List["Vertex"]) -> Type[BaseMode
         field_name = input_.display_name.lower().replace(" ", "_")
         description = input_.description
         fields[field_name] = (str, Field(default="", description=description))
-    return create_model(name, **fields)  # type: ignore
+    return create_model(name, **fields)

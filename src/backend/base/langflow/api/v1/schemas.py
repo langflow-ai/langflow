@@ -1,13 +1,14 @@
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator, model_serializer
 
 from langflow.graph.schema import RunOutputs
 from langflow.schema import dotdict
+from langflow.schema.schema import InputType, OutputType
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
@@ -259,7 +260,7 @@ class VerticesBuiltResponse(BaseModel):
 class InputValueRequest(BaseModel):
     components: Optional[List[str]] = []
     input_value: Optional[str] = None
-    type: Optional[Literal["chat", "text", "json", "any"]] = Field(
+    type: Optional[InputType] = Field(
         "any",
         description="Defines on which components the input value should be applied. 'any' applies to all input components.",
     )
@@ -310,3 +311,15 @@ class Tweaks(RootModel):
 
     def items(self):
         return self.root.items()
+
+
+class SimplifiedAPIRequest(BaseModel):
+    input_value: Optional[str] = Field(default="", description="The input value")
+    input_type: Optional[InputType] = Field(default="chat", description="The input type")
+    output_type: Optional[OutputType] = Field(default="chat", description="The output type")
+    output_component: Optional[str] = Field(
+        default="",
+        description="If there are multiple output components, you can specify the component to get the output from.",
+    )
+    tweaks: Optional[Tweaks] = Field(default=None, description="The tweaks")
+    session_id: Optional[str] = Field(default=None, description="The session id")

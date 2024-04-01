@@ -60,10 +60,6 @@ const EditNodeModal = forwardRef(
 
     const edges = useFlowStore((state) => state.edges);
     const setNode = useFlowStore((state) => state.setNode);
-    const setNoticeData = useAlertStore((state) => state.setNoticeData);
-    const globalVariablesEntries = useGlobalVariablesStore(
-      (state) => state.globalVariablesEntries
-    );
 
     function changeAdvanced(n) {
       setMyData((old) => {

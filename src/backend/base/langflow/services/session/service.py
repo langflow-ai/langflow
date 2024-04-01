@@ -15,7 +15,10 @@ class SessionService(Service):
     async def load_session(self, key, flow_id: str, data_graph: Optional[dict] = None):
         # Check if the data is cached
         if key in self.cache_service:
-            return self.cache_service.get(key)
+            result = self.cache_service.get(key)
+            if isinstance(result, Coroutine):
+                result = await result
+            return result
 
         if key is None:
             key = self.generate_key(session_id=None, data_graph=data_graph)
