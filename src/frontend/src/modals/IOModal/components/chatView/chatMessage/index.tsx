@@ -110,7 +110,7 @@ export default function ChatMessage({
       >
         <div
           className={classNames(
-            "mr-3 mt-1 flex max-w-16 flex-col items-center gap-1 overflow-hidden px-3 pb-3"
+            "mr-3 mt-1 flex max-w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3"
           )}
         >
           <div className="flex flex-col items-center gap-1">
@@ -126,7 +126,7 @@ export default function ChatMessage({
                 alt={!chat.isSend ? "robot_image" : "male_technology"}
               />
             </div>
-            <span className="max-w-16 truncate text-xs">
+            <span className="max-w-24 truncate text-xs">
               {chat.sender_name}
             </span>
           </div>
