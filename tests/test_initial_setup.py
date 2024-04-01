@@ -1,9 +1,6 @@
 from itertools import chain
 
 import pytest
-from sqlalchemy import func
-from sqlmodel import select
-
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import ResultData
 from langflow.initial_setup.setup import (
@@ -14,6 +11,8 @@ from langflow.initial_setup.setup import (
 )
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
+from sqlalchemy import func
+from sqlmodel import select
 
 
 def test_load_starter_projects():
@@ -26,7 +25,7 @@ def test_get_project_data():
     projects = load_starter_projects()
     for project in projects:
         data = get_project_data(project)
-        assert all(d is not None for d in data)
+        assert all(d is not None for d in data), f"Project {project} data is None"
 
 
 def test_create_or_update_starter_projects(client):
