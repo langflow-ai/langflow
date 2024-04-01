@@ -57,7 +57,7 @@ class OpenAIEmbeddingsComponent(CustomComponent):
                 "password": True,
                 "advanced": True,
             },
-            "openai_api_key": {"display_name": "OpenAI API Key", "password": True, "required": True},
+            "openai_api_key": {"display_name": "OpenAI API Key", "password": True},
             "openai_api_type": {
                 "display_name": "OpenAI API Type",
                 "advanced": True,
@@ -87,6 +87,7 @@ class OpenAIEmbeddingsComponent(CustomComponent):
 
     def build(
         self,
+        openai_api_key: str,
         default_headers: Optional[Dict[str, str]] = None,
         default_query: Optional[NestedDict] = {},
         allowed_special: List[str] = [],
@@ -99,7 +100,6 @@ class OpenAIEmbeddingsComponent(CustomComponent):
         model: str = "text-embedding-3-small",
         model_kwargs: NestedDict = {},
         openai_api_base: Optional[str] = None,
-        openai_api_key: Optional[str] = "",
         openai_api_type: Optional[str] = None,
         openai_api_version: Optional[str] = None,
         openai_organization: Optional[str] = None,
