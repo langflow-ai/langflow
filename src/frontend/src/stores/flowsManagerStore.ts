@@ -104,7 +104,11 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       );
     }
   },
-  saveFlow: debounce((flow: FlowType, silent?: boolean) => {
+  saveFlow: (flow: FlowType, silent?: boolean) => {
+    set({ saveLoading: true }); // set saveLoading true immediately
+    return get().saveFlowDebounce(flow, silent); // call the debounced function directly
+  },
+  saveFlowDebounce: debounce((flow: FlowType, silent?: boolean) => {
     set({ saveLoading: true });
     return new Promise<void>((resolve, reject) => {
       updateFlowInDatabase(flow)
