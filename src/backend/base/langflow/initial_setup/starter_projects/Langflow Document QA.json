@@ -360,7 +360,7 @@
                                 "list": false,
                                 "show": true,
                                 "multiline": false,
-                                "value": "",
+                                "value": "User",
                                 "fileTypes": [],
                                 "file_path": "",
                                 "password": false,
