@@ -52,7 +52,7 @@ def get_all(
 
 
 @router.post("/run/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
-async def simplified_run_flow_with_caching(
+async def simplified_run_flow(
     db: Annotated[Session, Depends(get_session)],
     flow_id: str,
     input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
@@ -171,7 +171,7 @@ async def simplified_run_flow_with_caching(
 
 
 @router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
-async def experimental_run_flow_with_caching(
+async def experimental_run_flow(
     session: Annotated[Session, Depends(get_session)],
     flow_id: str,
     inputs: Optional[List[InputValueRequest]] = [InputValueRequest(components=[], input_value="")],
