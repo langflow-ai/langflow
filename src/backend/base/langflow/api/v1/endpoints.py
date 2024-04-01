@@ -74,8 +74,10 @@ async def simplified_run_flow(
     - `input_value` (Optional[str], default=""): Input value to pass to the flow.
     - `input_type` (Optional[Literal["chat", "text", "any"]], default="chat"): Type of the input value, determining how the input is interpreted.
     - `output_type` (Optional[Literal["chat", "text", "any", "debug"]], default="chat"): Desired type of output, affecting which components' outputs are included in the response. If set to "debug", all outputs are returned.
+    - `output_component` (Optional[str], default=None): Specific component output to retrieve. If provided, only the output of the specified component is returned. This overrides the `output_type` parameter.
     - `tweaks` (Optional[Tweaks], default=None): Adjustments to the flow's behavior, allowing for custom execution parameters.
     - `session_id` (Optional[str], default=None): An identifier for reusing session data, aiding in performance for subsequent requests.
+
 
     ### Tweaks
     A dictionary of tweaks to customize the flow execution. The tweaks can be used to modify the flow's parameters and components. Tweaks can be overridden by the input values.
@@ -135,15 +137,18 @@ async def simplified_run_flow(
         # if the output type is debug, we return all outputs
         # if the output type is any, we return all outputs that are either chat or text
         # if the output type is chat or text, we return only the outputs that match the type
-        outputs = [
-            vertex.id
-            for vertex in graph.vertices
-            if input_request.output_type == "debug"
-            or (
-                vertex.is_output
-                and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())
-            )
-        ]
+        if input_request.output_component:
+            outputs = [input_request.output_component]
+        else:
+            outputs = [
+                vertex.id
+                for vertex in graph.vertices
+                if input_request.output_type == "debug"
+                or (
+                    vertex.is_output
+                    and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())
+                )
+            ]
         task_result, session_id = await run_graph(
             graph=graph,
             flow_id=flow_id,
