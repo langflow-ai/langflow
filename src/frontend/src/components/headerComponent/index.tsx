@@ -103,6 +103,7 @@ export default function Header(): JSX.Element {
               onClick={() => {
                 checkForChanges(nodes);
               }}
+              data-testid="button-store"
             >
               <IconComponent name="Store" className="h-4 w-4" />
               <div className="flex-1">Store</div>
