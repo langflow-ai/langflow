@@ -234,6 +234,20 @@ export default function ExtraSidebar(): JSX.Element {
     []
   );
 
+  const getIcon = useMemo(() => {
+    return (SBSectionName: string) => {
+      if (nodeIconsLucide[SBSectionName]) {
+        return (
+          <IconComponent
+            name={SBSectionName}
+            strokeWidth={1.5}
+            className="w-[22px] text-primary"
+          />
+        );
+      }
+    };
+  }, []);
+
   return (
     <div className="side-bar-arrangement">
       <div className="side-bar-search-div-placement">
@@ -271,6 +285,11 @@ export default function ExtraSidebar(): JSX.Element {
       </div>
       <Separator />
       <div className="side-bar-components-div-arrangement">
+        <div className="parent-disclosure-arrangement">
+          <div className="flex items-center gap-4 align-middle">
+            <span className="parent-disclosure-title">Core Components</span>
+          </div>
+        </div>
         {Object.keys(dataFilter)
           .sort(sortKeys)
           .filter((x) => PRIORITY_SIDEBAR_ORDER.includes(x))
@@ -310,7 +329,7 @@ export default function ExtraSidebar(): JSX.Element {
                           <SidebarDraggableComponent
                             sectionName={SBSectionName as string}
                             apiClass={dataFilter[SBSectionName][SBItemName]}
-                            key={index}
+                            key={index + SBItemName}
                             onDragStart={(event) =>
                               onDragStart(event, {
                                 //split type to remove type in nodes saved with same name removing it's
@@ -344,9 +363,7 @@ export default function ExtraSidebar(): JSX.Element {
             )
           )}{" "}
         <ParentDisclosureComponent
-          openDisc={
-            getFilterEdge.length !== 0 || search.length !== 0 ? true : false
-          }
+          openDisc={false}
           key={"Extended"}
           button={{
             title: "Extended",
@@ -361,6 +378,7 @@ export default function ExtraSidebar(): JSX.Element {
               Object.keys(dataFilter[SBSectionName]).length > 0 ? (
                 <>
                   <DisclosureComponent
+                  isChild={false}
                     openDisc={
                       getFilterEdge.length !== 0 || search.length !== 0
                         ? true

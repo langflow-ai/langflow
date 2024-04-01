@@ -131,4 +131,5 @@ export type FlowStoreType = {
     data: FlowPoolObjectType | ChatOutputType | chatInputType,
     buildId?: string
   ) => void;
+  getNodePosition: (nodeId: string) => { x: number; y: number };
 };

@@ -29,6 +29,12 @@ def records_to_text(template: str, records: list[Record]) -> str:
     if isinstance(records, Record):
         records = [records]
     # Check if there are any format strings in the template
+    _records = []
+    for record in records:
+        # If it is not a record, create one with the key "text"
+        if not isinstance(record, Record):
+            record = Record(text=record)
+        _records.append(record)
 
-    formated_records = [template.format(data=record.data, **record.data) for record in records]
+    formated_records = [template.format(data=record.data, **record.data) for record in _records]
     return "\n".join(formated_records)

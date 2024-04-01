@@ -12,7 +12,6 @@ import ReactFlow, {
   updateEdge,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
-import FlowToolbar from "../../../../components/chatComponent";
 import {
   INVALID_SELECTION_ERROR_ALERT,
   UPLOAD_ALERT_LIST,
@@ -38,7 +37,6 @@ import {
 import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
-import ExtraSidebar from "../extraSidebarComponent";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -59,6 +57,9 @@ export default function Page({
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const [showCanvas, setSHowCanvas] = useState(
+    Object.keys(templates).length > 0 && Object.keys(types).length > 0
+  );
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
@@ -271,6 +272,12 @@ export default function Page({
     };
   }, []);
 
+  useEffect(() => {
+    setSHowCanvas(
+      Object.keys(templates).length > 0 && Object.keys(types).length > 0
+    );
+  }, [templates, types]);
+
   const onConnectMod = useCallback(
     (params: Connection) => {
       takeSnapshot();
@@ -432,71 +439,60 @@ export default function Page({
   }
 
   return (
-    <div className="flex h-full overflow-hidden">
-      {!view && <ExtraSidebar />}
-      {/* Main area */}
-      <main className="flex flex-1">
-        {/* Primary column */}
-        <div className="h-full w-full">
-          <div className="h-full w-full" ref={reactFlowWrapper}>
-            {Object.keys(templates).length > 0 &&
-            Object.keys(types).length > 0 ? (
-              <div id="react-flow-id" className="h-full w-full">
-                <ReactFlow
-                  nodes={nodes}
-                  edges={edges}
-                  onNodesChange={onNodesChange}
-                  onEdgesChange={onEdgesChange}
-                  onConnect={onConnectMod}
-                  disableKeyboardA11y={true}
-                  onInit={setReactFlowInstance}
-                  nodeTypes={nodeTypes}
-                  onEdgeUpdate={onEdgeUpdate}
-                  onEdgeUpdateStart={onEdgeUpdateStart}
-                  onEdgeUpdateEnd={onEdgeUpdateEnd}
-                  onNodeDragStart={onNodeDragStart}
-                  onNodeDragStop={onNodeDragStop}
-                  onSelectionDragStart={onSelectionDragStart}
-                  onSelectionEnd={onSelectionEnd}
-                  onSelectionStart={onSelectionStart}
-                  connectionLineComponent={ConnectionLineComponent}
-                  onDragOver={onDragOver}
-                  onMoveEnd={onMoveEnd}
-                  onDrop={onDrop}
-                  onSelectionChange={onSelectionChange}
-                  deleteKeyCode={[]}
-                  className="theme-attribution"
-                  minZoom={0.01}
-                  maxZoom={8}
-                  zoomOnScroll={!view}
-                  zoomOnPinch={!view}
-                  panOnDrag={!view}
-                  proOptions={{ hideAttribution: true }}
-                  onPaneClick={onPaneClick}
-                >
-                  <Background className="" />
-                  {!view && (
-                    <Controls
-                      className="bg-muted fill-foreground stroke-foreground text-primary
+    <div className="h-full w-full" ref={reactFlowWrapper}>
+      {showCanvas ? (
+        <div id="react-flow-id" className="h-full w-full">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnectMod}
+            disableKeyboardA11y={true}
+            onInit={setReactFlowInstance}
+            nodeTypes={nodeTypes}
+            onEdgeUpdate={onEdgeUpdate}
+            onEdgeUpdateStart={onEdgeUpdateStart}
+            onEdgeUpdateEnd={onEdgeUpdateEnd}
+            onNodeDragStart={onNodeDragStart}
+            onNodeDragStop={onNodeDragStop}
+            onSelectionDragStart={onSelectionDragStart}
+            onSelectionEnd={onSelectionEnd}
+            onSelectionStart={onSelectionStart}
+            connectionLineComponent={ConnectionLineComponent}
+            onDragOver={onDragOver}
+            onMoveEnd={onMoveEnd}
+            onDrop={onDrop}
+            onSelectionChange={onSelectionChange}
+            deleteKeyCode={[]}
+            className="theme-attribution"
+            minZoom={0.01}
+            maxZoom={8}
+            zoomOnScroll={!view}
+            zoomOnPinch={!view}
+            panOnDrag={!view}
+            proOptions={{ hideAttribution: true }}
+            onPaneClick={onPaneClick}
+          >
+            <Background className="" />
+            {!view && (
+              <Controls
+                className="[&>button]:bg-muted fill-foreground stroke-foreground text-primary
                    [&>button]:border-b-border hover:[&>button]:bg-border"
-                    ></Controls>
-                  )}
-                  <SelectionMenu
-                    isVisible={selectionMenuVisible}
-                    nodes={lastSelection?.nodes}
-                    onClick={() => {
-                      handleGroupNode();
-                    }}
-                  />
-                </ReactFlow>
-                {!view && <FlowToolbar flow={flow} />}
-              </div>
-            ) : (
-              <></>
+              ></Controls>
             )}
-          </div>
+            <SelectionMenu
+              isVisible={selectionMenuVisible}
+              nodes={lastSelection?.nodes}
+              onClick={() => {
+                handleGroupNode();
+              }}
+            />
+          </ReactFlow>
         </div>
-      </main>
+      ) : (
+        <></>
+      )}
     </div>
   );
 }

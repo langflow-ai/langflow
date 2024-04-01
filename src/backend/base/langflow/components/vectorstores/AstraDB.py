@@ -9,8 +9,8 @@ from langflow.schema import Record
 
 
 class AstraDBVectorStoreComponent(CustomComponent):
-    display_name = "AstraDB Vector Store"
-    description = "Builds or loads an AstraDB Vector Store"
+    display_name = "AstraDB"
+    description = "Builds or loads an AstraDB Vector Store."
     icon = "AstraDB"
     field_order = ["token", "api_endpoint", "collection_name", "inputs", "embedding"]
 

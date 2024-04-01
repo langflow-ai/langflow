@@ -3,8 +3,8 @@ from typing import Optional
 from langchain.llms.base import BaseLanguageModel
 from langchain_openai import AzureChatOpenAI
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import Text
 
 
 class AzureChatOpenAIComponent(LCModelComponent):
@@ -52,36 +52,28 @@ class AzureChatOpenAIComponent(LCModelComponent):
                 "display_name": "Model Name",
                 "value": self.AZURE_OPENAI_MODELS[0],
                 "options": self.AZURE_OPENAI_MODELS,
-                "required": True,
             },
             "azure_endpoint": {
                 "display_name": "Azure Endpoint",
-                "required": True,
                 "info": "Your Azure endpoint, including the resource.. Example: `https://example-resource.azure.openai.com/`",
             },
             "azure_deployment": {
                 "display_name": "Deployment Name",
-                "required": True,
             },
             "api_version": {
                 "display_name": "API Version",
                 "options": self.AZURE_OPENAI_API_VERSIONS,
                 "value": self.AZURE_OPENAI_API_VERSIONS[-1],
-                "required": True,
                 "advanced": True,
             },
-            "api_key": {"display_name": "API Key", "required": True, "password": True},
+            "api_key": {"display_name": "API Key", "password": True},
             "temperature": {
                 "display_name": "Temperature",
                 "value": 0.7,
-                "field_type": "float",
-                "required": False,
             },
             "max_tokens": {
                 "display_name": "Max Tokens",
                 "value": 1000,
-                "required": False,
-                "field_type": "int",
                 "advanced": True,
                 "info": "Maximum number of tokens to generate.",
             },
@@ -89,11 +81,13 @@ class AzureChatOpenAIComponent(LCModelComponent):
             "input_value": {"display_name": "Input"},
             "stream": {
                 "display_name": "Stream",
-                "info": "Stream the response from the model.",
+                "info": STREAM_INFO_TEXT,
+                "advanced": True,
             },
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 
@@ -104,9 +98,9 @@ class AzureChatOpenAIComponent(LCModelComponent):
         input_value: Text,
         azure_deployment: str,
         api_version: str,
-        api_key: Optional[str] = None,
+        api_key: str,
+        temperature: float,
         system_message: Optional[str] = None,
-        temperature: float = 0.7,
         max_tokens: Optional[int] = 1000,
         stream: bool = False,
     ) -> BaseLanguageModel:

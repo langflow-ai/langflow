@@ -1,6 +1,11 @@
 .PHONY: all init format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage
 
 all: help
+log_level ?= debug
+host ?= 0.0.0.0
+port ?= 7860
+env ?= .env
+open_browser ?= true
 
 setup_poetry:
 	pipx install poetry
@@ -69,16 +74,15 @@ endif
 run_cli:
 	@echo 'Running the CLI'
 	@make install_frontend > /dev/null
-	@echo 'Building the frontend'
-	@make build_frontend > /dev/null
 	@echo 'Install backend dependencies'
 	@make install_backend > /dev/null
+	@echo 'Building the frontend'
+	@make build_frontend > /dev/null
 ifdef env
-	poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file $(env)
+	@make start env=$(env) host=$(host) port=$(port) log_level=$(log_level)
 else
-	poetry run langflow run --path src/frontend/build --host $(host) --port $(port) --env-file .env
+	@make start host=$(host) port=$(port) log_level=$(log_level)
 endif
-
 
 run_cli_debug:
 	@echo 'Running the CLI in debug mode'
@@ -88,10 +92,20 @@ run_cli_debug:
 	@echo 'Install backend dependencies'
 	@make install_backend > /dev/null
 ifdef env
-	poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file $(env)
+	@make start env=$(env) host=$(host) port=$(port) log_level=debug
 else
-	poetry run langflow run --path src/frontend/build --log-level debug --host $(host) --port $(port) --env-file .env
+	@make start host=$(host) port=$(port) log_level=debug
 endif
+
+start:
+	@echo 'Running the CLI'
+ifeq ($(open_browser),false)
+	poetry run langflow run --path src/frontend/build --log-level $(log_level) --host $(host) --port $(port) --env-file $(env) --no-open-browser
+else
+	poetry run langflow run --path src/frontend/build --log-level $(log_level) --host $(host) --port $(port) --env-file $(env)
+endif
+
+
 
 setup_devcontainer:
 	make init
@@ -120,7 +134,7 @@ backend:
 	@-kill -9 `lsof -t -i:7860`
 ifeq ($(login),1)
 	@echo "Running backend without autologin";
-	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env
+	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio
 else
 	@echo "Running backend with autologin";
 	LANGFLOW_AUTO_LOGIN=True poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env

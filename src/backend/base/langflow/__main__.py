@@ -290,6 +290,7 @@ def run_langflow(host, port, log_level, options, app):
                 host=host,
                 port=port,
                 log_level=log_level.lower(),
+                loop="asyncio",
             )
         else:
             from langflow.server import LangflowApplication

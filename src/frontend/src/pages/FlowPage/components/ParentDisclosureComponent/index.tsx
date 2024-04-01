@@ -18,7 +18,7 @@ export default function ParentDisclosureComponent({
               data-testid={testId}
             >
               <div className="flex gap-4">
-                <span className="parent-disclosure-title">{title}</span>
+                <span className="parent-disclosure-title ">{title}</span>
               </div>
               <div className="components-disclosure-div">
                 {buttons.map((btn, index) => (
@@ -28,9 +28,9 @@ export default function ParentDisclosureComponent({
                 ))}
                 <div>
                   <IconComponent
-                    name="ChevronRight"
+                    name="ChevronsUpDownIcon"
                     className={`${
-                      open || openDisc ? "rotate-90 transform" : ""
+                      open || openDisc ? "" : ""
                     } h-4 w-4 text-foreground`}
                   />
                 </div>

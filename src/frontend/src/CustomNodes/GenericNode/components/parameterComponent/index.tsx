@@ -27,11 +27,15 @@ import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useTypesStore } from "../../../../stores/typesStore";
-import { APIClassType, ResponseErrorTypeAPI } from "../../../../types/api";
+import {
+  APIClassType,
+  ResponseErrorDetailAPI,
+  ResponseErrorTypeAPI,
+} from "../../../../types/api";
 import { ParameterComponentType } from "../../../../types/components";
 import {
+  debouncedHandleUpdateValues,
   handleUpdateValues,
-  throttledHandleUpdateValues,
 } from "../../../../utils/parameterUtils";
 import {
   convertObjToArray,
@@ -104,10 +108,11 @@ export default function ParameterComponent({
         });
       }
     } catch (error) {
-      let responseError = error as ResponseErrorTypeAPI;
+      let responseError = error as ResponseErrorDetailAPI;
+
       setErrorData({
         title: "Error while updating the Component",
-        list: [responseError.response.data.detail.error ?? "Unknown error"],
+        list: [responseError.response.data.detail ?? "Unknown error"],
       });
     }
     setIsLoading(false);
@@ -136,10 +141,11 @@ export default function ParameterComponent({
             });
           }
         } catch (error) {
-          let responseError = error as ResponseErrorTypeAPI;
+          let responseError = error as ResponseErrorDetailAPI;
+
           setErrorData({
             title: "Error while updating the Component",
-            list: [responseError.response.data.detail.error ?? "Unknown error"],
+            list: [responseError.response.data.detail ?? "Unknown error"],
           });
         }
         setIsLoading(false);
@@ -164,7 +170,7 @@ export default function ParameterComponent({
     if (shouldUpdate) {
       setIsLoading(true);
       try {
-        newTemplate = await throttledHandleUpdateValues(name, data);
+        newTemplate = await debouncedHandleUpdateValues(name, data);
       } catch (error) {
         let responseError = error as ResponseErrorTypeAPI;
         setErrorData({
@@ -377,7 +383,7 @@ export default function ParameterComponent({
                 !showNode ? "mt-0" : ""
               )}
               style={{
-                borderColor: color,
+                borderColor: color ?? nodeColors.unknown,
               }}
               onClick={() => {
                 setFilterEdge(groupedEdge.current);
@@ -406,7 +412,7 @@ export default function ParameterComponent({
           }
         >
           {!left && data.node?.frozen && (
-            <div>
+            <div className="pr-1">
               <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
             </div>
           )}
@@ -421,7 +427,7 @@ export default function ParameterComponent({
               {title}
             </span>
           )}
-          <span className={(info === "" ? "" : "ml-1 ") + " text-status-red pl-1"}>
+          <span className={(required ? "ml-2 " : "") + "text-status-red"}>
             {required ? "*" : ""}
           </span>
           <div className="">
@@ -445,7 +451,7 @@ export default function ParameterComponent({
             <div className="flex">
               <ShadTooltip
                 styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
-                delayDuration={0}
+                delayDuration={1000}
                 content={refHtml.current}
                 side={left ? "left" : "right"}
               >
@@ -473,7 +479,7 @@ export default function ParameterComponent({
                     "h-3 w-3 rounded-full border-2 bg-background"
                   )}
                   style={{
-                    borderColor: color,
+                    borderColor: color ?? nodeColors.unknown,
                   }}
                   onClick={() => {
                     setFilterEdge(groupedEdge.current);
@@ -679,6 +685,7 @@ export default function ParameterComponent({
         ) : left === true && type === "int" ? (
           <div className="mt-2 w-full">
             <IntComponent
+              rangeSpec={data.node?.template[name].rangeSpec}
               disabled={disabled}
               value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}

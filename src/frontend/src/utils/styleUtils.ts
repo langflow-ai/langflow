@@ -22,6 +22,7 @@ import {
   ChevronsRight,
   ChevronsUpDown,
   Circle,
+  ChevronsUpDownIcon,
   CircleDot,
   Clipboard,
   Code,
@@ -116,6 +117,7 @@ import {
   TerminalIcon,
   TerminalSquare,
   TextCursorInput,
+  TextSearch,
   ToyBrick,
   Trash2,
   Type,
@@ -150,6 +152,7 @@ import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
 import { GitBookIcon } from "../icons/GitBook";
 import { GoogleIcon } from "../icons/Google";
+import { GoogleGenerativeAIIcon } from "../icons/GoogleGenerativeAI";
 import {
   GradientInfinity,
   GradientSave,
@@ -217,11 +220,11 @@ export const gradients = [
 ];
 
 export const nodeColors: { [char: string]: string } = {
-  inputs: "#9AAE42",
+  inputs: "#10B981",
   outputs: "#AA2411",
-  data: "#6344BE",
+  data: "#4367BF",
   prompts: "#4367BF",
-  models: "#AA2411",
+  models: "#6344BE",
   model_specs: "#6344BE",
   chains: "#FE7500",
   Document: "#7AAE42",
@@ -249,6 +252,9 @@ export const nodeColors: { [char: string]: string } = {
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
+  Records:"#31a3cc",
+  Record:"#31a3cc",
+
 };
 
 export const nodeNames: { [char: string]: string } = {
@@ -319,6 +325,7 @@ export const nodeIconsLucide: iconsType = {
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
   Cohere: CohereIcon,
+  ChevronsUpDownIcon,
   CohereEmbeddings: CohereIcon,
   EverNoteLoader: EvernoteIcon,
   FacebookChatLoader: FBIcon,
@@ -327,6 +334,7 @@ export const nodeIconsLucide: iconsType = {
   GoogleSearchResults: GoogleIcon,
   GoogleSearchRun: GoogleIcon,
   Google: GoogleIcon,
+  GoogleGenerativeAI: GoogleGenerativeAIIcon,
   HNLoader: HackerNewsIcon,
   HuggingFaceHub: HuggingFaceIcon,
   HuggingFace: HuggingFaceIcon,
@@ -371,7 +379,7 @@ export const nodeIconsLucide: iconsType = {
   saved_components: GradientSave,
   documentloaders: Paperclip,
   vectorstores: Layers,
-  vectorsearch: Search,
+  vectorsearch: TextSearch,
   toolkits: Package2,
   textsplitters: Scissors,
   wrappers: Gift,

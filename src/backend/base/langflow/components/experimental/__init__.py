@@ -24,4 +24,5 @@ __all__ = [
     "RunnableExecComponent",
     "SQLExecutorComponent",
     "SubFlowComponent",
+    "PythonFunctionComponent",
 ]

@@ -13,7 +13,9 @@
         "7860",
         "--reload",
         "--log-level",
-        "debug"
+        "debug",
+        "--loop",
+        "asyncio"
       ],
       "jinja": true,
       "justMyCode": false,

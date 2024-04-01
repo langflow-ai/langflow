@@ -8,14 +8,17 @@ import "./style/index.css";
 // @ts-ignore
 import "./style/applies.css";
 // @ts-ignore
+import { StrictMode } from "react";
 import "./style/classes.css";
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
 );
 root.render(
-  <ContextWrapper>
-    <App />
-  </ContextWrapper>
+  <StrictMode>
+    <ContextWrapper>
+      <App />
+    </ContextWrapper>
+  </StrictMode>
 );
 reportWebVitals();

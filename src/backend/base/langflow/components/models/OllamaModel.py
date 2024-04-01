@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 # from langchain_community.chat_models import ChatOllama
 from langchain_community.chat_models import ChatOllama
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 
 # from langchain.chat_models import ChatOllama
@@ -53,6 +54,7 @@ class ChatOllamaComponent(LCModelComponent):
             "base_url": {
                 "display_name": "Base URL",
                 "info": "Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
+                "advanced": True,
             },
             "model": {
                 "display_name": "Model Name",
@@ -200,11 +202,12 @@ class ChatOllamaComponent(LCModelComponent):
             "input_value": {"display_name": "Input"},
             "stream": {
                 "display_name": "Stream",
-                "info": "Stream the response from the model.",
+                "info": STREAM_INFO_TEXT,
             },
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 

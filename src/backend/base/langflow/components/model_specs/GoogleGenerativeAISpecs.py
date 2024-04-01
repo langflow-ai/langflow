@@ -30,7 +30,7 @@ class GoogleGenerativeAIComponent(CustomComponent):
             "top_k": {
                 "display_name": "Top K",
                 "info": "Decode using top-k sampling: consider the set of top_k most probable tokens. Must be positive.",
-                "range_spec": RangeSpec(min=0, max=2, step=0.1),
+                "rangeSpec": RangeSpec(min=0, max=2, step=0.1),
                 "advanced": True,
             },
             "top_p": {

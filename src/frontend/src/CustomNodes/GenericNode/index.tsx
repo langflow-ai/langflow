@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -86,7 +86,11 @@ export default function GenericNode({
     if (!thisNodeTemplate.code) return;
     const currentCode = thisNodeTemplate.code?.value;
     const thisNodesCode = data.node!.template?.code?.value;
-    if (currentCode !== thisNodesCode) {
+    const componentsToIgnore = ["Custom Component", "Prompt"];
+    if (
+      currentCode !== thisNodesCode &&
+      !componentsToIgnore.includes(data.node!.display_name)
+    ) {
       setIsOutdated(true);
     } else {
       setIsOutdated(false);
@@ -293,7 +297,6 @@ export default function GenericNode({
       );
     }
   };
-
   const getSpecificClassFromBuildStatus = (
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
@@ -342,17 +345,16 @@ export default function GenericNode({
   const getNodeSizeClass = (showNode) =>
     showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full";
 
-  return (
-    <>
+  const memoizedNodeToolbarComponent = useMemo(() => {
+    return (
       <NodeToolbar>
         <NodeToolbarComponent
-          position={{ x: xPos, y: yPos }}
           data={data}
           deleteNode={(id) => {
             takeSnapshot();
             deleteNode(id);
           }}
-          setShowNode={(show: boolean) => {
+          setShowNode={(show) => {
             setNode(data.id, (old) => ({
               ...old,
               data: { ...old.data, showNode: show },
@@ -366,8 +368,25 @@ export default function GenericNode({
           updateNodeCode={updateNodeCode}
           isOutdated={isOutdated}
           selected={selected}
-        ></NodeToolbarComponent>
+        />
       </NodeToolbar>
+    );
+  }, [
+    data,
+    deleteNode,
+    takeSnapshot,
+    setNode,
+    setShowNode,
+    handles,
+    showNode,
+    updateNodeCode,
+    isOutdated,
+    selected,
+  ]);
+
+  return (
+    <>
+      {memoizedNodeToolbarComponent}
       <div
         className={getNodeBorderClassName(
           selected,

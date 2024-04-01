@@ -119,7 +119,7 @@ export default function InputComponent({
                     ? " text-clip password "
                     : "",
                   editNode ? " input-edit-node " : "",
-                  password && setSelectedOption ? "pr-16" : "",
+                  password && setSelectedOption ? "pr-[62.9px]" : "",
                   (!password && setSelectedOption) ||
                     (password && !setSelectedOption)
                     ? "pr-8"
