@@ -99,6 +99,7 @@ async def simplified_run_flow_with_caching(
 
     This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency, supporting a wide range of applications by allowing for dynamic input and output configuration along with performance optimizations through session management and caching.
     """
+    session_id = input_request.session_id
     try:
         task_result: List[RunOutputs] = []
         artifacts = {}
