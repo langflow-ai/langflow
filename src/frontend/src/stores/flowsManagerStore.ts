@@ -108,7 +108,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     },
     SAVE_DEBOUNCE_TIME
   ),
-  saveFlow: (flow: FlowType, silent?: boolean) => {
+  saveFlow: debounce((flow: FlowType, silent?: boolean) => {
     set({ saveLoading: true });
     return new Promise<void>((resolve, reject) => {
       updateFlowInDatabase(flow)
@@ -142,7 +142,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           reject(err);
         });
     });
-  },
+  }, SAVE_DEBOUNCE_TIME),
   uploadFlows: () => {
     return new Promise<void>((resolve) => {
       const input = document.createElement("input");
