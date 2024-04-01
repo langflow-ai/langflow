@@ -7,6 +7,7 @@ module.exports = {
       items: [
         "index",
         "getting-started/installation",
+        "getting-started/usage",
         "getting-started/hugging-face-spaces",
         "getting-started/creating-flows",
       ],
