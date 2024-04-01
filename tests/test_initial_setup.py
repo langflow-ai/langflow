@@ -1,4 +1,9 @@
+from datetime import datetime
+
 import pytest
+from sqlalchemy import func
+from sqlmodel import select
+
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.initial_setup.setup import (
@@ -10,8 +15,6 @@ from langflow.initial_setup.setup import (
 from langflow.memory import delete_messages
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
-from sqlalchemy import func
-from sqlmodel import select
 
 
 def test_load_starter_projects():
@@ -22,9 +25,23 @@ def test_load_starter_projects():
 
 def test_get_project_data():
     projects = load_starter_projects()
-    for project in projects:
-        data = get_project_data(project)
-        assert all(d is not None for d in data), f"Project {project} data is None"
+    for _, project in projects:
+        (
+            project_name,
+            project_description,
+            project_is_component,
+            updated_at_datetime,
+            project_data,
+            project_icon,
+            project_icon_bg_color,
+        ) = get_project_data(project)
+        assert isinstance(project_name, str)
+        assert isinstance(project_description, str)
+        assert isinstance(project_is_component, bool)
+        assert isinstance(updated_at_datetime, datetime)
+        assert isinstance(project_data, dict)
+        assert isinstance(project_icon, str) or project_icon is None
+        assert isinstance(project_icon_bg_color, str) or project_icon_bg_color is None
 
 
 def test_create_or_update_starter_projects(client):
