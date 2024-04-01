@@ -3,8 +3,8 @@ from typing import Optional
 from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
 from pydantic.v1 import SecretStr
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import Text
 
 
 class QianfanChatEndpointComponent(LCModelComponent):
@@ -83,7 +83,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
             "input_value": {"display_name": "Input"},
             "stream": {
                 "display_name": "Stream",
-                "info": "Stream the response from the model.",
+                "info": STREAM_INFO_TEXT,
                 "advanced": True,
             },
             "system_message": {

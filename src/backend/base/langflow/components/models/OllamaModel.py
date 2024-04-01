@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 # from langchain_community.chat_models import ChatOllama
 from langchain_community.chat_models import ChatOllama
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 
 # from langchain.chat_models import ChatOllama
@@ -201,7 +202,7 @@ class ChatOllamaComponent(LCModelComponent):
             "input_value": {"display_name": "Input"},
             "stream": {
                 "display_name": "Stream",
-                "info": "Stream the response from the model.",
+                "info": STREAM_INFO_TEXT,
             },
             "system_message": {
                 "display_name": "System Message",
