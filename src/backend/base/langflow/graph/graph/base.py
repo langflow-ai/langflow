@@ -15,7 +15,7 @@ from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import ChatVertex, FileToolVertex, LLMVertex, RoutingVertex, StateVertex, ToolkitVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.schema import Record
-from langflow.schema.schema import INPUT_FIELD_NAME
+from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
@@ -201,7 +201,7 @@ class Graph:
         self,
         inputs: Dict[str, str],
         input_components: list[str],
-        input_type: Literal["chat", "text", "any"] | None,
+        input_type: InputType | None,
         outputs: list[str],
         stream: bool,
         session_id: str,
@@ -271,7 +271,7 @@ class Graph:
         self,
         inputs: list[Dict[str, str]],
         input_components: Optional[list[list[str]]] = None,
-        types: Optional[list[Literal["chat", "text", "any"] | None]] = None,
+        types: Optional[list[InputType | None]] = None,
         outputs: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         stream: bool = False,
@@ -309,7 +309,7 @@ class Graph:
         self,
         inputs: list[Dict[str, str]],
         inputs_components: Optional[list[list[str]]] = None,
-        types: Optional[list[Literal["chat", "text", "any"] | None]] = None,
+        types: Optional[list[InputType | None]] = None,
         outputs: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         stream: bool = False,
