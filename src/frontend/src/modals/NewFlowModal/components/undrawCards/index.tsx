@@ -13,7 +13,7 @@ import { ReactComponent as ChatBot } from "../../../../assets/undraw_chat_bot_re
 //@ts-ignore
 import { ReactComponent as BlogPost } from "../../../../assets/undraw_blog_post_re_fy5x.svg";
 //@ts-ignore
-import { ReactComponent as BasicPrompt } from "../../../../assets/undraw_design_components_9vy6.svg";
+import { ReactComponent as BasicPrompt } from "../../../../assets/undraw_short_bio_re_fmx0.svg";
 
 import {
   Card,
@@ -47,8 +47,8 @@ export default function UndrawCardComponent({
         return (
           <BasicPrompt
             style={{
-              width: "80%",
-              height: "80%",
+              width: "65%",
+              height: "65%",
               preserveAspectRatio: "xMidYMid meet",
             }}
           />
