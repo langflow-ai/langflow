@@ -1129,7 +1129,7 @@
     }
   },
   "description": "This project can be used as a starting point for building a Chat experience with user specific memory. You can set a different Session ID to start a new message history.",
-  "name": "Conversation with Memory",
+  "name": "Chatbot with Memory",
   "last_tested_version": "1.0.0a0",
   "is_component": false
 }
