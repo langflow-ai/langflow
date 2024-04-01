@@ -1,11 +1,16 @@
 from gunicorn.app.base import BaseApplication  # type: ignore
+from uvicorn.workers import UvicornWorker
+
+
+class LangflowUvicornWorker(UvicornWorker):
+    CONFIG_KWARGS = {"loop": "asyncio"}
 
 
 class LangflowApplication(BaseApplication):
     def __init__(self, app, options=None):
         self.options = options or {}
 
-        self.options["worker_class"] = "uvicorn.workers.UvicornWorker"
+        self.options["worker_class"] = "langflow.server.LangflowUvicornWorker"
         self.application = app
         super().__init__()
 
