@@ -31,6 +31,7 @@ import {
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
+import ForwardedIconComponent from "../../../../components/genericIconComponent";
 
 export default function NodeToolbarComponent({
   data,
@@ -368,14 +369,67 @@ export default function NodeToolbarComponent({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
     };
+
   }, [isSaved, showNode, data.showNode, isMinimal]);
+
+  function renderTooltips({
+    shift,
+    keyboardKey,
+    isMac,
+    value}: {
+      shift: boolean;
+      keyboardKey: string;
+      isMac: boolean;
+      value: string;
+  }) {
+    return (
+      <div className="flex flex-col justify-center text-center">
+        <span className={""}>{value}</span>
+        <div className="flex">
+          {isMac ? (
+            <ForwardedIconComponent
+              name="Command"
+              className={`
+              ${shift ? " right2 " : "right1.15"}
+              top0.65 h-3.5 w-3.5 stroke-2 ${""}`}
+            ></ForwardedIconComponent>
+          ) : (
+            <span
+              className={` ${
+                shift ? " right2.15 " : "right1.15"
+              } top0.43em stroke-2 `}
+            >
+              {shift ? "Ctrl" : "Ctrl +"}
+            </span>
+          )}
+          {shift && (
+            <ForwardedIconComponent
+              name="ArrowBigUp"
+              className={`right1.15 top0.65 h-3.5 w-3.5 stroke-2 ${""}`}
+            />
+          )}
+          <span className={`right-2 top0.43 ${""}`}>
+            {keyboardKey}
+          </span>
+        </div>
+    </div>
+    );
+  }
 
   return (
     <>
       <div className="w-26 h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
           {hasCode && (
-            <ShadTooltip content="Code" side="top">
+            <ShadTooltip
+              content={renderTooltips({
+                shift: true,
+                keyboardKey: "U",
+                isMac: navigator.userAgent.toUpperCase().includes("MAC"),
+                value: "Code"
+              })}
+              side="top"
+            >
               <button
                 className="relative inline-flex items-center rounded-l-md  bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
                 onClick={() => {
