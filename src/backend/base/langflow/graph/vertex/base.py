@@ -4,6 +4,7 @@ import inspect
 import types
 from enum import Enum
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
+
 from loguru import logger
 
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
@@ -385,6 +386,7 @@ class Vertex:
                 if key not in self._raw_params:
                     new_params.pop(key)
         self._raw_params.update(new_params)
+        self.params = self._raw_params.copy()
         self.updated_raw_params = True
 
     async def _build(self, user_id=None):
