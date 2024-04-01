@@ -130,4 +130,5 @@ if __name__ == "__main__":
         workers=get_number_of_workers(),
         log_level="debug",
         reload=True,
+        loop="asyncio",
     )
