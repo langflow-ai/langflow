@@ -1,5 +1,5 @@
 import copy
-from typing import Optional
+from typing import Literal, Optional
 
 from langchain_core.documents import Document
 from pydantic import BaseModel, model_validator
@@ -145,3 +145,6 @@ class Record(BaseModel):
 
 
 INPUT_FIELD_NAME = "input_value"
+
+InputType = Literal["chat", "text", "any"]
+OutputType = Literal["chat", "text", "any", "debug"]
