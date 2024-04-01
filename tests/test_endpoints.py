@@ -424,6 +424,19 @@ def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_histo
     assert response.status_code == 500
 
 
+# Helper function to poll task status
+def poll_task_status(client, headers, href, max_attempts=20, sleep_time=1):
+    for _ in range(max_attempts):
+        task_status_response = client.get(
+            href,
+            headers=headers,
+        )
+        if task_status_response.status_code == 200 and task_status_response.json()["status"] == "SUCCESS":
+            return task_status_response.json()
+        time.sleep(sleep_time)
+    return None  # Return None if task did not complete in time
+
+
 def test_successful_run(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
@@ -455,11 +468,14 @@ def test_run_with_inputs_and_outputs(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
     payload = {
-        "inputs": [{"components": ["component1"], "input_value": "value1"}],
-        "outputs": ["Component Name", "component_id"],
+        "input_value": "value1",
+        "input_type": "text",
+        "output_type": "text",
+        "tweaks": {"parameter_name": "value"},
+        "stream": False,
     }
     response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == status.HTTP_200_OK, response.text
     # Validate the response structure and content
 
 
@@ -475,16 +491,10 @@ def test_run_flow_with_caching_success(client: TestClient, starter_project, crea
     flow_id = starter_project["id"]
     headers = {"x-api-key": created_api_key.api_key}
     payload = {
-        "inputs": [
-            {"components": ["component1"], "input_value": "value1"},
-            {"components": ["component3"], "input_value": "value2"},
-        ],
-        "outputs": ["Component Name", "component_id"],
-        "tweaks": {
-            "parameter_name": "value",
-            "Component Name": {"parameter_name": "value"},
-            "component_id": {"parameter_name": "value"},
-        },
+        "input_value": "value1",
+        "input_type": "text",
+        "output_type": "text",
+        "tweaks": {"parameter_name": "value"},
         "stream": False,
     }
     response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
@@ -497,7 +507,7 @@ def test_run_flow_with_caching_success(client: TestClient, starter_project, crea
 def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created_api_key):
     invalid_flow_id = uuid4()
     headers = {"x-api-key": created_api_key.api_key}
-    payload = {"inputs": [], "outputs": [], "tweaks": {}, "stream": False}
+    payload = {"input_value": "", "input_type": "text", "output_type": "text", "tweaks": {}, "stream": False}
     response = client.post(f"/api/v1/run/{invalid_flow_id}", json=payload, headers=headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND
     data = response.json()
@@ -508,8 +518,7 @@ def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created_api_k
 def test_run_flow_with_caching_invalid_input_format(client: TestClient, starter_project, created_api_key):
     flow_id = starter_project["id"]
     headers = {"x-api-key": created_api_key.api_key}
-    payload = {"inputs": [{"invalid_key": "value"}], "outputs": [], "tweaks": {}, "stream": False}
-    # This should raise an http 422 error not validation error
+    payload = {"invalid_key": "value"}
     response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -518,8 +527,9 @@ def test_run_flow_with_session_id(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
     payload = {
-        "inputs": [{"components": ["component1"], "input_value": "value1"}],
-        "outputs": ["Component Name", "component_id"],
+        "input_value": "value1",
+        "input_type": "text",
+        "output_type": "text",
         "session_id": "test-session-id",
     }
     response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
@@ -534,8 +544,9 @@ def test_run_flow_with_invalid_session_id(client, starter_project, created_api_k
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
     payload = {
-        "inputs": [{"components": ["component1"], "input_value": "value1"}],
-        "outputs": ["Component Name", "component_id"],
+        "input_value": "value1",
+        "input_type": "text",
+        "output_type": "text",
         "session_id": "invalid-session-id",
     }
     response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
@@ -549,8 +560,9 @@ def test_run_flow_with_invalid_tweaks(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
     payload = {
-        "inputs": [{"components": ["component1"], "input_value": "value1"}],
-        "outputs": ["Component Name", "component_id"],
+        "input_value": "value1",
+        "input_type": "text",
+        "output_type": "text",
         "tweaks": {"invalid_tweak": "value"},
     }
     response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
