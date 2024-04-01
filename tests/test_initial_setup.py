@@ -1,14 +1,13 @@
-from itertools import chain
-
 import pytest
 from langflow.graph.graph.base import Graph
-from langflow.graph.schema import ResultData
+from langflow.graph.schema import RunOutputs
 from langflow.initial_setup.setup import (
     STARTER_FOLDER_NAME,
     create_or_update_starter_projects,
     get_project_data,
     load_starter_projects,
 )
+from langflow.memory import delete_messages
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
 from sqlalchemy import func
@@ -61,16 +60,15 @@ async def test_starter_project_can_run_successfully(client):
         # Get all the starter projects
         projects = session.exec(select(Flow).where(Flow.folder == STARTER_FOLDER_NAME)).all()
 
-        graphs: list[Graph] = [
+        graphs: list[tuple[str, Graph]] = [
             (project.name, Graph.from_payload(project.data, flow_id=project.id)) for project in projects
         ]
         assert len(graphs) == len(projects)
     for name, graph in graphs:
-        outputs = await graph.run(
+        outputs = await graph.arun(
             inputs={},
             outputs=[],
             session_id="test",
         )
-        assert all(
-            isinstance(output, ResultData) for output in chain.from_iterable(outputs)
-        ), f"Project {name} error: {outputs}"
+        assert all(isinstance(output, RunOutputs) for output in outputs), f"Project {name} error: {outputs}"
+        delete_messages(session_id="test")
