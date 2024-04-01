@@ -289,11 +289,10 @@ export function buildTweakObject(tweak: tweakType) {
 
 /**
  * Function to get Chat Input Field
- * @param {FlowType} flow - The current flow.
  * @param {FlowsState} tabsState - The current tabs state.
  * @returns {string} - The chat input field
  */
-export function getChatInputField(flow: FlowType, flowState?: FlowState) {
+export function getChatInputField(flowState?: FlowState) {
   let chat_input_field = "text";
 
   if (flowState && flowState.input_keys) {
@@ -305,13 +304,14 @@ export function getChatInputField(flow: FlowType, flowState?: FlowState) {
 /**
  * Function to get the python code for the API
  * @param {string} flowId - The id of the flow
+ * @param {boolean} isAuth - If the API is authenticated
+ * @param {any[]} tweak - The tweaks
  * @returns {string} - The python code
  */
 export function getPythonApiCode(
   flow: FlowType,
   isAuth: boolean,
-  tweak?: any[],
-  flowState?: FlowState
+  tweak?: any[]
 ): string {
   const flowId = flow.id;
 
@@ -320,13 +320,10 @@ export function getPythonApiCode(
   //   node.data.id
   // }
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs();
   return `import requests
 from typing import Optional
 
-BASE_API_URL = "${window.location.protocol}//${
-    window.location.host
-  }/api/v1/process"
+BASE_API_URL = "${window.location.protocol}//${window.location.host}/api/v1/run"
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
@@ -336,9 +333,12 @@ TWEAKS = ${
       : JSON.stringify(tweaks, null, 2)
   }
 
-def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${
-    !isAuth ? `, api_key: Optional[str] = None` : ""
-  }) -> dict:
+def run_flow(message: str,
+  flow_id: str,
+  output_type: str = "chat",
+  input_type: str = "chat",
+  tweaks: Optional[dict] = None,
+  api_key: Optional[str] = None) -> dict:
     """
     Run a flow with a given message and optional tweaks.
 
@@ -349,7 +349,11 @@ def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${
     """
     api_url = f"{BASE_API_URL}/{flow_id}"
 
-    payload = {"inputs": inputs}
+    payload = {
+        "input_value": message,
+        "output_type": output_type,
+        "input_type": input_type,
+    }
     headers = None
     if tweaks:
         payload["tweaks"] = tweaks
@@ -359,9 +363,9 @@ def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${
     return response.json()
 
 # Setup any tweaks you want to apply to the flow
-inputs = ${inputs}
+message = "message"
 ${!isAuth ? `api_key = "<your api key>"` : ""}
-print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS${
+print(run_flow(message=message, flow_id=FLOW_ID, tweaks=TWEAKS${
     !isAuth ? `, api_key=api_key` : ""
   }))`;
 }
@@ -369,28 +373,27 @@ print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS${
 /**
  * Function to get the curl code for the API
  * @param {string} flowId - The id of the flow
+ * @param {boolean} isAuth - If the API is authenticated
  * @returns {string} - The curl code
  */
 export function getCurlCode(
   flow: FlowType,
   isAuth: boolean,
-  tweak?: any[],
-  flowState?: FlowState
+  tweak?: any[]
 ): string {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs();
-
-  const arrayOfOutputs = getOutputIds(flow);
 
   return `curl -X POST \\
-  ${window.location.protocol}//${window.location.host}/api/v1/run/${flowId} \\
+  ${window.location.protocol}//${
+    window.location.host
+  }/api/v1/run/${flowId}?stream=false \\
   -H 'Content-Type: application/json'\\${
     !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
   }
-  -d '{"inputs": [${inputs}],
-  "outputs": [${arrayOfOutputs}], 
-  "stream": false,
+  -d '{"input_value": "message",
+  "output_type": "chat",
+  "input_type": "chat",
   "tweaks": ${
     tweak && tweak.length > 0
       ? buildTweakObject(tweak)
@@ -419,26 +422,23 @@ export function getOutputIds(flow) {
 /**
  * Function to get the python code for the API
  * @param {string} flow - The current flow
+ * @param {any[]} tweak - The tweaks
  * @returns {string} - The python code
  */
-export function getPythonCode(
-  flow: FlowType,
-  tweak?: any[],
-  flowState?: FlowState
-): string {
+export function getPythonCode(flow: FlowType, tweak?: any[]): string {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs();
-  return `from langflow.load import load_flow_from_json
+
+  return `from langflow.load import run_flow_from_json
 TWEAKS = ${
     tweak && tweak.length > 0
       ? buildTweakObject(tweak)
       : JSON.stringify(tweaks, null, 2)
   }
-flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
-# Now you can use it like any chain
-inputs = ${inputs}
-flow(inputs)`;
+
+result = run_flow_from_json(flow="${flowName}.json",
+                            input_value="message",
+                            tweaks=TWEAKS)`;
 }
 
 /**
@@ -454,7 +454,7 @@ export function getWidgetCode(
   const flowId = flow.id;
   const flowName = flow.name;
   const inputs = buildInputs();
-  let chat_input_field = getChatInputField(flow, flowState);
+  let chat_input_field = getChatInputField(flowState);
 
   return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 
