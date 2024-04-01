@@ -4,8 +4,8 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
+
 from langflow.interface.custom.directory_reader.directory_reader import DirectoryReader
-from langflow.memory import delete_messages
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
 
@@ -424,11 +424,10 @@ def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_histo
     assert response.status_code == 500
 
 
-def test_successful_run(client, starter_project, created_api_key):
+def test_successful_run_no_payload(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
-    delete_messages("MySessionID")
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -444,12 +443,98 @@ def test_successful_run(client, starter_project, created_api_key):
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
-    assert all([id in ids for id in ["ChatOutput-ImuK8"]])
+    assert all(["ChatOutput" in _id for _id in ids])
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
     assert all([name in display_names for name in ["Chat Output"]])
     inner_results = [output.get("results").get("result") for output in outputs_dict.get("outputs")]
     expected_result = "Langflow"
     assert all([expected_result in result for result in inner_results]), inner_results
+
+
+def test_successful_run_with_output_type_text(client, starter_project, created_api_key):
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = starter_project["id"]
+    payload = {
+        "output_type": "text",
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    assert response.status_code == status.HTTP_200_OK, response.text
+    # Add more assertions here to validate the response content
+    json_response = response.json()
+    assert "session_id" in json_response
+    assert "outputs" in json_response
+    outer_outputs = json_response["outputs"]
+    assert len(outer_outputs) == 1
+    outputs_dict = outer_outputs[0]
+    assert len(outputs_dict) == 2
+    assert "inputs" in outputs_dict
+    assert "outputs" in outputs_dict
+    assert outputs_dict.get("inputs") == {"input_value": ""}
+    assert isinstance(outputs_dict.get("outputs"), list)
+    assert len(outputs_dict.get("outputs")) == 1
+    ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
+    assert all(["TextOutput" in _id for _id in ids]), ids
+    display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
+    assert all([name in display_names for name in ["Prompt Output"]]), display_names
+    inner_results = [output.get("results").get("result") for output in outputs_dict.get("outputs")]
+    expected_result = "Langflow"
+    assert all([expected_result in result for result in inner_results]), inner_results
+
+
+def test_successful_run_with_output_type_any(client, starter_project, created_api_key):
+    # This one should have both the ChatOutput and TextOutput components
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = starter_project["id"]
+    payload = {
+        "output_type": "any",
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    assert response.status_code == status.HTTP_200_OK, response.text
+    # Add more assertions here to validate the response content
+    json_response = response.json()
+    assert "session_id" in json_response
+    assert "outputs" in json_response
+    outer_outputs = json_response["outputs"]
+    assert len(outer_outputs) == 1
+    outputs_dict = outer_outputs[0]
+    assert len(outputs_dict) == 2
+    assert "inputs" in outputs_dict
+    assert "outputs" in outputs_dict
+    assert outputs_dict.get("inputs") == {"input_value": ""}
+    assert isinstance(outputs_dict.get("outputs"), list)
+    assert len(outputs_dict.get("outputs")) == 2
+    ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
+    assert all(["ChatOutput" in _id or "TextOutput" in _id for _id in ids]), ids
+    display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
+    assert all([name in display_names for name in ["Chat Output", "Prompt Output"]]), display_names
+    inner_results = [output.get("results").get("result") for output in outputs_dict.get("outputs")]
+    expected_result = "Langflow"
+    assert all([expected_result in result for result in inner_results]), inner_results
+
+
+def test_successful_run_with_output_type_debug(client, starter_project, created_api_key):
+    # This one should return outputs for all components
+    # Let's just check the amount of outputs(there hsould be 7)
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = starter_project["id"]
+    payload = {
+        "output_type": "debug",
+    }
+    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    assert response.status_code == status.HTTP_200_OK, response.text
+    # Add more assertions here to validate the response content
+    json_response = response.json()
+    assert "session_id" in json_response
+    assert "outputs" in json_response
+    outer_outputs = json_response["outputs"]
+    assert len(outer_outputs) == 1
+    outputs_dict = outer_outputs[0]
+    assert len(outputs_dict) == 2
+    assert "inputs" in outputs_dict
+    assert "outputs" in outputs_dict
+    assert outputs_dict.get("inputs") == {"input_value": ""}
+    assert isinstance(outputs_dict.get("outputs"), list)
+    assert len(outputs_dict.get("outputs")) == 7
 
 
 def test_run_with_inputs_and_outputs(client, starter_project, created_api_key):
@@ -506,7 +591,7 @@ def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created_api_k
 def test_run_flow_with_caching_invalid_input_format(client: TestClient, starter_project, created_api_key):
     flow_id = starter_project["id"]
     headers = {"x-api-key": created_api_key.api_key}
-    payload = {"invalid_key": "value"}
+    payload = {"input_value": {"key": "value"}, "input_type": "text", "output_type": "text", "tweaks": {}}
     response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
@@ -521,11 +606,9 @@ def test_run_flow_with_session_id(client, starter_project, created_api_key):
         "session_id": "test-session-id",
     }
     response = client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     data = response.json()
-    assert "outputs" in data
-    assert "session_id" in data
-    assert data["session_id"] == "test-session-id"
+    assert {"detail": "Session test-session-id not found"} == data
 
 
 def test_run_flow_with_invalid_session_id(client, starter_project, created_api_key):
