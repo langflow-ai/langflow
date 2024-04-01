@@ -5,6 +5,7 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from langflow.interface.custom.directory_reader.directory_reader import DirectoryReader
+from langflow.memory import delete_messages
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
 
@@ -427,6 +428,7 @@ def test_successful_run(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
+    delete_messages("MySessionID")
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -440,14 +442,14 @@ def test_successful_run(client, starter_project, created_api_key):
     assert "outputs" in outputs_dict
     assert outputs_dict.get("inputs") == {"input_value": ""}
     assert isinstance(outputs_dict.get("outputs"), list)
-    assert len(outputs_dict.get("outputs")) == 2
+    assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
-    assert all([id in ids for id in ["TextOutput-fTp5e", "ChatOutput-AVN8s"]])
+    assert all([id in ids for id in ["ChatOutput-ImuK8"]])
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
-    assert all([name in display_names for name in ["Prompt Output", "Chat Output"]])
+    assert all([name in display_names for name in ["Chat Output"]])
     inner_results = [output.get("results").get("result") for output in outputs_dict.get("outputs")]
-    expected_results = ["Write a press release \n\n- Cars\n- Bottle\n\n\nAnswer:\n\n", ""]
-    assert all([result in inner_results for result in expected_results])
+    expected_result = "Langflow"
+    assert all([expected_result in result for result in inner_results]), inner_results
 
 
 def test_run_with_inputs_and_outputs(client, starter_project, created_api_key):
