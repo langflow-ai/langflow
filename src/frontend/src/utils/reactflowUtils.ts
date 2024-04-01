@@ -1192,6 +1192,20 @@ export function removeFileNameFromComponents(flow: FlowType) {
   });
 }
 
+export function removeGlobalVariableFromComponents(flow: FlowType) {
+  flow.data!.nodes.forEach((node: NodeType) => {
+    Object.keys(node.data.node!.template).forEach((field) => {
+      if (node.data?.node?.template[field]?.load_from_db) {
+        node.data.node!.template[field].value = "";
+        node.data.node!.template[field].load_from_db = false;
+      }
+    });
+    if (node.data.node?.flow) {
+      removeGlobalVariableFromComponents(node.data.node.flow);
+    }
+  });
+}
+
 export function typesGenerator(data: APIObjectType) {
   return Object.keys(data)
     .reverse()
