@@ -23,7 +23,7 @@ export default function NewFlowModal({
           /> */}
       </BaseModal.Header>
       <BaseModal.Content>
-        <div className=" grid h-fit w-full grid-cols-3 gap-3 overflow-auto p-4 custom-scroll">
+        <div className=" mb-5 grid h-fit w-full grid-cols-3 gap-4 overflow-auto pb-6 custom-scroll">
           <NewFlowCardComponent />
           {/* {examples.map((example, idx) => {
             return <UndrawCardComponent key={idx} flow={example} />;
