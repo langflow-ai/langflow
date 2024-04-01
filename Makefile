@@ -92,7 +92,7 @@ run_cli_debug:
 	@echo 'Install backend dependencies'
 	@make install_backend > /dev/null
 ifdef env
-    @make start env=$(env) host=$(host) port=$(port) log_level=debug
+	@make start env=$(env) host=$(host) port=$(port) log_level=debug
 else
 	@make start host=$(host) port=$(port) log_level=debug
 endif
