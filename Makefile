@@ -99,6 +99,7 @@ endif
 
 start:
 	@echo 'Running the CLI'
+	@make install_backend
 ifeq ($(open_browser),false)
 	poetry run langflow run --path src/frontend/build --log-level $(log_level) --host $(host) --port $(port) --env-file $(env) --no-open-browser
 else
@@ -137,7 +138,7 @@ ifeq ($(login),1)
 	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio
 else
 	@echo "Running backend with autologin";
-	LANGFLOW_AUTO_LOGIN=True poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env
+	LANGFLOW_AUTO_LOGIN=True poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env  --loop asyncio
 endif
 
 build_and_run:
