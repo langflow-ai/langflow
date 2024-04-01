@@ -69,11 +69,23 @@ async def simplified_run_flow(
     - `input_request` (SimplifiedAPIRequest): A request model containing:
         - `input_value` (Optional[str], default=""): Input value to pass to the flow.
         - `input_type` (Optional[Literal["chat", "text", "any"]], default="chat"): Type of the input value, determining how the input is interpreted.
-        - `output_type` (Optional[Literal["chat", "text", "any", "debug"]], default="chat"): Desired type of output, affecting which components' outputs are included in the response.
+        - `output_type` (Optional[Literal["chat", "text", "any", "debug"]], default="chat"): Desired type of output, affecting which components' outputs are included in the response. If set to "debug", all outputs are returned.
         - `tweaks` (Optional[Tweaks], default=None): Adjustments to the flow's behavior, allowing for custom execution parameters.
         - `session_id` (Optional[str], default=None): An identifier for reusing session data, aiding in performance for subsequent requests.
     - `api_key_user` (User): User object derived from the provided API key, used for authentication.
     - `session_service` (SessionService): Service for managing flow sessions, essential for session reuse and caching.
+
+    ### SimplifiedAPIRequest:
+    - `input_value` (Optional[str], default=""): Input value to pass to the flow.
+    - `input_type` (Optional[Literal["chat", "text", "any"]], default="chat"): Type of the input value, determining how the input is interpreted.
+    - `output_type` (Optional[Literal["chat", "text", "any", "debug"]], default="chat"): Desired type of output, affecting which components' outputs are included in the response. If set to "debug", all outputs are returned.
+    - `tweaks` (Optional[Tweaks], default=None): Adjustments to the flow's behavior, allowing for custom execution parameters.
+    - `session_id` (Optional[str], default=None): An identifier for reusing session data, aiding in performance for subsequent requests.
+
+    ### Tweaks
+    A dictionary of tweaks to customize the flow execution. The tweaks can be used to modify the flow's parameters and components. Tweaks can be overridden by the input values.
+    You can use Component's `id` or Display Name as key to tweak a specific component (e.g., `{"Component Name": {"parameter_name": "value"}}`).
+    You can also use the parameter name as key to tweak all components with that parameter (e.g., `{"parameter_name": "value"}`).
 
     ### Returns:
     - A `RunResponse` object containing the execution results, including selected (or all, based on `output_type`) outputs of the flow and the session ID, facilitating result retrieval and further interactions in a session context.
