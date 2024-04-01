@@ -3,8 +3,8 @@ from typing import Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic.v1 import SecretStr
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import RangeSpec, Text
 
 
 class GoogleGenerativeAIComponent(LCModelComponent):
@@ -67,7 +67,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             "input_value": {"display_name": "Input", "info": "The input to the model."},
             "stream": {
                 "display_name": "Stream",
-                "info": "Stream the response from the model.",
+                "info": STREAM_INFO_TEXT,
                 "advanced": True,
             },
             "system_message": {

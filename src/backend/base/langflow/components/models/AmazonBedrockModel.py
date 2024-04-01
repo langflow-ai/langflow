@@ -2,6 +2,7 @@ from typing import Optional
 
 from langchain_community.chat_models.bedrock import BedrockChat
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Text
 
@@ -65,7 +66,7 @@ class AmazonBedrockComponent(LCModelComponent):
             },
             "stream": {
                 "display_name": "Stream",
-                "info": "Stream the response from the model.",
+                "info": STREAM_INFO_TEXT,
                 "advanced": True,
             },
         }

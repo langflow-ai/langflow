@@ -2,8 +2,8 @@ from typing import Optional
 
 from langchain_openai import ChatOpenAI
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import NestedDict, Text
 
 
 class OpenAIModelComponent(LCModelComponent):
@@ -69,7 +69,7 @@ class OpenAIModelComponent(LCModelComponent):
             },
             "stream": {
                 "display_name": "Stream",
-                "info": "Stream the response from the model.",
+                "info": STREAM_INFO_TEXT,
                 "advanced": True,
             },
             "system_message": {
