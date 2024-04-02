@@ -144,10 +144,11 @@ endif
 
 build_and_run:
 	@echo 'Removing dist folder'
+	@make setup_env
 	rm -rf dist
 	rm -rf src/backend/base/dist
 	make build
-	poetry run pip install dist/*.tar.gz && pip install src/backend/base/dist/*.tar.gz
+	poetry run pip install dist/*.tar.gz
 	poetry run langflow run
 
 build_and_install:
@@ -166,14 +167,21 @@ build:
 	make build_langflow_base
 	make build_langflow
 
-build_langflow:
-	poetry build-rewrite-path-deps --version-pinning-strategy=semver
-
 build_langflow_base:
 	make install_frontend
 	make build_frontend
 	cd src/backend/base && poetry build-rewrite-path-deps --version-pinning-strategy=semver
 	rm -rf src/backend/base/langflow/frontend
+
+build_langflow_backup:
+	poetry lock && poetry build-rewrite-path-deps --version-pinning-strategy=semver
+
+build_langflow:
+	python update_dependencies.py
+	poetry lock
+	poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	mv pyproject.toml2 pyproject.toml
+	mv poetry.lock2 poetry.lock
 
 dev:
 	make install_frontend
@@ -193,10 +201,9 @@ lock_langflow:
 
 lock:
 # Run both in parallel
-	# cd src/backend/base && poetry lock
-	# poetry lock
 	@echo 'Locking dependencies'
-	@make -j2 lock_base lock_langflow
+	cd src/backend/base && poetry lock
+	poetry lock
 publish_base:
 	make build_langflow_base
 	cd src/backend/base && poetry publish

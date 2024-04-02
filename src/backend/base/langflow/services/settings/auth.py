@@ -40,9 +40,9 @@ class AuthSettings(BaseSettings):
     """The Secure attribute of the refresh token cookie."""
     REFRESH_HTTPONLY: bool = True
     """The HttpOnly attribute of the refresh token cookie."""
-    ACCESS_SAME_SITE: Literal["lax", "strict", "none"] = "none"
+    ACCESS_SAME_SITE: Literal["lax", "strict", "none"] = "lax"
     """The SameSite attribute of the access token cookie."""
-    ACCESS_SECURE: bool = True
+    ACCESS_SECURE: bool = False
     """The Secure attribute of the access token cookie."""
     ACCESS_HTTPONLY: bool = False
     """The HttpOnly attribute of the access token cookie."""

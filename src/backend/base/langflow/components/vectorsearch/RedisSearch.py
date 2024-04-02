@@ -39,6 +39,11 @@ class RedisSearchComponent(RedisComponent, LCVectorStoreComponent):
                 "advanced": False,
             },
             "redis_index_name": {"display_name": "Redis Index", "advanced": False},
+            "number_of_results": {
+                "display_name": "Number of Results",
+                "info": "Number of results to return.",
+                "advanced": True,
+            },
         }
 
     def build(  # type: ignore[override]
@@ -48,6 +53,7 @@ class RedisSearchComponent(RedisComponent, LCVectorStoreComponent):
         embedding: Embeddings,
         redis_server_url: str,
         redis_index_name: str,
+        number_of_results: int = 4,
         schema: Optional[str] = None,
     ) -> List[Record]:
         """
@@ -72,5 +78,5 @@ class RedisSearchComponent(RedisComponent, LCVectorStoreComponent):
             raise ValueError("Failed to load the Redis index.")
 
         return self.search_with_vector_store(
-            input_value=input_value, search_type=search_type, vector_store=vector_store
+            input_value=input_value, search_type=search_type, vector_store=vector_store, k=number_of_results
         )

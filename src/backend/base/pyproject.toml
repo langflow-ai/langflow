@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.13"
+version = "0.0.15"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -52,12 +52,6 @@ docstring-parser = "^0.15"
 python-jose = "^3.3.0"
 pandas = "2.2.0"
 multiprocess = "^0.70.14"
-opentelemetry-api = "^1.23.0"
-opentelemetry-sdk = "^1.23.0"
-opentelemetry-exporter-otlp = "^1.23.0"
-opentelemetry-instrumentation-fastapi = "^0.44b0"
-opentelemetry-instrumentation-httpx = "^0.44b0"
-opentelemetry-instrumentation-asgi = "^0.44b0"
 duckdb = "^0.9.2"
 python-socketio = "^5.11.0"
 python-docx = "^1.1.0"
