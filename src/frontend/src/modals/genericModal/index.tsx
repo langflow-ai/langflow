@@ -4,6 +4,7 @@ import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
+import Scroller from "../../components/ui/scroller";
 import { Textarea } from "../../components/ui/textarea";
 import {
   BUG_ALERT,
@@ -266,10 +267,7 @@ export default function GenericModal({
             <div className="mb-auto flex-1">
               {type === TypeModal.PROMPT && (
                 <div className=" mr-2">
-                  <div
-                    ref={divRef}
-                    className="max-h-20 overflow-y-auto custom-scroll"
-                  >
+                  <Scroller ref={divRef} className="max-h-20 overflow-y-auto">
                     <div className="flex flex-wrap items-center">
                       <IconComponent
                         name="Braces"
@@ -303,7 +301,7 @@ export default function GenericModal({
                         </ShadTooltip>
                       ))}
                     </div>
-                  </div>
+                  </Scroller>
                   <span className="mt-2 text-xs text-muted-foreground">
                     Prompt variables can be created with any chosen name inside
                     curly brackets, e.g. {"{variable_name}"}
