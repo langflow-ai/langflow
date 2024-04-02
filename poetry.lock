@@ -3920,49 +3920,56 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.15"
+version = "0.0.16"
 description = "A Python package with a built-in web application"
 optional = false
-python-versions = "<3.12,>=3.10"
-files = [
-    {file = "langflow_base-0.0.15-py3-none-any.whl", hash = "sha256:26848f1796a686bceaae762d19520c0587fd03a3684653f4a139a1d5201a9801"},
-    {file = "langflow_base-0.0.15.tar.gz", hash = "sha256:2d2796ab21a4e5b1b1fe84e1f53cbbced912010ecdff866151f2a7853a6e3828"},
-]
+python-versions = ">=3.10,<3.12"
+files = []
+develop = true
 
 [package.dependencies]
-alembic = ">=1.13.0,<2.0.0"
+alembic = "^1.13.0"
 bcrypt = "4.0.1"
-cachetools = ">=5.3.1,<6.0.0"
-chromadb = ">=0.4.24,<0.5.0"
-docstring-parser = ">=0.15,<0.16"
-duckdb = ">=0.9.2,<0.10.0"
-fastapi = ">=0.109.0,<0.110.0"
-gunicorn = ">=21.2.0,<22.0.0"
+cachetools = "^5.3.1"
+chromadb = "^0.4.24"
+docstring-parser = "^0.15"
+duckdb = "^0.9.2"
+fastapi = "^0.109.0"
+gunicorn = "^21.2.0"
 httpx = "*"
-jq = {version = ">=1.7.0,<2.0.0", markers = "sys_platform != \"win32\""}
-langchain = ">=0.1.0,<0.2.0"
-langchain-anthropic = ">=0.1.4,<0.2.0"
-langchain-astradb = ">=0.1.0,<0.2.0"
+jq = {version = "^1.7.0", markers = "sys_platform != \"win32\""}
+langchain = "~0.1.0"
+langchain-anthropic = "^0.1.4"
+langchain-astradb = "^0.1.0"
 langchain-experimental = "*"
-loguru = ">=0.7.1,<0.8.0"
-multiprocess = ">=0.70.14,<0.71.0"
+loguru = "^0.7.1"
+multiprocess = "^0.70.14"
 orjson = "3.9.15"
 pandas = "2.2.0"
-passlib = ">=1.7.4,<2.0.0"
-pillow = ">=10.2.0,<11.0.0"
-platformdirs = ">=4.2.0,<5.0.0"
-pydantic = ">=2.5.0,<3.0.0"
-pydantic-settings = ">=2.1.0,<3.0.0"
-pypdf = ">=4.1.0,<5.0.0"
-python-docx = ">=1.1.0,<2.0.0"
-python-jose = ">=3.3.0,<4.0.0"
-python-multipart = ">=0.0.7,<0.0.8"
-python-socketio = ">=5.11.0,<6.0.0"
-rich = ">=13.7.0,<14.0.0"
-sqlmodel = ">=0.0.14,<0.0.15"
-typer = ">=0.9.0,<0.10.0"
-uvicorn = ">=0.27.0,<0.28.0"
+passlib = "^1.7.4"
+pillow = "^10.2.0"
+platformdirs = "^4.2.0"
+pydantic = "^2.5.0"
+pydantic-settings = "^2.1.0"
+pypdf = "^4.1.0"
+python-docx = "^1.1.0"
+python-jose = "^3.3.0"
+python-multipart = "^0.0.7"
+python-socketio = "^5.11.0"
+rich = "^13.7.0"
+sqlmodel = "^0.0.14"
+typer = "^0.9.0"
+uvicorn = "^0.27.0"
 websockets = "*"
+
+[package.extras]
+all = []
+deploy = []
+local = []
+
+[package.source]
+type = "directory"
+url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
@@ -10242,4 +10249,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "4ef2dac1b1b461770f49d06bb43a2a66c162f04494c37e48c5650f85cde1679d"
+content-hash = "3eb1181a83884c7ba52a7d1c98dcff13a307452eaf8f4a148fc0778f97499dfd"
