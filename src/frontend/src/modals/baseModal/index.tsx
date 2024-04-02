@@ -17,6 +17,7 @@ import {
 
 import { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
+import Scroller from "../../components/ui/scroller";
 
 type ContentProps = { children: ReactNode };
 type HeaderProps = { children: ReactNode; description: string };
@@ -188,15 +189,15 @@ function BaseModal({
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <DialogContent className={cn(minWidth, height, "flex flex-col duration-300")}>
+          <DialogContent className={cn(minWidth, height, "max-h-[95vh] flex flex-col duration-300")}>
             <div className="truncate-doubleline flex-shrink-0 word-break-break-word">
               {headerChild}
             </div>
-            <div
+            <Scroller
               className={`flex flex-col w-full min-h-0 grow transition-all duration-300`}
             >
               {ContentChild}
-            </div>
+            </Scroller>
             {(ContentFooter && ContentFooter !== <></>) && (
               <div className="flex flex-row-reverse flex-shrink-0">{ContentFooter}</div>
             )}

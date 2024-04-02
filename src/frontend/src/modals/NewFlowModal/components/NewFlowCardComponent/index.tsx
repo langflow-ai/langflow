@@ -17,7 +17,7 @@ export default function NewFlowCardComponent() {
           navigate("/flow/" + id);
         });
       }}
-      className="h-64 w-80 cursor-pointer bg-background pt-4"
+      className="h-64 cursor-pointer bg-background pt-4"
       data-testid="blank-flow"
     >
       <CardContent className="h-full w-full">

@@ -30,6 +30,7 @@ import {
 } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { ApiKey } from "../../types/components";
+import Scroller from "../../components/ui/scroller";
 
 export default function ApiKeysPage() {
   const [loadingKeys, setLoadingKeys] = useState(true);
@@ -126,9 +127,9 @@ export default function ApiKeysPage() {
                       <strong>Loading...</strong>
                     </div>
                   )}
-                  <div
+                  <Scroller
                     className={
-                      "max-h-[15rem] overflow-scroll overflow-x-hidden rounded-md border-2 bg-muted custom-scroll" +
+                      "max-h-[15rem] overflow-x-hidden rounded-md border-2 bg-muted" +
                       (loadingKeys ? " border-0" : "")
                     }
                   >
@@ -261,7 +262,7 @@ export default function ApiKeysPage() {
                           )}
                         </Table>
                       )}
-                  </div>
+                  </Scroller>
 
                   <div className="flex items-center justify-between">
                     <div>

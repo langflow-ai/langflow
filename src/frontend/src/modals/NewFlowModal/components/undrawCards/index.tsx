@@ -114,7 +114,7 @@ export default function UndrawCardComponent({
           navigate("/flow/" + id);
         });
       }}
-      className="h-64 w-80 cursor-pointer bg-background pt-4"
+      className="h-64 cursor-pointer bg-background pt-4"
     >
       <CardContent className="h-full w-full">
         <div className="flex h-full w-full flex-col items-center justify-center rounded-md bg-muted p-1 align-middle">
