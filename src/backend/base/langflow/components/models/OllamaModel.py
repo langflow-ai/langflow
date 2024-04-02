@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional
 # from langchain_community.chat_models import ChatOllama
 from langchain_community.chat_models import ChatOllama
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 
 # from langchain.chat_models import ChatOllama
@@ -13,15 +14,47 @@ from langflow.field_typing import Text
 
 
 class ChatOllamaComponent(LCModelComponent):
-    display_name = "ChatOllama"
-    description = "Generate text using Local LLM for chat with Ollama."
+    display_name = "Ollama"
+    description = "Generate text using Ollama Local LLMs."
     icon = "Ollama"
+
+    field_order = [
+        "base_url",
+        "model",
+        "temperature",
+        "cache",
+        "callback_manager",
+        "callbacks",
+        "format",
+        "metadata",
+        "mirostat",
+        "mirostat_eta",
+        "mirostat_tau",
+        "num_ctx",
+        "num_gpu",
+        "num_thread",
+        "repeat_last_n",
+        "repeat_penalty",
+        "tfs_z",
+        "timeout",
+        "top_k",
+        "top_p",
+        "verbose",
+        "tags",
+        "stop",
+        "system",
+        "template",
+        "input_value",
+        "system_message",
+        "stream",
+    ]
 
     def build_config(self) -> dict:
         return {
             "base_url": {
                 "display_name": "Base URL",
                 "info": "Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
+                "advanced": True,
             },
             "model": {
                 "display_name": "Model Name",
@@ -169,11 +202,12 @@ class ChatOllamaComponent(LCModelComponent):
             "input_value": {"display_name": "Input"},
             "stream": {
                 "display_name": "Stream",
-                "info": "Stream the response from the model.",
+                "info": STREAM_INFO_TEXT,
             },
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 

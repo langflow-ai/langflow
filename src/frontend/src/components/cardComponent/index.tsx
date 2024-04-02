@@ -250,7 +250,7 @@ export default function CollectionCardComponent({
                     >
                       <Button
                         variant="ghost"
-                        size="xs"
+                        size="icon"
                         className={
                           "whitespace-nowrap" +
                           (!authorized ? " cursor-not-allowed" : "")
@@ -275,7 +275,7 @@ export default function CollectionCardComponent({
                     <Button
                       disabled={loadingLike}
                       variant="ghost"
-                      size="xs"
+                      size="icon"
                       className={
                         "whitespace-nowrap" +
                         (!authorized ? " cursor-not-allowed" : "")
@@ -312,7 +312,7 @@ export default function CollectionCardComponent({
                   <Button
                     disabled={loading}
                     variant="ghost"
-                    size="xs"
+                    size="icon"
                     className={
                       "whitespace-nowrap" +
                       (!authorized ? " cursor-not-allowed" : "") +

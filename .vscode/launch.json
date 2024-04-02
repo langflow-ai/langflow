@@ -13,10 +13,29 @@
         "7860",
         "--reload",
         "--log-level",
-        "debug"
+        "debug",
+        "--loop",
+        "asyncio"
       ],
       "jinja": true,
-      "justMyCode": true,
+      "justMyCode": false,
+      "env": {
+        "LANGFLOW_LOG_LEVEL": "debug"
+      },
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Debug CLI",
+      "type": "python",
+      "request": "launch",
+      "module": "langflow",
+      "args": [
+        "run",
+        "--path",
+        "${workspaceFolder}/src/backend/langflow/frontend"
+      ],
+      "jinja": true,
+      "justMyCode": false,
       "env": {
         "LANGFLOW_LOG_LEVEL": "debug"
       },

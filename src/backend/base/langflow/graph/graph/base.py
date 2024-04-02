@@ -1,7 +1,7 @@
 import asyncio
 from collections import defaultdict, deque
 from itertools import chain
-from typing import TYPE_CHECKING, Coroutine, Dict, Generator, List, Optional, Type, Union
+from typing import TYPE_CHECKING, Callable, Coroutine, Dict, Generator, List, Literal, Optional, Type, Union
 
 from loguru import logger
 
@@ -15,7 +15,7 @@ from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import ChatVertex, FileToolVertex, LLMVertex, RoutingVertex, StateVertex, ToolkitVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.schema import Record
-from langflow.schema.schema import INPUT_FIELD_NAME
+from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
@@ -201,7 +201,7 @@ class Graph:
         self,
         inputs: Dict[str, str],
         input_components: list[str],
-        input_type: str,
+        input_type: InputType | None,
         outputs: list[str],
         stream: bool,
         session_id: str,
@@ -236,7 +236,7 @@ class Graph:
                     continue
                 # If the input_type is not any and the input_type is not in the vertex id
                 # Example: input_type = "chat" and vertex.id = "OpenAI-19ddn"
-                elif input_type != "any" and input_type not in vertex.id.lower():
+                elif input_type is not None and input_type != "any" and input_type not in vertex.id.lower():
                     continue
                 if vertex is None:
                     raise ValueError(f"Vertex {vertex_id} not found")
@@ -269,9 +269,9 @@ class Graph:
 
     def run(
         self,
-        inputs: Dict[str, str],
-        input_components: Optional[list[str]] = None,
-        types: Optional[list[str]] = None,
+        inputs: list[Dict[str, str]],
+        input_components: Optional[list[list[str]]] = None,
+        types: Optional[list[InputType | None]] = None,
         outputs: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         stream: bool = False,
@@ -309,7 +309,7 @@ class Graph:
         self,
         inputs: list[Dict[str, str]],
         inputs_components: Optional[list[list[str]]] = None,
-        types: Optional[list[str]] = None,
+        types: Optional[list[InputType | None]] = None,
         outputs: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         stream: bool = False,
@@ -338,8 +338,12 @@ class Graph:
             inputs = [{}]
         # Length of all should be the as inputs length
         # just add empty lists to complete the length
+        if inputs_components is None:
+            inputs_components = []
         for _ in range(len(inputs) - len(inputs_components)):
             inputs_components.append([])
+        if types is None:
+            types = []
         for _ in range(len(inputs) - len(types)):
             types.append("any")
         for run_inputs, components, input_type in zip(inputs, inputs_components, types):
@@ -599,8 +603,7 @@ class Graph:
         # This is a hack to make sure that the LLM vertex is sent to
         # the toolkit vertex
         self._build_vertex_params()
-        # remove invalid vertices
-        self._validate_vertices()
+
         # Now that we have the vertices and edges
         # We need to map the vertices that are connected to
         # to ChatVertex instances
@@ -627,14 +630,6 @@ class Graph:
                 if isinstance(vertex, ToolkitVertex):
                     vertex.params["llm"] = llm_vertex
 
-    def _validate_vertices(self) -> None:
-        """Check that all vertices have edges"""
-        if len(self.vertices) == 1:
-            return
-        for vertex in self.vertices:
-            if not self._validate_vertex(vertex):
-                raise ValueError(f"{vertex.display_name} is not connected to any other components")
-
     def _validate_vertex(self, vertex: Vertex) -> bool:
         """Validates a vertex."""
         # All vertices that do not have edges are invalid
@@ -650,7 +645,7 @@ class Graph:
     async def build_vertex(
         self,
         lock: asyncio.Lock,
-        set_cache_coro: Coroutine,
+        set_cache_coro: Callable[["Graph", asyncio.Lock], Coroutine],
         vertex_id: str,
         inputs_dict: Optional[Dict[str, str]] = None,
         user_id: Optional[str] = None,
@@ -693,7 +688,9 @@ class Graph:
             logger.exception(f"Error building vertex: {exc}")
             raise exc
 
-    async def get_next_and_top_level_vertices(self, lock: asyncio.Lock, set_cache_coro: Coroutine, vertex: Vertex):
+    async def get_next_and_top_level_vertices(
+        self, lock: asyncio.Lock, set_cache_coro: Callable[["Graph", asyncio.Lock], Coroutine], vertex: Vertex
+    ):
         """
         Retrieves the next runnable vertices and the top level vertices for a given vertex.
 
@@ -884,8 +881,7 @@ class Graph:
         # and then build the edges
         # if we can't find a vertex, we raise an error
 
-        edges: List[ContractEdge] = []
-        edges_added = set()
+        edges: set[ContractEdge] = set()
         for edge in self._edges:
             source = self.get_vertex(edge["source"])
             target = self.get_vertex(edge["target"])
@@ -894,13 +890,11 @@ class Graph:
                 raise ValueError(f"Source vertex {edge['source']} not found")
             if target is None:
                 raise ValueError(f"Target vertex {edge['target']} not found")
+            edge = ContractEdge(source, target, edge)
 
-            if (source.id, target.id) in edges_added:
-                continue
+            edges.add(edge)
 
-            edges.append(ContractEdge(source, target, edge))
-            edges_added.add((source.id, target.id))
-        return edges
+        return list(edges)
 
     def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> Type[Vertex]:
         """Returns the node class based on the node type."""

@@ -5,6 +5,7 @@ from .OpenAIConversationalAgent import ConversationalAgent
 from .SQLAgent import SQLAgentComponent
 from .VectorStoreAgent import VectorStoreAgentComponent
 from .VectorStoreRouterAgent import VectorStoreRouterAgentComponent
+from .XMLAgent import XMLAgentComponent
 
 __all__ = [
     "AgentInitializerComponent",
@@ -14,4 +15,5 @@ __all__ = [
     "SQLAgentComponent",
     "VectorStoreAgentComponent",
     "VectorStoreRouterAgentComponent",
+    "XMLAgentComponent",
 ]

@@ -101,7 +101,11 @@ class Edge:
     def __eq__(self, __o: object) -> bool:
         if not isinstance(__o, Edge):
             return False
-        return self._source_handle == __o._source_handle and self._target_handle == __o._target_handle
+        return (
+            self._source_handle == __o._source_handle
+            and self._target_handle == __o._target_handle
+            and self.target_param == __o.target_param
+        )
 
 
 class ContractEdge(Edge):

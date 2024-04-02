@@ -1,65 +1,93 @@
 from typing import List, Optional
 
 from langchain_astradb import AstraDBVectorStore
+from langchain_astradb.utils.astradb import SetupMode
 
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, VectorStore
 from langflow.schema import Record
 
 
 class AstraDBVectorStoreComponent(CustomComponent):
-    display_name = "AstraDB Vector Store"
-    description = "Builds or loads an AstraDB Vector Store"
+    display_name = "AstraDB"
+    description = "Builds or loads an AstraDB Vector Store."
+    icon = "AstraDB"
+    field_order = ["token", "api_endpoint", "collection_name", "inputs", "embedding"]
 
     def build_config(self):
         return {
-            "inputs": {"display_name": "Inputs", "info": "Inputs to AstraDB"},
+            "inputs": {
+                "display_name": "Inputs",
+                "info": "Optional list of records to be processed and stored in the vector store.",
+            },
             "embedding": {"display_name": "Embedding", "info": "Embedding to use"},
-            "collection_name": {"display_name": "Collection Name", "info": "Collection name"},
-            "token": {"display_name": "Token", "info": "Token to use", "password": True},
-            "api_endpoint": {"display_name": "API Endpoint", "info": "API Endpoint to use"},
-            "namespace": {"display_name": "Namespace", "info": "Namespace to use", "advanced": True},
-            "metric": {"display_name": "Metric", "info": "Metric to use", "advanced": True},
-            "batch_size": {"display_name": "Batch Size", "info": "Batch size to use", "advanced": True},
+            "collection_name": {
+                "display_name": "Collection Name",
+                "info": "The name of the collection within AstraDB where the vectors will be stored.",
+            },
+            "token": {
+                "display_name": "Token",
+                "info": "Authentication token for accessing AstraDB.",
+                "password": True,
+            },
+            "api_endpoint": {
+                "display_name": "API Endpoint",
+                "info": "API endpoint URL for the AstraDB service.",
+            },
+            "namespace": {
+                "display_name": "Namespace",
+                "info": "Optional namespace within AstraDB to use for the collection.",
+                "advanced": True,
+            },
+            "metric": {
+                "display_name": "Metric",
+                "info": "Optional distance metric for vector comparisons in the vector store.",
+                "advanced": True,
+            },
+            "batch_size": {
+                "display_name": "Batch Size",
+                "info": "Optional number of records to process in a single batch.",
+                "advanced": True,
+            },
             "bulk_insert_batch_concurrency": {
                 "display_name": "Bulk Insert Batch Concurrency",
-                "info": "Bulk Insert Batch Concurrency to use",
+                "info": "Optional concurrency level for bulk insert operations.",
                 "advanced": True,
             },
             "bulk_insert_overwrite_concurrency": {
                 "display_name": "Bulk Insert Overwrite Concurrency",
-                "info": "Bulk Insert Overwrite Concurrency to use",
+                "info": "Optional concurrency level for bulk insert operations that overwrite existing records.",
                 "advanced": True,
             },
             "bulk_delete_concurrency": {
                 "display_name": "Bulk Delete Concurrency",
-                "info": "Bulk Delete Concurrency to use",
+                "info": "Optional concurrency level for bulk delete operations.",
                 "advanced": True,
             },
             "setup_mode": {
                 "display_name": "Setup Mode",
-                "info": "Setup mode for the vector store",
+                "info": "Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.",
                 "options": ["Sync", "Async", "Off"],
                 "advanced": True,
             },
             "pre_delete_collection": {
                 "display_name": "Pre Delete Collection",
-                "info": "Pre delete collection",
+                "info": "Boolean flag to determine whether to delete the collection before creating a new one.",
                 "advanced": True,
             },
             "metadata_indexing_include": {
                 "display_name": "Metadata Indexing Include",
-                "info": "Metadata Indexing Include",
+                "info": "Optional list of metadata fields to include in the indexing.",
                 "advanced": True,
             },
             "metadata_indexing_exclude": {
                 "display_name": "Metadata Indexing Exclude",
-                "info": "Metadata Indexing Exclude",
+                "info": "Optional list of metadata fields to exclude from the indexing.",
                 "advanced": True,
             },
             "collection_indexing_policy": {
                 "display_name": "Collection Indexing Policy",
-                "info": "Collection Indexing Policy",
+                "info": "Optional dictionary defining the indexing policy for the collection.",
                 "advanced": True,
             },
         }
@@ -67,22 +95,26 @@ class AstraDBVectorStoreComponent(CustomComponent):
     def build(
         self,
         embedding: Embeddings,
+        token: str,
+        api_endpoint: str,
         collection_name: str,
         inputs: Optional[List[Record]] = None,
-        token: Optional[str] = None,
-        api_endpoint: Optional[str] = None,
         namespace: Optional[str] = None,
         metric: Optional[str] = None,
         batch_size: Optional[int] = None,
         bulk_insert_batch_concurrency: Optional[int] = None,
         bulk_insert_overwrite_concurrency: Optional[int] = None,
         bulk_delete_concurrency: Optional[int] = None,
-        setup_mode: str = "Sync",
+        setup_mode: str = "Async",
         pre_delete_collection: bool = False,
         metadata_indexing_include: Optional[List[str]] = None,
         metadata_indexing_exclude: Optional[List[str]] = None,
         collection_indexing_policy: Optional[dict] = None,
     ) -> VectorStore:
+        try:
+            setup_mode_value = SetupMode[setup_mode.upper()]
+        except KeyError:
+            raise ValueError(f"Invalid setup mode: {setup_mode}")
         if inputs:
             documents = [_input.to_lc_document() for _input in inputs]
 
@@ -98,7 +130,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
                 bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,
                 bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,
                 bulk_delete_concurrency=bulk_delete_concurrency,
-                setup_mode=setup_mode,
+                setup_mode=setup_mode_value,
                 pre_delete_collection=pre_delete_collection,
                 metadata_indexing_include=metadata_indexing_include,
                 metadata_indexing_exclude=metadata_indexing_exclude,
@@ -116,7 +148,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
                 bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,
                 bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,
                 bulk_delete_concurrency=bulk_delete_concurrency,
-                setup_mode=setup_mode,
+                setup_mode=setup_mode_value,
                 pre_delete_collection=pre_delete_collection,
                 metadata_indexing_include=metadata_indexing_include,
                 metadata_indexing_exclude=metadata_indexing_exclude,

@@ -1,12 +1,13 @@
 from typing import Any, Callable, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 
 from langflow.field_typing.range_spec import RangeSpec
 
 
 class TemplateField(BaseModel):
     model_config = ConfigDict()
+
     field_type: str = Field(default="str", serialization_alias="type")
     """The type of field this is. Default is a string."""
 
@@ -69,6 +70,8 @@ class TemplateField(BaseModel):
     range_spec: Optional[RangeSpec] = Field(default=None, serialization_alias="rangeSpec")
     """Range specification for the field. Defaults to None."""
 
+    load_from_db: bool = False
+    """Specifies if the field should be loaded from the database. Defaults to False."""
     title_case: bool = False
     """Specifies if the field should be displayed in title case. Defaults to True."""
 
@@ -87,6 +90,13 @@ class TemplateField(BaseModel):
         else:
             result["type"] = self.field_type
         return result
+
+    @model_validator(mode="after")
+    def validate_model(self):
+        # if field_type is int, we need to set the range_spec
+        if self.field_type == "int" and self.range_spec is not None:
+            self.range_spec = RangeSpec.set_step_type("int", self.range_spec)
+        return self
 
     @field_serializer("file_path")
     def serialize_file_path(self, value):

@@ -32,6 +32,8 @@ def check_tools_in_params(params: Dict):
 
 def instantiate_from_template(class_object, params: Dict):
     from_template_params = {"template": params.pop("prompt", params.pop("template", ""))}
+
+    from_template_params.update(params)
     if not from_template_params.get("template"):
         raise ValueError("Prompt template is required")
     return class_object.from_template(**from_template_params)

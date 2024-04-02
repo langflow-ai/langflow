@@ -269,6 +269,9 @@ def run_build_config(
             # Allow user to build TemplateField as well
             # as a dict with the same keys as TemplateField
             field_dict = get_field_dict(field)
+            # Let's check if "rangeSpec" is a RangeSpec object
+            if "rangeSpec" in field_dict and isinstance(field_dict["rangeSpec"], RangeSpec):
+                field_dict["rangeSpec"] = field_dict["rangeSpec"].model_dump()
             build_config[field_name] = field_dict
 
         return build_config, custom_instance
@@ -423,9 +426,6 @@ def update_field_dict(
                 logger.error(f"Error while running update_build_config: {str(exc)}")
                 raise UpdateBuildConfigError(f"Error while running update_build_config: {str(exc)}") from exc
 
-    # Let's check if "range_spec" is a RangeSpec object
-    if "rangeSpec" in field_dict and isinstance(field_dict["rangeSpec"], RangeSpec):
-        field_dict["rangeSpec"] = field_dict["rangeSpec"].model_dump()
     return build_config
 
 

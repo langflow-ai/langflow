@@ -119,6 +119,8 @@ export async function buildVertices({
       try {
         onValidateNodes(verticesOrderResponse.verticesToRun);
       } catch (e) {
+        useFlowStore.getState().setIsBuilding(false);
+
         return;
       }
     }
@@ -202,12 +204,11 @@ export async function buildVertices({
     if (stop) {
       break;
     }
-
-    if (onBuildComplete) {
-      const allNodesValid = buildResults.every((result) => result);
-      onBuildComplete(allNodesValid);
-      useFlowStore.getState().setIsBuilding(false);
-    }
+  }
+  if (onBuildComplete) {
+    const allNodesValid = buildResults.every((result) => result);
+    onBuildComplete(allNodesValid);
+    useFlowStore.getState().setIsBuilding(false);
   }
 }
 async function buildVertex({

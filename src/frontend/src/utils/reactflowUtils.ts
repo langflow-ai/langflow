@@ -1170,7 +1170,7 @@ export function downloadNode(NodeFLow: FlowType) {
     type: "application/json",
   });
   element.href = URL.createObjectURL(file);
-  element.download = `${NodeFLow.name}.json`;
+  element.download = `${NodeFLow?.name ?? "node"}.json`;
   element.click();
 }
 
@@ -1188,6 +1188,20 @@ export function removeFileNameFromComponents(flow: FlowType) {
     });
     if (node.data.node?.flow) {
       removeFileNameFromComponents(node.data.node.flow);
+    }
+  });
+}
+
+export function removeGlobalVariableFromComponents(flow: FlowType) {
+  flow.data!.nodes.forEach((node: NodeType) => {
+    Object.keys(node.data.node!.template).forEach((field) => {
+      if (node.data?.node?.template[field]?.load_from_db) {
+        node.data.node!.template[field].value = "";
+        node.data.node!.template[field].load_from_db = false;
+      }
+    });
+    if (node.data.node?.flow) {
+      removeGlobalVariableFromComponents(node.data.node.flow);
     }
   });
 }

@@ -124,10 +124,10 @@ class Result(BaseModel):
     session_id: str
 
 
-async def run_graph(
-    graph: Union["Graph", dict],
+async def run_graph_internal(
+    graph: "Graph",
     flow_id: str,
-    stream: bool,
+    stream: bool = False,
     session_id: Optional[str] = None,
     inputs: Optional[List["InputValueRequest"]] = None,
     outputs: Optional[List[str]] = None,
@@ -165,6 +165,58 @@ async def run_graph(
     if session_id_str and session_service:
         await session_service.update_session(session_id_str, (graph, artifacts))
     return run_outputs, session_id_str
+
+
+def run_graph(
+    graph: "Graph",
+    input_value: str,
+    input_type: str,
+    output_type: str,
+    output_component: Optional[str] = None,
+) -> List[RunOutputs]:
+    """
+    Runs the given Langflow Graph with the specified input and returns the outputs.
+
+    Args:
+        graph (Graph): The graph to be executed.
+        input_value (str): The input value to be passed to the graph.
+        input_type (str): The type of the input value.
+        output_type (str): The type of the desired output.
+        output_component (Optional[str], optional): The specific output component to retrieve. Defaults to None.
+
+    Returns:
+        List[RunOutputs]: A list of RunOutputs objects representing the outputs of the graph.
+
+    """
+    inputs = [InputValueRequest(components=[], input_value=input_value, type=input_type)]
+    if output_component:
+        outputs = [output_component]
+    else:
+        outputs = [
+            vertex.id
+            for vertex in graph.vertices
+            if output_type == "debug"
+            or (vertex.is_output and (output_type == "any" or output_type in vertex.id.lower()))
+        ]
+    components = []
+    inputs_list = []
+    types = []
+    for input_value_request in inputs:
+        if input_value_request.input_value is None:
+            logger.warning("InputValueRequest input_value cannot be None, defaulting to an empty string.")
+            input_value_request.input_value = ""
+        components.append(input_value_request.components or [])
+        inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
+        types.append(input_value_request.type)
+    run_outputs = graph.run(
+        inputs_list,
+        components,
+        types,
+        outputs or [],
+        stream=False,
+        session_id="",
+    )
+    return run_outputs
 
 
 def validate_input(

@@ -70,6 +70,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
     get().setFlowPool(newFlowPool);
   },
+  getNodePosition: (nodeId: string) => {
+    const node = get().nodes.find((node) => node.id === nodeId);
+    return node?.position || { x: 0, y: 0 };
+  },
   updateFlowPool: (
     nodeId: string,
     data: FlowPoolObjectType | ChatOutputType | chatInputType,
@@ -505,6 +509,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
 
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
+
+      const verticesIds = get().verticesBuild?.verticesIds;
+      const newFlowBuildStatus = { ...get().flowBuildStatus };
+      // filter out the vertices that are not status
+      const verticesToUpdate = verticesIds?.filter(
+        (id) => newFlowBuildStatus[id]?.status !== BuildStatus.BUILT
+      );
+
+      if (verticesToUpdate) {
+        useFlowStore.getState().updateBuildStatus(verticesToUpdate, status);
+      }
     }
     await buildVertices({
       input_value,
@@ -514,9 +529,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       onGetOrderSuccess: () => {
         setNoticeData({ title: "Running components" });
       },
-      onBuildComplete: () => {
+      onBuildComplete: (allNodesValid) => {
         const nodeId = startNodeId || stopNodeId;
-        if (nodeId) {
+        if (nodeId && allNodesValid) {
           setSuccessData({
             title: `${
               get().nodes.find((node) => node.id === nodeId)?.data.node
@@ -591,7 +606,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
-
     nodeIdList.forEach((id) => {
       newFlowBuildStatus[id] = {
         status,

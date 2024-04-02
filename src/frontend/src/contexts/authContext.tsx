@@ -83,7 +83,7 @@ export function AuthProvider({ children }): React.ReactElement {
           useFlowsManagerStore.setState({ isLoading: false });
         }
       });
-  }, [setUserData, setLoading, autoLogin, setIsAdmin]);
+  }, [autoLogin]);
 
   function getUser() {
     getLoggedUser()

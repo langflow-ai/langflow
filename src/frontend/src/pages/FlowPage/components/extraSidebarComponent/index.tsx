@@ -25,6 +25,7 @@ import {
   sensitiveSort,
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
+import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
 import { sortKeys } from "./utils";
 
@@ -233,6 +234,20 @@ export default function ExtraSidebar(): JSX.Element {
     []
   );
 
+  const getIcon = useMemo(() => {
+    return (SBSectionName: string) => {
+      if (nodeIconsLucide[SBSectionName]) {
+        return (
+          <IconComponent
+            name={SBSectionName}
+            strokeWidth={1.5}
+            className="w-[22px] text-primary"
+          />
+        );
+      }
+    };
+  }, []);
+
   return (
     <div className="side-bar-arrangement">
       <div className="side-bar-search-div-placement">
@@ -270,53 +285,24 @@ export default function ExtraSidebar(): JSX.Element {
       </div>
       <Separator />
       <div className="side-bar-components-div-arrangement">
+        <div className="parent-disclosure-arrangement">
+          <div className="flex items-center gap-4 align-middle">
+            <span className="parent-disclosure-title">Core Components</span>
+          </div>
+        </div>
         {Object.keys(dataFilter)
           .sort(sortKeys)
+          .filter((x) => PRIORITY_SIDEBAR_ORDER.includes(x))
           .map((SBSectionName: keyof APIObjectType, index) =>
             Object.keys(dataFilter[SBSectionName]).length > 0 ? (
               <>
-                {index === 0 && (
-                  <div className="pt-0.5">
-                    <div className="p-2 px-4 text-sm font-semibold" key={index}>
-                      Native Components
-                    </div>
-                  </div>
-                )}
-                {index === PRIORITY_SIDEBAR_ORDER.length - 1 && (
-                  <>
-                    <a
-                      target={"_blank"}
-                      href="https://langflow.store"
-                      className="components-disclosure-arrangement"
-                    >
-                      <div className="flex gap-4">
-                        {/* BUG ON THIS ICON */}
-                        <SparklesIcon
-                          strokeWidth={1.5}
-                          className="w-[22px] text-primary"
-                        />
-
-                        <span className="components-disclosure-title">
-                          Discover More
-                        </span>
-                      </div>
-                      <div className="components-disclosure-div">
-                        <div>
-                          <LinkIcon className="h-4 w-4 text-foreground" />
-                        </div>
-                      </div>
-                    </a>
-                    <div className="p-2 px-4 text-sm font-semibold" key={index}>
-                      Legacy Components
-                    </div>
-                  </>
-                )}
                 <DisclosureComponent
                   openDisc={
                     getFilterEdge.length !== 0 || search.length !== 0
                       ? true
                       : false
                   }
+                  isChild={false}
                   key={index + search + JSON.stringify(getFilterEdge)}
                   button={{
                     title: nodeNames[SBSectionName] ?? nodeNames.unknown,
@@ -343,7 +329,7 @@ export default function ExtraSidebar(): JSX.Element {
                           <SidebarDraggableComponent
                             sectionName={SBSectionName as string}
                             apiClass={dataFilter[SBSectionName][SBItemName]}
-                            key={index}
+                            key={index + SBItemName}
                             onDragStart={(event) =>
                               onDragStart(event, {
                                 //split type to remove type in nodes saved with same name removing it's
@@ -375,7 +361,119 @@ export default function ExtraSidebar(): JSX.Element {
             ) : (
               <div key={index}></div>
             )
-          )}
+          )}{" "}
+        <ParentDisclosureComponent
+          openDisc={false}
+          key={"Extended"}
+          button={{
+            title: "Extended",
+            Icon: nodeIconsLucide.unknown,
+          }}
+        >
+          {Object.keys(dataFilter)
+            .sort(sortKeys)
+            .filter((x) => !PRIORITY_SIDEBAR_ORDER.includes(x))
+            .map((SBSectionName: keyof APIObjectType, index) =>
+              Object.keys(dataFilter[SBSectionName]).length > 0 ? (
+                <>
+                  <DisclosureComponent
+                  isChild={false}
+                    openDisc={
+                      getFilterEdge.length !== 0 || search.length !== 0
+                        ? true
+                        : false
+                    }
+                    key={index + search + JSON.stringify(getFilterEdge)}
+                    button={{
+                      title: nodeNames[SBSectionName] ?? nodeNames.unknown,
+                      Icon:
+                        nodeIconsLucide[SBSectionName] ??
+                        nodeIconsLucide.unknown,
+                    }}
+                  >
+                    <div className="side-bar-components-gap">
+                      {Object.keys(dataFilter[SBSectionName])
+                        .sort((a, b) =>
+                          sensitiveSort(
+                            dataFilter[SBSectionName][a].display_name,
+                            dataFilter[SBSectionName][b].display_name
+                          )
+                        )
+                        .map((SBItemName: string, index) => (
+                          <ShadTooltip
+                            content={
+                              dataFilter[SBSectionName][SBItemName].display_name
+                            }
+                            side="right"
+                            key={index}
+                          >
+                            <SidebarDraggableComponent
+                              sectionName={SBSectionName as string}
+                              apiClass={dataFilter[SBSectionName][SBItemName]}
+                              key={index}
+                              onDragStart={(event) =>
+                                onDragStart(event, {
+                                  //split type to remove type in nodes saved with same name removing it's
+                                  type: removeCountFromString(SBItemName),
+                                  node: dataFilter[SBSectionName][SBItemName],
+                                })
+                              }
+                              color={nodeColors[SBSectionName]}
+                              itemName={SBItemName}
+                              //convert error to boolean
+                              error={
+                                !!dataFilter[SBSectionName][SBItemName].error
+                              }
+                              display_name={
+                                dataFilter[SBSectionName][SBItemName]
+                                  .display_name
+                              }
+                              official={
+                                dataFilter[SBSectionName][SBItemName]
+                                  .official === false
+                                  ? false
+                                  : true
+                              }
+                            />
+                          </ShadTooltip>
+                        ))}
+                    </div>
+                  </DisclosureComponent>
+                  {index ===
+                    Object.keys(dataFilter).length -
+                      PRIORITY_SIDEBAR_ORDER.length +
+                      1 && (
+                    <>
+                      <a
+                        target={"_blank"}
+                        href="https://langflow.store"
+                        className="components-disclosure-arrangement"
+                      >
+                        <div className="flex gap-4">
+                          {/* BUG ON THIS ICON */}
+                          <SparklesIcon
+                            strokeWidth={1.5}
+                            className="w-[22px] text-primary"
+                          />
+
+                          <span className="components-disclosure-title">
+                            Discover More
+                          </span>
+                        </div>
+                        <div className="components-disclosure-div">
+                          <div>
+                            <LinkIcon className="h-4 w-4 text-foreground" />
+                          </div>
+                        </div>
+                      </a>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div key={index}></div>
+              )
+            )}
+        </ParentDisclosureComponent>
       </div>
     </div>
   );

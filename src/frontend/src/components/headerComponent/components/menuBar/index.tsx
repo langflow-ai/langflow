@@ -193,29 +193,31 @@ export const MenuBar = ({
           setOpen={setOpenSettings}
         ></FlowSettingsModal>
       </div>
-      <ShadTooltip
-        content={
-          SAVED_HOVER +
-          new Date(currentFlow.updated_at ?? "").toLocaleString("en-US", {
-            hour: "numeric",
-            minute: "numeric",
-            second: "numeric",
-          })
-        }
-        side="bottom"
-        styleClasses="cursor-default"
-      >
-        <div className="flex cursor-default items-center gap-1.5 text-sm text-muted-foreground">
-          <IconComponent
-            name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
-            className={cn(
-              "h-4 w-4",
-              isBuilding || saveLoading ? "animate-spin" : "animate-wiggle"
-            )}
-          />
-          {printByBuildStatus()}
-        </div>
-      </ShadTooltip>
+      {(currentFlow.updated_at || saveLoading) && (
+        <ShadTooltip
+          content={
+            SAVED_HOVER +
+            new Date(currentFlow.updated_at ?? "").toLocaleString("en-US", {
+              hour: "numeric",
+              minute: "numeric",
+              second: "numeric",
+            })
+          }
+          side="bottom"
+          styleClasses="cursor-default"
+        >
+          <div className="flex cursor-default items-center gap-1.5 text-sm text-muted-foreground">
+            <IconComponent
+              name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
+              className={cn(
+                "h-4 w-4",
+                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle"
+              )}
+            />
+            {printByBuildStatus()}
+          </div>
+        </ShadTooltip>
+      )}
     </div>
   ) : (
     <></>

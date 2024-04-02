@@ -15,10 +15,8 @@
 [![GitHub fork](https://img.shields.io/github/forks/logspace-ai/langflow?style=social)](https://github.com/logspace-ai/langflow/fork)
 [![Twitter](https://img.shields.io/twitter/url/https/twitter.com/langflow_ai.svg?style=social&label=Follow%20%40langflow_ai)](https://twitter.com/langflow_ai)
 [![](https://dcbadge.vercel.app/api/server/EqksyE2EX9?compact=true&style=flat)](https://discord.com/invite/EqksyE2EX9)
-[![HuggingFace Spaces](https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-sm.svg)](https://huggingface.co/spaces/Logspace/Langflow)
+[![HuggingFace Spaces](https://huggingface.co/datasets/huggingface/badges/raw/main/duplicate-this-space-md.svg)](https://huggingface.co/spaces/Logspace/Langflow-Preview?duplicate=true)
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/logspace-ai/langflow)
-
-The easiest way to create and customize your flow
 
 <a href="https://github.com/logspace-ai/langflow">
 <img width="100%" src="https://github.com/logspace-ai/langflow/blob/dev/docs/static/img/new_langflow_demo.gif"></a>
@@ -26,6 +24,8 @@ The easiest way to create and customize your flow
 # 📦 Installation
 
 ### <b>Locally</b>
+
+Make sure you have Python 3.10 installed on your system.
 
 You can install Langflow from pip:
 
@@ -51,7 +51,7 @@ You can still use models from projects like LocalAI, Ollama, LM Studio, Jan and 
 Next, run:
 
 ```shell
-python -m langflow
+python -m langflow run
 ```
 
 or
@@ -62,7 +62,7 @@ langflow run # or langflow --help
 
 ### HuggingFace Spaces
 
-You can also check it out on [HuggingFace Spaces](https://huggingface.co/spaces/Logspace/Langflow) and run it in your browser! You can even clone it and have your own copy of Langflow to play with.
+You can also check it out on HuggingFace Spaces and run it in your browser for free! [Click here to duplicate the Space](https://huggingface.co/spaces/Logspace/Langflow-Preview?duplicate=true)
 
 # 🖥️ Command Line Interface (CLI)
 

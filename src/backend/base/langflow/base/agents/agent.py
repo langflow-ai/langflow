@@ -1,6 +1,9 @@
-from typing import List, Union
+from typing import List, Optional, Union, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
+from langchain_core.runnables import Runnable
+
+from langflow.custom import CustomComponent
 from langflow.field_typing import BaseMemory, Text, Tool
 from langflow.interface.custom.custom_component import CustomComponent
 
@@ -38,11 +41,11 @@ class LCAgentComponent(CustomComponent):
 
     async def run_agent(
         self,
-        agent: Union[BaseSingleActionAgent, BaseMultiActionAgent, AgentExecutor],
+        agent: Union[Runnable, BaseSingleActionAgent, BaseMultiActionAgent, AgentExecutor],
         inputs: str,
         input_variables: list[str],
         tools: List[Tool],
-        memory: BaseMemory = None,
+        memory: Optional[BaseMemory] = None,
         handle_parsing_errors: bool = True,
         output_key: str = "output",
     ) -> Text:
@@ -50,7 +53,11 @@ class LCAgentComponent(CustomComponent):
             runnable = agent
         else:
             runnable = AgentExecutor.from_agent_and_tools(
-                agent=agent, tools=tools, verbose=True, memory=memory, handle_parsing_errors=handle_parsing_errors
+                agent=agent,  # type: ignore
+                tools=tools,
+                verbose=True,
+                memory=memory,
+                handle_parsing_errors=handle_parsing_errors,
             )
         input_dict = {"input": inputs}
         for var in input_variables:
@@ -59,11 +66,11 @@ class LCAgentComponent(CustomComponent):
         result = await runnable.ainvoke(input_dict)
         self.status = result
         if output_key in result:
-            return result.get(output_key)
+            return cast(str, result.get(output_key))
         elif "output" not in result:
             if output_key != "output":
                 raise ValueError(f"Output key not found in result. Tried '{output_key}' and 'output'.")
             else:
                 raise ValueError("Output key not found in result. Tried 'output'.")
 
-        return result.get("output")
+        return cast(str, result.get("output"))

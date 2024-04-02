@@ -3,17 +3,28 @@ from typing import Optional
 from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
 from pydantic.v1 import SecretStr
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import Text
 
 
 class QianfanChatEndpointComponent(LCModelComponent):
-    display_name: str = "QianfanChat"
-    description: str = (
-        "Generate text using Baidu Qianfan chat models. Get more detail from "
-        "https://python.langchain.com/docs/integrations/chat/baidu_qianfan_endpoint."
-    )
+    display_name: str = "Qianfan"
+    description: str = "Generate text using Baidu Qianfan LLMs."
+    documentation: str = "https://python.langchain.com/docs/integrations/chat/baidu_qianfan_endpoint."
     icon = "BaiduQianfan"
+
+    field_order = [
+        "model",
+        "qianfan_ak",
+        "qianfan_sk",
+        "top_p",
+        "temperature",
+        "penalty_score",
+        "endpoint",
+        "input_value",
+        "system_message",
+        "stream",
+    ]
 
     def build_config(self):
         return {
@@ -32,17 +43,15 @@ class QianfanChatEndpointComponent(LCModelComponent):
                     "AquilaChat-7B",
                 ],
                 "info": "https://python.langchain.com/docs/integrations/chat/baidu_qianfan_endpoint",
-                "required": True,
+                "value": "ERNIE-Bot-turbo",
             },
             "qianfan_ak": {
                 "display_name": "Qianfan Ak",
-                "required": True,
                 "password": True,
                 "info": "which you could get from  https://cloud.baidu.com/product/wenxinworkshop",
             },
             "qianfan_sk": {
                 "display_name": "Qianfan Sk",
-                "required": True,
                 "password": True,
                 "info": "which you could get from  https://cloud.baidu.com/product/wenxinworkshop",
             },
@@ -51,6 +60,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
                 "field_type": "float",
                 "info": "Model params, only supported in ERNIE-Bot and ERNIE-Bot-turbo",
                 "value": 0.8,
+                "advanced": True,
             },
             "temperature": {
                 "display_name": "Temperature",
@@ -63,6 +73,7 @@ class QianfanChatEndpointComponent(LCModelComponent):
                 "field_type": "float",
                 "info": "Model params, only supported in ERNIE-Bot and ERNIE-Bot-turbo",
                 "value": 1.0,
+                "advanced": True,
             },
             "endpoint": {
                 "display_name": "Endpoint",
@@ -72,20 +83,22 @@ class QianfanChatEndpointComponent(LCModelComponent):
             "input_value": {"display_name": "Input"},
             "stream": {
                 "display_name": "Stream",
-                "info": "Stream the response from the model.",
+                "info": STREAM_INFO_TEXT,
+                "advanced": True,
             },
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 
     def build(
         self,
         input_value: Text,
-        model: str = "ERNIE-Bot-turbo",
-        qianfan_ak: Optional[str] = None,
-        qianfan_sk: Optional[str] = None,
+        qianfan_ak: str,
+        qianfan_sk: str,
+        model: str,
         top_p: Optional[float] = None,
         temperature: Optional[float] = None,
         penalty_score: Optional[float] = None,

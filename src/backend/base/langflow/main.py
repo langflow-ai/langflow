@@ -3,11 +3,13 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
 
+import nest_asyncio
 import socketio  # type: ignore
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from loguru import logger
 
 from langflow.api import router
 from langflow.initial_setup.setup import create_or_update_starter_projects
@@ -20,6 +22,7 @@ from langflow.utils.logger import configure
 def get_lifespan(fix_migration=False, socketio_server=None):
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        nest_asyncio.apply()
         initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
         setup_llm_caching()
         LangfuseInstance.update()
@@ -104,6 +107,7 @@ def get_static_files_dir():
 def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = False) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
+    logger.info(f"Setting up app with static files directory {static_files_dir}")
     if not static_files_dir:
         static_files_dir = get_static_files_dir()
 
@@ -128,4 +132,5 @@ if __name__ == "__main__":
         workers=get_number_of_workers(),
         log_level="debug",
         reload=True,
+        loop="asyncio",
     )

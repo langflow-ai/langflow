@@ -1,17 +1,19 @@
-from typing import Any, List, Optional, Text, Tuple
+from typing import Any, List, Optional
 
 from loguru import logger
 
 from langflow.custom import CustomComponent
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import ResultData, RunOutputs
+from langflow.graph.vertex.base import Vertex
+from langflow.helpers.flow import get_flow_inputs
 from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import TemplateField
 
 
 class SubFlowComponent(CustomComponent):
-    display_name = "SubFlow"
+    display_name = "Sub Flow"
     description = "Dynamically Generates a Component from a Flow. The output is a list of records with keys 'result' and 'message'."
     beta: bool = True
     field_order = ["flow_name"]
@@ -20,7 +22,7 @@ class SubFlowComponent(CustomComponent):
         flow_records = self.list_flows()
         return [flow_record.data["name"] for flow_record in flow_records]
 
-    def get_flow(self, flow_name: str) -> Optional[Text]:
+    def get_flow(self, flow_name: str) -> Optional[Record]:
         flow_records = self.list_flows()
         for flow_record in flow_records:
             if flow_record.data["name"] == flow_name:
@@ -42,7 +44,7 @@ class SubFlowComponent(CustomComponent):
                     raise ValueError(f"Flow {field_value} not found.")
                 graph = Graph.from_payload(flow_record.data["data"])
                 # Get all inputs from the graph
-                inputs = self.get_flow_inputs(graph)
+                inputs = get_flow_inputs(graph)
                 # Add inputs to the build config
                 build_config = self.add_inputs_to_build_config(inputs, build_config)
             except Exception as e:
@@ -50,21 +52,13 @@ class SubFlowComponent(CustomComponent):
 
         return build_config
 
-    def get_flow_inputs(self, graph: Graph) -> List[Record]:
-        inputs = []
-        for vertex in graph.vertices:
-            if vertex.is_input:
-                inputs.append((vertex.id, vertex.display_name, vertex.description))
-        logger.debug(inputs)
-        return inputs
-
-    def add_inputs_to_build_config(self, inputs: List[Tuple], build_config: dotdict):
+    def add_inputs_to_build_config(self, inputs: List[Vertex], build_config: dotdict):
         new_fields: list[TemplateField] = []
-        for input_id, input_display_name, input_description in inputs:
+        for vertex in inputs:
             field = TemplateField(
-                display_name=input_display_name,
-                name=input_id,
-                info=input_description,
+                display_name=vertex.display_name,
+                name=vertex.id,
+                info=vertex.description,
                 field_type="str",
                 default=None,
             )
@@ -110,12 +104,15 @@ class SubFlowComponent(CustomComponent):
             tweaks=tweaks,
             flow_name=flow_name,
         )
+        if not run_outputs:
+            return []
         run_output = run_outputs[0]
 
         records = []
-        for output in run_output.outputs:
-            if output:
-                records.extend(self.build_records_from_result_data(output))
+        if run_output is not None:
+            for output in run_output.outputs:
+                if output:
+                    records.extend(self.build_records_from_result_data(output))
 
         self.status = records
         logger.debug(records)

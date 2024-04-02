@@ -2,12 +2,12 @@ from typing import Optional
 
 from langchain_community.embeddings.cohere import CohereEmbeddings
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class CohereEmbeddingsComponent(CustomComponent):
-    display_name = "CohereEmbeddings"
-    description = "Cohere embedding models."
+    display_name = "Cohere Embeddings"
+    description = "Generate embeddings using Cohere models."
 
     def build_config(self):
         return {
@@ -16,13 +16,14 @@ class CohereEmbeddingsComponent(CustomComponent):
             "truncate": {"display_name": "Truncate", "advanced": True},
             "max_retries": {"display_name": "Max Retries", "advanced": True},
             "user_agent": {"display_name": "User Agent", "advanced": True},
+            "request_timeout": {"display_name": "Request Timeout", "advanced": True},
         }
 
     def build(
         self,
         request_timeout: Optional[float] = None,
         cohere_api_key: str = "",
-        max_retries: Optional[int] = None,
+        max_retries: int = 3,
         model: str = "embed-english-v2.0",
         truncate: Optional[str] = None,
         user_agent: str = "langchain",

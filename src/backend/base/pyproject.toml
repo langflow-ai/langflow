@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.12"
+version = "0.0.16"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -17,18 +17,18 @@ repository = "https://github.com/logspace-ai/langflow"
 license = "MIT"
 readme = "README.md"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
-packages = [{ include = "langflow" }]
+packages = [{ include = "langflow" }, { include = "langflow/py.typed" }]
 include = ["pyproject.toml", "README.md", "langflow/**/*"]
 documentation = "https://docs.langflow.org"
+
 
 [tool.poetry.scripts]
 langflow-base = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.12"
-
+python = ">=3.10,<3.12"
 fastapi = "^0.109.0"
-httpx = "^0.25.2"
+httpx = "*"
 uvicorn = "^0.27.0"
 gunicorn = "^21.2.0"
 langchain = "~0.1.0"
@@ -38,7 +38,7 @@ rich = "^13.7.0"
 langchain-experimental = "*"
 pydantic = "^2.5.0"
 pydantic-settings = "^2.1.0"
-websockets = "^10.3"
+websockets = "*"
 typer = "^0.9.0"
 cachetools = "^5.3.1"
 platformdirs = "^4.2.0"
@@ -52,6 +52,15 @@ docstring-parser = "^0.15"
 python-jose = "^3.3.0"
 pandas = "2.2.0"
 multiprocess = "^0.70.14"
+duckdb = "^0.9.2"
+python-socketio = "^5.11.0"
+python-docx = "^1.1.0"
+jq = { version = "^1.7.0", markers = "sys_platform != 'win32'" }
+pypdf = "^4.1.0"
+chromadb = "^0.4.24"
+langchain-anthropic = "^0.1.4"
+langchain-astradb = "^0.1.0"
+
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.21.1"
@@ -78,7 +87,7 @@ pytest-sugar = "^0.9.7"
 
 
 [tool.poetry.extras]
-deploy = ["langchain-serve", "celery", "redis", "flower"]
+deploy = ["celery", "redis", "flower"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 all = ["deploy", "local"]
 
@@ -91,6 +100,11 @@ console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning"]
 log_cli = true
 markers = ["async_test"]
+
+[tool.mypy]
+namespace_packages = true
+mypy_path = "langflow"
+ignore_missing_imports = true
 
 
 [tool.ruff]

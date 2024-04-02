@@ -737,7 +737,9 @@ export const PRIORITY_SIDEBAR_ORDER = [
   "prompt",
   "models",
   "helpers",
-  "experimental",
+  "vectorstores",
+  "vectorsearch",
+  "embeddings",
 ];
 export const NATIVE_CATEGORIES = [
   "inputs",
@@ -751,4 +753,4 @@ export const NATIVE_CATEGORIES = [
   "agents",
 ];
 
-export const SAVE_DEBOUNCE_TIME = 500;
+export const SAVE_DEBOUNCE_TIME = 300;

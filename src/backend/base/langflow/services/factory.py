@@ -23,7 +23,7 @@ class ServiceFactory:
         raise self.service_class(*args, **kwargs)
 
 
-def hash_factory(factory: ServiceFactory) -> str:
+def hash_factory(factory: Type[ServiceFactory]) -> str:
     return factory.service_class.__name__
 
 
@@ -38,7 +38,7 @@ def hash_infer_service_types_args(factory_class: Type[ServiceFactory], available
 
 
 @cached(cache=LRUCache(maxsize=10), key=hash_infer_service_types_args)
-def infer_service_types(factory_class: Type[ServiceFactory], available_services=None) -> "ServiceType":
+def infer_service_types(factory_class: Type[ServiceFactory], available_services=None) -> list["ServiceType"]:
     create_method = factory_class.create
     type_hints = get_type_hints(create_method, globalns=available_services)
     service_types = []

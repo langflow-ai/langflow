@@ -3,14 +3,24 @@ from typing import Optional
 from langchain_community.chat_models.huggingface import ChatHuggingFace
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 
+from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import Text
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
     display_name: str = "Hugging Face API"
-    description: str = "Generate text using LLM model from Hugging Face Inference API."
+    description: str = "Generate text using Hugging Face Inference APIs."
     icon = "HuggingFace"
+
+    field_order = [
+        "endpoint_url",
+        "task",
+        "huggingfacehub_api_token",
+        "model_kwargs",
+        "input_value",
+        "system_message",
+        "stream",
+    ]
 
     def build_config(self):
         return {
@@ -23,16 +33,19 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             "model_kwargs": {
                 "display_name": "Model Keyword Arguments",
                 "field_type": "code",
+                "advanced": True,
             },
             "code": {"show": False},
             "input_value": {"display_name": "Input"},
             "stream": {
                 "display_name": "Stream",
-                "info": "Stream the response from the model.",
+                "info": STREAM_INFO_TEXT,
+                "advanced": True,
             },
             "system_message": {
                 "display_name": "System Message",
                 "info": "System message to pass to the model.",
+                "advanced": True,
             },
         }
 

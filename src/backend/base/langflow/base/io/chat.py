@@ -2,6 +2,7 @@ import warnings
 from typing import Optional, Union
 
 from langflow.field_typing import Text
+from langflow.helpers.record import records_to_text
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.memory import add_messages
 from langflow.schema import Record
@@ -21,6 +22,7 @@ class ChatComponent(CustomComponent):
             "sender": {
                 "options": ["Machine", "User"],
                 "display_name": "Sender Type",
+                "advanced": True,
             },
             "sender_name": {"display_name": "Sender Name"},
             "session_id": {
@@ -31,6 +33,13 @@ class ChatComponent(CustomComponent):
             "return_record": {
                 "display_name": "Return Record",
                 "info": "Return the message as a record containing the sender, sender_name, and session_id.",
+                "advanced": True,
+            },
+            "record_template": {
+                "display_name": "Record Template",
+                "multiline": True,
+                "info": "In case of Message being a Record, this template will be used to convert it to text.",
+                "advanced": True,
             },
         }
 
@@ -74,9 +83,10 @@ class ChatComponent(CustomComponent):
         self,
         sender: Optional[str] = "User",
         sender_name: Optional[str] = "User",
-        input_value: Optional[str] = None,
+        input_value: Optional[Union[str, Record]] = None,
         session_id: Optional[str] = None,
         return_record: Optional[bool] = False,
+        record_template: Optional[str] = "Text: {text}\nData: {data}",
     ) -> Union[Text, Record]:
         input_value_record: Optional[Record] = None
         if return_record:
@@ -94,6 +104,8 @@ class ChatComponent(CustomComponent):
                         "session_id": session_id,
                     },
                 )
+        elif isinstance(input_value, Record):
+            input_value = records_to_text(template=record_template, records=input_value)
         if not input_value:
             input_value = ""
         if return_record and input_value_record:
@@ -101,6 +113,6 @@ class ChatComponent(CustomComponent):
         else:
             result = input_value
         self.status = result
-        if session_id:
+        if session_id and isinstance(result, (Record, str)):
             self.store_message(result, session_id, sender, sender_name)
         return result

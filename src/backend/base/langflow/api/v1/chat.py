@@ -7,7 +7,13 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
-from langflow.api.utils import build_and_cache_graph, format_elapsed_time, format_exception_message
+from langflow.api.utils import (
+    build_and_cache_graph,
+    format_elapsed_time,
+    format_exception_message,
+    get_top_level_vertices,
+    parse_exception,
+)
 from langflow.api.v1.schemas import (
     InputValueRequest,
     ResultDataResponse,
@@ -93,7 +99,8 @@ async def get_vertices(
         # and return the same structure but only with the ids
         run_id = uuid.uuid4()
         graph.set_run_id(run_id)
-        return VerticesOrderResponse(ids=first_layer, run_id=run_id, vertices_to_run=list(graph.vertices_to_run))
+        vertices_to_run = list(graph.vertices_to_run) + get_top_level_vertices(graph, graph.vertices_to_run)
+        return VerticesOrderResponse(ids=first_layer, run_id=run_id, vertices_to_run=vertices_to_run)
 
     except Exception as exc:
         logger.error(f"Error checking build status: {exc}")
@@ -216,7 +223,8 @@ async def build_vertex(
     except Exception as exc:
         logger.error(f"Error building vertex: {exc}")
         logger.exception(exc)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        message = parse_exception(exc)
+        raise HTTPException(status_code=500, detail=message) from exc
 
 
 @router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse)
@@ -308,7 +316,10 @@ async def build_vertex_stream(
 
             except Exception as exc:
                 logger.exception(f"Error building vertex: {exc}")
-                yield str(StreamData(event="error", data={"error": str(exc)}))
+                exc_message = parse_exception(exc)
+                if exc_message == "The message must be an iterator or an async iterator.":
+                    exc_message = "This stream has already been closed."
+                yield str(StreamData(event="error", data={"error": exc_message}))
             finally:
                 logger.debug("Closing stream")
                 yield str(StreamData(event="close", data={"message": "Stream closed"}))

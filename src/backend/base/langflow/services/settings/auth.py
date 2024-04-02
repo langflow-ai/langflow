@@ -1,5 +1,6 @@
 import secrets
 from pathlib import Path
+from typing import Literal
 
 from loguru import logger
 from passlib.context import CryptContext
@@ -14,7 +15,7 @@ class AuthSettings(BaseSettings):
     # Login settings
     CONFIG_DIR: str
     SECRET_KEY: SecretStr = Field(
-        default=None,
+        default=SecretStr(""),
         description="Secret key for JWT. If not provided, a random one will be generated.",
         frozen=False,
     )
@@ -33,15 +34,15 @@ class AuthSettings(BaseSettings):
     SUPERUSER: str = DEFAULT_SUPERUSER
     SUPERUSER_PASSWORD: str = DEFAULT_SUPERUSER_PASSWORD
 
-    REFRESH_SAME_SITE: str = "none"
+    REFRESH_SAME_SITE: Literal["lax", "strict", "none"] = "none"
     """The SameSite attribute of the refresh token cookie."""
     REFRESH_SECURE: bool = True
     """The Secure attribute of the refresh token cookie."""
     REFRESH_HTTPONLY: bool = True
     """The HttpOnly attribute of the refresh token cookie."""
-    ACCESS_SAME_SITE: str = "none"
+    ACCESS_SAME_SITE: Literal["lax", "strict", "none"] = "lax"
     """The SameSite attribute of the access token cookie."""
-    ACCESS_SECURE: bool = True
+    ACCESS_SECURE: bool = False
     """The Secure attribute of the access token cookie."""
     ACCESS_HTTPONLY: bool = False
     """The HttpOnly attribute of the access token cookie."""
@@ -85,9 +86,10 @@ class AuthSettings(BaseSettings):
 
         secret_key_path = Path(config_dir) / "secret_key"
 
-        if value:
+        if value and isinstance(value, SecretStr):
             logger.debug("Secret key provided")
-            write_secret_to_file(secret_key_path, value)
+            secret_value = value.get_secret_value()
+            write_secret_to_file(secret_key_path, secret_value)
         else:
             logger.debug("No secret key provided, generating a random one")
 
@@ -103,4 +105,4 @@ class AuthSettings(BaseSettings):
                 write_secret_to_file(secret_key_path, value)
                 logger.debug("Saved secret key")
 
-        return value
+        return value if isinstance(value, SecretStr) else SecretStr(value)

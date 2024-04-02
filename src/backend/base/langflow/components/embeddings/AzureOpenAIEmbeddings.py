@@ -5,8 +5,8 @@ from langflow.interface.custom.custom_component import CustomComponent
 
 
 class AzureOpenAIEmbeddingsComponent(CustomComponent):
-    display_name: str = "AzureOpenAIEmbeddings"
-    description: str = "Embeddings model from Azure OpenAI."
+    display_name: str = "Azure OpenAI Embeddings"
+    description: str = "Generate embeddings using Azure OpenAI models."
     documentation: str = "https://python.langchain.com/docs/integrations/text_embedding/azureopenai"
     beta = False
     icon = "Azure"

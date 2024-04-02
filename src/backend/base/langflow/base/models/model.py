@@ -1,10 +1,10 @@
-from typing import Optional
+from typing import Optional, Union
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class LCModelComponent(CustomComponent):
@@ -34,15 +34,17 @@ class LCModelComponent(CustomComponent):
     def get_chat_result(
         self, runnable: BaseChatModel, stream: bool, input_value: str, system_message: Optional[str] = None
     ):
-        messages = []
-        if input_value:
-            messages.append(HumanMessage(input_value))
+        messages: list[Union[HumanMessage, SystemMessage]] = []
+        if not input_value and not system_message:
+            raise ValueError("The message you want to send to the model is empty.")
         if system_message:
-            messages.append(SystemMessage(system_message))
+            messages.append(SystemMessage(content=system_message))
+        if input_value:
+            messages.append(HumanMessage(content=input_value))
         if stream:
-            result = runnable.stream(messages)
+            return runnable.stream(messages)
         else:
             message = runnable.invoke(messages)
             result = message.content
             self.status = result
-        return result
+            return result

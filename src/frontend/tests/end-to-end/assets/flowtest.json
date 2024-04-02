@@ -80,9 +80,7 @@
               "save_path": null,
               "text_input": null
             },
-            "output_types": [
-              "str"
-            ],
+            "output_types": ["str"],
             "field_formatters": {},
             "beta": true
           },
@@ -170,9 +168,7 @@
               "OpenAIKey": null,
               "audio": null
             },
-            "output_types": [
-              "str"
-            ],
+            "output_types": ["str"],
             "field_formatters": {},
             "beta": true
           },
