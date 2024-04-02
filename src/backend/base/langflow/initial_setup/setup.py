@@ -192,6 +192,7 @@ def delete_start_projects(session):
     ).all()
     for flow in flows:
         session.delete(flow)
+    session.commit()
 
 
 def create_or_update_starter_projects():
