@@ -16,6 +16,7 @@ import TextAreaComponent from "../../components/textAreaComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
+import Scroller from "../../components/ui/scroller";
 import {
   Table,
   TableBody,
@@ -28,9 +29,7 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   limitScrollFieldsModal,
 } from "../../constants/constants";
-import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
-import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import { NodeDataType } from "../../types/flow";
 import {
   convertObjToArray,
@@ -113,11 +112,11 @@ const EditNodeModal = forwardRef(
           </div>
 
           <div className="edit-node-modal-arrangement">
-            <div
+            <Scroller
               className={classNames(
                 "edit-node-modal-box",
                 nodeLength > limitScrollFieldsModal
-                  ? "overflow-scroll overflow-x-hidden custom-scroll"
+                  ? "overflow-y-auto overflow-x-hidden"
                   : ""
               )}
             >
@@ -170,7 +169,7 @@ const EditNodeModal = forwardRef(
                             <TableRow
                               key={index}
                               className={
-                                "h-10 " +
+                                "h-10" +
                                 ((templateParam === "code" &&
                                   myData.node?.template[templateParam].type ===
                                     "code") ||
@@ -305,13 +304,9 @@ const EditNodeModal = forwardRef(
                                   </div>
                                 ) : myData.node?.template[templateParam]
                                     .type === "dict" ? (
-                                  <div
+                                  <Scroller
                                     className={classNames(
-                                      "max-h-48 w-full overflow-auto custom-scroll",
-                                      myData.node!.template[templateParam].value
-                                        ?.length > 1
-                                        ? "my-3"
-                                        : ""
+                                      "flex flex-col max-h-48 items-center justify-center w-full overflow-auto pr-2"
                                     )}
                                   >
                                     <KeypairListComponent
@@ -345,7 +340,7 @@ const EditNodeModal = forwardRef(
                                         );
                                       }}
                                     />
-                                  </div>
+                                  </Scroller>
                                 ) : myData.node?.template[templateParam]
                                     .type === "bool" ? (
                                   <div className="ml-auto">
@@ -555,7 +550,7 @@ const EditNodeModal = forwardRef(
                   </Table>
                 </div>
               )}
-            </div>
+            </Scroller>
           </div>
         </BaseModal.Content>
 

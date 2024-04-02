@@ -45,8 +45,7 @@ export default function KeypairListComponent({
   return (
     <div
       className={classNames(
-        ref.current?.length > 1 && editNode ? "mx-2 my-1" : "",
-        "flex h-full flex-col gap-3"
+        "flex flex-col gap-3", editNode ? (ref.current?.length === 1 ? "my-0.5" : "my-3") : ""
       )}
     >
       {ref.current?.map((obj, index) => {

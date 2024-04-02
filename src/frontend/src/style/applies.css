@@ -147,7 +147,7 @@
   }
 
   .input-edit-node {
-    @apply primary-input w-full pb-0.5 pt-0.5 text-left;
+    @apply primary-input w-full py-0.5 text-left;
   }
   .input-search {
     @apply primary-input mx-2 pr-7;
