@@ -13,8 +13,10 @@ test("chat_io_teste", async ({ page }) => {
     "utf-8"
   );
 
+  await page.waitForTimeout(3000);
+
   await page.locator('//*[@id="new-project-btn"]').click();
-  await page.waitForTimeout(2000);
+  await page.locator('//*[@id="new-project-btn"]').click();
 
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(2000);

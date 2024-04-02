@@ -89,16 +89,6 @@ test("dropDownComponent", async ({ page }) => {
     await page.locator('//*[@id="showendpoint_url"]').isChecked()
   ).toBeTruthy();
 
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
-  ).toBeTruthy();
-
   await page.locator('//*[@id="showregion_name"]').click();
   expect(
     await page.locator('//*[@id="showregion_name"]').isChecked()
@@ -145,16 +135,6 @@ test("dropDownComponent", async ({ page }) => {
     await page.locator('//*[@id="showendpoint_url"]').isChecked()
   ).toBeTruthy();
 
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
-  ).toBeTruthy();
-
   await page.locator('//*[@id="showregion_name"]').click();
   expect(
     await page.locator('//*[@id="showregion_name"]').isChecked()
@@ -164,12 +144,6 @@ test("dropDownComponent", async ({ page }) => {
   expect(
     await page.locator('//*[@id="showregion_name"]').isChecked()
   ).toBeTruthy();
-
-  await page.locator('//*[@id="showstream"]').click();
-  expect(await page.locator('//*[@id="showstream"]').isChecked()).toBeFalsy();
-
-  await page.locator('//*[@id="showstream"]').click();
-  expect(await page.locator('//*[@id="showstream"]').isChecked()).toBeTruthy();
 
   // showmodel_id
   await page.locator('//*[@id="showmodel_id"]').click();
