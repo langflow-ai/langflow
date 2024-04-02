@@ -56,15 +56,16 @@ select:-webkit-autofill:focus {
 }
 
 .ace_scrollbar::-webkit-scrollbar-track {
-  background-color: #f1f1f1;
+  background-color: #00000000;
 }
 
 .ace_scrollbar::-webkit-scrollbar-thumb {
-  background-color: #ccc;
+  background-color: #7f7f7f79;
   border-radius: 999px;
+  transition: 0.3s;
 }
 
 .ace_scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #bbb;
+  background-color: #7f7f7f;
   border-radius: 999px;
 }

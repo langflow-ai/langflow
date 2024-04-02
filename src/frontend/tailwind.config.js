@@ -196,14 +196,14 @@ module.exports = {
             height: "8px",
           },
           "&::-webkit-scrollbar-track": {
-            backgroundColor: "#f1f1f1",
+            backgroundColor: "#00000000",
           },
           "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "#ccc",
+            backgroundColor: "#7f7f7f79",
             borderRadius: "999px",
           },
           "&::-webkit-scrollbar-thumb:hover": {
-            backgroundColor: "#bbb",
+            backgroundColor: "#7f7f7f",
           },
           cursor: "auto",
         },

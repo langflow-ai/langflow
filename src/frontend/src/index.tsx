@@ -10,6 +10,7 @@ import "./style/applies.css";
 // @ts-ignore
 import { StrictMode } from "react";
 import "./style/classes.css";
+import 'overlayscrollbars/overlayscrollbars.css';
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement

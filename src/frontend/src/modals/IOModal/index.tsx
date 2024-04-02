@@ -4,6 +4,7 @@ import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
+import Scroller from "../../components/ui/scroller";
 import {
   Tabs,
   TabsContent,
@@ -16,6 +17,7 @@ import {
   TEXT_INPUT_MODAL_TITLE,
 } from "../../constants/constants";
 import { InputOutput } from "../../constants/enums";
+import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { IOModalPropsType } from "../../types/components";
@@ -121,6 +123,8 @@ export default function IOModal({
     setSelectedViewField(startView());
   }, [open]);
 
+  const dark = useDarkStore((state) => state.dark);
+
   return (
     <BaseModal
       size={selectedTab === 0 ? "large-thin" : "large"}
@@ -150,161 +154,165 @@ export default function IOModal({
                 )}
               >
                 <Tabs
+                  asChild
                   value={selectedTab.toString()}
-                  className={
-                    "flex h-full flex-col overflow-y-auto rounded-md border bg-muted text-center custom-scroll"
-                  }
                   onValueChange={(value) => {
                     setSelectedTab(Number(value));
                   }}
                 >
-                  <div className="api-modal-tablist-div">
-                    <TabsList>
-                      {inputs.length > 0 && (
-                        <TabsTrigger value={"1"}>Inputs</TabsTrigger>
-                      )}
-                      {outputs.length > 0 && (
-                        <TabsTrigger value={"2"}>Outputs</TabsTrigger>
-                      )}
-                    </TabsList>
-                  </div>
+                  <Scroller
+                    className={
+                      "flex h-full flex-col overflow-y-auto rounded-md border bg-muted text-center"
+                    }
+                  >
+                    <div className="api-modal-tablist-div">
+                      <TabsList>
+                        {inputs.length > 0 && (
+                          <TabsTrigger value={"1"}>Inputs</TabsTrigger>
+                        )}
+                        {outputs.length > 0 && (
+                          <TabsTrigger value={"2"}>Outputs</TabsTrigger>
+                        )}
+                      </TabsList>
+                    </div>
 
-                  <TabsContent
-                    value={"1"}
-                    className="api-modal-tabs-content mt-4"
-                  >
-                    <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
-                      <IconComponent className="h-4 w-4" name={"Type"} />
-                      {TEXT_INPUT_MODAL_TITLE}
-                    </div>
-                    {nodes
-                      .filter((node) =>
-                        inputs.some((input) => input.id === node.id)
-                      )
-                      .map((node, index) => {
-                        const input = inputs.find(
-                          (input) => input.id === node.id
-                        )!;
-                        return (
-                          <div
-                            className="file-component-accordion-div"
-                            key={index}
-                          >
-                            <AccordionComponent
-                              trigger={
-                                <div className="file-component-badge-div">
-                                  <ShadTooltip
-                                    content={input.id}
-                                    styleClasses="z-50"
-                                  >
-                                    <div>
-                                      <Badge variant="gray" size="md">
-                                        {node.data.node.display_name}
-                                      </Badge>
+                    <TabsContent
+                      value={"1"}
+                      className="api-modal-tabs-content mt-4"
+                    >
+                      <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
+                        <IconComponent className="h-4 w-4" name={"Type"} />
+                        {TEXT_INPUT_MODAL_TITLE}
+                      </div>
+                      {nodes
+                        .filter((node) =>
+                          inputs.some((input) => input.id === node.id)
+                        )
+                        .map((node, index) => {
+                          const input = inputs.find(
+                            (input) => input.id === node.id
+                          )!;
+                          return (
+                            <div
+                              className="file-component-accordion-div"
+                              key={index}
+                            >
+                              <AccordionComponent
+                                trigger={
+                                  <div className="file-component-badge-div">
+                                    <ShadTooltip
+                                      content={input.id}
+                                      styleClasses="z-50"
+                                    >
+                                      <div>
+                                        <Badge variant="gray" size="md">
+                                          {node.data.node.display_name}
+                                        </Badge>
+                                      </div>
+                                    </ShadTooltip>
+                                    <div
+                                      className="-mb-1 pr-4"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        setSelectedViewField(input);
+                                      }}
+                                    >
+                                      <IconComponent
+                                        className="h-4 w-4"
+                                        name="ExternalLink"
+                                      ></IconComponent>
                                     </div>
-                                  </ShadTooltip>
-                                  <div
-                                    className="-mb-1 pr-4"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      setSelectedViewField(input);
-                                    }}
-                                  >
-                                    <IconComponent
-                                      className="h-4 w-4"
-                                      name="ExternalLink"
-                                    ></IconComponent>
+                                  </div>
+                                }
+                                key={index}
+                                keyValue={input.id}
+                              >
+                                <div className="file-component-tab-column">
+                                  <div className="">
+                                    {input && (
+                                      <IOFieldView
+                                        type={InputOutput.INPUT}
+                                        left={true}
+                                        fieldType={input.type}
+                                        fieldId={input.id}
+                                      />
+                                    )}
                                   </div>
                                 </div>
-                              }
+                              </AccordionComponent>
+                            </div>
+                          );
+                        })}
+                    </TabsContent>
+                    <TabsContent
+                      value={"2"}
+                      className="api-modal-tabs-content mt-4"
+                    >
+                      <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
+                        <IconComponent className="h-4 w-4" name={"Type"} />
+                        {OUTPUTS_MODAL_TITLE}
+                      </div>
+                      {nodes
+                        .filter((node) =>
+                          outputs.some((output) => output.id === node.id)
+                        )
+                        .map((node, index) => {
+                          const output = outputs.find(
+                            (output) => output.id === node.id
+                          )!;
+                          return (
+                            <div
+                              className="file-component-accordion-div"
                               key={index}
-                              keyValue={input.id}
                             >
-                              <div className="file-component-tab-column">
-                                <div className="">
-                                  {input && (
-                                    <IOFieldView
-                                      type={InputOutput.INPUT}
-                                      left={true}
-                                      fieldType={input.type}
-                                      fieldId={input.id}
-                                    />
-                                  )}
-                                </div>
-                              </div>
-                            </AccordionComponent>
-                          </div>
-                        );
-                      })}
-                  </TabsContent>
-                  <TabsContent
-                    value={"2"}
-                    className="api-modal-tabs-content mt-4"
-                  >
-                    <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
-                      <IconComponent className="h-4 w-4" name={"Type"} />
-                      {OUTPUTS_MODAL_TITLE}
-                    </div>
-                    {nodes
-                      .filter((node) =>
-                        outputs.some((output) => output.id === node.id)
-                      )
-                      .map((node, index) => {
-                        const output = outputs.find(
-                          (output) => output.id === node.id
-                        )!;
-                        return (
-                          <div
-                            className="file-component-accordion-div"
-                            key={index}
-                          >
-                            <AccordionComponent
-                              trigger={
-                                <div className="file-component-badge-div">
-                                  <ShadTooltip
-                                    content={output.id}
-                                    styleClasses="z-50"
-                                  >
-                                    <div>
-                                      <Badge variant="gray" size="md">
-                                        {node.data.node.display_name}
-                                      </Badge>
+                              <AccordionComponent
+                                trigger={
+                                  <div className="file-component-badge-div">
+                                    <ShadTooltip
+                                      content={output.id}
+                                      styleClasses="z-50"
+                                    >
+                                      <div>
+                                        <Badge variant="gray" size="md">
+                                          {node.data.node.display_name}
+                                        </Badge>
+                                      </div>
+                                    </ShadTooltip>
+                                    <div
+                                      className="-mb-1 pr-4"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        setSelectedViewField(output);
+                                      }}
+                                    >
+                                      <IconComponent
+                                        className="h-4 w-4"
+                                        name="ExternalLink"
+                                      ></IconComponent>
                                     </div>
-                                  </ShadTooltip>
-                                  <div
-                                    className="-mb-1 pr-4"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      setSelectedViewField(output);
-                                    }}
-                                  >
-                                    <IconComponent
-                                      className="h-4 w-4"
-                                      name="ExternalLink"
-                                    ></IconComponent>
+                                  </div>
+                                }
+                                key={index}
+                                keyValue={output.id}
+                              >
+                                <div className="file-component-tab-column">
+                                  <div className="">
+                                    {output && (
+                                      <IOFieldView
+                                        type={InputOutput.OUTPUT}
+                                        left={true}
+                                        fieldType={output.type}
+                                        fieldId={output.id}
+                                      />
+                                    )}
                                   </div>
                                 </div>
-                              }
-                              key={index}
-                              keyValue={output.id}
-                            >
-                              <div className="file-component-tab-column">
-                                <div className="">
-                                  {output && (
-                                    <IOFieldView
-                                      type={InputOutput.OUTPUT}
-                                      left={true}
-                                      fieldType={output.type}
-                                      fieldId={output.id}
-                                    />
-                                  )}
-                                </div>
-                              </div>
-                            </AccordionComponent>
-                          </div>
-                        );
-                      })}
-                  </TabsContent>
+                              </AccordionComponent>
+                            </div>
+                          );
+                        })}
+                    </TabsContent>
+                  </Scroller>
                 </Tabs>
               </div>
             )}
