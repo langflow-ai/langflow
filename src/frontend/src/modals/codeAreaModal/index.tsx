@@ -26,6 +26,7 @@ import { useDarkStore } from "../../stores/darkStore";
 import { CodeErrorDataTypeAPI } from "../../types/api";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
+import Scroller from "../../components/ui/scroller";
 
 export default function CodeAreaModal({
   value,
@@ -168,7 +169,7 @@ export default function CodeAreaModal({
           <Input
             value={code}
             readOnly
-            className="absolute left-[500%] top-[500%]"
+            className="hidden"
             id="codeValue"
           />
           <div className="flex h-full w-full flex-col transition-all">
@@ -198,16 +199,16 @@ export default function CodeAreaModal({
                 (error?.detail?.error !== undefined ? "h-2/6" : "h-0")
               }
             >
-              <div className="mt-1 h-full max-h-[10rem] w-full overflow-y-auto overflow-x-clip text-left custom-scroll">
-                <h1 className="text-lg text-destructive">
+              <Scroller className="mt-2 w-full max-h-[10rem] overflow-y-auto text-left">
+                <h1 className="text-lg text-status-red font-semibold">
                   {error?.detail?.error}
                 </h1>
-                <div className="ml-2 w-full text-sm text-status-red word-break-break-word">
-                  <span className="w-full word-break-break-word">
+                <div className="ml-2 text-sm text-status-red word-break-break-word">
+                  <span className=" word-break-break-word">
                     {error?.detail?.traceback}
                   </span>
                 </div>
-              </div>
+              </Scroller>
             </div>
             <div className="flex h-fit w-full justify-end">
               <Button
