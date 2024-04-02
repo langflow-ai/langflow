@@ -130,8 +130,9 @@ frontendc:
 	make run_frontend
 
 install_backend:
-	@echo 'Installing backend dependencies'
+	@echo 'Setting up the environment'
 	@make setup_env
+	@echo 'Installing backend dependencies'
 	@poetry install --extras deploy
 
 backend:
