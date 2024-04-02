@@ -21,6 +21,11 @@ class FAISSSearchComponent(LCVectorStoreComponent):
             },
             "input_value": {"display_name": "Input"},
             "index_name": {"display_name": "Index Name"},
+            "number_of_results": {
+                "display_name": "Number of Results",
+                "info": "Number of results to return.",
+                "advanced": True,
+            },
         }
 
     def build(
@@ -28,6 +33,7 @@ class FAISSSearchComponent(LCVectorStoreComponent):
         input_value: Text,
         embedding: Embeddings,
         folder_path: str,
+        number_of_results: int = 4,
         index_name: str = "langflow_index",
     ) -> List[Record]:
         if not folder_path:
@@ -38,5 +44,5 @@ class FAISSSearchComponent(LCVectorStoreComponent):
             raise ValueError("Failed to load the FAISS index.")
 
         return self.search_with_vector_store(
-            vector_store=vector_store, input_value=input_value, search_type="similarity"
+            vector_store=vector_store, input_value=input_value, search_type="similarity", k=number_of_results
         )

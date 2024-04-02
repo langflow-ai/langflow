@@ -34,6 +34,11 @@ class VectaraSearchComponent(VectaraComponent, LCVectorStoreComponent):
             "display_name": "Files Url",
             "info": "Make vectara object using url of files (optional)",
         },
+        "number_of_results": {
+            "display_name": "Number of Results",
+            "info": "Number of results to return.",
+            "advanced": True,
+        },
     }
 
     def build(  # type: ignore[override]
@@ -43,6 +48,7 @@ class VectaraSearchComponent(VectaraComponent, LCVectorStoreComponent):
         vectara_customer_id: str,
         vectara_corpus_id: str,
         vectara_api_key: str,
+        number_of_results: int = 4,
     ) -> List[Record]:
         source = "Langflow"
         vector_store = Vectara(
@@ -56,5 +62,5 @@ class VectaraSearchComponent(VectaraComponent, LCVectorStoreComponent):
             raise ValueError("Failed to create Vectara Vector Store")
 
         return self.search_with_vector_store(
-            vector_store=vector_store, input_value=input_value, search_type=search_type
+            vector_store=vector_store, input_value=input_value, search_type=search_type, k=number_of_results
         )
