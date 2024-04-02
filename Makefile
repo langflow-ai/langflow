@@ -194,10 +194,9 @@ lock_langflow:
 
 lock:
 # Run both in parallel
-	# cd src/backend/base && poetry lock
-	# poetry lock
 	@echo 'Locking dependencies'
-	@make -j2 lock_base lock_langflow
+	cd src/backend/base && poetry lock
+	poetry lock
 publish_base:
 	make build_langflow_base
 	cd src/backend/base && poetry publish
