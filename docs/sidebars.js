@@ -71,7 +71,7 @@ module.exports = {
       items: [
         "components/inputs",
         "components/outputs",
-        "components/data",
+        // "components/data",
         "components/prompts",
         "components/models",
         "components/helpers",
