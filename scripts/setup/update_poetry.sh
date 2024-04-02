@@ -7,6 +7,31 @@ then
     exit 1
 fi
 
+echo "Checking Pipx installation..."
+
+# Check if pipx is installed
+if ! command -v pipx &> /dev/null
+then
+    echo "Pipx is not installed. Installing..."
+    python3 -m pip install --user pipx
+    python3 -m pipx ensurepath
+    echo "Pipx installed successfully."
+else
+    echo "Pipx is already installed."
+fi
+
+echo "Checking Poetry installation..."
+
+# Check if Poetry is installed
+if ! command -v poetry &> /dev/null
+then
+    echo "Poetry is not installed. Installing..."
+    pipx install poetry
+    echo "Poetry installed successfully."
+else
+    echo "Poetry is already installed."
+fi
+
 echo "Checking Poetry version..."
 
 # Check Poetry version
