@@ -982,7 +982,7 @@
       "zoom": 0.47344308394045925
     }
   },
-  "description": "",
+  "description": "This flow can be used to create a blog post following instructions from the user, using two other blogs as reference.",
   "name": "Blog Writer",
   "last_tested_version": "1.0.0a0",
   "is_component": false
