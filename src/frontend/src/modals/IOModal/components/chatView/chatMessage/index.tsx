@@ -13,6 +13,8 @@ import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { classNames, cn } from "../../../../../utils/utils";
 import FileCard from "../fileComponent";
+import useAlertStore from "../../../../../stores/alertStore";
+import { Message } from "@radix-ui/react-form";
 
 export default function ChatMessage({
   chat,
@@ -33,6 +35,7 @@ export default function ChatMessage({
   const [isStreaming, setIsStreaming] = useState(false);
   const eventSource = useRef<EventSource | undefined>(undefined);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const chatMessageRef = useRef(chatMessage);
 
   // Sync ref with state
@@ -53,10 +56,14 @@ export default function ChatMessage({
           setChatMessage((prev) => prev + parsedData.chunk);
         }
       };
-      eventSource.current.onerror = (event) => {
+      eventSource.current.onerror = (event:any) => {
         setIsStreaming(false);
         eventSource.current?.close();
         setStreamUrl(undefined);
+        if(JSON.parse(event.data)?.error){
+          setErrorData({title: "Error on Streaming", list: [JSON.parse(event.data)?.error]});
+        }
+        updateChat(chat, chatMessageRef.current);
         reject(new Error("Streaming failed"));
       };
       eventSource.current.addEventListener("close", (event) => {
