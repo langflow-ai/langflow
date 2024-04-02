@@ -6,7 +6,7 @@ host ?= 0.0.0.0
 port ?= 7860
 env ?= .env
 open_browser ?= true
-path = src/backend/base/langflow/frontend/build
+path = src/backend/base/langflow/frontend
 
 setup_poetry:
 	pipx install poetry
@@ -148,7 +148,7 @@ build_and_run:
 	rm -rf dist
 	rm -rf src/backend/base/dist
 	make build
-	poetry run pip install dist/*.tar.gz && pip install src/backend/base/dist/*.tar.gz
+	poetry run pip install dist/*.tar.gz
 	poetry run langflow run
 
 build_and_install:
