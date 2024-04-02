@@ -1,8 +1,8 @@
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from langchain_openai.embeddings.base import OpenAIEmbeddings
 
-from langflow.field_typing import NestedDict
+from langflow.field_typing import Embeddings, NestedDict
 from langflow.interface.custom.custom_component import CustomComponent
 
 
@@ -109,7 +109,7 @@ class OpenAIEmbeddingsComponent(CustomComponent):
         skip_empty: bool = False,
         tiktoken_enable: bool = True,
         tiktoken_model_name: Optional[str] = None,
-    ) -> Union[OpenAIEmbeddings, Callable]:
+    ) -> Embeddings:
         # This is to avoid errors with Vector Stores (e.g Chroma)
         if disallowed_special == ["all"]:
             disallowed_special = "all"  # type: ignore

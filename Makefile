@@ -6,6 +6,7 @@ host ?= 0.0.0.0
 port ?= 7860
 env ?= .env
 open_browser ?= true
+path = src/backend/base/langflow/frontend
 
 setup_poetry:
 	pipx install poetry
@@ -99,11 +100,11 @@ endif
 
 start:
 	@echo 'Running the CLI'
-	@make install_backend
+
 ifeq ($(open_browser),false)
-	poetry run langflow run --path src/frontend/build --log-level $(log_level) --host $(host) --port $(port) --env-file $(env) --no-open-browser
+	@make install_backend && poetry run langflow run --path $(path) --log-level $(log_level) --host $(host) --port $(port) --env-file $(env) --no-open-browser
 else
-	poetry run langflow run --path src/frontend/build --log-level $(log_level) --host $(host) --port $(port) --env-file $(env)
+	@make install_backend && poetry run langflow run --path $(path) --log-level $(log_level) --host $(host) --port $(port) --env-file $(env)
 endif
 
 
