@@ -6,7 +6,7 @@ host ?= 0.0.0.0
 port ?= 7860
 env ?= .env
 open_browser ?= true
-path = src/backend/base/langflow/frontend
+path = src/backend/base/langflow/frontend/build
 
 setup_poetry:
 	pipx install poetry
@@ -116,6 +116,7 @@ setup_devcontainer:
 
 setup_env:
 	@sh ./scripts/setup/update_poetry.sh 1.8.2
+	@make setup_poetry
 	@sh ./scripts/setup/setup_env.sh
 
 frontend:
