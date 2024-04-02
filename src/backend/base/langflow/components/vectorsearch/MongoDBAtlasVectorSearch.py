@@ -23,6 +23,11 @@ class MongoDBAtlasSearchComponent(LCVectorStoreComponent):
             "index_name": {"display_name": "Index Name"},
             "mongodb_atlas_cluster_uri": {"display_name": "MongoDB Atlas Cluster URI"},
             "search_kwargs": {"display_name": "Search Kwargs", "advanced": True},
+            "number_of_results": {
+                "display_name": "Number of Results",
+                "info": "Number of results to return.",
+                "advanced": True,
+            },
         }
 
     def build(  # type: ignore[override]
@@ -30,6 +35,7 @@ class MongoDBAtlasSearchComponent(LCVectorStoreComponent):
         input_value: Text,
         search_type: str,
         embedding: Embeddings,
+        number_of_results: int = 4,
         collection_name: str = "",
         db_name: str = "",
         index_name: str = "",
@@ -47,5 +53,5 @@ class MongoDBAtlasSearchComponent(LCVectorStoreComponent):
         if not vector_store:
             raise ValueError("Failed to create MongoDB Atlas Vector Store")
         return self.search_with_vector_store(
-            vector_store=vector_store, input_value=input_value, search_type=search_type
+            vector_store=vector_store, input_value=input_value, search_type=search_type, k=number_of_results
         )
