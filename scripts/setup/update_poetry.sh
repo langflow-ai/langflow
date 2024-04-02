@@ -80,7 +80,24 @@ check_for_pipx_update() {
         read -r user_input
         if [[ "$user_input" == "yes" ]]; then
             echo "Updating pipx..."
-            python3 -m pip install --user --upgrade pipx
+            case "$OS" in
+                macOS)
+                    brew upgrade pipx
+                    ;;
+                Linux)
+                    if grep -qEi "(ubuntu|debian)" /etc/*release; then
+                        sudo apt update
+                        sudo apt install --only-upgrade pipx -y
+                    elif grep -qEi "fedora" /etc/*release; then
+                        sudo dnf upgrade pipx -y
+                    else
+                        python3 -m pip install --user --upgrade pipx
+                    fi
+                    ;;
+                *)
+                    exit_with_message "Unsupported operating system for pipx update."
+                    ;;
+            esac
             pipx ensurepath
             echo "pipx updated to version $latest_version"
         else
