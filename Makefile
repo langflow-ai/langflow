@@ -145,6 +145,7 @@ endif
 
 build_and_run:
 	@echo 'Removing dist folder'
+	@make setup_env
 	rm -rf dist
 	rm -rf src/backend/base/dist
 	make build
