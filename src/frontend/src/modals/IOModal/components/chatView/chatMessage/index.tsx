@@ -9,12 +9,11 @@ import Robot from "../../../../../assets/robot.png";
 import SanitizedHTMLWrapper from "../../../../../components/SanitizedHTMLWrapper";
 import CodeTabsComponent from "../../../../../components/codeTabsComponent";
 import IconComponent from "../../../../../components/genericIconComponent";
+import useAlertStore from "../../../../../stores/alertStore";
 import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { classNames, cn } from "../../../../../utils/utils";
 import FileCard from "../fileComponent";
-import useAlertStore from "../../../../../stores/alertStore";
-import { Message } from "@radix-ui/react-form";
 
 export default function ChatMessage({
   chat,
@@ -56,12 +55,15 @@ export default function ChatMessage({
           setChatMessage((prev) => prev + parsedData.chunk);
         }
       };
-      eventSource.current.onerror = (event:any) => {
+      eventSource.current.onerror = (event: any) => {
         setIsStreaming(false);
         eventSource.current?.close();
         setStreamUrl(undefined);
-        if(JSON.parse(event.data)?.error){
-          setErrorData({title: "Error on Streaming", list: [JSON.parse(event.data)?.error]});
+        if (JSON.parse(event.data)?.error) {
+          setErrorData({
+            title: "Error on Streaming",
+            list: [JSON.parse(event.data)?.error],
+          });
         }
         updateChat(chat, chatMessageRef.current);
         reject(new Error("Streaming failed"));
