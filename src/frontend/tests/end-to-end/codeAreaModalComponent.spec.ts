@@ -15,8 +15,6 @@ test("CodeAreaModalComponent", async ({ page }) => {
 
   await page.waitForTimeout(1000);
 
-  await page.getByTestId("extended-disclosure").click();
-
   await page
     .getByTestId("toolsPythonFunctionTool")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
