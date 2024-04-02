@@ -137,4 +137,12 @@ class AstraDBSearchComponent(LCVectorStoreComponent):
             metadata_indexing_exclude=metadata_indexing_exclude,
             collection_indexing_policy=collection_indexing_policy,
         )
-        return self.search_with_vector_store(input_value, search_type, vector_store, k=number_of_results)
+        try:
+            return self.search_with_vector_store(input_value, search_type, vector_store, k=number_of_results)
+        except KeyError as e:
+            if "content" in str(e):
+                raise ValueError(
+                    "You should ingest data through Langflow (or LangChain) to query it in Langflow. Your collection does not contain a field name 'content'."
+                )
+            else:
+                raise e
