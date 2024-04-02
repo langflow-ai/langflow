@@ -6,8 +6,8 @@ module.exports = {
       collapsed: false,
       items: [
         "index",
-        "getting-started/installation",
-        "getting-started/usage",
+        "getting-started/first-steps",
+        "getting-started/cli",
         "getting-started/hugging-face-spaces",
         "getting-started/creating-flows",
       ],
