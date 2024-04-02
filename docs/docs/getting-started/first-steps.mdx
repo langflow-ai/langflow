@@ -1,28 +1,52 @@
-# ⛓️ Running Langflow
+# First steps
 
-Langflow can be run in a variety of ways, including using the command-line interface (CLI) or HuggingFace Spaces.
+## Installation
+
+Make sure you have **Python 3.10** installed on your system.
+
+You can install **Langflow** with [pipx](https://pipx.pypa.io/stable/installation/) or with pip.
+
+Pipx can fetch the missing Python version for you, but you can also install it manually.
 
 ```bash
-python -m langflow run
+pipx install langflow --python python3.10 --fetch-missing-python
+# or
+pip install langflow -U
 ```
 
-or
+Or you can install a pre-release version using:
+
+```bash
+pipx install langflow --python python3.10 --fetch-missing-python --pip-args="--pre"
+# or
+pip install langflow --pre -U
+```
+
+##⛓️ Running Langflow
+
+Langflow can be run in a variety of ways, including using the command-line interface (CLI) or HuggingFace Spaces.
 
 ```bash
 langflow run # or langflow --help
 ```
 
-
 ### 🤗 HuggingFace Spaces
 
-Check out our [guide](./hugging-face-spaces) on how to get your Langflow instance running on HuggingFace Spaces.
+Hugging Face provides a great alternative for running Langflow in their Spaces environment. This means you can run Langflow without any local installation required.
+
+The first step is to go to the [Langflow Space](https://huggingface.co/spaces/Logspace/Langflow?duplicate=true). Remember to use a Chromium-based browser for the best experience. You’ll be presented with the following screen:
+From here, just name your Space, define the visibility (Public or Private), and click on `Duplicate Space` to start the installation process. When that is done, you’ll be redirected to the Space’s main page to start using Langflow right away!
+
+Once you get Langflow running, click on New Project in the top right corner of the screen. Langflow provides a range of example flows to help you get started.
+
+To quickly try one of them, open a starter example and click ⚡ Run, on the bottom right corner of the canvas. This will open up Langflow’s Interaction Panel with the chat console, text inputs, and outputs.
 
 
-# 🖥️ Command Line Interface (CLI)
+### 🖥️ Command Line Interface (CLI)
 
 Langflow provides a command-line interface (CLI) for easy management and configuration.
 
-## Usage
+#### Usage
 
 You can run the Langflow using the following command:
 
@@ -59,3 +83,4 @@ These parameters are important for users who need to customize the behavior of L
 You can configure many of the CLI options using environment variables. These can be exported in your operating system or added to a `.env` file and loaded using the `--env-file` option.
 
 A sample `.env` file named `.env.example` is included with the project. Copy this file to a new file named `.env` and replace the example values with your actual settings. If you're setting values in both your OS and the `.env` file, the `.env` settings will take precedence.
+
