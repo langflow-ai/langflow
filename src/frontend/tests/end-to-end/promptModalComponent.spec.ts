@@ -33,8 +33,6 @@ test("PromptTemplateComponent", async ({ page }) => {
     .click();
   await page.getByTestId("prompt-input-template").click();
 
-  // await page.getByTestId("edit-prompt-sanitized").click();
-  // await page.getByTestId("modal-title").click();
   await page
     .getByTestId("modal-prompt-input-template")
     .fill("{prompt} example {prompt1}");

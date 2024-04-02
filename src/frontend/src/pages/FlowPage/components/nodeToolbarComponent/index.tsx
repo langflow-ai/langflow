@@ -29,7 +29,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { classNames, cn } from "../../../../utils/utils";
+import { classNames } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
 
 export default function NodeToolbarComponent({
@@ -326,7 +326,8 @@ export default function NodeToolbarComponent({
       if (
         selected &&
         !isGroup &&
-        (event.ctrlKey || event.metaKey) && event.shiftKey&&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey &&
         event.key === "A"
       ) {
         event.preventDefault();
@@ -409,15 +410,14 @@ export default function NodeToolbarComponent({
 
           <ShadTooltip content={"Duplicate"} side="top">
             <button
-              data-testid="save-button-modal"
+              data-testid="duplicate-button-modal"
               className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
               )}
               onClick={(event) => {
                 event.preventDefault();
                 handleSelectChange("duplicate");
-              }
-            }
+              }}
             >
               <IconComponent name="Copy" className="h-4 w-4" />
             </button>
