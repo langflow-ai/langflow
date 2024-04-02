@@ -137,12 +137,12 @@ install_backend:
 backend:
 	make install_backend
 	@-kill -9 `lsof -t -i:7860`
-ifeq ($(login),1)
-	@echo "Running backend without autologin";
-	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio
+ifdef login
+	@echo "Running backend autologin is $(login)";
+	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio
 else
-	@echo "Running backend with autologin";
-	LANGFLOW_AUTO_LOGIN=True poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env  --loop asyncio
+	@echo "Running backend respecting the .env file";
+	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env  --loop asyncio
 endif
 
 build_and_run:
