@@ -25,6 +25,23 @@
       "envFile": "${workspaceFolder}/.env"
     },
     {
+      "name": "Debug CLI",
+      "type": "python",
+      "request": "launch",
+      "module": "langflow",
+      "args": [
+        "run",
+        "--path",
+        "${workspaceFolder}/src/backend/langflow/frontend"
+      ],
+      "jinja": true,
+      "justMyCode": false,
+      "env": {
+        "LANGFLOW_LOG_LEVEL": "debug"
+      },
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
       "name": "Python: Remote Attach",
       "type": "python",
       "request": "attach",
