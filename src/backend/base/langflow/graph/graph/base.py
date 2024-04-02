@@ -1,7 +1,7 @@
 import asyncio
 from collections import defaultdict, deque
 from itertools import chain
-from typing import TYPE_CHECKING, Callable, Coroutine, Dict, Generator, List, Literal, Optional, Type, Union
+from typing import TYPE_CHECKING, Callable, Coroutine, Dict, Generator, List, Optional, Type, Union
 
 from loguru import logger
 
