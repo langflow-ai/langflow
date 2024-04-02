@@ -2804,6 +2804,21 @@ files = [
 protobuf = ["grpcio-tools (>=1.62.1)"]
 
 [[package]]
+name = "grpcio-health-checking"
+version = "1.62.1"
+description = "Standard Health Checking Service for gRPC"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "grpcio-health-checking-1.62.1.tar.gz", hash = "sha256:9e56180a941b1d32a077d7491e0611d0483c396358afd5349bf00152612e4583"},
+    {file = "grpcio_health_checking-1.62.1-py3-none-any.whl", hash = "sha256:9ce761c09fc383e7aa2f7e6c0b0b65d5a1157c1b98d1f5871f7c38aca47d49b9"},
+]
+
+[package.dependencies]
+grpcio = ">=1.62.1"
+protobuf = ">=4.21.6"
+
+[[package]]
 name = "grpcio-status"
 version = "1.62.1"
 description = "Status proto mapping for gRPC"
@@ -3039,13 +3054,13 @@ test = ["Cython (>=0.29.24,<0.30.0)"]
 
 [[package]]
 name = "httpx"
-version = "0.25.2"
+version = "0.27.0"
 description = "The next generation HTTP client."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "httpx-0.25.2-py3-none-any.whl", hash = "sha256:a05d3d052d9b2dfce0e3896636467f8a5342fb2b902c819428e1ac65413ca118"},
-    {file = "httpx-0.25.2.tar.gz", hash = "sha256:8b8fcaa0c8ea7b05edd69a094e63a2094c4efcb48129fb757361bc423c0ad9e8"},
+    {file = "httpx-0.27.0-py3-none-any.whl", hash = "sha256:71d5465162c13681bff01ad59b2cc68dd838ea1f10e51574bac27103f00c91a5"},
+    {file = "httpx-0.27.0.tar.gz", hash = "sha256:a0cb88a46f32dc874e04ee956e4c2764aba2aa228f650b06788ba6bda2962ab5"},
 ]
 
 [package.dependencies]
@@ -3890,13 +3905,13 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.13"
+version = "0.0.14"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = "<3.12,>=3.10"
 files = [
-    {file = "langflow_base-0.0.13-py3-none-any.whl", hash = "sha256:86a8cd4f4dac68a1c00b4fe434cd5df1ef4af939295a1a5516e4cc14aaf79e7a"},
-    {file = "langflow_base-0.0.13.tar.gz", hash = "sha256:b7ee7d93e29c20bdb2a1431498d5715ed2a8fbfe9ca5d7d49926a9a10937e8c2"},
+    {file = "langflow_base-0.0.14-py3-none-any.whl", hash = "sha256:a71594dd2218be21112dc03f9287a9710500a7733d6b959b4392d84e974baed9"},
+    {file = "langflow_base-0.0.14.tar.gz", hash = "sha256:3dcc905a6ea15e97e5037d43b0208818561590cafeba8b2be03c070f3017e24a"},
 ]
 
 [package.dependencies]
@@ -3908,7 +3923,7 @@ docstring-parser = ">=0.15,<0.16"
 duckdb = ">=0.9.2,<0.10.0"
 fastapi = ">=0.109.0,<0.110.0"
 gunicorn = ">=21.2.0,<22.0.0"
-httpx = ">=0.25,<0.26"
+httpx = "*"
 jq = {version = ">=1.7.0,<2.0.0", markers = "sys_platform != \"win32\""}
 langchain = ">=0.1.0,<0.2.0"
 langchain-anthropic = ">=0.1.4,<0.2.0"
@@ -9452,14 +9467,25 @@ test = ["Cython (>=0.29.36,<0.30.0)", "aiohttp (==3.9.0b0)", "aiohttp (>=3.8.1)"
 
 [[package]]
 name = "validators"
-version = "0.24.0"
+version = "0.22.0"
 description = "Python Data Validation for Humans™"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "validators-0.24.0-py3-none-any.whl", hash = "sha256:4a99eb368747e60900bae947418eb21e230ff4ff5e7b7944b9308c456d86da32"},
-    {file = "validators-0.24.0.tar.gz", hash = "sha256:cd23defb36de42d14e7559cf0757f761bb46b10d9de2998e6ef805f769d859e3"},
+    {file = "validators-0.22.0-py3-none-any.whl", hash = "sha256:61cf7d4a62bbae559f2e54aed3b000cea9ff3e2fdbe463f51179b92c58c9585a"},
+    {file = "validators-0.22.0.tar.gz", hash = "sha256:77b2689b172eeeb600d9605ab86194641670cdb73b60afd577142a9397873370"},
 ]
+
+[package.extras]
+docs-offline = ["myst-parser (>=2.0.0)", "pypandoc-binary (>=1.11)", "sphinx (>=7.1.1)"]
+docs-online = ["mkdocs (>=1.5.2)", "mkdocs-git-revision-date-localized-plugin (>=1.2.0)", "mkdocs-material (>=9.2.6)", "mkdocstrings[python] (>=0.22.0)", "pyaml (>=23.7.0)"]
+hooks = ["pre-commit (>=3.3.3)"]
+package = ["build (>=1.0.0)", "twine (>=4.0.2)"]
+runner = ["tox (>=4.11.1)"]
+sast = ["bandit[toml] (>=1.7.5)"]
+testing = ["pytest (>=7.4.0)"]
+tooling = ["black (>=23.7.0)", "pyright (>=1.1.325)", "ruff (>=0.0.287)"]
+tooling-extras = ["pyaml (>=23.7.0)", "pypandoc-binary (>=1.11)", "pytest (>=7.4.0)"]
 
 [[package]]
 name = "vine"
@@ -9572,22 +9598,24 @@ files = [
 
 [[package]]
 name = "weaviate-client"
-version = "3.26.2"
+version = "4.5.4"
 description = "A python native Weaviate client"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "weaviate-client-3.26.2.tar.gz", hash = "sha256:63ec70839b64909810a64aa7b3e5b85088462e93c7e2ed3c32ebefb702f36723"},
-    {file = "weaviate_client-3.26.2-py3-none-any.whl", hash = "sha256:ca43bfb9c06b8ae3fd938dc9158acd93d4cbf4622192e173333e1ff63cf97164"},
+    {file = "weaviate-client-4.5.4.tar.gz", hash = "sha256:fc53dc73cd53df453c5e6dc758e49a6a1549212d6670ddd013392107120692f8"},
+    {file = "weaviate_client-4.5.4-py3-none-any.whl", hash = "sha256:f6d3a6b759e5aa0d3350067490526ea38b9274ae4043b4a3ae0064c28d56883f"},
 ]
 
 [package.dependencies]
 authlib = ">=1.2.1,<2.0.0"
+grpcio = ">=1.57.0,<2.0.0"
+grpcio-health-checking = ">=1.57.0,<2.0.0"
+grpcio-tools = ">=1.57.0,<2.0.0"
+httpx = "0.27.0"
+pydantic = ">=2.5.0,<3.0.0"
 requests = ">=2.30.0,<3.0.0"
-validators = ">=0.21.2,<1.0.0"
-
-[package.extras]
-grpc = ["grpcio (>=1.57.0,<2.0.0)", "grpcio-tools (>=1.57.0,<2.0.0)"]
+validators = "0.22.0"
 
 [[package]]
 name = "websocket-client"
@@ -10163,4 +10191,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "b1b40cf39cc544faf5ca6ad04a2be009df7d8d343d86c1e9d7c02d21b2cad431"
+content-hash = "93ba818f62480fce5ab5f91b45a02568ff3a636d8c155fb7dcf52a5b2acfa79c"
