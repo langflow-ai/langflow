@@ -23,7 +23,9 @@ export default function IOFieldView({
           case "TextInput":
             return (
               <Textarea
-                className={`w-full custom-scroll ${left ? " min-h-32" : " h-full"}`}
+                className={`w-full custom-scroll ${
+                  left ? " min-h-32" : " h-full"
+                }`}
                 placeholder={"Enter text..."}
                 value={node.data.node!.template["input_value"].value}
                 onChange={(e) => {
@@ -54,7 +56,9 @@ export default function IOFieldView({
           default:
             return (
               <Textarea
-                className={`w-full custom-scroll ${left ? " min-h-32" : " h-full"}`}
+                className={`w-full custom-scroll ${
+                  left ? " min-h-32" : " h-full"
+                }`}
                 placeholder={"Enter text..."}
                 value={node.data.node!.template["input_value"]}
                 onChange={(e) => {
@@ -74,7 +78,9 @@ export default function IOFieldView({
           case "TextOutput":
             return (
               <Textarea
-                className={`w-full custom-scroll ${left ? " min-h-32" : " h-full"}`}
+                className={`w-full custom-scroll ${
+                  left ? " min-h-32" : " h-full"
+                }`}
                 placeholder={"Empty"}
                 // update to real value on flowPool
                 value={
@@ -89,7 +95,9 @@ export default function IOFieldView({
           default:
             return (
               <Textarea
-                className={`w-full custom-scroll ${left ? " min-h-32" : " h-full"}`}
+                className={`w-full custom-scroll ${
+                  left ? " min-h-32" : " h-full"
+                }`}
                 placeholder={"Empty"}
                 // update to real value on flowPool
                 value={

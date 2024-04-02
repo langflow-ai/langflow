@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../../../components/genericIconComponent";
-import { NOCHATOUTPUT_NOTICE_ALERT } from "../../../../constants/alerts_constants";
 import {
   CHAT_FIRST_INITIAL_TEXT,
   CHAT_SECOND_INITIAL_TEXT,
