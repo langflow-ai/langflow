@@ -116,7 +116,6 @@ setup_devcontainer:
 
 setup_env:
 	@sh ./scripts/setup/update_poetry.sh 1.8.2
-	@make setup_poetry
 	@sh ./scripts/setup/setup_env.sh
 
 frontend:
