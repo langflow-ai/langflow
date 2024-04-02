@@ -5,7 +5,7 @@
   "data": {
     "nodes": [
       {
-        "id": "ChatInput-kOK82",
+        "id": "ChatInput-r2WbA",
         "type": "genericNode",
         "position": {
           "x": 1283.2700598313072,
@@ -51,7 +51,7 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "value": "Hello. I'm testing Langflow."
+                "value": "what i said in the past?"
               },
               "return_record": {
                 "type": "bool",
@@ -170,11 +170,11 @@
             "field_order": [],
             "beta": false
           },
-          "id": "ChatInput-kOK82"
+          "id": "ChatInput-r2WbA"
         },
         "selected": false,
         "width": 384,
-        "height": 477,
+        "height": 471,
         "positionAbsolute": {
           "x": 1283.2700598313072,
           "y": 982.5953650473145
@@ -182,7 +182,7 @@
         "dragging": false
       },
       {
-        "id": "ChatOutput-ImuK8",
+        "id": "ChatOutput-65FlE",
         "type": "genericNode",
         "position": {
           "x": 3154.916355514023,
@@ -348,11 +348,11 @@
             "field_order": [],
             "beta": false
           },
-          "id": "ChatOutput-ImuK8"
+          "id": "ChatOutput-65FlE"
         },
         "selected": false,
         "width": 384,
-        "height": 477,
+        "height": 479,
         "dragging": false,
         "positionAbsolute": {
           "x": 3154.916355514023,
@@ -360,11 +360,11 @@
         }
       },
       {
-        "id": "MemoryComponent-tbqb9",
+        "id": "MemoryComponent-CsMk7",
         "type": "genericNode",
         "position": {
-          "x": 1295.1067823347944,
-          "y": 539.7445491027617
+          "x": 1289.9606870058817,
+          "y": 442.16804561053766
         },
         "data": {
           "type": "MemoryComponent",
@@ -377,7 +377,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
-                "value": "from typing import Optional\n\nfrom langflow.field_typing import Text\nfrom langflow.helpers.record import records_to_text\nfrom langflow.interface.custom.custom_component import CustomComponent\nfrom langflow.memory import get_messages\n\n\nclass MemoryComponent(CustomComponent):\n    display_name = \"Chat Memory\"\n    description = \"Retrieves stored chat messages given a specific Session ID.\"\n    beta: bool = True\n    icon = \"history\"\n\n    def build_config(self):\n        return {\n            \"sender\": {\n                \"options\": [\"Machine\", \"User\", \"Machine and User\"],\n                \"display_name\": \"Sender Type\",\n            },\n            \"sender_name\": {\"display_name\": \"Sender Name\", \"advanced\": True},\n            \"n_messages\": {\n                \"display_name\": \"Number of Messages\",\n                \"info\": \"Number of messages to retrieve.\",\n                \"advanced\": True,\n            },\n            \"session_id\": {\n                \"display_name\": \"Session ID\",\n                \"info\": \"Session ID of the chat history.\",\n                \"input_types\": [\"Text\"],\n            },\n            \"order\": {\n                \"options\": [\"Ascending\", \"Descending\"],\n                \"display_name\": \"Order\",\n                \"info\": \"Order of the messages.\",\n                \"advanced\": True,\n            },\n            \"record_template\": {\n                \"display_name\": \"Record Template\",\n                \"multiline\": True,\n                \"info\": \"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine and User\",\n        sender_name: Optional[str] = None,\n        session_id: Optional[str] = None,\n        n_messages: int = 5,\n        order: Optional[str] = \"Descending\",\n        record_template: Optional[str] = \"{sender_name}: {text}\",\n    ) -> Text:\n        order = \"DESC\" if order == \"Descending\" else \"ASC\"\n        if sender == \"Machine and User\":\n            sender = None\n        messages = get_messages(\n            sender=sender,\n            sender_name=sender_name,\n            session_id=session_id,\n            limit=n_messages,\n            order=order,\n        )\n        messages_str = records_to_text(template=record_template, records=messages)\n        self.status = messages_str\n        return messages_str\n",
+                "value": "from typing import Optional\n\nfrom langflow.field_typing import Text\nfrom langflow.helpers.record import records_to_text\nfrom langflow.interface.custom.custom_component import CustomComponent\nfrom langflow.memory import get_messages\n\n\nclass MemoryComponent(CustomComponent):\n    display_name = \"Chat Memory\"\n    description = \"Retrieves stored chat messages given a specific Session ID.\"\n    beta: bool = True\n    icon = \"history\"\n\n    def build_config(self):\n        return {\n            \"sender\": {\n                \"options\": [\"Machine\", \"User\", \"Machine and User\"],\n                \"display_name\": \"Sender Type\",\n            },\n            \"sender_name\": {\"display_name\": \"Sender Name\", \"advanced\": True},\n            \"n_messages\": {\n                \"display_name\": \"Number of Messages\",\n                \"info\": \"Number of messages to retrieve.\",\n            },\n            \"session_id\": {\n                \"display_name\": \"Session ID\",\n                \"info\": \"Session ID of the chat history.\",\n                \"input_types\": [\"Text\"],\n            },\n            \"order\": {\n                \"options\": [\"Ascending\", \"Descending\"],\n                \"display_name\": \"Order\",\n                \"info\": \"Order of the messages.\",\n                \"advanced\": True,\n            },\n            \"record_template\": {\n                \"display_name\": \"Record Template\",\n                \"multiline\": True,\n                \"info\": \"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine and User\",\n        sender_name: Optional[str] = None,\n        session_id: Optional[str] = None,\n        n_messages: int = 5,\n        order: Optional[str] = \"Descending\",\n        record_template: Optional[str] = \"{sender_name}: {text}\",\n    ) -> Text:\n        order = \"DESC\" if order == \"Descending\" else \"ASC\"\n        if sender == \"Machine and User\":\n            sender = None\n        messages = get_messages(\n            sender=sender,\n            sender_name=sender_name,\n            session_id=session_id,\n            limit=n_messages,\n            order=order,\n        )\n        messages_str = records_to_text(template=record_template, records=messages)\n        self.status = messages_str\n        return messages_str\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -401,7 +401,7 @@
                 "password": false,
                 "name": "n_messages",
                 "display_name": "Number of Messages",
-                "advanced": true,
+                "advanced": false,
                 "dynamic": false,
                 "info": "Number of messages to retrieve.",
                 "load_from_db": false,
@@ -552,21 +552,21 @@
             "field_order": [],
             "beta": true
           },
-          "id": "MemoryComponent-tbqb9",
+          "id": "MemoryComponent-CsMk7",
           "description": "Retrieves stored chat messages given a specific Session ID.",
           "display_name": "Chat Memory"
         },
         "selected": false,
         "width": 384,
-        "height": 403,
+        "height": 491,
         "dragging": false,
         "positionAbsolute": {
-          "x": 1295.1067823347944,
-          "y": 539.7445491027617
+          "x": 1289.9606870058817,
+          "y": 442.16804561053766
         }
       },
       {
-        "id": "Prompt-54XGX",
+        "id": "Prompt-p9ug4",
         "type": "genericNode",
         "position": {
           "x": 1894.594426342426,
@@ -699,13 +699,13 @@
             "beta": false,
             "error": null
           },
-          "id": "Prompt-54XGX",
+          "id": "Prompt-p9ug4",
           "description": "A component for creating prompt templates using dynamic variables.",
           "display_name": "Prompt"
         },
         "selected": false,
         "width": 384,
-        "height": 497,
+        "height": 479,
         "dragging": false,
         "positionAbsolute": {
           "x": 1894.594426342426,
@@ -713,11 +713,11 @@
         }
       },
       {
-        "id": "OpenAIModel-NQQmp",
+        "id": "OpenAIModel-OwSm5",
         "type": "genericNode",
         "position": {
-          "x": 2534.6473994159896,
-          "y": 394.72169335336775
+          "x": 2561.5850334731617,
+          "y": 553.2745131130916
         },
         "data": {
           "type": "OpenAIModel",
@@ -775,7 +775,7 @@
                 "password": false,
                 "name": "max_tokens",
                 "display_name": "Max Tokens",
-                "advanced": false,
+                "advanced": true,
                 "dynamic": false,
                 "info": "",
                 "load_from_db": false,
@@ -813,6 +813,7 @@
                 "password": false,
                 "options": [
                   "gpt-4-turbo-preview",
+                  "gpt-3.5-turbo",
                   "gpt-4-0125-preview",
                   "gpt-4-1106-preview",
                   "gpt-4-vision-preview",
@@ -842,7 +843,7 @@
                 "password": false,
                 "name": "openai_api_base",
                 "display_name": "OpenAI API Base",
-                "advanced": false,
+                "advanced": true,
                 "dynamic": false,
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
                 "load_from_db": false,
@@ -886,7 +887,7 @@
                 "password": false,
                 "name": "stream",
                 "display_name": "Stream",
-                "advanced": false,
+                "advanced": true,
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
                 "load_from_db": false,
@@ -904,7 +905,7 @@
                 "password": false,
                 "name": "system_message",
                 "display_name": "System Message",
-                "advanced": false,
+                "advanced": true,
                 "dynamic": false,
                 "info": "System message to pass to the model.",
                 "load_from_db": false,
@@ -930,6 +931,7 @@
                 "dynamic": false,
                 "info": "",
                 "rangeSpec": {
+                  "step_type": "float",
                   "min": -1,
                   "max": 1,
                   "step": 0.1
@@ -943,19 +945,19 @@
             "icon": "OpenAI",
             "base_classes": [
               "str",
-              "Text",
-              "object"
+              "object",
+              "Text"
             ],
             "display_name": "OpenAI",
             "documentation": "",
             "custom_fields": {
               "input_value": null,
-              "max_tokens": null,
-              "model_kwargs": null,
-              "model_name": null,
-              "openai_api_base": null,
               "openai_api_key": null,
               "temperature": null,
+              "model_name": null,
+              "max_tokens": null,
+              "model_kwargs": null,
+              "openai_api_base": null,
               "stream": null,
               "system_message": null
             },
@@ -977,60 +979,29 @@
             ],
             "beta": false
           },
-          "id": "OpenAIModel-NQQmp"
+          "id": "OpenAIModel-OwSm5"
         },
         "selected": false,
         "width": 384,
-        "height": 913,
+        "height": 565,
         "positionAbsolute": {
-          "x": 2534.6473994159896,
-          "y": 394.72169335336775
+          "x": 2561.5850334731617,
+          "y": 553.2745131130916
         },
         "dragging": false
       }
     ],
     "edges": [
       {
-        "source": "Prompt-54XGX",
-        "sourceHandle": "{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-54XGXœ}",
-        "target": "OpenAIModel-NQQmp",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-NQQmpœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-NQQmp",
-            "inputTypes": [
-              "Text"
-            ],
-            "type": "str"
-          },
-          "sourceHandle": {
-            "baseClasses": [
-              "Text",
-              "str",
-              "object"
-            ],
-            "dataType": "Prompt",
-            "id": "Prompt-54XGX"
-          }
-        },
-        "style": {
-          "stroke": "#555"
-        },
-        "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-Prompt-54XGX{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-54XGXœ}-OpenAIModel-NQQmp{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-NQQmpœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
-        "selected": false
-      },
-      {
-        "source": "MemoryComponent-tbqb9",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-tbqb9œ}",
-        "target": "Prompt-54XGX",
-        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-54XGXœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "MemoryComponent-CsMk7",
+        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-CsMk7œ}",
+        "target": "Prompt-p9ug4",
+        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-p9ug4œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "context",
             "type": "str",
-            "id": "Prompt-54XGX",
+            "id": "Prompt-p9ug4",
             "inputTypes": [
               "Document",
               "BaseOutputParser",
@@ -1045,26 +1016,26 @@
               "object"
             ],
             "dataType": "MemoryComponent",
-            "id": "MemoryComponent-tbqb9"
+            "id": "MemoryComponent-CsMk7"
           }
         },
         "style": {
           "stroke": "#555"
         },
         "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-MemoryComponent-tbqb9{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-tbqb9œ}-Prompt-54XGX{œfieldNameœ:œcontextœ,œidœ:œPrompt-54XGXœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-MemoryComponent-CsMk7{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-CsMk7œ}-Prompt-p9ug4{œfieldNameœ:œcontextœ,œidœ:œPrompt-p9ug4œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false
       },
       {
-        "source": "ChatInput-kOK82",
-        "sourceHandle": "{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-kOK82œ}",
-        "target": "Prompt-54XGX",
-        "targetHandle": "{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-54XGXœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-r2WbA",
+        "sourceHandle": "{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-r2WbAœ}",
+        "target": "Prompt-p9ug4",
+        "targetHandle": "{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-p9ug4œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "user_message",
             "type": "str",
-            "id": "Prompt-54XGX",
+            "id": "Prompt-p9ug4",
             "inputTypes": [
               "Document",
               "BaseOutputParser",
@@ -1080,25 +1051,55 @@
               "str"
             ],
             "dataType": "ChatInput",
-            "id": "ChatInput-kOK82"
+            "id": "ChatInput-r2WbA"
           }
         },
         "style": {
           "stroke": "#555"
         },
         "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-ChatInput-kOK82{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-kOK82œ}-Prompt-54XGX{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-54XGXœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-r2WbA{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-r2WbAœ}-Prompt-p9ug4{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-p9ug4œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false
       },
       {
-        "source": "OpenAIModel-NQQmp",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-NQQmpœ}",
-        "target": "ChatOutput-ImuK8",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ImuK8œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "source": "Prompt-p9ug4",
+        "sourceHandle": "{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-p9ug4œ}",
+        "target": "OpenAIModel-OwSm5",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-OwSm5œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-ImuK8",
+            "id": "OpenAIModel-OwSm5",
+            "inputTypes": [
+              "Text"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "baseClasses": [
+              "Text",
+              "str",
+              "object"
+            ],
+            "dataType": "Prompt",
+            "id": "Prompt-p9ug4"
+          }
+        },
+        "style": {
+          "stroke": "#555"
+        },
+        "className": "stroke-foreground stroke-connection",
+        "id": "reactflow__edge-Prompt-p9ug4{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-p9ug4œ}-OpenAIModel-OwSm5{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-OwSm5œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "source": "OpenAIModel-OwSm5",
+        "sourceHandle": "{œbaseClassesœ:[œstrœ,œobjectœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-OwSm5œ}",
+        "target": "ChatOutput-65FlE",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-65FlEœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-65FlE",
             "inputTypes": [
               "Text"
             ],
@@ -1107,29 +1108,28 @@
           "sourceHandle": {
             "baseClasses": [
               "str",
-              "Text",
-              "object"
+              "object",
+              "Text"
             ],
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-NQQmp"
+            "id": "OpenAIModel-OwSm5"
           }
         },
         "style": {
           "stroke": "#555"
         },
-        "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-OpenAIModel-NQQmp{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-NQQmpœ}-ChatOutput-ImuK8{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ImuK8œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
-        "selected": false
+        "className": "stroke-foreground stroke-connection",
+        "id": "reactflow__edge-OpenAIModel-OwSm5{œbaseClassesœ:[œstrœ,œobjectœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-OwSm5œ}-ChatOutput-65FlE{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-65FlEœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
       }
     ],
     "viewport": {
-      "x": -754.6488411466921,
-      "y": -151.93405346066697,
-      "zoom": 0.5097988414990936
+      "x": -391.0433294674358,
+      "y": -105.08951818254411,
+      "zoom": 0.5948708289887507
     }
   },
   "description": "This project can be used as a starting point for building a Chat experience with user specific memory. You can set a different Session ID to start a new message history.",
-  "name": "Chatbot with Memory",
+  "name": "Memory Chatbot",
   "last_tested_version": "1.0.0a0",
   "is_component": false
 }

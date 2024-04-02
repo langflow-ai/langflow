@@ -3,13 +3,18 @@ import { useNavigate } from "react-router-dom";
 //@ts-ignore
 import { ReactComponent as TransferFiles } from "../../../../assets/undraw_transfer_files_re_a2a9.svg";
 //@ts-ignore
-import { ReactComponent as BasicPrompt } from "../../../../assets/undraw_design_components_9vy6.svg";
 //@ts-ignore
-import { ReactComponent as ChatWithHistory } from "../../../../assets/undraw_mobile_messages_re_yx8w.svg";
-//@ts-ignore
-import { ReactComponent as Assistant } from "../../../../assets/undraw_team_collaboration_re_ow29.svg";
 //@ts-ignore
 import { ReactComponent as APIRequest } from "../../../../assets/undraw_real_time_analytics_re_yliv.svg";
+//@ts-ignore
+import { ReactComponent as PromptChaining } from "../../../../assets/undraw_cloud_docs_re_xjht.svg";
+//@ts-ignore
+import { ReactComponent as ChatBot } from "../../../../assets/undraw_chat_bot_re_e2gj.svg";
+//@ts-ignore
+import { ReactComponent as BlogPost } from "../../../../assets/undraw_blog_post_re_fy5x.svg";
+//@ts-ignore
+import { ReactComponent as BasicPrompt } from "../../../../assets/undraw_short_bio_re_fmx0.svg";
+
 import {
   Card,
   CardContent,
@@ -28,12 +33,12 @@ export default function UndrawCardComponent({
 
   function selectImage() {
     switch (flow.name) {
-      case "Data Ingestion":
+      case "Blog Writer":
         return (
-          <TransferFiles
+          <BlogPost
             style={{
-              width: "80%",
-              height: "80%",
+              width: "65%",
+              height: "65%",
               preserveAspectRatio: "xMidYMid meet",
             }}
           />
@@ -42,15 +47,15 @@ export default function UndrawCardComponent({
         return (
           <BasicPrompt
             style={{
-              width: "80%",
-              height: "80%",
+              width: "65%",
+              height: "65%",
               preserveAspectRatio: "xMidYMid meet",
             }}
           />
         );
-      case "Chat with memory":
+      case "Memory Chatbot":
         return (
-          <ChatWithHistory
+          <ChatBot
             style={{
               width: "70%",
               height: "70%",
@@ -68,9 +73,19 @@ export default function UndrawCardComponent({
             }}
           />
         );
-      case "Assistant":
+      case "Document QA":
         return (
-          <Assistant
+          <TransferFiles
+            style={{
+              width: "80%",
+              height: "80%",
+              preserveAspectRatio: "xMidYMid meet",
+            }}
+          />
+        );
+      case "Prompt Chaining":
+        return (
+          <PromptChaining
             style={{
               width: "80%",
               height: "80%",

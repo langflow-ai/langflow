@@ -5,182 +5,11 @@
   "data": {
     "nodes": [
       {
-        "id": "ChatInput-HTY3h",
+        "id": "Prompt-nzvwK",
         "type": "genericNode",
         "position": {
-          "x": 86.66131544226482,
-          "y": 69.51987428063671
-        },
-        "data": {
-          "type": "ChatInput",
-          "node": {
-            "template": {
-              "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Interaction Panel.\"\n    icon = \"ChatInput\"\n\n    def build_config(self):\n        build_config = super().build_config()\n        build_config[\"input_value\"] = {\n            \"input_types\": [],\n            \"display_name\": \"Message\",\n            \"multiline\": True,\n        }\n\n        return build_config\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n    ) -> Union[Text, Record]:\n        return super().build(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n        )\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
-                "advanced": true,
-                "dynamic": true,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "input_value": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "input_value",
-                "display_name": "Message",
-                "advanced": false,
-                "input_types": [],
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "value": "Write a press release "
-              },
-              "return_record": {
-                "type": "bool",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": false,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "return_record",
-                "display_name": "Return Record",
-                "advanced": false,
-                "dynamic": false,
-                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
-                "title_case": false
-              },
-              "sender": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": true,
-                "show": true,
-                "multiline": false,
-                "value": "User",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "options": [
-                  "Machine",
-                  "User"
-                ],
-                "name": "sender",
-                "display_name": "Sender Type",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "sender_name": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": "User",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "sender_name",
-                "display_name": "Sender Name",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "session_id": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "session_id",
-                "display_name": "Session ID",
-                "advanced": false,
-                "dynamic": false,
-                "info": "If provided, the message will be stored in the memory.",
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "_type": "CustomComponent"
-            },
-            "description": "Get chat inputs from the Interaction Panel.",
-            "base_classes": [
-              "object",
-              "Text",
-              "Record",
-              "str"
-            ],
-            "display_name": "Chat Input",
-            "documentation": "",
-            "custom_fields": {
-              "sender": null,
-              "sender_name": null,
-              "input_value": null,
-              "session_id": null,
-              "return_record": null
-            },
-            "output_types": [
-              "Text",
-              "Record"
-            ],
-            "field_formatters": {},
-            "frozen": false,
-            "field_order": [],
-            "beta": false,
-            "icon": "ChatInput"
-          },
-          "id": "ChatInput-HTY3h"
-        },
-        "selected": false,
-        "width": 384,
-        "height": 675,
-        "positionAbsolute": {
-          "x": 86.66131544226482,
-          "y": 69.51987428063671
-        },
-        "dragging": false
-      },
-      {
-        "id": "Prompt-BbuIE",
-        "type": "genericNode",
-        "position": {
-          "x": 731.5380376186406,
-          "y": 273.5294585628963
+          "x": 53.588791333410654,
+          "y": -105.1077989256227
         },
         "data": {
           "type": "Prompt",
@@ -211,7 +40,7 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
-                "value": "{request}\n\n- {topic_1}\n- {topic_2}\n\n\nAnswer:\n\n",
+                "value": "Extract key phrases from the customer reviews provided below. Focus on {sentiment} phrases that seem to capture the essence of the customers' opinions about their experience. Output these phrases in a list format.\n\nCustomer Reviews:\n{reviews}\n\nKey Phrases:\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -223,10 +52,11 @@
                 ],
                 "dynamic": false,
                 "info": "",
+                "load_from_db": false,
                 "title_case": false
               },
               "_type": "CustomComponent",
-              "request": {
+              "reviews": {
                 "field_type": "str",
                 "required": false,
                 "placeholder": "",
@@ -237,21 +67,22 @@
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
-                "name": "request",
-                "display_name": "request",
+                "name": "reviews",
+                "display_name": "reviews",
                 "advanced": false,
                 "input_types": [
                   "Document",
                   "BaseOutputParser",
-                  "Text",
-                  "Record"
+                  "Record",
+                  "Text"
                 ],
                 "dynamic": false,
                 "info": "",
+                "load_from_db": false,
                 "title_case": false,
                 "type": "str"
               },
-              "topic_1": {
+              "sentiment": {
                 "field_type": "str",
                 "required": false,
                 "placeholder": "",
@@ -262,42 +93,18 @@
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
-                "name": "topic_1",
-                "display_name": "topic_1",
+                "name": "sentiment",
+                "display_name": "sentiment",
                 "advanced": false,
                 "input_types": [
                   "Document",
                   "BaseOutputParser",
-                  "Text",
-                  "Record"
+                  "Record",
+                  "Text"
                 ],
                 "dynamic": false,
                 "info": "",
-                "title_case": false,
-                "type": "str"
-              },
-              "topic_2": {
-                "field_type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "topic_2",
-                "display_name": "topic_2",
-                "advanced": false,
-                "input_types": [
-                  "Document",
-                  "BaseOutputParser",
-                  "Text",
-                  "Record"
-                ],
-                "dynamic": false,
-                "info": "",
+                "load_from_db": false,
                 "title_case": false,
                 "type": "str"
               }
@@ -308,18 +115,17 @@
             "is_output": null,
             "is_composition": null,
             "base_classes": [
-              "object",
+              "str",
               "Text",
-              "str"
+              "object"
             ],
             "name": "",
             "display_name": "Prompt",
             "documentation": "",
             "custom_fields": {
               "template": [
-                "request",
-                "topic_1",
-                "topic_2"
+                "sentiment",
+                "reviews"
               ]
             },
             "output_types": [
@@ -332,442 +138,25 @@
             "beta": false,
             "error": null
           },
-          "id": "Prompt-BbuIE",
-          "description": "A component for creating prompts using templates",
+          "id": "Prompt-nzvwK",
+          "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt"
         },
         "selected": false,
         "width": 384,
-        "height": 595,
-        "dragging": false
-      },
-      {
-        "id": "TextInput-DMvJK",
-        "type": "genericNode",
-        "position": {
-          "x": 72.39693609771552,
-          "y": 782.101290521749
-        },
-        "data": {
-          "type": "TextInput",
-          "node": {
-            "template": {
-              "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "from typing import Optional\n\nfrom langflow.base.io.text import TextComponent\nfrom langflow.field_typing import Text\n\n\nclass TextInput(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Used to pass text input to the next component.\"\n\n    def build(self, input_value: Optional[str] = \"\") -> Text:\n        return super().build(input_value=input_value)\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
-                "advanced": false,
-                "dynamic": true,
-                "info": "",
-                "title_case": false
-              },
-              "input_value": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "Inputs and Outputs definition in Langflow's latest major release",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "input_value",
-                "display_name": "Value",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "_type": "CustomComponent"
-            },
-            "description": "Used to pass text input to the next component.",
-            "base_classes": [
-              "object",
-              "Text",
-              "str"
-            ],
-            "display_name": "Topic 1",
-            "documentation": "",
-            "custom_fields": {
-              "input_value": null
-            },
-            "output_types": [
-              "Text"
-            ],
-            "field_formatters": {},
-            "frozen": false,
-            "field_order": [
-              "input_value"
-            ],
-            "beta": true
-          },
-          "id": "TextInput-DMvJK"
-        },
-        "selected": false,
-        "width": 384,
-        "height": 297,
+        "height": 477,
+        "dragging": false,
         "positionAbsolute": {
-          "x": 72.39693609771552,
-          "y": 782.101290521749
-        },
-        "dragging": false
+          "x": 53.588791333410654,
+          "y": -105.1077989256227
+        }
       },
       {
-        "id": "TextInput-qQVvJ",
+        "id": "OpenAIModel-u4NL8",
         "type": "genericNode",
         "position": {
-          "x": 61.631382957038454,
-          "y": 1128.0611718003504
-        },
-        "data": {
-          "type": "TextInput",
-          "node": {
-            "template": {
-              "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "from typing import Optional\n\nfrom langflow.base.io.text import TextComponent\nfrom langflow.field_typing import Text\n\n\nclass TextInput(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Used to pass text input to the next component.\"\n\n    def build(self, input_value: Optional[str] = \"\") -> Text:\n        return super().build(input_value=input_value)\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
-                "advanced": false,
-                "dynamic": true,
-                "info": "",
-                "title_case": false
-              },
-              "input_value": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "Renaming Langflow Components to make it easier to identify them in the Interaction Panel",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "input_value",
-                "display_name": "Value",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "_type": "CustomComponent"
-            },
-            "description": "Used to pass text input to the next component.",
-            "base_classes": [
-              "object",
-              "Text",
-              "str"
-            ],
-            "display_name": "Topic 2",
-            "documentation": "",
-            "custom_fields": {
-              "input_value": null
-            },
-            "output_types": [
-              "Text"
-            ],
-            "field_formatters": {},
-            "frozen": false,
-            "field_order": [
-              "input_value"
-            ],
-            "beta": true
-          },
-          "id": "TextInput-qQVvJ"
-        },
-        "selected": true,
-        "width": 384,
-        "height": 297,
-        "positionAbsolute": {
-          "x": 61.631382957038454,
-          "y": 1128.0611718003504
-        },
-        "dragging": true
-      },
-      {
-        "id": "TextOutput-MtLP2",
-        "type": "genericNode",
-        "position": {
-          "x": 1212.7643867035406,
-          "y": 503.75128898079595
-        },
-        "data": {
-          "type": "TextOutput",
-          "node": {
-            "template": {
-              "input_value": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": "",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "input_value",
-                "display_name": "Value",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "from typing import Optional\n\nfrom langflow.base.io.text import TextComponent\nfrom langflow.field_typing import Text\n\n\nclass TextOutput(TextComponent):\n    display_name = \"Text Output\"\n    description = \"Used to pass text output to the next component.\"\n\n    field_config = {\n        \"input_value\": {\"display_name\": \"Value\"},\n    }\n\n    def build(self, input_value: Optional[Text] = \"\") -> Text:\n        return super().build(input_value=input_value)\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
-                "advanced": false,
-                "dynamic": true,
-                "info": "",
-                "title_case": false
-              },
-              "_type": "CustomComponent"
-            },
-            "description": "Used to pass text output to the next component.",
-            "base_classes": [
-              "object",
-              "Text",
-              "str"
-            ],
-            "display_name": "Prompt Output",
-            "documentation": "",
-            "custom_fields": {
-              "input_value": null
-            },
-            "output_types": [
-              "Text"
-            ],
-            "field_formatters": {},
-            "frozen": false,
-            "field_order": [
-              "input_value"
-            ],
-            "beta": true
-          },
-          "id": "TextOutput-MtLP2"
-        },
-        "selected": false,
-        "width": 384,
-        "height": 297,
-        "positionAbsolute": {
-          "x": 1212.7643867035406,
-          "y": 503.75128898079595
-        },
-        "dragging": false
-      },
-      {
-        "id": "ChatOutput-zRrJz",
-        "type": "genericNode",
-        "position": {
-          "x": 2299.2806014585203,
-          "y": 449.2461295937437
-        },
-        "data": {
-          "type": "ChatOutput",
-          "node": {
-            "template": {
-              "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Interaction Panel.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n        record_template: Optional[str] = \"{text}\",\n    ) -> Union[Text, Record]:\n        return super().build(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n            record_template=record_template,\n        )\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
-                "advanced": true,
-                "dynamic": true,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "input_value": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "input_value",
-                "display_name": "Message",
-                "advanced": false,
-                "input_types": [
-                  "Text"
-                ],
-                "dynamic": false,
-                "info": "",
-                "title_case": false
-              },
-              "return_record": {
-                "type": "bool",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": false,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "return_record",
-                "display_name": "Return Record",
-                "advanced": false,
-                "dynamic": false,
-                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
-                "title_case": false
-              },
-              "sender": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": true,
-                "show": true,
-                "multiline": false,
-                "value": "Machine",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "options": [
-                  "Machine",
-                  "User"
-                ],
-                "name": "sender",
-                "display_name": "Sender Type",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "sender_name": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": "AI",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "sender_name",
-                "display_name": "Sender Name",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "session_id": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "session_id",
-                "display_name": "Session ID",
-                "advanced": false,
-                "dynamic": false,
-                "info": "If provided, the message will be stored in the memory.",
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "_type": "CustomComponent"
-            },
-            "description": "Display a chat message in the Interaction Panel.",
-            "base_classes": [
-              "object",
-              "Text",
-              "Record",
-              "str"
-            ],
-            "display_name": "Chat Output",
-            "documentation": "",
-            "custom_fields": {
-              "sender": null,
-              "sender_name": null,
-              "input_value": null,
-              "session_id": null,
-              "return_record": null
-            },
-            "output_types": [
-              "Text",
-              "Record"
-            ],
-            "field_formatters": {},
-            "frozen": false,
-            "field_order": [],
-            "beta": false,
-            "icon": "ChatOutput"
-          },
-          "id": "ChatOutput-zRrJz"
-        },
-        "selected": false,
-        "width": 384,
-        "height": 675,
-        "positionAbsolute": {
-          "x": 2299.2806014585203,
-          "y": 449.2461295937437
-        },
-        "dragging": false
-      },
-      {
-        "id": "OpenAIModel-mDfsk",
-        "type": "genericNode",
-        "position": {
-          "x": 1698.5020965619854,
-          "y": 213.01669602012862
+          "x": 642.6764379749295,
+          "y": 1.4849847595449148
         },
         "data": {
           "type": "OpenAIModel",
@@ -857,7 +246,7 @@
                 "list": true,
                 "show": true,
                 "multiline": false,
-                "value": "gpt-4-turbo-preview",
+                "value": "gpt-3.5-turbo-1106",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -931,7 +320,7 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
-                "value": false,
+                "value": true,
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -995,8 +384,8 @@
             "icon": "OpenAI",
             "base_classes": [
               "object",
-              "str",
-              "Text"
+              "Text",
+              "str"
             ],
             "display_name": "OpenAI",
             "documentation": "",
@@ -1029,62 +418,560 @@
             ],
             "beta": false
           },
-          "id": "OpenAIModel-mDfsk"
+          "id": "OpenAIModel-u4NL8",
+          "description": "Generates text using OpenAI LLMs.",
+          "display_name": "OpenAI"
+        },
+        "selected": true,
+        "width": 384,
+        "height": 561,
+        "positionAbsolute": {
+          "x": 642.6764379749295,
+          "y": 1.4849847595449148
+        },
+        "dragging": false
+      },
+      {
+        "id": "ChatOutput-stoNg",
+        "type": "genericNode",
+        "position": {
+          "x": 1193.250417197867,
+          "y": 71.88476890163852
+        },
+        "data": {
+          "type": "ChatOutput",
+          "node": {
+            "template": {
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Interaction Panel.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n        record_template: Optional[str] = \"{text}\",\n    ) -> Union[Text, Record]:\n        return super().build(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n            record_template=record_template,\n        )\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "input_value": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "input_value",
+                "display_name": "Message",
+                "advanced": false,
+                "input_types": [
+                  "Text"
+                ],
+                "dynamic": false,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "record_template": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "{text}",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "record_template",
+                "display_name": "Record Template",
+                "advanced": true,
+                "dynamic": false,
+                "info": "In case of Message being a Record, this template will be used to convert it to text.",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": [
+                  "Text"
+                ]
+              },
+              "return_record": {
+                "type": "bool",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "return_record",
+                "display_name": "Return Record",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "sender": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": true,
+                "show": true,
+                "multiline": false,
+                "value": "Machine",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "name": "sender",
+                "display_name": "Sender Type",
+                "advanced": true,
+                "dynamic": false,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": [
+                  "Text"
+                ]
+              },
+              "sender_name": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": "AI",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "sender_name",
+                "display_name": "Sender Name",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": [
+                  "Text"
+                ]
+              },
+              "session_id": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "session_id",
+                "display_name": "Session ID",
+                "advanced": true,
+                "dynamic": false,
+                "info": "If provided, the message will be stored in the memory.",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": [
+                  "Text"
+                ]
+              },
+              "_type": "CustomComponent"
+            },
+            "description": "Display a chat message in the Interaction Panel.",
+            "icon": "ChatOutput",
+            "base_classes": [
+              "Record",
+              "Text",
+              "str",
+              "object"
+            ],
+            "display_name": "Chat Output",
+            "documentation": "",
+            "custom_fields": {
+              "sender": null,
+              "sender_name": null,
+              "input_value": null,
+              "session_id": null,
+              "return_record": null,
+              "record_template": null
+            },
+            "output_types": [
+              "Text",
+              "Record"
+            ],
+            "field_formatters": {},
+            "frozen": false,
+            "field_order": [],
+            "beta": false
+          },
+          "id": "ChatOutput-stoNg"
         },
         "selected": false,
         "width": 384,
-        "height": 563,
+        "height": 383,
         "positionAbsolute": {
-          "x": 1698.5020965619854,
-          "y": 213.01669602012862
+          "x": 1193.250417197867,
+          "y": 71.88476890163852
+        },
+        "dragging": false
+      },
+      {
+        "id": "TextOutput-prj03",
+        "type": "genericNode",
+        "position": {
+          "x": 640.7986738161987,
+          "y": 724.7095283934595
+        },
+        "data": {
+          "type": "TextOutput",
+          "node": {
+            "template": {
+              "input_value": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": "",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "input_value",
+                "display_name": "Value",
+                "advanced": false,
+                "input_types": [
+                  "Record",
+                  "Text"
+                ],
+                "dynamic": false,
+                "info": "Text or Record to be passed as output.",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from typing import Optional\n\nfrom langflow.base.io.text import TextComponent\nfrom langflow.field_typing import Text\n\n\nclass TextOutput(TextComponent):\n    display_name = \"Text Output\"\n    description = \"Display a text output in the Interaction Panel.\"\n    icon = \"type\"\n\n    def build_config(self):\n        return {\n            \"input_value\": {\n                \"display_name\": \"Value\",\n                \"input_types\": [\"Record\", \"Text\"],\n                \"info\": \"Text or Record to be passed as output.\",\n            },\n            \"record_template\": {\n                \"display_name\": \"Record Template\",\n                \"multiline\": True,\n                \"info\": \"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(self, input_value: Optional[Text] = \"\", record_template: str = \"\") -> Text:\n        return super().build(input_value=input_value, record_template=record_template)\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "record_template": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "{text}",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "record_template",
+                "display_name": "Record Template",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": [
+                  "Text"
+                ]
+              },
+              "_type": "CustomComponent"
+            },
+            "description": "Display a text output in the Interaction Panel.",
+            "icon": "type",
+            "base_classes": [
+              "Text",
+              "object",
+              "str"
+            ],
+            "display_name": "Inspect Prompt",
+            "documentation": "",
+            "custom_fields": {
+              "input_value": null,
+              "record_template": null
+            },
+            "output_types": [
+              "Text"
+            ],
+            "field_formatters": {},
+            "frozen": false,
+            "field_order": [],
+            "beta": false
+          },
+          "id": "TextOutput-prj03",
+          "description": "Display a text output in the Interaction Panel.",
+          "display_name": "Inspect Prompt"
+        },
+        "selected": false,
+        "width": 384,
+        "height": 289,
+        "positionAbsolute": {
+          "x": 640.7986738161987,
+          "y": 724.7095283934595
+        },
+        "dragging": false
+      },
+      {
+        "id": "TextInput-ARFMe",
+        "type": "genericNode",
+        "position": {
+          "x": -496.0627119809512,
+          "y": 212.27354495043377
+        },
+        "data": {
+          "type": "TextInput",
+          "node": {
+            "template": {
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from typing import Optional\n\nfrom langflow.base.io.text import TextComponent\nfrom langflow.field_typing import Text\n\n\nclass TextInput(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Interaction Panel.\"\n    icon = \"type\"\n\n    def build_config(self):\n        return {\n            \"input_value\": {\n                \"display_name\": \"Value\",\n                \"input_types\": [\"Record\", \"Text\"],\n                \"info\": \"Text or Record to be passed as input.\",\n            },\n            \"record_template\": {\n                \"display_name\": \"Record Template\",\n                \"multiline\": True,\n                \"info\": \"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        input_value: Optional[str] = \"\",\n        record_template: Optional[str] = \"\",\n    ) -> Text:\n        return super().build(input_value=input_value, record_template=record_template)\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "input_value": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": "negative",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "input_value",
+                "display_name": "Value",
+                "advanced": false,
+                "input_types": [
+                  "Record",
+                  "Text"
+                ],
+                "dynamic": false,
+                "info": "Text or Record to be passed as input.",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "record_template": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "{text}",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "record_template",
+                "display_name": "Record Template",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": [
+                  "Text"
+                ]
+              },
+              "_type": "CustomComponent"
+            },
+            "description": "Get text inputs from the Interaction Panel.",
+            "icon": "type",
+            "base_classes": [
+              "object",
+              "Text",
+              "str"
+            ],
+            "display_name": "Focus Sentiment",
+            "documentation": "",
+            "custom_fields": {
+              "input_value": null,
+              "record_template": null
+            },
+            "output_types": [
+              "Text"
+            ],
+            "field_formatters": {},
+            "frozen": false,
+            "field_order": [],
+            "beta": false
+          },
+          "id": "TextInput-ARFMe",
+          "description": "Get text inputs from the Interaction Panel.",
+          "display_name": "Text Input"
+        },
+        "selected": false,
+        "width": 384,
+        "height": 289,
+        "positionAbsolute": {
+          "x": -496.0627119809512,
+          "y": 212.27354495043377
+        },
+        "dragging": false
+      },
+      {
+        "id": "TextInput-oKkcQ",
+        "type": "genericNode",
+        "position": {
+          "x": -501.8114356733282,
+          "y": -152.0266822138945
+        },
+        "data": {
+          "type": "TextInput",
+          "node": {
+            "template": {
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from typing import Optional\n\nfrom langflow.base.io.text import TextComponent\nfrom langflow.field_typing import Text\n\n\nclass TextInput(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Interaction Panel.\"\n    icon = \"type\"\n\n    def build_config(self):\n        return {\n            \"input_value\": {\n                \"display_name\": \"Value\",\n                \"input_types\": [\"Record\", \"Text\"],\n                \"info\": \"Text or Record to be passed as input.\",\n            },\n            \"record_template\": {\n                \"display_name\": \"Record Template\",\n                \"multiline\": True,\n                \"info\": \"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        input_value: Optional[str] = \"\",\n        record_template: Optional[str] = \"\",\n    ) -> Text:\n        return super().build(input_value=input_value, record_template=record_template)\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "input_value": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": "\"Absolutely love this new coffee machine! It brews quickly and the coffee tastes amazing every time. However, the setup process was a bit complicated.\" \"I’m not happy with the battery life of the smartphone I purchased. It barely lasts half a day. On the plus side, the camera quality is exceptional.\"",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "input_value",
+                "display_name": "Value",
+                "advanced": false,
+                "input_types": [
+                  "Record",
+                  "Text"
+                ],
+                "dynamic": false,
+                "info": "Text or Record to be passed as input.",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "record_template": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "{text}",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "record_template",
+                "display_name": "Record Template",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": [
+                  "Text"
+                ]
+              },
+              "_type": "CustomComponent"
+            },
+            "description": "Get text inputs from the Interaction Panel.",
+            "icon": "type",
+            "base_classes": [
+              "object",
+              "Text",
+              "str"
+            ],
+            "display_name": "Reviews",
+            "documentation": "",
+            "custom_fields": {
+              "input_value": null,
+              "record_template": null
+            },
+            "output_types": [
+              "Text"
+            ],
+            "field_formatters": {},
+            "frozen": false,
+            "field_order": [],
+            "beta": false
+          },
+          "id": "TextInput-oKkcQ",
+          "description": "Get text inputs from the Interaction Panel.",
+          "display_name": "Text Input"
+        },
+        "selected": false,
+        "width": 384,
+        "height": 289,
+        "positionAbsolute": {
+          "x": -501.8114356733282,
+          "y": -152.0266822138945
         },
         "dragging": false
       }
     ],
     "edges": [
       {
-        "source": "ChatInput-HTY3h",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-HTY3hœ}",
-        "target": "Prompt-BbuIE",
-        "targetHandle": "{œfieldNameœ:œrequestœ,œidœ:œPrompt-BbuIEœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œTextœ,œRecordœ],œtypeœ:œstrœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "request",
-            "id": "Prompt-BbuIE",
-            "inputTypes": [
-              "Document",
-              "BaseOutputParser",
-              "Text",
-              "Record"
-            ],
-            "type": "str"
-          },
-          "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "Record",
-              "str"
-            ],
-            "dataType": "ChatInput",
-            "id": "ChatInput-HTY3h"
-          }
-        },
-        "style": {
-          "stroke": "#555"
-        },
-        "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-ChatInput-HTY3h{œbaseClassesœ:[œobjectœ,œTextœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-HTY3hœ}-Prompt-BbuIE{œfieldNameœ:œrequestœ,œidœ:œPrompt-BbuIEœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œTextœ,œRecordœ],œtypeœ:œstrœ}"
-      },
-      {
-        "source": "Prompt-BbuIE",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-BbuIEœ}",
-        "target": "TextOutput-MtLP2",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-MtLP2œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "source": "Prompt-nzvwK",
+        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-nzvwKœ}",
+        "target": "OpenAIModel-u4NL8",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-u4NL8œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "TextOutput-MtLP2",
+            "id": "OpenAIModel-u4NL8",
             "inputTypes": [
               "Text"
             ],
@@ -1092,96 +979,33 @@
           },
           "sourceHandle": {
             "baseClasses": [
-              "object",
+              "str",
               "Text",
-              "str"
+              "object"
             ],
             "dataType": "Prompt",
-            "id": "Prompt-BbuIE"
+            "id": "Prompt-nzvwK"
           }
         },
         "style": {
           "stroke": "#555"
         },
         "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-Prompt-BbuIE{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-BbuIEœ}-TextOutput-MtLP2{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-MtLP2œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-Prompt-nzvwK{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-nzvwKœ}-OpenAIModel-u4NL8{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-u4NL8œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
       },
       {
-        "source": "TextInput-qQVvJ",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-qQVvJœ}",
-        "target": "Prompt-BbuIE",
-        "targetHandle": "{œfieldNameœ:œtopic_2œ,œidœ:œPrompt-BbuIEœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œTextœ,œRecordœ],œtypeœ:œstrœ}",
+        "source": "TextInput-ARFMe",
+        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-ARFMeœ}",
+        "target": "Prompt-nzvwK",
+        "targetHandle": "{œfieldNameœ:œsentimentœ,œidœ:œPrompt-nzvwKœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
-            "fieldName": "topic_2",
-            "id": "Prompt-BbuIE",
+            "fieldName": "sentiment",
+            "id": "Prompt-nzvwK",
             "inputTypes": [
               "Document",
               "BaseOutputParser",
-              "Text",
-              "Record"
-            ],
-            "type": "str"
-          },
-          "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "str"
-            ],
-            "dataType": "TextInput",
-            "id": "TextInput-qQVvJ"
-          }
-        },
-        "style": {
-          "stroke": "#555"
-        },
-        "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-TextInput-qQVvJ{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-qQVvJœ}-Prompt-BbuIE{œfieldNameœ:œtopic_2œ,œidœ:œPrompt-BbuIEœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œTextœ,œRecordœ],œtypeœ:œstrœ}"
-      },
-      {
-        "source": "TextInput-DMvJK",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-DMvJKœ}",
-        "target": "Prompt-BbuIE",
-        "targetHandle": "{œfieldNameœ:œtopic_1œ,œidœ:œPrompt-BbuIEœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œTextœ,œRecordœ],œtypeœ:œstrœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "topic_1",
-            "id": "Prompt-BbuIE",
-            "inputTypes": [
-              "Document",
-              "BaseOutputParser",
-              "Text",
-              "Record"
-            ],
-            "type": "str"
-          },
-          "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "str"
-            ],
-            "dataType": "TextInput",
-            "id": "TextInput-DMvJK"
-          }
-        },
-        "style": {
-          "stroke": "#555"
-        },
-        "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-TextInput-DMvJK{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-DMvJKœ}-Prompt-BbuIE{œfieldNameœ:œtopic_1œ,œidœ:œPrompt-BbuIEœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œTextœ,œRecordœ],œtypeœ:œstrœ}"
-      },
-      {
-        "source": "TextOutput-MtLP2",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextOutputœ,œidœ:œTextOutput-MtLP2œ}",
-        "target": "OpenAIModel-mDfsk",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-mDfskœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-mDfsk",
-            "inputTypes": [
+              "Record",
               "Text"
             ],
             "type": "str"
@@ -1192,26 +1016,29 @@
               "Text",
               "str"
             ],
-            "dataType": "TextOutput",
-            "id": "TextOutput-MtLP2"
+            "dataType": "TextInput",
+            "id": "TextInput-ARFMe"
           }
         },
         "style": {
           "stroke": "#555"
         },
-        "className": "stroke-foreground stroke-connection",
-        "id": "reactflow__edge-TextOutput-MtLP2{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextOutputœ,œidœ:œTextOutput-MtLP2œ}-OpenAIModel-mDfsk{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-mDfskœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "className": "stroke-gray-900 stroke-connection",
+        "id": "reactflow__edge-TextInput-ARFMe{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-ARFMeœ}-Prompt-nzvwK{œfieldNameœ:œsentimentœ,œidœ:œPrompt-nzvwKœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
-        "source": "OpenAIModel-mDfsk",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-mDfskœ}",
-        "target": "ChatOutput-zRrJz",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-zRrJzœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "source": "TextInput-oKkcQ",
+        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-oKkcQœ}",
+        "target": "Prompt-nzvwK",
+        "targetHandle": "{œfieldNameœ:œreviewsœ,œidœ:œPrompt-nzvwKœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-zRrJz",
+            "fieldName": "reviews",
+            "id": "Prompt-nzvwK",
             "inputTypes": [
+              "Document",
+              "BaseOutputParser",
+              "Record",
               "Text"
             ],
             "type": "str"
@@ -1219,24 +1046,85 @@
           "sourceHandle": {
             "baseClasses": [
               "object",
+              "Text",
+              "str"
+            ],
+            "dataType": "TextInput",
+            "id": "TextInput-oKkcQ"
+          }
+        },
+        "style": {
+          "stroke": "#555"
+        },
+        "className": "stroke-gray-900 stroke-connection",
+        "id": "reactflow__edge-TextInput-oKkcQ{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-oKkcQœ}-Prompt-nzvwK{œfieldNameœ:œreviewsœ,œidœ:œPrompt-nzvwKœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "source": "Prompt-nzvwK",
+        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-nzvwKœ}",
+        "target": "TextOutput-prj03",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-prj03œ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "TextOutput-prj03",
+            "inputTypes": [
+              "Record",
+              "Text"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "baseClasses": [
               "str",
+              "Text",
+              "object"
+            ],
+            "dataType": "Prompt",
+            "id": "Prompt-nzvwK"
+          }
+        },
+        "style": {
+          "stroke": "#555"
+        },
+        "className": "stroke-gray-900 stroke-connection",
+        "id": "reactflow__edge-Prompt-nzvwK{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-nzvwKœ}-TextOutput-prj03{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-prj03œ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "source": "OpenAIModel-u4NL8",
+        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-u4NL8œ}",
+        "target": "ChatOutput-stoNg",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-stoNgœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-stoNg",
+            "inputTypes": [
               "Text"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "baseClasses": [
+              "object",
+              "Text",
+              "str"
             ],
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-mDfsk"
+            "id": "OpenAIModel-u4NL8"
           }
         },
         "style": {
           "stroke": "#555"
         },
-        "className": "stroke-foreground stroke-connection",
-        "id": "reactflow__edge-OpenAIModel-mDfsk{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-mDfskœ}-ChatOutput-zRrJz{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-zRrJzœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "className": "stroke-gray-900 stroke-connection",
+        "id": "reactflow__edge-OpenAIModel-u4NL8{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-u4NL8œ}-ChatOutput-stoNg{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-stoNgœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
       }
     ],
     "viewport": {
-      "x": 25.006295501767738,
-      "y": 121.09135278538275,
-      "zoom": 0.3619845430948907
+      "x": 319.9710437562943,
+      "y": 143.9251365088694,
+      "zoom": 0.5282102678500032
     }
   },
   "description": "Use a language model to generate text based on a prompt. \n\nIn this project, you'll be able to generate text based on a request and some topics.\n\nThe Topic 1 and Topic 2 components are actually Text Input, while the Prompt Output component is a Text Output. Changing the name of the component makes them easier to identify when interacting with them.",

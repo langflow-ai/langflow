@@ -53,7 +53,7 @@ You can still use models from projects like LocalAI, Ollama, LM Studio, Jan and 
 Next, run:
 
 ```shell
-python -m langflow
+python -m langflow run
 ```
 
 or

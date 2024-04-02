@@ -23,11 +23,41 @@ export default function NewFlowModal({
           /> */}
       </BaseModal.Header>
       <BaseModal.Content>
-        <div className=" grid h-full w-full grid-cols-3 gap-3 overflow-auto p-4 custom-scroll">
+        <div className=" mb-5 grid h-fit w-full grid-cols-3 gap-4 overflow-auto pb-6 custom-scroll">
           <NewFlowCardComponent />
-          {examples.map((example, idx) => {
+          {/* {examples.map((example, idx) => {
             return <UndrawCardComponent key={idx} flow={example} />;
-          })}
+          })} */}
+          {examples.find((e) => e.name == "Basic Prompting") && (
+            <UndrawCardComponent
+              key={1}
+              flow={examples.find((e) => e.name == "Basic Prompting")!}
+            />
+          )}
+          {examples.find((e) => e.name == "Memory Chatbot") && (
+            <UndrawCardComponent
+              key={1}
+              flow={examples.find((e) => e.name == "Memory Chatbot")!}
+            />
+          )}
+          {examples.find((e) => e.name == "Document QA") && (
+            <UndrawCardComponent
+              key={1}
+              flow={examples.find((e) => e.name == "Document QA")!}
+            />
+          )}
+          {examples.find((e) => e.name == "Prompt Chaining") && (
+            <UndrawCardComponent
+              key={1}
+              flow={examples.find((e) => e.name == "Prompt Chaining")!}
+            />
+          )}
+          {examples.find((e) => e.name == "Blog Writer") && (
+            <UndrawCardComponent
+              key={1}
+              flow={examples.find((e) => e.name == "Blog Writer")!}
+            />
+          )}
         </div>
       </BaseModal.Content>
     </BaseModal>
