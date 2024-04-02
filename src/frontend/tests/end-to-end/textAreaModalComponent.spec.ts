@@ -7,6 +7,7 @@ test("TextAreaModalComponent", async ({ page }) => {
   await page.locator('//*[@id="new-project-btn"]').click();
   await page.waitForTimeout(1000);
 
+  await page.locator('//*[@id="new-project-btn"]').click();
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(1000);
   await page.getByTestId("extended-disclosure").click();
