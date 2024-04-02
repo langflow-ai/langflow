@@ -26,6 +26,7 @@ export default function NewFlowModal({
         <div className=" grid h-full w-full grid-cols-3 gap-3 overflow-auto p-4 custom-scroll">
           <NewFlowCardComponent />
           {examples.map((example, idx) => {
+            console.log(example)
             return <UndrawCardComponent key={idx} flow={example} />;
           })}
         </div>

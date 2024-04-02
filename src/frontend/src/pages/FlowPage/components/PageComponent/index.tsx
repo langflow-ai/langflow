@@ -441,7 +441,7 @@ export default function Page({
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>
       {showCanvas ? (
-        <div id="react-flow-id" className="h-full w-full">
+        <div id="react-flow-id" data-testid="oi" className="h-full w-full">
           <ReactFlow
             nodes={nodes}
             edges={edges}
