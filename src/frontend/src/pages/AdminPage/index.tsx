@@ -41,6 +41,7 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { Users } from "../../types/api";
 import { UserInputType } from "../../types/components";
+import Scroller from "../../components/ui/scroller";
 
 export default function AdminPage() {
   const [inputValue, setInputValue] = useState("");
@@ -278,9 +279,9 @@ export default function AdminPage() {
             </>
           ) : (
             <>
-              <div
+              <Scroller
                 className={
-                  "m-4 h-full overflow-x-hidden overflow-y-scroll rounded-md border-2 bg-background custom-scroll" +
+                  "m-4 h-full overflow-x-hidden overflow-y-scroll rounded-md border-2 bg-background" +
                   (loadingUsers ? " border-0" : "")
                 }
               >
@@ -450,7 +451,7 @@ export default function AdminPage() {
                     </TableBody>
                   )}
                 </Table>
-              </div>
+              </Scroller>
 
               <PaginatorComponent
                 pageIndex={index}
