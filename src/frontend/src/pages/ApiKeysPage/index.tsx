@@ -129,7 +129,7 @@ export default function ApiKeysPage() {
                   )}
                   <Scroller
                     className={
-                      "max-h-[15rem] overflow-x-hidden rounded-md border-2 bg-muted" +
+                      "overflow-x-hidden rounded-md border-2 bg-muted" +
                       (loadingKeys ? " border-0" : "")
                     }
                   >
