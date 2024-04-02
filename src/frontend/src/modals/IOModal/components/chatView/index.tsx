@@ -124,7 +124,7 @@ export default function ChatView({
     message: string,
     stream_url?: string
   ) {
-    if (message === "") return;
+    // if (message === "") return;
     chat.message = message;
     // chat is one of the chatHistory
     updateFlowPool(chat.componentId, {
