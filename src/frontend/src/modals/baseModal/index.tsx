@@ -115,44 +115,47 @@ function BaseModal({
       break;
     case "smaller":
       minWidth = "min-w-[40vw]";
-      height = "h-[11rem]";
+      height = "";
       break;
     case "smaller-h-full":
       minWidth = "min-w-[40vw]";
-      height = "h-full";
+      height = " ";
       break;
     case "small":
       minWidth = "min-w-[40vw]";
-      height = "h-[40vh]";
+      height = "";
       break;
     case "small-h-full":
       minWidth = "min-w-[40vw]";
+      height = " ";
       break;
     case "medium":
       minWidth = "min-w-[60vw]";
-      height = "h-[60vh]";
+      height = "";
       break;
     case "medium-h-full":
       minWidth = "min-w-[60vw]";
+      height = " ";
       break;
     case "large":
-      minWidth = "min-w-[85vw]";
-      height = "h-[80vh]";
+      minWidth = "min-w-[85vw]" ;
+      height = "h-[90vh]";
       break;
     case "three-cards":
       minWidth = "min-w-[1066px]";
-      height = "h-fit";
+      height = "";
       break;
     case "large-thin":
       minWidth = "min-w-[65vw]";
-      height = "h-[80vh]";
+      height = "h-[90vh]";
       break;
     case "large-h-full":
       minWidth = "min-w-[80vw]";
+      height = " ";
       break;
     default:
       minWidth = "min-w-[80vw]";
-      height = "h-[80vh]";
+      height = "";
       break;
   }
 
@@ -168,34 +171,34 @@ function BaseModal({
       {type === "modal" ? (
         <Modal open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <ModalContent className={cn(minWidth, "duration-300")}>
-            <div className="truncate-doubleline word-break-break-word">
+          <ModalContent className={cn(minWidth, height, "duration-300")}>
+            <div className="truncate-doubleline flex-shrink-0 word-break-break-word">
               {headerChild}
             </div>
             <div
-              className={`flex flex-col ${height!} w-full transition-all duration-300`}
+              className={`flex flex-col h-full w-full transition-all duration-300`}
             >
               {ContentChild}
             </div>
             {ContentFooter && (
-              <div className="flex flex-row-reverse">{ContentFooter}</div>
+              <div className="flex flex-row-reverse flex-shrink-0">{ContentFooter}</div>
             )}
           </ModalContent>
         </Modal>
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <DialogContent className={cn(minWidth, "duration-300")}>
-            <div className="truncate-doubleline word-break-break-word">
+          <DialogContent className={cn(minWidth, height, "flex flex-col duration-300")}>
+            <div className="truncate-doubleline flex-shrink-0 word-break-break-word">
               {headerChild}
             </div>
             <div
-              className={`flex flex-col ${height!} w-full transition-all duration-300`}
+              className={`flex flex-col w-full min-h-0 grow transition-all duration-300`}
             >
               {ContentChild}
             </div>
-            {ContentFooter && (
-              <div className="flex flex-row-reverse">{ContentFooter}</div>
+            {(ContentFooter && ContentFooter !== <></>) && (
+              <div className="flex flex-row-reverse flex-shrink-0">{ContentFooter}</div>
             )}
           </DialogContent>
         </Dialog>
