@@ -9,6 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from loguru import logger
 
 from langflow.api import router
 from langflow.initial_setup.setup import create_or_update_starter_projects
@@ -106,6 +107,7 @@ def get_static_files_dir():
 def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = False) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
+    logger.info(f"Setting up app with static files directory {static_files_dir}")
     if not static_files_dir:
         static_files_dir = get_static_files_dir()
 
