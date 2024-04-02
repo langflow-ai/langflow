@@ -1,5 +1,6 @@
 import { ShadToolTipType } from "../../types/components";
 import { cn } from "../../utils/utils";
+import Scroller from "../ui/scroller";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 export default function ShadTooltip({
@@ -19,8 +20,9 @@ export default function ShadTooltip({
         side={side}
         avoidCollisions={false}
         sticky="always"
+        asChild
       >
-        {content}
+        <Scroller>{content}</Scroller>
       </TooltipContent>
     </Tooltip>
   );

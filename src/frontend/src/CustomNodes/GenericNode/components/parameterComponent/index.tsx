@@ -337,7 +337,7 @@ export default function ParameterComponent({
       <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
         <div className="flex">
           <ShadTooltip
-            styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
+            styleClasses={"tooltip-fixed-width py-2 nowheel"}
             delayDuration={1000}
             content={refHtml.current}
             side={left ? "left" : "right"}
@@ -431,7 +431,7 @@ export default function ParameterComponent({
           <Button className="h-7 truncate bg-muted p-0 text-sm font-normal text-black hover:bg-muted">
             <div className="flex">
               <ShadTooltip
-                styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
+                styleClasses={"tooltip-fixed-width py-2 nowheel"}
                 delayDuration={1000}
                 content={refHtml.current}
                 side={left ? "left" : "right"}
