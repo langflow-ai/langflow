@@ -2,7 +2,7 @@ from typing import Optional
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic.v1 import SecretStr
-
+from langflow.field_typing import Text, RangeSpec
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 

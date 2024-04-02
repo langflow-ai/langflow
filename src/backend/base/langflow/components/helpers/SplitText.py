@@ -54,7 +54,6 @@ class SplitTextComponent(CustomComponent):
         chunk_overlap: Optional[int] = 200,
         recursive: bool = False,
     ) -> list[Record]:
-
         separators = [unescape_string(x) for x in separators]
 
         # Make sure chunk_size and chunk_overlap are ints
