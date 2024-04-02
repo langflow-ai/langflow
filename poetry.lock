@@ -2682,6 +2682,21 @@ httpx = ">=0.23,<0.28"
 pydantic = ">=1.10,<3"
 
 [[package]]
+name = "gotrue"
+version = "2.4.2"
+description = "Python Client Library for Supabase Auth"
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "gotrue-2.4.2-py3-none-any.whl", hash = "sha256:64cd40933d1f0a5d5cc4f4bd93bc51d730b94812447b6600f774790a4901e455"},
+    {file = "gotrue-2.4.2.tar.gz", hash = "sha256:e100745161f1c58dd05b9c1ef8bcd4cd78cdfb38d8d2c253ade63143a3dc6aeb"},
+]
+
+[package.dependencies]
+httpx = ">=0.23,<0.28"
+pydantic = ">=1.10,<3"
+
+[[package]]
 name = "greenlet"
 version = "3.0.3"
 description = "Lightweight in-process concurrent programming"
@@ -10264,4 +10279,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "b66acb0ed04e62c9f311828307ac1503bc7a19912753c217d4ea6237f474543a"
+content-hash = "286003c52aea0faaab5b8352c097b67bdc240c02ae6de527d526215b7268adef"
