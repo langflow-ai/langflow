@@ -13,7 +13,7 @@ const Scroller = React.forwardRef<
       options={{
         scrollbars: {
           autoHide: "scroll",
-          theme: dark ? "os-theme-dark" : "os-theme-light",
+          theme: dark ? "os-theme-light" : "os-theme-dark",
         },
       }}
       {...props}
