@@ -59,13 +59,11 @@ export default function IOModal({
     if (!chatInput && !chatOutput) {
       if (inputs.length > 0) {
         return inputs[0];
-      }
-      else {
+      } else {
         return outputs[0];
       }
-    }
-    else {
-      return undefined
+    } else {
+      return undefined;
     }
   }
 
@@ -116,12 +114,12 @@ export default function IOModal({
   }
 
   useEffect(() => {
-    if(selectedTab!==2) setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
-  }, [allNodes]);
+    setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
+  }, [allNodes.length]);
 
   useEffect(() => {
     setSelectedViewField(startView());
-  },[open])
+  }, [open]);
 
   return (
     <BaseModal
@@ -144,7 +142,7 @@ export default function IOModal({
       </BaseModal.Header>
       <BaseModal.Content>
         <div className="flex h-full flex-col ">
-          <div className="flex-max-width mt-2 h-full">
+          <div className="flex-max-width h-full">
             {selectedTab !== 0 && (
               <div
                 className={cn(
@@ -320,12 +318,14 @@ export default function IOModal({
                   )}
                 >
                   <div className="font-xl flex items-center justify-center gap-3 font-semibold">
-                    {(haveChat && <button onClick={() => setSelectedViewField(undefined)}>
-                      <IconComponent
-                        name={"ArrowLeft"}
-                        className="h-6 w-6"
-                      ></IconComponent>
-                    </button>)}
+                    {haveChat && (
+                      <button onClick={() => setSelectedViewField(undefined)}>
+                        <IconComponent
+                          name={"ArrowLeft"}
+                          className="h-6 w-6"
+                        ></IconComponent>
+                      </button>
+                    )}
                     {
                       nodes.find((node) => node.id === selectedViewField.id)
                         ?.data.node.display_name
@@ -376,8 +376,8 @@ export default function IOModal({
           </div>
         </div>
       </BaseModal.Content>
-      <BaseModal.Footer>
-        {!haveChat && (
+      {!haveChat ? (
+        <BaseModal.Footer>
           <div className="flex w-full justify-end  pt-2">
             <Button
               variant={"outline"}
@@ -396,8 +396,10 @@ export default function IOModal({
               Run Flow
             </Button>
           </div>
-        )}
-      </BaseModal.Footer>
+        </BaseModal.Footer>
+      ) : (
+        <></>
+      )}
     </BaseModal>
   );
 }
