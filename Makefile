@@ -58,6 +58,9 @@ lint:
 install_frontend:
 	cd src/frontend && npm install
 
+install_frontendci:
+	cd src/frontend && npm ci
+
 install_frontendc:
 	cd src/frontend && rm -rf node_modules package-lock.json && npm install
 
@@ -168,7 +171,7 @@ build:
 	make build_langflow
 
 build_langflow_base:
-	make install_frontend
+	make install_frontendci
 	make build_frontend
 	cd src/backend/base && poetry build-rewrite-path-deps --version-pinning-strategy=semver
 	rm -rf src/backend/base/langflow/frontend
@@ -177,11 +180,11 @@ build_langflow_backup:
 	poetry lock && poetry build-rewrite-path-deps --version-pinning-strategy=semver
 
 build_langflow:
-	python update_dependencies.py
+	cd ./scripts && python update_dependencies.py
 	poetry lock
 	poetry build-rewrite-path-deps --version-pinning-strategy=semver
-	mv pyproject.toml2 pyproject.toml
-	mv poetry.lock2 poetry.lock
+	mv pyproject.toml.bak pyproject.toml
+	mv poetry.lock.bak poetry.lock
 
 dev:
 	make install_frontend

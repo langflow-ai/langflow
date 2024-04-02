@@ -2487,13 +2487,13 @@ extended-testing = ["aiosqlite (>=0.19.0,<0.20.0)", "aleph-alpha-client (>=2.15.
 
 [[package]]
 name = "langchain-core"
-version = "0.1.37"
+version = "0.1.38"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_core-0.1.37-py3-none-any.whl", hash = "sha256:63c6aecb0f2eb1a21f8e944da622748cfeafa2cc3d94c0182ffa8038bd00fe0b"},
-    {file = "langchain_core-0.1.37.tar.gz", hash = "sha256:3db7008796e25aea90f98c2159dbf29bf1fd296bdcb78dc2d8183a92fdde4433"},
+    {file = "langchain_core-0.1.38-py3-none-any.whl", hash = "sha256:d881b2754254cb4bdb0d5bb56e5c138d032b6e75e5cb21f151b01224b322e02b"},
+    {file = "langchain_core-0.1.38.tar.gz", hash = "sha256:ee8da6d061c06cce7dc22fec224b6ecbc3a8de106d6dd9f409c7fe448ea41861"},
 ]
 
 [package.dependencies]
@@ -3829,6 +3829,41 @@ mic = ["olefile"]
 tests = ["check-manifest", "coverage", "defusedxml", "markdown2", "olefile", "packaging", "pyroma", "pytest", "pytest-cov", "pytest-timeout"]
 typing = ["typing-extensions"]
 xmp = ["defusedxml"]
+
+[[package]]
+name = "pip"
+version = "24.0"
+description = "The PyPA recommended tool for installing Python packages."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pip-24.0-py3-none-any.whl", hash = "sha256:ba0d021a166865d2265246961bec0152ff124de910c5cc39f1156ce3fa7c69dc"},
+    {file = "pip-24.0.tar.gz", hash = "sha256:ea9bd1a847e8c5774a5777bb398c19e80bcd4e2aa16a4b301b718fe6f593aba2"},
+]
+
+[[package]]
+name = "pip-tools"
+version = "7.4.1"
+description = "pip-tools keeps your pinned dependencies fresh."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pip-tools-7.4.1.tar.gz", hash = "sha256:864826f5073864450e24dbeeb85ce3920cdfb09848a3d69ebf537b521f14bcc9"},
+    {file = "pip_tools-7.4.1-py3-none-any.whl", hash = "sha256:4c690e5fbae2f21e87843e89c26191f0d9454f362d8acdbd695716493ec8b3a9"},
+]
+
+[package.dependencies]
+build = ">=1.0.0"
+click = ">=8"
+pip = ">=22.2"
+pyproject_hooks = "*"
+setuptools = "*"
+tomli = {version = "*", markers = "python_version < \"3.11\""}
+wheel = "*"
+
+[package.extras]
+coverage = ["covdefaults", "pytest-cov"]
+testing = ["flit_core (>=2,<4)", "poetry_core (>=1.0.0)", "pytest (>=7.2.0)", "pytest-rerunfailures", "pytest-xdist", "tomli-w"]
 
 [[package]]
 name = "platformdirs"
@@ -5718,6 +5753,20 @@ MarkupSafe = ">=2.1.1"
 watchdog = ["watchdog (>=2.3)"]
 
 [[package]]
+name = "wheel"
+version = "0.43.0"
+description = "A built-package format for Python"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "wheel-0.43.0-py3-none-any.whl", hash = "sha256:55c570405f142630c6b9f72fe09d9b67cf1477fcf543ae5b8dcb1f5b7377da81"},
+    {file = "wheel-0.43.0.tar.gz", hash = "sha256:465ef92c69fa5c5da2d1cf8ac40559a8c940886afcef87dcf14b9470862f1d85"},
+]
+
+[package.extras]
+test = ["pytest (>=6.0.0)", "setuptools (>=65)"]
+
+[[package]]
 name = "win32-setctime"
 version = "1.1.0"
 description = "A small Python utility to set file creation time on Windows"
@@ -6021,4 +6070,4 @@ local = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "4ed60c6536db77f669810a9b62320cb91f5981721b15876b386ff6f86ef17dc7"
+content-hash = "455e5f44f2e5dcbc3e0359658d7c4ef9f93e40c99841c9de99311a0ecad483c2"

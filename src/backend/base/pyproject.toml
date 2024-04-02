@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.15"
+version = "0.0.16"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -87,7 +87,7 @@ pytest-sugar = "^0.9.7"
 
 
 [tool.poetry.extras]
-deploy = ["langchain-serve", "celery", "redis", "flower"]
+deploy = ["celery", "redis", "flower"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 all = ["deploy", "local"]
 
