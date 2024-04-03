@@ -1,3 +1,5 @@
+import os
+
 from gunicorn.app.base import BaseApplication  # type: ignore
 from uvicorn.workers import UvicornWorker
 
@@ -11,6 +13,7 @@ class LangflowApplication(BaseApplication):
         self.options = options or {}
 
         self.options["worker_class"] = "langflow.server.LangflowUvicornWorker"
+        self.options["loglevel"] = os.getenv("LANGFLOW_LOG_LEVEL", "error").lower()
         self.application = app
         super().__init__()
 
