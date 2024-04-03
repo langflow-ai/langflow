@@ -6,7 +6,6 @@ from pathlib import Path
 from loguru import logger
 
 from langflow.interface.custom.custom_component import CustomComponent
-from langflow.interface.custom.custom_component import CustomComponent
 
 
 class CustomComponentPathValueError(ValueError):
@@ -109,7 +108,14 @@ class DirectoryReader:
         if not os.path.isfile(file_path):
             return None
         with open(file_path, "r") as file:
-            return file.read()
+            # UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 3069: character maps to <undefined>
+            try:
+                return file.read()
+            except UnicodeDecodeError:
+                # This is happening in Windows, so we need to open the file in binary mode
+                # The file is always just a python file, so we can safely read it as utf-8
+                with open(file_path, "rb") as file:
+                    return file.read().decode("utf-8")
 
     def get_files(self):
         """
