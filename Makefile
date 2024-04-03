@@ -187,7 +187,7 @@ build_langflow_backup:
 
 build_langflow:
 	cd ./scripts && python update_dependencies.py
-	-poetry lock
+	poetry lock
 	-poetry build-rewrite-path-deps --version-pinning-strategy=semver
 	mv pyproject.toml.bak pyproject.toml
 	mv poetry.lock.bak poetry.lock
@@ -225,11 +225,11 @@ publish_langflow:
 publish:
 	@echo 'Publishing the project'
 ifdef base
-	make publish_base
+	-make publish_base
 endif
 
 ifdef main
-	make publish_langflow
+	-make publish_langflow
 endif
 
 help:
