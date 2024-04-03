@@ -14,17 +14,17 @@ This feature supports running tasks in a Celery worker queue and AnyIO task grou
 
 ## The _`sync`_ Flag
 
-The _`sync`_ flag can be included in the payload of your POST request to the _`/api/v1/process/<your_flow_id>`_ endpoint.
+The _`sync`_ flag can be included in the payload of your POST request to the _`/api/v1/run/<your_flow_id>`_ endpoint.
 When set to _`false`_, the API will initiate an asynchronous task instead of processing the flow synchronously.
 
 ### API Request with _`sync`_ flag
 
 ```bash
 curl -X POST \
-  http://localhost:3000/api/v1/process/<your_flow_id> \
+  http://localhost:3000/api/v1/run/<your_flow_id> \
   -H 'Content-Type: application/json' \
   -H 'x-api-key: <your_api_key>' \
-  -d '{"inputs": {"text": ""}, "tweaks": {}, "sync": false}'
+  -d '{"input_value": "Message", "tweaks": {}, "sync": false}'
 ```
 
 Response:
