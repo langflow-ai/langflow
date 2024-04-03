@@ -178,12 +178,12 @@ build_langflow_base:
 	rm -rf src/backend/base/langflow/frontend
 
 build_langflow_backup:
-	poetry lock && poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	poetry lock && poetry build-rewrite-path-deps --version-pinning-strategy=semver --sdist
 
 build_langflow:
 	cd ./scripts && python update_dependencies.py
 	poetry lock
-	poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	poetry build-rewrite-path-deps --version-pinning-strategy=semver --sdist
 	mv pyproject.toml.bak pyproject.toml
 	mv poetry.lock.bak poetry.lock
 
