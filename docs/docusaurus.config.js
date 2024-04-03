@@ -42,6 +42,10 @@ module.exports = {
           path: "docs",
           // sidebarPath: 'sidebars.js',
         },
+        gtag: {
+          trackingID: 'G-SLQFLQ3KPT',
+          anonymizeIP: true,
+        },
         theme: {
           customCss: [
             require.resolve("@code-hike/mdx/styles.css"),
