@@ -3,7 +3,7 @@
   "data": {
     "nodes": [
       {
-        "id": "Prompt-6qkyO",
+        "id": "Prompt-amqBu",
         "type": "genericNode",
         "position": {
           "x": 2191.5837146441663,
@@ -109,7 +109,7 @@
             "beta": false,
             "error": null
           },
-          "id": "Prompt-6qkyO",
+          "id": "Prompt-amqBu",
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt"
         },
@@ -123,7 +123,7 @@
         "dragging": false
       },
       {
-        "id": "Prompt-8M7lZ",
+        "id": "Prompt-gTNiz",
         "type": "genericNode",
         "position": {
           "x": 3731.0813766902447,
@@ -229,16 +229,17 @@
             "beta": false,
             "error": null
           },
-          "id": "Prompt-8M7lZ",
+          "id": "Prompt-gTNiz",
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt"
         },
         "selected": false,
         "width": 384,
-        "height": 385
+        "height": 385,
+        "dragging": false
       },
       {
-        "id": "ChatOutput-TKkOi",
+        "id": "ChatOutput-EJkG3",
         "type": "genericNode",
         "position": {
           "x": 3722.1747844849388,
@@ -426,7 +427,7 @@
             "field_order": [],
             "beta": false
           },
-          "id": "ChatOutput-TKkOi"
+          "id": "ChatOutput-EJkG3"
         },
         "selected": false,
         "width": 384,
@@ -434,7 +435,7 @@
         "dragging": false
       },
       {
-        "id": "ChatOutput-WOZJj",
+        "id": "ChatOutput-DNmvg",
         "type": "genericNode",
         "position": {
           "x": 5077.71285886074,
@@ -622,14 +623,14 @@
             "field_order": [],
             "beta": false
           },
-          "id": "ChatOutput-WOZJj"
+          "id": "ChatOutput-DNmvg"
         },
         "selected": false,
         "width": 384,
         "height": 385
       },
       {
-        "id": "TextInput-fd38z",
+        "id": "TextInput-sptaH",
         "type": "genericNode",
         "position": {
           "x": 1700.5624822024752,
@@ -725,9 +726,9 @@
             "field_order": [],
             "beta": false
           },
-          "id": "TextInput-fd38z"
+          "id": "TextInput-sptaH"
         },
-        "selected": true,
+        "selected": false,
         "width": 384,
         "height": 290,
         "positionAbsolute": {
@@ -737,11 +738,11 @@
         "dragging": false
       },
       {
-        "id": "TextOutput-LH9pW",
+        "id": "TextOutput-2MS4a",
         "type": "genericNode",
         "position": {
-          "x": 2429.4897030584134,
-          "y": 552.2482060219679
+          "x": 2917.216113690115,
+          "y": 513.0058511435552
         },
         "data": {
           "type": "TextOutput",
@@ -833,19 +834,19 @@
             "field_order": [],
             "beta": false
           },
-          "id": "TextOutput-LH9pW"
+          "id": "TextOutput-2MS4a"
         },
         "selected": false,
         "width": 384,
         "height": 290,
         "positionAbsolute": {
-          "x": 2429.4897030584134,
-          "y": 552.2482060219679
+          "x": 2917.216113690115,
+          "y": 513.0058511435552
         },
         "dragging": false
       },
       {
-        "id": "OpenAIModel-WAiN2",
+        "id": "OpenAIModel-uYXZJ",
         "type": "genericNode",
         "position": {
           "x": 2925.784767523062,
@@ -1111,7 +1112,7 @@
             ],
             "beta": false
           },
-          "id": "OpenAIModel-WAiN2"
+          "id": "OpenAIModel-uYXZJ"
         },
         "selected": false,
         "width": 384,
@@ -1123,7 +1124,7 @@
         "dragging": false
       },
       {
-        "id": "TextOutput-ZUN0s",
+        "id": "TextOutput-MUDOR",
         "type": "genericNode",
         "position": {
           "x": 4446.064323520379,
@@ -1219,7 +1220,7 @@
             "field_order": [],
             "beta": false
           },
-          "id": "TextOutput-ZUN0s"
+          "id": "TextOutput-MUDOR"
         },
         "selected": false,
         "width": 384,
@@ -1231,7 +1232,7 @@
         }
       },
       {
-        "id": "OpenAIModel-4b8eN",
+        "id": "OpenAIModel-XawYB",
         "type": "genericNode",
         "position": {
           "x": 4500.152018344182,
@@ -1497,7 +1498,7 @@
             ],
             "beta": false
           },
-          "id": "OpenAIModel-4b8eN"
+          "id": "OpenAIModel-XawYB"
         },
         "selected": false,
         "width": 384,
@@ -1511,14 +1512,14 @@
     ],
     "edges": [
       {
-        "source": "TextInput-fd38z",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-fd38zœ}",
-        "target": "Prompt-6qkyO",
-        "targetHandle": "{œfieldNameœ:œdocumentœ,œidœ:œPrompt-6qkyOœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "TextInput-sptaH",
+        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-sptaHœ}",
+        "target": "Prompt-amqBu",
+        "targetHandle": "{œfieldNameœ:œdocumentœ,œidœ:œPrompt-amqBuœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "document",
-            "id": "Prompt-6qkyO",
+            "id": "Prompt-amqBu",
             "inputTypes": [
               "Document",
               "BaseOutputParser",
@@ -1534,24 +1535,24 @@
               "object"
             ],
             "dataType": "TextInput",
-            "id": "TextInput-fd38z"
+            "id": "TextInput-sptaH"
           }
         },
         "style": {
           "stroke": "#555"
         },
-        "className": "stroke-foreground stroke-connection",
-        "id": "reactflow__edge-TextInput-fd38z{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-fd38zœ}-Prompt-6qkyO{œfieldNameœ:œdocumentœ,œidœ:œPrompt-6qkyOœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+        "className": "stroke-gray-900 stroke-connection",
+        "id": "reactflow__edge-TextInput-sptaH{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-sptaHœ}-Prompt-amqBu{œfieldNameœ:œdocumentœ,œidœ:œPrompt-amqBuœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
-        "source": "Prompt-6qkyO",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-6qkyOœ}",
-        "target": "TextOutput-LH9pW",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-LH9pWœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "Prompt-amqBu",
+        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-amqBuœ}",
+        "target": "TextOutput-2MS4a",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-2MS4aœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "TextOutput-LH9pW",
+            "id": "TextOutput-2MS4a",
             "inputTypes": [
               "Record",
               "Text"
@@ -1565,24 +1566,24 @@
               "Text"
             ],
             "dataType": "Prompt",
-            "id": "Prompt-6qkyO"
+            "id": "Prompt-amqBu"
           }
         },
         "style": {
           "stroke": "#555"
         },
-        "className": "stroke-foreground stroke-connection",
-        "id": "reactflow__edge-Prompt-6qkyO{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-6qkyOœ}-TextOutput-LH9pW{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-LH9pWœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}"
+        "className": "stroke-gray-900 stroke-connection",
+        "id": "reactflow__edge-Prompt-amqBu{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-amqBuœ}-TextOutput-2MS4a{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-2MS4aœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
-        "source": "Prompt-6qkyO",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-6qkyOœ}",
-        "target": "OpenAIModel-WAiN2",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-WAiN2œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "source": "Prompt-amqBu",
+        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-amqBuœ}",
+        "target": "OpenAIModel-uYXZJ",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-uYXZJœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-WAiN2",
+            "id": "OpenAIModel-uYXZJ",
             "inputTypes": [
               "Text"
             ],
@@ -1595,24 +1596,24 @@
               "Text"
             ],
             "dataType": "Prompt",
-            "id": "Prompt-6qkyO"
+            "id": "Prompt-amqBu"
           }
         },
         "style": {
           "stroke": "#555"
         },
-        "className": "stroke-foreground stroke-connection",
-        "id": "reactflow__edge-Prompt-6qkyO{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-6qkyOœ}-OpenAIModel-WAiN2{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-WAiN2œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "className": "stroke-gray-900 stroke-connection",
+        "id": "reactflow__edge-Prompt-amqBu{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-amqBuœ}-OpenAIModel-uYXZJ{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-uYXZJœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
       },
       {
-        "source": "OpenAIModel-WAiN2",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-WAiN2œ}",
-        "target": "Prompt-8M7lZ",
-        "targetHandle": "{œfieldNameœ:œsummaryœ,œidœ:œPrompt-8M7lZœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-uYXZJ",
+        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uYXZJœ}",
+        "target": "Prompt-gTNiz",
+        "targetHandle": "{œfieldNameœ:œsummaryœ,œidœ:œPrompt-gTNizœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "summary",
-            "id": "Prompt-8M7lZ",
+            "id": "Prompt-gTNiz",
             "inputTypes": [
               "Document",
               "BaseOutputParser",
@@ -1628,24 +1629,24 @@
               "object"
             ],
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-WAiN2"
+            "id": "OpenAIModel-uYXZJ"
           }
         },
         "style": {
           "stroke": "#555"
         },
-        "className": "stroke-foreground stroke-connection",
-        "id": "reactflow__edge-OpenAIModel-WAiN2{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-WAiN2œ}-Prompt-8M7lZ{œfieldNameœ:œsummaryœ,œidœ:œPrompt-8M7lZœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+        "className": "stroke-gray-900 stroke-connection",
+        "id": "reactflow__edge-OpenAIModel-uYXZJ{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uYXZJœ}-Prompt-gTNiz{œfieldNameœ:œsummaryœ,œidœ:œPrompt-gTNizœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
-        "source": "OpenAIModel-WAiN2",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-WAiN2œ}",
-        "target": "ChatOutput-TKkOi",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-TKkOiœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-uYXZJ",
+        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uYXZJœ}",
+        "target": "ChatOutput-EJkG3",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-EJkG3œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-TKkOi",
+            "id": "ChatOutput-EJkG3",
             "inputTypes": [
               "Text"
             ],
@@ -1658,24 +1659,24 @@
               "object"
             ],
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-WAiN2"
+            "id": "OpenAIModel-uYXZJ"
           }
         },
         "style": {
           "stroke": "#555"
         },
-        "className": "stroke-foreground stroke-connection",
-        "id": "reactflow__edge-OpenAIModel-WAiN2{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-WAiN2œ}-ChatOutput-TKkOi{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-TKkOiœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "className": "stroke-gray-900 stroke-connection",
+        "id": "reactflow__edge-OpenAIModel-uYXZJ{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uYXZJœ}-ChatOutput-EJkG3{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-EJkG3œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
       },
       {
-        "source": "Prompt-8M7lZ",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-8M7lZœ}",
-        "target": "TextOutput-ZUN0s",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-ZUN0sœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "Prompt-gTNiz",
+        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-gTNizœ}",
+        "target": "TextOutput-MUDOR",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-MUDORœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "TextOutput-ZUN0s",
+            "id": "TextOutput-MUDOR",
             "inputTypes": [
               "Record",
               "Text"
@@ -1689,24 +1690,24 @@
               "Text"
             ],
             "dataType": "Prompt",
-            "id": "Prompt-8M7lZ"
+            "id": "Prompt-gTNiz"
           }
         },
         "style": {
           "stroke": "#555"
         },
-        "className": "stroke-foreground stroke-connection",
-        "id": "reactflow__edge-Prompt-8M7lZ{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-8M7lZœ}-TextOutput-ZUN0s{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-ZUN0sœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}"
+        "className": "stroke-gray-900 stroke-connection",
+        "id": "reactflow__edge-Prompt-gTNiz{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-gTNizœ}-TextOutput-MUDOR{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-MUDORœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
-        "source": "Prompt-8M7lZ",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-8M7lZœ}",
-        "target": "OpenAIModel-4b8eN",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-4b8eNœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "source": "Prompt-gTNiz",
+        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-gTNizœ}",
+        "target": "OpenAIModel-XawYB",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-XawYBœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-4b8eN",
+            "id": "OpenAIModel-XawYB",
             "inputTypes": [
               "Text"
             ],
@@ -1719,24 +1720,24 @@
               "Text"
             ],
             "dataType": "Prompt",
-            "id": "Prompt-8M7lZ"
+            "id": "Prompt-gTNiz"
           }
         },
         "style": {
           "stroke": "#555"
         },
-        "className": "stroke-foreground stroke-connection",
-        "id": "reactflow__edge-Prompt-8M7lZ{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-8M7lZœ}-OpenAIModel-4b8eN{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-4b8eNœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "className": "stroke-gray-900 stroke-connection",
+        "id": "reactflow__edge-Prompt-gTNiz{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-gTNizœ}-OpenAIModel-XawYB{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-XawYBœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
       },
       {
-        "source": "OpenAIModel-4b8eN",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-4b8eNœ}",
-        "target": "ChatOutput-WOZJj",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-WOZJjœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-XawYB",
+        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-XawYBœ}",
+        "target": "ChatOutput-DNmvg",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DNmvgœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-WOZJj",
+            "id": "ChatOutput-DNmvg",
             "inputTypes": [
               "Text"
             ],
@@ -1749,20 +1750,20 @@
               "object"
             ],
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-4b8eN"
+            "id": "OpenAIModel-XawYB"
           }
         },
         "style": {
           "stroke": "#555"
         },
-        "className": "stroke-foreground stroke-connection",
-        "id": "reactflow__edge-OpenAIModel-4b8eN{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-4b8eNœ}-ChatOutput-WOZJj{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-WOZJjœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "className": "stroke-gray-900 stroke-connection",
+        "id": "reactflow__edge-OpenAIModel-XawYB{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-XawYBœ}-ChatOutput-DNmvg{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DNmvgœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
       }
     ],
     "viewport": {
-      "x": -269.16751160112597,
-      "y": 42.28236292358156,
-      "zoom": 0.30778611191960875
+      "x": -383.7251879618552,
+      "y": 69.19813933800037,
+      "zoom": 0.3105753483695743
     }
   },
   "description": "The Prompt Chaining flow chains prompts with LLMs, refining outputs through iterative stages.",

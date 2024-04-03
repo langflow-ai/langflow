@@ -9,7 +9,7 @@ from langchain_core.documents import Document
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
 from langflow.field_typing import Text
-from langflow.utils.util import build_loader_repr_from_records, unescape_string
+from langflow.utils.util import unescape_string
 
 
 class SplitTextComponent(CustomComponent):
@@ -54,7 +54,6 @@ class SplitTextComponent(CustomComponent):
         chunk_overlap: Optional[int] = 200,
         recursive: bool = False,
     ) -> list[Record]:
-
         separators = [unescape_string(x) for x in separators]
 
         # Make sure chunk_size and chunk_overlap are ints

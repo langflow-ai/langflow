@@ -1,3 +1,4 @@
+import warnings
 from typing import Callable, Dict, List, Optional
 
 from langchain.agents import agent_toolkits
@@ -29,13 +30,15 @@ class ToolkitCreator(LangChainTypeCreator):
     @property
     def type_to_loader_dict(self) -> Dict:
         if self.type_dict is None:
-            settings_service = get_settings_service()
-            self.type_dict = {
-                toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
-                # if toolkit_name is not lower case it is a class
-                for toolkit_name in agent_toolkits.__all__
-                if not toolkit_name.islower() and toolkit_name in settings_service.settings.TOOLKITS
-            }
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                settings_service = get_settings_service()
+                self.type_dict = {
+                    toolkit_name: import_class(f"langchain.agents.agent_toolkits.{toolkit_name}")
+                    # if toolkit_name is not lower case it is a class
+                    for toolkit_name in agent_toolkits.__all__
+                    if not toolkit_name.islower() and toolkit_name in settings_service.settings.TOOLKITS
+                }
 
         return self.type_dict
 
