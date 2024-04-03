@@ -197,7 +197,11 @@ def delete_start_projects(session):
 
 def create_or_update_starter_projects():
     components_paths = get_settings_service().settings.COMPONENTS_PATH
-    all_types_dict = get_all_components(components_paths, as_dict=True)
+    try:
+        all_types_dict = get_all_components(components_paths, as_dict=True)
+    except Exception as e:
+        logger.exception(f"Error loading components: {e}")
+        raise e
     with session_scope() as session:
         starter_projects = load_starter_projects()
         delete_start_projects(session)
