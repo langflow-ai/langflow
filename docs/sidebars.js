@@ -2,7 +2,7 @@ module.exports = {
   docs: [
     {
       type: "category",
-      label: "Getting Started",
+      label: " Getting Started",
       collapsed: false,
       items: [
         "index",
@@ -13,14 +13,23 @@ module.exports = {
     },
     {
       type: "category",
-      label: "What's New",
+      label: " What's New",
       collapsed: false,
       items: [
         "whats-new/a-new-chapter-langflow",
         "whats-new/migrating-to-one-point-zero",
-        "whats-new/customization-control",
-        "whats-new/debugging-reimagined",
-        "whats-new/simplification-standardization",
+      ],
+    },
+    {
+      type: "category",
+      label: " Step-by-Step Guides",
+      collapsed: false,
+      items: [
+        "guides/rag-with-astradb",
+        "guides/async-tasks",
+        "guides/loading_document",
+        "guides/chatprompttemplate_guide",
+        "guides/langfuse_integration",
       ],
     },
     {
@@ -90,17 +99,6 @@ module.exports = {
         "components/utilities",
         "components/vector-stores",
         "components/wrappers",
-      ],
-    },
-    {
-      type: "category",
-      label: "Step-by-Step Guides",
-      collapsed: false,
-      items: [
-        "guides/async-tasks",
-        "guides/loading_document",
-        "guides/chatprompttemplate_guide",
-        "guides/langfuse_integration",
       ],
     },
     {
