@@ -112,8 +112,6 @@ module.exports = {
         "components/text-splitters",
         "components/toolkits",
         "components/tools",
-        "components/wrappers",
-        // "components/prompts",
       ],
     },
     {
@@ -124,13 +122,10 @@ module.exports = {
         "examples/flow-runner",
         "examples/conversation-chain",
         "examples/buffer-memory",
-        "examples/midjourney-prompt-chain",
         "examples/csv-loader",
         "examples/searchapi-tool",
         "examples/serp-api-tool",
-        "examples/multiple-vectorstores",
         "examples/python-function",
-        "examples/how-upload-examples",
       ],
     },
     {
