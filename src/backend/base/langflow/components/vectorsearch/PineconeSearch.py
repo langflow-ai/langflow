@@ -38,6 +38,11 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
                 "default": 1,
                 "advanced": True,
             },
+            "number_of_results": {
+                "display_name": "Number of Results",
+                "info": "Number of results to return.",
+                "advanced": True,
+            },
         }
 
     def build(  # type: ignore[override]
@@ -46,6 +51,7 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
         embedding: Embeddings,
         pinecone_env: str,
         text_key: str = "text",
+        number_of_results: int = 4,
         pool_threads: int = 4,
         index_name: Optional[str] = None,
         pinecone_api_key: Optional[str] = None,
@@ -66,5 +72,5 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
             raise ValueError("Failed to load the Pinecone index.")
 
         return self.search_with_vector_store(
-            vector_store=vector_store, input_value=input_value, search_type=search_type
+            vector_store=vector_store, input_value=input_value, search_type=search_type, k=number_of_results
         )

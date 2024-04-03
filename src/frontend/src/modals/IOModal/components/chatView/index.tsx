@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../../../components/genericIconComponent";
-import { NOCHATOUTPUT_NOTICE_ALERT } from "../../../../constants/alerts_constants";
 import {
   CHAT_FIRST_INITIAL_TEXT,
   CHAT_SECOND_INITIAL_TEXT,
@@ -124,7 +123,7 @@ export default function ChatView({
     message: string,
     stream_url?: string
   ) {
-    if (message === "") return;
+    // if (message === "") return;
     chat.message = message;
     // chat is one of the chatHistory
     updateFlowPool(chat.componentId, {

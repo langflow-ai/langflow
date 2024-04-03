@@ -48,6 +48,11 @@ class ChromaSearchComponent(LCVectorStoreComponent):
                 "display_name": "Server SSL Enabled",
                 "advanced": True,
             },
+            "number_of_results": {
+                "display_name": "Number of Results",
+                "info": "Number of results to return.",
+                "advanced": True,
+            },
         }
 
     def build(
@@ -57,6 +62,7 @@ class ChromaSearchComponent(LCVectorStoreComponent):
         collection_name: str,
         embedding: Embeddings,
         chroma_server_ssl_enabled: bool,
+        number_of_results: int = 4,
         index_directory: Optional[str] = None,
         chroma_server_cors_allow_origins: Optional[str] = None,
         chroma_server_host: Optional[str] = None,
@@ -102,4 +108,4 @@ class ChromaSearchComponent(LCVectorStoreComponent):
             client_settings=chroma_settings,
         )
 
-        return self.search_with_vector_store(input_value, search_type, vector_store)
+        return self.search_with_vector_store(input_value, search_type, vector_store, k=number_of_results)

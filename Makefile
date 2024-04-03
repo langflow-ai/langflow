@@ -58,6 +58,9 @@ lint:
 install_frontend:
 	cd src/frontend && npm install
 
+install_frontendci:
+	cd src/frontend && npm ci
+
 install_frontendc:
 	cd src/frontend && rm -rf node_modules package-lock.json && npm install
 
@@ -127,27 +130,29 @@ frontendc:
 	make run_frontend
 
 install_backend:
-	@echo 'Installing backend dependencies'
+	@echo 'Setting up the environment'
 	@make setup_env
+	@echo 'Installing backend dependencies'
 	@poetry install --extras deploy
 
 backend:
 	make install_backend
 	@-kill -9 `lsof -t -i:7860`
-ifeq ($(login),1)
-	@echo "Running backend without autologin";
-	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio
+ifdef login
+	@echo "Running backend autologin is $(login)";
+	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio
 else
-	@echo "Running backend with autologin";
-	LANGFLOW_AUTO_LOGIN=True poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env  --loop asyncio
+	@echo "Running backend respecting the .env file";
+	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env  --loop asyncio
 endif
 
 build_and_run:
 	@echo 'Removing dist folder'
+	@make setup_env
 	rm -rf dist
 	rm -rf src/backend/base/dist
 	make build
-	poetry run pip install dist/*.tar.gz && pip install src/backend/base/dist/*.tar.gz
+	poetry run pip install dist/*.tar.gz
 	poetry run langflow run
 
 build_and_install:
@@ -166,14 +171,21 @@ build:
 	make build_langflow_base
 	make build_langflow
 
-build_langflow:
-	poetry build-rewrite-path-deps --version-pinning-strategy=semver
-
 build_langflow_base:
-	make install_frontend
+	make install_frontendci
 	make build_frontend
 	cd src/backend/base && poetry build-rewrite-path-deps --version-pinning-strategy=semver
 	rm -rf src/backend/base/langflow/frontend
+
+build_langflow_backup:
+	poetry lock && poetry build-rewrite-path-deps --version-pinning-strategy=semver
+
+build_langflow:
+	cd ./scripts && python update_dependencies.py
+	poetry lock
+	poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	mv pyproject.toml.bak pyproject.toml
+	mv poetry.lock.bak poetry.lock
 
 dev:
 	make install_frontend
@@ -193,10 +205,9 @@ lock_langflow:
 
 lock:
 # Run both in parallel
-	# cd src/backend/base && poetry lock
-	# poetry lock
 	@echo 'Locking dependencies'
-	@make -j2 lock_base lock_langflow
+	cd src/backend/base && poetry lock
+	poetry lock
 publish_base:
 	make build_langflow_base
 	cd src/backend/base && poetry publish

@@ -2,17 +2,57 @@ import Admonition from '@theme/Admonition';
 
 # Helpers
 
-### Custom Component
+### Chat Memory
 
-This component serves as a template for creating your own custom components.
+This component retrieves stored chat messages given a specific Session ID.
 
 **Params**
 
-- **Display Name:** Parameter
+- **Sender Type:** Choose the sender type from options like "Machine", "User", or "Machine and User".
+- **Sender Name:** (Optional) The name of the sender.
+- **Number of Messages:** Number of messages to retrieve.
+- **Session ID:** The Session ID of the chat history.
+- **Order:** Choose the order of the messages, either "Ascending" or "Descending".
+- **Record Template:** (Optional) Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.
 
-**Usage**
+---
 
-To use this component, provide the required parameter as specified.
+### Combine Text
+
+This component concatenates two text sources into a single text chunk using a specified delimiter.
+
+**Params**
+
+- **First Text:** The first text input to concatenate.
+- **Second Text:** The second text input to concatenate.
+- **Delimiter:** A string used to separate the two text inputs. Defaults to a whitespace.
+
+---
+
+### Create Record
+
+This component dynamically creates a Record with a specified number of fields.
+
+**Params**
+
+- **Number of Fields:** Number of fields to be added to the record.
+- **Text Key:** Key to be used as text.
+
+---
+
+### Custom Component
+
+Use this component as a template to create your own custom component.
+
+**Params**
+
+- **Parameter:** Describe the purpose of this parameter.
+
+<Admonition type="info" title="Info">
+    <p>
+        Customize the <code>build_config</code> and <code>build</code> methods according to your requirements.
+    </p>
+</Admonition>
 
 Learn more about [Custom Component](http://docs.langflow.org/components/custom).
 
@@ -20,154 +60,68 @@ Learn more about [Custom Component](http://docs.langflow.org/components/custom).
 
 ### Documents to Records
 
-This component converts documents to records.
+Convert LangChain Documents into Records.
 
-**Params**
+**Parameters**
 
-- **Documents:**
-  - **Display Name:** Documents
-
-**Usage**
-
-To use this component, provide a list of documents to be converted into records.
+- **Documents:** Documents to be converted into Records.
 
 ---
 
-### Unique ID Generator
+### ID Generator
 
-This component generates a unique ID.
+Generates a unique ID.
 
-**Params**
+**Parameters**
 
-- **Value:**
-  - **Display Name:** Value
-  - **Real Time Refresh:** True
-
-**Usage**
-
-To use this component, simply retrieve the generated unique ID from the provided value parameter.
+- **Value:** Unique ID generated.
 
 ---
 
 ### Message History
 
-This component is used to retrieve stored messages from the message history.
+Retrieves stored chat messages given a specific Session ID.
 
-**Params**
+**Parameters**
 
-- **Sender Type:**
-  - **Display Name:** Sender Type
-  - **Options:** Machine, User, Machine and User
-
-- **Sender Name:**
-  - **Display Name:** Sender Name
-
-- **Number of Messages:**
-  - **Display Name:** Number of Messages
-  - **Info:** Number of messages to retrieve.
-
-- **Session ID:**
-  - **Display Name:** Session ID
-  - **Info:** Session ID of the chat history.
-  - **Input Types:** Text
-
-**Usage**
-
-To use this component, configure the parameters as needed to retrieve messages from the message history.
-
----
-
-### Python Function
-
-**Params**
-
-- **Code:**
-  - **Display Name:** Code
-  - **Info:** The code for the function.
-  - **Show:** True
-
-**Usage**
-
-To use this component, provide the Python code for the function you want to define.
+- **Sender Type:** Options for the sender type.
+- **Sender Name:** Sender name.
+- **Number of Messages:** Number of messages to retrieve.
+- **Session ID:** Session ID of the chat history.
+- **Order:** Order of the messages.
 
 ---
 
 ### Records to Text
 
-This component converts records into a single piece of text using a template.
+Convert Records into plain text following a specified template.
 
-**Params**
+**Parameters**
 
-- **Records:**
-  - **Display Name:** Records
-  - **Info:** The records to convert to text.
-
-- **Template:**
-  - **Display Name:** Template
-    - **Info:** The template to use for formatting the records. It can contain the keys `{text}`, `{data}` or any other key in the Record.
-
-**Usage**
-
-To use this component, provide the records you want to convert to text along with a template for formatting.
+- **Records:** The records to convert to text.
+- **Template:** The template to use for formatting the records. It can contain the keys `{text}`, `{data}` or any other key in the Record.
 
 ---
 
-### SearchApi
+### Split Text
 
-This component provides access to the real-time search engine results API.
+Split text into chunks of a specified length.
 
-**Params**
+**Parameters**
 
-- **Engine:**
-  - **Display Name:** Engine
-  - **Info:** The search engine to use.
-
-- **Parameters:**
-  - **Display Name:** Parameters
-  - **Info:** The parameters to send with the request.
-
-- **API Key:**
-  - **Display Name:** API Key
-  - **Info:** The API key to use SearchApi.
-  - **Required:** True
-  - **Password:** True
-
-Learn more about [SearchApi Documentation](https://www.searchapi.io/docs/google).
-
----
-
-### Text to Record
-
-This component enables the creation of a record from text data.
-
-**Params**
-
-- **Data:**
-  - **Display Name:** Data
-  - **Info:** The data to convert to a record.
-  - **Input Types:** Text
-
-**Usage**
-
-To use this component, provide the text data to convert into a record.
+- **Texts:** Texts to split.
+- **Separators:** The characters to split on. Defaults to [" "].
+- **Max Chunk Size:** The maximum length (in number of characters) of each chunk.
+- **Chunk Overlap:** The amount of character overlap between chunks.
+- **Recursive:** Whether to split recursively.
 
 ---
 
 ### Update Record
 
-This component updates a record with new data.
+Update Record with text-based key/value pairs, similar to updating a Python dictionary.
 
-**Params**
+**Parameters**
 
-- **Record:**
-  - **Display Name:** Record
-  - **Info:** The record to update.
-
-- **New Data:**
-  - **Display Name:** New Data
-  - **Info:** The new data to update the record with.
-  - **Input Types:** Text
-
-**Usage**
-
-To use this component, provide the record to be updated along with the new data.
+- **Record:** The record to update.
+- **New Data:** The new data to update the record with.

@@ -1,0 +1,202 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import DownloadableJsonFile from "/src/theme/DownloadableJsonFile.js";
+import Admonition from "@theme/Admonition";
+
+# 🌟 RAG with AstraDB
+
+This guide will walk you through how to build a RAG (Retrieval Augmented Generation) application using **AstraDB** and **Langflow**.
+
+AstraDB is a cloud-native database built on Apache Cassandra that is optimized for the cloud. It is a fully managed database-as-a-service that simplifies operations and reduces costs. AstraDB is built on the same technology that powers the largest Cassandra deployments in the world.
+
+In this guide, we will use AstraDB as a vector store to store and retrieve the documents that will be used by the RAG application to generate responses.
+
+<Admonition type="tip">
+  This guide assumes that you have Langflow up and running. If you are new to
+  Langflow, you can check out the [Getting Started](/) guide.
+</Admonition>
+
+TLDR;
+
+- Visit the [Astra](https://astra.datastax.com) website and create a free account
+- Duplicate our [Langflow 1.0 Space](https://huggingface.co/spaces/Logspace/Langflow-Preview?duplicate=true)
+- Create a new database, get a **Token** and the **API Endpoint**
+- <DownloadableJsonFile
+    title="Download AstraDB RAG Flows"
+    source="/data/AstraDB-RAG-Flows.json"
+  />
+- Import the project into Langflow by dropping it on the Canvas or My Collection page
+- Update the **Token** and **API Endpoint** in the **AstraDB** components
+- Update the OpenAI API key in the **OpenAI** components
+- Run the ingestion flow which is the one that uses the **AstraDB** component
+- Click on the ⚡ _Run_ button and start interacting with your RAG application
+
+# First things first
+
+## Create an AstraDB Database
+
+To get started, you will need to create an AstraDB database. Visit the [Astra](https://astra.datastax.com) website and create a free account.
+
+Once you have created an account, you will be taken to the AstraDB dashboard. Click on the **Create Database** button.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/astra-create-database.png",
+    dark: "img/astra-create-database.png",
+  }}
+  style={{ width: "80%" }}
+/>
+
+Now you will need to configure your database. Choose the **Serverless (Vector)** deployment type, and pick a Database name, provider and region.
+
+After you have configured your database, click on the **Create Database** button.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/astra-configure-deployment.png",
+    dark: "img/astra-configure-deployment.png",
+  }}
+  style={{ width: "70%" }}
+/>
+
+Once your database is initialized, to the right of the page, you will see the _Database Details_ section which contains a button for you to copy the **API Endpoint** and another to generate a **Token**.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/astra-generate-token.png",
+    dark: "img/astra-generate-token.png",
+  }}
+  style={{ width: "50%" }}
+/>
+
+Now we are all set to start building our RAG application using AstraDB and Langflow.
+
+## (Optional) Duplicate the Langflow 1.0 HuggingFace Space
+
+If you haven't already, now is the time to launch Langflow. To make things easier, you can duplicate our [Langflow 1.0 Space](https://huggingface.co/spaces/Logspace/Langflow-Preview?duplicate=true) which sets up a Langflow instance just for you.
+
+You'll still need to get the Project file and import it so, let's get to that.
+
+## Import AstraDB RAG Flows
+
+To get started, you will need to <DownloadableJsonFile title="download the AstraDB RAG Flows project file" source="/data/AstraDB-RAG-Flows.json" />.
+
+Once you have downloaded the project file, you can import it into Langflow by dropping it on the Canvas or My Collection page.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/drag-and-drop-flow.png",
+    dark: "img/drag-and-drop-flow.png",
+  }}
+  style={{ width: "90%" }}
+/>
+
+This project consists of two flows. The simpler one is the **Ingestion Flow** which is responsible for ingesting the documents into the AstraDB database.
+
+Your first step should be to understand what each flow does and how they interact with each other.
+
+The ingestion flow consists of:
+
+- **Files** component that uploads a text file to Langflow
+- **Recursive Character Text Splitter** component that splits the text into smaller chunks
+- **OpenAIEmbeddings** component that generates embeddings for the text chunks
+- **AstraDB** component that stores the text chunks in the AstraDB database
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/astra-ingestion-flow.png",
+    dark: "img/astra-ingestion-flow.png",
+  }}
+  style={{ width: "90%" }}
+/>
+
+Now, let's update the **AstraDB** and **AstraDB Search** components with the **Token** and **API Endpoint** that we generated earlier, and the OpenAI Embeddings components with your OpenAI API key.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/astra-ingestion-fields.png",
+    dark: "img/astra-ingestion-fields.png",
+  }}
+  style={{ width: "90%" }}
+/>
+
+And run it! This will ingest the Text data from your file into the AstraDB database.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/astra-ingestion-run.png",
+    dark: "img/astra-ingestion-run.png",
+  }}
+  style={{ width: "90%" }}
+/>
+
+Now, on to the **RAG Flow**. This flow is responsible for generating responses to your queries.
+
+The RAG flow is a bit more complex. It consists of:
+
+- **Chat Input** component that defines where to put the user input coming from the Interaction Panel
+- **OpenAI Embeddings** component that generates embeddings from the user input
+- **AstraDB Search** component that retrieves the most relevant Records from the AstraDB database
+- **Text Output** component that turns the Records into Text by concatenating them and also displays it in the Interaction Panel
+  - One interesting point you'll see here is that this component is named `Extracted Chunks`, and that is how it will appear in the Interaction Panel
+- **Prompt** component that takes in the user input and the retrieved Records as text and builds a prompt for the OpenAI model
+- **OpenAI** component that generates a response to the prompt
+- **Chat Output** component that displays the response in the Interaction Panel
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/astra-rag-flow.png",
+    dark: "img/astra-rag-flow.png",
+  }}
+  style={{ width: "90%" }}
+/>
+
+To run it all we have to do is click on the ⚡ _Run_ button and start interacting with your RAG application.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/astra-rag-flow-run.png",
+    dark: "img/astra-rag-flow-run.png",
+  }}
+  style={{ width: "90%" }}
+/>
+
+This opens the Interaction Panel where you can chat your data.
+
+Because this flow has a **Chat Input** and a **Text Output** component, the Panel displays a chat input at the bottom and the Extracted Chunks section on the left.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/astra-rag-flow-interaction-panel.png",
+    dark: "img/astra-rag-flow-interaction-panel.png",
+  }}
+  style={{ width: "80%" }}
+/>
+
+Once we interact with it we get a response and the Extracted Chunks section is updated with the retrieved records.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/astra-rag-flow-interaction-panel-interaction.png",
+    dark: "img/astra-rag-flow-interaction-panel-interaction.png",
+  }}
+  style={{ width: "80%" }}
+/>
+
+And that's it! You have successfully built a RAG application using AstraDB and Langflow.
+
+# Conclusion
+
+In this guide, we have learned how to build a RAG application using AstraDB and Langflow. We have seen how to create an AstraDB database, import the AstraDB RAG Flows project into Langflow, and run the ingestion and RAG flows.

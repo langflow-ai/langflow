@@ -33,6 +33,11 @@ class PGVectorSearchComponent(PGVectorComponent, LCVectorStoreComponent):
             },
             "collection_name": {"display_name": "Table", "advanced": False},
             "input_value": {"display_name": "Input"},
+            "number_of_results": {
+                "display_name": "Number of Results",
+                "info": "Number of results to return.",
+                "advanced": True,
+            },
         }
 
     def build(  # type: ignore[override]
@@ -42,6 +47,7 @@ class PGVectorSearchComponent(PGVectorComponent, LCVectorStoreComponent):
         search_type: str,
         pg_server_url: str,
         collection_name: str,
+        number_of_results: int = 4,
     ) -> List[Record]:
         """
         Builds the Vector Store or BaseRetriever object.
@@ -64,5 +70,5 @@ class PGVectorSearchComponent(PGVectorComponent, LCVectorStoreComponent):
         except Exception as e:
             raise RuntimeError(f"Failed to build PGVector: {e}")
         return self.search_with_vector_store(
-            input_value=input_value, search_type=search_type, vector_store=vector_store
+            input_value=input_value, search_type=search_type, vector_store=vector_store, k=number_of_results
         )

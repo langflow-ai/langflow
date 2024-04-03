@@ -149,13 +149,13 @@ def run(
     Run the Langflow.
     """
 
+    configure(log_level=log_level, log_file=log_file)
     set_var_for_macos_issue()
     # override env variables with .env file
 
     if env_file:
         load_dotenv(env_file, override=True)
 
-    configure(log_level=log_level, log_file=log_file)
     update_settings(
         config,
         dev=dev,
@@ -246,10 +246,10 @@ def get_free_port(port):
 
 
 def print_banner(host, port):
-    # console = Console()
+    from langflow.version import __version__
 
     word = "Langflow"
-    colors = ["#3300cc"]
+    colors = ["#6e42f5"]
 
     styled_word = ""
 
@@ -259,7 +259,7 @@ def print_banner(host, port):
 
     # Title with emojis and gradient text
     title = (
-        f"[bold]Welcome to :chains: {styled_word} [/bold]\n\n"
+        f"[bold]Welcome to :chains: {styled_word} v{__version__}[/bold]\n"
         f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
     )
     info_text = (
@@ -307,7 +307,7 @@ def run_langflow(host, port, log_level, options, app):
 def superuser(
     username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
     password: str = typer.Option(..., prompt=True, hide_input=True, help="Password for the superuser."),
-    log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
 ):
     """
     Create a superuser.

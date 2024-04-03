@@ -28,9 +28,7 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   limitScrollFieldsModal,
 } from "../../constants/constants";
-import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
-import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import { NodeDataType } from "../../types/flow";
 import {
   convertObjToArray,

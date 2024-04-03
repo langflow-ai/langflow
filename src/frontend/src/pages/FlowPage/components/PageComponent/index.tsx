@@ -477,8 +477,8 @@ export default function Page({
             <Background className="" />
             {!view && (
               <Controls
-                className="[&>button]:bg-muted fill-foreground stroke-foreground text-primary
-                   [&>button]:border-b-border hover:[&>button]:bg-border"
+                className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border
+                   [&>button]:bg-muted hover:[&>button]:bg-border"
               ></Controls>
             )}
             <SelectionMenu

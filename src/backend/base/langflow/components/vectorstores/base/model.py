@@ -19,6 +19,8 @@ class LCVectorStoreComponent(CustomComponent):
         input_value: Text,
         search_type: str,
         vector_store: Union[VectorStore, BaseRetriever],
+        k=10,
+        **kwargs,
     ) -> List[Record]:
         """
         Search for records in the vector store based on the input value and search type.
@@ -37,7 +39,7 @@ class LCVectorStoreComponent(CustomComponent):
 
         docs: List[Document] = []
         if input_value and isinstance(input_value, str) and hasattr(vector_store, "search"):
-            docs = vector_store.search(query=input_value, search_type=search_type.lower())
+            docs = vector_store.search(query=input_value, search_type=search_type.lower(), k=k, **kwargs)
         else:
             raise ValueError("Invalid inputs provided.")
         records = docs_to_records(docs)

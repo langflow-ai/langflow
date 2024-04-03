@@ -49,7 +49,11 @@ class WeaviateSearchVectorStore(WeaviateVectorStoreComponent, LCVectorStoreCompo
             "field_type": "bool",
             "advanced": True,
         },
-        "code": {"show": False},
+        "number_of_results": {
+            "display_name": "Number of Results",
+            "info": "Number of results to return.",
+            "advanced": True,
+        },
     }
 
     def build(  # type: ignore[override]
@@ -57,6 +61,7 @@ class WeaviateSearchVectorStore(WeaviateVectorStoreComponent, LCVectorStoreCompo
         input_value: Text,
         search_type: str,
         url: str,
+        number_of_results: int = 4,
         search_by_text: bool = False,
         api_key: Optional[str] = None,
         index_name: Optional[str] = None,
@@ -77,5 +82,5 @@ class WeaviateSearchVectorStore(WeaviateVectorStoreComponent, LCVectorStoreCompo
             raise ValueError("Failed to load the Weaviate index.")
 
         return self.search_with_vector_store(
-            vector_store=vector_store, input_value=input_value, search_type=search_type
+            vector_store=vector_store, input_value=input_value, search_type=search_type, k=number_of_results
         )

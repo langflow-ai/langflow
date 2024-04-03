@@ -14,6 +14,7 @@ module.exports = {
   organizationName: "logspace-ai",
   projectName: "langflow",
   trailingSlash: false,
+  staticDirectories: ["static"],
   customFields: {
     mendableAnonKey: process.env.MENDABLE_ANON_KEY,
   },
