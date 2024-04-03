@@ -80,6 +80,7 @@ dspy-ai = "^2.4.0"
 crewai = "^0.22.5"
 html2text = "^2024.2.26"
 assemblyai = "^0.23.1"
+litellm = "^1.34.22"
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
