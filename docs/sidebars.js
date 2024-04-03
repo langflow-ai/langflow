@@ -73,7 +73,6 @@ module.exports = {
       items: [
         "guidelines/login",
         "guidelines/api",
-        "guidelines/async-api",
         "guidelines/components",
         "guidelines/features",
         "guidelines/collection",
