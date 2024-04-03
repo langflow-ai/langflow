@@ -22,10 +22,21 @@ module.exports = {
     },
     {
       type: "category",
+      label: " Starter Projects",
+      collapsed: false,
+      items: [
+        "starter-projects/rag-with-astradb",
+        "starter-projects/basic-prompting",
+        "starter-projects/memory-chatbot",
+        "starter-projects/document-qa",
+        "starter-projects/blog-writer",
+      ],
+    },
+    {
+      type: "category",
       label: " Step-by-Step Guides",
       collapsed: false,
       items: [
-        "guides/rag-with-astradb",
         "guides/async-tasks",
         "guides/loading_document",
         "guides/chatprompttemplate_guide",
@@ -83,7 +94,7 @@ module.exports = {
         "components/models",
         "components/helpers",
         "components/vector-stores",
-        "components/embeddings", 
+        "components/embeddings",
       ],
     },
     {
