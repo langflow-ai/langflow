@@ -168,8 +168,13 @@ build_frontend:
 build:
 	@echo 'Building the project'
 	@make setup_env
+ifdef base
 	make build_langflow_base
+endif
+
+ifdef main
 	make build_langflow
+endif
 
 build_langflow_base:
 	make install_frontendci
@@ -208,6 +213,7 @@ lock:
 	@echo 'Locking dependencies'
 	cd src/backend/base && poetry lock
 	poetry lock
+
 publish_base:
 	make build_langflow_base
 	cd src/backend/base && poetry publish
@@ -217,8 +223,14 @@ publish_langflow:
 	poetry publish
 
 publish:
+	@echo 'Publishing the project'
+ifdef base
 	make publish_base
-	make publish_langflowpoetr
+endif
+
+ifdef main
+	make publish_langflow
+endif
 
 help:
 	@echo '----'
