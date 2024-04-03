@@ -169,6 +169,8 @@ build:
 	@echo 'Building the project'
 	@make setup_env
 ifdef base
+	make install_frontendci
+	make build_frontend
 	make build_langflow_base
 endif
 
@@ -177,8 +179,6 @@ ifdef main
 endif
 
 build_langflow_base:
-	make install_frontendci
-	make build_frontend
 	cd src/backend/base && poetry build-rewrite-path-deps --version-pinning-strategy=semver
 	rm -rf src/backend/base/langflow/frontend
 
