@@ -3,8 +3,10 @@ import os
 import zlib
 from pathlib import Path
 
-from langflow.interface.custom.custom_component import CustomComponent
 from loguru import logger
+
+from langflow.interface.custom.custom_component import CustomComponent
+from langflow.interface.custom.custom_component import CustomComponent
 
 
 class CustomComponentPathValueError(ValueError):
@@ -198,7 +200,12 @@ class DirectoryReader:
         Process a file by validating its content and
         returning the result and content/error message.
         """
-        file_content = self.read_file_content(file_path)
+        try:
+            file_content = self.read_file_content(file_path)
+        except Exception as exc:
+            logger.exception(exc)
+            logger.error(f"Error while reading file {file_path}: {str(exc)}")
+            return False, f"Could not read {file_path}"
 
         if file_content is None:
             return False, f"Could not read {file_path}"
