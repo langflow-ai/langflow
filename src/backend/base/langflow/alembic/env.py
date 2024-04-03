@@ -1,4 +1,5 @@
 import os
+import warnings
 from logging.config import fileConfig
 
 from alembic import context
@@ -82,11 +83,12 @@ def run_migrations_online() -> None:
             prefix="sqlalchemy.",
             poolclass=pool.NullPool,
         )
-    with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
-
-        with context.begin_transaction():
-            context.run_migrations()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        with connectable.connect() as connection:
+            context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
+            with context.begin_transaction():
+                context.run_migrations()
 
 
 if context.is_offline_mode():
