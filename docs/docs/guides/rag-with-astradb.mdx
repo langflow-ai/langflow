@@ -1,7 +1,6 @@
 import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
-import DownloadableJsonFile from "/src/theme/DownloadableJsonFile.js";
 import Admonition from "@theme/Admonition";
 
 # 🌟 RAG with AstraDB
@@ -22,10 +21,7 @@ TLDR;
 - Visit the [Astra](https://astra.datastax.com) website and create a free account
 - Duplicate our [Langflow 1.0 Space](https://huggingface.co/spaces/Logspace/Langflow-Preview?duplicate=true)
 - Create a new database, get a **Token** and the **API Endpoint**
-- <DownloadableJsonFile
-    title="Download AstraDB RAG Flows"
-    source="/data/AstraDB-RAG-Flows.json"
-  />
+- Click on the **New Project** button and look for Vector Store RAG. This will create a new project with the necessary components
 - Import the project into Langflow by dropping it on the Canvas or My Collection page
 - Update the **Token** and **API Endpoint** in the **AstraDB** components
 - Update the OpenAI API key in the **OpenAI** components
@@ -79,13 +75,9 @@ Now we are all set to start building our RAG application using AstraDB and Langf
 
 If you haven't already, now is the time to launch Langflow. To make things easier, you can duplicate our [Langflow 1.0 Space](https://huggingface.co/spaces/Logspace/Langflow-Preview?duplicate=true) which sets up a Langflow instance just for you.
 
-You'll still need to get the Project file and import it so, let's get to that.
+## Open the Vector Store RAG Project
 
-## Import AstraDB RAG Flows
-
-To get started, you will need to <DownloadableJsonFile title="download the AstraDB RAG Flows project file" source="/data/AstraDB-RAG-Flows.json" />.
-
-Once you have downloaded the project file, you can import it into Langflow by dropping it on the Canvas or My Collection page.
+To get started, click on the **New Project** button and look for the **Vector Store RAG** project. This will open a starter project with the necessary components to run a RAG application using AstraDB.
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -138,7 +130,7 @@ And run it! This will ingest the Text data from your file into the AstraDB datab
   style={{ width: "90%" }}
 />
 
-Now, on to the **RAG Flow**. This flow is responsible for generating responses to your queries.
+Now, on to the **RAG Flow**. This flow is responsible for generating responses to your queries. It will define all of the steps from getting the User's input to generating a response and displaying it in the Interaction Panel.
 
 The RAG flow is a bit more complex. It consists of:
 

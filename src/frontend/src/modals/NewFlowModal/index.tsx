@@ -52,16 +52,16 @@ export default function NewFlowModal({
               flow={examples.find((e) => e.name == "Document QA")!}
             />
           )}
-          {examples.find((e) => e.name == "Prompt Chaining") && (
-            <UndrawCardComponent
-              key={1}
-              flow={examples.find((e) => e.name == "Prompt Chaining")!}
-            />
-          )}
           {examples.find((e) => e.name == "Blog Writer") && (
             <UndrawCardComponent
               key={1}
               flow={examples.find((e) => e.name == "Blog Writer")!}
+            />
+          )}
+          {examples.find((e) => e.name == "Vector Store RAG") && (
+            <UndrawCardComponent
+              key={1}
+              flow={examples.find((e) => e.name == "Vector Store RAG")!}
             />
           )}
         </div>
