@@ -83,7 +83,7 @@ export default function UndrawCardComponent({
             }}
           />
         );
-      case "Prompt Chaining":
+      case "Vector Store RAG":
         return (
           <PromptChaining
             style={{
