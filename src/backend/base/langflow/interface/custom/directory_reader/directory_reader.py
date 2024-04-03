@@ -107,7 +107,7 @@ class DirectoryReader:
         """
         if not os.path.isfile(file_path):
             return None
-        with open(file_path, "r") as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             # UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 3069: character maps to <undefined>
             try:
                 return file.read()
