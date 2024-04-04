@@ -130,7 +130,7 @@ export default function CollectionCardComponent({
   return (
     <Card
       className={cn(
-        "group relative flex flex-col justify-between overflow-hidden transition-all hover:shadow-md",
+        "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:shadow-md",
         disabled ? "pointer-events-none opacity-50" : ""
       )}
     >
