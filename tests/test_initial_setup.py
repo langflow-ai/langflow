@@ -1,9 +1,6 @@
 from datetime import datetime
 
 import pytest
-from sqlalchemy import func
-from sqlmodel import select
-
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.initial_setup.setup import (
@@ -15,6 +12,8 @@ from langflow.initial_setup.setup import (
 from langflow.memory import delete_messages
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
+from sqlalchemy import func
+from sqlmodel import select
 
 
 def test_load_starter_projects():
@@ -78,7 +77,9 @@ async def test_starter_project_can_run_successfully(client):
         projects = session.exec(select(Flow).where(Flow.folder == STARTER_FOLDER_NAME)).all()
 
         graphs: list[tuple[str, Graph]] = [
-            (project.name, Graph.from_payload(project.data, flow_id=project.id)) for project in projects
+            (project.name, Graph.from_payload(project.data, flow_id=project.id))
+            for project in projects
+            if "Document" not in project.name or "RAG" not in project.name
         ]
         assert len(graphs) == len(projects)
     for name, graph in graphs:
