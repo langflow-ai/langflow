@@ -27,10 +27,8 @@ This is a big change, but it's also a big improvement.
 It allows you to define the structure of your conversation and the data that flows through it.
 This makes it easier to understand and control your conversation.
 
-
 This change comes with a new way of visualizing your projects. Before 1.0 you would connect Components to ultimately build one final Component that was processed behind the scenes.
 Now, each step of the process is defined by you, is visible on the canvas, and can be monitored and controlled by you. This makes it so that Composition is now just another way of building in Langflow. **Now data flows through your project more transparently**.
-
 
 The caveat is existing projects may need some new Components to get them back to their full functionality.
 [We've made this as easy as possible](../migration/compatibility), and there will be improvements to it as we get feedback in our Discord server and on GitHub.
@@ -40,9 +38,7 @@ The caveat is existing projects may need some new Components to get them back to
 The moment we decided to make this change, we saw the potential to make Langflow even more yours.
 By having a clear definition of Inputs and Outputs, we could build the experience around that which led us to create the **Interaction Panel**.
 
-
 When building a project testing and debugging is crucial. The Interaction Panel is a tool that changes dynamically based on the Inputs and Outputs you defined in your project.
-
 
 For example, let's say you are building a simple RAG application. Generally, you have an Input, some references that come from a Vector Store Search, a Prompt and the answer.
 Now, you could plug the output of your Prompt into a [Text Output](../components/outputs#Text-Output), rename that to "Prompt Result" and see the output of your Prompt in the Interaction Panel.
@@ -65,9 +61,11 @@ We wanted to create start projects that would help you learn about new features 
 
 For now, we have:
 
-- **Basic Prompting**: A simple project that shows you how to use the Prompt Component.
-- **Data Ingestion**: A project that shows you how to ingest files into a Vector Store.
-- **RAG**: A project that shows you how to use a Vector Store Search and a Prompt to build a simple RAG application.
+- **[Basic Prompting (Hello, world!)](/starter-projects/basic-prompting)**: A simple flow that shows you how to use the Prompt Component.
+- **[Vector Store RAG](/starter-projects/rag-with-astra-db)**: A flow that shows you how to ingest data into a Vector Store and then use it to run a RAG application.
+- **[Memory Chatbot](/starter-projects/memory-chatbot)**: This one shows you how to create a simple chatbot that can remember things about the user.
+- **[Document QA](/starter-projects/document-qa)**: This flow shows you how to build a simple flow that helps you get answers about a document.
+- **[Blog Writer](/starter-projects/blog-writer)**: Shows you how you can expand on the Prompt variables and be creative about what inputs you add to it.
 
 As always, your feedback is invaluable, so please let us know what you think of the new starter projects and what you would like to see in the future.
 
