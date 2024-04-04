@@ -4,7 +4,15 @@ module.exports = {
       type: "category",
       label: " Getting Started",
       collapsed: false,
-      items: ["index", "getting-started/cli", "getting-started/creating-flows"],
+      items: [
+        "index",
+        "getting-started/cli",
+        "getting-started/basic-prompting",
+        "getting-started/document-qa",
+        "getting-started/blog-writer",
+        "getting-started/memory-chatbot",
+        "getting-started/rag-with-astradb",
+      ],
     },
     {
       type: "category",
@@ -17,26 +25,9 @@ module.exports = {
     },
     {
       type: "category",
-      label: " Starter Projects",
-      collapsed: false,
-      items: [
-        "starter-projects/rag-with-astradb",
-        "starter-projects/basic-prompting",
-        "starter-projects/memory-chatbot",
-        "starter-projects/document-qa",
-        "starter-projects/blog-writer",
-      ],
-    },
-    {
-      type: "category",
       label: " Step-by-Step Guides",
       collapsed: false,
-      items: [
-        "guides/async-tasks",
-        "guides/loading_document",
-        "guides/chatprompttemplate_guide",
-        "guides/langfuse_integration",
-      ],
+      items: ["guides/langfuse_integration"],
     },
     {
       type: "category",
@@ -56,7 +47,7 @@ module.exports = {
         // "migration/connecting-output-components",
         // "migration/renaming-and-editing-components",
         // "migration/passing-tweaks-and-inputs",
-        // "migration/global-variables",
+        "migration/global-variables",
         // "migration/experimental-components",
         // "migration/state-management",
       ],
