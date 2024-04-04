@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.16"
+version = "0.0.18"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -60,6 +60,10 @@ pypdf = "^4.1.0"
 chromadb = "^0.4.24"
 langchain-anthropic = "^0.1.4"
 langchain-astradb = "^0.1.0"
+nest-asyncio = "^1.6.0"
+emoji = "^2.11.0"
+cryptography = "^42.0.5"
+langchain-openai = "^0.1.1"
 
 
 [tool.poetry.group.dev.dependencies]

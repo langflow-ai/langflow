@@ -3,8 +3,9 @@ import os
 import zlib
 from pathlib import Path
 
-from langflow.interface.custom.custom_component import CustomComponent
 from loguru import logger
+
+from langflow.interface.custom.custom_component import CustomComponent
 
 
 class CustomComponentPathValueError(ValueError):
@@ -106,8 +107,15 @@ class DirectoryReader:
         """
         if not os.path.isfile(file_path):
             return None
-        with open(file_path, "r") as file:
-            return file.read()
+        with open(file_path, "r", encoding="utf-8") as file:
+            # UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 3069: character maps to <undefined>
+            try:
+                return file.read()
+            except UnicodeDecodeError:
+                # This is happening in Windows, so we need to open the file in binary mode
+                # The file is always just a python file, so we can safely read it as utf-8
+                with open(file_path, "rb") as file:
+                    return file.read().decode("utf-8")
 
     def get_files(self):
         """
@@ -198,7 +206,12 @@ class DirectoryReader:
         Process a file by validating its content and
         returning the result and content/error message.
         """
-        file_content = self.read_file_content(file_path)
+        try:
+            file_content = self.read_file_content(file_path)
+        except Exception as exc:
+            logger.exception(exc)
+            logger.error(f"Error while reading file {file_path}: {str(exc)}")
+            return False, f"Could not read {file_path}"
 
         if file_content is None:
             return False, f"Could not read {file_path}"
@@ -233,7 +246,7 @@ class DirectoryReader:
             filename = os.path.basename(file_path)
             validation_result, result_content = self.process_file(file_path)
             if not validation_result:
-                logger.error(f"Error while processing file {file_path}: {result_content}")
+                logger.error(f"Error while processing file {file_path}")
 
             menu_result = self.find_menu(response, menu_name) or {
                 "name": menu_name,

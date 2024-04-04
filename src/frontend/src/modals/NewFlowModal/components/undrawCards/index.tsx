@@ -43,7 +43,7 @@ export default function UndrawCardComponent({
             }}
           />
         );
-      case "Basic Prompting":
+      case "Basic Prompting (Ahoy World!)":
         return (
           <BasicPrompt
             style={{
@@ -83,7 +83,7 @@ export default function UndrawCardComponent({
             }}
           />
         );
-      case "Prompt Chaining":
+      case "Vector Store RAG":
         return (
           <PromptChaining
             style={{

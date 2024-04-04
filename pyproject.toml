@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.0a0"
+version = "1.0.0a4"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -23,8 +23,6 @@ documentation = "https://docs.langflow.org"
 [tool.poetry.scripts]
 langflow = "langflow.__main__:main"
 
-[tool.poetry-monorepo-dependency-plugin]
-enable = true
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
@@ -80,6 +78,7 @@ dspy-ai = "^2.4.0"
 crewai = "^0.22.5"
 html2text = "^2024.2.26"
 assemblyai = "^0.23.1"
+litellm = "^1.34.22"
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"

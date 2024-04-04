@@ -34,10 +34,12 @@ export default function NewFlowModal({
           {/* {examples.map((example, idx) => {
             return <UndrawCardComponent key={idx} flow={example} />;
           })} */}
-          {examples.find((e) => e.name == "Basic Prompting") && (
+          {examples.find((e) => e.name == "Basic Prompting (Ahoy World!)") && (
             <UndrawCardComponent
               key={1}
-              flow={examples.find((e) => e.name == "Basic Prompting")!}
+              flow={
+                examples.find((e) => e.name == "Basic Prompting (Ahoy World!)")!
+              }
             />
           )}
           {examples.find((e) => e.name == "Memory Chatbot") && (
@@ -52,16 +54,16 @@ export default function NewFlowModal({
               flow={examples.find((e) => e.name == "Document QA")!}
             />
           )}
-          {examples.find((e) => e.name == "Prompt Chaining") && (
-            <UndrawCardComponent
-              key={1}
-              flow={examples.find((e) => e.name == "Prompt Chaining")!}
-            />
-          )}
           {examples.find((e) => e.name == "Blog Writer") && (
             <UndrawCardComponent
               key={1}
               flow={examples.find((e) => e.name == "Blog Writer")!}
+            />
+          )}
+          {examples.find((e) => e.name == "Vector Store RAG") && (
+            <UndrawCardComponent
+              key={1}
+              flow={examples.find((e) => e.name == "Vector Store RAG")!}
             />
           )}
         </div>

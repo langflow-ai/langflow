@@ -10,7 +10,6 @@ path = src/backend/base/langflow/frontend
 
 setup_poetry:
 	pipx install poetry
-	poetry self add poetry-monorepo-dependency-plugin
 
 add:
 	@echo 'Adding dependencies'
@@ -168,22 +167,27 @@ build_frontend:
 build:
 	@echo 'Building the project'
 	@make setup_env
-	make build_langflow_base
-	make build_langflow
-
-build_langflow_base:
+ifdef base
 	make install_frontendci
 	make build_frontend
-	cd src/backend/base && poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	make build_langflow_base
+endif
+
+ifdef main
+	make build_langflow
+endif
+
+build_langflow_base:
+	cd src/backend/base && poetry build
 	rm -rf src/backend/base/langflow/frontend
 
 build_langflow_backup:
-	poetry lock && poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	poetry lock && poetry build
 
 build_langflow:
-	cd ./scripts && python update_dependencies.py
+	cd ./scripts && poetry run python update_dependencies.py
 	poetry lock
-	poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	poetry build
 	mv pyproject.toml.bak pyproject.toml
 	mv poetry.lock.bak poetry.lock
 
@@ -208,6 +212,7 @@ lock:
 	@echo 'Locking dependencies'
 	cd src/backend/base && poetry lock
 	poetry lock
+
 publish_base:
 	make build_langflow_base
 	cd src/backend/base && poetry publish
@@ -217,8 +222,14 @@ publish_langflow:
 	poetry publish
 
 publish:
-	make publish_base
-	make publish_langflow
+	@echo 'Publishing the project'
+ifdef base
+	-make publish_base
+endif
+
+ifdef main
+	-make publish_langflow
+endif
 
 help:
 	@echo '----'

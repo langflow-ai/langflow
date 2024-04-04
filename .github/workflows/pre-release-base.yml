@@ -1,20 +1,21 @@
-name: release
+name: Langflow Base Pre-release
 
 on:
   pull_request:
     types:
       - closed
     branches:
-      - main
+      - dev
     paths:
       - "pyproject.toml"
+  workflow_dispatch:
 
 env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
   if_release:
-    if: ${{ (github.event.pull_request.merged == true) && contains(github.event.pull_request.labels.*.name, 'Release') }}
+    if: ${{ (github.event.pull_request.merged == true) && contains(github.event.pull_request.labels.*.name, 'pre-release') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +27,7 @@ jobs:
           python-version: "3.10"
           cache: "poetry"
       - name: Build project for distribution
-        run: make build
+        run: make build base=true
       - name: Check Version
         id: check-version
         run: |
@@ -38,13 +39,14 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           generateReleaseNotes: true
+          prerelease: true
           tag: v${{ steps.check-version.outputs.version }}
-          commit: main
+          commit: dev
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          poetry publish
+          poetry publish base=true
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -59,7 +61,6 @@ jobs:
         with:
           context: .
           push: true
-          file: ./build_and_push.Dockerfile
+          file: ./build_and_push_base.Dockerfile
           tags: |
-            logspace/langflow:${{ steps.check-version.outputs.version }}
-            logspace/langflow:latest
+            logspace/langflow:base-${{ steps.check-version.outputs.version }}

@@ -1,14 +1,32 @@
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
-from langflow.field_typing import BaseLanguageModel
-from langflow.interface.custom.custom_component import CustomComponent
+
+from langflow.base.constants import STREAM_INFO_TEXT
+from langflow.base.models.model import LCModelComponent
+from langflow.field_typing import BaseLanguageModel, Text
 
 
-class ChatLiteLLMComponent(CustomComponent):
-    display_name = "ChatLiteLLM"
+class ChatLiteLLMModelComponent(LCModelComponent):
+    display_name = "LiteLLM"
     description = "`LiteLLM` collection of large language models."
     documentation = "https://python.langchain.com/docs/integrations/chat/litellm"
+    field_order = [
+        "model",
+        "api_key",
+        "provider",
+        "temperature",
+        "model_kwargs",
+        "top_p",
+        "top_k",
+        "n",
+        "max_tokens",
+        "max_retries",
+        "verbose",
+        "stream",
+        "input_value",
+        "system_message",
+    ]
 
     def build_config(self):
         return {
@@ -37,13 +55,6 @@ class ChatLiteLLMComponent(CustomComponent):
                     "Cohere",
                     "OpenRouter",
                 ],
-            },
-            "streaming": {
-                "display_name": "Streaming",
-                "field_type": "bool",
-                "advanced": True,
-                "required": False,
-                "default": True,
             },
             "temperature": {
                 "display_name": "Temperature",
@@ -102,14 +113,26 @@ class ChatLiteLLMComponent(CustomComponent):
                 "required": False,
                 "default": False,
             },
+            "input_value": {"display_name": "Input"},
+            "stream": {
+                "display_name": "Stream",
+                "info": STREAM_INFO_TEXT,
+                "advanced": True,
+            },
+            "system_message": {
+                "display_name": "System Message",
+                "info": "System message to pass to the model.",
+                "advanced": True,
+            },
         }
 
     def build(
         self,
+        input_value: Text,
         model: str,
         provider: str,
         api_key: Optional[str] = None,
-        streaming: bool = True,
+        stream: bool = False,
         temperature: Optional[float] = 0.7,
         model_kwargs: Optional[Dict[str, Any]] = {},
         top_p: Optional[float] = None,
@@ -118,6 +141,7 @@ class ChatLiteLLMComponent(CustomComponent):
         max_tokens: int = 256,
         max_retries: int = 6,
         verbose: bool = False,
+        system_message: Optional[str] = None,
     ) -> BaseLanguageModel:
         try:
             import litellm  # type: ignore
@@ -146,10 +170,10 @@ class ChatLiteLLMComponent(CustomComponent):
                 f"Provider {provider} is not supported. Supported providers are: {', '.join(provider_map.keys())}"
             )
 
-        LLM = ChatLiteLLM(
+        output = ChatLiteLLM(
             model=model,
             client=None,
-            streaming=streaming,
+            streaming=stream,
             temperature=temperature,
             model_kwargs=model_kwargs if model_kwargs is not None else {},
             top_p=top_p,
@@ -164,4 +188,4 @@ class ChatLiteLLMComponent(CustomComponent):
             cohere_api_key=api_keys["cohere_api_key"],
             openrouter_api_key=api_keys["openrouter_api_key"],
         )
-        return LLM
+        return self.get_chat_result(output, stream, input_value, system_message)
