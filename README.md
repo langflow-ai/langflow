@@ -30,9 +30,7 @@ langflow run
 ```
 
 
-### HuggingFace Spaces
-
-You can also check it out on [HuggingFace Spaces](https://huggingface.co/spaces/Logspace/Langflow) and run it in your browser! You can even clone it and have your own copy of Langflow to play with.
+You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Logspace/Langflow). Simply clone the space, to create your own Langflow workspace in minutes.
 
 # 🖥️ Command Line Interface (CLI)
 
