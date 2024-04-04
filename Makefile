@@ -10,7 +10,6 @@ path = src/backend/base/langflow/frontend
 
 setup_poetry:
 	pipx install poetry
-	poetry self add poetry-monorepo-dependency-plugin
 
 add:
 	@echo 'Adding dependencies'
@@ -179,16 +178,16 @@ ifdef main
 endif
 
 build_langflow_base:
-	cd src/backend/base && poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	cd src/backend/base && poetry build
 	rm -rf src/backend/base/langflow/frontend
 
 build_langflow_backup:
-	poetry lock && poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	poetry lock && poetry build
 
 build_langflow:
-	cd ./scripts && python update_dependencies.py
+	cd ./scripts && poetry run python update_dependencies.py
 	poetry lock
-	-poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	poetry build
 	mv pyproject.toml.bak pyproject.toml
 	mv poetry.lock.bak poetry.lock
 
