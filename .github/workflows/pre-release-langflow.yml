@@ -9,6 +9,11 @@ on:
     paths:
       - "pyproject.toml"
   workflow_dispatch:
+    inputs:
+      force_release:
+        description: "Force a release"
+        required: false
+        default: "false"
   workflow_run:
     workflows: ["pre-release-base"]
     types: [completed]
@@ -19,7 +24,7 @@ env:
 
 jobs:
   if_release:
-    if: ${{ (github.event.pull_request.merged == true) && contains(github.event.pull_request.labels.*.name, 'pre-release') }}
+    if: ${{ (github.event.pull_request.merged == true) && contains(github.event.pull_request.labels.*.name, 'pre-release') }} || ${{ github.event_name == 'workflow_dispatch' && inputs.force_release == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
