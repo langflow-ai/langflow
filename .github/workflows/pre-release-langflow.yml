@@ -41,6 +41,8 @@ jobs:
         id: check-version
         run: |
           echo version=$(poetry version --short) >> $GITHUB_OUTPUT
+      - name: Display pyproject.toml langflow-base Version
+        run: cat pyproject.toml | grep langflow-base
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
