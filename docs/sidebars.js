@@ -7,11 +7,11 @@ module.exports = {
       items: [
         "index",
         "getting-started/cli",
-        // "getting-started/basic-prompting",
-        // "getting-started/document-qa",
-        // "getting-started/blog-writer",
-        // "getting-started/memory-chatbot",
-        "getting-started/rag-with-astradb",
+        "guides/basic-prompting",
+        "guides/document-qa",
+        "guides/blog-writer",
+        "guides/memory-chatbot",
+        "guides/rag-with-astradb",
       ],
     },
     {
