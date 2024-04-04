@@ -3,10 +3,11 @@ name: Langflow Pre-release
 on:
   pull_request:
     types:
-      - opened
-      - synchronize
+      - closed
     branches:
       - dev
+    paths:
+      - "pyproject.toml"
   workflow_dispatch:
     inputs:
       force_release:
@@ -42,14 +43,6 @@ jobs:
           echo version=$(poetry version --short) >> $GITHUB_OUTPUT
       - name: Display pyproject.toml langflow-base Version
         run: cat pyproject.toml | grep langflow-base
-      - name: Check langflow-base Version in poetry.lock
-        run: |
-          VERSION_REGEX='name = "langflow-base"\n\s+version = "([0-9\.]+)"'
-          if [[ $(cat poetry.lock) =~ $VERSION_REGEX ]]; then
-            echo "langflow-base version in poetry.lock: ${BASH_REMATCH[1]}"
-          else
-            echo "langflow-base version not found in poetry.lock"
-          fi
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
