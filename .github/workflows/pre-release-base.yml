@@ -36,7 +36,7 @@ jobs:
       - name: Check Version
         id: check-version
         run: |
-          echo version=$(poetry version --short) >> $GITHUB_OUTPUT
+          echo version=$(cd src/backend/base && poetry version --short) >> $GITHUB_OUTPUT
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
