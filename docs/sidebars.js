@@ -23,15 +23,10 @@ module.exports = {
         "whats-new/migrating-to-one-point-zero",
       ],
     },
+
     {
       type: "category",
-      label: " Step-by-Step Guides",
-      collapsed: false,
-      items: ["guides/langfuse_integration"],
-    },
-    {
-      type: "category",
-      label: "Migration Guides",
+      label: " Migration Guides",
       collapsed: false,
       items: [
         // "migration/flow-of-data",
@@ -67,6 +62,12 @@ module.exports = {
         "guidelines/chat-widget",
         "guidelines/custom-component",
       ],
+    },
+    {
+      type: "category",
+      label: "Step-by-Step Guides",
+      collapsed: false,
+      items: ["guides/langfuse_integration"],
     },
     {
       type: "category",
