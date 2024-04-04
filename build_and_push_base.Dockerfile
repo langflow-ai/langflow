@@ -74,6 +74,7 @@ COPY Makefile ./
 COPY README.md ./
 RUN cd src/frontend && npm run build
 COPY src/backend ./src/backend
+RUN cp -r src/frontend/build src/backend/base/langflow/frontend
 RUN rm -rf src/backend/base/dist
 RUN cd src/backend/base && $POETRY_HOME/bin/poetry build --format sdist
 
@@ -85,11 +86,6 @@ COPY --from=builder-base /app/src/backend/base/dist/*.tar.gz ./
 
 # Install the package from the .tar.gz
 RUN pip install *.tar.gz
-
-# Now remove the .tar.gz
-RUN rm *.tar.gz
-# Remove the source code
-RUN rm -rf /app
 
 WORKDIR /app
 CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]
