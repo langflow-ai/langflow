@@ -247,7 +247,7 @@ def get_free_port(port):
 
 def print_banner(host, port):
     try:
-        from langflow.version import __version__
+        from langflow.version import __version__  # type: ignore
 
         version = __version__
         word = "Langflow"

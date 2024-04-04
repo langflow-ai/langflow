@@ -86,7 +86,7 @@ class ChatComponent(CustomComponent):
         input_value: Optional[Union[str, Record]] = None,
         session_id: Optional[str] = None,
         return_record: Optional[bool] = False,
-        record_template: Optional[str] = "Text: {text}\nData: {data}",
+        record_template: str = "Text: {text}\nData: {data}",
     ) -> Union[Text, Record]:
         input_value_record: Optional[Record] = None
         if return_record:

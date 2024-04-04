@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional
 
 from langflow.field_typing import Text
 from langflow.helpers.record import records_to_text
@@ -27,7 +27,7 @@ class TextComponent(CustomComponent):
 
     def build(
         self,
-        input_value: Optional[Union[Text, Record]] = "",
+        input_value: Optional[Text] = "",
         record_template: Optional[str] = "{text}",
     ) -> Text:
         if isinstance(input_value, Record):

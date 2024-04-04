@@ -1,3 +1,4 @@
+from typing import Union
 from langchain_core.documents import Document
 
 from langflow.schema import Record
@@ -16,7 +17,7 @@ def docs_to_records(documents: list[Document]) -> list[Record]:
     return [Record.from_document(document) for document in documents]
 
 
-def records_to_text(template: str, records: list[Record]) -> str:
+def records_to_text(template: str, records: Union[Record, list[Record]]) -> str:
     """
     Converts a list of Records to a list of texts.
 
