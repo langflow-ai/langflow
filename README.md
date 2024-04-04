@@ -3,14 +3,11 @@
 # ⛓️ Langflow
 
 <h3>Discover a simpler & smarter way to build around Foundation Models</h3>
-
-<a href="https://github.com/logspace-ai/langflow">
-# <img width="100%" src="https://github.com/logspace-ai/langflow/blob/dev/docs/static/img/new_langflow_demo.gif"></a>
+# [![Langflow](https://github.com/logspace-ai/langflow/blob/dev/docs/static/img/new_langflow_demo.gif)](https://www.langflow.org)
 
 [![Release Notes](https://img.shields.io/github/release/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/releases)
 [![Twitter](https://img.shields.io/twitter/url/https/twitter.com/langflow_ai.svg?style=social&label=Follow%20%40langflow_ai)](https://twitter.com/langflow_ai)
-[![Discord](https://img.shields.io/discord/1116803230643527710?label=discord](https://discord.com/invite/EqksyE2EX9)
-
+[![Discord](https://img.shields.io/discord/1116803230643527710?label=discord)](https://discord.com/invite/EqksyE2EX9)
 
 # 📦 Installation
 
