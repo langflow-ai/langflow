@@ -8,6 +8,8 @@
 
 # 📦 Installation
 
+Make sure you have **Python 3.10** installed on your system.
+
 You can install Langflow with pip:
 
 ```shell
