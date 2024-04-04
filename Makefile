@@ -188,8 +188,10 @@ build_langflow:
 	cd ./scripts && poetry run python update_dependencies.py
 	poetry lock
 	poetry build
+ifdef restore
 	mv pyproject.toml.bak pyproject.toml
 	mv poetry.lock.bak poetry.lock
+endif
 
 dev:
 	make install_frontend
