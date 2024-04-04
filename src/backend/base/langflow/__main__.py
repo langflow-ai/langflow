@@ -246,9 +246,17 @@ def get_free_port(port):
 
 
 def print_banner(host, port):
-    from langflow.version import __version__
+    try:
+        from langflow.version import __version__
 
-    word = "Langflow"
+        version = __version__
+        word = "Langflow"
+    except ImportError:
+        from importlib import metadata
+
+        version = metadata.version("langflow-base")
+        word = "Langflow Base"
+
     colors = ["#6e42f5"]
 
     styled_word = ""
@@ -259,7 +267,7 @@ def print_banner(host, port):
 
     # Title with emojis and gradient text
     title = (
-        f"[bold]Welcome to :chains: {styled_word} v{__version__}[/bold]\n"
+        f"[bold]Welcome to :chains: {styled_word} v{version}[/bold]\n"
         f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
     )
     info_text = (

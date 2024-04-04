@@ -372,9 +372,17 @@ async def create_upload_file(
 # get endpoint to return version of langflow
 @router.get("/version")
 def get_version():
-    from langflow.version import __version__  # type: ignore
+    try:
+        from langflow.version import __version__
 
-    return {"version": __version__}
+        version = __version__
+        package = "Langflow"
+    except ImportError:
+        from importlib import metadata
+
+        version = metadata.version("langflow-base")
+        package = "Langflow Base"
+    return {"version": version, "package": package}
 
 
 @router.post("/custom_component", status_code=HTTPStatus.OK)
