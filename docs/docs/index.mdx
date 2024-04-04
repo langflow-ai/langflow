@@ -28,18 +28,20 @@ You can install **Langflow** with [pipx](https://pipx.pypa.io/stable/installatio
 Pipx can fetch the missing Python version for you, but you can also install it manually.
 
 ```bash
-pipx install langflow --python python3.10 --fetch-missing-python
-# or
 pip install langflow -U
+# or
+pipx install langflow --python python3.10 --fetch-missing-python
 ```
 
 Or you can install a pre-release version using:
 
 ```bash
-pipx install langflow --python python3.10 --fetch-missing-python --pip-args="--pre --force-reinstall"
-# or
 pip install langflow --pre --force-reinstall
+# or
+pipx install langflow --python python3.10 --fetch-missing-python --pip-args="--pre --force-reinstall"
 ```
+
+We recommend using --force-reinstall to ensure you have the latest version of Langflow and its dependencies.
 
 ### ⛓️ Running Langflow
 
