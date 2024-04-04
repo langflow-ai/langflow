@@ -252,6 +252,19 @@ def version_is_prerelease(version: str):
     return "a" in version or "b" in version or "rc" in version
 
 
+def get_letter_from_version(version: str):
+    """
+    Get the letter from a pre-release version.
+    """
+    if "a" in version:
+        return "a"
+    if "b" in version:
+        return "b"
+    if "rc" in version:
+        return "rc"
+    return None
+
+
 def build_new_version_notice(current_version: str, package_name: str):
     """
     Build a new version notice.
@@ -267,10 +280,14 @@ def build_new_version_notice(current_version: str, package_name: str):
         # curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1
         # this command will give us the latest pre-release version
         package_info = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()
-        # 4.0.0a1
-        number_version = current_version.split("a")[0]
+        # 4.0.0a1 or 4.0.0b1 or 4.0.0rc1
+        # find which type of pre-release version we have
+        # could be a1, b1, rc1
+        # we want the a, b, or rc and the number
+        suffix_letter = get_letter_from_version(current_version)
+        number_version = current_version.split(suffix_letter)[0]
         latest_version = sorted(
-            package_info["releases"].keys(), key=lambda x: x.split("a")[-1] and number_version in x
+            package_info["releases"].keys(), key=lambda x: x.split(suffix_letter)[-1] and number_version in x
         )[-1]
         if version_is_prerelease(latest_version) and latest_version != current_version:
             return True, f"A new pre-release version of {package_name} is available: {latest_version}"
