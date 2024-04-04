@@ -4,12 +4,7 @@ module.exports = {
       type: "category",
       label: " Getting Started",
       collapsed: false,
-      items: [
-        "index",
-        "getting-started/cli",
-        "getting-started/hugging-face-spaces",
-        "getting-started/creating-flows",
-      ],
+      items: ["index", "getting-started/cli", "getting-started/creating-flows"],
     },
     {
       type: "category",
