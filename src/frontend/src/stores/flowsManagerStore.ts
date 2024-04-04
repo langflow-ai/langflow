@@ -1,7 +1,11 @@
 import { AxiosError } from "axios";
-import { cloneDeep } from "lodash";
+import { cloneDeep, debounce } from "lodash";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
+import {
+  SAVE_DEBOUNCE_TIME,
+  STARTER_FOLDER_NAME,
+} from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   readFlowsFromDatabase,
@@ -37,6 +41,10 @@ const past = {};
 const future = {};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
+  examples: [],
+  setExamples: (examples: FlowType[]) => {
+    set({ examples });
+  },
   currentFlowId: "",
   setCurrentFlowId: (currentFlowId: string) => {
     set((state) => ({
@@ -52,6 +60,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     });
   },
   currentFlow: undefined,
+  saveLoading: false,
   isLoading: true,
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
   refreshFlows: () => {
@@ -61,7 +70,16 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         .then((dbData) => {
           if (dbData) {
             const { data, flows } = processFlows(dbData, false);
-            get().setFlows(flows);
+            get().setExamples(
+              flows.filter(
+                (f) => f.folder === STARTER_FOLDER_NAME && !f.user_id
+              )
+            );
+            get().setFlows(
+              flows.filter(
+                (f) => !(f.folder === STARTER_FOLDER_NAME && !f.user_id)
+              )
+            );
             useTypesStore.setState((state) => ({
               data: { ...state.data, ["saved_components"]: data },
             }));
@@ -70,6 +88,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           }
         })
         .catch((e) => {
+          set({ isLoading: false });
           useAlertStore.getState().setErrorData({
             title: "Could not load flows from database",
           });
@@ -78,22 +97,19 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     });
   },
   autoSaveCurrentFlow: (nodes: Node[], edges: Edge[], viewport: Viewport) => {
-    // Clear the previous timeout if it exists.
-    if (saveTimeoutId) {
-      clearTimeout(saveTimeoutId);
+    if (get().currentFlow) {
+      get().saveFlow(
+        { ...get().currentFlow!, data: { nodes, edges, viewport } },
+        true
+      );
     }
-
-    // Set up a new timeout.
-    saveTimeoutId = setTimeout(() => {
-      if (get().currentFlow) {
-        get().saveFlow(
-          { ...get().currentFlow!, data: { nodes, edges, viewport } },
-          true
-        );
-      }
-    }, 300); // Delay of 300ms.
   },
   saveFlow: (flow: FlowType, silent?: boolean) => {
+    set({ saveLoading: true }); // set saveLoading true immediately
+    return get().saveFlowDebounce(flow, silent); // call the debounced function directly
+  },
+  saveFlowDebounce: debounce((flow: FlowType, silent?: boolean) => {
+    set({ saveLoading: true });
     return new Promise<void>((resolve, reject) => {
       updateFlowInDatabase(flow)
         .then((updatedFlow) => {
@@ -115,6 +131,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
             //update tabs state
 
             resolve();
+            set({ saveLoading: false });
           }
         })
         .catch((err) => {
@@ -125,7 +142,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           reject(err);
         });
     });
-  },
+  }, SAVE_DEBOUNCE_TIME),
   uploadFlows: () => {
     return new Promise<void>((resolve) => {
       const input = document.createElement("input");

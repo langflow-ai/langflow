@@ -3,14 +3,21 @@ import types
 from uuid import uuid4
 
 import pytest
+from langchain_core.documents import Document
+
 from langflow.interface.custom.base import CustomComponent
-from langflow.interface.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
-from langflow.interface.custom.custom_component.component import Component, ComponentCodeNullError
-from langflow.interface.custom.utils import build_custom_component_template
+from langflow.interface.custom.code_parser.code_parser import (
+    CodeParser,
+    CodeSyntaxError,
+)
+from langflow.interface.custom.custom_component.component import (
+    Component,
+    ComponentCodeNullError,
+)
 from langflow.services.database.models.flow import Flow, FlowCreate
 
 code_default = """
-from langflow import Prompt
+from langflow.field_typing import Prompt
 from langflow.interface.custom.custom_component import CustomComponent
 
 from langchain.llms.base import BaseLLM
@@ -67,16 +74,16 @@ def test_component_init():
     """
     Test the initialization of the Component class.
     """
-    component = Component(code=code_default, _function_entrypoint_name="build")
+    component = Component(code=code_default, function_entrypoint_name="build")
     assert component.code == code_default
-    assert component._function_entrypoint_name == "build"
+    assert component.function_entrypoint_name == "build"
 
 
 def test_component_get_code_tree():
     """
     Test the get_code_tree method of the Component class.
     """
-    component = Component(code=code_default, _function_entrypoint_name="build")
+    component = Component(code=code_default, function_entrypoint_name="build")
     tree = component.get_code_tree(component.code)
     assert "imports" in tree
 
@@ -86,20 +93,9 @@ def test_component_code_null_error():
     Test the get_function method raises the
     ComponentCodeNullError when the code is empty.
     """
-    component = Component(code="", _function_entrypoint_name="")
+    component = Component(code="", function_entrypoint_name="")
     with pytest.raises(ComponentCodeNullError):
         component.get_function()
-
-
-# TODO: Validate if we should remove this
-# def test_component_function_entrypoint_name_null_error():
-#     """
-#     Test the get_function method raises the ComponentFunctionEntrypointNameNullError
-#     when the function_entrypoint_name is empty.
-#     """
-#     component = Component(code=code_default, _function_entrypoint_name="")
-#     with pytest.raises(ComponentFunctionEntrypointNameNullError):
-#         component.get_function()
 
 
 def test_custom_component_init():
@@ -118,7 +114,7 @@ def test_custom_component_build_template_config():
     Test the build_template_config property of the CustomComponent class.
     """
     custom_component = CustomComponent(code=code_default, function_entrypoint_name="build")
-    config = custom_component.template_config
+    config = custom_component.build_template_config()
     assert isinstance(config, dict)
 
 
@@ -127,7 +123,7 @@ def test_custom_component_get_function():
     Test the get_function property of the CustomComponent class.
     """
     custom_component = CustomComponent(code="def build(): pass", function_entrypoint_name="build")
-    my_function = custom_component.get_function
+    my_function = custom_component.get_function()
     assert isinstance(my_function, types.FunctionType)
 
 
@@ -201,7 +197,7 @@ def test_component_get_function_valid():
     Test the get_function method of the Component
     class with valid code and function_entrypoint_name.
     """
-    component = Component(code="def build(): pass", _function_entrypoint_name="build")
+    component = Component(code="def build(): pass", function_entrypoint_name="build")
     my_function = component.get_function()
     assert callable(my_function)
 
@@ -224,7 +220,6 @@ def test_custom_component_get_function_entrypoint_return_type():
     Test the get_function_entrypoint_return_type
     property of the CustomComponent class.
     """
-    from langchain_core.documents import Document
 
     custom_component = CustomComponent(code=code_default, function_entrypoint_name="build")
     return_type = custom_component.get_function_entrypoint_return_type
@@ -309,7 +304,7 @@ def test_code_parser_parse_ann_assign():
     stmt = ast.AnnAssign(
         target=ast.Name(id="x", ctx=ast.Store()),
         annotation=ast.Name(id="int", ctx=ast.Load()),
-        value=ast.Constant(n=1),
+        value=ast.Num(n=1),
         simple=1,
     )
     result = parser.parse_ann_assign(stmt)
@@ -359,9 +354,19 @@ def test_component_get_code_tree_syntax_error():
     Test the get_code_tree method of the Component class
     raises the CodeSyntaxError when given incorrect syntax.
     """
-    component = Component(code="import os as", _function_entrypoint_name="build")
+    component = Component(code="import os as", function_entrypoint_name="build")
     with pytest.raises(CodeSyntaxError):
         component.get_code_tree(component.code)
+
+
+def test_custom_component_class_template_validation_no_code():
+    """
+    Test the _class_template_validation method of the CustomComponent class
+    raises the HTTPException when the code is None.
+    """
+    custom_component = CustomComponent(code=None, function_entrypoint_name="build")
+    with pytest.raises(TypeError):
+        custom_component.get_function()
 
 
 def test_custom_component_get_code_tree_syntax_error():
@@ -518,36 +523,3 @@ def test_build_config_field_value_keys(component):
     config = component.build_config()
     field_values = config["fields"].values()
     assert all("type" in value for value in field_values)
-
-
-def test_create_and_validate_component_valid_code(test_component_code):
-    component = CustomComponent(code=test_component_code)
-    assert isinstance(component, CustomComponent)
-
-
-def test_build_langchain_template_custom_component_valid_code(test_component_code):
-    component = CustomComponent(code=test_component_code)
-    frontend_node = build_custom_component_template(component)
-    assert isinstance(frontend_node, dict)
-    template = frontend_node["template"]
-    assert isinstance(template, dict)
-    assert "param" in template
-    param_options = template["param"]["options"]
-    # Now run it again with an update field
-    frontend_node = build_custom_component_template(component, update_field="param")
-    new_param_options = frontend_node["template"]["param"]["options"]
-    assert param_options != new_param_options
-
-
-def test_build_langchain_template_custom_component_templatefield(test_component_with_templatefield_code):
-    component = CustomComponent(code=test_component_with_templatefield_code)
-    frontend_node = build_custom_component_template(component)
-    assert isinstance(frontend_node, dict)
-    template = frontend_node["template"]
-    assert isinstance(template, dict)
-    assert "param" in template
-    param_options = template["param"]["options"]
-    # Now run it again with an update field
-    frontend_node = build_custom_component_template(component, update_field="param")
-    new_param_options = frontend_node["template"]["param"]["options"]
-    assert param_options != new_param_options

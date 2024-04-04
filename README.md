@@ -3,6 +3,7 @@
 # ⛓️ Langflow
 
 ### Discover a simpler & smarter way to build around Foundation Models</h3>
+
 # [![Langflow](https://github.com/logspace-ai/langflow/blob/dev/docs/static/img/new_langflow_demo.gif)](https://www.langflow.org)
 
 # 📦 Installation
@@ -38,11 +39,9 @@ Once you’re done, you can export your flow as a JSON file.
 Load the flow with:
 
 ```python
-from langflow import load_flow_from_json
+from langflow.load import run_flow_from_json
 
-flow = load_flow_from_json("path/to/flow.json")
-# Now you can use it
-flow("Hey, have you heard of Langflow?")
+results = run_flow_from_json("path/to/flow.json", input_value="Hello, World!")
 ```
 
 # 🖥️ Command Line Interface (CLI)

@@ -50,14 +50,9 @@ const ApiModal = forwardRef(
     const tweaksList = useRef<string[]>([]);
     const [getTweak, setTweak] = useState<tweakType>([]);
     const flowState = useFlowStore((state) => state.flowState);
-    const pythonApiCode = getPythonApiCode(
-      flow,
-      autoLogin,
-      tweak.current,
-      flowState
-    );
-    const curl_code = getCurlCode(flow, autoLogin, tweak.current, flowState);
-    const pythonCode = getPythonCode(flow, tweak.current, flowState);
+    const pythonApiCode = getPythonApiCode(flow, autoLogin, tweak.current);
+    const curl_code = getCurlCode(flow, autoLogin, tweak.current);
+    const pythonCode = getPythonCode(flow, tweak.current);
     const widgetCode = getWidgetCode(flow, autoLogin, flowState);
     const tweaksCode = buildTweaks(flow);
     const codesArray = [
@@ -98,6 +93,9 @@ const ApiModal = forwardRef(
       let arrNodesWithValues: string[] = [];
 
       flow["data"]!["nodes"].forEach((node) => {
+        if (!node["data"]["node"]["template"]) {
+          return;
+        }
         Object.keys(node["data"]["node"]["template"])
           .filter(
             (templateField) =>
@@ -165,14 +163,9 @@ const ApiModal = forwardRef(
         tweak.current.push(newTweak);
       }
 
-      const pythonApiCode = getPythonApiCode(
-        flow,
-        autoLogin,
-        tweak.current,
-        flowState
-      );
-      const curl_code = getCurlCode(flow, autoLogin, tweak.current, flowState);
-      const pythonCode = getPythonCode(flow, tweak.current, flowState);
+      const pythonApiCode = getPythonApiCode(flow, autoLogin, tweak.current);
+      const curl_code = getCurlCode(flow, autoLogin, tweak.current);
+      const pythonCode = getPythonCode(flow, tweak.current);
       const widgetCode = getWidgetCode(flow, autoLogin, flowState);
 
       tabs![0].code = curl_code;
@@ -222,7 +215,7 @@ const ApiModal = forwardRef(
       <BaseModal open={open} setOpen={setOpen}>
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_CODE_DIALOG}>
-          <span className="pr-2">Code</span>
+          <span className="pr-2">API</span>
           <IconComponent
             name="Code2"
             className="h-6 w-6 pl-1 text-gray-800 dark:text-white"

@@ -1,14 +1,9 @@
 import copy
 import json
-import os
 import pickle
-from pathlib import Path
 from typing import Type, Union
 
 import pytest
-from langchain.agents import AgentExecutor
-from langchain.chains.base import Chain
-from langchain.llms.fake import FakeListLLM
 
 from langflow.graph import Graph
 from langflow.graph.edge.base import Edge
@@ -21,10 +16,8 @@ from langflow.graph.graph.utils import (
     update_target_handle,
     update_template,
 )
-from langflow.graph.utils import UnbuiltObject
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import FileToolVertex, LLMVertex, ToolkitVertex
-from langflow.processing.process import get_result_and_thought
+from langflow.initial_setup.setup import load_starter_projects
 from langflow.utils.payload import get_root_vertex
 
 # Test cases for the graph module
@@ -82,8 +75,10 @@ def test_graph_structure(basic_graph):
         assert isinstance(node, Vertex)
     for edge in basic_graph.edges:
         assert isinstance(edge, Edge)
-        assert edge.source_id in basic_graph.vertex_map.keys()
-        assert edge.target_id in basic_graph.vertex_map.keys()
+        source_vertex = basic_graph.get_vertex(edge.source_id)
+        target_vertex = basic_graph.get_vertex(edge.target_id)
+        assert source_vertex in basic_graph.vertices
+        assert target_vertex in basic_graph.vertices
 
 
 def test_circular_dependencies(basic_graph):
@@ -152,55 +147,6 @@ def test_get_node_neighbors_basic(basic_graph):
     assert any("OpenAI" in neighbor.data["type"] for neighbor, val in neighbors.items() if val)
 
 
-# def test_get_node_neighbors_complex(complex_graph):
-#     """Test getting node neighbors"""
-#     assert isinstance(complex_graph, Graph)
-#     # Get root node
-#     root = get_root_node(complex_graph)
-#     assert root is not None
-#     neighbors = complex_graph.get_nodes_with_target(root)
-#     assert neighbors is not None
-#     # Neighbors should be a list of nodes
-#     assert isinstance(neighbors, list)
-#     # Root Node is an Agent, it requires an LLMChain and tools
-#     # We need to check if there is a Chain in the one of the neighbors'
-#     assert any("Chain" in neighbor.data["type"] for neighbor in neighbors)
-#     # assert Tool is in the neighbors
-#     assert any("Tool" in neighbor.data["type"] for neighbor in neighbors)
-#     # Now on to the Chain's neighbors
-#     chain = next(neighbor for neighbor in neighbors if "Chain" in neighbor.data["type"])
-#     chain_neighbors = complex_graph.get_nodes_with_target(chain)
-#     assert chain_neighbors is not None
-#     # Check if there is a LLM in the chain's neighbors
-#     assert any("OpenAI" in neighbor.data["type"] for neighbor in chain_neighbors)
-#     # Chain should have a Prompt as a neighbor
-#     assert any("Prompt" in neighbor.data["type"] for neighbor in chain_neighbors)
-#     # Now on to the Tool's neighbors
-#     tool = next(neighbor for neighbor in neighbors if "Tool" in neighbor.data["type"])
-#     tool_neighbors = complex_graph.get_nodes_with_target(tool)
-#     assert tool_neighbors is not None
-#     # Check if there is an Agent in the tool's neighbors
-#     assert any("Agent" in neighbor.data["type"] for neighbor in tool_neighbors)
-#     # This Agent has a Tool that has a PythonFunction as func
-#     agent = next(
-#         neighbor for neighbor in tool_neighbors if "Agent" in neighbor.data["type"]
-#     )
-#     agent_neighbors = complex_graph.get_nodes_with_target(agent)
-#     assert agent_neighbors is not None
-#     # Check if there is a Tool in the agent's neighbors
-#     assert any("Tool" in neighbor.data["type"] for neighbor in agent_neighbors)
-#     # This Tool has a PythonFunction as func
-#     tool = next(
-#         neighbor for neighbor in agent_neighbors if "Tool" in neighbor.data["type"]
-#     )
-#     tool_neighbors = complex_graph.get_nodes_with_target(tool)
-#     assert tool_neighbors is not None
-#     # Check if there is a PythonFunction in the tool's neighbors
-#     assert any(
-#         "PythonFunctionTool" in neighbor.data["type"] for neighbor in tool_neighbors
-#     )
-
-
 def test_get_node(basic_graph):
     """Test getting a single node"""
     node_id = basic_graph.vertices[0].id
@@ -222,7 +168,6 @@ def test_build_edges(basic_graph):
     assert len(basic_graph.edges) == len(basic_graph._edges)
     for edge in basic_graph.edges:
         assert isinstance(edge, Edge)
-
         assert isinstance(edge.source_id, str)
         assert isinstance(edge.target_id, str)
 
@@ -281,83 +226,11 @@ def test_build_params(basic_graph):
     assert "memory" in root.params
 
 
-@pytest.mark.asyncio
-async def test_build(basic_graph):
-    """Test Node's build method"""
-    await assert_agent_was_built(basic_graph)
-
-
-async def assert_agent_was_built(graph):
-    """Assert that the agent was built"""
-    assert isinstance(graph, Graph)
-    # Now we test the build method
-    # Build the Agent
-    result = await graph.build()
-    # The agent should be a AgentExecutor
-    assert isinstance(result, Chain)
-
-
-@pytest.mark.asyncio
-async def test_llm_node_build(basic_graph):
-    llm_node = get_node_by_type(basic_graph, LLMVertex)
-    assert llm_node is not None
-    built_object = await llm_node.build()
-    assert built_object is not UnbuiltObject()
-
-
-@pytest.mark.asyncio
-async def test_toolkit_node_build(client, openapi_graph):
-    # Write a file to the disk
-    file_path = "api-with-examples.yaml"
-    with open(file_path, "w") as f:
-        f.write("openapi: 3.0.0")
-
-    toolkit_node = get_node_by_type(openapi_graph, ToolkitVertex)
-    assert toolkit_node is not None
-    built_object = await toolkit_node.build()
-    assert built_object is not UnbuiltObject
-    # Remove the file
-    os.remove(file_path)
-    assert not Path(file_path).exists()
-
-
-@pytest.mark.asyncio
-async def test_file_tool_node_build(client, openapi_graph):
-    file_path = "api-with-examples.yaml"
-    with open(file_path, "w") as f:
-        f.write("openapi: 3.0.0")
-
-    assert Path(file_path).exists()
-    file_tool_node = get_node_by_type(openapi_graph, FileToolVertex)
-    assert file_tool_node is not UnbuiltObject and file_tool_node is not None
-    built_object = await file_tool_node.build()
-    assert built_object is not UnbuiltObject
-    # Remove the file
-    os.remove(file_path)
-    assert not Path(file_path).exists()
-
-
-@pytest.mark.asyncio
-async def test_get_result_and_thought(basic_graph):
-    """Test the get_result_and_thought method"""
-    responses = [
-        "Final Answer: I am a response",
-    ]
-    message = {"input": "Hello"}
-    # Find the node that is an LLMNode and change the
-    # _built_object to a FakeListLLM
-    llm_node = get_node_by_type(basic_graph, LLMVertex)
-    assert llm_node is not None
-    llm_node._built_object = FakeListLLM(responses=responses)
-    llm_node._built = True
-    langchain_object = await basic_graph.build()
-    # assert all nodes are built
-    assert all(node._built for node in basic_graph.vertices)
-    # now build again and check if FakeListLLM was used
-
-    # Get the result and thought
-    result = get_result_and_thought(langchain_object, message)
-    assert isinstance(result, dict)
+# def test_wrapper_node_build(openapi_graph):
+#     wrapper_node = get_node_by_type(openapi_graph, WrapperVertex)
+#     assert wrapper_node is not None
+#     built_object = wrapper_node.build()
+#     assert built_object is not None
 
 
 def test_find_last_node(grouped_chat_json_flow):
@@ -471,12 +344,10 @@ def test_update_template(sample_template, sample_nodes):
     node2_updated = next((n for n in nodes_copy if n["id"] == "node2"), None)
     node3_updated = next((n for n in nodes_copy if n["id"] == "node3"), None)
 
-    assert node1_updated is not None
     assert node1_updated["data"]["node"]["template"]["some_field"]["show"] is True
     assert node1_updated["data"]["node"]["template"]["some_field"]["advanced"] is False
     assert node1_updated["data"]["node"]["template"]["some_field"]["display_name"] == "Name1"
 
-    assert node2_updated is not None
     assert node2_updated["data"]["node"]["template"]["other_field"]["show"] is False
     assert node2_updated["data"]["node"]["template"]["other_field"]["advanced"] is True
     assert node2_updated["data"]["node"]["template"]["other_field"]["display_name"] == "DisplayName2"
@@ -537,27 +408,37 @@ def test_update_source_handle():
 
 @pytest.mark.asyncio
 async def test_pickle_graph(json_vector_store):
-    loaded_json = json.loads(json_vector_store)
-    graph = Graph.from_payload(loaded_json)
+    starter_projects = load_starter_projects()
+    data = starter_projects[0]["data"]
+    graph = Graph.from_payload(data)
     assert isinstance(graph, Graph)
-    first_result = await graph.build()
-    assert isinstance(first_result, AgentExecutor)
     pickled = pickle.dumps(graph)
-    assert pickled is not UnbuiltObject
+    assert pickled is not None
     unpickled = pickle.loads(pickled)
-    assert unpickled is not UnbuiltObject
-    result = await unpickled.build()
-    assert isinstance(result, AgentExecutor)
+    assert unpickled is not None
 
 
 @pytest.mark.asyncio
 async def test_pickle_each_vertex(json_vector_store):
-    loaded_json = json.loads(json_vector_store)
-    graph = Graph.from_payload(loaded_json)
+    starter_projects = load_starter_projects()
+    data = starter_projects[0]["data"]
+    graph = Graph.from_payload(data)
     assert isinstance(graph, Graph)
     for vertex in graph.vertices:
         await vertex.build()
         pickled = pickle.dumps(vertex)
-        assert pickled is not UnbuiltObject
+        assert pickled is not None
         unpickled = pickle.loads(pickled)
-        assert unpickled is not UnbuiltObject
+        assert unpickled is not None
+
+
+@pytest.mark.asyncio
+async def test_build_ordering(complex_graph_with_groups):
+    sorted_vertices = complex_graph_with_groups.sort_vertices(stop_component_id="ChatInput-Ay8QQ")
+    assert sorted_vertices == [
+        "ChatInput-Ay8QQ",
+        "RecordsAsText-vkx2A",
+        "FileLoader-Vo1Cq",
+    ]
+
+    sorted_vertices = complex_graph_with_groups.sort_vertices()

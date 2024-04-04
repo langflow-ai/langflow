@@ -1,14 +1,25 @@
 import * as Form from "@radix-ui/react-form";
+import { PopoverAnchor } from "@radix-ui/react-popover";
 import { useEffect, useRef, useState } from "react";
+import useAlertStore from "../../stores/alertStore";
 import { InputComponentType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
-import { classNames } from "../../utils/utils";
+import { classNames, cn } from "../../utils/utils";
+import ForwardedIconComponent from "../genericIconComponent";
+import {
+  Command,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "../ui/command";
 import { Input } from "../ui/input";
+import { Popover, PopoverContentWithoutPortal } from "../ui/popover";
 
 export default function InputComponent({
   autoFocus = false,
   onBlur,
-  value,
+  value = "",
   onChange,
   disabled,
   required = false,
@@ -19,15 +30,29 @@ export default function InputComponent({
   className,
   id = "",
   blurOnEnter = false,
+  optionsIcon = "ChevronsUpDown",
+  selectedOption,
+  setSelectedOption,
+  options = [],
+  optionsPlaceholder = "Search options...",
+  optionsButton,
+  optionButton,
 }: InputComponentType): JSX.Element {
+  const setErrorData = useAlertStore.getState().setErrorData;
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
+  const [showOptions, setShowOptions] = useState<boolean>(false);
+
   // Clear component state
   useEffect(() => {
-    if (disabled && value !== "") {
+    if (disabled && value && onChange && value !== "") {
       onChange("");
     }
   }, [disabled]);
+
+  function onInputLostFocus(event): void {
+    if (onBlur) onBlur(event);
+  }
 
   return (
     <div className="relative w-full">
@@ -36,7 +61,7 @@ export default function InputComponent({
           <Input
             id={"form-" + id}
             ref={refInput}
-            onBlur={onBlur}
+            onBlur={onInputLostFocus}
             autoFocus={autoFocus}
             type={password && !pwdVisible ? "password" : "text"}
             value={value}
@@ -53,7 +78,7 @@ export default function InputComponent({
             )}
             placeholder={password && editNode ? "Key" : placeholder}
             onChange={(e) => {
-              onChange(e.target.value);
+              onChange && onChange(e.target.value);
             }}
             onCopy={(e) => {
               e.preventDefault();
@@ -65,39 +90,194 @@ export default function InputComponent({
           />
         </Form.Control>
       ) : (
-        <Input
-          id={id}
-          ref={refInput}
-          type="text"
-          onBlur={onBlur}
-          value={value}
-          autoFocus={autoFocus}
-          disabled={disabled}
-          required={required}
-          className={classNames(
-            password && !pwdVisible && value !== ""
-              ? " text-clip password "
-              : "",
-            editNode ? " input-edit-node " : "",
-            password && editNode ? "pr-8" : "",
-            password && !editNode ? "pr-10" : "",
-            className!
-          )}
-          placeholder={password && editNode ? "Key" : placeholder}
-          onChange={(e) => {
-            onChange(e.target.value);
-          }}
-          onKeyDown={(e) => {
-            handleKeyDown(e, value, "");
-            if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
-          }}
-        />
+        <>
+          <Popover modal open={showOptions} onOpenChange={setShowOptions}>
+            <PopoverAnchor>
+              <Input
+                id={id}
+                ref={refInput}
+                type="text"
+                onBlur={onInputLostFocus}
+                value={
+                  (selectedOption !== "" || !onChange) && setSelectedOption
+                    ? selectedOption
+                    : value
+                }
+                autoFocus={autoFocus}
+                disabled={disabled}
+                onClick={() => {
+                  (selectedOption !== "" || !onChange) &&
+                    setSelectedOption &&
+                    setShowOptions(true);
+                }}
+                required={required}
+                className={classNames(
+                  password &&
+                    selectedOption === "" &&
+                    !pwdVisible &&
+                    value !== ""
+                    ? " text-clip password "
+                    : "",
+                  editNode ? " input-edit-node " : "",
+                  password && setSelectedOption ? "pr-[62.9px]" : "",
+                  (!password && setSelectedOption) ||
+                    (password && !setSelectedOption)
+                    ? "pr-8"
+                    : "",
+
+                  className!
+                )}
+                placeholder={password && editNode ? "Key" : placeholder}
+                onChange={(e) => {
+                  // if the user copies a password from another input
+                  // it might come as ••••••••••• it causes errors
+                  // in ascii encoding, so we need to handle it
+                  if (password) {
+                    // check if all chars are •
+                    if (
+                      e.target.value.split("").every((char) => char === "•") &&
+                      e.target.value !== ""
+                    ) {
+                      setErrorData({
+                        title: `Invalid characters: ${e.target.value}`,
+                        list: [
+                          "It seems you are trying to paste a password. Make sure the value is visible before copying from another field.",
+                        ],
+                      });
+                    }
+                  }
+                  onChange && onChange(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  handleKeyDown(e, value, "");
+                  if (blurOnEnter && e.key === "Enter")
+                    refInput.current?.blur();
+                }}
+                data-testid={editNode ? id + "-edit" : id}
+              />
+            </PopoverAnchor>
+            <PopoverContentWithoutPortal
+              className="nocopy nopan nodelete nodrag noundo p-0"
+              style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
+              side="bottom"
+              align="center"
+            >
+              <Command
+                filter={(value, search) => {
+                  if (value.includes(search) || value.includes("doNotFilter-"))
+                    return 1; // ensures items arent filtered
+                  return 0;
+                }}
+              >
+                <CommandInput placeholder={optionsPlaceholder} />
+                <CommandList>
+                  <CommandGroup defaultChecked={false}>
+                    {options.map((option, id) => (
+                      <CommandItem
+                        className="group"
+                        key={option + id}
+                        value={option}
+                        onSelect={(currentValue) => {
+                          setSelectedOption &&
+                            setSelectedOption(
+                              currentValue === selectedOption
+                                ? ""
+                                : currentValue
+                            );
+                          setShowOptions(false);
+                        }}
+                      >
+                        <div className="group flex w-full items-center justify-between">
+                          <div className="flex items-center">
+                            <div
+                              className={cn(
+                                "relative mr-2 h-4 w-4",
+                                selectedOption === option
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            >
+                              <div className="absolute opacity-100 transition-all group-hover:opacity-0">
+                                <ForwardedIconComponent
+                                  name="Check"
+                                  className="mr-2 h-4 w-4 text-primary"
+                                  aria-hidden="true"
+                                />
+                              </div>
+                              <div className="absolute opacity-0 transition-all group-hover:opacity-100">
+                                <ForwardedIconComponent
+                                  name="X"
+                                  className="mr-2 h-4 w-4 text-status-red"
+                                  aria-hidden="true"
+                                />
+                              </div>
+                            </div>
+
+                            {option}
+                          </div>
+                          {optionButton && optionButton(option)}
+                        </div>
+                      </CommandItem>
+                    ))}
+                    {optionsButton && optionsButton}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContentWithoutPortal>
+          </Popover>
+          <div
+            className={cn(
+              "pointer-events-auto absolute inset-y-0 h-full w-full cursor-pointer",
+              (selectedOption !== "" || !onChange) && setSelectedOption
+                ? ""
+                : "hidden"
+            )}
+            onClick={
+              (selectedOption !== "" || !onChange) && setSelectedOption
+                ? (e) => {
+                    setShowOptions((old) => !old);
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                : () => {}
+            }
+          ></div>
+        </>
       )}
-      {password && (
+
+      {setSelectedOption && (
+        <span
+          className={cn(
+            password && selectedOption === "" ? "right-8" : "right-0",
+            "absolute inset-y-0 flex items-center pr-2.5"
+          )}
+        >
+          <button
+            onClick={() => {
+              setShowOptions(!showOptions);
+            }}
+            className={cn(
+              selectedOption !== ""
+                ? "text-medium-indigo"
+                : "text-muted-foreground",
+              "hover:text-accent-foreground"
+            )}
+          >
+            <ForwardedIconComponent
+              name={optionsIcon}
+              className={"h-4 w-4"}
+              aria-hidden="true"
+            />
+          </button>
+        </span>
+      )}
+
+      {password && selectedOption === "" && (
         <button
           type="button"
           tabIndex={-1}
           className={classNames(
+            "mb-px",
             editNode
               ? "input-component-true-button"
               : "input-component-false-button"
@@ -108,6 +288,7 @@ export default function InputComponent({
           }}
         >
           {password &&
+            selectedOption === "" &&
             (pwdVisible ? (
               <svg
                 xmlns="http://www.w3.org/2000/svg"

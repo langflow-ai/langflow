@@ -1,4 +1,4 @@
-export const custom = `from langflow import CustomComponent
+export const custom = `from langflow.custom import CustomComponent
 
 from langchain.llms.base import BaseLLM
 from langchain.chains import LLMChain

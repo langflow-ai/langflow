@@ -1,5 +1,6 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { priorityFields } from "../constants/constants";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
 import {
   APIDataType,
@@ -13,7 +14,7 @@ import {
   tweakType,
 } from "../types/components";
 import { FlowType, NodeType } from "../types/flow";
-import { FlowState, FlowsState } from "../types/tabs";
+import { FlowState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
 
 export function classNames(...classes: Array<string>): string {
@@ -58,11 +59,15 @@ export function normalCaseToSnakeCase(str: string): string {
     .join("_");
 }
 
-export function toTitleCase(str: string | undefined): string {
+export function toTitleCase(
+  str: string | undefined,
+  isNodeField?: boolean
+): string {
   if (!str) return "";
   let result = str
     .split("_")
     .map((word, index) => {
+      if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
           word[0].toUpperCase() + word.slice(1).toLowerCase()
@@ -75,6 +80,7 @@ export function toTitleCase(str: string | undefined): string {
   return result
     .split("-")
     .map((word, index) => {
+      if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
           word[0].toUpperCase() + word.slice(1).toLowerCase()
@@ -119,15 +125,7 @@ export function groupByFamily(
     display_name?: string;
   }> = [];
   let checkedNodes = new Map();
-  const excludeTypes = new Set([
-    "str",
-    "bool",
-    "float",
-    "code",
-    "prompt",
-    "file",
-    "int",
-  ]);
+  const excludeTypes = new Set(["bool", "float", "code", "file", "int"]);
 
   const checkBaseClass = (template: TemplateVariableType) => {
     return (
@@ -146,7 +144,7 @@ export function groupByFamily(
     // se existir o flow
     for (const node of flow) {
       // para cada node do flow
-      if (node!.data!.node!.flow) break; // não faz nada se o node for um group
+      if (node!.data!.node!.flow || !node!.data!.node!.template) break; // não faz nada se o node for um group
       const nodeData = node.data;
 
       const foundNode = checkedNodes.get(nodeData.type); // verifica se o tipo do node já foi checado
@@ -220,12 +218,8 @@ export function groupByFamily(
       }));
 }
 
-export function buildInputs(flowState?: FlowState): string {
-  return flowState &&
-    flowState.input_keys &&
-    Object.keys(flowState.input_keys!).length > 0
-    ? JSON.stringify(flowState.input_keys)
-    : '{"input": "message"}';
+export function buildInputs(): string {
+  return '{"input_value": "message"}';
 }
 
 export function getRandomElement<T>(array: T[]): T {
@@ -295,11 +289,10 @@ export function buildTweakObject(tweak: tweakType) {
 
 /**
  * Function to get Chat Input Field
- * @param {FlowType} flow - The current flow.
  * @param {FlowsState} tabsState - The current tabs state.
  * @returns {string} - The chat input field
  */
-export function getChatInputField(flow: FlowType, flowState?: FlowState) {
+export function getChatInputField(flowState?: FlowState) {
   let chat_input_field = "text";
 
   if (flowState && flowState.input_keys) {
@@ -311,13 +304,14 @@ export function getChatInputField(flow: FlowType, flowState?: FlowState) {
 /**
  * Function to get the python code for the API
  * @param {string} flowId - The id of the flow
+ * @param {boolean} isAuth - If the API is authenticated
+ * @param {any[]} tweak - The tweaks
  * @returns {string} - The python code
  */
 export function getPythonApiCode(
   flow: FlowType,
   isAuth: boolean,
-  tweak?: any[],
-  flowState?: FlowState
+  tweak?: any[]
 ): string {
   const flowId = flow.id;
 
@@ -326,13 +320,10 @@ export function getPythonApiCode(
   //   node.data.id
   // }
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(flowState);
   return `import requests
 from typing import Optional
 
-BASE_API_URL = "${window.location.protocol}//${
-    window.location.host
-  }/api/v1/process"
+BASE_API_URL = "${window.location.protocol}//${window.location.host}/api/v1/run"
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
@@ -342,9 +333,12 @@ TWEAKS = ${
       : JSON.stringify(tweaks, null, 2)
   }
 
-def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${
-    !isAuth ? `, api_key: Optional[str] = None` : ""
-  }) -> dict:
+def run_flow(message: str,
+  flow_id: str,
+  output_type: str = "chat",
+  input_type: str = "chat",
+  tweaks: Optional[dict] = None,
+  api_key: Optional[str] = None) -> dict:
     """
     Run a flow with a given message and optional tweaks.
 
@@ -355,7 +349,11 @@ def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${
     """
     api_url = f"{BASE_API_URL}/{flow_id}"
 
-    payload = {"inputs": inputs}
+    payload = {
+        "input_value": message,
+        "output_type": output_type,
+        "input_type": input_type,
+    }
     headers = None
     if tweaks:
         payload["tweaks"] = tweaks
@@ -365,9 +363,9 @@ def run_flow(inputs: dict, flow_id: str, tweaks: Optional[dict] = None${
     return response.json()
 
 # Setup any tweaks you want to apply to the flow
-inputs = ${inputs}
+message = "message"
 ${!isAuth ? `api_key = "<your api key>"` : ""}
-print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS${
+print(run_flow(message=message, flow_id=FLOW_ID, tweaks=TWEAKS${
     !isAuth ? `, api_key=api_key` : ""
   }))`;
 }
@@ -375,55 +373,72 @@ print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS${
 /**
  * Function to get the curl code for the API
  * @param {string} flowId - The id of the flow
+ * @param {boolean} isAuth - If the API is authenticated
  * @returns {string} - The curl code
  */
 export function getCurlCode(
   flow: FlowType,
   isAuth: boolean,
-  tweak?: any[],
-  flowState?: FlowState
+  tweak?: any[]
 ): string {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(flowState);
 
   return `curl -X POST \\
   ${window.location.protocol}//${
     window.location.host
-  }/api/v1/process/${flowId} \\
+  }/api/v1/run/${flowId}?stream=false \\
   -H 'Content-Type: application/json'\\${
     !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
   }
-  -d '{"inputs": ${inputs}, "tweaks": ${
+  -d '{"input_value": "message",
+  "output_type": "chat",
+  "input_type": "chat",
+  "tweaks": ${
     tweak && tweak.length > 0
       ? buildTweakObject(tweak)
       : JSON.stringify(tweaks, null, 2)
-  }}'`;
+  }}'
+  `;
+}
+
+export function getOutputIds(flow) {
+  const nodes = flow.data!.nodes;
+
+  const arrayOfOutputs = nodes.reduce((acc: string[], node) => {
+    if (node.data.type.toLowerCase().includes("output")) {
+      acc.push(node.id);
+    }
+    return acc;
+  }, []);
+
+  const arrayOfOutputsJoin = arrayOfOutputs
+    .map((output) => `"${output}"`)
+    .join(", ");
+
+  return arrayOfOutputsJoin;
 }
 
 /**
  * Function to get the python code for the API
  * @param {string} flow - The current flow
+ * @param {any[]} tweak - The tweaks
  * @returns {string} - The python code
  */
-export function getPythonCode(
-  flow: FlowType,
-  tweak?: any[],
-  flowState?: FlowState
-): string {
+export function getPythonCode(flow: FlowType, tweak?: any[]): string {
   const flowName = flow.name;
   const tweaks = buildTweaks(flow);
-  const inputs = buildInputs(flowState);
-  return `from langflow import load_flow_from_json
+
+  return `from langflow.load import run_flow_from_json
 TWEAKS = ${
     tweak && tweak.length > 0
       ? buildTweakObject(tweak)
       : JSON.stringify(tweaks, null, 2)
   }
-flow = load_flow_from_json("${flowName}.json", tweaks=TWEAKS)
-# Now you can use it like any chain
-inputs = ${inputs}
-flow(inputs)`;
+
+result = run_flow_from_json(flow="${flowName}.json",
+                            input_value="message",
+                            tweaks=TWEAKS)`;
 }
 
 /**
@@ -438,24 +453,15 @@ export function getWidgetCode(
 ): string {
   const flowId = flow.id;
   const flowName = flow.name;
-  const inputs = buildInputs(flowState);
-  let chat_input_field = getChatInputField(flow, flowState);
+  const inputs = buildInputs();
+  let chat_input_field = getChatInputField(flowState);
 
-  return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
+  return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@1.0_alpha/dist/build/static/js/bundle.min.js"></script>
 
-<!-- chat_inputs: Stringified JSON with all the input keys and its values. The value of the key that is defined
-as chat_input_field will be overwritten by the chat message.
-chat_input_field: Input key that you want the chat to send the user message with. -->
 <langflow-chat
   window_title="${flowName}"
   flow_id="${flowId}"
-  ${
-    flowState
-      ? `chat_inputs='${inputs}'
-  chat_input_field="${chat_input_field}"
-  `
-      : ""
-  }host_url="http://localhost:7860"${
+  host_url="http://localhost:7860"${
     !isAuth
       ? `
   api_key="..."`
@@ -595,6 +601,11 @@ export function removeCountFromString(input: string): string {
   return result.trim(); // Trim any leading/trailing spaces
 }
 
+export function extractTypeFromLongId(id: string): string {
+  let [newId, _] = id.split("-");
+  return newId;
+}
+
 export function createRandomKey(key: string, uid: string): string {
   return removeCountFromString(key) + ` (${uid})`;
 }
@@ -644,7 +655,49 @@ export function getFieldTitle(
 ): string {
   return template[templateField].display_name
     ? template[templateField].display_name!
-    : template[templateField].name
-    ? toTitleCase(template[templateField].name!)
-    : toTitleCase(templateField);
+    : template[templateField].name ?? templateField;
+}
+
+export function sortFields(a, b, fieldOrder) {
+  // Early return for empty fields
+  if (!a && !b) return 0;
+  if (!a) return 1;
+  if (!b) return -1;
+
+  // Normalize the case to ensure case-insensitive comparison
+  const normalizedFieldA = a.toLowerCase();
+  const normalizedFieldB = b.toLowerCase();
+
+  const aIsPriority = priorityFields.has(normalizedFieldA);
+  const bIsPriority = priorityFields.has(normalizedFieldB);
+
+  // Sort by priority
+  if (aIsPriority && !bIsPriority) return -1;
+  if (!aIsPriority && bIsPriority) return 1;
+
+  // Check if either field is in the fieldOrder array
+  const indexOfA = fieldOrder.indexOf(normalizedFieldA);
+  const indexOfB = fieldOrder.indexOf(normalizedFieldB);
+
+  // If both fields are in fieldOrder, sort by their order in the array
+  if (indexOfA !== -1 && indexOfB !== -1) {
+    return indexOfA - indexOfB;
+  }
+
+  // If only one of the fields is in fieldOrder, that field comes first
+  if (indexOfA !== -1) {
+    return -1;
+  }
+  if (indexOfB !== -1) {
+    return 1;
+  }
+
+  // Default case for fields not in priorityFields and not found in fieldOrder
+  // You might want to sort them alphabetically or in another specific manner
+  return a.localeCompare(b);
+}
+
+export function freezeObject(obj: any) {
+  if (!obj) return obj;
+  return JSON.parse(JSON.stringify(obj));
 }

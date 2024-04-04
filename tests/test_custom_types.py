@@ -1,7 +1,7 @@
 # Test this:
-from langflow.interface.importing.utils import get_function
 import pytest
-from langflow.interface.tools.custom import PythonFunctionTool, PythonFunction
+from langflow.interface.custom.utils import get_function
+from langflow.interface.tools.custom import PythonFunction, PythonFunctionTool
 from langflow.utils import constants
 
 
