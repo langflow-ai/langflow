@@ -2,12 +2,6 @@ import Admonition from '@theme/Admonition';
 
 # Models
 
-<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-    <p>
-        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
-    </p>
-</Admonition>
-
 ### Amazon Bedrock
 
 This component facilitates the generation of text using the LLM (Large Language Model) model from Amazon Bedrock.
@@ -194,6 +188,29 @@ This component facilitates text generation using LLM models from the Hugging Fac
 - **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
 
 - **System Message (Optional):** A system message to pass to the model.
+
+---
+
+### LiteLLM Model
+
+Generates text using the `LiteLLM` collection of large language models.
+
+**Parameters**
+
+- **Model name:** The name of the model to use. For example, `gpt-3.5-turbo`. (Type: str)
+- **API key:** The API key to use for accessing the provider's API. (Type: str, Optional)
+- **Provider:** The provider of the API key. (Type: str, Choices: "OpenAI", "Azure", "Anthropic", "Replicate", "Cohere", "OpenRouter")
+- **Temperature:** Controls the randomness of the text generation. (Type: float, Default: 0.7)
+- **Model kwargs:** Additional keyword arguments for the model. (Type: Dict, Optional)
+- **Top p:** Filter responses to keep the cumulative probability within the top p tokens. (Type: float, Optional)
+- **Top k:** Filter responses to only include the top k tokens. (Type: int, Optional)
+- **N:** Number of chat completions to generate for each prompt. (Type: int, Default: 1)
+- **Max tokens:** The maximum number of tokens to generate for each chat completion. (Type: int, Default: 256)
+- **Max retries:** Maximum number of retries for failed requests. (Type: int, Default: 6)
+- **Verbose:** Whether to print verbose output. (Type: bool, Default: False)
+- **Input:** The input prompt for text generation. (Type: str)
+- **Stream:** Whether to stream the output. (Type: bool, Default: False)
+- **System message:** System message to pass to the model. (Type: str, Optional)
 
 ---
 
