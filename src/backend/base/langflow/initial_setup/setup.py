@@ -88,7 +88,7 @@ def load_starter_projects():
     starter_projects = []
     folder = Path(__file__).parent / "starter_projects"
     for file in folder.glob("*.json"):
-        project = orjson.loads(file.read_text())
+        project = orjson.loads(file.read_text(encoding="utf-8"))
         starter_projects.append((file, project))
         logger.info(f"Loaded starter project {file}")
     return starter_projects
@@ -124,7 +124,7 @@ def get_project_data(project):
 
 def update_project_file(project_path, project, updated_project_data):
     project["data"] = updated_project_data
-    with open(project_path, "w") as f:
+    with open(project_path, "w", encoding="utf-8") as f:
         f.write(orjson.dumps(project, option=orjson.OPT_INDENT_2).decode())
     logger.info(f"Updated starter project {project['name']} file")
 
@@ -197,7 +197,11 @@ def delete_start_projects(session):
 
 def create_or_update_starter_projects():
     components_paths = get_settings_service().settings.COMPONENTS_PATH
-    all_types_dict = get_all_components(components_paths, as_dict=True)
+    try:
+        all_types_dict = get_all_components(components_paths, as_dict=True)
+    except Exception as e:
+        logger.exception(f"Error loading components: {e}")
+        raise e
     with session_scope() as session:
         starter_projects = load_starter_projects()
         delete_start_projects(session)

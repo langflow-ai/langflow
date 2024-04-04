@@ -47,7 +47,6 @@ ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 # Used to build deps + create our virtual environment
 ################################
 FROM python-base as builder-base
-RUN
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
     # deps for installing poetry
@@ -55,26 +54,35 @@ RUN apt-get update \
     # deps for building python deps
     build-essential \
     # npm
-    npm
+    npm \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
+RUN --mount=type=cache,target=/root/.cache \
+    curl -sSL https://install.python-poetry.org | python3 -
 
 # Now we need to copy the entire project into the image
-WORKDIR /app
 COPY pyproject.toml poetry.lock ./
-COPY src ./src
+COPY src/frontend/package.json /tmp/package.json
+RUN cd /tmp && npm install
+WORKDIR /app
+COPY src/frontend ./src/frontend
+RUN rm -rf src/frontend/node_modules
+RUN cp -a /tmp/node_modules /app/src/frontend
 COPY scripts ./scripts
 COPY Makefile ./
 COPY README.md ./
-RUN --mount=type=cache,target=/root/.cache \
-    curl -sSL https://install.python-poetry.org | python3 -
-RUN python -m pip install requests && cd ./scripts && python update_dependencies.py
-RUN $POETRY_HOME/bin/poetry lock
-RUN $POETRY_HOME/bin/poetry build
+RUN cd src/frontend && npm run build
+COPY src/backend ./src/backend
+RUN cp -r src/frontend/build src/backend/base/langflow/frontend
+RUN rm -rf src/backend/base/dist
+RUN cd src/backend/base && $POETRY_HOME/bin/poetry build --format sdist
+
 # Final stage for the application
 FROM python-base as final
 
 # Copy virtual environment and built .tar.gz from builder base
-COPY --from=builder-base /app/dist/*.tar.gz ./
+COPY --from=builder-base /app/src/backend/base/dist/*.tar.gz ./
 
 # Install the package from the .tar.gz
 RUN pip install *.tar.gz
