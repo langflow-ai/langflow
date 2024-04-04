@@ -118,7 +118,7 @@ class ChatLiteLLMComponent(CustomComponent):
         max_tokens: int = 256,
         max_retries: int = 6,
         verbose: bool = False,
-    ) -> Union[BaseLanguageModel, Callable]:
+    ) -> BaseLanguageModel:
         try:
             import litellm  # type: ignore
 

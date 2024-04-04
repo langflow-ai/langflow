@@ -68,6 +68,7 @@ export type InputListComponentType = {
   onChange: (value: string[]) => void;
   disabled: boolean;
   editNode?: boolean;
+  componentName?: string;
 };
 
 export type InputGlobalComponentType = {
@@ -159,6 +160,7 @@ export type DisclosureComponentType = {
       onClick: (event?: React.MouseEvent) => void;
     }[];
   };
+  testId?: string;
 };
 
 export type RangeSpecType = {

@@ -203,10 +203,8 @@ def prepare_global_scope(code, module):
                 imported_module = importlib.import_module(node.module)
                 for alias in node.names:
                     exec_globals[alias.name] = getattr(imported_module, alias.name)
-            except ModuleNotFoundError as e:
-                raise ModuleNotFoundError(
-                    f"Module {node.module} not found. Please install it and try again. Error: {repr(e)}"
-                )
+            except ModuleNotFoundError:
+                raise ModuleNotFoundError(f"Module {node.module} not found. Please install it and try again")
     return exec_globals
 
 

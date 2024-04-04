@@ -28,9 +28,7 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   limitScrollFieldsModal,
 } from "../../constants/constants";
-import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
-import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import { NodeDataType } from "../../types/flow";
 import {
   convertObjToArray,
@@ -207,6 +205,7 @@ const EditNodeModal = forwardRef(
                                     {myData.node.template[templateParam]
                                       .list ? (
                                       <InputListComponent
+                                        componentName={templateParam}
                                         editNode={true}
                                         disabled={disabled}
                                         value={
@@ -344,6 +343,10 @@ const EditNodeModal = forwardRef(
                                           templateParam
                                         );
                                       }}
+                                      isList={
+                                        data.node?.template[templateParam]
+                                          .list ?? false
+                                      }
                                     />
                                   </div>
                                 ) : myData.node?.template[templateParam]
@@ -561,6 +564,7 @@ const EditNodeModal = forwardRef(
 
         <BaseModal.Footer>
           <Button
+            data-test-id="saveChangesBtn"
             id={"saveChangesBtn"}
             className="mt-3"
             onClick={() => {

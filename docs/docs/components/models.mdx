@@ -8,7 +8,7 @@ import Admonition from '@theme/Admonition';
     </p>
 </Admonition>
 
-### AmazonBedrock
+### Amazon Bedrock
 
 This component facilitates the generation of text using the LLM (Large Language Model) model from Amazon Bedrock.
 
@@ -53,7 +53,7 @@ This component facilitates the generation of text using the LLM (Large Language 
 
 ---
 
-### AnthropicLLM
+### Anthropic
 
 This component allows the generation of text using Anthropic Chat&Completion large language models.
 
@@ -83,7 +83,7 @@ For detailed documentation and integration guides, please refer to the [Anthropi
 
 ---
 
-### AzureChatOpenAI
+### Azure OpenAI
 
 This component allows the generation of text using the LLM (Large Language Model) model from Azure OpenAI.
 
@@ -127,44 +127,6 @@ For detailed documentation and integration guides, please refer to the [Azure Op
 
 ---
 
-### QianfanChatEndpoint
-
-This component facilitates the generation of text using Baidu Qianfan chat models.
-
-**Params**
-
-- **Model Name:** Specifies the name of the Qianfan chat model to be used for text generation. Available options include:
-    - _`"ERNIE-Bot"`_
-    - _`"ERNIE-Bot-turbo"`_
-    - _`"BLOOMZ-7B"`_
-    - _`"Llama-2-7b-chat"`_
-    - _`"Llama-2-13b-chat"`_
-    - _`"Llama-2-70b-chat"`_
-    - _`"Qianfan-BLOOMZ-7B-compressed"`_
-    - _`"Qianfan-Chinese-Llama-2-7B"`_
-    - _`"ChatGLM2-6B-32K"`_
-    - _`"AquilaChat-7B"`_
-
-- **Qianfan Ak:** Your Baidu Qianfan access key, obtainable from [here](https://cloud.baidu.com/product/wenxinworkshop).
-
-- **Qianfan Sk:** Your Baidu Qianfan secret key, obtainable from [here](https://cloud.baidu.com/product/wenxinworkshop).
-
-- **Top p (Optional):** Model parameter. Specifies the top-p value. Only supported in ERNIE-Bot and ERNIE-Bot-turbo models. Defaults to _`0.8`_.
-
-- **Temperature (Optional):** Model parameter. Specifies the sampling temperature. Only supported in ERNIE-Bot and ERNIE-Bot-turbo models. Defaults to _`0.95`_.
-
-- **Penalty Score (Optional):** Model parameter. Specifies the penalty score. Only supported in ERNIE-Bot and ERNIE-Bot-turbo models. Defaults to _`1.0`_.
-
-- **Endpoint (Optional):** Endpoint of the Qianfan LLM, required if custom model is used.
-
-- **Input Value:** Specifies the input text for text generation.
-
-- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
-
-- **System Message (Optional):** A system message to pass to the model.
-
----
-
 ### Cohere
 
 This component enables text generation using Cohere large language models.
@@ -176,32 +138,6 @@ This component enables text generation using Cohere large language models.
 - **Max Tokens (Optional):** Specifies the maximum number of tokens to generate. Defaults to _`256`_.
 
 - **Temperature (Optional):** Specifies the sampling temperature. Defaults to _`0.75`_.
-
-- **Input Value:** Specifies the input text for text generation.
-
-- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
-
-- **System Message (Optional):** A system message to pass to the model.
-
----
-
-### CTransformers
-
-This component allows the generation of text using CTransformers large language models.
-
-**Params**
-
-- **Model:** Specifies the CTransformers model to be used for text generation.
-
-- **Model File (Optional):** Path to the model file if using a custom model. Should be a _.bin_ file.
-
-- **Model Type:** Specifies the type of the CTransformers model.
-
-- **Config (Optional):** Additional configuration parameters for the model. It should be provided as a JSON object. 
-    
-    Defaults to:
-    
-     `{"top_k":40,"top_p":0.95,"temperature":0.8,"repetition_penalty":1.1,"last_n_tokens":64,"seed":-1,"max_new_tokens":256,"stop":"","stream":"False","reset":"True","batch_size":8,"threads":-1,"context_length":-1,"gpu_layers":0}`.
 
 - **Input Value:** Specifies the input text for text generation.
 
@@ -261,151 +197,42 @@ This component facilitates text generation using LLM models from the Hugging Fac
 
 ---
 
-### LlamaCpp 
+### Ollama
 
-The `LlamaCpp` is a component for generating text using the llama.cpp model.
+Generate text using Ollama Local LLMs.
 
-**Params**
+**Parameters**
 
-- **Model Path:** The path to the llama.cpp model file. This should be provided as a file type input.
-
-- **Input Value:** The input text for text generation.
-
-- **Grammar (Optional):** The grammar for text generation.
-
-- **Cache (Optional):** Specifies whether to cache the generated text.
-
-- **Client (Optional):** The client to use for text generation.
-
-- **Echo (Optional):** Specifies whether to echo the generated text. Defaults to _`False`_.
-
-- **F16 KV:** Specifies whether to use F16 key-value pairs. Defaults to _`True`_.
-
-- **Grammar Path (Optional):** The path to the grammar file.
-
-- **Last N Tokens Size (Optional):** The size of the last N tokens. Defaults to _`64`_.
-
-- **Logits All:** Specifies whether to include logits for all tokens. Defaults to _`False`_.
-
-- **Logprobs (Optional):** The log probabilities for text generation.
-
-- **Lora Base (Optional):** The base URL for Lora.
-
-- **Lora Path (Optional):** The path for Lora.
-
-- **Max Tokens (Optional):** The maximum number of tokens to generate. Defaults to _`256`_.
-
-- **Metadata (Optional):** Additional metadata for the model.
-
-- **Model Kwargs:** Additional keyword arguments for the model. Should be provided as a Python dictionary.
-
-- **N Batch (Optional):** The batch size. Defaults to _`8`_.
-
-- **N Ctx:** The context size. Defaults to _`512`_.
-
-- **N GPU Layers (Optional):** The number of GPU layers.
-
-- **N Parts:** The number of parts.
-
-- **N Threads (Optional):** The number of threads. Defaults to _`1`_.
-
-- **Repeat Penalty (Optional):** The repeat penalty for text generation. Defaults to _`1.1`_.
-
-- **Rope Freq Base:** The base frequency for rope.
-
-- **Rope Freq Scale:** The scale frequency for rope.
-
-- **Seed:** The seed for random generation.
-
-- **Stop (Optional):** The stop words for text generation.
-
-- **Streaming:** Specifies whether to stream the response from the model. Defaults to _`True`_.
-
-- **Suffix (Optional):** The suffix for text generation.
-
-- **Tags (Optional):** The tags for text generation.
-
-- **Temperature (Optional):** The temperature for text generation. Defaults to _`0.8`_.
-
-- **Top K (Optional):** The top K tokens to consider for text generation. Defaults to _`40`_.
-
-- **Top P (Optional):** The top P probability threshold for text generation. Defaults to _`0.95`_.
-
-- **Use Mlock:** Specifies whether to use Mlock. Defaults to _`False`_.
-
-- **Use Mmap (Optional):** Specifies whether to use Mmap. Defaults to _`True`_.
-
-- **Verbose:** Specifies whether to enable verbose mode. Defaults to _`True`_.
-
-- **Vocab Only:** Specifies whether to include vocabulary only.
-
-- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
-
-For more information, please refer to the [documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/llamacpp).
+- **Base URL:** Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.
+- **Model Name:** The model name to use. Refer to [Ollama Library](https://ollama.ai/library) for more models.
+- **Temperature:** Controls the creativity of model responses. (Default: 0.8)
+- **Cache:** Enable or disable caching. (Default: False)
+- **Format:** Specify the format of the output (e.g., json). (Advanced)
+- **Metadata:** Metadata to add to the run trace. (Advanced)
+- **Mirostat:** Enable/disable Mirostat sampling for controlling perplexity. (Default: Disabled)
+- **Mirostat Eta:** Learning rate for Mirostat algorithm. (Default: None) (Advanced)
+- **Mirostat Tau:** Controls the balance between coherence and diversity of the output. (Default: None) (Advanced)
+- **Context Window Size:** Size of the context window for generating tokens. (Default: None) (Advanced)
+- **Number of GPUs:** Number of GPUs to use for computation. (Default: None) (Advanced)
+- **Number of Threads:** Number of threads to use during computation. (Default: None) (Advanced)
+- **Repeat Last N:** How far back the model looks to prevent repetition. (Default: None) (Advanced)
+- **Repeat Penalty:** Penalty for repetitions in generated text. (Default: None) (Advanced)
+- **TFS Z:** Tail free sampling value. (Default: None) (Advanced)
+- **Timeout:** Timeout for the request stream. (Default: None) (Advanced)
+- **Top K:** Limits token selection to top K. (Default: None) (Advanced)
+- **Top P:** Works together with top-k. (Default: None) (Advanced)
+- **Verbose:** Whether to print out response text.
+- **Tags:** Tags to add to the run trace. (Advanced)
+- **Stop Tokens:** List of tokens to signal the model to stop generating text. (Advanced)
+- **System:** System to use for generating text. (Advanced)
+- **Template:** Template to use for generating text. (Advanced)
+- **Input:** The input text.
+- **Stream:** Whether to stream the response.
+- **System Message:** System message to pass to the model. (Advanced)
 
 ---
 
-### ChatOllama
-
-This component facilitates text generation using the Local LLM model for chat with Ollama.
-
-**Params**
-
-- **Base URL:** The endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.
-
-- **Model Name:** The name of the model to use. Refer to [https://ollama.ai/library](https://ollama.ai/library) for more models.
-
-- **Input Value:** The input text for text generation.
-
-- **Mirostat:** Enable/disable Mirostat sampling for controlling perplexity.
-
-- **Mirostat Eta (Optional):** The learning rate for the Mirostat algorithm. (Default: 0.1)
-
-- **Mirostat Tau (Optional):** Controls the balance between coherence and diversity of the output. (Default: 5.0)
-
-- **Repeat Last N (Optional):** How far back the model looks to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)
-
-- **Verbose (Optional):** Whether to print out response text.
-
-- **Cache (Optional):** Enable or disable caching. Defaults to _`False`_.
-
-- **Context Window Size (Optional):** Size of the context window for generating tokens. (Default: 2048)
-
-- **Number of GPUs (Optional):** Number of GPUs to use for computation. (Default: 1 on macOS, 0 to disable)
-
-- **Format (Optional):** Specify the format of the output (e.g., json).
-
-- **Metadata (Optional):** Metadata to add to the run trace.
-
-- **Number of Threads (Optional):** Number of threads to use during computation. (Default: detected for optimal performance)
-
-- **Repeat Penalty (Optional):** Penalty for repetitions in generated text. (Default: 1.1)
-
-- **Stop Tokens (Optional):** List of tokens to signal the model to stop generating text.
-
-- **System (Optional):** System to use for generating text.
-
-- **Tags (Optional):** Tags to add to the run trace.
-
-- **Temperature (Optional):** Controls the creativity of model responses. Defaults to _`0.8`_.
-
-- **Template (Optional):** Template to use for generating text.
-
-- **TFS Z (Optional):** Tail free sampling value. (Default: 1)
-
-- **Timeout (Optional):** Timeout for the request stream.
-
-- **Top K (Optional):** Limits token selection to top K. (Default: 40)
-
-- **Top P (Optional):** Works together with top-k. (Default: 0.9)
-
-- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
-
-- **System Message (Optional):** System message to pass to the model.
-
----
-
-### OpenAIModel
+### OpenAI
 
 This component facilitates text generation using OpenAI's models.
 
@@ -431,13 +258,49 @@ This component facilitates text generation using OpenAI's models.
 
 ---
 
-### ChatVertexAI
+### Qianfan
+
+This component facilitates the generation of text using Baidu Qianfan chat models.
+
+**Params**
+
+- **Model Name:** Specifies the name of the Qianfan chat model to be used for text generation. Available options include:
+    - _`"ERNIE-Bot"`_
+    - _`"ERNIE-Bot-turbo"`_
+    - _`"BLOOMZ-7B"`_
+    - _`"Llama-2-7b-chat"`_
+    - _`"Llama-2-13b-chat"`_
+    - _`"Llama-2-70b-chat"`_
+    - _`"Qianfan-BLOOMZ-7B-compressed"`_
+    - _`"Qianfan-Chinese-Llama-2-7B"`_
+    - _`"ChatGLM2-6B-32K"`_
+    - _`"AquilaChat-7B"`_
+
+- **Qianfan Ak:** Your Baidu Qianfan access key, obtainable from [here](https://cloud.baidu.com/product/wenxinworkshop).
+
+- **Qianfan Sk:** Your Baidu Qianfan secret key, obtainable from [here](https://cloud.baidu.com/product/wenxinworkshop).
+
+- **Top p (Optional):** Model parameter. Specifies the top-p value. Only supported in ERNIE-Bot and ERNIE-Bot-turbo models. Defaults to _`0.8`_.
+
+- **Temperature (Optional):** Model parameter. Specifies the sampling temperature. Only supported in ERNIE-Bot and ERNIE-Bot-turbo models. Defaults to _`0.95`_.
+
+- **Penalty Score (Optional):** Model parameter. Specifies the penalty score. Only supported in ERNIE-Bot and ERNIE-Bot-turbo models. Defaults to _`1.0`_.
+
+- **Endpoint (Optional):** Endpoint of the Qianfan LLM, required if custom model is used.
+
+- **Input Value:** Specifies the input text for text generation.
+
+- **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
+
+- **System Message (Optional):** A system message to pass to the model.
+
+---
+
+### Vertex AI
 
 The `ChatVertexAI` is a component for generating text using Vertex AI Chat large language models API.
 
 **Params**
-
-- **Input Value:** The input text for text generation.
 
 - **Credentials:** The JSON file containing the credentials for accessing the Vertex AI Chat API.
 
@@ -452,6 +315,8 @@ The `ChatVertexAI` is a component for generating text using Vertex AI Chat large
 - **Model Name:** The name of the model to use. Defaults to _`chat-bison`_.
 
 - **Temperature:** Controls the creativity of model responses. Defaults to _`0.0`_.
+
+- **Input Value:** The input text for text generation.
 
 - **Top K:** Limits token selection to top K. Defaults to _`40`_.
 

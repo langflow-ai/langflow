@@ -21,8 +21,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
-  Circle,
   ChevronsUpDownIcon,
+  Circle,
   CircleDot,
   Clipboard,
   Code,
@@ -252,9 +252,8 @@ export const nodeColors: { [char: string]: string } = {
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
-  Records:"#31a3cc",
-  Record:"#31a3cc",
-
+  Records: "#31a3cc",
+  Record: "#31a3cc",
 };
 
 export const nodeNames: { [char: string]: string } = {

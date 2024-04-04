@@ -13,6 +13,14 @@ test("chat_io_teste", async ({ page }) => {
     "utf-8"
   );
 
+  await page.waitForTimeout(3000);
+
+  await page.locator('//*[@id="new-project-btn"]').click();
+  await page.locator('//*[@id="new-project-btn"]').click();
+
+  await page.getByTestId("blank-flow").click();
+  await page.waitForTimeout(2000);
+
   // Create the DataTransfer and File
   const dataTransfer = await page.evaluateHandle((data) => {
     const dt = new DataTransfer();
@@ -23,12 +31,6 @@ test("chat_io_teste", async ({ page }) => {
     dt.items.add(file);
     return dt;
   }, jsonContent);
-
-  await page.locator('//*[@id="new-project-btn"]').click();
-  await page.waitForTimeout(2000);
-
-  await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(2000);
 
   // Now dispatch
   await page.dispatchEvent(

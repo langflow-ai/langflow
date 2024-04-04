@@ -6,10 +6,10 @@ host ?= 0.0.0.0
 port ?= 7860
 env ?= .env
 open_browser ?= true
+path = src/backend/base/langflow/frontend
 
 setup_poetry:
 	pipx install poetry
-	poetry self add poetry-monorepo-dependency-plugin
 
 add:
 	@echo 'Adding dependencies'
@@ -57,6 +57,9 @@ lint:
 install_frontend:
 	cd src/frontend && npm install
 
+install_frontendci:
+	cd src/frontend && npm ci
+
 install_frontendc:
 	cd src/frontend && rm -rf node_modules package-lock.json && npm install
 
@@ -99,10 +102,11 @@ endif
 
 start:
 	@echo 'Running the CLI'
+
 ifeq ($(open_browser),false)
-	poetry run langflow run --path src/frontend/build --log-level $(log_level) --host $(host) --port $(port) --env-file $(env) --no-open-browser
+	@make install_backend && poetry run langflow run --path $(path) --log-level $(log_level) --host $(host) --port $(port) --env-file $(env) --no-open-browser
 else
-	poetry run langflow run --path src/frontend/build --log-level $(log_level) --host $(host) --port $(port) --env-file $(env)
+	@make install_backend && poetry run langflow run --path $(path) --log-level $(log_level) --host $(host) --port $(port) --env-file $(env)
 endif
 
 
@@ -125,27 +129,29 @@ frontendc:
 	make run_frontend
 
 install_backend:
-	@echo 'Installing backend dependencies'
+	@echo 'Setting up the environment'
 	@make setup_env
+	@echo 'Installing backend dependencies'
 	@poetry install --extras deploy
 
 backend:
 	make install_backend
 	@-kill -9 `lsof -t -i:7860`
-ifeq ($(login),1)
-	@echo "Running backend without autologin";
-	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio
+ifdef login
+	@echo "Running backend autologin is $(login)";
+	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio
 else
-	@echo "Running backend with autologin";
-	LANGFLOW_AUTO_LOGIN=True poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env  --loop asyncio
+	@echo "Running backend respecting the .env file";
+	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env  --loop asyncio
 endif
 
 build_and_run:
 	@echo 'Removing dist folder'
+	@make setup_env
 	rm -rf dist
 	rm -rf src/backend/base/dist
 	make build
-	poetry run pip install dist/*.tar.gz && pip install src/backend/base/dist/*.tar.gz
+	poetry run pip install dist/*.tar.gz
 	poetry run langflow run
 
 build_and_install:
@@ -161,17 +167,29 @@ build_frontend:
 build:
 	@echo 'Building the project'
 	@make setup_env
+ifdef base
+	make install_frontendci
+	make build_frontend
 	make build_langflow_base
-	make build_langflow
+endif
 
-build_langflow:
-	poetry build-rewrite-path-deps --version-pinning-strategy=semver
+ifdef main
+	make build_langflow
+endif
 
 build_langflow_base:
-	make install_frontend
-	make build_frontend
-	cd src/backend/base && poetry build-rewrite-path-deps --version-pinning-strategy=semver
+	cd src/backend/base && poetry build
 	rm -rf src/backend/base/langflow/frontend
+
+build_langflow_backup:
+	poetry lock && poetry build
+
+build_langflow:
+	cd ./scripts && poetry run python update_dependencies.py
+	poetry lock
+	poetry build
+	mv pyproject.toml.bak pyproject.toml
+	mv poetry.lock.bak poetry.lock
 
 dev:
 	make install_frontend
@@ -191,10 +209,10 @@ lock_langflow:
 
 lock:
 # Run both in parallel
-	# cd src/backend/base && poetry lock
-	# poetry lock
 	@echo 'Locking dependencies'
-	@make -j2 lock_base lock_langflow
+	cd src/backend/base && poetry lock
+	poetry lock
+
 publish_base:
 	make build_langflow_base
 	cd src/backend/base && poetry publish
@@ -204,8 +222,14 @@ publish_langflow:
 	poetry publish
 
 publish:
-	make publish_base
-	make publish_langflow
+	@echo 'Publishing the project'
+ifdef base
+	-make publish_base
+endif
+
+ifdef main
+	-make publish_langflow
+endif
 
 help:
 	@echo '----'

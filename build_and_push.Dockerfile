@@ -62,10 +62,14 @@ RUN apt-get update \
 WORKDIR /app
 COPY pyproject.toml poetry.lock ./
 COPY src ./src
+COPY scripts ./scripts
 COPY Makefile ./
 COPY README.md ./
-RUN curl -sSL https://install.python-poetry.org | python3 - && make build
-
+RUN --mount=type=cache,target=/root/.cache \
+    curl -sSL https://install.python-poetry.org | python3 -
+RUN python -m pip install requests && cd ./scripts && python update_dependencies.py
+RUN $POETRY_HOME/bin/poetry lock
+RUN $POETRY_HOME/bin/poetry build
 # Final stage for the application
 FROM python-base as final
 

@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install poetry
-        run: pipx install poetry==$POETRY_VERSION && poetry self add poetry-monorepo-dependency-plugin
+        run: pipx install poetry==$POETRY_VERSION
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:

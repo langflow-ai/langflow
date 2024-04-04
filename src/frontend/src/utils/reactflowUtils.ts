@@ -664,6 +664,9 @@ export function reconnectEdges(groupNode: NodeType, excludedEdges: Edge[]) {
   let newEdges = cloneDeep(excludedEdges);
   const { nodes, edges } = groupNode.data.node!.flow!.data!;
   const lastNode = findLastNode(groupNode.data.node!.flow!.data!);
+  newEdges = newEdges.filter(
+    (e) => !(nodes.some((n) => n.id === e.source) && e.source !== lastNode?.id)
+  );
   newEdges.forEach((edge) => {
     if (lastNode && edge.source === lastNode.id) {
       edge.source = groupNode.id;
@@ -1188,6 +1191,20 @@ export function removeFileNameFromComponents(flow: FlowType) {
     });
     if (node.data.node?.flow) {
       removeFileNameFromComponents(node.data.node.flow);
+    }
+  });
+}
+
+export function removeGlobalVariableFromComponents(flow: FlowType) {
+  flow.data!.nodes.forEach((node: NodeType) => {
+    Object.keys(node.data.node!.template).forEach((field) => {
+      if (node.data?.node?.template[field]?.load_from_db) {
+        node.data.node!.template[field].value = "";
+        node.data.node!.template[field].load_from_db = false;
+      }
+    });
+    if (node.data.node?.flow) {
+      removeGlobalVariableFromComponents(node.data.node.flow);
     }
   });
 }

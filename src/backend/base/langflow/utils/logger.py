@@ -28,7 +28,7 @@ def configure(log_level: Optional[str] = None, log_file: Optional[Path] = None):
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
     if log_level is None:
-        log_level = "INFO"
+        log_level = "ERROR"
     # Human-readable
     log_format = (
         "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>"

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.0a0"
+version = "1.0.0a4"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -23,13 +23,10 @@ documentation = "https://docs.langflow.org"
 [tool.poetry.scripts]
 langflow = "langflow.__main__:main"
 
-[tool.poetry-monorepo-dependency-plugin]
-enable = true
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
 langflow-base = { path = "./src/backend/base", develop = true }
-
 beautifulsoup4 = "^4.12.2"
 google-search-results = "^2.4.1"
 google-api-python-client = "^2.118.0"
@@ -59,7 +56,6 @@ celery = { extras = ["redis"], version = "^5.3.6", optional = true }
 redis = { version = "^5.0.1", optional = true }
 flower = { version = "^2.0.0", optional = true }
 metaphor-python = "^0.1.11"
-zep-python = "*"
 pywin32 = { version = "^306", markers = "sys_platform == 'win32'" }
 langfuse = "^2.9.0"
 metal-sdk = "^2.5.0"
@@ -78,16 +74,11 @@ pytube = "^15.0.0"
 llama-index = "^0.10.13"
 langchain-openai = "^0.0.5"
 unstructured = { extras = ["md"], version = "^0.12.4" }
-opentelemetry-api = "^1.23.0"
-opentelemetry-sdk = "^1.23.0"
-opentelemetry-exporter-otlp = "^1.23.0"
-opentelemetry-instrumentation-fastapi = "^0.44b0"
-opentelemetry-instrumentation-httpx = "^0.44b0"
-opentelemetry-instrumentation-asgi = "^0.44b0"
 dspy-ai = "^2.4.0"
 crewai = "^0.22.5"
 html2text = "^2024.2.26"
 assemblyai = "^0.23.1"
+litellm = "^1.34.22"
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
@@ -116,7 +107,7 @@ respx = "^0.20.2"
 
 
 [tool.poetry.extras]
-deploy = ["langchain-serve", "celery", "redis", "flower"]
+deploy = ["celery", "redis", "flower"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 all = ["deploy", "local"]
 

@@ -369,6 +369,7 @@ export default function ExtraSidebar(): JSX.Element {
             title: "Extended",
             Icon: nodeIconsLucide.unknown,
           }}
+          testId="extended-disclosure"
         >
           {Object.keys(dataFilter)
             .sort(sortKeys)
@@ -377,7 +378,7 @@ export default function ExtraSidebar(): JSX.Element {
               Object.keys(dataFilter[SBSectionName]).length > 0 ? (
                 <>
                   <DisclosureComponent
-                  isChild={false}
+                    isChild={false}
                     openDisc={
                       getFilterEdge.length !== 0 || search.length !== 0
                         ? true

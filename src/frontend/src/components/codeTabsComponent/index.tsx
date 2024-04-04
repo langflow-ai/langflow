@@ -205,10 +205,7 @@ export default function CodeTabsComponent({
               <div className="api-modal-according-display">
                 <div
                   className={classNames(
-                    "h-[70vh] w-full rounded-lg bg-muted",
-                    1 == 1
-                      ? "overflow-scroll overflow-x-hidden custom-scroll"
-                      : "overflow-hidden"
+                    "h-[70vh] w-full overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll"
                   )}
                 >
                   {data?.map((node: any, i) => (
@@ -272,6 +269,9 @@ export default function CodeTabsComponent({
                                                   templateField
                                                 ].list ? (
                                                   <InputListComponent
+                                                    componentName={
+                                                      templateField
+                                                    }
                                                     editNode={true}
                                                     disabled={false}
                                                     value={
@@ -742,6 +742,11 @@ export default function CodeTabsComponent({
                                                       ]
                                                     );
                                                   }}
+                                                  isList={
+                                                    node.data.node!.template[
+                                                      templateField
+                                                    ].list ?? false
+                                                  }
                                                 />
                                               </div>
                                             ) : node.data.node.template[

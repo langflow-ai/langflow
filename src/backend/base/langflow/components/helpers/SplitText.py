@@ -1,15 +1,12 @@
 from typing import Optional
 
-from langchain.text_splitter import (
-    RecursiveCharacterTextSplitter,
-    CharacterTextSplitter,
-)
+from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
+from langflow.field_typing import Text
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
-from langflow.field_typing import Text
-from langflow.utils.util import build_loader_repr_from_records, unescape_string
+from langflow.utils.util import unescape_string
 
 
 class SplitTextComponent(CustomComponent):
@@ -18,10 +15,10 @@ class SplitTextComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "texts": {
-                "display_name": "Texts",
+            "inputs": {
+                "display_name": "Inputs",
                 "info": "Texts to split.",
-                "input_types": ["Text"],
+                "input_types": ["Record", "Text"],
             },
             "separators": {
                 "display_name": "Separators",
@@ -48,13 +45,12 @@ class SplitTextComponent(CustomComponent):
 
     def build(
         self,
-        texts: list[Text],
+        inputs: list[Text],
         separators: Optional[list[str]] = [" "],
         chunk_size: Optional[int] = 1000,
         chunk_overlap: Optional[int] = 200,
         recursive: bool = False,
     ) -> list[Record]:
-
         separators = [unescape_string(x) for x in separators]
 
         # Make sure chunk_size and chunk_overlap are ints
@@ -78,9 +74,11 @@ class SplitTextComponent(CustomComponent):
             )
 
         documents = []
-        for _text in texts:
-            # documents.append(_input.to_lc_document())
-            documents.append(Document(page_content=_text))
+        for _input in inputs:
+            if isinstance(_input, Record):
+                documents.append(_input.to_lc_document())
+            else:
+                documents.append(Document(page_content=_input))
 
         records = self.to_records(splitter.split_documents(documents))
         self.status = records

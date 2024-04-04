@@ -7,8 +7,8 @@ from langflow.schema import Record
 
 
 class AstraDBSearchComponent(LCVectorStoreComponent):
-    display_name = "AstraDB Search"
-    description = "Searches an existing AstraDB Vector Store."
+    display_name = "Astra DB Search"
+    description = "Searches an existing Astra DB Vector Store."
     icon = "AstraDB"
     field_order = ["token", "api_endpoint", "collection_name", "input_value", "embedding"]
 
@@ -25,20 +25,20 @@ class AstraDBSearchComponent(LCVectorStoreComponent):
             "embedding": {"display_name": "Embedding", "info": "Embedding to use"},
             "collection_name": {
                 "display_name": "Collection Name",
-                "info": "The name of the collection within AstraDB where the vectors will be stored.",
+                "info": "The name of the collection within Astra DB where the vectors will be stored.",
             },
             "token": {
                 "display_name": "Token",
-                "info": "Authentication token for accessing AstraDB.",
+                "info": "Authentication token for accessing Astra DB.",
                 "password": True,
             },
             "api_endpoint": {
                 "display_name": "API Endpoint",
-                "info": "API endpoint URL for the AstraDB service.",
+                "info": "API endpoint URL for the Astra DB service.",
             },
             "namespace": {
                 "display_name": "Namespace",
-                "info": "Optional namespace within AstraDB to use for the collection.",
+                "info": "Optional namespace within Astra DB to use for the collection.",
                 "advanced": True,
             },
             "metric": {
@@ -92,6 +92,11 @@ class AstraDBSearchComponent(LCVectorStoreComponent):
                 "info": "Optional dictionary defining the indexing policy for the collection.",
                 "advanced": True,
             },
+            "number_of_results": {
+                "display_name": "Number of Results",
+                "info": "Number of results to return.",
+                "advanced": True,
+            },
         }
 
     def build(
@@ -102,6 +107,7 @@ class AstraDBSearchComponent(LCVectorStoreComponent):
         token: str,
         api_endpoint: str,
         search_type: str = "Similarity",
+        number_of_results: int = 4,
         namespace: Optional[str] = None,
         metric: Optional[str] = None,
         batch_size: Optional[int] = None,
@@ -131,4 +137,12 @@ class AstraDBSearchComponent(LCVectorStoreComponent):
             metadata_indexing_exclude=metadata_indexing_exclude,
             collection_indexing_policy=collection_indexing_policy,
         )
-        return self.search_with_vector_store(input_value, search_type, vector_store)
+        try:
+            return self.search_with_vector_store(input_value, search_type, vector_store, k=number_of_results)
+        except KeyError as e:
+            if "content" in str(e):
+                raise ValueError(
+                    "You should ingest data through Langflow (or LangChain) to query it in Langflow. Your collection does not contain a field name 'content'."
+                )
+            else:
+                raise e

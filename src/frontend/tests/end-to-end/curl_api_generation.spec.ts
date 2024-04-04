@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 test("curl_api_generation", async ({ page, context }) => {
-  await page.goto("/");
+  await page.goto("http:localhost:3000/");
   await page.locator('//*[@id="new-project-btn"]').click();
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.getByRole("heading", { name: "Data Ingestion" }).click();
+  await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(2000);
   await page.getByText("API", { exact: true }).click();
   await page.getByRole("tab", { name: "cURL" }).click();

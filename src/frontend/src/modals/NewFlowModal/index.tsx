@@ -10,6 +10,12 @@ export default function NewFlowModal({
 }: newFlowModalPropsType): JSX.Element {
   const examples = useFlowsManagerStore((state) => state.examples);
 
+  examples.forEach((example) => {
+    if (example.name === "Blog Writter") {
+      example.name = "Blog Writer";
+    }
+  });
+
   return (
     <BaseModal size="three-cards" open={open} setOpen={setOpen}>
       <BaseModal.Header description={"Select a template below"}>
@@ -23,12 +29,43 @@ export default function NewFlowModal({
           /> */}
       </BaseModal.Header>
       <BaseModal.Content>
-        <div className=" grid h-full w-full grid-cols-3 gap-3 overflow-auto p-4 custom-scroll">
+        <div className=" mb-5 grid h-fit w-full grid-cols-3 gap-4 overflow-auto pb-6 custom-scroll">
           <NewFlowCardComponent />
-          {examples.map((example, idx) => {
-            console.log(example)
+          {/* {examples.map((example, idx) => {
             return <UndrawCardComponent key={idx} flow={example} />;
-          })}
+          })} */}
+          {examples.find((e) => e.name == "Basic Prompting (Ahoy World!)") && (
+            <UndrawCardComponent
+              key={1}
+              flow={
+                examples.find((e) => e.name == "Basic Prompting (Ahoy World!)")!
+              }
+            />
+          )}
+          {examples.find((e) => e.name == "Memory Chatbot") && (
+            <UndrawCardComponent
+              key={1}
+              flow={examples.find((e) => e.name == "Memory Chatbot")!}
+            />
+          )}
+          {examples.find((e) => e.name == "Document QA") && (
+            <UndrawCardComponent
+              key={1}
+              flow={examples.find((e) => e.name == "Document QA")!}
+            />
+          )}
+          {examples.find((e) => e.name == "Blog Writer") && (
+            <UndrawCardComponent
+              key={1}
+              flow={examples.find((e) => e.name == "Blog Writer")!}
+            />
+          )}
+          {examples.find((e) => e.name == "Vector Store RAG") && (
+            <UndrawCardComponent
+              key={1}
+              flow={examples.find((e) => e.name == "Vector Store RAG")!}
+            />
+          )}
         </div>
       </BaseModal.Content>
     </BaseModal>

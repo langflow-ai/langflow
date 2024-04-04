@@ -22,7 +22,6 @@ class MemoryComponent(CustomComponent):
             "n_messages": {
                 "display_name": "Number of Messages",
                 "info": "Number of messages to retrieve.",
-                "advanced": True,
             },
             "session_id": {
                 "display_name": "Session ID",
