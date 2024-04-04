@@ -1,10 +1,11 @@
 <!-- markdownlint-disable MD030 -->
 
-# ⛓️ Langflow
-
-### Discover a simpler & smarter way to build around Foundation Models</h3>
-
 # [![Langflow](https://github.com/logspace-ai/langflow/blob/dev/docs/static/img/new_langflow_demo.gif)](https://www.langflow.org)
+### [Langflow](https://www.langflow.org) is a new, visual way to build, imterate and deploy AI app
+
+# ⚡️ Documentation and Community
+- [Documentation](https://docs.langflow.org)
+- [Discord](https://discord.com/invite/EqksyE2EX9)
 
 # 📦 Installation
 
@@ -111,8 +112,6 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 # 👋 Contributing
 
 We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make Langflow more accessible.
-
-Join our [Discord](https://discord.com/invite/EqksyE2EX9) server to ask questions, make suggestions, and showcase your projects! 🦾
 
 ---
 
