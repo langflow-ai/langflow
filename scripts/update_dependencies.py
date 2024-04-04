@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     # Reading version and updating pyproject.toml
     langflow_base_path = Path(__file__).resolve().parent / "../src/backend/base/pyproject.toml"
-    version = get_version_from_pypi("langflow-base")
+    version = read_version_from_pyproject(langflow_base_path)
     if version:
         update_pyproject_dependency(pyproject_path, version)
     else:
