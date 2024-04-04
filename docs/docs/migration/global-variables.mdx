@@ -1,0 +1,65 @@
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
+
+# Global Variables
+
+Global Variables are a really useful feature of Langflow.
+They allow you to define reusable variables that can be accessed from any Text field in your project.
+
+The first thing you need to do is find a **Text field** in a Component, so let's talk about what a Text field is.
+
+## Text Fields
+
+Text fields are the fields in a Component where you can write text but that does not allow you to open a Text Area.
+
+The easiest way to find fields that are Text fields, though, is to look for fields that have a 🌐 button.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/ollama-gv.png",
+    dark: "img/ollama-gv.png",
+  }}
+  style={{ width: "50%" }}
+/>
+
+## Creating a Global Variable
+
+To create a Global Variable, you need to click on the 🌐 button in a Text field and that will open a dropdown showing your currently available variables and at the end of it **+ Add New Variable**.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/add-new-variable.png",
+    dark: "img/add-new-variable.png",
+  }}
+  style={{ width: "60%" }}
+/>
+
+Click on **+ Add New Variable** and a window will open where you can define your new Global Variable.
+
+In it, you can define the **Name** of the variable, the optional **Type** of the variable, and the **Value** of the variable.
+
+The **Name** is the name that you will use to refer to the variable in your Text fields.
+
+The **Type** is optional for now but will be used in the future to allow for more advanced features.
+
+The **Value** is the value that the variable will have.
+{/* say that all variables are encrypted */}
+
+<Admonition type="warning">
+  All Global Variables are encrypted and cannot be accessed by anyone but you.
+</Admonition>
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/create-variable-window.png",
+    dark: "img/create-variable-window.png",
+  }}
+  style={{ width: "60%" }}
+/>
+
+After you have defined your variable, click on **Save Variable** and your variable will be created.
+
+After that, once you click on the 🌐 button in a Text field, you will see your new variable in the dropdown.
