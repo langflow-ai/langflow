@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.0a4"
+version = "1.0.0a5"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -72,10 +72,8 @@ langchain-cohere = "^0.1.0rc1"
 elasticsearch = "^8.12.0"
 pytube = "^15.0.0"
 llama-index = "^0.10.13"
-langchain-openai = "^0.0.5"
 unstructured = { extras = ["md"], version = "^0.12.4" }
 dspy-ai = "^2.4.0"
-crewai = "^0.22.5"
 html2text = "^2024.2.26"
 assemblyai = "^0.23.1"
 litellm = "^1.34.22"
