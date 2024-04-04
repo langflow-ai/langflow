@@ -23,8 +23,6 @@ documentation = "https://docs.langflow.org"
 [tool.poetry.scripts]
 langflow = "langflow.__main__:main"
 
-[tool.poetry-monorepo-dependency-plugin]
-enable = true
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
