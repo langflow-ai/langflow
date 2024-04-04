@@ -167,13 +167,13 @@ files = [
 
 [[package]]
 name = "anthropic"
-version = "0.21.3"
+version = "0.22.0"
 description = "The official Python library for the anthropic API"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "anthropic-0.21.3-py3-none-any.whl", hash = "sha256:5869115453b543a46ded6515c9f29b8d610b6e94bbba3230ad80ac947d2b0862"},
-    {file = "anthropic-0.21.3.tar.gz", hash = "sha256:02f1ab5694c497e2b2d42d30d51a4f2edcaca92d2ec86bb64fe78a9c7434a869"},
+    {file = "anthropic-0.22.0-py3-none-any.whl", hash = "sha256:1b866e813c9c20c5db72c3e857a69308ef7e155777a9e68b538543753cc07f14"},
+    {file = "anthropic-0.22.0.tar.gz", hash = "sha256:cf132742dc6b2e8a750a9907ec090731e0c7d05b133ef29e15c41593dc6b6605"},
 ]
 
 [package.dependencies]
@@ -3875,67 +3875,60 @@ name = "langflow-base"
 version = "0.0.19"
 description = "A Python package with a built-in web application"
 optional = false
-python-versions = ">=3.10,<3.12"
-files = []
-develop = true
+python-versions = "<3.12,>=3.10"
+files = [
+    {file = "langflow_base-0.0.19-py3-none-any.whl", hash = "sha256:d195fb1f015cb1c4c178b5f83fdd9e9d98be57237e2f120674125db0f71c11d8"},
+    {file = "langflow_base-0.0.19.tar.gz", hash = "sha256:557ef346b7d43e2ae2996e518048b6975065bbd1812bc31f384db229f332b79d"},
+]
 
 [package.dependencies]
-alembic = "^1.13.0"
+alembic = ">=1.13.0,<2.0.0"
 bcrypt = "4.0.1"
-cachetools = "^5.3.1"
-chromadb = "^0.4.24"
-cryptography = "^42.0.5"
-docstring-parser = "^0.15"
-duckdb = "^0.9.2"
-emoji = "^2.11.0"
-fastapi = "^0.109.0"
-gunicorn = "^21.2.0"
+cachetools = ">=5.3.1,<6.0.0"
+chromadb = ">=0.4.24,<0.5.0"
+cryptography = ">=42.0.5,<43.0.0"
+docstring-parser = ">=0.15,<0.16"
+duckdb = ">=0.9.2,<0.10.0"
+emoji = ">=2.11.0,<3.0.0"
+fastapi = ">=0.109.0,<0.110.0"
+gunicorn = ">=21.2.0,<22.0.0"
 httpx = "*"
-jq = {version = "^1.7.0", markers = "sys_platform != \"win32\""}
-langchain = "~0.1.0"
-langchain-anthropic = "^0.1.4"
-langchain-astradb = "^0.1.0"
+jq = {version = ">=1.7.0,<2.0.0", markers = "sys_platform != \"win32\""}
+langchain = ">=0.1.0,<0.2.0"
+langchain-anthropic = ">=0.1.4,<0.2.0"
+langchain-astradb = ">=0.1.0,<0.2.0"
 langchain-experimental = "*"
-langchain-openai = "^0.1.1"
-loguru = "^0.7.1"
-multiprocess = "^0.70.14"
-nest-asyncio = "^1.6.0"
+langchain-openai = ">=0.1.1,<0.2.0"
+loguru = ">=0.7.1,<0.8.0"
+multiprocess = ">=0.70.14,<0.71.0"
+nest-asyncio = ">=1.6.0,<2.0.0"
 orjson = "3.9.15"
 pandas = "2.2.0"
-passlib = "^1.7.4"
-pillow = "^10.2.0"
-platformdirs = "^4.2.0"
-pydantic = "^2.5.0"
-pydantic-settings = "^2.1.0"
-pypdf = "^4.1.0"
-python-docx = "^1.1.0"
-python-jose = "^3.3.0"
-python-multipart = "^0.0.7"
-python-socketio = "^5.11.0"
-rich = "^13.7.0"
-sqlmodel = "^0.0.14"
-typer = "^0.9.0"
-uvicorn = "^0.27.0"
+passlib = ">=1.7.4,<2.0.0"
+pillow = ">=10.2.0,<11.0.0"
+platformdirs = ">=4.2.0,<5.0.0"
+pydantic = ">=2.5.0,<3.0.0"
+pydantic-settings = ">=2.1.0,<3.0.0"
+pypdf = ">=4.1.0,<5.0.0"
+python-docx = ">=1.1.0,<2.0.0"
+python-jose = ">=3.3.0,<4.0.0"
+python-multipart = ">=0.0.7,<0.0.8"
+python-socketio = ">=5.11.0,<6.0.0"
+rich = ">=13.7.0,<14.0.0"
+sqlmodel = ">=0.0.14,<0.0.15"
+typer = ">=0.9.0,<0.10.0"
+uvicorn = ">=0.27.0,<0.28.0"
 websockets = "*"
-
-[package.extras]
-all = []
-deploy = []
-local = []
-
-[package.source]
-type = "directory"
-url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
-version = "2.21.2"
+version = "2.21.3"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langfuse-2.21.2-py3-none-any.whl", hash = "sha256:bd65858e6326776f65c9b2e414e64fdea0f14402f5c784952af93346dfd489bb"},
-    {file = "langfuse-2.21.2.tar.gz", hash = "sha256:eb7911aa640f020f097cb56eaa7d67f01d39f9e2bdd6226e0c5d642a87f3663c"},
+    {file = "langfuse-2.21.3-py3-none-any.whl", hash = "sha256:cce9130279984c3a5c2eaf1f6d9b5069f8f44021045cd875840037b0f74fd681"},
+    {file = "langfuse-2.21.3.tar.gz", hash = "sha256:6d11cabd95a69a152742a55802e634f5d8accf332c906cc760446b7ae1f05e35"},
 ]
 
 [package.dependencies]
@@ -10252,4 +10245,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "dd93ffd00d43f15f2df742e6b6b57dac97548be3f542bfa29e9f6d951748ac51"
+content-hash = "b93b9d4fb163df9817c6fdbf586d233b64ac7a7312cf0cb75157fb6acbc57055"
