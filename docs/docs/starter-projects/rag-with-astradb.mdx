@@ -3,13 +3,13 @@ import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 import Admonition from "@theme/Admonition";
 
-# 🌟 RAG with AstraDB
+# 🌟 RAG with Astra DB
 
-This guide will walk you through how to build a RAG (Retrieval Augmented Generation) application using **AstraDB** and **Langflow**.
+This guide will walk you through how to build a RAG (Retrieval Augmented Generation) application using **Astra DB** and **Langflow**.
 
-AstraDB is a cloud-native database built on Apache Cassandra that is optimized for the cloud. It is a fully managed database-as-a-service that simplifies operations and reduces costs. AstraDB is built on the same technology that powers the largest Cassandra deployments in the world.
+Astra DB is a cloud-native database built on Apache Cassandra that is optimized for the cloud. It is a fully managed database-as-a-service that simplifies operations and reduces costs. Astra DB is built on the same technology that powers the largest Cassandra deployments in the world.
 
-In this guide, we will use AstraDB as a vector store to store and retrieve the documents that will be used by the RAG application to generate responses.
+In this guide, we will use Astra DB as a vector store to store and retrieve the documents that will be used by the RAG application to generate responses.
 
 <Admonition type="tip">
   This guide assumes that you have Langflow up and running. If you are new to
@@ -23,18 +23,18 @@ TLDR;
 - Create a new database, get a **Token** and the **API Endpoint**
 - Click on the **New Project** button and look for Vector Store RAG. This will create a new project with the necessary components
 - Import the project into Langflow by dropping it on the Canvas or My Collection page
-- Update the **Token** and **API Endpoint** in the **AstraDB** components
+- Update the **Token** and **API Endpoint** in the **Astra DB** components
 - Update the OpenAI API key in the **OpenAI** components
-- Run the ingestion flow which is the one that uses the **AstraDB** component
+- Run the ingestion flow which is the one that uses the **Astra DB** component
 - Click on the ⚡ _Run_ button and start interacting with your RAG application
 
 # First things first
 
-## Create an AstraDB Database
+## Create an Astra DB Database
 
-To get started, you will need to create an AstraDB database. Visit the [Astra](https://astra.datastax.com) website and create a free account.
+To get started, you will need to create an Astra DB database. Visit the [Astra](https://astra.datastax.com) website and create a free account.
 
-Once you have created an account, you will be taken to the AstraDB dashboard. Click on the **Create Database** button.
+Once you have created an account, you will be taken to the Astra DB dashboard. Click on the **Create Database** button.
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -69,7 +69,7 @@ Once your database is initialized, to the right of the page, you will see the _D
   style={{ width: "50%" }}
 />
 
-Now we are all set to start building our RAG application using AstraDB and Langflow.
+Now we are all set to start building our RAG application using Astra DB and Langflow.
 
 ## (Optional) Duplicate the Langflow 1.0 HuggingFace Space
 
@@ -77,7 +77,7 @@ If you haven't already, now is the time to launch Langflow. To make things easie
 
 ## Open the Vector Store RAG Project
 
-To get started, click on the **New Project** button and look for the **Vector Store RAG** project. This will open a starter project with the necessary components to run a RAG application using AstraDB.
+To get started, click on the **New Project** button and look for the **Vector Store RAG** project. This will open a starter project with the necessary components to run a RAG application using Astra DB.
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -88,7 +88,7 @@ To get started, click on the **New Project** button and look for the **Vector St
   style={{ width: "90%" }}
 />
 
-This project consists of two flows. The simpler one is the **Ingestion Flow** which is responsible for ingesting the documents into the AstraDB database.
+This project consists of two flows. The simpler one is the **Ingestion Flow** which is responsible for ingesting the documents into the Astra DB database.
 
 Your first step should be to understand what each flow does and how they interact with each other.
 
@@ -97,7 +97,7 @@ The ingestion flow consists of:
 - **Files** component that uploads a text file to Langflow
 - **Recursive Character Text Splitter** component that splits the text into smaller chunks
 - **OpenAIEmbeddings** component that generates embeddings for the text chunks
-- **AstraDB** component that stores the text chunks in the AstraDB database
+- **Astra DB** component that stores the text chunks in the Astra DB database
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -108,7 +108,7 @@ The ingestion flow consists of:
   style={{ width: "90%" }}
 />
 
-Now, let's update the **AstraDB** and **AstraDB Search** components with the **Token** and **API Endpoint** that we generated earlier, and the OpenAI Embeddings components with your OpenAI API key.
+Now, let's update the **Astra DB** and **Astra DB Search** components with the **Token** and **API Endpoint** that we generated earlier, and the OpenAI Embeddings components with your OpenAI API key.
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -119,7 +119,7 @@ Now, let's update the **AstraDB** and **AstraDB Search** components with the **T
   style={{ width: "90%" }}
 />
 
-And run it! This will ingest the Text data from your file into the AstraDB database.
+And run it! This will ingest the Text data from your file into the Astra DB database.
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -136,7 +136,7 @@ The RAG flow is a bit more complex. It consists of:
 
 - **Chat Input** component that defines where to put the user input coming from the Interaction Panel
 - **OpenAI Embeddings** component that generates embeddings from the user input
-- **AstraDB Search** component that retrieves the most relevant Records from the AstraDB database
+- **Astra DB Search** component that retrieves the most relevant Records from the Astra DB database
 - **Text Output** component that turns the Records into Text by concatenating them and also displays it in the Interaction Panel
   - One interesting point you'll see here is that this component is named `Extracted Chunks`, and that is how it will appear in the Interaction Panel
 - **Prompt** component that takes in the user input and the retrieved Records as text and builds a prompt for the OpenAI model
@@ -187,8 +187,11 @@ Once we interact with it we get a response and the Extracted Chunks section is u
   style={{ width: "80%" }}
 />
 
-And that's it! You have successfully ran a RAG application using AstraDB and Langflow.
+And that's it! You have successfully ran a RAG application using Astra DB and Langflow.
 
 # Conclusion
 
-In this guide, we have learned how to run a RAG application using AstraDB and Langflow. We have seen how to create an AstraDB database, import the AstraDB RAG Flows project into Langflow, and run the ingestion and RAG flows.
+In this guide, we have learned how to run a RAG application using Astra DB and Langflow. We have seen how to create an Astra DB database, import the Astra DB RAG Flows project into Langflow, and run the ingestion and RAG flows.import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
