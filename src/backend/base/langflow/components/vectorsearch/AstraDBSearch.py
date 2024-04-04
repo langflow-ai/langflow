@@ -7,8 +7,8 @@ from langflow.schema import Record
 
 
 class AstraDBSearchComponent(LCVectorStoreComponent):
-    display_name = "AstraDB Search"
-    description = "Searches an existing AstraDB Vector Store."
+    display_name = "Astra DB Search"
+    description = "Searches an existing Astra DB Vector Store."
     icon = "AstraDB"
     field_order = ["token", "api_endpoint", "collection_name", "input_value", "embedding"]
 
@@ -25,20 +25,20 @@ class AstraDBSearchComponent(LCVectorStoreComponent):
             "embedding": {"display_name": "Embedding", "info": "Embedding to use"},
             "collection_name": {
                 "display_name": "Collection Name",
-                "info": "The name of the collection within AstraDB where the vectors will be stored.",
+                "info": "The name of the collection within Astra DB where the vectors will be stored.",
             },
             "token": {
                 "display_name": "Token",
-                "info": "Authentication token for accessing AstraDB.",
+                "info": "Authentication token for accessing Astra DB.",
                 "password": True,
             },
             "api_endpoint": {
                 "display_name": "API Endpoint",
-                "info": "API endpoint URL for the AstraDB service.",
+                "info": "API endpoint URL for the Astra DB service.",
             },
             "namespace": {
                 "display_name": "Namespace",
-                "info": "Optional namespace within AstraDB to use for the collection.",
+                "info": "Optional namespace within Astra DB to use for the collection.",
                 "advanced": True,
             },
             "metric": {
