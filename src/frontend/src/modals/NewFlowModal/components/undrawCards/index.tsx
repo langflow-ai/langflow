@@ -43,7 +43,7 @@ export default function UndrawCardComponent({
             }}
           />
         );
-      case "Basic Prompting (Hello, world!)":
+      case "Basic Prompting (Ahoy World!)":
         return (
           <BasicPrompt
             style={{
