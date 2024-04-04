@@ -246,7 +246,7 @@ class DirectoryReader:
             filename = os.path.basename(file_path)
             validation_result, result_content = self.process_file(file_path)
             if not validation_result:
-                logger.error(f"Error while processing file {file_path}: {result_content}")
+                logger.error(f"Error while processing file {file_path}")
 
             menu_result = self.find_menu(response, menu_name) or {
                 "name": menu_name,
