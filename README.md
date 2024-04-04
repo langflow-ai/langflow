@@ -2,7 +2,7 @@
 
 # ⛓️ Langflow
 
-<h3>Discover a simpler & smarter way to build around Foundation Models</h3>
+### Discover a simpler & smarter way to build around Foundation Models</h3>
 # [![Langflow](https://github.com/logspace-ai/langflow/blob/dev/docs/static/img/new_langflow_demo.gif)](https://www.langflow.org)
 
 [![Release Notes](https://img.shields.io/github/release/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/releases)
@@ -25,7 +25,9 @@ Then, run Langflow with:
 
 ```shell
 python -m langflow run
+
 # or
+
 langflow run
 ```
 
