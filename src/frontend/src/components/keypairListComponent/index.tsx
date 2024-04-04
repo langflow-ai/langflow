@@ -12,10 +12,11 @@ export default function KeypairListComponent({
   disabled,
   editNode = false,
   duplicateKey,
+  isList = true,
 }: KeyPairListComponentType): JSX.Element {
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
-      onChange([""]);
+      onChange([{ "": "" }]);
     }
   }, [disabled]);
 
@@ -79,6 +80,7 @@ export default function KeypairListComponent({
                     : "keypair" + (index + 100).toString()
                 }
                 type="text"
+                disabled={disabled}
                 value={obj[key]}
                 className={editNode ? "input-edit-node" : ""}
                 placeholder="Type a value..."
@@ -87,8 +89,9 @@ export default function KeypairListComponent({
                 }
               />
 
-              {index === ref.current.length - 1 ? (
+              {isList && index === ref.current.length - 1 ? (
                 <button
+                  disabled={disabled}
                   onClick={() => {
                     let newInputList = _.cloneDeep(ref.current);
                     newInputList.push({ "": "" });
@@ -110,7 +113,7 @@ export default function KeypairListComponent({
                     className={"h-4 w-4 hover:text-accent-foreground"}
                   />
                 </button>
-              ) : (
+              ) : isList ? (
                 <button
                   onClick={() => {
                     let newInputList = _.cloneDeep(ref.current);
@@ -133,6 +136,8 @@ export default function KeypairListComponent({
                     className="h-4 w-4 hover:text-status-red"
                   />
                 </button>
+              ) : (
+                ""
               )}
             </div>
           );

@@ -1,5 +1,6 @@
 import { useContext, useEffect } from "react";
-import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
+import { FaDiscord, FaGithub } from "react-icons/fa";
+import { RiTwitterXFill } from "react-icons/ri";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
 import { USER_PROJECTS_HEADER } from "../../constants/constants";
@@ -33,7 +34,7 @@ export default function Header(): JSX.Element {
   const removeFlow = useFlowsManagerStore((store) => store.removeFlow);
   const hasStore = useStoreStore((state) => state.hasStore);
   const { id } = useParams();
-  const n = useFlowStore((state) => state.nodes);
+  const nodes = useFlowStore((state) => state.nodes);
 
   const dark = useDarkStore((state) => state.dark);
   const setDark = useDarkStore((state) => state.setDark);
@@ -57,7 +58,7 @@ export default function Header(): JSX.Element {
   return (
     <div className="header-arrangement">
       <div className="header-start-display lg:w-[30%]">
-        <Link to="/" onClick={() => checkForChanges(n)}>
+        <Link to="/" onClick={() => checkForChanges(nodes)}>
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
         <MenuBar removeFunction={checkForChanges} />
@@ -74,7 +75,7 @@ export default function Header(): JSX.Element {
             }
             size="sm"
             onClick={() => {
-              checkForChanges(n);
+              checkForChanges(nodes);
             }}
           >
             <IconComponent name="Home" className="h-4 w-4" />
@@ -100,7 +101,7 @@ export default function Header(): JSX.Element {
               variant={location.pathname === "/store" ? "primary" : "secondary"}
               size="sm"
               onClick={() => {
-                checkForChanges(n);
+                checkForChanges(nodes);
               }}
             >
               <IconComponent name="Store" className="h-4 w-4" />
@@ -127,7 +128,7 @@ export default function Header(): JSX.Element {
             rel="noreferrer"
             className="text-muted-foreground"
           >
-            <FaTwitter className="side-bar-button-size" />
+            <RiTwitterXFill className="side-bar-button-size" />
           </a>
           <a
             href="https://discord.gg/EqksyE2EX9"

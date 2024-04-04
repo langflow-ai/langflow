@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { SIGNUP_ERROR_ALERT } from "../../constants/alerts_constants";
 import {
   CONTROL_INPUT_STATE,
   SIGN_UP_SUCCESS,
@@ -60,7 +61,7 @@ export default function SignUp(): JSX.Element {
           },
         } = error;
         setErrorData({
-          title: "Error signing up",
+          title: SIGNUP_ERROR_ALERT,
           list: [detail],
         });
         return;

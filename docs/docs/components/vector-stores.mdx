@@ -1,9 +1,635 @@
-import Admonition from '@theme/Admonition';
+import Admonition from "@theme/Admonition";
 
 # Vector Stores
 
-<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
+### Astra DB
+
+The `Astra DB` is a component for initializing an Astra DB Vector Store from Records. It facilitates the creation of Astra DB-based vector indexes for efficient document storage and retrieval.
+
+**Params**
+
+- **Input:** The input documents or records.
+
+- **Embedding:** The embedding model used by Astra DB.
+
+- **Collection Name:** The name of the collection in Astra DB.
+
+- **Token:** The token for Astra DB.
+
+- **API Endpoint:** The API endpoint for Astra DB.
+
+- **Namespace:** The namespace in Astra DB.
+
+- **Metric:** The metric to use in Astra DB.
+
+- **Batch Size:** The batch size for Astra DB.
+
+- **Bulk Insert Batch Concurrency:** The bulk insert batch concurrency for Astra DB.
+
+- **Bulk Insert Overwrite Concurrency:** The bulk insert overwrite concurrency for Astra DB.
+
+- **Bulk Delete Concurrency:** The bulk delete concurrency for Astra DB.
+
+- **Setup Mode:** The setup mode for the vector store.
+
+- **Pre Delete Collection:** Pre delete collection.
+
+- **Metadata Indexing Include:** Metadata indexing include.
+
+- **Metadata Indexing Exclude:** Metadata indexing exclude.
+
+- **Collection Indexing Policy:** Collection indexing policy.
+
+<Admonition type="note" title="Note">
     <p>
-        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
+        Ensure that the required Astra DB token and API endpoint are properly configured.
     </p>
+
 </Admonition>
+
+---
+
+### Astra DB Search
+
+The `Astra DBSearch` is a component for searching an existing Astra DB Vector Store for similar documents. It extends the functionality of the `Astra DB` component to provide efficient document retrieval based on similarity metrics.
+
+**Params**
+
+- **Search Type:** The type of search to perform (e.g., Similarity, MMR).
+
+- **Input Value:** The input value to search for.
+
+- **Embedding:** The embedding model used by Astra DB.
+
+- **Collection Name:** The name of the collection in Astra DB.
+
+- **Token:** The token for Astra DB.
+
+- **API Endpoint:** The API endpoint for Astra DB.
+
+- **Namespace:** The namespace in Astra DB.
+
+- **Metric:** The metric to use in Astra DB.
+
+- **Batch Size:** The batch size for Astra DB.
+
+- **Bulk Insert Batch Concurrency:** The bulk insert batch concurrency for Astra DB.
+
+- **Bulk Insert Overwrite Concurrency:** The bulk insert overwrite concurrency for Astra DB.
+
+- **Bulk Delete Concurrency:** The bulk delete concurrency for Astra DB.
+
+- **Setup Mode:** The setup mode for the vector store.
+
+- **Pre Delete Collection:** Pre delete collection.
+
+- **Metadata Indexing Include:** Metadata indexing include.
+
+- **Metadata Indexing Exclude:** Metadata indexing exclude.
+
+- **Collection Indexing Policy:** Collection indexing policy.
+
+---
+
+### Chroma
+
+The `Chroma` is a component designed for implementing a Vector Store using Chroma. This component allows users to utilize Chroma for efficient vector storage and retrieval within their language processing workflows.
+
+**Params**
+
+- **Collection Name:** The name of the collection.
+
+- **Persist Directory:** The directory to persist the Vector Store to.
+
+- **Server CORS Allow Origins (Optional):** The CORS allow origins for the Chroma server.
+
+- **Server Host (Optional):** The host for the Chroma server.
+
+- **Server Port (Optional):** The port for the Chroma server.
+
+- **Server gRPC Port (Optional):** The gRPC port for the Chroma server.
+
+- **Server SSL Enabled (Optional):** Whether to enable SSL for the Chroma server.
+
+- **Input:** Input data for creating the Vector Store.
+
+- **Embedding:** The embeddings to use for the Vector Store.
+
+For detailed documentation and integration guides, please refer to the [Chroma Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/chroma).
+
+---
+
+### Chroma Search
+
+The `ChromaSearch` is a component designed for searching a Chroma collection for similar documents. This component integrates with Chroma to facilitate efficient document retrieval based on similarity metrics.
+
+**Params**
+
+- **Input:** The input text to search for similar documents.
+
+- **Search Type:** The type of search to perform ("Similarity" or "MMR").
+
+- **Collection Name:** The name of the Chroma collection.
+
+- **Index Directory:** The directory where the Chroma index is stored.
+
+- **Embedding:** The embedding model used to vectorize inputs (make sure to use the same as the index).
+
+- **Server CORS Allow Origins (Optional):** The CORS allow origins for the Chroma server.
+
+- **Server Host (Optional):** The host for the Chroma server.
+
+- **Server Port (Optional):** The port for the Chroma server.
+
+- **Server gRPC Port (Optional):** The gRPC port for the Chroma server.
+
+- **Server SSL Enabled (Optional):** Whether SSL is enabled for the Chroma server.
+
+---
+
+### FAISS
+
+The `FAISS` is a component designed for ingesting documents into a FAISS Vector Store. It facilitates efficient document indexing and retrieval using the FAISS library.
+
+**Params**
+
+- **Embedding:** The embedding model used to vectorize inputs.
+
+- **Input:** The input documents to ingest into the FAISS Vector Store.
+
+- **Folder Path:** The path to save the FAISS index. It will be relative to where Langflow is running.
+
+- **Index Name:** The name of the FAISS index.
+
+For detailed documentation and integration guides, please refer to the [FAISS Component Documentation](https://faiss.ai/index.html).
+
+---
+
+### FAISS Search
+
+The `FAISSSearch` is a component for searching a FAISS Vector Store for similar documents. It enables efficient document retrieval based on similarity metrics using FAISS.
+
+**Params**
+
+- **Embedding:** The embedding model used by the FAISS Vector Store.
+
+- **Folder Path:** The path from which to load the FAISS index. It will be relative to where Langflow is running.
+
+- **Input:** The input value to search for similar documents.
+
+- **Index Name:** The name of the FAISS index.
+
+---
+
+### MongoDB Atlas
+
+The `MongoDBAtlas` is a component used to construct a MongoDB Atlas Vector Search vector store from Records. It facilitates the creation of MongoDB Atlas-based vector stores for efficient document storage and retrieval.
+
+**Params**
+
+- **Embedding:** The embedding model used by the MongoDB Atlas Vector Search.
+
+- **Input:** The input documents or records.
+
+- **Collection Name:** The name of the collection in the MongoDB Atlas database.
+
+- **Database Name:** The name of the database in MongoDB Atlas.
+
+- **Index Name:** The name of the index in MongoDB Atlas.
+
+- **MongoDB Atlas Cluster URI:** The URI of the MongoDB Atlas cluster.
+
+- **Search Kwargs:** Additional search arguments for MongoDB Atlas.
+
+<Admonition type="note" title="Note">
+  <p>Ensure that pymongo is installed to use MongoDB Atlas Vector Store.</p>
+</Admonition>
+
+---
+
+### MongoDB Atlas Search
+
+The `MongoDBAtlasSearch` is a component for searching a MongoDB Atlas Vector Store for similar documents. It extends the functionality of the MongoDBAtlasComponent to provide efficient document retrieval based on similarity metrics.
+
+**Params**
+
+- **Search Type:** The type of search to perform. Options: "Similarity", "MMR".
+
+- **Input:** The input value to search for.
+
+- **Embedding:** The embedding model used by the MongoDB Atlas Vector Store.
+
+- **Collection Name:** The name of the collection in the MongoDB Atlas database.
+
+- **Database Name:** The name of the database in MongoDB Atlas.
+
+- **Index Name:** The name of the index in MongoDB Atlas.
+
+- **MongoDB Atlas Cluster URI:** The URI of the MongoDB Atlas cluster.
+
+- **Search Kwargs:** Additional search arguments for MongoDB Atlas.
+
+---
+
+### PGVector
+
+The `PGVector` is a component for implementing a Vector Store using PostgreSQL. It allows users to store and retrieve vectors efficiently within a PostgreSQL database.
+
+**Params**
+
+- **Input:** The input value to use for the Vector Store.
+
+- **Embedding:** The embedding model used by the Vector Store.
+
+- **PostgreSQL Server Connection String:** The URL for the PostgreSQL server.
+
+- **Table:** The name of the table in the PostgreSQL database.
+
+For detailed documentation and integration guides, please refer to the [PGVector Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/pgvector).
+
+<Admonition type="note" title="Note">
+  <p>
+    Ensure that the required PostgreSQL server is accessible and properly
+    configured.
+  </p>
+</Admonition>
+
+---
+
+### PGVector Search
+
+The `PGVectorSearch` is a component for searching a PGVector Store for similar documents. It extends the functionality of the PGVectorComponent to provide efficient document retrieval based on similarity metrics.
+
+**Params**
+
+- **Input:** The input value to search for.
+
+- **Embedding:** The embedding model used by the Vector Store.
+
+- **PostgreSQL Server Connection String:** The URL for the PostgreSQL server.
+
+- **Table:** The name of the table in the PostgreSQL database.
+
+- **Search Type:** The type of search to perform (e.g., "Similarity", "MMR").
+
+---
+
+### Pinecone
+
+The `Pinecone` is a component used to construct a Pinecone wrapper from Records. It facilitates the creation of Pinecone-based vector indexes for efficient document storage and retrieval.
+
+**Params**
+
+- **Input:** The input documents or records.
+
+- **Embedding:** The embedding model used by Pinecone.
+
+- **Index Name:** The name of the index in Pinecone.
+
+- **Namespace:** The namespace in Pinecone.
+
+- **Pinecone API Key:** The API key for Pinecone.
+
+- **Pinecone Environment:** The environment for Pinecone.
+
+- **Search Kwargs:** Additional search keyword arguments for Pinecone.
+
+- **Pool Threads:** The number of threads to use for Pinecone.
+
+<Admonition type="note" title="Note">
+  <p>
+    Ensure that the required Pinecone API key and environment are properly
+    configured.
+  </p>
+</Admonition>
+
+---
+
+### Pinecone Search
+
+The `PineconeSearch` is a component used to search a Pinecone Vector Store for similar documents. It extends the functionality of the `PineconeComponent` to provide efficient document retrieval based on similarity metrics.
+
+**Params**
+
+- **Search Type:** The type of search to perform (e.g., Similarity, MMR).
+
+- **Input Value:** The input value to search for.
+
+- **Embedding:** The embedding model used by Pinecone.
+
+- **Index Name:** The name of the index in Pinecone.
+
+- **Namespace:** The namespace in Pinecone.
+
+- **Pinecone API Key:** The API key for Pinecone.
+
+- **Pinecone Environment:** The environment for Pinecone.
+
+- **Search Kwargs:** Additional search keyword arguments for Pinecone.
+
+- **Pool Threads:** The number of threads to use for Pinecone.
+
+---
+
+### Qdrant
+
+The `Qdrant` is a component used to construct a Qdrant wrapper from a list of texts. It allows for efficient similarity search and retrieval operations based on the provided embeddings.
+
+**Params**
+
+- **Input:** The input documents or records.
+
+- **Embedding:** The embedding model used by Qdrant.
+
+- **API Key:** The API key for Qdrant (password field).
+
+- **Collection Name:** The name of the collection in Qdrant.
+
+- **Content Payload Key:** The key for the content payload in the documents (advanced).
+
+- **Distance Function:** The distance function to use in Qdrant (advanced).
+
+- **gRPC Port:** The gRPC port for Qdrant (advanced).
+
+- **Host:** The host for Qdrant (advanced).
+
+- **HTTPS:** Enable HTTPS for Qdrant (advanced).
+
+- **Location:** The location for Qdrant (advanced).
+
+- **Metadata Payload Key:** The key for the metadata payload in the documents (advanced).
+
+- **Path:** The path for Qdrant (advanced).
+
+- **Port:** The port for Qdrant (advanced).
+
+- **Prefer gRPC:** Prefer gRPC for Qdrant (advanced).
+
+- **Prefix:** The prefix for Qdrant (advanced).
+
+- **Search Kwargs:** Additional search keyword arguments for Qdrant (advanced).
+
+- **Timeout:** The timeout for Qdrant (advanced).
+
+- **URL:** The URL for Qdrant (advanced).
+
+---
+
+### Qdrant Search
+
+The `QdrantSearch` is a component used to search a Qdrant Vector Store for similar documents. It extends the functionality of the `QdrantComponent` to provide efficient document retrieval based on similarity metrics.
+
+**Params**
+
+- **Search Type:** The type of search to perform (e.g., Similarity, MMR).
+
+- **Input Value:** The input value to search for.
+
+- **Embedding:** The embedding model used by Qdrant.
+
+- **API Key:** The API key for Qdrant (password field).
+
+- **Collection Name:** The name of the collection in Qdrant.
+
+- **Content Payload Key:** The key for the content payload in the documents (advanced).
+
+- **Distance Function:** The distance function to use in Qdrant (advanced).
+
+- **gRPC Port:** The gRPC port for Qdrant (advanced).
+
+- **Host:** The host for Qdrant (advanced).
+
+- **HTTPS:** Enable HTTPS for Qdrant (advanced).
+
+- **Location:** The location for Qdrant (advanced).
+
+- **Metadata Payload Key:** The key for the metadata payload in the documents (advanced).
+
+- **Path:** The path for Qdrant (advanced).
+
+- **Port:** The port for Qdrant (advanced).
+
+- **Prefer gRPC:** Prefer gRPC for Qdrant (advanced).
+
+- **Prefix:** The prefix for Qdrant (advanced).
+
+- **Search Kwargs:** Additional search keyword arguments for Qdrant (advanced).
+
+- **Timeout:** The timeout for Qdrant (advanced).
+
+- **URL:** The URL for Qdrant (advanced).
+
+---
+
+### Redis
+
+The `Redis` is a component for implementing a Vector Store using Redis. It provides functionality to store and retrieve vectors efficiently from a Redis database.
+
+**Params**
+
+- **Index Name:** The name of the index in Redis (default: your_index).
+
+- **Input:** The input data to build the Redis Vector Store (input types: Document, Record).
+
+- **Embedding:** The embedding model used by Redis.
+
+- **Schema:** The schema file (.yaml) to define the structure of the documents (optional).
+
+- **Redis Server Connection String:** The connection string for the Redis server.
+
+- **Redis Index:** The name of the Redis index (optional).
+
+For detailed documentation, please refer to the [Redis Documentation](https://python.langchain.com/docs/integrations/vectorstores/redis).
+
+<Admonition type="note" title="Note">
+  <p>
+    Ensure that the required Redis server connection URL and index name are
+    properly configured. If no documents are provided, a schema must be
+    provided.
+  </p>
+</Admonition>
+
+---
+
+### Redis Search
+
+The `RedisSearch` is a component for searching a Redis Vector Store for similar documents.
+
+**Params**
+
+- **Search Type:** The type of search to perform (e.g., Similarity, MMR).
+
+- **Input Value:** The input value to search for.
+
+- **Index Name:** The name of the index in Redis (default: your_index).
+
+- **Embedding:** The embedding model used by Redis.
+
+- **Schema:** The schema file (.yaml) to define the structure of the documents (optional).
+
+- **Redis Server Connection String:** The connection string for the Redis server.
+
+- **Redis Index:** The name of the Redis index (optional).
+
+---
+
+### Supabase
+
+The `Supabase` is a component for initializing a Supabase Vector Store from texts and embeddings.
+
+**Params**
+
+- **Input:** The input documents or records.
+
+- **Embedding:** The embedding model used by Supabase.
+
+- **Query Name:** The name of the query (optional).
+
+- **Search Kwargs:** Additional search keyword arguments for Supabase (advanced).
+
+- **Supabase Service Key:** The service key for Supabase.
+
+- **Supabase URL:** The URL for the Supabase instance.
+
+- **Table Name:** The name of the table in Supabase (advanced).
+
+<Admonition type="note" title="Note">
+  <p>
+    Ensure that the required Supabase service key, Supabase URL, and table name
+    are properly configured.
+  </p>
+</Admonition>
+
+---
+
+### Supabase Search
+
+The `SupabaseSearch` is a component for searching a Supabase Vector Store for similar documents.
+
+**Params**
+
+- **Search Type:** The type of search to perform (e.g., Similarity, MMR).
+
+- **Input Value:** The input value to search for.
+
+- **Embedding:** The embedding model used by Supabase.
+
+- **Query Name:** The name of the query (optional).
+
+- **Search Kwargs:** Additional search keyword arguments for Supabase (advanced).
+
+- **Supabase Service Key:** The service key for Supabase.
+
+- **Supabase URL:** The URL for the Supabase instance.
+
+- **Table Name:** The name of the table in Supabase (advanced).
+
+---
+
+### Vectara
+
+The `Vectara` is a component for implementing a Vector Store using Vectara.
+
+**Params**
+
+- **Vectara Customer ID:** The customer ID for Vectara.
+
+- **Vectara Corpus ID:** The corpus ID for Vectara.
+
+- **Vectara API Key:** The API key for Vectara.
+
+- **Files Url:** The URL(s) of the file(s) to be used for initializing the Vectara Vector Store (optional).
+
+- **Input:** The input data to be upserted to the corpus (optional).
+
+For detailed documentation and integration guides, please refer to the [Vectara Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/vectara).
+
+<Admonition type="note" title="Note">
+  <p>
+    If `inputs` are provided, they will be upserted to the corpus. If
+    `files_url` are provided, Vectara will process the files from the URLs.
+  </p>
+</Admonition>
+
+---
+
+### Vectara Search
+
+The `VectaraSearch` is a component for searching a Vectara Vector Store for similar documents.
+
+**Params**
+
+- **Search Type:** The type of search to perform (e.g., Similarity, MMR).
+
+- **Input Value:** The input value to search for.
+
+- **Vectara Customer ID:** The customer ID for Vectara.
+
+- **Vectara Corpus ID:** The corpus ID for Vectara.
+
+- **Vectara API Key:** The API key for Vectara.
+
+- **Files Url:** The URL(s) of the file(s) to be used for initializing the Vectara Vector Store (optional).
+
+---
+
+### Weaviate
+
+The `Weaviate` is a component for implementing a Vector Store using Weaviate.
+
+**Params**
+
+- **Weaviate URL:** The URL of the Weaviate instance (default: http://localhost:8080).
+
+- **Search By Text:** Boolean indicating whether to search by text (default: False).
+
+- **API Key:** The API key for authentication (optional).
+
+- **Index name:** The name of the index in Weaviate (optional).
+
+- **Text Key:** The key used to extract text from documents (default: "text").
+
+- **Input:** The input document or record.
+
+- **Embedding:** The embedding model used by Weaviate.
+
+- **Attributes:** Additional attributes to consider during indexing (optional).
+
+For detailed documentation and integration guides, please refer to the [Weaviate Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/weaviate).
+
+<Admonition type="note" title="Note">
+  <p>
+    Before using the Weaviate Vector Store component, ensure that you have a
+    Weaviate instance running and accessible at the specified URL. Additionally,
+    make sure to provide the correct API key for authentication if required.
+    Adjust the index name, text key, and attributes according to your dataset
+    and indexing requirements. Finally, ensure that the provided embeddings are
+    compatible with Weaviate's requirements.
+  </p>
+</Admonition>
+
+---
+
+### Weaviate Search
+
+The `WeaviateSearch` component facilitates searching a Weaviate Vector Store for similar documents.
+
+**Params**
+
+- **Search Type:** The type of search to perform (e.g., Similarity, MMR).
+
+- **Input Value:** The input value to search for.
+
+- **Weaviate URL:** The URL of the Weaviate instance (default: http://localhost:8080).
+
+- **Search By Text:** Boolean indicating whether to search by text (default: False).
+
+- **API Key:** The API key for authentication (optional).
+
+- **Index name:** The name of the index in Weaviate (optional).
+
+- **Text Key:** The key used to extract text from documents (default: "text").
+
+- **Embedding:** The embedding model used by Weaviate.
+
+- **Attributes:** Additional attributes to consider during indexing (optional).

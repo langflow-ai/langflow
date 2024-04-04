@@ -30,7 +30,7 @@ Here is an example:
     <CH.Code linuNumbers={false}>
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class DocumentProcessor(CustomComponent):
@@ -92,7 +92,7 @@ The Python script for every Custom Component should follow a set of rules. Let's
 The script must contain a **single class** that inherits from _`CustomComponent`_.
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class MyComponent(CustomComponent):
@@ -113,7 +113,7 @@ class MyComponent(CustomComponent):
 This class requires a _`build`_ method used to run the component and define its fields.
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class MyComponent(CustomComponent):
@@ -134,7 +134,7 @@ class MyComponent(CustomComponent):
 The [Return Type Annotation](https://docs.python.org/3/library/typing.html) of the _`build`_ method defines the component type (e.g., Chain, BaseLLM, or basic Python types). Check out all supported types in the [component reference](../components/custom).
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class MyComponent(CustomComponent):
@@ -153,7 +153,7 @@ class MyComponent(CustomComponent):
 ---
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class MyComponent(CustomComponent):
@@ -179,7 +179,7 @@ Check out the [component reference](../components/custom) for more details on th
 ---
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class MyComponent(CustomComponent):
@@ -204,7 +204,7 @@ Let's create a custom component that processes a document (_`langchain.schema.Do
 To start, let's choose a name for our component by adding a _`display_name`_ attribute. This name will appear on the canvas. The name of the class is not relevant, but let's call it _`DocumentProcessor`_.
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 # focus
@@ -227,7 +227,7 @@ class DocumentProcessor(CustomComponent):
 We can also write a description for it using a _`description`_ attribute.
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class DocumentProcessor(CustomComponent):
@@ -244,7 +244,7 @@ class DocumentProcessor(CustomComponent):
 ---
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class DocumentProcessor(CustomComponent):
@@ -283,11 +283,11 @@ The return type is _`Document`_.
 The _`build_config`_ method is here defined to customize the component fields.
 
 - _`options`_ determines that the field will be a dropdown menu. The list values and field type must be _`str`_.
-- _`value`_ is the default option of the dropdown menu.
+- _`value`_ is the default value of the field.
 - _`display_name`_ is the name of the field to be displayed.
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class DocumentProcessor(CustomComponent):

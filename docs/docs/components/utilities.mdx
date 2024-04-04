@@ -74,3 +74,23 @@ Build a Document containing a JSON object using a key and another Document page 
 **Output**
 
 - **List of Documents:** A list containing the Document with the JSON object.
+
+## Unique ID Generator
+
+Generates a unique identifier (UUID) for each instance it is invoked, providing a distinct and reliable identifier suitable for a variety of applications.
+
+**Params**
+
+- **Value:** This field displays the generated unique identifier (UUID). The UUID is generated dynamically for each instance of the component, ensuring uniqueness across different uses.
+
+**Output**
+
+- Returns a unique identifier (UUID) as a string. This UUID is generated using Python's `uuid` module, ensuring that each identifier is unique and can be used as a reliable reference in your application.
+
+<Admonition type="note" title="Note">
+    <p>
+        The Unique ID Generator is crucial for scenarios requiring distinct identifiers, such as session management, transaction tracking, or any context where different instances or entities must be uniquely identified. The generated UUID is provided as a hexadecimal string, offering a high level of uniqueness and security for identification purposes.
+    </p>
+</Admonition>
+
+For additional information and examples, please consult the [Langflow Components Custom Documentation](http://docs.langflow.org/components/custom).

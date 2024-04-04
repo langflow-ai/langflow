@@ -1,9 +1,9 @@
-import _ from "lodash";
 import { useContext, useEffect, useState } from "react";
 import "reactflow/dist/style.css";
 import "./App.css";
 
 import { ErrorBoundary } from "react-error-boundary";
+import { useNavigate } from "react-router-dom";
 import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
@@ -15,109 +15,27 @@ import {
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { getHealth } from "./controllers/API";
+import { getGlobalVariables, getHealth } from "./controllers/API";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
+import { useGlobalVariablesStore } from "./stores/globalVariables";
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
 
 export default function App() {
-  const errorData = useAlertStore((state) => state.errorData);
-  const errorOpen = useAlertStore((state) => state.errorOpen);
-  const setErrorOpen = useAlertStore((state) => state.setErrorOpen);
-  const noticeData = useAlertStore((state) => state.noticeData);
-  const noticeOpen = useAlertStore((state) => state.noticeOpen);
-  const setNoticeOpen = useAlertStore((state) => state.setNoticeOpen);
-  const successData = useAlertStore((state) => state.successData);
-  const successOpen = useAlertStore((state) => state.successOpen);
-  const setSuccessOpen = useAlertStore((state) => state.setSuccessOpen);
+  const removeFromTempNotificationList = useAlertStore(
+    (state) => state.removeFromTempNotificationList
+  );
+  const tempNotificationList = useAlertStore(
+    (state) => state.tempNotificationList
+  );
   const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
-  // Initialize state variable for the list of alerts
-  const [alertsList, setAlertsList] = useState<
-    Array<{
-      type: string;
-      data: { title: string; list?: Array<string>; link?: string };
-      id: string;
-    }>
-  >([]);
-
-  // Use effect hook to update alertsList when a new alert is added
-  useEffect(() => {
-    // If there is an error alert open with data, add it to the alertsList
-    if (errorOpen && errorData) {
-      if (
-        alertsList.length > 0 &&
-        JSON.stringify(alertsList[alertsList.length - 1].data) ===
-          JSON.stringify(errorData)
-      ) {
-        return;
-      }
-      setErrorOpen(false);
-      setAlertsList((old) => {
-        let newAlertsList = [
-          ...old,
-          { type: "error", data: _.cloneDeep(errorData), id: _.uniqueId() },
-        ];
-        return newAlertsList;
-      });
-    }
-    // If there is a notice alert open with data, add it to the alertsList
-    else if (noticeOpen && noticeData) {
-      if (
-        alertsList.length > 0 &&
-        JSON.stringify(alertsList[alertsList.length - 1].data) ===
-          JSON.stringify(noticeData)
-      ) {
-        return;
-      }
-      setNoticeOpen(false);
-      setAlertsList((old) => {
-        let newAlertsList = [
-          ...old,
-          { type: "notice", data: _.cloneDeep(noticeData), id: _.uniqueId() },
-        ];
-        return newAlertsList;
-      });
-    }
-    // If there is a success alert open with data, add it to the alertsList
-    else if (successOpen && successData) {
-      if (
-        alertsList.length > 0 &&
-        JSON.stringify(alertsList[alertsList.length - 1].data) ===
-          JSON.stringify(successData)
-      ) {
-        return;
-      }
-      setSuccessOpen(false);
-      setAlertsList((old) => {
-        let newAlertsList = [
-          ...old,
-          { type: "success", data: _.cloneDeep(successData), id: _.uniqueId() },
-        ];
-        return newAlertsList;
-      });
-    }
-  }, [
-    _,
-    errorData,
-    errorOpen,
-    noticeData,
-    noticeOpen,
-    setErrorOpen,
-    setNoticeOpen,
-    setSuccessOpen,
-    successData,
-    successOpen,
-  ]);
-
   const removeAlert = (id: string) => {
-    setAlertsList((prevAlertsList) =>
-      prevAlertsList.filter((alert) => alert.id !== id)
-    );
+    removeFromTempNotificationList(id);
   };
 
   const { isAuthenticated } = useContext(AuthContext);
@@ -126,7 +44,13 @@ export default function App() {
   const getTypes = useTypesStore((state) => state.getTypes);
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
+  const setGlobalVariables = useGlobalVariablesStore(
+    (state) => state.setGlobalVariables
+  );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
+  const navigate = useNavigate();
+
+  const [isLoadingHealth, setIsLoadingHealth] = useState(false);
 
   useEffect(() => {
     refreshStars();
@@ -138,28 +62,56 @@ export default function App() {
       getTypes().then(() => {
         refreshFlows();
       });
+      getGlobalVariables().then((res) => {
+        setGlobalVariables(res);
+      });
       checkHasStore();
       fetchApiData();
     }
   }, [isAuthenticated]);
 
   useEffect(() => {
+    checkApplicationHealth();
     // Timer to call getHealth every 5 seconds
     const timer = setInterval(() => {
       getHealth()
         .then(() => {
-          if (fetchError) setFetchError(false);
+          onHealthCheck();
         })
         .catch(() => {
           setFetchError(true);
         });
-    }, 20000);
+    }, 20000); // 20 seconds
 
     // Clean up the timer on component unmount
     return () => {
       clearInterval(timer);
     };
   }, []);
+
+  const checkApplicationHealth = () => {
+    setIsLoadingHealth(true);
+    getHealth()
+      .then(() => {
+        onHealthCheck();
+      })
+      .catch(() => {
+        setFetchError(true);
+      });
+
+    setTimeout(() => {
+      setIsLoadingHealth(false);
+    }, 2000);
+  };
+
+  const onHealthCheck = () => {
+    setFetchError(false);
+    //This condition is necessary to avoid infinite loop on starter page when the application is not healthy
+    if (isLoading === true && window.location.pathname === "/") {
+      navigate("/flows");
+      window.location.reload();
+    }
+  };
 
   return (
     //need parent component with width and height
@@ -170,51 +122,71 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        {fetchError ? (
-          <FetchErrorComponent
-            description={FETCH_ERROR_DESCRIPION}
-            message={FETCH_ERROR_MESSAGE}
-          ></FetchErrorComponent>
-        ) : isLoading ? (
-          <div className="loading-page-panel">
-            <LoadingComponent remSize={50} />
-          </div>
-        ) : (
-          <>
-            <Router />
-          </>
-        )}
+        <>
+          {
+            <FetchErrorComponent
+              description={FETCH_ERROR_DESCRIPION}
+              message={FETCH_ERROR_MESSAGE}
+              openModal={fetchError}
+              setRetry={() => {
+                checkApplicationHealth();
+              }}
+              isLoadingHealth={isLoadingHealth}
+            ></FetchErrorComponent>
+          }
+
+          {isLoading ? (
+            <div className="loading-page-panel">
+              <LoadingComponent remSize={50} />
+            </div>
+          ) : (
+            <>
+              <Router />
+            </>
+          )}
+        </>
       </ErrorBoundary>
       <div></div>
-      <div className="app-div" style={{ zIndex: 999 }}>
-        {alertsList.map((alert) => (
-          <div key={alert.id}>
-            {alert.type === "error" ? (
-              <ErrorAlert
-                key={alert.id}
-                title={alert.data.title}
-                list={alert.data.list}
-                id={alert.id}
-                removeAlert={removeAlert}
-              />
-            ) : alert.type === "notice" ? (
-              <NoticeAlert
-                key={alert.id}
-                title={alert.data.title}
-                link={alert.data.link}
-                id={alert.id}
-                removeAlert={removeAlert}
-              />
-            ) : (
-              <SuccessAlert
-                key={alert.id}
-                title={alert.data.title}
-                id={alert.id}
-                removeAlert={removeAlert}
-              />
-            )}
-          </div>
-        ))}
+      <div className="app-div">
+        <div className="flex flex-col-reverse" style={{ zIndex: 999 }}>
+          {tempNotificationList.map((alert) => (
+            <div key={alert.id}>
+              {alert.type === "error" && (
+                <ErrorAlert
+                  key={alert.id}
+                  title={alert.title}
+                  list={alert.list}
+                  id={alert.id}
+                  removeAlert={removeAlert}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="z-40 flex flex-col-reverse">
+          {tempNotificationList.map((alert) => (
+            <div key={alert.id}>
+              {alert.type === "notice" ? (
+                <NoticeAlert
+                  key={alert.id}
+                  title={alert.title}
+                  link={alert.link}
+                  id={alert.id}
+                  removeAlert={removeAlert}
+                />
+              ) : (
+                alert.type === "success" && (
+                  <SuccessAlert
+                    key={alert.id}
+                    title={alert.title}
+                    id={alert.id}
+                    removeAlert={removeAlert}
+                  />
+                )
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

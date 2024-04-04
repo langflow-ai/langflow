@@ -1,0 +1,13 @@
+from langflow.services.factory import ServiceFactory
+from langflow.services.settings.service import SettingsService
+from langflow.services.state.service import InMemoryStateService
+
+
+class StateServiceFactory(ServiceFactory):
+    def __init__(self):
+        super().__init__(InMemoryStateService)
+
+    def create(self, settings_service: SettingsService):
+        return InMemoryStateService(
+            settings_service,
+        )

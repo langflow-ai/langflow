@@ -7,10 +7,15 @@ export type FlowsManagerStoreType = {
   currentFlow: FlowType | undefined;
   currentFlowId: string;
   setCurrentFlowId: (currentFlowId: string) => void;
+  saveLoading: boolean;
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
   refreshFlows: () => Promise<void>;
-  saveFlow: (flow: FlowType, silent?: boolean) => Promise<void>;
+  saveFlow: (flow: FlowType, silent?: boolean) => Promise<void> | undefined;
+  saveFlowDebounce: (
+    flow: FlowType,
+    silent?: boolean
+  ) => Promise<void> | undefined;
   autoSaveCurrentFlow: (
     nodes: Node[],
     edges: Edge[],
@@ -43,6 +48,8 @@ export type FlowsManagerStoreType = {
   undo: () => void;
   redo: () => void;
   takeSnapshot: () => void;
+  examples: Array<FlowType>;
+  setExamples: (examples: FlowType[]) => void;
 };
 
 export type UseUndoRedoOptions = {

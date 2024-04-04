@@ -1,5 +1,6 @@
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
 
 # API Keys
 
@@ -7,11 +8,16 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 Langflow offers an API Key functionality that allows users to access their individual components and flows without going through traditional login authentication. The API Key is a user-specific token that can be included in the request's header or query parameter to authenticate API calls. The following documentation outlines how to generate, use, and manage these API Keys in Langflow.
 
+<Admonition type="warning">
+  This feature requires the `LANGFLOW_AUTO_LOGIN` environment variable to be set
+  to `False`. The default user and password are set using _`LANGFLOW_SUPERUSER`_
+  and _`LANGFLOW_SUPERUSER_PASSWORD`_ environment variables. Default values are
+  _`langflow`_ and _`langflow`_ respectively.
+</Admonition>
+
 ## Generating an API Key
 
 ### Through Langflow UI
-
-{/* add image img/api-key.png */}
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -36,7 +42,7 @@ Include the `x-api-key` in the HTTP header when making API requests:
 
 ```bash
 curl -X POST \
-  http://localhost:3000/api/v1/process/<your_flow_id> \
+  http://localhost:3000/api/v1/run/<your_flow_id> \
   -H 'Content-Type: application/json'\
   -H 'x-api-key: <your api key>'\
   -d '{"inputs": {"text":""}, "tweaks": {}}'

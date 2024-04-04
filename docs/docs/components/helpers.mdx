@@ -1,0 +1,127 @@
+import Admonition from '@theme/Admonition';
+
+# Helpers
+
+### Chat Memory
+
+This component retrieves stored chat messages given a specific Session ID.
+
+**Params**
+
+- **Sender Type:** Choose the sender type from options like "Machine", "User", or "Machine and User".
+- **Sender Name:** (Optional) The name of the sender.
+- **Number of Messages:** Number of messages to retrieve.
+- **Session ID:** The Session ID of the chat history.
+- **Order:** Choose the order of the messages, either "Ascending" or "Descending".
+- **Record Template:** (Optional) Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.
+
+---
+
+### Combine Text
+
+This component concatenates two text sources into a single text chunk using a specified delimiter.
+
+**Params**
+
+- **First Text:** The first text input to concatenate.
+- **Second Text:** The second text input to concatenate.
+- **Delimiter:** A string used to separate the two text inputs. Defaults to a whitespace.
+
+---
+
+### Create Record
+
+This component dynamically creates a Record with a specified number of fields.
+
+**Params**
+
+- **Number of Fields:** Number of fields to be added to the record.
+- **Text Key:** Key to be used as text.
+
+---
+
+### Custom Component
+
+Use this component as a template to create your own custom component.
+
+**Params**
+
+- **Parameter:** Describe the purpose of this parameter.
+
+<Admonition type="info" title="Info">
+    <p>
+        Customize the <code>build_config</code> and <code>build</code> methods according to your requirements.
+    </p>
+</Admonition>
+
+Learn more about [Custom Component](http://docs.langflow.org/components/custom).
+
+---
+
+### Documents to Records
+
+Convert LangChain Documents into Records.
+
+**Parameters**
+
+- **Documents:** Documents to be converted into Records.
+
+---
+
+### ID Generator
+
+Generates a unique ID.
+
+**Parameters**
+
+- **Value:** Unique ID generated.
+
+---
+
+### Message History
+
+Retrieves stored chat messages given a specific Session ID.
+
+**Parameters**
+
+- **Sender Type:** Options for the sender type.
+- **Sender Name:** Sender name.
+- **Number of Messages:** Number of messages to retrieve.
+- **Session ID:** Session ID of the chat history.
+- **Order:** Order of the messages.
+
+---
+
+### Records to Text
+
+Convert Records into plain text following a specified template.
+
+**Parameters**
+
+- **Records:** The records to convert to text.
+- **Template:** The template to use for formatting the records. It can contain the keys `{text}`, `{data}` or any other key in the Record.
+
+---
+
+### Split Text
+
+Split text into chunks of a specified length.
+
+**Parameters**
+
+- **Texts:** Texts to split.
+- **Separators:** The characters to split on. Defaults to [" "].
+- **Max Chunk Size:** The maximum length (in number of characters) of each chunk.
+- **Chunk Overlap:** The amount of character overlap between chunks.
+- **Recursive:** Whether to split recursively.
+
+---
+
+### Update Record
+
+Update Record with text-based key/value pairs, similar to updating a Python dictionary.
+
+**Parameters**
+
+- **Record:** The record to update.
+- **New Data:** The new data to update the record with.

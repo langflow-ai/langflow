@@ -69,7 +69,7 @@
     @apply flex h-full w-[14.5rem] flex-col overflow-hidden border-r scrollbar-hide;
   }
   .side-bar-search-div-placement {
-    @apply relative mx-auto mb-2 mt-2 flex items-center;
+    @apply relative mx-auto flex items-center py-3;
   }
   .side-bar-components-icon {
     @apply h-6 w-4 text-ring;
@@ -114,7 +114,10 @@
     @apply pointer-events-none;
   }
   .extra-side-bar-buttons {
-    @apply relative inline-flex w-full items-center justify-center rounded-md bg-background px-2 py-2 text-foreground shadow-sm ring-1 ring-inset ring-input transition-all duration-500 ease-in-out;
+    @apply relative inline-flex w-full items-center justify-center rounded-md bg-background px-2 py-2 text-foreground transition-all duration-500 ease-in-out;
+  }
+  .header-menubar-item {
+    @apply relative flex cursor-default cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50;
   }
   .extra-side-bar-buttons:hover {
     @apply hover:bg-muted;
@@ -175,13 +178,23 @@
     @apply fixed bottom-4 right-4;
   }
   .message-button-icon {
-    @apply fill-chat-trigger stroke-chat-trigger stroke-1;
+    @apply fill-medium-indigo stroke-medium-indigo stroke-1;
   }
   .disabled-message-button-icon {
     @apply fill-chat-trigger-disabled stroke-chat-trigger-disabled stroke-1;
   }
+  .parent-disclosure-arrangement {
+    @apply flex w-full select-none items-center justify-between bg-background px-3 py-1;
+  }
   .components-disclosure-arrangement {
     @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
+  }
+  .components-disclosure-arrangement-child {
+    /* different color than the non child */
+    @apply -mt-px flex w-full select-none items-center justify-between border-y border-y-input bg-muted px-3 py-2;
+  }
+  .parent-disclosure-title {
+    @apply p-2 px-2 text-sm font-medium;
   }
   .components-disclosure-title {
     @apply flex items-center text-sm text-primary;
@@ -267,7 +280,7 @@
     @apply relative flex flex-col justify-center bg-background;
   }
   .generic-node-div-title {
-    @apply flex w-full items-center gap-8  border-b bg-muted p-4;
+    @apply flex w-full items-center gap-2 border-b bg-muted p-4;
   }
   .generic-node-title-arrangement {
     @apply flex-max-width items-center truncate;
@@ -276,33 +289,53 @@
     @apply h-10 w-10 rounded p-1;
   }
   .generic-node-tooltip-div {
-    @apply ml-2 truncate;
+    @apply ml-2 max-w-[220px] truncate;
   }
   .generic-node-validation-div {
     @apply max-h-96 overflow-auto;
   }
 
   .generic-node-status-position {
-    @apply relative top-[3px] h-5 w-5;
+    @apply h-5 w-5;
   }
 
   .generic-node-status-animation {
     @apply hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0;
   }
   .generic-node-status {
-    @apply h-4 w-4 rounded-full opacity-100;
+    @apply animate-wiggle opacity-100;
   }
   .green-status {
-    @apply generic-node-status bg-status-green;
+    @apply generic-node-status text-status-green;
   }
+  .gray-status {
+    @apply generic-node-status text-status-gray;
+  }
+
   .red-status {
-    @apply generic-node-status bg-status-red;
+    @apply generic-node-status text-status-red;
   }
   .yellow-status {
-    @apply generic-node-status bg-status-yellow;
+    @apply generic-node-status text-status-yellow;
+  }
+  .inactive-status {
+    /* what colour for inactive status?
+    muted-foreground is too strong, maybe use a lighter shade of it?
+
+     */
+    @apply border-none ring ring-muted-foreground;
+  }
+  .built-invalid-status {
+    @apply border-none ring ring-[#FF9090];
+  }
+  .built-invalid-status-dark {
+    @apply border-none ring ring-[#751C1C];
+  }
+  .building-status {
+    @apply border-none ring;
   }
   .status-build-animation {
-    @apply hidden h-4 w-4 animate-spin rounded-full bg-ring opacity-0;
+    @apply opacity-0;
   }
   .status-div {
     @apply absolute w-4 duration-200 ease-in-out;
@@ -411,7 +444,9 @@
   .code-area-external-link:hover {
     @apply hover:text-accent-foreground;
   }
-
+  .dropdown-component-disabled {
+    @apply pointer-events-none cursor-not-allowed;
+  }
   .dropdown-component-outline {
     @apply input-edit-node relative pr-8;
   }
@@ -421,11 +456,17 @@
   .dropdown-component-display {
     @apply block w-full truncate bg-background;
   }
+  .dropdown-component-display-disabled {
+    @apply text-muted-foreground;
+  }
   .dropdown-component-arrow {
-    @apply pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2;
+    @apply pointer-events-none absolute inset-y-0 flex items-center pr-2;
   }
   .dropdown-component-arrow-color {
-    @apply extra-side-bar-save-disable h-5 w-5;
+    @apply h-5 w-5 text-accent-foreground;
+  }
+  .dropdown-component-arrow-color-disable {
+    @apply h-5 w-5 text-muted-foreground;
   }
   .dropdown-component-options {
     @apply z-10 mt-1 max-h-60 overflow-auto rounded-md bg-background py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm;
@@ -449,7 +490,7 @@
     @apply absolute inset-y-0 right-0 flex items-center pr-4;
   }
   .dropdown-component-check-icon {
-    @apply h-5 w-5 text-black;
+    @apply h-5 w-5 text-primary;
   }
 
   .edit-flow-arrangement {
@@ -467,7 +508,7 @@
     @apply flex items-center gap-0.5 rounded-md px-1.5 py-1 text-sm font-medium;
   }
   .header-menu-bar-display {
-    @apply flex max-w-[120px] cursor-pointer items-center gap-2 lg:max-w-[200px];
+    @apply flex max-w-[115px] cursor-pointer items-center gap-2 lg:max-w-[145px];
   }
   .header-menu-flow-name {
     @apply flex-1 truncate;
@@ -553,7 +594,7 @@
   }
 
   .app-div {
-    @apply fixed bottom-5 left-5 flex flex-col-reverse;
+    @apply absolute bottom-5 left-5 flex flex-col-reverse;
   }
 
   .chat-input-modal-txtarea {
@@ -825,13 +866,13 @@
   }
 
   .api-modal-tabs {
-    @apply flex h-full max-w-full flex-col overflow-hidden rounded-md border bg-muted text-center sm:w-[75vw] md:w-[75vw] lg:w-[75vw] xl:w-[76vw] 2xl:w-full;
+    @apply flex h-full flex-col overflow-hidden rounded-md border bg-muted text-center;
   }
   .api-modal-tablist-div {
-    @apply flex items-center justify-between px-2;
+    @apply flex items-center justify-between px-2 py-2;
   }
   .api-modal-tabs-content {
-    @apply -mt-1 h-full w-full overflow-hidden px-4 pb-4;
+    @apply -mt-1 h-full w-full px-4 pb-4;
   }
   .api-modal-accordion-display {
     @apply mt-2 flex h-full w-full;
@@ -876,13 +917,13 @@
     @apply mr-2 h-5 w-5 rotate-[44deg];
   }
   .form-modal-play-icon {
-    @apply mx-1 h-5 w-5;
+    @apply mx-1 h-5 w-5 fill-current;
   }
   .form-modal-chat-position {
     @apply flex-max-width px-2 py-6 pl-4 pr-9;
   }
   .form-modal-chatbot-icon {
-    @apply mb-3 ml-3 mr-6 mt-1;
+    @apply mb-3 ml-3 mr-6 mt-1 flex flex-col;
   }
   .form-modal-chat-image {
     @apply flex flex-col items-center gap-1;
@@ -925,9 +966,6 @@
   }
   .form-modal-initial-prompt-btn {
     @apply mb-2 flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-semibold shadow-sm;
-  }
-  .form-modal-iv-box {
-    @apply flex-max-width mt-2 h-[80vh];
   }
   .form-modal-iv-size {
     @apply mr-6 flex h-full w-2/6 flex-col justify-start overflow-auto scrollbar-hide;
@@ -1012,7 +1050,7 @@
   }
 
   .beta-badge-wrapper {
-    @apply absolute right-0 top-0 h-16 w-16 overflow-hidden rounded-tr-lg;
+    @apply pointer-events-none absolute right-0 top-0 h-16 w-16 overflow-hidden rounded-tr-lg;
   }
   .beta-badge-content {
     @apply mt-2 w-24 rotate-45 bg-beta-background text-center text-xs font-semibold text-beta-foreground;

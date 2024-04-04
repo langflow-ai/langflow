@@ -83,7 +83,7 @@ export function AuthProvider({ children }): React.ReactElement {
           useFlowsManagerStore.setState({ isLoading: false });
         }
       });
-  }, [setUserData, setLoading, autoLogin, setIsAdmin]);
+  }, [autoLogin]);
 
   function getUser() {
     getLoggedUser()
@@ -94,7 +94,6 @@ export function AuthProvider({ children }): React.ReactElement {
         setIsAdmin(isSuperUser);
       })
       .catch((error) => {
-        console.log("auth context");
         setLoading(false);
       });
   }

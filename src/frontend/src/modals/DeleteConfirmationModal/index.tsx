@@ -14,14 +14,18 @@ export default function DeleteConfirmationModal({
   children,
   onConfirm,
   description,
+  asChild,
 }: {
   children: JSX.Element;
-  onConfirm: () => void;
+  onConfirm: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
   description?: string;
+  asChild?: boolean;
 }) {
   return (
     <Dialog>
-      <DialogTrigger tabIndex={-1}>{children}</DialogTrigger>
+      <DialogTrigger asChild={asChild} tabIndex={-1}>
+        {children}
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
@@ -35,21 +39,25 @@ export default function DeleteConfirmationModal({
           </DialogTitle>
         </DialogHeader>
         <span>
-          Are you sure you want to delete this {description ?? "component"}?
-          <br></br>
-          This action cannot be undone.
+          Confirm deletion of {description ?? "component"}?<br></br>
+          Note: This action is irreversible.
         </span>
         <DialogFooter>
-          <DialogClose>
-            <Button className="mr-3" variant="outline">
+          <DialogClose asChild>
+            <Button
+              onClick={(e) => e.stopPropagation()}
+              className="mr-3"
+              variant="outline"
+            >
               Cancel
             </Button>
-
+          </DialogClose>
+          <DialogClose asChild>
             <Button
               type="submit"
               variant="destructive"
-              onClick={() => {
-                onConfirm();
+              onClick={(e) => {
+                onConfirm(e);
               }}
             >
               Delete

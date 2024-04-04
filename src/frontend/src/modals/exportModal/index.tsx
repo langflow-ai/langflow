@@ -3,7 +3,12 @@ import EditFlowSettings from "../../components/EditFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
-import { EXPORT_DIALOG_SUBTITLE } from "../../constants/constants";
+import { API_WARNING_NOTICE_ALERT } from "../../constants/alerts_constants";
+import {
+  ALERT_SAVE_WITH_API,
+  EXPORT_DIALOG_SUBTITLE,
+  SAVE_WITH_API_CHECKBOX,
+} from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -51,12 +56,11 @@ const ExportModal = forwardRef(
               }}
             />
             <label htmlFor="terms" className="export-modal-save-api text-sm ">
-              Save with my API keys
+              {SAVE_WITH_API_CHECKBOX}
             </label>
           </div>
           <span className=" text-xs text-destructive ">
-            Caution: Uncheck this box only removes API keys from fields
-            specifically designated for API keys.
+            {ALERT_SAVE_WITH_API}
           </span>
         </BaseModal.Content>
 
@@ -77,8 +81,7 @@ const ExportModal = forwardRef(
                   description
                 );
                 setNoticeData({
-                  title:
-                    "Warning: Critical data, JSON file may include API keys.",
+                  title: API_WARNING_NOTICE_ALERT,
                 });
               } else
                 downloadFlow(
