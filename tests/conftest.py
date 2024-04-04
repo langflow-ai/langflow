@@ -10,6 +10,10 @@ import orjson
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
+
 from langflow.graph.graph.base import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
@@ -18,9 +22,6 @@ from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
-from sqlmodel import Session, SQLModel, create_engine, select
-from sqlmodel.pool import StaticPool
-from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -380,7 +381,7 @@ def get_starter_project(active_user):
     # once the client is created, we can get the starter project
     with session_getter(get_db_service()) as session:
         flow = session.exec(
-            select(Flow).where(Flow.folder == STARTER_FOLDER_NAME).where(Flow.name == "Basic Prompting (Ahoy World!)")
+            select(Flow).where(Flow.folder == STARTER_FOLDER_NAME).where(Flow.name == "Basic Prompting (Hello, world!)")
         ).first()
         if not flow:
             raise ValueError("No starter project found")
