@@ -11,6 +11,19 @@
 
 Make sure you have **Python 3.10** installed on your system.
 
+On Mac + Virtualenv: 
+```shell
+brew install python@3.10
+virtualenv -p /usr/bin/python3.10 langflow
+source langflow/bin/activate
+```
+
+With Anaconda:
+```shell
+conda create -n langflow python=3.10
+conda activate langflow
+```
+
 You can install Langflow with pip:
 
 ```shell
