@@ -222,11 +222,11 @@ publish_langflow:
 publish:
 	@echo 'Publishing the project'
 ifdef base
-	-make publish_base
+	make publish_base
 endif
 
 ifdef main
-	-make publish_langflow
+	make publish_langflow
 endif
 
 help:
