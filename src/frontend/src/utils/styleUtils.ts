@@ -315,6 +315,7 @@ export const nodeIconsLucide: iconsType = {
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
+  AirbyteLoader: AirbyteIcon,
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,

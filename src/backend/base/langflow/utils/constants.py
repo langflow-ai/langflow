@@ -66,8 +66,15 @@ DIRECT_TYPES = [
 
 LOADERS_INFO: List[Dict[str, Any]] = [
     {
+        "loader": "AirbyteLoader",
+        "name": "Airbyte",
+        "import": "langchain_airbyte.AirbyteLoader",
+        "defaultFor": ["jsonl"],
+        "allowdTypes": ["jsonl"],
+    },
+    {
         "loader": "AirbyteJSONLoader",
-        "name": "Airbyte JSON (.jsonl)",
+        "name": "Airbyte JSON (Deprecated)",
         "import": "langchain_community.document_loaders.AirbyteJSONLoader",
         "defaultFor": ["jsonl"],
         "allowdTypes": ["jsonl"],
