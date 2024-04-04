@@ -7,7 +7,7 @@ on:
     branches:
       - dev
     paths:
-      - "pyproject.toml"
+      - "src/backend/base/pyproject.toml"
   workflow_dispatch:
     inputs:
       force_release:
