@@ -7,7 +7,7 @@
 
 # 📦 Installation
 
-You can install Langflow from pip:
+You can install Langflow with pip:
 
 ```shell
 # Install the pre-release version
