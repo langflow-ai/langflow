@@ -62,6 +62,8 @@ langchain-anthropic = "^0.1.4"
 langchain-astradb = "^0.1.0"
 nest-asyncio = "^1.6.0"
 emoji = "^2.11.0"
+cryptography = "^42.0.5"
+langchain-openai = "^0.1.1"
 
 
 [tool.poetry.group.dev.dependencies]
