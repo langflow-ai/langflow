@@ -1,4 +1,4 @@
-name: pre-release-base
+name: Langflow Base Pre-release
 
 on:
   pull_request:
@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install poetry
-        run: pipx install poetry==$POETRY_VERSION && poetry self add poetry-monorepo-dependency-plugin
+        run: pipx install poetry==$POETRY_VERSION
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
@@ -61,7 +61,6 @@ jobs:
         with:
           context: .
           push: true
-          file: ./build_and_push.Dockerfile
+          file: ./build_and_push_base.Dockerfile
           tags: |
-            logspace/langflow:${{ steps.check-version.outputs.version }}
-            logspace/langflow:latest-dev
+            logspace/langflow:base-${{ steps.check-version.outputs.version }}
