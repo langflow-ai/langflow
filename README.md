@@ -27,8 +27,25 @@ python -m langflow run
 langflow run
 ```
 
+You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Logspace/Langflow-Preview?duplicate=true). Simply clone the space, to create your own Langflow workspace in minutes.
 
-You can also preview Langflow in [[HuggingFace Spaces](https://huggingface.co/spaces/Logspace/Langflow)](https://huggingface.co/spaces/Logspace/Langflow-Preview?duplicate=true). Simply clone the space, to create your own Langflow workspace in minutes.
+# 🎨 Creating Flows
+
+Creating flows with Langflow is easy. Simply drag components from the sidebar onto the canvas and connect them to start building your application.
+
+Explore by editing prompt parameters, grouping components into a single high-level component, and building your own Custom Components.
+
+Once you’re done, you can export your flow as a JSON file.
+
+Load the flow with:
+
+```python
+from langflow import load_flow_from_json
+
+flow = load_flow_from_json("path/to/flow.json")
+# Now you can use it
+flow("Hey, have you heard of Langflow?")
+```
 
 # 🖥️ Command Line Interface (CLI)
 
@@ -91,24 +108,6 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 <a href="https://render.com/deploy?repo=https://github.com/logspace-ai/langflow/tree/main">
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
 </a>
-
-# 🎨 Creating Flows
-
-Creating flows with Langflow is easy. Simply drag components from the sidebar onto the canvas and connect them to start building your application.
-
-Explore by editing prompt parameters, grouping components into a single high-level component, and building your own Custom Components.
-
-Once you’re done, you can export your flow as a JSON file.
-
-Load the flow with:
-
-```python
-from langflow import load_flow_from_json
-
-flow = load_flow_from_json("path/to/flow.json")
-# Now you can use it
-flow("Hey, have you heard of Langflow?")
-```
 
 # 👋 Contributing
 
