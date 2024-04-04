@@ -1,41 +1,42 @@
-import Admonition from '@theme/Admonition';
+import Admonition from "@theme/Admonition";
 
 # Vector Stores
 
 <Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-    <p>
-        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
-    </p>
+  <p>
+    We appreciate your understanding as we polish our documentation – it may
+    contain some rough edges. Share your feedback or report issues to help us
+    improve! 🛠️📝
+  </p>
 </Admonition>
 
+### Astra DB
 
-### AstraDB
-
-The `AstraDB` is a component for initializing an AstraDB Vector Store from Records. It facilitates the creation of AstraDB-based vector indexes for efficient document storage and retrieval.
+The `Astra DB` is a component for initializing an Astra DB Vector Store from Records. It facilitates the creation of Astra DB-based vector indexes for efficient document storage and retrieval.
 
 **Params**
 
 - **Input:** The input documents or records.
 
-- **Embedding:** The embedding model used by AstraDB.
+- **Embedding:** The embedding model used by Astra DB.
 
-- **Collection Name:** The name of the collection in AstraDB.
+- **Collection Name:** The name of the collection in Astra DB.
 
-- **Token:** The token for AstraDB.
+- **Token:** The token for Astra DB.
 
-- **API Endpoint:** The API endpoint for AstraDB.
+- **API Endpoint:** The API endpoint for Astra DB.
 
-- **Namespace:** The namespace in AstraDB.
+- **Namespace:** The namespace in Astra DB.
 
-- **Metric:** The metric to use in AstraDB.
+- **Metric:** The metric to use in Astra DB.
 
-- **Batch Size:** The batch size for AstraDB.
+- **Batch Size:** The batch size for Astra DB.
 
-- **Bulk Insert Batch Concurrency:** The bulk insert batch concurrency for AstraDB.
+- **Bulk Insert Batch Concurrency:** The bulk insert batch concurrency for Astra DB.
 
-- **Bulk Insert Overwrite Concurrency:** The bulk insert overwrite concurrency for AstraDB.
+- **Bulk Insert Overwrite Concurrency:** The bulk insert overwrite concurrency for Astra DB.
 
-- **Bulk Delete Concurrency:** The bulk delete concurrency for AstraDB.
+- **Bulk Delete Concurrency:** The bulk delete concurrency for Astra DB.
 
 - **Setup Mode:** The setup mode for the vector store.
 
@@ -49,16 +50,16 @@ The `AstraDB` is a component for initializing an AstraDB Vector Store from Recor
 
 <Admonition type="note" title="Note">
     <p>
-        Ensure that the required AstraDB token and API endpoint are properly configured.
+        Ensure that the required Astra DB token and API endpoint are properly configured.
     </p>
 
 </Admonition>
 
 ---
 
-### AstraDB Search
+### Astra DB Search
 
-The `AstraDBSearch` is a component for searching an existing AstraDB Vector Store for similar documents. It extends the functionality of the `AstraDB` component to provide efficient document retrieval based on similarity metrics.
+The `Astra DBSearch` is a component for searching an existing Astra DB Vector Store for similar documents. It extends the functionality of the `Astra DB` component to provide efficient document retrieval based on similarity metrics.
 
 **Params**
 
@@ -66,25 +67,25 @@ The `AstraDBSearch` is a component for searching an existing AstraDB Vector Stor
 
 - **Input Value:** The input value to search for.
 
-- **Embedding:** The embedding model used by AstraDB.
+- **Embedding:** The embedding model used by Astra DB.
 
-- **Collection Name:** The name of the collection in AstraDB.
+- **Collection Name:** The name of the collection in Astra DB.
 
-- **Token:** The token for AstraDB.
+- **Token:** The token for Astra DB.
 
-- **API Endpoint:** The API endpoint for AstraDB.
+- **API Endpoint:** The API endpoint for Astra DB.
 
-- **Namespace:** The namespace in AstraDB.
+- **Namespace:** The namespace in Astra DB.
 
-- **Metric:** The metric to use in AstraDB.
+- **Metric:** The metric to use in Astra DB.
 
-- **Batch Size:** The batch size for AstraDB.
+- **Batch Size:** The batch size for Astra DB.
 
-- **Bulk Insert Batch Concurrency:** The bulk insert batch concurrency for AstraDB.
+- **Bulk Insert Batch Concurrency:** The bulk insert batch concurrency for Astra DB.
 
-- **Bulk Insert Overwrite Concurrency:** The bulk insert overwrite concurrency for AstraDB.
+- **Bulk Insert Overwrite Concurrency:** The bulk insert overwrite concurrency for Astra DB.
 
-- **Bulk Delete Concurrency:** The bulk delete concurrency for AstraDB.
+- **Bulk Delete Concurrency:** The bulk delete concurrency for Astra DB.
 
 - **Setup Mode:** The setup mode for the vector store.
 
@@ -118,7 +119,6 @@ The `Chroma` is a component designed for implementing a Vector Store using Chrom
 
 - **Server SSL Enabled (Optional):** Whether to enable SSL for the Chroma server.
 
-
 - **Input:** Input data for creating the Vector Store.
 
 - **Embedding:** The embeddings to use for the Vector Store.
@@ -128,7 +128,6 @@ For detailed documentation and integration guides, please refer to the [Chroma C
 ---
 
 ### Chroma Search
-
 
 The `ChromaSearch` is a component designed for searching a Chroma collection for similar documents. This component integrates with Chroma to facilitate efficient document retrieval based on similarity metrics.
 
@@ -154,7 +153,6 @@ The `ChromaSearch` is a component designed for searching a Chroma collection for
 
 - **Server SSL Enabled (Optional):** Whether SSL is enabled for the Chroma server.
 
-
 ---
 
 ### FAISS
@@ -170,7 +168,6 @@ The `FAISS` is a component designed for ingesting documents into a FAISS Vector 
 - **Folder Path:** The path to save the FAISS index. It will be relative to where Langflow is running.
 
 - **Index Name:** The name of the FAISS index.
-
 
 For detailed documentation and integration guides, please refer to the [FAISS Component Documentation](https://faiss.ai/index.html).
 
@@ -190,9 +187,7 @@ The `FAISSSearch` is a component for searching a FAISS Vector Store for similar 
 
 - **Index Name:** The name of the FAISS index.
 
-
 ---
-
 
 ### MongoDB Atlas
 
@@ -214,11 +209,8 @@ The `MongoDBAtlas` is a component used to construct a MongoDB Atlas Vector Searc
 
 - **Search Kwargs:** Additional search arguments for MongoDB Atlas.
 
-
 <Admonition type="note" title="Note">
-    <p>
-        Ensure that pymongo is installed to use MongoDB Atlas Vector Store.
-    </p>
+  <p>Ensure that pymongo is installed to use MongoDB Atlas Vector Store.</p>
 </Admonition>
 
 ---
@@ -245,7 +237,6 @@ The `MongoDBAtlasSearch` is a component for searching a MongoDB Atlas Vector Sto
 
 - **Search Kwargs:** Additional search arguments for MongoDB Atlas.
 
-
 ---
 
 ### PGVector
@@ -262,14 +253,13 @@ The `PGVector` is a component for implementing a Vector Store using PostgreSQL. 
 
 - **Table:** The name of the table in the PostgreSQL database.
 
-
 For detailed documentation and integration guides, please refer to the [PGVector Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/pgvector).
 
-
 <Admonition type="note" title="Note">
-    <p>
-        Ensure that the required PostgreSQL server is accessible and properly configured.
-    </p>
+  <p>
+    Ensure that the required PostgreSQL server is accessible and properly
+    configured.
+  </p>
 </Admonition>
 
 ---
@@ -289,7 +279,6 @@ The `PGVectorSearch` is a component for searching a PGVector Store for similar d
 - **Table:** The name of the table in the PostgreSQL database.
 
 - **Search Type:** The type of search to perform (e.g., "Similarity", "MMR").
-
 
 ---
 
@@ -315,11 +304,11 @@ The `Pinecone` is a component used to construct a Pinecone wrapper from Records.
 
 - **Pool Threads:** The number of threads to use for Pinecone.
 
-
 <Admonition type="note" title="Note">
-    <p>
-        Ensure that the required Pinecone API key and environment are properly configured.
-    </p>
+  <p>
+    Ensure that the required Pinecone API key and environment are properly
+    configured.
+  </p>
 </Admonition>
 
 ---
@@ -347,7 +336,6 @@ The `PineconeSearch` is a component used to search a Pinecone Vector Store for s
 - **Search Kwargs:** Additional search keyword arguments for Pinecone.
 
 - **Pool Threads:** The number of threads to use for Pinecone.
-
 
 ---
 
@@ -462,9 +450,11 @@ The `Redis` is a component for implementing a Vector Store using Redis. It provi
 For detailed documentation, please refer to the [Redis Documentation](https://python.langchain.com/docs/integrations/vectorstores/redis).
 
 <Admonition type="note" title="Note">
-    <p>
-        Ensure that the required Redis server connection URL and index name are properly configured. If no documents are provided, a schema must be provided.
-    </p>
+  <p>
+    Ensure that the required Redis server connection URL and index name are
+    properly configured. If no documents are provided, a schema must be
+    provided.
+  </p>
 </Admonition>
 
 ---
@@ -512,9 +502,10 @@ The `Supabase` is a component for initializing a Supabase Vector Store from text
 - **Table Name:** The name of the table in Supabase (advanced).
 
 <Admonition type="note" title="Note">
-    <p>
-        Ensure that the required Supabase service key, Supabase URL, and table name are properly configured.
-    </p>
+  <p>
+    Ensure that the required Supabase service key, Supabase URL, and table name
+    are properly configured.
+  </p>
 </Admonition>
 
 ---
@@ -562,9 +553,10 @@ The `Vectara` is a component for implementing a Vector Store using Vectara.
 For detailed documentation and integration guides, please refer to the [Vectara Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/vectara).
 
 <Admonition type="note" title="Note">
-    <p>
-        If `inputs` are provided, they will be upserted to the corpus. If `files_url` are provided, Vectara will process the files from the URLs.
-    </p>
+  <p>
+    If `inputs` are provided, they will be upserted to the corpus. If
+    `files_url` are provided, Vectara will process the files from the URLs.
+  </p>
 </Admonition>
 
 ---
@@ -586,6 +578,7 @@ The `VectaraSearch` is a component for searching a Vectara Vector Store for simi
 - **Vectara API Key:** The API key for Vectara.
 
 - **Files Url:** The URL(s) of the file(s) to be used for initializing the Vectara Vector Store (optional).
+
 ---
 
 ### Weaviate
@@ -613,9 +606,14 @@ The `Weaviate` is a component for implementing a Vector Store using Weaviate.
 For detailed documentation and integration guides, please refer to the [Weaviate Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/weaviate).
 
 <Admonition type="note" title="Note">
-    <p>
-        Before using the Weaviate Vector Store component, ensure that you have a Weaviate instance running and accessible at the specified URL. Additionally, make sure to provide the correct API key for authentication if required. Adjust the index name, text key, and attributes according to your dataset and indexing requirements. Finally, ensure that the provided embeddings are compatible with Weaviate's requirements.
-    </p>
+  <p>
+    Before using the Weaviate Vector Store component, ensure that you have a
+    Weaviate instance running and accessible at the specified URL. Additionally,
+    make sure to provide the correct API key for authentication if required.
+    Adjust the index name, text key, and attributes according to your dataset
+    and indexing requirements. Finally, ensure that the provided embeddings are
+    compatible with Weaviate's requirements.
+  </p>
 </Admonition>
 
 ---
