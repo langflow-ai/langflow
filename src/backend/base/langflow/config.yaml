@@ -12,6 +12,8 @@ agents:
   SQLAgent:
     documentation: ""
 documentloaders:
+  AirbyteLoader:
+    documentation: "https://python.langchain.com/docs/integrations/providers/airbyte/#airbyteloader"
   AirbyteJSONLoader:
     documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/airbyte_json"
   CoNLLULoader:
