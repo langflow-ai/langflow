@@ -28,7 +28,7 @@ langflow run
 ```
 
 
-You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Logspace/Langflow). Simply clone the space, to create your own Langflow workspace in minutes.
+You can also preview Langflow in [[HuggingFace Spaces](https://huggingface.co/spaces/Logspace/Langflow)](https://huggingface.co/spaces/Logspace/Langflow-Preview?duplicate=true). Simply clone the space, to create your own Langflow workspace in minutes.
 
 # 🖥️ Command Line Interface (CLI)
 
