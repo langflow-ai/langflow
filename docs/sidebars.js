@@ -4,7 +4,15 @@ module.exports = {
       type: "category",
       label: " Getting Started",
       collapsed: false,
-      items: ["index", "getting-started/cli", "getting-started/creating-flows"],
+      items: [
+        "index",
+        "getting-started/cli",
+        "getting-started/basic-prompting",
+        "getting-started/document-qa",
+        "getting-started/blog-writer",
+        "getting-started/memory-chatbot",
+        "getting-started/rag-with-astradb",
+      ],
     },
     {
       type: "category",
@@ -13,18 +21,6 @@ module.exports = {
       items: [
         "whats-new/a-new-chapter-langflow",
         "whats-new/migrating-to-one-point-zero",
-      ],
-    },
-    {
-      type: "category",
-      label: " Starter Projects",
-      collapsed: false,
-      items: [
-        "starter-projects/rag-with-astradb",
-        "starter-projects/basic-prompting",
-        "starter-projects/memory-chatbot",
-        "starter-projects/document-qa",
-        "starter-projects/blog-writer",
       ],
     },
     {
