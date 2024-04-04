@@ -25,9 +25,7 @@ Then, run Langflow with:
 
 ```shell
 python -m langflow run
-
 # or
-
 langflow run
 ```
 
