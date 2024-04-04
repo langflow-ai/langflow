@@ -41,14 +41,12 @@ The Code button shows snippets to use your flow as a Python object or an API.
 
 **Python Code**
 
-Through the Langflow package, you can load a flow from a JSON file and use it as a LangChain object.
+Through the Langflow package, you can run your flow from a JSON file. The example below shows how to run a flow from a JSON file.
 
 ```python
-from langflow.load import load_flow_from_json
+from langflow.load import run_flow_from_json
 
-flow = load_flow_from_json("path/to/flow.json")
-# Now you can use it like any chain
-flow("Hey, have you heard of Langflow?")
+results = run_flow_from_json("path/to/flow.json", input_value="Hello, World!")
 ```
 
 **API**
