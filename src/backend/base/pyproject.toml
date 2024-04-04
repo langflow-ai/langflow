@@ -64,7 +64,7 @@ nest-asyncio = "^1.6.0"
 emoji = "^2.11.0"
 cryptography = "^42.0.5"
 langchain-openai = "^0.1.1"
-
+langchain-airbyte = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.21.1"
