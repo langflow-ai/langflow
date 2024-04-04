@@ -214,11 +214,9 @@ lock:
 	poetry lock
 
 publish_base:
-	make build_langflow_base
 	cd src/backend/base && poetry publish
 
 publish_langflow:
-	make build_langflow
 	poetry publish
 
 publish:
