@@ -47,7 +47,7 @@ module.exports = {
         // "migration/connecting-output-components",
         // "migration/renaming-and-editing-components",
         // "migration/passing-tweaks-and-inputs",
-        // "migration/global-variables",
+        "migration/global-variables",
         // "migration/experimental-components",
         // "migration/state-management",
       ],
