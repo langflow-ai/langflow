@@ -4,6 +4,7 @@ import inspect
 import types
 from enum import Enum
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
+import os
 
 from loguru import logger
 
@@ -305,7 +306,7 @@ class Vertex:
                 if file_path := field.get("file_path"):
                     storage_service = get_storage_service()
                     try:
-                        flow_id, file_name = file_path.split("/")
+                        flow_id, file_name = os.path.split(file_path)
                         full_path = storage_service.build_full_path(flow_id, file_name)
                     except ValueError as e:
                         if "too many values to unpack" in str(e):
