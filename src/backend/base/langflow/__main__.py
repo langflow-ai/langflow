@@ -2,26 +2,25 @@ import platform
 import socket
 import sys
 import time
-import webbrowser
 from pathlib import Path
 from typing import Optional
 
+import click
 import httpx
 import typer
 from dotenv import load_dotenv
-from multiprocess import Process, cpu_count  # type: ignore
-from rich import box
-from rich import print as rprint
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-
 from langflow.main import setup_app
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service
 from langflow.services.utils import initialize_services, initialize_settings_service
 from langflow.utils.logger import configure, logger
+from multiprocess import Process, cpu_count  # type: ignore
 from packaging import version as pkg_version
+from rich import box
+from rich import print as rprint
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
 console = Console()
 
@@ -100,8 +99,12 @@ def update_settings(
 
 @app.command()
 def run(
-    host: str = typer.Option("127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"),
-    workers: int = typer.Option(1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"),
+    host: str = typer.Option(
+        "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
+    ),
+    workers: int = typer.Option(
+        1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
+    ),
     timeout: int = typer.Option(300, help="Worker timeout in seconds."),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
     components_path: Optional[Path] = typer.Option(
@@ -109,11 +112,19 @@ def run(
         help="Path to the directory containing custom components.",
         envvar="LANGFLOW_COMPONENTS_PATH",
     ),
-    config: str = typer.Option(Path(__file__).parent / "config.yaml", help="Path to the configuration file."),
+    config: str = typer.Option(
+        Path(__file__).parent / "config.yaml", help="Path to the configuration file."
+    ),
     # .env file param
-    env_file: Path = typer.Option(None, help="Path to the .env file containing environment variables."),
-    log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
-    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"),
+    env_file: Path = typer.Option(
+        None, help="Path to the .env file containing environment variables."
+    ),
+    log_level: str = typer.Option(
+        "critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
+    ),
+    log_file: Path = typer.Option(
+        "logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"
+    ),
     cache: Optional[str] = typer.Option(
         envvar="LANGFLOW_LANGCHAIN_CACHE",
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
@@ -190,22 +201,30 @@ def run(
     else:
         # Run using gunicorn on Linux
         run_on_mac_or_linux(host, port, log_level, options, app, open_browser)
+    if open_browser:
+        click.launch(f"http://{host}:{port}")
 
 
-def run_on_mac_or_linux(host, port, log_level, options, app, open_browser=True):
-    webapp_process = Process(target=run_langflow, args=(host, port, log_level, options, app))
-    webapp_process.start()
+def wait_for_server_ready(host, port):
+    """
+    Wait for the server to become ready by polling the health endpoint.
+    """
     status_code = 0
     while status_code != 200:
         try:
             status_code = httpx.get(f"http://{host}:{port}/health").status_code
-
         except Exception:
             time.sleep(1)
 
+
+def run_on_mac_or_linux(host, port, log_level, options, app):
+    webapp_process = Process(
+        target=run_langflow, args=(host, port, log_level, options, app)
+    )
+    webapp_process.start()
+    wait_for_server_ready(host, port)
+
     print_banner(host, port)
-    if open_browser:
-        webbrowser.open(f"http://{host}:{port}")
 
 
 def run_on_windows(host, port, log_level, options, app):
@@ -288,14 +307,23 @@ def build_new_version_notice(current_version: str, package_name: str):
         suffix_letter = get_letter_from_version(current_version)
         number_version = current_version.split(suffix_letter)[0]
         latest_version = sorted(
-            package_info["releases"].keys(), key=lambda x: x.split(suffix_letter)[-1] and number_version in x
+            package_info["releases"].keys(),
+            key=lambda x: x.split(suffix_letter)[-1] and number_version in x,
         )[-1]
         if version_is_prerelease(latest_version) and latest_version != current_version:
-            return True, f"A new pre-release version of {package_name} is available: {latest_version}"
+            return (
+                True,
+                f"A new pre-release version of {package_name} is available: {latest_version}",
+            )
     else:
-        latest_version = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()["info"]["version"]
+        latest_version = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()[
+            "info"
+        ]["version"]
         if not version_is_prerelease(latest_version):
-            return False, f"A new version of {package_name} is available: {latest_version}"
+            return (
+                False,
+                f"A new version of {package_name} is available: {latest_version}",
+            )
     return False, ""
 
 
@@ -314,7 +342,9 @@ def fetch_latest_version(package_name: str, include_prerelease: bool) -> str:
 
 def build_version_notice(current_version: str, package_name: str) -> str:
     latest_version = fetch_latest_version(package_name, is_prerelease(current_version))
-    if latest_version and pkg_version.parse(current_version) < pkg_version.parse(latest_version):
+    if latest_version and pkg_version.parse(current_version) < pkg_version.parse(
+        latest_version
+    ):
         release_type = "pre-release" if is_prerelease(latest_version) else "version"
         return f"A new {release_type} of {package_name} is available: {latest_version}"
     return ""
@@ -350,7 +380,8 @@ def print_banner(host: str, port: int):
         is_pre_release |= is_prerelease(langflow_version)  # Update pre-release status
         notice = build_version_notice(langflow_version, "langflow")
         notice = stylize_text(notice, "langflow", is_pre_release)
-        notices.append(notice)
+        if notice:
+            notices.append(notice)
         package_names.append("langflow")
         package_name = "Langflow"
     except ImportError:
@@ -362,10 +393,13 @@ def print_banner(host: str, port: int):
             from importlib import metadata
 
             langflow_base_version = metadata.version("langflow-base")
-            is_pre_release |= is_prerelease(langflow_base_version)  # Update pre-release status
+            is_pre_release |= is_prerelease(
+                langflow_base_version
+            )  # Update pre-release status
             notice = build_version_notice(langflow_base_version, "langflow-base")
             notice = stylize_text(notice, "langflow-base", is_pre_release)
-            notices.append(notice)
+            if notice:
+                notices.append(notice)
             package_names.append("langflow-base")
             package_name = "Langflow Base"
         except ImportError as e:
@@ -380,7 +414,9 @@ def print_banner(host: str, port: int):
         notices.append(f"Run '{pip_command}' to update.")
 
     styled_notices = [f"[bold]{notice}[/bold]" for notice in notices if notice]
-    styled_package_name = stylize_text(package_name, package_name, any("pre-release" in notice for notice in notices))
+    styled_package_name = stylize_text(
+        package_name, package_name, any("pre-release" in notice for notice in notices)
+    )
 
     title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
     info_text = "Collaborate, and contribute at our [bold][link=https://github.com/logspace-ai/langflow]GitHub Repo[/link][/bold] :rocket:"
@@ -423,8 +459,12 @@ def run_langflow(host, port, log_level, options, app):
 @app.command()
 def superuser(
     username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
-    password: str = typer.Option(..., prompt=True, hide_input=True, help="Password for the superuser."),
-    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    password: str = typer.Option(
+        ..., prompt=True, hide_input=True, help="Password for the superuser."
+    ),
+    log_level: str = typer.Option(
+        "error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
+    ),
 ):
     """
     Create a superuser.
