@@ -31,7 +31,8 @@ You can install **Langflow** with [pipx](https://pipx.pypa.io/stable/installatio
 Pipx can fetch the missing Python version for you, but you can also install it manually.
 
 ```bash
-pip install langflow -U
+# Remember to check if you have Python 3.10 installed
+python -m pip install langflow -U
 # or
 pipx install langflow --python python3.10 --fetch-missing-python
 ```
@@ -39,7 +40,7 @@ pipx install langflow --python python3.10 --fetch-missing-python
 Or you can install a pre-release version using:
 
 ```bash
-pip install langflow --pre --force-reinstall
+python -m pip install langflow --pre --force-reinstall
 # or
 pipx install langflow --python python3.10 --fetch-missing-python --pip-args="--pre --force-reinstall"
 ```
@@ -105,4 +106,7 @@ langflow --help
 
 To get you learning more about what's new and why you should be excited about Langflow 1.0,
 go to [A new chapter for Langflow](/whats-new/a-new-chapter-langflow) and also come back often
-to check out our [migration guides](/whats-new/migrating-to-one-point-zero) as we release them.
+to check out our [migration guides](/whats-new/migrating-to-one-point-zero) as we release them.import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
