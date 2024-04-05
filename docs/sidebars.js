@@ -29,6 +29,7 @@ module.exports = {
       label: " Migration Guides",
       collapsed: false,
       items: [
+        "migration/possible-installation-issues",
         // "migration/flow-of-data",
         "migration/inputs-and-outputs",
         // "migration/supported-frameworks",
