@@ -32,7 +32,7 @@
       "args": [
         "run",
         "--path",
-        "${workspaceFolder}/src/backend/langflow/frontend"
+        "${workspaceFolder}/src/backend/base/langflow/frontend"
       ],
       "jinja": true,
       "justMyCode": false,
