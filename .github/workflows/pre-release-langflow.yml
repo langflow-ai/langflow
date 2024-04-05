@@ -35,8 +35,6 @@ jobs:
         with:
           python-version: "3.10"
           cache: "poetry"
-      - name: Build project for distribution
-        run: make build main=true
       - name: Check Version
         id: check-version
         run: |
@@ -48,6 +46,8 @@ jobs:
           else
             echo version=$version >> $GITHUB_OUTPUT
           fi
+      - name: Build project for distribution
+        run: make build main=true
       - name: Display pyproject.toml langflow-base Version
         run: cat pyproject.toml | grep langflow-base
       - name: Publish to PyPI
