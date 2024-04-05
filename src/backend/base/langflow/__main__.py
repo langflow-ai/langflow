@@ -21,6 +21,7 @@ from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service
 from langflow.services.utils import initialize_services, initialize_settings_service
 from langflow.utils.logger import configure, logger
+from packaging import version as pkg_version
 
 console = Console()
 
@@ -298,58 +299,95 @@ def build_new_version_notice(current_version: str, package_name: str):
     return False, ""
 
 
-def print_banner(host, port):
-    release_color = ["#6e42f5"]
-    pre_release_color = ["#42a7f5"]
+def is_prerelease(version: str) -> bool:
+    return "a" in version or "b" in version or "rc" in version
+
+
+def fetch_latest_version(package_name: str, include_prerelease: bool) -> str:
+    response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
+    versions = response.json()["releases"].keys()
+    valid_versions = [v for v in versions if include_prerelease or not is_prerelease(v)]
+    if not valid_versions:
+        return None  # Handle case where no valid versions are found
+    return max(valid_versions, key=lambda v: pkg_version.parse(v))
+
+
+def build_version_notice(current_version: str, package_name: str) -> str:
+    latest_version = fetch_latest_version(package_name, is_prerelease(current_version))
+    if latest_version and pkg_version.parse(current_version) < pkg_version.parse(latest_version):
+        release_type = "pre-release" if is_prerelease(latest_version) else "version"
+        return f"A new {release_type} of {package_name} is available: {latest_version}"
+    return ""
+
+
+def generate_pip_command(package_names, is_pre_release):
+    """
+    Generate the pip install command based on the packages and whether it's a pre-release.
+    """
+    base_command = "pip install"
+    if is_pre_release:
+        return f"{base_command} {' '.join(package_names)} -U --pre"
+    else:
+        return f"{base_command} {' '.join(package_names)} -U"
+
+
+def stylize_text(text: str, to_style: str, is_prerelease: bool) -> str:
+    color = "#42a7f5" if is_prerelease else "#6e42f5"
+    # return "".join(f"[{color}]{char}[/]" for char in text)
+    styled_text = f"[{color}]{to_style}[/]"
+    return text.replace(to_style, styled_text)
+
+
+def print_banner(host: str, port: int):
+    notices = []
+    package_names = []  # Track package names for pip install instructions
+    is_pre_release = False  # Track if any package is a pre-release
+    package_name = ""
+
     try:
-        from langflow.version import __version__  # type: ignore
+        from langflow.version import __version__ as langflow_version
 
-        package_name = "langflow"
-        version = __version__
-
-        word = "Langflow"
-        is_prerelease, new_version_notice = build_new_version_notice(version, package_name)
-
+        is_pre_release |= is_prerelease(langflow_version)  # Update pre-release status
+        notice = build_version_notice(langflow_version, "langflow")
+        notice = stylize_text(notice, "langflow", is_pre_release)
+        notices.append(notice)
+        package_names.append("langflow")
+        package_name = "Langflow"
     except ImportError:
-        from importlib import metadata
+        langflow_version = None
 
-        package_name = "langflow-base"
-        version = metadata.version(package_name)
-        word = "Langflow Base"
-        is_prerelease, new_version_notice = build_new_version_notice(version, package_name)
+    # Attempt to handle langflow-base similarly
+    if langflow_version is None:  # This means langflow.version was not imported
+        try:
+            from importlib import metadata
 
-    styled_word = ""
-    styled_package_name = ""
-    for i, char in enumerate(word):
-        if is_prerelease:
-            color = pre_release_color[i % len(pre_release_color)]
-        else:
-            color = release_color[i % len(release_color)]
-        styled_word += f"[{color}]{char}[/]"
+            langflow_base_version = metadata.version("langflow-base")
+            is_pre_release |= is_prerelease(langflow_base_version)  # Update pre-release status
+            notice = build_version_notice(langflow_base_version, "langflow-base")
+            notice = stylize_text(notice, "langflow-base", is_pre_release)
+            notices.append(notice)
+            package_names.append("langflow-base")
+            package_name = "Langflow Base"
+        except ImportError as e:
+            logger.exception(e)
+            raise e
 
-    for i, char in enumerate(iterable=package_name):
-        if is_prerelease:
-            color = pre_release_color[i % len(pre_release_color)]
-        else:
-            color = release_color[i % len(release_color)]
-        styled_package_name += f"[{color}]{char}[/]"
-    new_version_notice = f"[bold]{new_version_notice}[/bold]" if new_version_notice else ""
-    new_version_notice = new_version_notice.replace(package_name, styled_package_name)
+    # Generate pip command based on the collected data
+    pip_command = generate_pip_command(package_names, is_pre_release)
 
-    # Title with emojis and gradient text
-    title = (
-        f"[bold]Welcome to :chains: {styled_word} {version}[/bold]\n"
-        f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
-    )
-    info_text = (
-        "Collaborate, and contribute at our "
-        "[bold][link=https://github.com/logspace-ai/langflow]GitHub Repo[/link][/bold] :rocket:"
-    )
+    # Add pip install command to notices if any package needs an update
+    if notices:
+        notices.append(f"Run '{pip_command}' to update.")
 
-    # Create a panel with the title and the info text, and a border around it
-    panel = Panel(f"{title}\n\n{new_version_notice}\n\n{info_text}", box=box.ROUNDED, border_style="blue", expand=False)
+    styled_notices = [f"[bold]{notice}[/bold]" for notice in notices if notice]
+    styled_package_name = stylize_text(package_name, package_name, any("pre-release" in notice for notice in notices))
 
-    # Print the banner with a separator line before and after
+    title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
+    info_text = "Collaborate, and contribute at our [bold][link=https://github.com/logspace-ai/langflow]GitHub Repo[/link][/bold] :rocket:"
+    access_link = f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
+
+    panel_content = "\n\n".join([title, *styled_notices, info_text, access_link])
+    panel = Panel(panel_content, box=box.ROUNDED, border_style="blue", expand=False)
     rprint(panel)
 
 
