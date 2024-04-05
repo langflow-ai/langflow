@@ -75,3 +75,4 @@ jobs:
           file: ./build_and_push.Dockerfile
           tags: |
             logspace/langflow:${{ steps.check-version.outputs.version }}
+            logspace/langflow:1.0-alpha
