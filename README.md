@@ -9,24 +9,21 @@
 
 # 📦 Installation
 
-Make sure you have **Python 3.10** installed on your system.
-
 You can install Langflow with pip:
 
 ```shell
+# Make sure you have Python 3.10 installed on your system.
 # Install the pre-release version
-pip install langflow --pre --force-reinstall
+python -m pip install langflow --pre --force-reinstall
 
 # or stable version
-pip install langflow -U
+python -m pip install langflow -U
 ```
 
 Then, run Langflow with:
 
 ```shell
 python -m langflow run
-# or
-langflow run
 ```
 
 You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Logspace/Langflow-Preview). [Clone the space using this link](https://huggingface.co/spaces/Logspace/Langflow-Preview?duplicate=true), to create your own Langflow workspace in minutes.
