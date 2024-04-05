@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD030 -->
 
-# [![Langflow](https://github.com/logspace-ai/langflow/blob/dev/docs/static/img/new_langflow_demo.gif)](https://www.langflow.org)
+# [![Langflow](https://github.com/logspace-ai/langflow/blob/dev/docs/static/img/hero.png)](https://www.langflow.org)
 ### [Langflow](https://www.langflow.org) is a new, visual way to build, iterate and deploy AI apps.
 
 # ⚡️ Documentation and Community
