@@ -45,6 +45,14 @@ python -m pip install langflow --pre --force-reinstall
 pipx install langflow --python python3.10 --fetch-missing-python --pip-args="--pre --force-reinstall"
 ```
 
+<Admonition type="tip">
+  <p>
+    Please, check out our [Possible Installation Issues
+    section](/migration/possible-installation-issues) if you encounter any
+    problems.
+  </p>
+</Admonition>
+
 We recommend using --force-reinstall to ensure you have the latest version of Langflow and its dependencies.
 
 ### ⛓️ Running Langflow
@@ -52,7 +60,7 @@ We recommend using --force-reinstall to ensure you have the latest version of La
 Langflow can be run in a variety of ways, including using the command-line interface (CLI) or HuggingFace Spaces.
 
 ```bash
-langflow run # or langflow --help
+python -m langflow run # or langflow --help
 ```
 
 #### 🤗 HuggingFace Spaces
@@ -93,7 +101,7 @@ langflow run [OPTIONS]
 Find more information about the available options by running:
 
 ```bash
-langflow --help
+python -m langflow --help
 ```
 
 ## Find out more about 1.0
