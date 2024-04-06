@@ -106,7 +106,7 @@ export default function ComponentsComponent({
               <div className="flex-max-width h-full flex-col">
                 <div className="flex w-full flex-col gap-4">
                   <div className="grid w-full gap-4">
-                    Flows and components can be created using Langflow.
+                    Flows and components can be created using Boostle.
                   </div>
                   <div className="align-center flex w-full justify-center gap-1">
                     <span>New?</span>

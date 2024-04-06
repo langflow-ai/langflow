@@ -84,7 +84,7 @@ export default function SignUp(): JSX.Element {
         <div className="flex w-72 flex-col items-center justify-center gap-2">
           <span className="mb-4 text-5xl">⛓️</span>
           <span className="mb-6 text-2xl font-semibold text-primary">
-            Sign up to Langflow
+            Sign up to Boostle
           </span>
           <div className="mb-3 w-full">
             <Form.Field name="username">
