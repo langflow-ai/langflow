@@ -22,3 +22,65 @@ The `MultiQueryRetriever` component automates the process of generating multiple
 - **Prompt:** Prompt to represent a schema for an LLM.
 - **Retriever:** The retriever used to fetch documents.
 - **parser_key:** This parameter is used to specify the key or attribute name of the parsed output that will be used for retrieval. It determines how the results from the language model are split into a list of queries. Defaults to `lines`, which means that the output from the language model will be split into a list of lines of text. This allows the retriever to retrieve relevant documents based on each line of text separately.
+
+### Amazon Kendra Retriever
+
+The `Amazon Kendra Retriever` is a component that utilizes the Amazon Kendra API to return documents. With its attribute filter and user context features, it can provide precise search results based on specific requirements.
+
+**Params**
+
+- **Attribute Filter:** Defines attributes used for filtering search results.
+- **Credentials Profile Name:** The name of the AWS credentials profile to use.
+- **Index ID:** The unique identifier of the Amazon Kendra index to search.
+- **Region Name:** The AWS region where the Kendra index is hosted.
+- **Top K:** The number of document results to return.
+- **User Context:** Additional user context to refine search results.
+
+---
+
+### Metal Retriever
+
+The `Metal Retriever` is a specialized component that uses the Metal API for document retrieval. This component is configured with parameters that facilitate the retrieval of documents based on a given query.
+
+**Params**
+
+- **API Key:** Your API key for accessing the Metal service.
+- **Client ID:** The client identifier for the Metal service.
+- **Index ID:** The unique identifier of the Metal index to search.
+- **Parameters:** Additional parameters to tailor the retrieval process.
+
+---
+
+### Vectara Self Query Retriever
+
+The `Vectara Self Query Retriever` component is designed to leverage the capabilities of Vectara for returning documents. It offers customization through several parameters that help tailor the retrieval to specific use cases.
+
+**Params**
+
+- **Vector Store:** The identifier for the Vectara vector store.
+- **LLM:** Language model used within the Vectara retrieval.
+- **Document Content Description:** Describes the content for retrieval.
+- **Metadata Field Info:** Metadata fields for more precise retrieval queries.
+
+---
+
+### VectorStore Retriever
+
+The `VectorStore Retriever` is a basic retriever that operates on a vector store. It's a simple yet effective way to retrieve documents based on vector similarity.
+
+**Params**
+
+- **Vector Store:** The identifier for the vector store from which to retrieve documents.
+
+---
+
+### MultiQueryRetriever
+
+The `MultiQueryRetriever` component automates the process of generating multiple queries, retrieves relevant documents for each query, and combines the results to provide a more extensive and diverse set of potentially relevant documents. This approach enhances the effectiveness of the retrieval process and helps overcome the limitations of traditional distance-based retrieval methods.
+
+**Params**
+
+- **LLM:** Language Model to use in the `MultiQueryRetriever`.
+- **Prompt:** Prompt to represent a schema for an LLM.
+- **Retriever:** The retriever used to fetch documents.
+- **parser_key:** This parameter is used to specify the key or attribute name of the parsed output that will be used for retrieval. It determines how the results from the language model are split into a list of queries. Defaults to `lines`, which means that the output from the language model will be split into a list of lines of text. This allows the retriever to retrieve relevant documents based on each line of text separately.
