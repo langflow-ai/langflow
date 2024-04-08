@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD030 -->
 
-# [![Langflow](https://github.com/logspace-ai/langflow/blob/dev/docs/static/img/hero.png)](https://www.langflow.org)
+# [![Langflow](https://github.com/langflow-ai/langflow/blob/dev/docs/static/img/hero.png)](https://www.langflow.org)
 
 ### [Langflow](https://www.langflow.org) is a new, visual way to build, iterate and deploy AI apps.
 
@@ -96,7 +96,7 @@ Follow our step-by-step guide to deploy Langflow on Google Cloud Platform (GCP) 
 
 Alternatively, click the **"Open in Cloud Shell"** button below to launch Google Cloud Shell, clone the Langflow repository, and start an **interactive tutorial** that will guide you through the process of setting up the necessary resources and deploying Langflow on your GCP project.
 
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/logspace-ai/langflow&working_dir=scripts/gcp&shellonly=true&tutorial=walkthroughtutorial_spot.md)
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/langflow-ai/langflow&working_dir=scripts/gcp&shellonly=true&tutorial=walkthroughtutorial_spot.md)
 
 ## Deploy on Railway
 
@@ -104,7 +104,7 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 
 ## Deploy on Render
 
-<a href="https://render.com/deploy?repo=https://github.com/logspace-ai/langflow/tree/main">
+<a href="https://render.com/deploy?repo=https://github.com/langflow-ai/langflow/tree/main">
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
 </a>
 
@@ -118,7 +118,7 @@ We welcome contributions from developers of all levels to our open-source projec
 
 # 🌟 Contributors
 
-[![langflow contributors](https://contrib.rocks/image?repo=logspace-ai/langflow)](https://github.com/logspace-ai/langflow/graphs/contributors)
+[![langflow contributors](https://contrib.rocks/image?repo=logspace-ai/langflow)](https://github.com/langflow-ai/langflow/graphs/contributors)
 
 # 📄 License
 

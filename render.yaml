@@ -4,7 +4,7 @@ services:
     name: langflow
     runtime: docker
     dockerfilePath: ./Dockerfile
-    repo: https://github.com/logspace-ai/langflow
+    repo: https://github.com/langflow-ai/langflow
     branch: main
     healthCheckPath: /health
     autoDeploy: false
