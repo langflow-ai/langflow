@@ -57,10 +57,15 @@ def read_variables(
     *,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
+    category: str,
 ):
     """Read all variables."""
     try:
-        variables = session.exec(select(Variable).where(Variable.user_id == current_user.id)).all()
+        stmt = select(Variable).where(Variable.user_id == current_user.id)
+        if category:
+            stmt = stmt.where(Variable.category == category)
+
+        variables = session.exec(stmt).all()
         return variables
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
