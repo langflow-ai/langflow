@@ -456,7 +456,7 @@ export function getWidgetCode(
   const inputs = buildInputs();
   let chat_input_field = getChatInputField(flowState);
 
-  return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@1.0_alpha/dist/build/static/js/bundle.min.js"></script>
+  return `<script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@1.0_alpha/dist/build/static/js/bundle.min.js"></script>
 
 <langflow-chat
   window_title="${flowName}"

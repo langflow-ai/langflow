@@ -9,11 +9,6 @@ import click
 import httpx
 import typer
 from dotenv import load_dotenv
-from langflow.main import setup_app
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, get_settings_service
-from langflow.services.utils import initialize_services, initialize_settings_service
-from langflow.utils.logger import configure, logger
 from multiprocess import Process, cpu_count  # type: ignore
 from packaging import version as pkg_version
 from rich import box
@@ -21,6 +16,14 @@ from rich import print as rprint
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+from langflow.main import setup_app
+from langflow.services.database.utils import session_getter
+from langflow.services.deps import get_db_service, get_settings_service
+from langflow.services.utils import initialize_services, initialize_settings_service
+from langflow.utils.logger import configure, logger
+                                     initialize_settings_service)
+from langflow.utils.logger import configure, logger
 
 console = Console()
 
@@ -419,7 +422,7 @@ def print_banner(host: str, port: int):
     )
 
     title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
-    info_text = "Collaborate, and contribute at our [bold][link=https://github.com/logspace-ai/langflow]GitHub Repo[/link][/bold] :rocket:"
+    info_text = "Collaborate, and contribute at our [bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :rocket:"
     access_link = f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
 
     panel_content = "\n\n".join([title, *styled_notices, info_text, access_link])
