@@ -248,7 +248,7 @@ export default function InputComponent({
           ></div>
         </>
       )}
-      <div className="absolute inset-y-0 right-3 flex items-center gap-2.5">
+      <div className={cn("absolute inset-y-0 right-3 flex items-center gap-2.5", disabled ? "cursor-not-allowed pointer-events-none" : "")}>
         {password && selectedOption === "" && (
           <button
             type="button"
