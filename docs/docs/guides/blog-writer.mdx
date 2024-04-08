@@ -1,0 +1,44 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+
+# Building chatbots with System Message
+
+## Overview
+
+
+The starter flow Blog Writer basically allows you to input URLs, texts, news documents, and it will write a blog based on that information.
+## Interactive Guide
+
+<iframe
+  src="https://app.tango.us/app/embed/f05bb3a7-4ceb-4b61-921f-628563b562f6?iframe=true"
+  sandbox="allow-scripts allow-top-navigation-by-user-activation allow-popups allow-same-origin"
+  security="restricted"
+  title="Step-by-Step Instructions to Customize and Build a Chatbot with custom System Message"
+  width="100%"
+  height="800px"
+  referrerpolicy="strict-origin-when-cross-origin"
+  frameborder="0"
+  webkitallowfullscreen="webkitallowfullscreen"
+  mozallowfullscreen="mozallowfullscreen"
+  allowfullscreen="allowfullscreen"
+></iframe>
+
+## Flow Overview
+- URL: Fetches content from one or more URLs. You'll notice there's a '+' option where you can add more URLs to the component. In this example, we've added two of these components to be connected to the references that will be created in the Prompt.
+
+- Text Input: The component has been renamed as 'Instructions'. Within it, basic blog writing instructions have been generated under the Value option, which will also be connected to a declared variable in the Prompt.
+
+- Prompt: In the Prompt, under the Template option, the variables 'reference_1' and 'reference_2' are declared, which received the URL components. The variable 'instructions' was also created, which receives the Text Input.
+
+- Model: In the OpenAI LLM, fill in the required fields marked by a red '*'. Note that almost everything is already filled in as default. The "OpenAI Key" option is empty, which means you'll have to input your OpenAI key to run the flow. In the Input option, you will receive the Prompt. The connection of the LLM will be with the Chat Output, which will display the information.
+
+- Chat Output: The Chat Output will display the interaction of the created flow in the interaction panel. Here, you can configure the name in the Sender Name field that will appear in the chat.
+
+
+Upon clicking "Run" the chat interface will open. Within it, you'll find the Interaction Panel, housing the Inputs created in the flow.
+
+By selecting the Inputs tab in the Interaction Panel, you'll encounter the Text Input containing the declared variable 'Instructions.' Clicking on it allows you to view and potentially modify the information of this component field.
+
+Returning to the right side of the screen, within the chat interface, clicking on the lightning bolt icon initiates the the flow run process. The output will then display the blog written based on the information inputted during the flow creation.
