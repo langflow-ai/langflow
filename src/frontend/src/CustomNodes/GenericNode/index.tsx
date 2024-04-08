@@ -444,6 +444,7 @@ export default function GenericNode({
                         onChange={setNodeName}
                         password={false}
                         blurOnEnter={true}
+                        id={`input-title-${data.node?.display_name}`}
                       />
                     </div>
                   ) : (
