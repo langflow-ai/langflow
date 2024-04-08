@@ -16,9 +16,11 @@ export default function InputGlobalComponent({
   onChange,
   setDb,
   multiline,
+  setPromptNodeClass,
   name,
   data,
   editNode = false,
+  id,
 }: InputGlobalComponentType): JSX.Element {
   const globalVariablesEntries = useGlobalVariablesStore(
     (state) => state.globalVariablesEntries
@@ -71,9 +73,12 @@ export default function InputGlobalComponent({
   }
   return (
     <InputComponent
-      id={"input-" + name}
+      id={id || ("input-" + name)}
       editNode={editNode}
       multiline={multiline}
+      setPromptNodeClass={setPromptNodeClass}
+      promptNodeClass={data.node}
+      readonly={data.node?.flow ? true : false}
       disabled={disabled}
       password={data.node?.template[name].password ?? false}
       value={data.node?.template[name].value ?? ""}

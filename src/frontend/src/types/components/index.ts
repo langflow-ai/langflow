@@ -12,7 +12,10 @@ export type InputComponentType = {
   disabled?: boolean;
   onChange?: (value: string) => void;
   password: boolean;
+  readonly?: boolean;
   multiline?: boolean;
+  setPromptNodeClass?: (value: APIClassType, code?: string) => void;
+  promptNodeClass?: APIClassType;
   required?: boolean;
   isForm?: boolean;
   editNode?: boolean;
@@ -76,8 +79,10 @@ export type InputGlobalComponentType = {
   disabled: boolean;
   onChange: (value: string) => void;
   multiline?: boolean;
+  setPromptNodeClass?: (value: APIClassType, code?: string) => void;
   setDb: (value: boolean) => void;
   name: string;
+  id?: string;
   data: NodeDataType;
   editNode?: boolean;
 };
