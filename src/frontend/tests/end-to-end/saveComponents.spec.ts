@@ -1,9 +1,6 @@
 import { Page, expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
-test.beforeEach(async ({ page }) => {
-  // await page.waitForTimeout(14000);
-  // test.setTimeout(120000);
-});
+
 test.describe("save component tests", () => {
   async function saveComponent(page: Page, pattern: RegExp, n: number) {
     for (let i = 0; i < n; i++) {
@@ -14,11 +11,11 @@ test.describe("save component tests", () => {
 
   /// <reference lib="dom"/>
   test("save group component tests", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("http:localhost:3000/");
     await page.locator('//*[@id="new-project-btn"]').click();
 
     await page.getByTestId("blank-flow").click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
 
     // Read your file into a buffer.
     const jsonContent = readFileSync(
@@ -37,7 +34,7 @@ test.describe("save component tests", () => {
       return dt;
     }, jsonContent);
 
-    page.waitForTimeout(2000);
+    page.waitForTimeout(1000);
 
     // Now dispatch
     await page.dispatchEvent(
@@ -85,15 +82,15 @@ test.describe("save component tests", () => {
     await page.getByTestId("title-Group").click();
     await page.getByTestId("icon-SaveAll").click();
 
-    const replaceButton = page.getByTestId("replace-button");
+    const replaceButton = await page.getByTestId("replace-button").isVisible();
 
     if (replaceButton) {
-      await replaceButton.click();
+      await page.getByTestId("replace-button").click();
     }
-
+    await page.getByTestId("extended-disclosure").click();
     await page.getByPlaceholder("Search").click();
     await page.getByPlaceholder("Search").fill("group");
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
 
     await page
       .getByTestId("saved_componentsGroup")
@@ -101,7 +98,17 @@ test.describe("save component tests", () => {
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
+    await page
+      .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+      .click();
 
+    await page
+      .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+      .click();
+
+    await page
+      .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+      .click();
     textArea = page.getByTestId("div-textarea-description");
     elementCountText = await textArea.count();
     if (elementCountText > 0) {

@@ -252,7 +252,12 @@ export default function ParameterComponent({
           nodeIconsLucide[item.family] ?? nodeIconsLucide["unknown"];
 
         return (
-          <div key={index}>
+          <div
+            key={index}
+            data-testid={`available-${left ? "input" : "output"}-${
+              item.family
+            }`}
+          >
             {index === 0 && (
               <span>{left ? INPUT_HANDLER_HOVER : OUTPUT_HANDLER_HOVER}</span>
             )}
@@ -276,10 +281,16 @@ export default function ParameterComponent({
                   }}
                 />
               </div>
-              <span className="ps-2 text-xs text-foreground">
+              <span
+                className="ps-2 text-xs text-foreground"
+                data-testid={`tooltip-${nodeNames[item.family] ?? "Other"}`}
+              >
                 {nodeNames[item.family] ?? "Other"}{" "}
                 {item?.display_name && item?.display_name?.length > 0 ? (
-                  <span className="text-xs">
+                  <span
+                    className="text-xs"
+                    data-testid={`tooltip-${item?.display_name}`}
+                  >
                     {" "}
                     {item.display_name === "" ? "" : " - "}
                     {item.display_name.split(", ").length > 2
@@ -296,7 +307,10 @@ export default function ParameterComponent({
                       : item.display_name}
                   </span>
                 ) : (
-                  <span className="text-xs">
+                  <span
+                    className="text-xs"
+                    data-testid={`tooltip-${item?.type}`}
+                  >
                     {" "}
                     {item.type === "" ? "" : " - "}
                     {item.type.split(", ").length > 2
@@ -319,7 +333,9 @@ export default function ParameterComponent({
       });
     } else {
       //@ts-ignore
-      refHtml.current = <span>{TOOLTIP_EMPTY}</span>;
+      refHtml.current = (
+        <span data-testid={`empty-tooltip-filter`}>{TOOLTIP_EMPTY}</span>
+      );
     }
   }
   // If optionalHandle is an empty list, then it is not an optional handle
@@ -343,6 +359,9 @@ export default function ParameterComponent({
             side={left ? "left" : "right"}
           >
             <Handle
+              data-test-id={`handle-${title.toLowerCase()}-${
+                left ? "target" : "source"
+              }`}
               type={left ? "target" : "source"}
               position={left ? Position.Left : Position.Right}
               key={
@@ -437,6 +456,9 @@ export default function ParameterComponent({
                 side={left ? "left" : "right"}
               >
                 <Handle
+                  data-test-id={`handle-${title.toLowerCase()}-${
+                    left ? "left" : "right"
+                  }`}
                   type={left ? "target" : "source"}
                   position={left ? Position.Left : Position.Right}
                   key={
@@ -482,6 +504,7 @@ export default function ParameterComponent({
                 }
               >
                 <InputListComponent
+                  componentName={name}
                   disabled={disabled}
                   value={
                     !data.node.template[name].value ||

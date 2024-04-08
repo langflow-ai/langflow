@@ -129,6 +129,7 @@ export default function StoreApiKeyModal({
 
               <Form.Submit asChild>
                 <Button
+                  data-testid="api-key-save-button-store"
                   className="mt-8"
                   onClick={() => {
                     handleSaveKey();

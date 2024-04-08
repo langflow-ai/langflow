@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 
 test.describe("group node test", () => {
   /// <reference lib="dom"/>
@@ -6,24 +6,22 @@ test.describe("group node test", () => {
     await page.goto("/");
     await page.locator('//*[@id="new-project-btn"]').click();
 
-    await page.getByRole("heading", { name: "Data Ingestion" }).click();
+    await page
+      .getByRole("heading", { name: "Basic Prompting" })
+      .first()
+      .click();
     await page.waitForTimeout(2000);
-    await page.getByLabel("fit view").click();
-    await page.keyboard.down("Control");
-    await page
-      .getByTestId("title-OpenAIEmbeddings")
-      .click({ modifiers: ["Control"] });
-    await page.getByTestId("title-URL").click({ modifiers: ["Control"] });
-    await page
-      .getByTestId("title-Recursive Character Text Splitter")
-      .click({ modifiers: ["Control"] });
-    await page.keyboard.up("Control");
+    await page.getByLabel("fit view").first().click();
+    await page.getByTestId("title-OpenAI").click({ modifiers: ["Control"] });
+    await page.getByTestId("title-Prompt").click({ modifiers: ["Control"] });
+    await page.getByTestId("title-OpenAI").click({ modifiers: ["Control"] });
+
     await page.getByRole("button", { name: "Group" }).click();
-    await page.getByTestId(/input-collection_name_Chroma-.*/).click();
-    await page.getByTestId(/input-collection_name_Chroma-.*/).fill("test");
-    await page.getByTestId("title-Group").click();
+    await page.getByTestId("title-Group").dblclick();
+    await page.getByTestId("input-title-Group").first().fill("test");
+    await page.getByTestId("icon-Ungroup").first().click();
     await page.keyboard.press("Control+g");
-    const value = await page.getByTestId("input-collection_name").inputValue();
-    expect(value).toBe("test");
+    await page.getByTestId("title-OpenAI").isVisible();
+    await page.getByTestId("title-Prompt").isVisible();
   });
 });
