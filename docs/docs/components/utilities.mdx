@@ -2,95 +2,141 @@ import Admonition from "@theme/Admonition";
 
 # Utilities
 
-<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-  <p>
-    We appreciate your understanding as we polish our documentation – it may
-    contain some rough edges. Share your feedback or report issues to help us
-    improve! 🛠️📝
-  </p>
-</Admonition>
-
 Utilities are a set of actions that can be used to perform common tasks in a flow. They are available in the **Utilities** section in the sidebar.
 
 ---
 
-### GET Request
+### Bing Search API Wrapper
 
-Make a GET request to the given URL.
+Wrapper for Bing Search API.
 
 **Params**
 
-- **URL:** The URL to make the request to. There can be more than one URL, in which case the request will be made to each URL in order.
-- **Headers:** A dictionary of headers to send with the request.
+- **Bing Search URL:** The URL for the Bing Search API. (Type: str)
+  
+- **Bing Subscription Key:** The subscription key for accessing the Bing Search API. (Type: str)
 
-**Output**
+- **Number of results:** Number of results to retrieve. (Type: int, Default: 10)
 
-- **List of Documents:** A list of Documents containing the JSON response from each request.
 
 ---
 
-### POST Request
+### Google Search API Wrapper
 
-Make a POST request to the given URL.
+Wrapper for Google Search API.
 
 **Params**
 
-- **URL:** The URL to make the request to.
-- **Headers:** A dictionary of headers to send with the request.
-- **Document:** The Document containing a JSON object to send with the request.
-
-**Output**
-
-- **Document:** The JSON response from the request as a Document.
+- **Google API Key:** The API key for accessing the Google Search API. (Type: str)
+  
+- **Google CSE ID:** The Custom Search Engine (CSE) ID for using Google Custom Search. (Type: str)
 
 ---
 
-### Update Request
+### Google Serper API Wrapper
 
-Make a PATCH or PUT request to the given URL.
+Wrapper around the Serper.dev Google Search API.
 
 **Params**
 
-- **URL:** The URL to make the request to.
-- **Headers:** A dictionary of headers to send with the request.
-- **Document:** The Document containing a JSON object to send with the request.
-- **Method:** The HTTP method to use for the request. Can be either `PATCH` or `PUT`.
+- **Result Key for Type:** Specifies the result key for different types of search results. (Type: dict)
 
-**Output**
-
-- **Document:** The JSON response from the request as a Document.
+- **Serper API Key:** The API key required for accessing the Serper.dev Google Search API. (Type: str)
 
 ---
 
 ### JSON Document Builder
 
-Build a Document containing a JSON object using a key and another Document page content.
+Builds a Document containing a JSON object using a key and another Document's page content.
 
 **Params**
 
 - **Key:** The key to use for the JSON object.
-- **Document:** The Document page to use for the JSON object.
+- **Document:** The Document from which to extract page content.
 
-**Output**
+Utilize this component to efficiently structure data within documents by converting page content into JSON format.
 
-- **List of Documents:** A list containing the Document with the JSON object.
+---
 
-## Unique ID Generator
+### Search Api
 
-Generates a unique identifier (UUID) for each instance it is invoked, providing a distinct and reliable identifier suitable for a variety of applications.
+Interacts with the SearchApi real-time search engine results API.
 
 **Params**
 
-- **Value:** This field displays the generated unique identifier (UUID). The UUID is generated dynamically for each instance of the component, ensuring uniqueness across different uses.
+- **Engine:** The search engine to use.
+- **Parameters:** The parameters to send with the request.
+- **API Key:** The API key to use with SearchApi.
 
-**Output**
+Use this component to integrate real-time search engine results from SearchApi into your workflow with ease.
 
-- Returns a unique identifier (UUID) as a string. This UUID is generated using Python's `uuid` module, ensuring that each identifier is unique and can be used as a reliable reference in your application.
-
-<Admonition type="note" title="Note">
+<Admonition type="info" title="Info">
     <p>
-        The Unique ID Generator is crucial for scenarios requiring distinct identifiers, such as session management, transaction tracking, or any context where different instances or entities must be uniquely identified. The generated UUID is provided as a hexadecimal string, offering a high level of uniqueness and security for identification purposes.
+        Detailed information about this API can be found in the [documentation](https://www.searchapi.io/docs/google)
     </p>
 </Admonition>
 
-For additional information and examples, please consult the [Langflow Components Custom Documentation](http://docs.langflow.org/components/custom).
+---
+
+### Searx Search Wrapper
+
+Wraps the Searx API for performing searches.
+
+**Params**
+
+- **Headers:** Custom headers to include in the request. Default: `{"Authorization": "Bearer <token>"}`.
+- **k:** The number of results to retrieve. Default: 10.
+- **Searx Host:** The URL of the Searx instance to use. Default: "https://searx.example.com".
+
+---
+
+### Serp API Wrapper
+
+Wraps the SerpAPI for accessing search engine results.
+
+**Params**
+
+- **SerpAPI API Key:** Your SerpAPI API key for authentication.
+- **Parameters:** Additional parameters to customize the search query. Default parameters include engine, google_domain, gl, and hl.
+
+---
+
+### SQL Database
+
+Enables interaction with a SQL database.
+
+**Params**
+
+- **URI:** The URI to the SQL database.
+
+---
+
+### Wikipedia API Wrapper
+
+Wrapper around the WikipediaAPI.
+
+**Params**
+
+- **Top K Results:** The maximum number of results to retrieve. (Default: 3)
+- **Language:** The language of the Wikipedia content. (Default: "en")
+- **Load All Available Meta:** Whether to load all available meta-information. (Default: False)
+- **Max Document Content Characters:** The maximum number of characters for document content. (Default: 4000)
+
+---
+
+### Wolfram Alpha API Wrapper
+
+Wrapper for Wolfram Alpha.
+
+**Params**
+
+- **App ID:** The API key for accessing Wolfram Alpha.
+
+
+
+
+
+
+
+
+
