@@ -16,32 +16,32 @@ import { Textarea } from "../ui/textarea";
 export default function AddNewVariableButton({ children }): JSX.Element {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
-  const [type, setType] = useState("");
+  const [category, setCategory] = useState("");
   const [open, setOpen] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const addGlobalVariable = useGlobalVariablesStore(
     (state) => state.addGlobalVariable
   );
   function handleSaveVariable() {
-    let data: { name: string; value: string; type?: string } = {
+    let data: { name: string; value: string; category?: string } = {
       name: key,
-      type,
+      category,
       value,
     };
     registerGlobalVariable(data)
       .then((res) => {
-        const { name, id, type } = res.data;
-        addGlobalVariable(name, id, type);
+        const { name, id, category } = res.data;
+        addGlobalVariable(name, id, category);
         setKey("");
         setValue("");
-        setType("");
+        setCategory("");
         setOpen(false);
       })
       .catch((error) => {
         let responseError = error as ResponseErrorDetailAPI;
         setErrorData({
           title: "Error creating variable",
-          list: [responseError.response.data.detail ?? "Unknown error"],
+          list: [JSON.stringify(responseError.response.data.detail) ?? "Unknown error"],
         });
       });
   }
@@ -70,15 +70,15 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             }}
             placeholder="Insert a name for the variable..."
           ></Input>
-          <Label>Type (optional)</Label>
+          <Label>Category (optional)</Label>
           <InputComponent
             setSelectedOption={(e) => {
-              setType(e);
+              setCategory(e);
             }}
-            selectedOption={type}
+            selectedOption={category}
             password={false}
             options={["Generic", "Credential"]}
-            placeholder="Choose a type for the variable..."
+            placeholder="Choose a category for the variable..."
           ></InputComponent>
           <Label>Value</Label>
           <Textarea

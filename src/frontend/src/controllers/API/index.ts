@@ -875,16 +875,16 @@ export async function getGlobalVariables(): Promise<{
 export async function registerGlobalVariable({
   name,
   value,
-  type,
+  category,
 }: {
   name: string;
   value: string;
-  type?: string;
-}): Promise<AxiosResponse<{ name: string; id: string; type: string }>> {
+  category?: string;
+}): Promise<AxiosResponse<{ name: string; id: string; category: string }>> {
   return await api.post(`${BASE_URL_API}variables/`, {
     name,
     value,
-    type,
+    category,
   });
 }
 
