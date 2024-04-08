@@ -66,7 +66,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Step-by-Step Guides",
+      label: "Extended Components",
       collapsed: false,
       items: ["guides/langfuse_integration"],
     },
