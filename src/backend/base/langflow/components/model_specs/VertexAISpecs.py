@@ -1,6 +1,6 @@
-from typing import Callable, Dict, Optional, Union
+from typing import Dict, Optional
 
-from langchain.llms import BaseLLM
+from langflow.field_typing import BaseLanguageModel
 from langchain_community.llms.vertexai import VertexAI
 
 from langflow.interface.custom.custom_component import CustomComponent
@@ -129,7 +129,7 @@ class VertexAIComponent(CustomComponent):
         top_p: float = 0.95,
         tuned_model_name: Optional[str] = None,
         verbose: bool = False,
-    ) -> Union[BaseLLM, Callable]:
+    ) -> BaseLanguageModel:
         return VertexAI(
             credentials=credentials,
             location=location,

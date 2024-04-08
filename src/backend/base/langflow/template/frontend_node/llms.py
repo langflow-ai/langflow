@@ -63,8 +63,8 @@ class LLMFrontendNode(FrontendNode):
             field.info = OPENAI_API_BASE_INFO
 
     def add_extra_base_classes(self) -> None:
-        if "BaseLLM" not in self.base_classes:
-            self.base_classes.append("BaseLLM")
+        if "BaseLanguageModel" not in self.base_classes:
+            self.base_classes.append("BaseLanguageModel")
 
     @staticmethod
     def format_azure_field(field: TemplateField):
