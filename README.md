@@ -114,11 +114,11 @@ We welcome contributions from developers of all levels to our open-source projec
 
 ---
 
-[![Star History Chart](https://api.star-history.com/svg?repos=logspace-ai/langflow&type=Timeline)](https://star-history.com/#logspace-ai/langflow&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=langflow-ai/langflow&type=Timeline)](https://star-history.com/#langflow-ai/langflow&Date)
 
 # 🌟 Contributors
 
-[![langflow contributors](https://contrib.rocks/image?repo=logspace-ai/langflow)](https://github.com/langflow-ai/langflow/graphs/contributors)
+[![langflow contributors](https://contrib.rocks/image?repo=langflow-ai/langflow)](https://github.com/langflow-ai/langflow/graphs/contributors)
 
 # 📄 License
 
