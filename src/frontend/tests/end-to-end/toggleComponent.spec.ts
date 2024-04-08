@@ -1,8 +1,5 @@
 import { expect, test } from "@playwright/test";
-test.beforeEach(async ({ page }) => {
-  // await page.waitForTimeout(15000);
-  // test.setTimeout(120000);
-});
+
 test("ToggleComponent", async ({ page }) => {
   await page.goto("http:localhost:3000/");
   await page.waitForTimeout(2000);

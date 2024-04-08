@@ -1,9 +1,6 @@
 import { test } from "@playwright/test";
 import { readFileSync } from "fs";
-test.beforeEach(async ({ page }) => {
-  // await page.waitForTimeout(20000);
-  // test.setTimeout(120000);
-});
+
 test("chat_io_teste", async ({ page }) => {
   await page.goto("/");
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
