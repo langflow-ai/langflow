@@ -248,29 +248,7 @@ export default function InputComponent({
           ></div>
         </>
       )}
-      <div className="absolute inset-y-0 right-2.5 flex items-center gap-2.5">
-        {setSelectedOption && (
-          <span className={cn("flex items-center")}>
-            <button
-              onClick={() => {
-                setShowOptions(!showOptions);
-              }}
-              className={cn(
-                selectedOption !== ""
-                  ? "text-medium-indigo"
-                  : "text-muted-foreground",
-                "hover:text-accent-foreground"
-              )}
-            >
-              <ForwardedIconComponent
-                name={optionsIcon}
-                className={"h-4 w-4"}
-                aria-hidden="true"
-              />
-            </button>
-          </span>
-        )}
-
+      <div className="absolute inset-y-0 right-3 flex items-center gap-2.5">
         {password && selectedOption === "" && (
           <button
             type="button"
@@ -288,7 +266,7 @@ export default function InputComponent({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className={"h-5 w-5"}
+                className={"h-4 w-4"}
               >
                 <path
                   strokeLinecap="round"
@@ -303,7 +281,7 @@ export default function InputComponent({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="h-5 w-5"
+                className="h-4 w-4"
               >
                 <path
                   strokeLinecap="round"
@@ -343,6 +321,27 @@ export default function InputComponent({
               )}
             </span>
           </GenericModal>
+        )}
+        {setSelectedOption && (
+          <span className={cn("flex items-center")}>
+            <button
+              onClick={() => {
+                setShowOptions(!showOptions);
+              }}
+              className={cn(
+                selectedOption !== ""
+                  ? "text-medium-indigo"
+                  : "text-muted-foreground",
+                "hover:text-accent-foreground"
+              )}
+            >
+              <ForwardedIconComponent
+                name={optionsIcon}
+                className={"h-4 w-4"}
+                aria-hidden="true"
+              />
+            </button>
+          </span>
         )}
       </div>
     </div>
