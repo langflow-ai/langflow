@@ -1,12 +1,6 @@
-import Admonition from '@theme/Admonition';
+import Admonition from "@theme/Admonition";
 
 # Models
-
-<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-    <p>
-        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
-    </p>
-</Admonition>
 
 ### Amazon Bedrock
 
@@ -19,16 +13,17 @@ This component facilitates the generation of text using the LLM (Large Language 
 - **System Message (Optional):** A system message to pass to the model.
 
 - **Model ID (Optional):** Specifies the model ID to be used for text generation. Defaults to _`"anthropic.claude-instant-v1"`_. Available options include:
-    - _`"ai21.j2-grande-instruct"`_
-    - _`"ai21.j2-jumbo-instruct"`_
-    - _`"ai21.j2-mid"`_
-    - _`"ai21.j2-mid-v1"`_
-    - _`"ai21.j2-ultra"`_
-    - _`"ai21.j2-ultra-v1"`_
-    - _`"anthropic.claude-instant-v1"`_
-    - _`"anthropic.claude-v1"`_
-    - _`"anthropic.claude-v2"`_
-    - _`"cohere.command-text-v14"`_
+
+  - _`"ai21.j2-grande-instruct"`_
+  - _`"ai21.j2-jumbo-instruct"`_
+  - _`"ai21.j2-mid"`_
+  - _`"ai21.j2-mid-v1"`_
+  - _`"ai21.j2-ultra"`_
+  - _`"ai21.j2-ultra-v1"`_
+  - _`"anthropic.claude-instant-v1"`_
+  - _`"anthropic.claude-v1"`_
+  - _`"anthropic.claude-v2"`_
+  - _`"cohere.command-text-v14"`_
 
 - **Credentials Profile Name (Optional):** Specifies the name of the credentials profile.
 
@@ -45,11 +40,11 @@ This component facilitates the generation of text using the LLM (Large Language 
 - **Stream (Optional):** Specifies whether to stream the response from the model. Defaults to _`False`_.
 
 <Admonition type="note" title="Note">
-    <p>
-        Ensure that necessary credentials are provided to connect to the Amazon Bedrock API. If connection fails, a ValueError will be raised.
-    </p>
+  <p>
+    Ensure that necessary credentials are provided to connect to the Amazon
+    Bedrock API. If connection fails, a ValueError will be raised.
+  </p>
 </Admonition>
-
 
 ---
 
@@ -60,10 +55,11 @@ This component allows the generation of text using Anthropic Chat&Completion lar
 **Params**
 
 - **Model Name:** Specifies the name of the Anthropic model to be used for text generation. Available options include:
-    - _`"claude-2.1"`_
-    - _`"claude-2.0"`_
-    - _`"claude-instant-1.2"`_
-    - _`"claude-instant-1"`_
+
+  - _`"claude-2.1"`_
+  - _`"claude-2.0"`_
+  - _`"claude-instant-1.2"`_
+  - _`"claude-instant-1"`_
 
 - **Anthropic API Key:** Your Anthropic API key.
 
@@ -90,25 +86,27 @@ This component allows the generation of text using the LLM (Large Language Model
 **Params**
 
 - **Model Name:** Specifies the name of the Azure OpenAI model to be used for text generation. Available options include:
-    - _`"gpt-35-turbo"`_
-    - _`"gpt-35-turbo-16k"`_
-    - _`"gpt-35-turbo-instruct"`_
-    - _`"gpt-4"`_
-    - _`"gpt-4-32k"`_
-    - _`"gpt-4-vision"`_
+
+  - _`"gpt-35-turbo"`_
+  - _`"gpt-35-turbo-16k"`_
+  - _`"gpt-35-turbo-instruct"`_
+  - _`"gpt-4"`_
+  - _`"gpt-4-32k"`_
+  - _`"gpt-4-vision"`_
 
 - **Azure Endpoint:** Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`.
 
 - **Deployment Name:** Specifies the name of the deployment.
 
 - **API Version:** Specifies the version of the Azure OpenAI API to be used. Available options include:
-    - _`"2023-03-15-preview"`_
-    - _`"2023-05-15"`_
-    - _`"2023-06-01-preview"`_
-    - _`"2023-07-01-preview"`_
-    - _`"2023-08-01-preview"`_
-    - _`"2023-09-01-preview"`_
-    - _`"2023-12-01-preview"`_
+
+  - _`"2023-03-15-preview"`_
+  - _`"2023-05-15"`_
+  - _`"2023-06-01-preview"`_
+  - _`"2023-07-01-preview"`_
+  - _`"2023-08-01-preview"`_
+  - _`"2023-09-01-preview"`_
+  - _`"2023-12-01-preview"`_
 
 - **API Key:** Your Azure OpenAI API key.
 
@@ -123,7 +121,6 @@ This component allows the generation of text using the LLM (Large Language Model
 - **System Message (Optional):** A system message to pass to the model.
 
 For detailed documentation and integration guides, please refer to the [Azure OpenAI Component Documentation](https://python.langchain.com/docs/integrations/llms/azure_openai).
-
 
 ---
 
@@ -197,6 +194,29 @@ This component facilitates text generation using LLM models from the Hugging Fac
 
 ---
 
+### LiteLLM Model
+
+Generates text using the `LiteLLM` collection of large language models.
+
+**Parameters**
+
+- **Model name:** The name of the model to use. For example, `gpt-3.5-turbo`. (Type: str)
+- **API key:** The API key to use for accessing the provider's API. (Type: str, Optional)
+- **Provider:** The provider of the API key. (Type: str, Choices: "OpenAI", "Azure", "Anthropic", "Replicate", "Cohere", "OpenRouter")
+- **Temperature:** Controls the randomness of the text generation. (Type: float, Default: 0.7)
+- **Model kwargs:** Additional keyword arguments for the model. (Type: Dict, Optional)
+- **Top p:** Filter responses to keep the cumulative probability within the top p tokens. (Type: float, Optional)
+- **Top k:** Filter responses to only include the top k tokens. (Type: int, Optional)
+- **N:** Number of chat completions to generate for each prompt. (Type: int, Default: 1)
+- **Max tokens:** The maximum number of tokens to generate for each chat completion. (Type: int, Default: 256)
+- **Max retries:** Maximum number of retries for failed requests. (Type: int, Default: 6)
+- **Verbose:** Whether to print verbose output. (Type: bool, Default: False)
+- **Input:** The input prompt for text generation. (Type: str)
+- **Stream:** Whether to stream the output. (Type: bool, Default: False)
+- **System message:** System message to pass to the model. (Type: str, Optional)
+
+---
+
 ### Ollama
 
 Generate text using Ollama Local LLMs.
@@ -248,7 +268,7 @@ This component facilitates text generation using OpenAI's models.
 
 - **OpenAI API Base (Optional):** The base URL of the OpenAI API. Defaults to _`https://api.openai.com/v1`_.
 
-- **OpenAI API Key (Optional):** The API key for accessing the OpenAI API. 
+- **OpenAI API Key (Optional):** The API key for accessing the OpenAI API.
 
 - **Temperature:** Controls the creativity of model responses. Defaults to _`0.7`_.
 
@@ -265,16 +285,17 @@ This component facilitates the generation of text using Baidu Qianfan chat model
 **Params**
 
 - **Model Name:** Specifies the name of the Qianfan chat model to be used for text generation. Available options include:
-    - _`"ERNIE-Bot"`_
-    - _`"ERNIE-Bot-turbo"`_
-    - _`"BLOOMZ-7B"`_
-    - _`"Llama-2-7b-chat"`_
-    - _`"Llama-2-13b-chat"`_
-    - _`"Llama-2-70b-chat"`_
-    - _`"Qianfan-BLOOMZ-7B-compressed"`_
-    - _`"Qianfan-Chinese-Llama-2-7B"`_
-    - _`"ChatGLM2-6B-32K"`_
-    - _`"AquilaChat-7B"`_
+
+  - _`"ERNIE-Bot"`_
+  - _`"ERNIE-Bot-turbo"`_
+  - _`"BLOOMZ-7B"`_
+  - _`"Llama-2-7b-chat"`_
+  - _`"Llama-2-13b-chat"`_
+  - _`"Llama-2-70b-chat"`_
+  - _`"Qianfan-BLOOMZ-7B-compressed"`_
+  - _`"Qianfan-Chinese-Llama-2-7B"`_
+  - _`"ChatGLM2-6B-32K"`_
+  - _`"AquilaChat-7B"`_
 
 - **Qianfan Ak:** Your Baidu Qianfan access key, obtainable from [here](https://cloud.baidu.com/product/wenxinworkshop).
 

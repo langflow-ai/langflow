@@ -128,7 +128,7 @@ class MonitorService(Service):
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
 
-        if order_by:
+        if order_by and order:
             # Make sure the order is from newest to oldest
             query += f" ORDER BY {order_by} {order.upper()}"
 

@@ -37,11 +37,11 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         )}
         <a
           target={"_blank"}
-          href="https://logspace.ai/"
+          href="https://medium.com/logspace/langflow-datastax-better-together-1b7462cebc4d"
           className="logspace-page-icon"
         >
-          {version && <div className="mt-1">⛓️ Langflow v{version}</div>}
-          <div className={version ? "mt-2" : "mt-1"}>Created by Logspace</div>
+          {version && <div className="mt-1">Langflow 🤝 DataStax</div>}
+          <div className={version ? "mt-2" : "mt-1"}>⛓️ v{version}</div>
         </a>
       </div>
     </>

@@ -1,5 +1,8 @@
 import { test } from "@playwright/test";
-
+test.beforeEach(async ({ page }) => {
+  // await page.waitForTimeout(16000);
+  // test.setTimeout(140000);
+});
 test.describe("Auto_login tests", () => {
   test("auto_login sign in", async ({ page }) => {
     await page.goto("http:localhost:3000/");

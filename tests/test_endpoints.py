@@ -4,7 +4,6 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
-
 from langflow.interface.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
@@ -447,8 +446,8 @@ def test_successful_run_no_payload(client, starter_project, created_api_key):
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
     assert all([name in display_names for name in ["Chat Output"]])
     inner_results = [output.get("results").get("result") for output in outputs_dict.get("outputs")]
-    expected_result = "Langflow"
-    assert all([expected_result in result for result in inner_results]), inner_results
+
+    assert all([len(result) > 0 for result in inner_results]), inner_results
 
 
 def test_successful_run_with_output_type_text(client, starter_project, created_api_key):

@@ -1,68 +1,50 @@
 <!-- markdownlint-disable MD030 -->
 
-# ⛓️ Langflow
+# [![Langflow](https://github.com/logspace-ai/langflow/blob/dev/docs/static/img/hero.png)](https://www.langflow.org)
 
-<h3>Discover a simpler & smarter way to build around Foundation Models</h3>
+### [Langflow](https://www.langflow.org) is a new, visual way to build, iterate and deploy AI apps.
 
-[![Release Notes](https://img.shields.io/github/release/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/releases)
-[![Contributors](https://img.shields.io/github/contributors/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/contributors)
-[![Last Commit](https://img.shields.io/github/last-commit/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/last-commit)
-[![Open Issues](https://img.shields.io/github/issues-raw/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/issues)
-[![LRepo-size](https://img.shields.io/github/repo-size/logspace-ai/langflow)](https://github.com/logspace-ai/langflow/repo-size)
-[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/logspace-ai/langflow)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub star chart](https://img.shields.io/github/stars/logspace-ai/langflow?style=social)](https://star-history.com/#logspace-ai/langflow)
-[![GitHub fork](https://img.shields.io/github/forks/logspace-ai/langflow?style=social)](https://github.com/logspace-ai/langflow/fork)
-[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/langflow_ai.svg?style=social&label=Follow%20%40langflow_ai)](https://twitter.com/langflow_ai)
-[![](https://dcbadge.vercel.app/api/server/EqksyE2EX9?compact=true&style=flat)](https://discord.com/invite/EqksyE2EX9)
-[![HuggingFace Spaces](https://huggingface.co/datasets/huggingface/badges/raw/main/duplicate-this-space-md.svg)](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/logspace-ai/langflow)
+# ⚡️ Documentation and Community
 
-<a href="https://github.com/logspace-ai/langflow">
-<img width="100%" src="https://github.com/logspace-ai/langflow/blob/dev/docs/static/img/new_langflow_demo.gif"></a>
+- [Documentation](https://docs.langflow.org)
+- [Discord](https://discord.com/invite/EqksyE2EX9)
 
 # 📦 Installation
 
-### <b>Locally</b>
-
-Make sure you have Python 3.10 installed on your system.
-
-You can install Langflow from pip:
+You can install Langflow with pip:
 
 ```shell
-# This installs the package without dependencies for local models
-pip install langflow
+# Make sure you have Python 3.10 installed on your system.
+# Install the pre-release version
+python -m pip install langflow --pre --force-reinstall
+
+# or stable version
+python -m pip install langflow -U
 ```
 
-To use local models (e.g llama-cpp-python) run:
-
-```shell
-pip install langflow[local]
-```
-
-This will install the following dependencies:
-
-- [CTransformers](https://github.com/marella/ctransformers)
-- [llama-cpp-python](https://github.com/abetlen/llama-cpp-python)
-- [sentence-transformers](https://github.com/UKPLab/sentence-transformers)
-
-You can still use models from projects like LocalAI, Ollama, LM Studio, Jan and others.
-
-Next, run:
+Then, run Langflow with:
 
 ```shell
 python -m langflow run
 ```
 
-or
+You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Logspace/Langflow-Preview). [Clone the space using this link](https://huggingface.co/spaces/Logspace/Langflow-Preview?duplicate=true), to create your own Langflow workspace in minutes.
 
-```shell
-langflow run # or langflow --help
+# 🎨 Creating Flows
+
+Creating flows with Langflow is easy. Simply drag components from the sidebar onto the canvas and connect them to start building your application.
+
+Explore by editing prompt parameters, grouping components into a single high-level component, and building your own Custom Components.
+
+Once you’re done, you can export your flow as a JSON file.
+
+Load the flow with:
+
+```python
+from langflow.load import run_flow_from_json
+
+results = run_flow_from_json("path/to/flow.json", input_value="Hello, World!")
 ```
-
-### HuggingFace Spaces
-
-You can also check it out on HuggingFace Spaces and run it in your browser for free! [Click here to duplicate the Space](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true)
 
 # 🖥️ Command Line Interface (CLI)
 
@@ -126,29 +108,9 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
 </a>
 
-# 🎨 Creating Flows
-
-Creating flows with Langflow is easy. Simply drag components from the sidebar onto the canvas and connect them to start building your application.
-
-Explore by editing prompt parameters, grouping components into a single high-level component, and building your own Custom Components.
-
-Once you’re done, you can export your flow as a JSON file.
-
-Load the flow with:
-
-```python
-from langflow import load_flow_from_json
-
-flow = load_flow_from_json("path/to/flow.json")
-# Now you can use it
-flow("Hey, have you heard of Langflow?")
-```
-
 # 👋 Contributing
 
 We welcome contributions from developers of all levels to our open-source project on GitHub. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make Langflow more accessible.
-
-Join our [Discord](https://discord.com/invite/EqksyE2EX9) server to ask questions, make suggestions, and showcase your projects! 🦾
 
 ---
 

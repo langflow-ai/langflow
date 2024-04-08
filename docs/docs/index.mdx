@@ -1,6 +1,13 @@
 import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
+
+# 👋 Welcome to Langflow
+
+Langflow is an easy way to build from simple to complex AI applications. It is a low-code platform that allows you to integrate AI into everything you do.
+
+{" "}
 
 # 👋 Welcome to Langflow
 
@@ -30,7 +37,8 @@ You can install **Langflow** with [pipx](https://pipx.pypa.io/stable/installatio
 Pipx can fetch the missing Python version for you, but you can also install it manually.
 
 ```bash
-pip install langflow -U
+# Remember to check if you have Python 3.10 installed
+python -m pip install langflow -U
 # or
 pipx install langflow --python python3.10 --fetch-missing-python
 ```
@@ -38,10 +46,18 @@ pipx install langflow --python python3.10 --fetch-missing-python
 Or you can install a pre-release version using:
 
 ```bash
-pip install langflow --pre --force-reinstall
+python -m pip install langflow --pre --force-reinstall
 # or
 pipx install langflow --python python3.10 --fetch-missing-python --pip-args="--pre --force-reinstall"
 ```
+
+<Admonition type="tip">
+  <p>
+    Please, check out our [Possible Installation Issues
+    section](/migration/possible-installation-issues) if you encounter any
+    problems.
+  </p>
+</Admonition>
 
 We recommend using --force-reinstall to ensure you have the latest version of Langflow and its dependencies.
 
@@ -50,14 +66,14 @@ We recommend using --force-reinstall to ensure you have the latest version of La
 Langflow can be run in a variety of ways, including using the command-line interface (CLI) or HuggingFace Spaces.
 
 ```bash
-langflow run # or langflow --help
+python -m langflow run # or langflow --help
 ```
 
 #### 🤗 HuggingFace Spaces
 
 Hugging Face provides a great alternative for running Langflow in their Spaces environment. This means you can run Langflow without any local installation required.
 
-The first step is to go to the [Langflow Space](https://huggingface.co/spaces/Logspace/Langflow?duplicate=true).
+The first step is to go to the [Langflow Space](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) or [Langflow 1.0 Preview Space](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true)
 
 Remember to use a Chromium-based browser for the best experience. You'll be presented with the following screen:
 
@@ -91,5 +107,17 @@ langflow run [OPTIONS]
 Find more information about the available options by running:
 
 ```bash
-langflow --help
+python -m langflow --help
 ```
+
+## Find out more about 1.0
+
+<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
+  <p>
+    We are currently working on updating the documentation for Langflow 1.0.
+  </p>
+</Admonition>
+
+To get you learning more about what's new and why you should be excited about Langflow 1.0,
+go to [A new chapter for Langflow](/whats-new/a-new-chapter-langflow) and also come back often
+to check out our [migration guides](/whats-new/migrating-to-one-point-zero) as we release them.

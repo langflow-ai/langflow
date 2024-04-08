@@ -890,9 +890,9 @@ class Graph:
                 raise ValueError(f"Source vertex {edge['source']} not found")
             if target is None:
                 raise ValueError(f"Target vertex {edge['target']} not found")
-            edge = ContractEdge(source, target, edge)
+            new_edge = ContractEdge(source, target, edge)
 
-            edges.add(edge)
+            edges.add(new_edge)
 
         return list(edges)
 

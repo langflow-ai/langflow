@@ -34,11 +34,15 @@ export default function NewFlowModal({
           {/* {examples.map((example, idx) => {
             return <UndrawCardComponent key={idx} flow={example} />;
           })} */}
-          {examples.find((e) => e.name == "Basic Prompting (Ahoy World!)") && (
+          {examples.find(
+            (e) => e.name == "Basic Prompting (Hello, world!)"
+          ) && (
             <UndrawCardComponent
               key={1}
               flow={
-                examples.find((e) => e.name == "Basic Prompting (Ahoy World!)")!
+                examples.find(
+                  (e) => e.name == "Basic Prompting (Hello, world!)"
+                )!
               }
             />
           )}
