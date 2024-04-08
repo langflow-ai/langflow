@@ -3,6 +3,7 @@ import importlib
 from langchain.agents import Tool
 from langchain_experimental.utilities import PythonREPL
 
+from langflow.base.tools.base import build_status_from_tool
 from langflow.custom import CustomComponent
 
 
@@ -58,10 +59,10 @@ class PythonREPLToolComponent(CustomComponent):
         """
         _globals = self.get_globals(global_imports)
         python_repl = PythonREPL(_globals=_globals)
-        repl_tool = Tool(
+        tool = Tool(
             name=name,
             description=description,
             func=python_repl.run,
         )
-        self.status = str(repl_tool)
-        return repl_tool
+        self.status = build_status_from_tool(tool)
+        return tool
