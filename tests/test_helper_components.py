@@ -72,8 +72,8 @@ def test_text_to_record_component():
 
     # Act
     # Replace with your actual test data
-    dict_with_text = {"key": "value"}
-    result = text_to_record_component.build(dict_with_text)
+    dict_with_text = {"field_1": {"key": "value"}}
+    result = text_to_record_component.build(number_of_fields=1, **dict_with_text)
 
     # Assert
     # Replace with your actual expected result

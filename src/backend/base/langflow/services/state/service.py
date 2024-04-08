@@ -30,8 +30,8 @@ class StateService(Service):
 class InMemoryStateService(StateService):
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
-        self.states = {}
-        self.observers = defaultdict(list)
+        self.states: dict = {}
+        self.observers: dict = defaultdict(list)
         self.lock = Lock()
 
     def append_state(self, key, new_state, run_id: str):

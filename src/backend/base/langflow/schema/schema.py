@@ -13,7 +13,7 @@ class Record(BaseModel):
         data (dict, optional): Additional data associated with the record.
     """
 
-    text_key: Optional[str] = "text"
+    text_key: str = "text"
     data: dict = {}
     default_value: Optional[str] = ""
 

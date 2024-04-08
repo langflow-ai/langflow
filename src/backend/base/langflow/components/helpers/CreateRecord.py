@@ -44,6 +44,7 @@ class CreateRecordComponent(CustomComponent):
                     )
                     build_config[field.name] = field.to_dict()
 
+            build_config["number_of_fields"]["value"] = field_value_int
         return build_config
 
     def build_config(self):

@@ -188,8 +188,10 @@ build_langflow:
 	cd ./scripts && poetry run python update_dependencies.py
 	poetry lock
 	poetry build
+ifdef restore
 	mv pyproject.toml.bak pyproject.toml
 	mv poetry.lock.bak poetry.lock
+endif
 
 dev:
 	make install_frontend
@@ -214,21 +216,19 @@ lock:
 	poetry lock
 
 publish_base:
-	make build_langflow_base
 	cd src/backend/base && poetry publish
 
 publish_langflow:
-	make build_langflow
 	poetry publish
 
 publish:
 	@echo 'Publishing the project'
 ifdef base
-	-make publish_base
+	make publish_base
 endif
 
 ifdef main
-	-make publish_langflow
+	make publish_langflow
 endif
 
 help:

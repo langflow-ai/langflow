@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
 
-import nest_asyncio
+import nest_asyncio  # type: ignore
 import socketio  # type: ignore
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware

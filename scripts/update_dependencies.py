@@ -11,12 +11,23 @@ def read_version_from_pyproject(file_path):
     return None
 
 
-def get_version_from_pypi(package_name):
-    import requests
+# def get_version_from_pypi(package_name):
+#     import requests
 
-    response = requests.get(f"https://pypi.org/pypi/{package_name}/json")
-    if response.ok:
-        return response.json()["info"]["version"]
+#     response = requests.get(f"https://pypi.org/pypi/{package_name}/json")
+#     if response.ok:
+#         return response.json()["info"]["version"]
+#     return None
+
+
+def get_version_from_pypi(package_name):
+    # Use default python lib to make the GET for this because it runs in github actions
+    import json
+    import urllib.request
+
+    response = urllib.request.urlopen(f"https://pypi.org/pypi/{package_name}/json")
+    if response.getcode() == 200:
+        return json.loads(response.read())["info"]["version"]
     return None
 
 
@@ -44,7 +55,7 @@ if __name__ == "__main__":
 
     # Reading version and updating pyproject.toml
     langflow_base_path = Path(__file__).resolve().parent / "../src/backend/base/pyproject.toml"
-    version = get_version_from_pypi("langflow-base")
+    version = read_version_from_pyproject(langflow_base_path)
     if version:
         update_pyproject_dependency(pyproject_path, version)
     else:
