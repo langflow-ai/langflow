@@ -57,14 +57,9 @@ python-socketio = "^5.11.0"
 python-docx = "^1.1.0"
 jq = { version = "^1.7.0", markers = "sys_platform != 'win32'" }
 pypdf = "^4.1.0"
-chromadb = "^0.4.24"
-langchain-anthropic = "^0.1.6"
-langchain-astradb = "^0.1.0"
 nest-asyncio = "^1.6.0"
 emoji = "^2.11.0"
 cryptography = "^42.0.5"
-langchain-openai = "^0.1.1"
-langchain-cohere = "^0.1.0"
 
 
 [tool.poetry.group.dev.dependencies]
