@@ -1,0 +1,47 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+import Admonition from "@theme/Admonition";
+
+# Talk with your documents
+
+## Overview
+
+This flow integrates PDF reading with a language model to answer document-specific questions. Ideal for small-scale texts, it facilitates direct queries with immediate insights.
+
+## Interactive Guide
+<iframe
+  src="https://app.tango.us/app/embed/f05bb3a7-4ceb-4b61-921f-628563b562f6?iframe=true"
+  sandbox="allow-scripts allow-top-navigation-by-user-activation allow-popups allow-same-origin"
+  security="restricted"
+  title="Step-by-Step Instructions to Customize and Build a Chatbot with custom System Message"
+  width="100%"
+  height="800px"
+  referrerpolicy="strict-origin-when-cross-origin"
+  frameborder="0"
+  webkitallowfullscreen="webkitallowfullscreen"
+  mozallowfullscreen="mozallowfullscreen"
+  allowfullscreen="allowfullscreen"
+></iframe>
+
+## Flow Overview
+
+- Files: It loads data from a file. You will see that it's possible to choose a file from your computer to be processed by this component. In this example, we can select any file whose extension is listed in the types defined by the variable TEXT_FILE_TYPES.
+
+<Admonition type="info">
+The current value of TEXT_FILE_TYPES is: ["txt", "md", "mdx", "csv", "json", "yaml", "yml", "xml", "html", "htm", "pdf", "docx"].
+</Admonition>
+
+- Chat Input: The Chat Input is designed to receive user input through the chat. In its options, you can configure a message that will be sent directly to the chat using the "Message" field. You can also set any name through the "Sender Name" field. This component will be connected to a declared variable in the Prompt.
+
+- Prompt: In the Prompt, under the Template option, the variables 'Document' is declared, which received the Files component. The variable 'Question' was also created, which receives the Chat Input.
+
+- OpenAI: In the OpenAI LLM, fill in the required fields marked by a red '*'. Note that almost everything is already filled in as default. The "OpenAI Key" option is empty, which means you'll have to input your OpenAI key to run the flow. In the Input option, you will receive the Prompt. The connection of the LLM will be with the Chat Output, which will display the answer.
+
+- Chat Output: The Chat Output will display the interaction of the created flow in the interaction panel. Here, you can configure the name in the Sender Name field that will appear in the chat.
+
+
+Upon clicking "Run" the chat interface will open. Within it, you'll find the Interaction Panel, housing the chat interface.
+
+Since this flow includes the Chat Input component, there's an input message field where you can type something. After entering your information and clicking on the chat playback icon, it will run the flow and respond based on the file sent.
