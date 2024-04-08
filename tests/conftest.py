@@ -381,7 +381,7 @@ def get_starter_project(active_user):
     # once the client is created, we can get the starter project
     with session_getter(get_db_service()) as session:
         flow = session.exec(
-            select(Flow).where(Flow.folder == STARTER_FOLDER_NAME).where(Flow.name == "Basic Prompting (Hello, world!)")
+            select(Flow).where(Flow.folder == STARTER_FOLDER_NAME).where(Flow.name == "Basic Prompting (Hello, World)")
         ).first()
         if not flow:
             raise ValueError("No starter project found")
