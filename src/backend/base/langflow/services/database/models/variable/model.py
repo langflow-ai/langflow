@@ -38,14 +38,14 @@ class Variable(VariableBase, table=True):
         description="Whether the variable is readable by the user. If False, the variable is only readable by the system.",
     )
 
-    @model_validator(mode="after")
-    def validate_type_and_is_readable(self):
+    @model_validator(mode="before")
+    def validate_type_and_is_readable(cls, data):
         # Is readable is never passed and should be set according to the type
-        if self.category in IS_READABLE_MAP:
-            self.is_readable = IS_READABLE_MAP[self.category]
+        if data.get("category") in IS_READABLE_MAP:
+            data["is_readable"] = IS_READABLE_MAP[data.get("category")]
         else:
-            raise ValueError(f"Invalid variable type {self.category}")
-        return self
+            raise ValueError(f"Invalid variable type {data.get('category')}")
+        return data
 
 
 class VariableCreate(VariableBase):
@@ -55,15 +55,11 @@ class VariableCreate(VariableBase):
 class VariableRead(SQLModel):
     id: UUID
     name: Optional[str] = Field(None, description="Name of the variable")
-    type: VariableCategories = Field(
-        sa_column_kwargs=Column(Enum(VariableCategories)), description="Type of the variable"
-    )
+    category: VariableCategories = Field(sa_column=Column(Enum(VariableCategories)), description="Type of the variable")
 
 
 class VariableUpdate(SQLModel):
     id: UUID  # Include the ID for updating
     name: Optional[str] = Field(None, description="Name of the variable")
     value: Optional[str] = Field(None, description="Encrypted value of the variable")
-    type: VariableCategories = Field(
-        sa_column_kwargs=Column(Enum(VariableCategories)), description="Type of the variable"
-    )
+    category: VariableCategories = Field(sa_column=Column(Enum(VariableCategories)), description="Type of the variable")

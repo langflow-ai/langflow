@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from loguru import logger
 from sqlmodel import Session, select
 
 from langflow.services.auth import utils as auth_utils
@@ -47,6 +48,7 @@ def create_variable(
         session.refresh(db_variable)
         return db_variable
     except Exception as e:
+        logger.exception("Error creating variable")
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -66,6 +68,11 @@ def read_variables(
             stmt = stmt.where(Variable.category == category)
 
         variables = session.exec(stmt).all()
+        # If variable.is_readable is False, remove the value
+        variables_dump = [variable.model_dump() for variable in variables]
+        for variable in variables_dump:
+            if not variable["is_readable"]:
+                variable["value"] = None
         return variables
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
