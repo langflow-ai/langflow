@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,6 +10,7 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable import Variable, VariableCreate, VariableRead, VariableUpdate
+from langflow.services.database.models.variable.constants import VariableCategories
 from langflow.services.deps import get_session, get_settings_service
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
@@ -59,7 +61,7 @@ def read_variables(
     *,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
-    category: str,
+    category: Optional[VariableCategories] = VariableCategories.GENERIC,
 ):
     """Read all variables."""
     try:
