@@ -15,6 +15,7 @@ export default function InputGlobalComponent({
   disabled,
   onChange,
   setDb,
+  multiline,
   name,
   data,
   editNode = false,
@@ -72,6 +73,7 @@ export default function InputGlobalComponent({
     <InputComponent
       id={"input-" + name}
       editNode={editNode}
+      multiline={multiline}
       disabled={disabled}
       password={data.node?.template[name].password ?? false}
       value={data.node?.template[name].value ?? ""}

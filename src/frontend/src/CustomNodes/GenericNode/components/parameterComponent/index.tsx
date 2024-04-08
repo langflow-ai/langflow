@@ -13,7 +13,6 @@ import InputListComponent from "../../../../components/inputListComponent";
 import IntComponent from "../../../../components/intComponent";
 import KeypairListComponent from "../../../../components/keypairListComponent";
 import PromptAreaComponent from "../../../../components/promptComponent";
-import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
 import { RefreshButton } from "../../../../components/ui/refreshButton";
@@ -112,7 +111,9 @@ export default function ParameterComponent({
 
       setErrorData({
         title: "Error while updating the Component",
-        list: [JSON.stringify(responseError.response.data.detail) ?? "Unknown error"],
+        list: [
+          JSON.stringify(responseError.response.data.detail) ?? "Unknown error",
+        ],
       });
     }
     setIsLoading(false);
@@ -145,7 +146,10 @@ export default function ParameterComponent({
 
           setErrorData({
             title: "Error while updating the Component",
-            list: [JSON.stringify(responseError.response.data.detail) ?? "Unknown error"],
+            list: [
+              JSON.stringify(responseError.response.data.detail) ??
+                "Unknown error",
+            ],
           });
         }
         setIsLoading(false);
@@ -531,12 +535,22 @@ export default function ParameterComponent({
             ) : data.node?.template[name].multiline ? (
               <div className="mt-2 flex w-full flex-col ">
                 <div className="flex-grow">
-                  <TextAreaComponent
+                  <InputGlobalComponent
                     disabled={disabled}
-                    value={data.node.template[name].value ?? ""}
                     onChange={handleOnNewValue}
-                    id={"textarea-" + data.node.template[name].name}
-                    data-testid={"textarea-" + data.node.template[name].name}
+                    multiline={true}
+                    setDb={(value) => {
+                      setNode(data.id, (oldNode) => {
+                        let newNode = cloneDeep(oldNode);
+                        newNode.data = {
+                          ...newNode.data,
+                        };
+                        newNode.data.node.template[name].load_from_db = value;
+                        return newNode;
+                      });
+                    }}
+                    name={name}
+                    data={data}
                   />
                 </div>
                 {data.node?.template[name].refresh_button && (

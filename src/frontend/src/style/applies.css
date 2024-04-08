@@ -560,21 +560,6 @@
   .input-component-div {
     @apply pointer-events-none relative cursor-not-allowed;
   }
-  .input-component-button {
-    @apply absolute inset-y-0 right-0 items-center text-muted-foreground;
-  }
-  .input-component-true-button {
-    @apply input-component-button pr-2;
-  }
-  .input-component-false-button {
-    @apply input-component-button px-4;
-  }
-  .input-component-true-svg {
-    @apply side-bar-button-size absolute bottom-0.5 right-2;
-  }
-  .input-component-false-svg {
-    @apply side-bar-button-size absolute bottom-2 right-3;
-  }
 
   .input-file-component {
     @apply flex-max-width items-center;

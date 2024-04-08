@@ -1,6 +1,9 @@
 import * as Form from "@radix-ui/react-form";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { useEffect, useRef, useState } from "react";
+import { EDIT_TEXT_MODAL_TITLE } from "../../constants/constants";
+import { TypeModal } from "../../constants/enums";
+import GenericModal from "../../modals/genericModal";
 import useAlertStore from "../../stores/alertStore";
 import { InputComponentType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
@@ -24,6 +27,7 @@ export default function InputComponent({
   disabled,
   required = false,
   isForm = false,
+  multiline = false,
   password,
   editNode = false,
   placeholder = "Type something...",
@@ -244,63 +248,47 @@ export default function InputComponent({
           ></div>
         </>
       )}
+      <div className="absolute inset-y-0 right-2.5 flex items-center gap-2.5">
+        {setSelectedOption && (
+          <span className={cn("flex items-center")}>
+            <button
+              onClick={() => {
+                setShowOptions(!showOptions);
+              }}
+              className={cn(
+                selectedOption !== ""
+                  ? "text-medium-indigo"
+                  : "text-muted-foreground",
+                "hover:text-accent-foreground"
+              )}
+            >
+              <ForwardedIconComponent
+                name={optionsIcon}
+                className={"h-4 w-4"}
+                aria-hidden="true"
+              />
+            </button>
+          </span>
+        )}
 
-      {setSelectedOption && (
-        <span
-          className={cn(
-            password && selectedOption === "" ? "right-8" : "right-0",
-            "absolute inset-y-0 flex items-center pr-2.5"
-          )}
-        >
+        {password && selectedOption === "" && (
           <button
-            onClick={() => {
-              setShowOptions(!showOptions);
+            type="button"
+            tabIndex={-1}
+            className={"text-muted-foreground hover:text-accent-foreground"}
+            onClick={(event) => {
+              event.preventDefault();
+              setPwdVisible(!pwdVisible);
             }}
-            className={cn(
-              selectedOption !== ""
-                ? "text-medium-indigo"
-                : "text-muted-foreground",
-              "hover:text-accent-foreground"
-            )}
           >
-            <ForwardedIconComponent
-              name={optionsIcon}
-              className={"h-4 w-4"}
-              aria-hidden="true"
-            />
-          </button>
-        </span>
-      )}
-
-      {password && selectedOption === "" && (
-        <button
-          type="button"
-          tabIndex={-1}
-          className={classNames(
-            "mb-px",
-            editNode
-              ? "input-component-true-button"
-              : "input-component-false-button"
-          )}
-          onClick={(event) => {
-            event.preventDefault();
-            setPwdVisible(!pwdVisible);
-          }}
-        >
-          {password &&
-            selectedOption === "" &&
-            (pwdVisible ? (
+            {pwdVisible ? (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className={classNames(
-                  editNode
-                    ? "input-component-true-svg"
-                    : "input-component-false-svg"
-                )}
+                className={"h-5 w-5"}
               >
                 <path
                   strokeLinecap="round"
@@ -315,11 +303,7 @@ export default function InputComponent({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className={classNames(
-                  editNode
-                    ? "input-component-true-svg"
-                    : "input-component-false-svg"
-                )}
+                className="h-5 w-5"
               >
                 <path
                   strokeLinecap="round"
@@ -332,9 +316,35 @@ export default function InputComponent({
                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-            ))}
-        </button>
-      )}
+            )}
+          </button>
+        )}
+        {(!setSelectedOption || selectedOption === "") && multiline && (
+          <GenericModal
+            type={TypeModal.TEXT}
+            buttonText="Finish Editing"
+            modalTitle={EDIT_TEXT_MODAL_TITLE}
+            value={value}
+            setValue={(value: string) => {
+              onChange && onChange(value);
+            }}
+          >
+            <span
+              className={cn(
+                "mb-px flex items-center text-muted-foreground hover:text-accent-foreground"
+              )}
+            >
+              {!editNode && (
+                <ForwardedIconComponent
+                  id={id}
+                  name="ExternalLink"
+                  className={"h-4 w-4"}
+                />
+              )}
+            </span>
+          </GenericModal>
+        )}
+      </div>
     </div>
   );
 }

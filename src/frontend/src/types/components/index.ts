@@ -12,6 +12,7 @@ export type InputComponentType = {
   disabled?: boolean;
   onChange?: (value: string) => void;
   password: boolean;
+  multiline?: boolean;
   required?: boolean;
   isForm?: boolean;
   editNode?: boolean;
@@ -74,15 +75,7 @@ export type InputListComponentType = {
 export type InputGlobalComponentType = {
   disabled: boolean;
   onChange: (value: string) => void;
-  setDb: (value: boolean) => void;
-  name: string;
-  data: NodeDataType;
-  editNode?: boolean;
-};
-
-export type InputGlobalComponentType = {
-  disabled: boolean;
-  onChange: (value: string) => void;
+  multiline?: boolean;
   setDb: (value: boolean) => void;
   name: string;
   data: NodeDataType;
