@@ -409,7 +409,7 @@ def test_update_source_handle():
 @pytest.mark.asyncio
 async def test_pickle_graph(json_vector_store):
     starter_projects = load_starter_projects()
-    data = starter_projects[0]["data"]
+    data = starter_projects[0][1]["data"]
     graph = Graph.from_payload(data)
     assert isinstance(graph, Graph)
     pickled = pickle.dumps(graph)
@@ -421,7 +421,7 @@ async def test_pickle_graph(json_vector_store):
 @pytest.mark.asyncio
 async def test_pickle_each_vertex(json_vector_store):
     starter_projects = load_starter_projects()
-    data = starter_projects[0]["data"]
+    data = starter_projects[0][1]["data"]
     graph = Graph.from_payload(data)
     assert isinstance(graph, Graph)
     for vertex in graph.vertices:
