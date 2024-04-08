@@ -6,10 +6,9 @@ This guide will help you set up a Langflow development VM in a Google Cloud Plat
 
 > Note: When Cloud Shell opens, be sure to select **Trust repo**. Some `gcloud` commands might not run in an ephemeral Cloud Shell environment.
 
+## Standard VM
 
-
-## Standard VM 
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/logspace-ai/langflow&working_dir=scripts&shellonly=true&tutorial=walkthroughtutorial.md)
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/langflow-ai/langflow&working_dir=scripts&shellonly=true&tutorial=walkthroughtutorial.md)
 
 This script sets up a Debian-based VM with the Langflow package, Nginx, and the necessary configurations to run the Langflow Dev environment.
 
@@ -24,11 +23,11 @@ When running as a [spot (preemptible) instance](https://cloud.google.com/compute
 ---
 
 ## Pricing (approximate)
+
 > For a more accurate breakdown of costs, please use the [**GCP Pricing Calculator**](https://cloud.google.com/products/calculator)
 
-
-| Component      | Regular Cost (Hourly) | Regular Cost (Monthly) | Spot/Preemptible Cost (Hourly) | Spot/Preemptible Cost (Monthly) | Notes |
-| -------------- | --------------------- | ---------------------- | ------------------------------ | ------------------------------- | ----- |
-| 100 GB Disk    | -                     | $10/month              | -                              | $10/month                        | Disk cost remains the same for both regular and Spot/Preemptible VMs |
-| VM (n1-standard-4) | $0.15/hr        | ~$108/month            | ~$0.04/hr                      | ~$29/month                       | The VM cost can be significantly reduced using a Spot/Preemptible instance |
-| **Total**          | **$0.15/hr**         | **~$118/month**        | **~$0.04/hr**                  | **~$39/month**                  | Total costs for running the VM and disk 24/7 for an entire month |
+| Component          | Regular Cost (Hourly) | Regular Cost (Monthly) | Spot/Preemptible Cost (Hourly) | Spot/Preemptible Cost (Monthly) | Notes                                                                      |
+| ------------------ | --------------------- | ---------------------- | ------------------------------ | ------------------------------- | -------------------------------------------------------------------------- |
+| 100 GB Disk        | -                     | $10/month              | -                              | $10/month                       | Disk cost remains the same for both regular and Spot/Preemptible VMs       |
+| VM (n1-standard-4) | $0.15/hr              | ~$108/month            | ~$0.04/hr                      | ~$29/month                      | The VM cost can be significantly reduced using a Spot/Preemptible instance |
+| **Total**          | **$0.15/hr**          | **~$118/month**        | **~$0.04/hr**                  | **~$39/month**                  | Total costs for running the VM and disk 24/7 for an entire month           |

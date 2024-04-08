@@ -1,9 +1,6 @@
 import { test } from "@playwright/test";
 import { readFileSync } from "fs";
-test.beforeEach(async ({ page }) => {
-  // await page.waitForTimeout(20000);
-  // test.setTimeout(120000);
-});
+
 test("chat_io_teste", async ({ page }) => {
   await page.goto("/");
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
@@ -12,6 +9,14 @@ test("chat_io_teste", async ({ page }) => {
     "tests/end-to-end/assets/ChatTest.json",
     "utf-8"
   );
+
+  await page.waitForTimeout(3000);
+
+  await page.locator('//*[@id="new-project-btn"]').click();
+  await page.locator('//*[@id="new-project-btn"]').click();
+
+  await page.getByTestId("blank-flow").click();
+  await page.waitForTimeout(2000);
 
   // Create the DataTransfer and File
   const dataTransfer = await page.evaluateHandle((data) => {
@@ -23,12 +28,6 @@ test("chat_io_teste", async ({ page }) => {
     dt.items.add(file);
     return dt;
   }, jsonContent);
-
-  await page.locator('//*[@id="new-project-btn"]').click();
-  await page.waitForTimeout(2000);
-
-  await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(2000);
 
   // Now dispatch
   await page.dispatchEvent(

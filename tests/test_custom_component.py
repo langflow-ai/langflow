@@ -6,21 +6,15 @@ import pytest
 from langchain_core.documents import Document
 
 from langflow.interface.custom.base import CustomComponent
-from langflow.interface.custom.code_parser.code_parser import (
-    CodeParser,
-    CodeSyntaxError,
-)
-from langflow.interface.custom.custom_component.component import (
-    Component,
-    ComponentCodeNullError,
-)
+from langflow.interface.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
+from langflow.interface.custom.custom_component.component import Component, ComponentCodeNullError
 from langflow.services.database.models.flow import Flow, FlowCreate
 
 code_default = """
 from langflow.field_typing import Prompt
 from langflow.interface.custom.custom_component import CustomComponent
 
-from langchain.llms.base import BaseLLM
+from langflow.field_typing import BaseLanguageModel
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain_core.documents import Document
@@ -32,7 +26,7 @@ class YourComponent(CustomComponent):
     description: str = "Your description"
     field_config = { "url": { "multiline": True, "required": True } }
 
-    def build(self, url: str, llm: BaseLLM, template: Prompt) -> Document:
+    def build(self, url: str, llm: BaseLanguageModel, template: Prompt) -> Document:
         response = requests.get(url)
         prompt = PromptTemplate.from_template(template)
         chain = LLMChain(llm=llm, prompt=prompt)

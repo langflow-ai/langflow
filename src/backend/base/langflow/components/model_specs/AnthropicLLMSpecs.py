@@ -1,14 +1,14 @@
 from typing import Optional
 
 from langchain.llms.base import BaseLanguageModel
-from langchain_community.chat_models.anthropic import ChatAnthropic
+from langchain_anthropic import ChatAnthropic
 from pydantic.v1 import SecretStr
 
 from langflow.interface.custom.custom_component import CustomComponent
 
 
-class AnthropicLLM(CustomComponent):
-    display_name: str = "AnthropicLLM"
+class ChatAntropicSpecsComponent(CustomComponent):
+    display_name: str = "Anthropic"
     description: str = "Anthropic Chat&Completion large language models."
     icon = "Anthropic"
 
