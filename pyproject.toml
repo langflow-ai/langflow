@@ -105,7 +105,7 @@ respx = "^0.20.2"
 chromadb = "^0.4.24"
 langchain-anthropic = "^0.1.6"
 langchain-astradb = "^0.1.0"
-langchain-openai = "^0.0.5"
+langchain-openai = "^0.1.1"
 langchain-cohere = "^0.1.0"
 
 [tool.poetry.extras]
