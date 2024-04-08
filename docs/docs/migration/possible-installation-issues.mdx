@@ -1,0 +1,27 @@
+# Possible Installation Issues
+
+This is a list of possible issues that you may encounter when installing Langflow 1.0 Alpha and how to solve them.
+
+## _`No module named 'langflow.__main__'`_
+
+TLDR;
+
+- Run _`python -m langflow run`_ instead of _`langflow run`_. If that doesn't work, run _`_python -m pip install langflow --pre -U`_ to reinstall langflow.
+- If the above doesn't work, run _`python -m pip install langflow --pre -U --force-reinstall`_ to reinstall langflow and its dependencies.
+
+When you try to run langflow using the command `langflow run`, you may encounter the following error:
+
+```bash
+> langflow run
+Traceback (most recent call last):
+ File ".../langflow", line 5, in <module>
+  from langflow.__main__ import main
+ModuleNotFoundError: No module named 'langflow.__main__'
+```
+
+For this error to occur, two scenarios are possible:
+
+1. You've installed langflow using _`pip install langflow`_ but you already had a previous version of langflow installed in your system.
+   In this case, you might not be running the correct executable.
+   To solve this issue, you can run the correct executable by running _`python -m langflow run`_ instead of _`langflow run`_ and if that doesn't work, you can try uninstalling langflow and reinstalling it using _`python -m pip install langflow --pre -U`_.
+2. Some version conflicts might have occurred during the installation process. Run _`python -m pip install langflow --pre -U --force-reinstall`_ to reinstall langflow and its dependencies.

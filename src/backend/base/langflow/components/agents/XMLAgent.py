@@ -4,7 +4,7 @@ from langchain.agents import create_xml_agent
 from langchain_core.prompts import PromptTemplate
 
 from langflow.base.agents.agent import LCAgentComponent
-from langflow.field_typing import BaseLLM, BaseMemory, Text, Tool
+from langflow.field_typing import BaseLanguageModel, BaseMemory, Text, Tool
 
 
 class XMLAgentComponent(LCAgentComponent):
@@ -66,7 +66,7 @@ class XMLAgentComponent(LCAgentComponent):
     async def build(
         self,
         input_value: str,
-        llm: BaseLLM,
+        llm: BaseLanguageModel,
         tools: List[Tool],
         prompt: str,
         memory: Optional[BaseMemory] = None,

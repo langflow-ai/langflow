@@ -46,10 +46,11 @@ export default function TextAreaComponent({
           >
             {!editNode && (
               <IconComponent
+                strokeWidth={1.5}
                 id={id}
                 name="ExternalLink"
                 className={
-                  "icons-parameters-comp" +
+                  "icons-parameters-comp w-[1.35rem]" +
                   (disabled ? " text-ring" : " hover:text-accent-foreground")
                 }
               />

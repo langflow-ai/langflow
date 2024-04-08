@@ -19,6 +19,7 @@ export default function DisclosureComponent({
                   ? "components-disclosure-arrangement-child"
                   : "components-disclosure-arrangement"
               }
+              data-testid={`disclosure-${title.toLocaleLowerCase()}`}
             >
               <div className={"flex gap-4" + (isChild ? " pl-2" : "")}>
                 {/* BUG ON THIS ICON */}

@@ -29,6 +29,7 @@ module.exports = {
       label: " Migration Guides",
       collapsed: false,
       items: [
+        "migration/possible-installation-issues",
         // "migration/flow-of-data",
         "migration/inputs-and-outputs",
         // "migration/supported-frameworks",
@@ -65,7 +66,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Step-by-Step Guides",
+      label: "Extended Components",
       collapsed: false,
       items: ["guides/langfuse_integration"],
     },

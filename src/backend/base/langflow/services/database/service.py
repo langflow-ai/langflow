@@ -6,17 +6,16 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
-from loguru import logger
-from sqlalchemy import inspect
-from sqlalchemy.exc import OperationalError
-from sqlmodel import Session, SQLModel, create_engine, select, text
-
 from langflow.services.base import Service
 from langflow.services.database import models  # noqa
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
+from loguru import logger
+from sqlalchemy import inspect
+from sqlalchemy.exc import OperationalError
+from sqlmodel import Session, SQLModel, create_engine, select, text
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -98,12 +97,12 @@ class DatabaseService(Service):
             try:
                 available_columns = [col["name"] for col in inspector.get_columns(table)]
             except sa.exc.NoSuchTableError:
-                logger.error(f"Missing table: {table}")
+                logger.debug(f"Missing table: {table}")
                 return False
 
             for column in expected_columns:
                 if column not in available_columns:
-                    logger.error(f"Missing column: {column} in table {table}")
+                    logger.debug(f"Missing column: {column} in table {table}")
                     return False
 
         for table in legacy_tables:
