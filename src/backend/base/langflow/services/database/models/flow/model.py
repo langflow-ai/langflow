@@ -8,8 +8,8 @@ from emoji import purely_emoji  # type: ignore
 from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from langflow.interface.custom.attributes import validate_icon
 from langflow.schema.schema import Record
+from langflow.utils.util import validate_icon
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User

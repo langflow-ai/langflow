@@ -1,9 +1,11 @@
 import importlib
 import inspect
 import re
+import warnings
 from functools import wraps
 from typing import Any, Dict, List, Optional, Union
 
+import emoji
 from docstring_parser import parse
 
 from langflow.schema.schema import Record
@@ -462,3 +464,21 @@ def build_loader_repr_from_records(records: List[Record]) -> str:
         \nAvg. Record Length (characters): {int(avg_length)}
         Records: {records[:3]}..."""
     return "0 records"
+
+
+def validate_icon(value: str, *args, **kwargs):
+    # we are going to use the emoji library to validate the emoji
+    # emojis can be defined using the :emoji_name: syntax
+
+    if not value.startswith(":") and not value.endswith(":"):
+        return value
+    elif not value.startswith(":") or not value.endswith(":"):
+        # emoji should have both starting and ending colons
+        # so if one of them is missing, we will raise
+        raise ValueError(f"Invalid emoji. {value} is not a valid emoji.")
+
+    emoji_value = emoji.emojize(value, variant="emoji_type")
+    if value == emoji_value:
+        warnings.warn(f"Invalid emoji. {value} is not a valid emoji.")
+        return value
+    return emoji_value
