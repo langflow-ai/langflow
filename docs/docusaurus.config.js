@@ -44,7 +44,7 @@ module.exports = {
           // sidebarPath: 'sidebars.js',
         },
         gtag: {
-          trackingID: 'G-XHC7G628ZP',
+          trackingID: "G-XHC7G628ZP",
           anonymizeIP: true,
         },
         theme: {
@@ -87,7 +87,7 @@ module.exports = {
           // right
           {
             position: "right",
-            href: "https://github.com/logspace-ai/langflow",
+            href: "https://github.com/langflow-ai/langflow",
             position: "right",
             className: "header-github-link",
             target: "_blank",
@@ -124,7 +124,7 @@ module.exports = {
       },
       announcementBar: {
         content:
-          '⭐️ If you like ⛓️Langflow, star it on <a target="_blank" rel="noopener noreferrer" href="https://github.com/logspace-ai/langflow">GitHub</a>! ⭐️',
+          '⭐️ If you like ⛓️Langflow, star it on <a target="_blank" rel="noopener noreferrer" href="https://github.com/langflow-ai/langflow">GitHub</a>! ⭐️',
         backgroundColor: "#E8EBF1", //Mustard Yellow #D19900 #D4B20B - Salmon #E9967A
         textColor: "#1C1E21",
         isCloseable: false,

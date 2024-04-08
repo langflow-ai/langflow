@@ -28,7 +28,7 @@ export default function CrashErrorComponent({
                 <p>
                   Please report errors with detailed tracebacks on the{" "}
                   <a
-                    href="https://github.com/logspace-ai/langflow/issues"
+                    href="https://github.com/langflow-ai/langflow/issues"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-medium  hover:underline "
@@ -47,7 +47,7 @@ export default function CrashErrorComponent({
                 <Button onClick={resetErrorBoundary}>Restart Langflow</Button>
 
                 <a
-                  href="https://github.com/logspace-ai/langflow/issues/new"
+                  href="https://github.com/langflow-ai/langflow/issues/new"
                   target="_blank"
                   rel="noopener noreferrer"
                 >

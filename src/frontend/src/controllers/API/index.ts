@@ -90,7 +90,7 @@ export async function postValidatePrompt(
  */
 export async function getExamples(): Promise<FlowType[]> {
   const url =
-    "https://api.github.com/repos/logspace-ai/langflow_examples/contents/examples?ref=main";
+    "https://api.github.com/repos/langflow-ai/langflow_examples/contents/examples?ref=main";
   const response = await api.get(url);
 
   const jsonFiles = response.data.filter((file: any) => {

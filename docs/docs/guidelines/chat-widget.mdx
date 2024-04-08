@@ -78,7 +78,7 @@ The Chat Widget can be embedded into any HTML page, inside a _`<body>`_ tag, as 
 To embed the Chat Widget using React, you'll need to insert this _`<script>`_ tag into the React _index.html_ file, inside the _`<body>`_ tag:
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 ```
 
 Then, declare your Web Component and encapsulate it in a React component.
@@ -115,7 +115,7 @@ Finally, you can place the component anywhere in your code to display the Chat W
 To use it in Angular, first add this _`<script>`_ tag into the Angular _index.html_ file, inside the _`<body>`_ tag.
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 ```
 
 When you use a custom web component in an Angular template, the Angular compiler might show a warning when it doesn't recognize the custom elements by default. To suppress this warning, add _`CUSTOM_ELEMENTS_SCHEMA`_ to the module's _`@NgModule.schemas`_.
@@ -185,7 +185,7 @@ Use the widget API to customize your Chat Widget:
 </Admonition>
 
 | Prop                  | Type    | Required | Description                                                                                                                                                      |
-| --------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
 | bot_message_style     | JSON    | No       | Applies custom formatting to bot messages.                                                                                                                       |
 | chat_input_field      | String  | Yes      | Defines the type of the input field for chat messages.                                                                                                           |
 | chat_inputs           | JSON    | Yes      | Determines the chat input elements and their respective values.                                                                                                  |
@@ -208,4 +208,4 @@ Use the widget API to customize your Chat Widget:
 | tweaks                | JSON    | No       | Applies additional custom adjustments for the associated flow.                                                                                                   |
 | user_message_style    | JSON    | No       | Determines the formatting for user messages in the chat window.                                                                                                  |
 | width                 | Number  | No       | Sets the width of the chat window in pixels.                                                                                                                     |
-| window_title          | String  | No       | Sets the title displayed in the chat window's header or title bar.                                                                                               |
+| window_title          | String  | No       | Sets the title displayed in the chat window's header or title bar.                                                                                               | import ThemedImage from "@theme/ThemedImage"; |
