@@ -1,3 +1,4 @@
+from .AstraMessageHistory import AstraMessageHistoryComponent
 from .CreateRecord import CreateRecordComponent
 from .CustomComponent import Component
 from .DocumentToRecord import DocumentToRecordComponent
@@ -14,4 +15,5 @@ __all__ = [
     "RecordsToTextComponent",
     "CreateRecordComponent",
     "MessageHistoryComponent",
+    "AstraMessageHistoryComponent",
 ]
