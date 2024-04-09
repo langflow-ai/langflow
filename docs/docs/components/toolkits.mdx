@@ -2,8 +2,93 @@ import Admonition from '@theme/Admonition';
 
 # Toolkits
 
-<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-    <p>
-        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
-    </p>
-</Admonition>
+Toolkits are sets of tools designed to collaborate for particular tasks, boasting user-friendly loading mechanisms for enhanced convenience.
+
+### JSON Toolkit
+
+Toolkit for interacting with a JSON spec.
+
+**Parameters**
+
+- **Spec:** The JSON specification to interact with.
+
+This component facilitates tasks related to JSON data, such as validation, transformation, and extraction, enhancing the flexibility and efficiency of working with JSON structures.
+
+---
+
+### Metaphor
+
+This component enables integration with the Metaphor service, providing functionalities for semantic search, content analysis, and similarity detection, empowering your natural language processing workflows.
+
+**Parameters**
+
+- **Metaphor API Key:** The API key for accessing the Metaphor service.
+- **Use Autoprompt:** Whether to use autoprompt for search. Defaults to True.
+- **Search Number of Results:** The number of search results to retrieve. Defaults to 5.
+- **Similar Number of Results:** The number of similar results to retrieve. Defaults to 5.
+
+**Advanced Parameters**
+
+- **Code:** Additional advanced configurations.
+
+**Beta:** This component is in beta stage.
+
+Learn more about Metaphor [here](https://python.langchain.com/docs/integrations/tools/metaphor_search).
+
+---
+
+### Open API Toolkit
+
+Toolkit for interacting with an OpenAPI API.
+
+**Parameters**
+
+- **JSON Agent:** The JSON agent for handling API responses.
+- **Text Requests Wrapper:** The text requests wrapper for making HTTP requests.
+
+---
+
+### Vector Store Info
+
+This component offers a convenient way to access and understand metadata about VectorStores, aiding in the management and utilization of vector data within your language processing pipelines.
+
+**Parameters**
+
+- **VectorStore:** The VectorStore containing vector data.
+- **Description:** A description of the VectorStore.
+- **Name:** The name of the VectorStore.
+
+---
+
+### Vector Store Router Toolkit
+
+Toolkit for routing between Vector Stores.
+
+**Parameters**
+
+- **Vector Stores:** The list of Vector Stores to route between.
+- **LLM:** The base language model used for routing decisions.
+
+---
+
+### Vector Store Toolkit
+
+Toolkit for interacting with a Vector Store.
+
+**Parameters**
+
+- **Vector Store Info:** Information about the Vector Store to interact with.
+- **LLM:** The base language model used for vector operations.
+
+
+
+
+
+
+
+
+
+
+
+
+
