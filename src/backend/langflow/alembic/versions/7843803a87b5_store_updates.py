@@ -33,6 +33,7 @@ def upgrade() -> None:
                     sa.Column("is_component", sa.Boolean(), nullable=True)
                 )
     except Exception as e:
+        logger.exception(f"Error during upgrade: {e}")
         pass
     try:
         if "store_api_key" not in user_columns:
@@ -41,6 +42,7 @@ def upgrade() -> None:
                     sa.Column("store_api_key", sqlmodel.AutoString(), nullable=True)
                 )
     except Exception as e:
+        logger.exception(f"Error during upgrade: {e}")
         pass
     # ### end Alembic commands ###
 
