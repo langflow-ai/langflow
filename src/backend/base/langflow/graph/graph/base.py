@@ -249,7 +249,10 @@ class Graph:
             vertex.update_raw_params({"session_id": session_id})
         # Process the graph
         try:
-            await self.process()
+            start_component_id = next(
+                (vertex_id for vertex_id in self._is_input_vertices if "chat" in vertex_id.lower()), None
+            )
+            await self.process(start_component_id=start_component_id)
             self.increment_run_count()
         except Exception as exc:
             logger.exception(exc)
@@ -345,7 +348,7 @@ class Graph:
         if types is None:
             types = []
         for _ in range(len(inputs) - len(types)):
-            types.append("any")
+            types.append("chat")  # default to chat
         for run_inputs, components, input_type in zip(inputs, inputs_components, types):
             run_outputs = await self._run(
                 inputs=run_inputs,
@@ -733,8 +736,10 @@ class Graph:
                 vertices.append(vertex)
         return vertices
 
-    async def process(self) -> "Graph":
+    async def process(self, start_component_id: Optional[str] = None) -> "Graph":
         """Processes the graph with vertices in each layer run in parallel."""
+
+        self.sort_vertices(start_component_id=start_component_id)
         vertices_layers = self.sorted_vertices_layers
         vertex_task_run_count: Dict[str, int] = {}
         for layer_index, layer in enumerate(vertices_layers):

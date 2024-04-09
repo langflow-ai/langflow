@@ -103,6 +103,7 @@ export default function Header(): JSX.Element {
               onClick={() => {
                 checkForChanges(nodes);
               }}
+              data-testid="button-store"
             >
               <IconComponent name="Store" className="h-4 w-4" />
               <div className="flex-1">Store</div>
@@ -113,7 +114,7 @@ export default function Header(): JSX.Element {
       <div className="header-end-division lg:w-[30%]">
         <div className="header-end-display">
           <a
-            href="https://github.com/logspace-ai/langflow"
+            href="https://github.com/langflow-ai/langflow"
             target="_blank"
             rel="noreferrer"
             className="header-github-link gap-2"

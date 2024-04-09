@@ -181,6 +181,7 @@ export default function StorePage(): JSX.Element {
           {StoreApiKeyModal && (
             <StoreApiKeyModal disabled={loading}>
               <Button
+                data-testid="api-key-button-store"
                 disabled={loading}
                 className={cn(
                   `${!validApiKey ? "animate-pulse border-error" : ""}`,
@@ -201,6 +202,7 @@ export default function StorePage(): JSX.Element {
           <div className="flex items-end gap-4">
             <div className="relative h-12 w-[40%]">
               <Input
+                data-testid="search-store-input"
                 disabled={loading}
                 placeholder="Search Flows and Components"
                 className="absolute h-12 pl-5 pr-12"
@@ -220,6 +222,7 @@ export default function StorePage(): JSX.Element {
                 onClick={() => {
                   setSearchNow(uniqueId());
                 }}
+                data-testid="search-store-button"
               >
                 <IconComponent
                   name={loading ? "Loader2" : "Search"}
@@ -229,6 +232,7 @@ export default function StorePage(): JSX.Element {
             </div>
             <div className="ml-4 flex w-full gap-2 border-b border-border">
               <button
+                data-testid="all-button-store"
                 disabled={loading}
                 onClick={() => {
                   setTabActive("All");
@@ -243,6 +247,7 @@ export default function StorePage(): JSX.Element {
                 All
               </button>
               <button
+                data-testid="flows-button-store"
                 disabled={loading}
                 onClick={() => {
                   resetPagination();
@@ -258,6 +263,7 @@ export default function StorePage(): JSX.Element {
                 Flows
               </button>
               <button
+                data-testid="components-button-store"
                 disabled={loading}
                 onClick={() => {
                   resetPagination();
@@ -344,7 +350,7 @@ export default function StorePage(): JSX.Element {
                 setPageOrder(e);
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger data-testid="select-order-store">
                 <SelectValue placeholder="Popular" />
               </SelectTrigger>
               <SelectContent>

@@ -1,9 +1,9 @@
 from typing import Optional
 
-from langchain.llms.base import BaseLLM
 from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
 from pydantic.v1 import SecretStr
 
+from langflow.field_typing import BaseLanguageModel
 from langflow.interface.custom.custom_component import CustomComponent
 
 
@@ -79,7 +79,7 @@ class QianfanChatEndpointComponent(CustomComponent):
         temperature: Optional[float] = None,
         penalty_score: Optional[float] = None,
         endpoint: Optional[str] = None,
-    ) -> BaseLLM:
+    ) -> BaseLanguageModel:
         try:
             output = QianfanChatEndpoint(  # type: ignore
                 model=model,

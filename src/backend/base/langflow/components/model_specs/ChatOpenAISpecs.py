@@ -1,9 +1,9 @@
-from typing import Optional, Union
+from typing import Optional
 
-from langchain.llms import BaseLLM
+from langflow.field_typing import BaseLanguageModel
 from langchain_community.chat_models.openai import ChatOpenAI
 
-from langflow.field_typing import BaseLanguageModel, NestedDict
+from langflow.field_typing import NestedDict
 from langflow.interface.custom.custom_component import CustomComponent
 
 
@@ -68,7 +68,7 @@ class ChatOpenAIComponent(CustomComponent):
         openai_api_base: Optional[str] = None,
         openai_api_key: Optional[str] = None,
         temperature: float = 0.7,
-    ) -> Union[BaseLanguageModel, BaseLLM]:
+    ) -> BaseLanguageModel:
         if not openai_api_base:
             openai_api_base = "https://api.openai.com/v1"
         return ChatOpenAI(

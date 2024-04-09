@@ -1,29 +1,36 @@
 import { expect, test } from "@playwright/test";
-test.beforeEach(async ({ page }) => {
-  await page.waitForTimeout(2000);
-  test.setTimeout(120000);
-});
+
 test("CodeAreaModalComponent", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("http:localhost:3000/");
   await page.waitForTimeout(2000);
 
   await page.locator('//*[@id="new-project-btn"]').click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(2000);
-
+  await page.waitForTimeout(1000);
+  await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("pythonfunctiontool");
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page
     .getByTestId("toolsPythonFunctionTool")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
 
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
+
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
   await page.getByTestId("div-generic-node").click();
   await page.getByTestId("code-button-modal").click();
 
@@ -50,6 +57,8 @@ test("CodeAreaModalComponent", async ({ page }) => {
   await page.locator("textarea").fill(wCode);
   await page.locator("textarea").fill(code);
   await page.locator('//*[@id="checkAndSaveBtn"]').click();
+  await page.waitForTimeout(1000);
+
   expect(await page.getByText("Code is ready to run").isVisible()).toBeTruthy();
   await page.getByTestId("code-button-modal").click();
   expect(await page.locator('//*[@id="codeValue"]').inputValue()).toBe(
