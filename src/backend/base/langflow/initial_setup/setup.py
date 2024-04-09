@@ -84,7 +84,7 @@ def log_node_changes(node_changes_log):
         logger.debug("\n".join(formatted_messages))
 
 
-def load_starter_projects():
+def load_starter_projects() -> list[tuple[Path, dict]]:
     starter_projects = []
     folder = Path(__file__).parent / "starter_projects"
     for file in folder.glob("*.json"):
