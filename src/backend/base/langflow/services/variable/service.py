@@ -29,7 +29,7 @@ class VariableService(Service):
                 if var in os.environ:
                     logger.debug(f"Creating {var} variable from environment.")
                     try:
-                        self.create_variable(user_id, var, os.environ[var], session=session)
+                        self.create_variable(user_id, var, os.environ[var], _type="Credential", session=session)
                     except Exception as e:
                         logger.error(f"Error creating {var} variable: {e}")
 
@@ -90,11 +90,13 @@ class VariableService(Service):
         user_id: Union[UUID, str],
         name: str,
         value: str,
+        _type: str = "Generic",
         session: Session = Depends(get_session),
     ):
         variable = Variable(
             user_id=user_id,
             name=name,
+            type=_type,
             value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
         )
         session.add(variable)
