@@ -36,7 +36,7 @@ def upgrade() -> None:
                 ),
                 sa.Column("user_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
                 sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
-                sa.Column("created_at", sa.DateTime(), nullable=False),
+                sa.Column("created_at", sqlmodel.sql.sqltypes.DateTime(), nullable=False),
                 sa.Column("updated_at", sa.DateTime(), nullable=True),
                 sa.PrimaryKeyConstraint("id"),
             )

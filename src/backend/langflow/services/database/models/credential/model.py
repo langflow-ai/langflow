@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, Column, func, DateTime
 
 from langflow.services.database.models.credential.schema import CredentialType
 
@@ -19,8 +19,11 @@ class CredentialBase(SQLModel):
 class Credential(CredentialBase, table=True):
     id: Optional[UUID] = Field(default_factory=uuid4, primary_key=True, description="Unique ID for the credential")
     # name is unique per user
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation time of the credential")
-    updated_at: Optional[datetime] = Field(None, description="Last update time of the credential")
+    created_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), server_default=func.now()),
+        description="Creation time of the credential",
+    )
+    updated_at: Optional[datetime] = Field(None,sa_column=Column(DateTime(timezone=True)), description="Last update time of the credential")
     # foreign key to user table
     user_id: UUID = Field(description="User ID associated with this credential", foreign_key="user.id")
     user: "User" = Relationship(back_populates="credentials")
