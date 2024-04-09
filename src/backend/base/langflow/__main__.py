@@ -189,7 +189,7 @@ def run(
         run_on_windows(host, port, log_level, options, app)
     else:
         # Run using gunicorn on Linux
-        run_on_mac_or_linux(host, port, log_level, options, app, open_browser)
+        run_on_mac_or_linux(host, port, log_level, options, app)
     if open_browser:
         click.launch(f"http://{host}:{port}")
 

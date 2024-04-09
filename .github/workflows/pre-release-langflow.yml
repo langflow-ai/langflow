@@ -71,8 +71,8 @@ jobs:
           push: true
           file: ./build_and_push.Dockerfile
           tags: |
-            langflow/langflow:${{ steps.check-version.outputs.version }}
-            langflow/langflow:1.0-alpha
+            logspace/langflow:${{ steps.check-version.outputs.version }}
+            logspace/langflow:1.0-alpha
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
