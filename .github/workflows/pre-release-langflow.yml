@@ -1,19 +1,13 @@
 name: Langflow Pre-release
-
+run-name: Langflow Pre-release by @${{ github.actor }}
 on:
-  pull_request:
-    types:
-      - closed
-    branches:
-      - dev
-    paths:
-      - "pyproject.toml"
   workflow_dispatch:
     inputs:
-      force_release:
-        description: "Force a release"
-        required: false
-        default: "false"
+      release_package:
+        description: "Release package"
+        required: true
+        type: boolean
+        default: false
   workflow_run:
     workflows: ["pre-release-base"]
     types: [completed]
@@ -24,7 +18,7 @@ env:
 
 jobs:
   if_release:
-    if: ${{ (github.event.pull_request.merged == true) && contains(github.event.pull_request.labels.*.name, 'pre-release') }} || ${{ github.event_name == 'workflow_dispatch' && inputs.force_release == 'true' }}
+    if: inputs.release_package == true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -73,6 +67,7 @@ jobs:
           tags: |
             logspace/langflow:${{ steps.check-version.outputs.version }}
             logspace/langflow:1.0-alpha
+
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
