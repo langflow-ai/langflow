@@ -5,7 +5,7 @@ from langflow.field_typing import Text
 from langflow.schema import Record
 
 
-class ChatInput(AstraDBChatComponent):
+class AstraChatInput(AstraDBChatComponent):
     display_name = "Astra DB Chat Input"
     description = "Get Astra DB chat inputs from the Interaction Panel."
     icon = "ChatInput"
