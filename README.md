@@ -122,4 +122,4 @@ We welcome contributions from developers of all levels to our open-source projec
 
 # 📄 License
 
-Langflow is released under the MIT License. See the LICENSE file for details.
+Langflow is released under the MIT License. See the [LICENSE](LICENSE) file for details.
