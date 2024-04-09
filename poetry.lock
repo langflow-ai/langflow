@@ -1129,13 +1129,13 @@ testing = ["pytest (>=7.2.1)", "pytest-cov (>=4.0.0)", "tox (>=4.4.3)"]
 
 [[package]]
 name = "cohere"
-version = "5.2.3"
+version = "5.2.4"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "cohere-5.2.3-py3-none-any.whl", hash = "sha256:943fd2818662b02a98dfdccc7d38d02fabd8782882e8e15ddab57a33a4dcf780"},
-    {file = "cohere-5.2.3.tar.gz", hash = "sha256:eba5a3cb6a44f241ac1fe9ef2235641996555e15ecda2544c997fd750d31a693"},
+    {file = "cohere-5.2.4-py3-none-any.whl", hash = "sha256:50e8cbd009a6d6f6ce7127a0b62c50d3dfcfdb853f681f0ac315cfa70599fee4"},
+    {file = "cohere-5.2.4.tar.gz", hash = "sha256:2bf6e905773116ad3fff348e054e4ce1a1830092a63cb48fa8180beda4cbb96a"},
 ]
 
 [package.dependencies]
@@ -1488,13 +1488,13 @@ files = [
 
 [[package]]
 name = "deepdiff"
-version = "7.0.0"
+version = "7.0.1"
 description = "Deep Difference and Search of any Python object/data. Recreate objects by adding adding deltas to each other."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "deepdiff-7.0.0-py3-none-any.whl", hash = "sha256:f7bbb845f83ad6b9453a4ab07c579bdc6f1df712edc515740455a9b88c2bc41a"},
-    {file = "deepdiff-7.0.0.tar.gz", hash = "sha256:4e07da4f2a1ae069b7465d264715764f3b36ce181ec89f47050ead61711b1e9a"},
+    {file = "deepdiff-7.0.1-py3-none-any.whl", hash = "sha256:447760081918216aa4fd4ca78a4b6a848b81307b2ea94c810255334b759e1dc3"},
+    {file = "deepdiff-7.0.1.tar.gz", hash = "sha256:260c16f052d4badbf60351b4f77e8390bee03a0b516246f6839bc813fb429ddf"},
 ]
 
 [package.dependencies]
@@ -1647,13 +1647,13 @@ files = [
 
 [[package]]
 name = "dspy-ai"
-version = "2.4.6"
+version = "2.4.5"
 description = "DSPy"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "dspy-ai-2.4.6.tar.gz", hash = "sha256:c1ef8e83b0ef1dae959066e7e394dcf506f429497417f74aa74f0f2de93a55dc"},
-    {file = "dspy_ai-2.4.6-py3-none-any.whl", hash = "sha256:0c9d47849e6d75407cc2f5f2b5362792f19da3f1aa9cebd5e04f243935b3a54b"},
+    {file = "dspy-ai-2.4.5.tar.gz", hash = "sha256:6d9f166f9c214a86cfa0ef0e1d1489b4034dbed1cdab61ce152de8c09f64d799"},
+    {file = "dspy_ai-2.4.5-py3-none-any.whl", hash = "sha256:341e239374fba86ad7f9cd1eb3810ccd70bbbdfe8e9b2fa79038da0e0e720d4e"},
 ]
 
 [package.dependencies]
@@ -3873,7 +3873,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.22"
+version = "0.0.23"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.12"
@@ -3983,13 +3983,13 @@ regex = ["regex"]
 
 [[package]]
 name = "litellm"
-version = "1.34.34"
+version = "1.34.35"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.34.34-py3-none-any.whl", hash = "sha256:c9eefd4b5adec3c2e6d0ab765a4fcebd475a895c7e417f47f8e677410b607f51"},
-    {file = "litellm-1.34.34.tar.gz", hash = "sha256:d11c9d5296d052a9e5e1187ac7b33683f3a581740abc4de6a9c327d3f3c7187c"},
+    {file = "litellm-1.34.35-py3-none-any.whl", hash = "sha256:4a637f5ecd6f9ac4b11b6262c89cc50d0622b81840c71726fa48349bd208be92"},
+    {file = "litellm-1.34.35.tar.gz", hash = "sha256:21343cdf849119d072b917facf3545a6cea9792b3a9ece90555ee0912369d83d"},
 ]
 
 [package.dependencies]
@@ -4261,13 +4261,13 @@ llama-index-program-openai = ">=0.1.1,<0.2.0"
 
 [[package]]
 name = "llama-index-readers-file"
-version = "0.1.14"
+version = "0.1.15"
 description = "llama-index readers file integration"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "llama_index_readers_file-0.1.14-py3-none-any.whl", hash = "sha256:3391e04f07eccc6bc51e1932bf4bc7665cb595adcd7c9f7c2a25d8e076ae779e"},
-    {file = "llama_index_readers_file-0.1.14.tar.gz", hash = "sha256:2a0aefa032a52f9035b8fe6c74d9a5296dbec455981470ea795d4ab947fe2fef"},
+    {file = "llama_index_readers_file-0.1.15-py3-none-any.whl", hash = "sha256:f0d26a46d4c40334729d4506d9fbdbed8f5e187e36e22159fb48b28d67c7f240"},
+    {file = "llama_index_readers_file-0.1.15.tar.gz", hash = "sha256:98087d983a1f2d26961805217f13d24b0f23cbbe8e32d2327ae86b1ee668d3b2"},
 ]
 
 [package.dependencies]
