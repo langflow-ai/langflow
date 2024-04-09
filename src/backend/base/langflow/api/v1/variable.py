@@ -75,7 +75,7 @@ def read_variables(
         for variable in variables_dump:
             if not variable["is_readable"]:
                 variable["value"] = None
-        return variables
+        return variables_dump
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
