@@ -14,9 +14,6 @@ if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
 
-VARS_TO_GET_FROM_ENV = ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]
-
-
 class VariableService(Service):
     name = "variable_service"
 
