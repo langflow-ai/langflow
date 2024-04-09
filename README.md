@@ -160,4 +160,4 @@ Join our [Discord](https://discord.com/invite/EqksyE2EX9) server to ask question
 
 # 📄 License
 
-Langflow is released under the MIT License. See the LICENSE file for details.
+Langflow is released under the MIT License. See the [LICENSE](LICENSE) file for details.
