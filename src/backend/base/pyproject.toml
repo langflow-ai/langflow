@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.21"
+version = "0.0.24"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -13,7 +13,7 @@ maintainers = [
     "Otávio Anovazzi <otavio2204@gmail.com>",
     "Rodrigo Nader <rodrigo@logspace.ai>",
 ]
-repository = "https://github.com/logspace-ai/langflow"
+repository = "https://github.com/langflow-ai/langflow"
 license = "MIT"
 readme = "README.md"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
@@ -43,7 +43,7 @@ typer = "^0.12.0"
 cachetools = "^5.3.1"
 platformdirs = "^4.2.0"
 python-multipart = "^0.0.7"
-orjson = "3.9.15"
+orjson = "3.10.0"
 alembic = "^1.13.0"
 passlib = "^1.7.4"
 bcrypt = "4.0.1"

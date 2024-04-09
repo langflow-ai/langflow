@@ -1,6 +1,5 @@
-from typing import List, Optional, Union
+from typing import List, Optional
 
-from langchain.llms import BaseLLM
 from langchain_community.chat_models.vertexai import ChatVertexAI
 from langchain_core.messages.base import BaseMessage
 
@@ -74,7 +73,7 @@ class ChatVertexAIComponent(CustomComponent):
         top_k: int = 40,
         top_p: float = 0.95,
         verbose: bool = False,
-    ) -> Union[BaseLanguageModel, BaseLLM]:
+    ) -> BaseLanguageModel:
         return ChatVertexAI(
             credentials=credentials,
             examples=examples,

@@ -1,67 +1,89 @@
-from typing import Callable, Optional, Union
+from typing import Optional
 
-from langchain_community.chat_models.anthropic import ChatAnthropic
+from langchain_anthropic import ChatAnthropic
 from pydantic.v1.types import SecretStr
+
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import BaseLanguageModel
 
 
-class ChatAnthropicComponent(CustomComponent):
-    display_name = "ChatAnthropic"
-    description = "`Anthropic` chat large language models."
-    documentation = "https://python.langchain.com/docs/modules/model_io/models/chat/integrations/anthropic"
+class AnthropicLLM(CustomComponent):
+    display_name: str = "Anthropic"
+    description: str = "Generate text using Anthropic Chat&Completion LLMs."
     icon = "Anthropic"
+
+    field_order = [
+        "model",
+        "anthropic_api_key",
+        "max_tokens",
+        "temperature",
+        "anthropic_api_url",
+    ]
 
     def build_config(self):
         return {
+            "model": {
+                "display_name": "Model Name",
+                "options": [
+                    "claude-3-opus-20240229",
+                    "claude-3-sonnet-20240229",
+                    "claude-3-haiku-20240307",
+                    "claude-2.1",
+                    "claude-2.0",
+                    "claude-instant-1.2",
+                    "claude-instant-1",
+                ],
+                "info": "Name of the model to use.",
+                "required": True,
+                "value": "claude-3-opus-20240229",
+            },
             "anthropic_api_key": {
                 "display_name": "Anthropic API Key",
-                "field_type": "str",
+                "required": True,
                 "password": True,
-            },
-            "model_kwargs": {
-                "display_name": "Model Kwargs",
-                "field_type": "dict",
-                "advanced": True,
-            },
-            "model_name": {
-                "display_name": "Model Name",
-                "field_type": "str",
-                "advanced": False,
-                "required": False,
-                "options": ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
-            },
-            "temperature": {
-                "display_name": "Temperature",
-                "field_type": "float",
+                "info": "Your Anthropic API key.",
             },
             "max_tokens": {
                 "display_name": "Max Tokens",
                 "field_type": "int",
-                "advanced": False,
-                "required": False,
+                "advanced": True,
+                "value": 256,
             },
-            "top_k": {"display_name": "Top K", "field_type": "int", "advanced": True},
-            "top_p": {"display_name": "Top P", "field_type": "float", "advanced": True},
+            "temperature": {
+                "display_name": "Temperature",
+                "field_type": "float",
+                "value": 0.1,
+            },
+            "anthropic_api_url": {
+                "display_name": "Anthropic API URL",
+                "advanced": True,
+                "info": "Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
+            },
+            "code": {"show": False},
         }
 
     def build(
         self,
-        anthropic_api_key: str,
-        model_kwargs: dict = {},
-        model_name: str = "claude-3-opus-20240229",
+        model: str,
+        anthropic_api_key: Optional[str] = None,
+        max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
-        max_tokens: Optional[int] = 1024,
-        top_k: Optional[int] = None,
-        top_p: Optional[float] = None,
-    ) -> Union[BaseLanguageModel, Callable]:
-        return ChatAnthropic(
-            anthropic_api_key=SecretStr(anthropic_api_key),
-            model_kwargs=model_kwargs,
-            model_name=model_name,
-            temperature=temperature,
-            max_tokens=max_tokens,  # type: ignore
-            top_k=top_k,
-            top_p=top_p,
-        )
+        anthropic_api_url: Optional[str] = None,
+    ) -> BaseLanguageModel:
+        # Set default API endpoint if not provided
+        if not anthropic_api_url:
+            anthropic_api_url = "https://api.anthropic.com"
+
+        try:
+            output = ChatAnthropic(
+                model_name=model,
+                anthropic_api_key=(SecretStr(anthropic_api_key) if anthropic_api_key else None),
+                max_tokens_to_sample=max_tokens,  # type: ignore
+                temperature=temperature,
+                anthropic_api_url=anthropic_api_url,
+            )
+        except Exception as e:
+            raise ValueError("Could not connect to Anthropic API.") from e
+
+        return output

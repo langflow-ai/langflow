@@ -10,7 +10,26 @@ from langflow.schema.schema import Record
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
-TEXT_FILE_TYPES = ["txt", "md", "mdx", "csv", "json", "yaml", "yml", "xml", "html", "htm", "pdf", "docx"]
+TEXT_FILE_TYPES = [
+    "txt",
+    "md",
+    "mdx",
+    "csv",
+    "json",
+    "yaml",
+    "yml",
+    "xml",
+    "html",
+    "htm",
+    "pdf",
+    "docx",
+    "py",
+    "sh",
+    "sql",
+    "js",
+    "ts",
+    "tsx",
+]
 
 
 def is_hidden(path: Path) -> bool:
