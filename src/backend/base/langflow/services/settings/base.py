@@ -7,6 +7,7 @@ from typing import List, Optional
 
 import orjson
 import yaml
+from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from loguru import logger
 from pydantic import field_validator, validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -69,6 +70,8 @@ class Settings(BaseSettings):
 
     store_environment_variables: bool = True
     """Whether to store environment variables as Global Variables in the database."""
+    variables_to_get_from_environment: list[str] = VARIABLES_TO_GET_FROM_ENVIRONMENT
+    """List of environment variables to get from the environment and store in the database."""
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):

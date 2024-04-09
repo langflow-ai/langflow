@@ -28,7 +28,7 @@ class VariableService(Service):
         should_or_should_not = "Should" if self.settings_service.settings.store_environment_variables else "Should not"
         logger.info(f"{should_or_should_not} store environment variables in the database.")
         if self.settings_service.settings.store_environment_variables:
-            for var in VARS_TO_GET_FROM_ENV:
+            for var in self.settings_service.settings.variables_to_get_from_environment:
                 if var in os.environ:
                     logger.debug(f"Creating {var} variable from environment.")
                     try:
