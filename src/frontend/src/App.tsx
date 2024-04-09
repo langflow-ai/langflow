@@ -56,18 +56,21 @@ export default function App() {
     refreshStars();
     refreshVersion();
 
-    // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
-    if (isAuthenticated === true) {
-      // get data from db
-      getTypes().then(() => {
-        refreshFlows();
-      });
-      getGlobalVariables().then((res) => {
-        setGlobalVariables(res);
-      });
-      checkHasStore();
-      fetchApiData();
-    }
+    const fetchData = async () => {
+      if (isAuthenticated) {
+        try {
+          await getTypes();
+          refreshFlows();
+          const res = await getGlobalVariables();
+          setGlobalVariables(res);
+          checkHasStore();
+          fetchApiData();
+        } catch (error) {
+          console.error("Failed to fetch data:", error);
+        }
+      }
+    };
+    fetchData();
   }, [isAuthenticated]);
 
   useEffect(() => {
