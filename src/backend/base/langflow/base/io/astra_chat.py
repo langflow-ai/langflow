@@ -9,7 +9,7 @@ from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
 
 
-class AstraChatComponent(CustomComponent):
+class AstraDBChatComponent(CustomComponent):
     display_name = "Astra DB Chat Component"
     description = "Use as base for Astra DB chat components."
 

@@ -1,11 +1,11 @@
 from typing import Optional, Union
 
-from langflow.base.io.astra_chat import AstraChatComponent
+from langflow.base.io.astra_chat import AstraDBChatComponent
 from langflow.field_typing import Text
 from langflow.schema import Record
 
 
-class ChatInput(AstraChatComponent):
+class ChatInput(AstraDBChatComponent):
     display_name = "Astra DB Chat Input"
     description = "Get Astra DB chat inputs from the Interaction Panel."
     icon = "ChatInput"
