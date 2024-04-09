@@ -24,4 +24,5 @@ FIELD_FORMAT_ATTRIBUTES = [
     "real_time_refresh",
     "refresh_button",
     "refresh_button_text",
+    "options",
 ]
