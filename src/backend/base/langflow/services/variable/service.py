@@ -1,16 +1,20 @@
+import os
 from typing import TYPE_CHECKING, Optional, Union
 from uuid import UUID
 
 from fastapi import Depends
-from sqlmodel import Session, select
-
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_session
+from loguru import logger
+from sqlmodel import Session, select
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
+
+
+VARS_TO_GET_FROM_ENV = ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]
 
 
 class VariableService(Service):
@@ -19,7 +23,28 @@ class VariableService(Service):
     def __init__(self, settings_service: "SettingsService"):
         self.settings_service = settings_service
 
-    def get_variable(self, user_id: Union[UUID, str], name: str, session: Session = Depends(get_session)) -> str:
+    def initialize_user_variables(self, user_id: Union[UUID, str], session: Session = Depends(get_session)):
+        # Check for environment variables that should be stored in the database
+        should_or_should_not = "Should" if self.settings_service.settings.store_environment_variables else "Should not"
+        logger.info(f"{should_or_should_not} store environment variables in the database.")
+        if self.settings_service.settings.store_environment_variables:
+            for var in VARS_TO_GET_FROM_ENV:
+                if var in os.environ:
+                    logger.debug(f"Creating {var} variable from environment.")
+                    try:
+                        self.create_variable(user_id, var, os.environ[var], session=session)
+                    except Exception as e:
+                        logger.error(f"Error creating {var} variable: {e}")
+
+        else:
+            logger.info("Skipping environment variable storage.")
+
+    def get_variable(
+        self,
+        user_id: Union[UUID, str],
+        name: str,
+        session: Session = Depends(get_session),
+    ) -> str:
         # we get the credential from the database
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
         variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
@@ -34,7 +59,11 @@ class VariableService(Service):
         return [variable.name for variable in variables]
 
     def update_variable(
-        self, user_id: Union[UUID, str], name: str, value: str, session: Session = Depends(get_session)
+        self,
+        user_id: Union[UUID, str],
+        name: str,
+        value: str,
+        session: Session = Depends(get_session),
     ):
         variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
         if not variable:
@@ -46,7 +75,12 @@ class VariableService(Service):
         session.refresh(variable)
         return variable
 
-    def delete_variable(self, user_id: Union[UUID, str], name: str, session: Session = Depends(get_session)):
+    def delete_variable(
+        self,
+        user_id: Union[UUID, str],
+        name: str,
+        session: Session = Depends(get_session),
+    ):
         variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
         if not variable:
             raise ValueError(f"{name} variable not found.")
@@ -55,12 +89,19 @@ class VariableService(Service):
         return variable
 
     def create_variable(
-        self, user_id: Union[UUID, str], name: str, value: str, session: Session = Depends(get_session)
+        self,
+        user_id: Union[UUID, str],
+        name: str,
+        value: str,
+        session: Session = Depends(get_session),
     ):
         variable = Variable(
-            user_id=user_id, name=name, value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
+            user_id=user_id,
+            name=name,
+            value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
         )
         session.add(variable)
         session.commit()
         session.refresh(variable)
+        return variable
         return variable

@@ -67,6 +67,9 @@ class Settings(BaseSettings):
 
     CELERY_ENABLED: bool = False
 
+    store_environment_variables: bool = True
+    """Whether to store environment variables as Global Variables in the database."""
+
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
         if not value:
@@ -148,14 +151,6 @@ class Settings(BaseSettings):
         return value
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
-
-    # @model_validator()
-    # @classmethod
-    # def validate_lists(cls, values):
-    #     for key, value in values.items():
-    #         if key != "dev" and not value:
-    #             values[key] = []
-    #     return values
 
     def update_from_yaml(self, file_path: str, dev: bool = False):
         new_settings = load_settings_from_yaml(file_path)
