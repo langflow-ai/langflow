@@ -3873,7 +3873,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.23"
+version = "0.0.24"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.12"
@@ -3983,13 +3983,13 @@ regex = ["regex"]
 
 [[package]]
 name = "litellm"
-version = "1.34.35"
+version = "1.34.36"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.34.35-py3-none-any.whl", hash = "sha256:4a637f5ecd6f9ac4b11b6262c89cc50d0622b81840c71726fa48349bd208be92"},
-    {file = "litellm-1.34.35.tar.gz", hash = "sha256:21343cdf849119d072b917facf3545a6cea9792b3a9ece90555ee0912369d83d"},
+    {file = "litellm-1.34.36-py3-none-any.whl", hash = "sha256:e5baa7f4540dd2923472f60d3ffb4f76bb48f5288a7fb26efed2010b57b0d8ad"},
+    {file = "litellm-1.34.36.tar.gz", hash = "sha256:03e59c30ae21b9c1df4064dc20b015233c3d86a07bb4832c40dd73021778f3c8"},
 ]
 
 [package.dependencies]
@@ -9172,13 +9172,13 @@ files = [
 
 [[package]]
 name = "types-redis"
-version = "4.6.0.20240311"
+version = "4.6.0.20240409"
 description = "Typing stubs for redis"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "types-redis-4.6.0.20240311.tar.gz", hash = "sha256:e049bbdff0e0a1f8e701b64636811291d21bff79bf1e7850850a44055224a85f"},
-    {file = "types_redis-4.6.0.20240311-py3-none-any.whl", hash = "sha256:6b9d68a29aba1ee400c823d8e5fe88675282eb69d7211e72fe65dbe54b33daca"},
+    {file = "types-redis-4.6.0.20240409.tar.gz", hash = "sha256:ce217c279581d769df992c5b76d61c65425b0a679626048e633e643868eb881b"},
+    {file = "types_redis-4.6.0.20240409-py3-none-any.whl", hash = "sha256:a3b92760c49a034827a0c3825206728df4e61e981c1324099d4414335af4f52f"},
 ]
 
 [package.dependencies]
