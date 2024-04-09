@@ -2,14 +2,15 @@ import platform
 import socket
 import sys
 import time
-import webbrowser
 from pathlib import Path
 from typing import Optional
 
+import click
 import httpx
 import typer
 from dotenv import load_dotenv
 from multiprocess import Process, cpu_count  # type: ignore
+from packaging import version as pkg_version
 from rich import box
 from rich import print as rprint
 from rich.console import Console
@@ -188,23 +189,29 @@ def run(
         run_on_windows(host, port, log_level, options, app)
     else:
         # Run using gunicorn on Linux
-        run_on_mac_or_linux(host, port, log_level, options, app, open_browser)
+        run_on_mac_or_linux(host, port, log_level, options, app)
+    if open_browser:
+        click.launch(f"http://{host}:{port}")
 
 
-def run_on_mac_or_linux(host, port, log_level, options, app, open_browser=True):
-    webapp_process = Process(target=run_langflow, args=(host, port, log_level, options, app))
-    webapp_process.start()
+def wait_for_server_ready(host, port):
+    """
+    Wait for the server to become ready by polling the health endpoint.
+    """
     status_code = 0
     while status_code != 200:
         try:
             status_code = httpx.get(f"http://{host}:{port}/health").status_code
-
         except Exception:
             time.sleep(1)
 
+
+def run_on_mac_or_linux(host, port, log_level, options, app):
+    webapp_process = Process(target=run_langflow, args=(host, port, log_level, options, app))
+    webapp_process.start()
+    wait_for_server_ready(host, port)
+
     print_banner(host, port)
-    if open_browser:
-        webbrowser.open(f"http://{host}:{port}")
 
 
 def run_on_windows(host, port, log_level, options, app):
@@ -245,40 +252,157 @@ def get_free_port(port):
     return port
 
 
-def print_banner(host, port):
+def version_is_prerelease(version: str):
+    """
+    Check if a version is a pre-release version.
+    """
+    return "a" in version or "b" in version or "rc" in version
+
+
+def get_letter_from_version(version: str):
+    """
+    Get the letter from a pre-release version.
+    """
+    if "a" in version:
+        return "a"
+    if "b" in version:
+        return "b"
+    if "rc" in version:
+        return "rc"
+    return None
+
+
+def build_new_version_notice(current_version: str, package_name: str):
+    """
+    Build a new version notice.
+    """
+    # The idea here is that we want to show a notice to the user
+    # when a new version of Langflow is available.
+    # The key is that if the version the user has is a pre-release
+    # e.g 0.0.0a1, then we find the latest version that is pre-release
+    # otherwise we find the latest stable version.
+    # we will show the notice either way, but only if the version
+    # the user has is not the latest version.
+    if version_is_prerelease(current_version):
+        # curl -s "https://pypi.org/pypi/langflow/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1
+        # this command will give us the latest pre-release version
+        package_info = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()
+        # 4.0.0a1 or 4.0.0b1 or 4.0.0rc1
+        # find which type of pre-release version we have
+        # could be a1, b1, rc1
+        # we want the a, b, or rc and the number
+        suffix_letter = get_letter_from_version(current_version)
+        number_version = current_version.split(suffix_letter)[0]
+        latest_version = sorted(
+            package_info["releases"].keys(),
+            key=lambda x: x.split(suffix_letter)[-1] and number_version in x,
+        )[-1]
+        if version_is_prerelease(latest_version) and latest_version != current_version:
+            return (
+                True,
+                f"A new pre-release version of {package_name} is available: {latest_version}",
+            )
+    else:
+        latest_version = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()["info"]["version"]
+        if not version_is_prerelease(latest_version):
+            return (
+                False,
+                f"A new version of {package_name} is available: {latest_version}",
+            )
+    return False, ""
+
+
+def is_prerelease(version: str) -> bool:
+    return "a" in version or "b" in version or "rc" in version
+
+
+def fetch_latest_version(package_name: str, include_prerelease: bool) -> str:
+    response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
+    versions = response.json()["releases"].keys()
+    valid_versions = [v for v in versions if include_prerelease or not is_prerelease(v)]
+    if not valid_versions:
+        return None  # Handle case where no valid versions are found
+    return max(valid_versions, key=lambda v: pkg_version.parse(v))
+
+
+def build_version_notice(current_version: str, package_name: str) -> str:
+    latest_version = fetch_latest_version(package_name, is_prerelease(current_version))
+    if latest_version and pkg_version.parse(current_version) < pkg_version.parse(latest_version):
+        release_type = "pre-release" if is_prerelease(latest_version) else "version"
+        return f"A new {release_type} of {package_name} is available: {latest_version}"
+    return ""
+
+
+def generate_pip_command(package_names, is_pre_release):
+    """
+    Generate the pip install command based on the packages and whether it's a pre-release.
+    """
+    base_command = "pip install"
+    if is_pre_release:
+        return f"{base_command} {' '.join(package_names)} -U --pre"
+    else:
+        return f"{base_command} {' '.join(package_names)} -U"
+
+
+def stylize_text(text: str, to_style: str, is_prerelease: bool) -> str:
+    color = "#42a7f5" if is_prerelease else "#6e42f5"
+    # return "".join(f"[{color}]{char}[/]" for char in text)
+    styled_text = f"[{color}]{to_style}[/]"
+    return text.replace(to_style, styled_text)
+
+
+def print_banner(host: str, port: int):
+    notices = []
+    package_names = []  # Track package names for pip install instructions
+    is_pre_release = False  # Track if any package is a pre-release
+    package_name = ""
+
     try:
-        from langflow.version import __version__  # type: ignore
+        from langflow.version import __version__ as langflow_version
 
-        version = __version__
-        word = "Langflow"
+        is_pre_release |= is_prerelease(langflow_version)  # Update pre-release status
+        notice = build_version_notice(langflow_version, "langflow")
+        notice = stylize_text(notice, "langflow", is_pre_release)
+        if notice:
+            notices.append(notice)
+        package_names.append("langflow")
+        package_name = "Langflow"
     except ImportError:
-        from importlib import metadata
+        langflow_version = None
 
-        version = metadata.version("langflow-base")
-        word = "Langflow Base"
+    # Attempt to handle langflow-base similarly
+    if langflow_version is None:  # This means langflow.version was not imported
+        try:
+            from importlib import metadata
 
-    colors = ["#6e42f5"]
+            langflow_base_version = metadata.version("langflow-base")
+            is_pre_release |= is_prerelease(langflow_base_version)  # Update pre-release status
+            notice = build_version_notice(langflow_base_version, "langflow-base")
+            notice = stylize_text(notice, "langflow-base", is_pre_release)
+            if notice:
+                notices.append(notice)
+            package_names.append("langflow-base")
+            package_name = "Langflow Base"
+        except ImportError as e:
+            logger.exception(e)
+            raise e
 
-    styled_word = ""
+    # Generate pip command based on the collected data
+    pip_command = generate_pip_command(package_names, is_pre_release)
 
-    for i, char in enumerate(word):
-        color = colors[i % len(colors)]
-        styled_word += f"[{color}]{char}[/]"
+    # Add pip install command to notices if any package needs an update
+    if notices:
+        notices.append(f"Run '{pip_command}' to update.")
 
-    # Title with emojis and gradient text
-    title = (
-        f"[bold]Welcome to :chains: {styled_word} v{version}[/bold]\n"
-        f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
-    )
-    info_text = (
-        "Collaborate, and contribute at our "
-        "[bold][link=https://github.com/logspace-ai/langflow]GitHub Repo[/link][/bold] :rocket:"
-    )
+    styled_notices = [f"[bold]{notice}[/bold]" for notice in notices if notice]
+    styled_package_name = stylize_text(package_name, package_name, any("pre-release" in notice for notice in notices))
 
-    # Create a panel with the title and the info text, and a border around it
-    panel = Panel(f"{title}\n{info_text}", box=box.ROUNDED, border_style="blue", expand=False)
+    title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
+    info_text = "Collaborate, and contribute at our [bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :rocket:"
+    access_link = f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
 
-    # Print the banner with a separator line before and after
+    panel_content = "\n\n".join([title, *styled_notices, info_text, access_link])
+    panel = Panel(panel_content, box=box.ROUNDED, border_style="blue", expand=False)
     rprint(panel)
 
 
@@ -342,11 +466,23 @@ def superuser(
 
 
 @app.command()
-def migration(test: bool = typer.Option(True, help="Run migrations in test mode.")):
+def migration(
+    test: bool = typer.Option(True, help="Run migrations in test mode."),
+    fix: bool = typer.Option(
+        False,
+        help="Fix migrations. This is a destructive operation, and should only be used if you know what you are doing.",
+    ),
+):
     """
     Run or test migrations.
     """
-    initialize_services()
+    if fix:
+        if not typer.confirm(
+            "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
+        ):
+            raise typer.Abort()
+
+    initialize_services(fix_migration=fix)
     db_service = get_db_service()
     if not test:
         db_service.run_migrations()
