@@ -1,26 +1,20 @@
 name: Langflow Base Pre-release
-
+run-name: Langflow Base Pre-release by @${{ github.actor }}
 on:
-  pull_request:
-    types:
-      - closed
-    branches:
-      - dev
-    paths:
-      - "src/backend/base/pyproject.toml"
   workflow_dispatch:
     inputs:
-      force_release:
-        description: "Force a release"
-        required: false
-        default: "false"
+      release_package:
+        description: "Release package"
+        required: true
+        type: boolean
+        default: false
 
 env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
   if_release:
-    if: ${{ (github.event.pull_request.merged == true) && contains(github.event.pull_request.labels.*.name, 'pre-release') }} || ${{ github.event_name == 'workflow_dispatch' && inputs.force_release == 'true' }}
+    if: inputs.release_package == true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,22 +44,11 @@ jobs:
           fi
       - name: Build project for distribution
         run: make build base=true
-
       - name: Publish to PyPI
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           make publish base=true
-      - name: Create Release
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "dist/*"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          draft: false
-          generateReleaseNotes: true
-          prerelease: true
-          tag: v${{ steps.check-version.outputs.version }}
-          commit: dev
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -83,3 +66,13 @@ jobs:
           file: ./build_and_push_base.Dockerfile
           tags: |
             logspace/langflow:base-${{ steps.check-version.outputs.version }}
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          generateReleaseNotes: true
+          prerelease: true
+          tag: v${{ steps.check-version.outputs.version }}
+          commit: dev

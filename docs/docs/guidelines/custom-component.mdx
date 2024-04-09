@@ -131,7 +131,7 @@ class MyComponent(CustomComponent):
 
 ---
 
-The [Return Type Annotation](https://docs.python.org/3/library/typing.html) of the _`build`_ method defines the component type (e.g., Chain, BaseLLM, or basic Python types). Check out all supported types in the [component reference](../components/custom).
+The [Return Type Annotation](https://docs.python.org/3/library/typing.html) of the _`build`_ method defines the component type (e.g., Chain, BaseLanguageModel, or basic Python types). Check out all supported types in the [component reference](../components/custom).
 
 ```python
 from langflow.custom import CustomComponent
@@ -366,7 +366,7 @@ For advanced customization, Langflow offers the option to create and load custom
 
 ### Folder Structure
 
-Create a folder that follows the same structural conventions as the [config.yaml](https://github.com/logspace-ai/langflow/blob/dev/src/backend/base/langflow/config.yaml) file. Inside this main directory, use a `custom_components` subdirectory for your custom components.
+Create a folder that follows the same structural conventions as the [config.yaml](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/config.yaml) file. Inside this main directory, use a `custom_components` subdirectory for your custom components.
 
 Inside `custom_components`, you can create a Python file for each component. Similarly, any custom agents should be housed in an `agents` subdirectory.
 
@@ -406,4 +406,5 @@ Langflow will attempt to load all of the components found in the specified direc
 
 Once your custom components have been loaded successfully, they will appear in Langflow's sidebar. From there, you can add them to your Langflow canvas for use. However, please note that components with errors will not be available for addition to the canvas. Always ensure your code is error-free before attempting to load components.
 
-Remember, creating custom components allows you to extend the functionality of Langflow to better suit your unique needs. Happy coding!
+Remember, creating custom components allows you to extend the functionality of Langflow to better suit your unique needs. Happy coding!import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
