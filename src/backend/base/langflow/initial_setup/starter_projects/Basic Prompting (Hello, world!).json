@@ -882,7 +882,7 @@
         }
     },
     "description": "This flow will get you experimenting with the basics of the UI, the Chat and the Prompt component. \n\nTry changing the Template in it to see how the model behaves. \nYou can change it to this and a Text Input into the `type_of_person` variable : \"Answer the user as if you were a pirate.\n\nUser: {user_input}\n\nAnswer: \" ",
-    "name": "Basic Prompting (Hello, world!)",
+    "name": "Basic Prompting (Hello, World)",
     "last_tested_version": "1.0.0a4",
     "is_component": false
 }

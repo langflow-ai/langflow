@@ -6,10 +6,9 @@ import httpx
 import pytest
 import respx
 from httpx import Response
-
 from langflow.components import (
     data,
-)  # Adjust the import according to your project structure
+)
 
 
 @pytest.fixture
@@ -135,7 +134,7 @@ def test_directory_without_mocks():
     from langflow.initial_setup import setup
     from langflow.initial_setup.setup import load_starter_projects
 
-    projects = load_starter_projects()
+    _, projects = zip(*load_starter_projects())
     # the setup module has a folder where the projects are stored
     # the contents of that folder are in the projects variable
     # the directory component can be used to load the projects

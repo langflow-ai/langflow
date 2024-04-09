@@ -245,7 +245,7 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
             logger.warning(f"Node {node.get('id')} does not have a tweak named {tweak_name}")
             continue
         if tweak_name in template_data:
-            key = tweak_name if tweak_name == "file_path" else "value"
+            key = "file_path" if template_data[tweak_name]["type"] == "file" else "value"
             template_data[tweak_name][key] = tweak_value
 
 
