@@ -1,5 +1,7 @@
+from .PythonREPLTool import PythonREPLToolComponent
 from .RetrieverTool import RetrieverToolComponent
-from .SearchAPITool import SearchApiToolComponent
 from .SearchApi import SearchApi
+from .SearchAPITool import SearchApiToolComponent
 
-__all__ = ["RetrieverToolComponent", "SearchApiToolComponent", "SearchApi"]
+
+__all__ = ["RetrieverToolComponent", "SearchApiToolComponent", "SearchApi", "PythonREPLToolComponent"]

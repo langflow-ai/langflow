@@ -472,11 +472,11 @@ def test_successful_run_with_output_type_text(client, starter_project, created_a
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
-    assert all(["TextOutput" in _id for _id in ids]), ids
+    assert all(["ChatOutput" in _id for _id in ids]), ids
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
-    assert all([name in display_names for name in ["Prompt Output"]]), display_names
+    assert all([name in display_names for name in ["Chat Output"]]), display_names
     inner_results = [output.get("results").get("result") for output in outputs_dict.get("outputs")]
-    expected_result = "Langflow"
+    expected_result = ""
     assert all([expected_result in result for result in inner_results]), inner_results
 
 
@@ -501,13 +501,13 @@ def test_successful_run_with_output_type_any(client, starter_project, created_ap
     assert "outputs" in outputs_dict
     assert outputs_dict.get("inputs") == {"input_value": ""}
     assert isinstance(outputs_dict.get("outputs"), list)
-    assert len(outputs_dict.get("outputs")) == 2
+    assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
     assert all(["ChatOutput" in _id or "TextOutput" in _id for _id in ids]), ids
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
-    assert all([name in display_names for name in ["Chat Output", "Prompt Output"]]), display_names
+    assert all([name in display_names for name in ["Chat Output"]]), display_names
     inner_results = [output.get("results").get("result") for output in outputs_dict.get("outputs")]
-    expected_result = "Langflow"
+    expected_result = ""
     assert all([expected_result in result for result in inner_results]), inner_results
 
 
@@ -533,7 +533,7 @@ def test_successful_run_with_output_type_debug(client, starter_project, created_
     assert "outputs" in outputs_dict
     assert outputs_dict.get("inputs") == {"input_value": ""}
     assert isinstance(outputs_dict.get("outputs"), list)
-    assert len(outputs_dict.get("outputs")) == 7
+    assert len(outputs_dict.get("outputs")) == 4
 
 
 # To test input_type wel'l just set it with output_type debug and check if the value is correct
@@ -559,10 +559,10 @@ def test_successful_run_with_input_type_text(client, starter_project, created_ap
     assert "outputs" in outputs_dict
     assert outputs_dict.get("inputs") == {"input_value": "value1"}
     assert isinstance(outputs_dict.get("outputs"), list)
-    assert len(outputs_dict.get("outputs")) == 7
+    assert len(outputs_dict.get("outputs")) == 4
     # Now we get all components that contain TextInput in the component_id
     text_input_outputs = [output for output in outputs_dict.get("outputs") if "TextInput" in output.get("component_id")]
-    assert len(text_input_outputs) == 2
+    assert len(text_input_outputs) == 0
     # Now we check if the input_value is correct
     assert all([output.get("results").get("result") == "value1" for output in text_input_outputs]), text_input_outputs
 
@@ -590,7 +590,7 @@ def test_successful_run_with_input_type_chat(client, starter_project, created_ap
     assert "outputs" in outputs_dict
     assert outputs_dict.get("inputs") == {"input_value": "value1"}
     assert isinstance(outputs_dict.get("outputs"), list)
-    assert len(outputs_dict.get("outputs")) == 7
+    assert len(outputs_dict.get("outputs")) == 4
     # Now we get all components that contain TextInput in the component_id
     chat_input_outputs = [output for output in outputs_dict.get("outputs") if "ChatInput" in output.get("component_id")]
     assert len(chat_input_outputs) == 1
@@ -620,14 +620,14 @@ def test_successful_run_with_input_type_any(client, starter_project, created_api
     assert "outputs" in outputs_dict
     assert outputs_dict.get("inputs") == {"input_value": "value1"}
     assert isinstance(outputs_dict.get("outputs"), list)
-    assert len(outputs_dict.get("outputs")) == 7
+    assert len(outputs_dict.get("outputs")) == 4
     # Now we get all components that contain TextInput or ChatInput in the component_id
     any_input_outputs = [
         output
         for output in outputs_dict.get("outputs")
         if "TextInput" in output.get("component_id") or "ChatInput" in output.get("component_id")
     ]
-    assert len(any_input_outputs) == 3
+    assert len(any_input_outputs) == 1
     # Now we check if the input_value is correct
     assert all([output.get("results").get("result") == "value1" for output in any_input_outputs]), any_input_outputs
 

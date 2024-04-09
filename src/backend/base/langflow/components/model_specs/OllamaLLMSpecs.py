@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from langchain.llms.base import BaseLLM
+from langflow.field_typing import BaseLanguageModel
 from langchain_community.llms.ollama import Ollama
 
 from langflow.interface.custom.custom_component import CustomComponent
@@ -118,7 +118,7 @@ class OllamaLLM(CustomComponent):
         tfs_z: Optional[float] = None,
         top_k: Optional[int] = None,
         top_p: Optional[int] = None,
-    ) -> BaseLLM:
+    ) -> BaseLanguageModel:
         if not base_url:
             base_url = "http://localhost:11434"
 

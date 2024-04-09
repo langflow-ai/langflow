@@ -29,6 +29,7 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
         .catch((error) => {
           console.error("An error has occurred while fetching types.");
           console.log(error);
+          setLoading(false);
           reject();
         });
     });

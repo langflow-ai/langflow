@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 from langflow.graph.graph.base import Graph
@@ -10,6 +11,7 @@ from langflow.initial_setup.setup import (
     load_starter_projects,
 )
 from langflow.memory import delete_messages
+from langflow.processing.process import process_tweaks
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
 from sqlalchemy import func
@@ -19,7 +21,8 @@ from sqlmodel import select
 def test_load_starter_projects():
     projects = load_starter_projects()
     assert isinstance(projects, list)
-    assert all(isinstance(project, dict) for project in projects)
+    assert all(isinstance(project[1], dict) for project in projects)
+    assert all(isinstance(project[0], Path) for project in projects)
 
 
 def test_get_project_data():
@@ -59,7 +62,7 @@ def test_create_or_update_starter_projects(client):
 
 
 @pytest.mark.asyncio
-async def test_starter_project_can_run_successfully(client):
+async def test_starter_projects_can_run_successfully(client):
     with session_scope() as session:
         # Run the function to create or update projects
         create_or_update_starter_projects()
@@ -75,12 +78,13 @@ async def test_starter_project_can_run_successfully(client):
 
         # Get all the starter projects
         projects = session.exec(select(Flow).where(Flow.folder == STARTER_FOLDER_NAME)).all()
-
-        graphs: list[tuple[str, Graph]] = [
-            (project.name, Graph.from_payload(project.data, flow_id=project.id))
-            for project in projects
-            if "Document" not in project.name or "RAG" not in project.name
-        ]
+        graphs: list[tuple[str, Graph]] = []
+        for project in projects:
+            # Add tweaks to make file_path work
+            tweaks = {"path": __file__}
+            graph_data = process_tweaks(project.data, tweaks)
+            graph_object = Graph.from_payload(graph_data, flow_id=project.id)
+            graphs.append((project.name, graph_object))
         assert len(graphs) == len(projects)
     for name, graph in graphs:
         outputs = await graph.arun(

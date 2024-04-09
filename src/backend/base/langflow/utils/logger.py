@@ -26,10 +26,7 @@ def patching(record):
 
 
 def configure(log_level: Optional[str] = None, log_file: Optional[Path] = None):
-    if (
-        os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS
-        and log_level is None
-    ):
+    if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
     if log_level is None:
         log_level = "ERROR"
@@ -77,11 +74,7 @@ def configure(log_level: Optional[str] = None, log_file: Optional[Path] = None):
 
 
 def setup_uvicorn_logger():
-    loggers = (
-        logging.getLogger(name)
-        for name in logging.root.manager.loggerDict
-        if name.startswith("uvicorn.")
-    )
+    loggers = (logging.getLogger(name) for name in logging.root.manager.loggerDict if name.startswith("uvicorn."))
     for uvicorn_logger in loggers:
         uvicorn_logger.handlers = []
     logging.getLogger("uvicorn").handlers = [InterceptHandler()]
@@ -111,6 +104,4 @@ class InterceptHandler(logging.Handler):
             frame = frame.f_back
             depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).log(
-            level, record.getMessage()
-        )
+        logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
