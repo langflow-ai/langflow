@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
 from pydantic import validator
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, Field, Column, func, DateTime
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
@@ -11,8 +11,8 @@ if TYPE_CHECKING:
 
 class ApiKeyBase(SQLModel):
     name: Optional[str] = Field(index=True, nullable=True, default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    last_used_at: Optional[datetime] = Field(default=None, nullable=True)
+    created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), server_default=func.now()))
+    last_used_at: Optional[datetime] = Field(sa_column=Column(DateTime(timezone=True)))
     total_uses: int = Field(default=0)
     is_active: bool = Field(default=True)
 
