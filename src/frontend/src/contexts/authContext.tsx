@@ -1,13 +1,8 @@
 import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Cookies from "universal-cookie";
-import {
-  autoLogin as autoLoginApi,
-  getLoggedUser,
-  requestLogout,
-} from "../controllers/API";
+import { getLoggedUser, requestLogout } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
-import useFlowsManagerStore from "../stores/flowsManagerStore";
 import { Users } from "../types/api";
 import { AuthContextType } from "../types/contexts/auth";
 
@@ -26,6 +21,7 @@ const initialValue: AuthContextType = {
   setApiKey: () => {},
   apiKey: null,
   storeApiKey: () => {},
+  getUser: () => {},
 };
 
 export const AuthContext = createContext<AuthContextType>(initialValue);
@@ -60,30 +56,6 @@ export function AuthProvider({ children }): React.ReactElement {
       setApiKey(apiKey);
     }
   }, []);
-
-  useEffect(() => {
-    const isLoginPage = location.pathname.includes("login");
-
-    autoLoginApi()
-      .then((user) => {
-        if (user && user["access_token"]) {
-          user["refresh_token"] = "auto";
-          login(user["access_token"]);
-          setUserData(user);
-          setAutoLogin(true);
-          setLoading(false);
-        }
-      })
-      .catch((error) => {
-        setAutoLogin(false);
-        if (isAuthenticated && !isLoginPage) {
-          getUser();
-        } else {
-          setLoading(false);
-          useFlowsManagerStore.setState({ isLoading: false });
-        }
-      });
-  }, [autoLogin]);
 
   function getUser() {
     getLoggedUser()
@@ -145,6 +117,7 @@ export function AuthProvider({ children }): React.ReactElement {
         setApiKey,
         apiKey,
         storeApiKey,
+        getUser,
       }}
     >
       {children}
