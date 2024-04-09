@@ -2,77 +2,41 @@ import Admonition from '@theme/Admonition';
 
 # Tools
 
-<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-    <p>
-        We appreciate your understanding as we polish our documentation – it may contain some rough edges. Share your feedback or report issues to help us improve! 🛠️📝
-    </p>
-</Admonition>
+Tools are interfaces that an agent, chain, or LLM can use to interact.
 
+### Retriever Tool
 
-### SearchApi
-
-Real-time search engine results API. Returns structured JSON data that includes answer box, knowledge graph, organic results, and more.
+This tool provides functionality to interact with a retriever, allowing retrieval of information based on specified criteria and configurations.
 
 **Parameters**
 
-- **Api Key:** A unique identifier for the SearchApi, necessary for authenticating requests to real-time search engines. This key can be retrieved from the [SearchApi dashboard](https://www.searchapi.io/).
-- **Engine:** Specifies the search engine. For instance: google, google_scholar, bing, youtube, and youtube_transcripts. A full list of supported engines is available in the [documentation](https://www.searchapi.io/docs/google).
-- **Parameters:** Allows the selection of any parameters recognized by SearchApi, with some being required and others optional. 
+- **Retriever:** The retriever to interact with.
+- **Name:** Name of the tool.
+- **Description:** Description of the tool.
 
-**Output**
+---
 
-- **Document:** The JSON response from the request as a Document.
+### Search Api
 
+Real-time search engine results API.
 
-### BingSearchRun
+**Output Types:** Document
 
-Bing Search is a web search engine owned and operated by Microsoft. It provides search results for various types of content, including web pages, images, videos, and news articles. It uses a combination of algorithms and human editors to deliver search results to users.
+**Parameters**
 
-**Params**
+- **Engine:** The search engine to use.
+- **Parameters:** The parameters to send with the request.
+- **API Key:** The API key to use SearchApi.
 
-- **Api Wrapper:** A BingSearchAPIWrapper component that takes the search URL and a subscription key.
+---
 
+### Search Api Tool
 
-### Calculator
+Real-time search engine results API.
 
-The calculator tool provides mathematical calculation capabilities to an agent by leveraging an LLMMathChain. It allows the agent to perform math when needed to answer questions.
+**Parameters**
 
-**Params**
-
-- **LLM:** Language Model to use in the calculation.
-
-
-### GoogleSearchResults
-
-A wrapper around Google Search. Useful for when the user needs to answer questions about with more control over the JSON data returned from the API. It returns the full JSON response configured based on the parameters passed to the API wrapper.
-
-**Params**
-
-- **Api Wrapper:** A GoogleSearchAPIWrapper with Google API key and CSE ID
+- **Engine:** The search engine to use.
+- **API Key:** The API key to use SearchApi.
 
 
-### GoogleSearchRun
-
-A quick wrapper around Google Search. It executes the search query and returns just the first result snippet from the highest-priority result type.
-
-**Params**
-
-- **Api Wrapper:** A GoogleSearchAPIWrapper with Google API key and CSE ID
-
-
-### GoogleSerperRun
-
-A low-cost Google Search API.
-
-**Params**
-
-- **Api Wrapper:** A GoogleSerperAPIWrapper component with API key and result keys
-
-
-### InfoSQLDatabaseTool
-
-Tool for getting metadata about a SQL database. The input to this tool is a comma-separated list of tables, and the output is the schema and sample rows for those tables. Example Input: `“table1`, `table2`, `table3”`.
-
-**Params**
-
-- **Db:** SQLDatabase to query.
