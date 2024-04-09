@@ -11,6 +11,7 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 import sqlmodel
 from alembic import op
+from loguru import logger  # noqa
 from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
@@ -46,9 +47,9 @@ def upgrade() -> None:
             if "fk_flow_user_id_user" not in indices_names:
                 batch_op.create_foreign_key("fk_flow_user_id_user", "user", ["user_id"], ["id"])
 
-    except Exception:
+    except Exception as e:
+        logger.exception(f"Error during upgrade: {e}")
         pass
-    # ### end Alembic commands ###
 
 
 def downgrade() -> None:
