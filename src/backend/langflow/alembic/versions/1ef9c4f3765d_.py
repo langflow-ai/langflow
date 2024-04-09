@@ -28,6 +28,7 @@ def upgrade() -> None:
                 "name", existing_type=sqlmodel.sql.sqltypes.AutoString(), nullable=True
             )
     except Exception as e:
+        logger.exception(f"Error during upgrade: {e}")
         pass
     # ### end Alembic commands ###
 
@@ -38,5 +39,6 @@ def downgrade() -> None:
         with op.batch_alter_table("apikey", schema=None) as batch_op:
             batch_op.alter_column("name", existing_type=sa.VARCHAR(), nullable=False)
     except Exception as e:
+        logger.exception(f"Error during upgrade: {e}")
         pass
     # ### end Alembic commands ###
