@@ -24,6 +24,7 @@ export type InputComponentType = {
   placeholder?: string;
   className?: string;
   id?: string;
+  name?: string;
   blurOnEnter?: boolean;
   optionsIcon?: string;
   optionsPlaceholder?: string;
@@ -587,6 +588,8 @@ export type genericModalPropsType = {
   children: ReactNode;
   id?: string;
   readonly?: boolean;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
 };
 
 export type newFlowModalPropsType = {

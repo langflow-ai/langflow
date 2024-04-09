@@ -30,6 +30,7 @@ export default function InputComponent({
   multiline = false,
   setPromptNodeClass,
   promptNodeClass,
+  name,
   readonly = false,
   password,
   editNode = false,
@@ -49,6 +50,7 @@ export default function InputComponent({
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
+  const [showPrompt, setShowPrompt] = useState<boolean>(false);
 
   // Clear component state
   useEffect(() => {
@@ -235,16 +237,25 @@ export default function InputComponent({
           <div
             className={cn(
               "pointer-events-auto absolute inset-y-0 h-full w-full cursor-pointer",
-              (selectedOption !== "" || !onChange) && setSelectedOption
+              ((selectedOption !== "" || !onChange) && setSelectedOption) ||
+                setPromptNodeClass
                 ? ""
                 : "hidden"
             )}
             onClick={
-              (selectedOption !== "" || !onChange) && setSelectedOption
+              ((selectedOption !== "" || !onChange) && setSelectedOption) ||
+              setPromptNodeClass
                 ? (e) => {
-                    setShowOptions((old) => !old);
                     e.preventDefault();
                     e.stopPropagation();
+                    if (setPromptNodeClass) {
+                      setShowPrompt((old) => !old);
+                    } else if (
+                      (selectedOption !== "" || !onChange) &&
+                      setSelectedOption
+                    ) {
+                      setShowOptions((old) => !old);
+                    }
                   }
                 : () => {}
             }
@@ -314,6 +325,36 @@ export default function InputComponent({
             setValue={(value: string) => {
               onChange && onChange(value);
             }}
+          >
+            <span
+              className={cn(
+                "mb-px flex items-center text-muted-foreground hover:text-accent-foreground"
+              )}
+            >
+              {!editNode && (
+                <ForwardedIconComponent
+                  id={id}
+                  name="ExternalLink"
+                  className={"h-4 w-4"}
+                />
+              )}
+            </span>
+          </GenericModal>
+        )}
+        {setPromptNodeClass && onChange && (
+          <GenericModal
+            id={id}
+            field_name={name}
+            readonly={readonly || selectedOption !== ""}
+            open={showPrompt}
+            setOpen={setShowPrompt}
+            type={TypeModal.PROMPT}
+            value={value}
+            buttonText="Check & Save"
+            modalTitle="Edit Prompt"
+            setValue={onChange}
+            nodeClass={promptNodeClass}
+            setNodeClass={setPromptNodeClass}
           >
             <span
               className={cn(

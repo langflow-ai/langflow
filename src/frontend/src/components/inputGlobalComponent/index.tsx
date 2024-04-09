@@ -78,6 +78,7 @@ export default function InputGlobalComponent({
       multiline={multiline}
       setPromptNodeClass={setPromptNodeClass}
       promptNodeClass={data.node}
+      name={name}
       readonly={data.node?.flow ? true : false}
       disabled={disabled}
       password={data.node?.template[name].password ?? false}

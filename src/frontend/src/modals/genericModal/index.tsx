@@ -39,10 +39,12 @@ export default function GenericModal({
   children,
   id = "",
   readonly = false,
+  open,
+  setOpen,
 }: genericModalPropsType): JSX.Element {
   const [myButtonText] = useState(buttonText);
   const [myModalTitle] = useState(modalTitle);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [modalOpen, setModalOpen] = setOpen ? [open, setOpen] : useState(false);
   const [myModalType] = useState(type);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);

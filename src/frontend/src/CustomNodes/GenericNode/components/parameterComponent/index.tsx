@@ -708,14 +708,22 @@ export default function ParameterComponent({
           </div>
         ) : left === true && type === "prompt" ? (
           <div className="mt-2 w-full">
-            <PromptAreaComponent
-              readonly={data.node?.flow ? true : false}
-              field_name={name}
-              setNodeClass={handleNodeClass}
-              nodeClass={data.node}
+            <InputGlobalComponent
               disabled={disabled}
-              value={data.node?.template[name].value ?? ""}
               onChange={handleOnNewValue}
+              setPromptNodeClass={handleNodeClass}
+              setDb={(value) => {
+                setNode(data.id, (oldNode) => {
+                  let newNode = cloneDeep(oldNode);
+                  newNode.data = {
+                    ...newNode.data,
+                  };
+                  newNode.data.node.template[name].load_from_db = value;
+                  return newNode;
+                });
+              }}
+              name={name}
+              data={data}
               id={"prompt-input-" + name}
               data-testid={"prompt-input-" + name}
             />
