@@ -14,7 +14,6 @@ from langflow.api.v1.schemas import (
     RunResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,
-    Tweaks,
     UpdateCustomComponentRequest,
     UploadFileResponse,
 )
@@ -24,6 +23,7 @@ from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import build_custom_component_template
 from langflow.processing.process import process_tweaks, run_graph_internal
+from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
@@ -373,7 +373,7 @@ async def create_upload_file(
 @router.get("/version")
 def get_version():
     try:
-        from langflow.version import __version__
+        from langflow.version import __version__  # type: ignore
 
         version = __version__
         package = "Langflow"

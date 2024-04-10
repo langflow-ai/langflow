@@ -3,11 +3,10 @@ from typing import Callable, Dict, List, Optional
 
 from langchain.agents import agent_toolkits
 from loguru import logger
-
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class, import_module
+from langflow.interface.utils import build_template_from_class
 from langflow.services.deps import get_settings_service
-from langflow.utils.util import build_template_from_class
 
 
 class ToolkitCreator(LangChainTypeCreator):

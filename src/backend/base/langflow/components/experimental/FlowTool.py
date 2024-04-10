@@ -1,14 +1,14 @@
 from typing import Any, List, Optional
 
+from asyncer import syncify
 from langchain_core.tools import StructuredTool
-from loguru import logger
-
 from langflow.custom import CustomComponent
 from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.helpers.flow import build_function_and_schema
 from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import Record
+from loguru import logger
 
 
 class FlowToolComponent(CustomComponent):
@@ -74,6 +74,7 @@ class FlowToolComponent(CustomComponent):
         graph = Graph.from_payload(flow_record.data["data"])
         dynamic_flow_function, schema = build_function_and_schema(flow_record, graph)
         tool = StructuredTool.from_function(
+            func=syncify(dynamic_flow_function, raise_sync_error=False),  # type: ignore
             coroutine=dynamic_flow_function,
             name=name,
             description=description,

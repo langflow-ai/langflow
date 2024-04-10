@@ -34,8 +34,8 @@ class PythonREPLToolComponent(CustomComponent):
         global_dict = {}
         for module in globals:
             try:
-                module = importlib.import_module(module)
-                global_dict[module.__name__] = module
+                imported_module = importlib.import_module(module)
+                global_dict[imported_module.__name__] = imported_module
             except ImportError:
                 print(f"Could not import module {module}")
         return global_dict

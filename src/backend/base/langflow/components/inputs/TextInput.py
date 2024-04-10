@@ -26,7 +26,7 @@ class TextInput(TextComponent):
 
     def build(
         self,
-        input_value: Optional[str] = "",
+        input_value: Optional[Text] = "",
         record_template: Optional[str] = "",
     ) -> Text:
         return super().build(input_value=input_value, record_template=record_template)

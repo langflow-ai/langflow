@@ -1,6 +1,6 @@
 import logging
 
-from gunicorn import glogging
+from gunicorn import glogging  # type: ignore
 from gunicorn.app.base import BaseApplication  # type: ignore
 from uvicorn.workers import UvicornWorker
 
