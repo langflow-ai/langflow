@@ -50,8 +50,17 @@ export default function App() {
   );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const navigate = useNavigate();
+  const dark = useDarkStore((state) => state.dark);
 
   const [isLoadingHealth, setIsLoadingHealth] = useState(false);
+
+  useEffect(() => {
+    if (!dark) {
+      document.getElementById("body")!.classList.remove("dark");
+    } else {
+      document.getElementById("body")!.classList.add("dark");
+    }
+  }, [dark]);
 
   useEffect(() => {
     const isLoginPage = location.pathname.includes("login");
