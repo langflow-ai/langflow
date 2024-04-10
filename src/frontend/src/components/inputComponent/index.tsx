@@ -107,7 +107,11 @@ export default function InputComponent({
                 ref={refInput}
                 type="text"
                 onBlur={onInputLostFocus}
-                value={value}
+                value={
+                  (selectedOption !== "" || !onChange) && setSelectedOption && !onChange
+                    ? selectedOption
+                    : value
+                }
                 autoFocus={autoFocus}
                 disabled={disabled}
                 onClick={() => {
