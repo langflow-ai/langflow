@@ -1,7 +1,8 @@
 import pytest
 from langflow.graph import Graph
+from langflow.graph.schema import RunOutputs
 from langflow.initial_setup.setup import load_starter_projects
-from langflow.processing.load import load_flow_from_json
+from langflow.processing.load import load_flow_from_json, run_flow_from_json
 
 
 @pytest.mark.noclient
@@ -29,3 +30,13 @@ def test_load_flow_from_json_object():
     loaded = load_flow_from_json(project)
     assert loaded is not None
     assert isinstance(loaded, Graph)
+
+
+@pytest.mark.noclient
+def test_run_flow_from_json_object():
+    """Test loading a flow from a json file and applying tweaks"""
+    _, projects = zip(*load_starter_projects())
+    project = projects[0]
+    results = run_flow_from_json(project, input_value="test")
+    assert results is not None
+    assert all(isinstance(result, RunOutputs) for result in results)
