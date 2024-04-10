@@ -3,7 +3,6 @@ import json
 from typing import List, Optional
 
 import httpx
-
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
 
@@ -47,8 +46,8 @@ class APIRequest(CustomComponent):
         client: httpx.AsyncClient,
         method: str,
         url: str,
-        headers: Optional[Record] = None,
-        body: Optional[Record] = None,
+        headers: Optional[dict] = None,
+        body: Optional[dict] = None,
         timeout: int = 5,
     ) -> Record:
         method = method.upper()

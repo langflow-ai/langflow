@@ -4,10 +4,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator, model_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer
 
 from langflow.graph.schema import RunOutputs
 from langflow.schema import dotdict
+from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
@@ -281,36 +282,6 @@ class InputValueRequest(BaseModel):
         },
         extra="forbid",
     )
-
-
-class Tweaks(RootModel):
-    root: dict[str, Union[str, dict[str, str]]] = Field(
-        description="A dictionary of tweaks to adjust the flow's execution. Allows customizing flow behavior dynamically. All tweaks are overridden by the input values.",
-    )
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "parameter_name": "value",
-                    "Component Name": {"parameter_name": "value"},
-                    "component_id": {"parameter_name": "value"},
-                }
-            ]
-        }
-    }
-
-    # This should behave like a dict
-    def __getitem__(self, key):
-        return self.root[key]
-
-    def __setitem__(self, key, value):
-        self.root[key] = value
-
-    def __delitem__(self, key):
-        del self.root[key]
-
-    def items(self):
-        return self.root.items()
 
 
 class SimplifiedAPIRequest(BaseModel):
