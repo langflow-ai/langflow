@@ -25,7 +25,9 @@ def patching(record):
     record["extra"]["serialized"] = serialize(record)
 
 
-def configure(log_level: Optional[str] = None, log_file: Optional[Path] = None):
+def configure(log_level: Optional[str] = None, log_file: Optional[Path] = None, disable: Optional[bool] = False):
+    if disable and log_level is None and log_file is None:
+        logger.disable("langflow")
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
     if log_level is None:
