@@ -296,17 +296,26 @@ class Graph:
         # run the async function in a sync way
         # this could be used in a FastAPI endpoint
         # so we should take care of the event loop
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(
-            self.arun(
-                inputs=inputs,
-                inputs_components=input_components,
-                types=types,
-                outputs=outputs,
-                session_id=session_id,
-                stream=stream,
-            )
+        coro = self.arun(
+            inputs=inputs,
+            inputs_components=input_components,
+            types=types,
+            outputs=outputs,
+            session_id=session_id,
+            stream=stream,
         )
+
+        try:
+            # Attempt to get the running event loop; if none, an exception is raised
+            loop = asyncio.get_running_loop()
+            if loop.is_closed():
+                raise RuntimeError("The running event loop is closed.")
+        except RuntimeError:
+            # If there's no running event loop or it's closed, use asyncio.run
+            return asyncio.run(coro)
+
+        # If there's an existing, open event loop, use it to run the async function
+        return loop.run_until_complete(coro)
 
     async def arun(
         self,
