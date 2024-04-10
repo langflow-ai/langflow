@@ -85,7 +85,7 @@ export default function InputGlobalComponent({
       readonly={data.node?.flow ? true : false}
       disabled={disabled}
       password={data.node?.template[name].password ?? false}
-      value={setPromptNodeClass && data.node?.template[name].load_from_db === true ? (globalVariables[data.node?.template[name].value].value ?? "") : (data.node?.template[name].value ?? "")}
+      value={setPromptNodeClass && data.node?.template[name].load_from_db === true ? (globalVariables[data.node?.template[name].value]?.value ?? "") : (data.node?.template[name].value ?? "")}
       options={setPromptNodeClass ? Object.keys(globalVariables).filter((g) => globalVariables[g].category == "Prompt") : globalVariablesEntries}
       optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
