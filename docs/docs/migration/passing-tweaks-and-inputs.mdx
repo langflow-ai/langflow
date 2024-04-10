@@ -1,0 +1,58 @@
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
+# Passing Tweaks and Inputs in the API
+
+The new feature in Langflow 1.0 revolutionizes the way you interact with the API by allowing you to pass tweaks and inputs using the Display Name of components. It is possible to dynamically control your flow by passing tweaks and inputs through the API. This feature allows you to customize your workflow on the fly.
+
+## Passing Tweaks and Inputs
+
+<ZoomableImage
+  alt="Tweaks example"
+  sources={{
+    light: "img/python-api-example.png",
+    dark: "img/python-api-example.png",
+  }}
+  style={{ width: "100%", margin: "20px auto" }}
+/>
+
+The ability to pass tweaks and inputs through the API is a game-changer for automating and adjusting flows without the need for direct manual intervention. Here's how to utilize this feature:
+
+1. Identify the component you want to adjust within your flow.
+2. Click on the "API" button at the bottom right of the Langflow interface to access the API menu.
+3. Reference the component's Display Name in your API call.
+4. Customize the `TWEAKS` dictionary with parameters based on the Display Name of the component, which can be found in the Tweaks tab.
+
+By following these steps, you can dynamically modify component behavior, inputs, and even configurations, all through API requests.
+
+## Understanding the Tweaks Tab
+
+<ZoomableImage
+  alt="Tweaks example"
+  sources={{
+    light: "img/tweaks-example.png",
+    dark: "img/tweaks-example.png",
+  }}
+  style={{ width: "100%", margin: "20px auto" }}
+/>
+
+The Tweaks tab in the API menu lists tweakable parameters for components. Here's an example layout for the `Anthropic` component:
+
+- input_value
+- anthropic_api_key
+- anthropic_api_url
+- code
+- max_tokens
+- model
+- stream
+- system_message
+- temperature
+
+Add the values for these parameters as needed to control the behavior of the flow.
+
+## Use Cases
+
+This functionality is particularly useful in scenarios such as:
+
+- **A/B Testing:** Effortlessly pass different inputs to test variations in your flow for optimization.
+- **Dynamic Response Systems:** Adjust the flow based on real-time analytics or user feedback.
+- **Automated Configuration:** Set up flows that configure themselves in response to data trends or patterns detected by other systems.
