@@ -328,7 +328,7 @@ def print_banner(host: str, port: int):
     package_name = ""
 
     try:
-        from langflow.version import __version__ as langflow_version
+        from langflow.version import __version__ as langflow_version  # type: ignore
 
         is_pre_release |= is_prerelease(langflow_version)  # Update pre-release status
         notice = build_version_notice(langflow_version, "langflow")

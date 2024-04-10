@@ -3,7 +3,6 @@ import json
 from typing import List, Optional
 
 import httpx
-
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
 
@@ -55,10 +54,12 @@ class APIRequest(CustomComponent):
         if method not in ["GET", "POST", "PATCH", "PUT", "DELETE"]:
             raise ValueError(f"Unsupported method: {method}")
 
+        headers_dict = headers.data if headers else {}
+
         data = body if body else None
         payload = json.dumps(data)
         try:
-            response = await client.request(method, url, headers=headers, content=payload, timeout=timeout)
+            response = await client.request(method, url, headers=headers_dict, content=payload, timeout=timeout)
             try:
                 result = response.json()
             except Exception:
@@ -99,9 +100,7 @@ class APIRequest(CustomComponent):
         timeout: int = 5,
     ) -> List[Record]:
         if _headers is None:
-            headers = {}
-        else:
-            headers = _headers.data
+            headers = Record()
 
         bodies = []
         if body:

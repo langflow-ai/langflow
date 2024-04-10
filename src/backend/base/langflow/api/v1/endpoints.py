@@ -373,7 +373,7 @@ async def create_upload_file(
 @router.get("/version")
 def get_version():
     try:
-        from langflow.version import __version__
+        from langflow.version import __version__  # type: ignore
 
         version = __version__
         package = "Langflow"
