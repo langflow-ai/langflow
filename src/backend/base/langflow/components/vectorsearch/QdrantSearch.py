@@ -94,5 +94,9 @@ class QdrantSearchComponent(QdrantComponent, LCVectorStoreComponent):
             raise ValueError("Failed to load the Qdrant index.")
 
         return self.search_with_vector_store(
-            vector_store=vector_store, input_value=input_value, search_type=search_type, k=number_of_results
+            vector_store=vector_store,
+            input_value=input_value,
+            search_type=search_type,
+            k=number_of_results,
+            **search_kwargs,
         )
