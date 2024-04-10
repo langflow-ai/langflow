@@ -1,0 +1,101 @@
+# New Categories and Components
+
+Langflow 1.0 has expanded its horizon by introducing new native categories and components, enhancing the versatility and efficiency of your workflows. The new categories, such as Inputs, Outputs, Helpers, Experimental, and Models, bring with them a fresh suite of components that can be leveraged to optimize and innovate your data processing tasks. Let's explore these new additions and the potential they hold for revolutionizing your workflow.
+
+## New Categories Overview
+
+## Inputs
+
+### Chat Input
+
+The `Chat Input` component captures chat inputs from the Interaction Panel, which users can type into directly.
+
+- **Message:** The message that the user inputs.
+- **Sender Name:** The name of the sender, typically set as 'User'.
+
+### Prompt
+
+The `Prompt` component is used to create dynamic prompt templates with variables.
+
+- **Template:** Define the structure of your prompt here with placeholders for dynamic content.
+
+### Text Input
+
+The `Text Input` component is for receiving text inputs from the Interaction Panel.
+
+- **Value:** The actual text input from the user.
+
+## Outputs
+
+### Chat Output
+
+The `Chat Output` component displays chat messages in the Interaction Panel, simulating a conversation.
+
+- **Message:** The chat message to display.
+- **Sender Name:** The entity's name sending the message, often set as 'AI' for system-generated responses.
+
+### Text Output
+
+The `Text Output` component shows a piece of text in the Interaction Panel, ideal for outputs that don't require the chat format.
+
+- **Value:** The text output to be displayed.
+
+## Helpers
+The Helpers contains practical components that aid in the manipulation and handling of data within your flows:
+
+- **Chat Memory:** Retain and recall user interactions within a chat to maintain context or reference.
+- **Combine Text:** Merge multiple text inputs into a single cohesive output.
+- **Create Record:** Assemble structured data in the form of key-value pairs from various inputs.
+- **Custom Component:** Build and incorporate your custom logic into the workflow.
+- **Documents To Records:** Convert document objects into structured record formats for ease of use.
+- **ID Generator:** Produce unique identifiers for tagging and tracking objects within a flow.
+- **Message History:** Keep a log of messages to reference past interactions.
+- **Records To Text:** Transform structured records into a text format for reporting or further processing.
+- **Split Text:** Divide text into smaller segments based on specified criteria for detailed analysis.
+- **Update Record:** Modify existing records with new data or adjustments as your flow processes data.
+
+## Experimental
+The Experimental category serves as a breeding ground for innovation, presenting components that push the boundaries of current capabilities:
+
+- **Clear Message History:** Wipe message logs to maintain privacy or prepare for new interactions.
+- **Extract Key From Record:** Retrieve specific data points from a record for targeted use.
+- **Flow as Tool:** Utilize an entire flow as a component within another, larger flow.
+- **List Flows:** Catalog and retrieve a list of all available flows within your system.
+- **Listen:** Actively monitor for specific events or triggers to initiate actions within a flow.
+- **Merge Records:** Combine multiple records into one, harmonizing data from different sources.
+- **Notify:** Send alerts or messages to indicate updates or milestones within a flow.
+- **Python Function:** Execute custom Python code within a flow for bespoke processing needs.
+- **Run Flow:** Initiate the execution of another flow from within the current one.
+- **Runnable Executor:** Enable components to perform actions at designated times or conditions.
+- **SQL Executor:** Run SQL queries directly within a flow to interact with databases.
+- **Sub Flow:** Embed a subsidiary flow within a primary one, compartmentalizing complex processes.
+
+## Models
+The Models category has been significantly expanded, showcasing a plethora of advanced models from leading AI providers:
+
+- **Amazon Bedrock:** Implement Amazon's state-of-the-art models for various AI-powered tasks.
+- **Anthropic:** Access Anthropics's cutting-edge models for ethical and advanced AI solutions.
+- **Azure OpenAI:** Integrate models hosted on Azure's cloud, combining OpenAI's innovation with Azure's infrastructure.
+- **Cohere:** Utilize Cohere's language models for natural language understanding and generation.
+- **Google Generative AI:** Leverage Google's generative models for creating content and automated responses.
+- **Hugging Face API:** Tap into a wide variety of community-driven models available through the Hugging Face API.
+- **LiteLLM:** Implement lightweight language models for efficient processing.
+- **Ollama:** Use Ollama's models tailored for specific domains and applications.
+- **OpenAI:** Incorporate OpenAI's suite of models, including the renowned GPT and Codex series.
+- **Qianfan:** Engage with Qianfan's models for specialized AI functions.
+- **Vertex AI:** Integrate with Google's Vertex AI for state-of-the-art machine learning solutions.
+
+
+## Introducing Some Standout Components
+
+### Chat Input
+Allows users to input data  from the Interaction Panel, making your application interactive and user-friendly.
+
+### Prompt
+The `Prompt` component is a powerful tool for creating prompt templates with dynamic variables, enabling nuanced control over generated text.
+
+### Files
+With the `File` component, users can now handle file input and output with ease, ensuring that workflows can interact with a wide array of data formats.
+
+### API Request
+A versatile component that can call external APIs, making it possible to integrate a vast array of web services and external data sources into your workflow.
