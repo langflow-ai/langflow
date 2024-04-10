@@ -1,0 +1,75 @@
+import Admonition from "@theme/Admonition";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
+# Sidebar and Interaction Panel 
+
+## TLDR;
+
+- The sidebar now includes new components: Inputs and Outputs. You can directly interact with them from the interaction panel.
+- Inputs are for ingesting data into the flow; they can be edited directly from the interaction panel.
+- Outputs are for outputting data from the flow; they can be viewed directly from the interaction panel.
+- The interaction panel is a new feature that allows you to interact with certain components and run the flow more user-friendly.
+- The chat modal has been removed; now chat is integrated into the interaction panel. You can use a chat interface with the Chat Input and/or Chat Output components.
+- Any updates made in the interaction panel will be reflected in the flow.
+- We value your feedback on this; please let us know how it works for you and what you think.
+- Suggestions for new Inputs and Outputs are welcome.
+
+## Introduction
+Langflow now operates optimally with a flow containing both an Input and an Output, which are the primary components you'll need to integrate into your existing flows.
+
+The sidebar has been enhanced with new components: Inputs and Outputs. Utilize these components to interact seamlessly with your flow.
+
+An Input is designed for data ingestion into the flow, while an Output facilitates data output from the flow.
+
+Now, every flow can be constructed and utilized directly from the interaction panel, eliminating the constant need to edit the flow on the canvas.
+
+By defining inputs and outputs, you can treat the flow as a black box, interacting with it solely by providing inputs and observing outputs.
+
+Langflow has transitioned from being a chat platform; however, you can still incorporate a chat interface using the Chat Input and/or Chat Output components. Now, Langflow serves as a versatile tool for constructing AI flows for various purposes.
+
+## Avaliable inputs
+{/* add an image for each */}
+- **Chat Input**:
+  - Interaction: Engage with the flow through a chat interface.
+  - Features: Input text via a chat input box and view it as a chat message.
+  - Parameters:
+    - Message: Set the content of the message.
+    - Session ID: Define the session ID.
+    - Sender Type: Specify the type of sender (e.g., User, Machine).
+    - Sender Name: Set the name of the sender displayed in the chat interface.
+
+- **Text Input**:
+  - Interaction: Input text directly into the flow.
+  - Features: Edit and view the text input directly from the interaction panel.
+  - Parameters:
+    - Value: Set the content of the input text.
+    - Record Template: Define the template for the inputed record.
+
+- **Prompt Input**:
+  - Interaction: Input a prompt into the flow.
+  - Variable Definition: Define variables within the prompt, which appear as text inputs in the prompt component.
+  - Parameters:
+        - Prompt: Set the prompt text.
+        - Variables: Define variables within the prompt text.
+
+### Available Outputs
+{/* add an image for each */}
+- **Text Output**:
+  - Interaction: This component allows you to output text directly from the flow into the interaction panel.
+  - Output Method:
+    - Connect the desired text to be outputted in the value field.
+  - Parameters:
+    - Value: Set the content of the input text.
+    - Record Template: Define the template for the outputed record.
+
+- **Chat Output**:
+  - Interaction: This component allows you to output text as a chat message.
+  - Output Method:
+    - Connect the desired text to be outputted in the message field.
+  - Parameters:
+    - Message: Set the content of the message.
+    - Record Template: Define the template for the outputed record.
+    - Return Record: Specify whether to return the response as a text or a record.
+    - Session ID: Define the session ID.
+    - Sender Type: Specify the type of sender (e.g., User, Machine).
+    - Sender Name: Set the name of the sender displayed in the chat interface.
