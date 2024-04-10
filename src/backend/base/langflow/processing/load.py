@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import List, Optional, Union
 
 from dotenv import load_dotenv
-
 from langflow.graph import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.processing.process import process_tweaks, run_graph
@@ -81,6 +80,25 @@ def run_flow_from_json(
     cache: Optional[str] = None,
     disable_logs: Optional[bool] = True,
 ) -> List[RunOutputs]:
+    """
+    Run a flow from a JSON file or dictionary.
+
+    Args:
+        flow (Union[Path, str, dict]): The path to the JSON file or the JSON dictionary representing the flow.
+        input_value (str): The input value to be processed by the flow.
+        tweaks (Optional[dict], optional): Optional tweaks to be applied to the flow. Defaults to None.
+        input_type (str, optional): The type of the input value. Defaults to "chat".
+        output_type (str, optional): The type of the output value. Defaults to "chat".
+        output_component (Optional[str], optional): The specific component to output. Defaults to None.
+        log_level (Optional[str], optional): The log level to use. Defaults to None.
+        log_file (Optional[str], optional): The log file to write logs to. Defaults to None.
+        env_file (Optional[str], optional): The environment file to load. Defaults to None.
+        cache (Optional[str], optional): The cache directory to use. Defaults to None.
+        disable_logs (Optional[bool], optional): Whether to disable logs. Defaults to True.
+
+    Returns:
+        List[RunOutputs]: A list of RunOutputs objects representing the results of running the flow.
+    """
     # Set all streaming to false
     if tweaks is None:
         tweaks = {}
