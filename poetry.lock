@@ -1132,13 +1132,13 @@ testing = ["pytest (>=7.2.1)", "pytest-cov (>=4.0.0)", "tox (>=4.4.3)"]
 
 [[package]]
 name = "cohere"
-version = "5.2.4"
+version = "5.2.5"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "cohere-5.2.4-py3-none-any.whl", hash = "sha256:50e8cbd009a6d6f6ce7127a0b62c50d3dfcfdb853f681f0ac315cfa70599fee4"},
-    {file = "cohere-5.2.4.tar.gz", hash = "sha256:2bf6e905773116ad3fff348e054e4ce1a1830092a63cb48fa8180beda4cbb96a"},
+    {file = "cohere-5.2.5-py3-none-any.whl", hash = "sha256:c29691eadd29c1253a5d9168c5a15a23583b982b0ffcfb9eace5dc17fddacb1a"},
+    {file = "cohere-5.2.5.tar.gz", hash = "sha256:5909083a9b00630108c009193fa02405dea176acc4262c590002a49ca8f7bdde"},
 ]
 
 [package.dependencies]
@@ -3876,7 +3876,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.25"
+version = "0.0.26"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.12"
@@ -3930,13 +3930,13 @@ url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
-version = "2.23.1"
+version = "2.23.2"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langfuse-2.23.1-py3-none-any.whl", hash = "sha256:d5e2feadc988c0d784b9a89e17e35dea5d90337a58db692a528bd1e084fe01fa"},
-    {file = "langfuse-2.23.1.tar.gz", hash = "sha256:9c2cb4e2610f99095bc8c9db96b0472c1c8fa9b7d28c23419705640b17f460c0"},
+    {file = "langfuse-2.23.2-py3-none-any.whl", hash = "sha256:591811d36fe42b26451615686ea91c04d96afd247ac023818b1ca72861e537a6"},
+    {file = "langfuse-2.23.2.tar.gz", hash = "sha256:11df6c6ff6ca5f6a079836f2530d5f7dcbe11d7058ae16efcafbf8275b0e14b6"},
 ]
 
 [package.dependencies]
@@ -4541,13 +4541,13 @@ source = ["Cython (>=3.0.10)"]
 
 [[package]]
 name = "mako"
-version = "1.3.2"
+version = "1.3.3"
 description = "A super-fast templating language that borrows the best ideas from the existing templating languages."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "Mako-1.3.2-py3-none-any.whl", hash = "sha256:32a99d70754dfce237019d17ffe4a282d2d3351b9c476e90d8a60e63f133b80c"},
-    {file = "Mako-1.3.2.tar.gz", hash = "sha256:2a0c8ad7f6274271b3bb7467dd37cf9cc6dab4bc19cb69a4ef10669402de698e"},
+    {file = "Mako-1.3.3-py3-none-any.whl", hash = "sha256:5324b88089a8978bf76d1629774fcc2f1c07b82acdf00f4c5dd8ceadfffc4b40"},
+    {file = "Mako-1.3.3.tar.gz", hash = "sha256:e16c01d9ab9c11f7290eef1cfefc093fb5a45ee4a3da09e2fec2e4d1bae54e73"},
 ]
 
 [package.dependencies]
@@ -5501,13 +5501,13 @@ sympy = "*"
 
 [[package]]
 name = "openai"
-version = "1.16.2"
+version = "1.17.0"
 description = "The official Python library for the openai API"
 optional = false
 python-versions = ">=3.7.1"
 files = [
-    {file = "openai-1.16.2-py3-none-any.whl", hash = "sha256:46a435380921e42dae218d04d6dd0e89a30d7f3b9d8a778d5887f78003cf9354"},
-    {file = "openai-1.16.2.tar.gz", hash = "sha256:c93d5efe5b73b6cb72c4cd31823852d2e7c84a138c0af3cbe4a8eb32b1164ab2"},
+    {file = "openai-1.17.0-py3-none-any.whl", hash = "sha256:72464cdb0602a57af87acb4888b1a48a1c02182cc9f09d2f2f3200b185223d5f"},
+    {file = "openai-1.17.0.tar.gz", hash = "sha256:72e6758cec080a3e5a9daf843178c975fed656fe0831919f4dd89bb62431724f"},
 ]
 
 [package.dependencies]
