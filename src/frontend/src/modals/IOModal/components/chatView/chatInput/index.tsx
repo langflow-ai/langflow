@@ -8,6 +8,7 @@ import {
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { chatInputType } from "../../../../../types/components";
 import { classNames } from "../../../../../utils/utils";
+import { uploadFile } from "../../../../../controllers/API";
 
 export default function ChatInput({
   lockChat,
@@ -19,6 +20,7 @@ export default function ChatInput({
 }: chatInputType): JSX.Element {
   const [repeat, setRepeat] = useState(1);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   useEffect(() => {
     if (!lockChat && inputRef.current) {
       inputRef.current.focus();
@@ -31,6 +33,37 @@ export default function ChatInput({
       inputRef.current.style.height = `${inputRef.current.scrollHeight}px`; // Set it to the scrollHeight
     }
   }, [chatValue]);
+
+  //listen to ctrl-v to paste images
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent): void => {
+      const items = event.clipboardData?.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf("image") !== -1) {
+            const blob = items[i].getAsFile();
+            if (blob) {
+              // const reader = new FileReader();
+              // reader.onload = (e) => {
+              //   const data = e.target?.result;
+              //   if (typeof data === "string") {
+              //     // sendMessage(data);
+              //   }
+              // };
+              // reader.readAsDataURL(blob);
+              uploadFile(blob, currentFlowId).then((res) => {
+                console.log(res);
+              });
+            }
+          }
+        }
+      }
+    };
+    document.addEventListener("paste", handlePaste);
+    return () => {
+      document.removeEventListener("paste", handlePaste);
+    };
+  }, []);
 
   return (
     <div className="flex w-full gap-2">
