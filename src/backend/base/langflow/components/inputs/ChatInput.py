@@ -28,7 +28,7 @@ class ChatInput(ChatComponent):
         session_id: Optional[str] = None,
         return_record: Optional[bool] = False,
     ) -> Union[Text, Record]:
-        return super().build(
+        return super().build_no_record(
             sender=sender,
             sender_name=sender_name,
             input_value=input_value,
