@@ -40,15 +40,6 @@ export default function Header(): JSX.Element {
   const setDark = useDarkStore((state) => state.setDark);
   const stars = useDarkStore((state) => state.stars);
 
-  useEffect(() => {
-    if (dark) {
-      document.getElementById("body")!.classList.add("dark");
-    } else {
-      document.getElementById("body")!.classList.remove("dark");
-    }
-    window.localStorage.setItem("isDark", dark.toString());
-  }, [dark]);
-
   async function checkForChanges(nodes: Node[]): Promise<void> {
     if (nodes.length === 0) {
       await removeFlow(id!);
