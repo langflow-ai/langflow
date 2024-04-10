@@ -81,6 +81,10 @@ def run_flow_from_json(
     cache: Optional[str] = None,
     disable_logs: Optional[bool] = True,
 ) -> List[RunOutputs]:
+    # Set all streaming to false
+    if tweaks is None:
+        tweaks = {}
+    tweaks["stream"] = False
     graph = load_flow_from_json(
         flow=flow,
         tweaks=tweaks,
