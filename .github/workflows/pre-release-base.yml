@@ -66,13 +66,3 @@ jobs:
           file: ./build_and_push_base.Dockerfile
           tags: |
             logspace/langflow:base-${{ steps.check-version.outputs.version }}
-      - name: Create Release
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: "dist/*"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          draft: false
-          generateReleaseNotes: true
-          prerelease: true
-          tag: v${{ steps.check-version.outputs.version }}
-          commit: dev
