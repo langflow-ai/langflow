@@ -3,16 +3,49 @@ import json
 import os
 from pathlib import Path
 from shutil import copy2
-from typing import List, Optional
+from typing import Any, List, Optional, Tuple, Type
 
 import orjson
 import yaml
 from loguru import logger
 from pydantic import field_validator, validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic.fields import FieldInfo
+from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
+
+from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
+from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 
 # BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
 BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent.parent / "components")
+
+
+def is_list_of_any(field: FieldInfo) -> bool:
+    """
+    Check if the given field is a list or an optional list of any type.
+
+    Args:
+        field (FieldInfo): The field to be checked.
+
+    Returns:
+        bool: True if the field is a list or a list of any type, False otherwise.
+    """
+    return field.annotation.__origin__ == list or any(
+        arg.__origin__ == list for arg in field.annotation.__args__ if hasattr(arg, "__origin__")
+    )
+
+
+class MyCustomSource(EnvSettingsSource):
+    def prepare_field_value(self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool) -> Any:
+        # allow comma-separated list parsing
+
+        # fieldInfo contains the annotation of the field
+        if is_list_of_any(field):
+            if isinstance(value, str):
+                value = value.split(",")
+            if isinstance(value, list):
+                return value
+
+        return super().prepare_field_value(field_name, field, value, value_is_complex)
 
 
 class Settings(BaseSettings):
@@ -66,6 +99,11 @@ class Settings(BaseSettings):
     STORAGE_TYPE: str = "local"
 
     CELERY_ENABLED: bool = False
+
+    store_environment_variables: bool = True
+    """Whether to store environment variables as Global Variables in the database."""
+    variables_to_get_from_environment: list[str] = VARIABLES_TO_GET_FROM_ENVIRONMENT
+    """List of environment variables to get from the environment and store in the database."""
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
@@ -149,14 +187,6 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
-    # @model_validator()
-    # @classmethod
-    # def validate_lists(cls, values):
-    #     for key, value in values.items():
-    #         if key != "dev" and not value:
-    #             values[key] = []
-    #     return values
-
     def update_from_yaml(self, file_path: str, dev: bool = False):
         new_settings = load_settings_from_yaml(file_path)
         self.CHAINS = new_settings.CHAINS or {}
@@ -208,6 +238,17 @@ class Settings(BaseSettings):
                 setattr(self, key, value)
                 logger.debug(f"Updated {key}")
             logger.debug(f"{key}: {getattr(self, key)}")
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        return (MyCustomSource(settings_cls),)
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
