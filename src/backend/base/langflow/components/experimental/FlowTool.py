@@ -74,7 +74,7 @@ class FlowToolComponent(CustomComponent):
         graph = Graph.from_payload(flow_record.data["data"])
         dynamic_flow_function, schema = build_function_and_schema(flow_record, graph)
         tool = StructuredTool.from_function(
-            func=syncify(dynamic_flow_function, raise_sync_error=False),
+            func=syncify(dynamic_flow_function, raise_sync_error=False),  # type: ignore
             coroutine=dynamic_flow_function,
             name=name,
             description=description,

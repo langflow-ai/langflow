@@ -25,5 +25,5 @@ class ChatOutput(ChatComponent):
             input_value=input_value,
             session_id=session_id,
             return_record=return_record,
-            record_template=record_template,
+            record_template=record_template or "",
         )

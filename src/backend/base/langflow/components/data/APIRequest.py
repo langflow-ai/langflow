@@ -46,20 +46,18 @@ class APIRequest(CustomComponent):
         client: httpx.AsyncClient,
         method: str,
         url: str,
-        headers: Optional[Record] = None,
-        body: Optional[Record] = None,
+        headers: Optional[dict] = None,
+        body: Optional[dict] = None,
         timeout: int = 5,
     ) -> Record:
         method = method.upper()
         if method not in ["GET", "POST", "PATCH", "PUT", "DELETE"]:
             raise ValueError(f"Unsupported method: {method}")
 
-        headers_dict = headers.data if headers else {}
-
         data = body if body else None
         payload = json.dumps(data)
         try:
-            response = await client.request(method, url, headers=headers_dict, content=payload, timeout=timeout)
+            response = await client.request(method, url, headers=headers, content=payload, timeout=timeout)
             try:
                 result = response.json()
             except Exception:
@@ -100,7 +98,9 @@ class APIRequest(CustomComponent):
         timeout: int = 5,
     ) -> List[Record]:
         if _headers is None:
-            headers = Record()
+            headers = {}
+        else:
+            headers = _headers.data
 
         bodies = []
         if body:

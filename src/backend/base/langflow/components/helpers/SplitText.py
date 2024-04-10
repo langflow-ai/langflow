@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
@@ -60,7 +60,7 @@ class SplitTextComponent(CustomComponent):
             chunk_size = int(chunk_size)
         if isinstance(chunk_overlap, str):
             chunk_overlap = int(chunk_overlap)
-
+        splitter: Optional[Union[CharacterTextSplitter, RecursiveCharacterTextSplitter]] = None
         if recursive:
             splitter = RecursiveCharacterTextSplitter(
                 separators=separators,

@@ -286,7 +286,7 @@ def is_prerelease(version: str) -> bool:
     return "a" in version or "b" in version or "rc" in version
 
 
-def fetch_latest_version(package_name: str, include_prerelease: bool) -> str:
+def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optional[str]:
     response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
     versions = response.json()["releases"].keys()
     valid_versions = [v for v in versions if include_prerelease or not is_prerelease(v)]
