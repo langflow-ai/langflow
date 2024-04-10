@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { test,expect } from "@playwright/test";
 import { readFileSync } from "fs";
 
 test("chat_io_teste", async ({ page }) => {
@@ -42,4 +42,8 @@ test("chat_io_teste", async ({ page }) => {
   await page.getByPlaceholder("Send a message...").click();
   await page.getByPlaceholder("Send a message...").fill("teste");
   await page.getByRole("button").nth(1).click();
+  const chat_output = page.getByTestId("chat-message-AI-teste");
+  const chat_input = page.getByTestId("chat-message-User-teste");
+  await expect(chat_output).toHaveText("teste");
+  await expect(chat_input).toHaveText("teste");
 });
