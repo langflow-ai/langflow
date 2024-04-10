@@ -80,15 +80,6 @@ export type InputGlobalComponentType = {
   editNode?: boolean;
 };
 
-export type InputGlobalComponentType = {
-  disabled: boolean;
-  onChange: (value: string) => void;
-  setDb: (value: boolean) => void;
-  name: string;
-  data: NodeDataType;
-  editNode?: boolean;
-};
-
 export type KeyPairListComponentType = {
   value: any;
   onChange: (value: Object[]) => void;
