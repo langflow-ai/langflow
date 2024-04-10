@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional, Type
 
 from langchain import prompts
+from loguru import logger
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
 from langflow.interface.utils import build_template_from_class

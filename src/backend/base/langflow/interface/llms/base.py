@@ -1,5 +1,7 @@
 from typing import Dict, List, Optional, Type
 
+from loguru import logger
+
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import llm_type_to_cls_dict
 from langflow.interface.utils import build_template_from_class
