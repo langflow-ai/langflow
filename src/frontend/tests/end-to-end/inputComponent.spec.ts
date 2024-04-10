@@ -1,23 +1,36 @@
 import { expect, test } from "@playwright/test";
 
 test("InputComponent", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("http:localhost:3000/");
   await page.waitForTimeout(2000);
 
   await page.locator('//*[@id="new-project-btn"]').click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
+  await page.getByTestId("blank-flow").click();
+  await page.waitForTimeout(1000);
+  await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("Chroma");
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page
     .getByTestId("vectorstoresChroma")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
 
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
+
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
   await page.getByTestId("input-collection_name").click();
   await page
     .getByTestId("input-collection_name")
@@ -114,7 +127,7 @@ test("InputComponent", async ({ page }) => {
   await page.getByTestId("input-collection_name-edit").click();
   await page
     .getByTestId("input-collection_name-edit")
-    .fill("NEW_collection_name_test_123123123!@#$&*(&%$@");
+    .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
@@ -137,7 +150,7 @@ test("InputComponent", async ({ page }) => {
 
     let value = await page.getByTestId("input-collection_name").inputValue();
 
-    if (value != "NEW_collection_name_test_123123123!@#$&*(&%$@") {
+    if (value != "NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe") {
       expect(false).toBeTruthy();
     }
   }

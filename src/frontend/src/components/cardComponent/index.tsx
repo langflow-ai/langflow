@@ -130,7 +130,7 @@ export default function CollectionCardComponent({
   return (
     <Card
       className={cn(
-        "group relative flex flex-col justify-between overflow-hidden transition-all hover:shadow-md",
+        "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:shadow-md",
         disabled ? "pointer-events-none opacity-50" : ""
       )}
     >
@@ -163,20 +163,26 @@ export default function CollectionCardComponent({
                     <ShadTooltip content="Components">
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <IconComponent name="ToyBrick" className="h-4 w-4" />
-                        {data?.metadata?.total ?? 0}
+                        <span data-testid={`total-${data.name}`}>
+                          {data?.metadata?.total ?? 0}
+                        </span>
                       </span>
                     </ShadTooltip>
                   )}
                   <ShadTooltip content="Likes">
                     <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <IconComponent name="Heart" className={cn("h-4 w-4 ")} />
-                      {likes_count ?? 0}
+                      <span data-testid={`likes-${data.name}`}>
+                        {likes_count ?? 0}
+                      </span>
                     </span>
                   </ShadTooltip>
                   <ShadTooltip content="Downloads">
                     <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <IconComponent name="DownloadCloud" className="h-4 w-4" />
-                      {downloads_count ?? 0}
+                      <span data-testid={`downloads-${data.name}`}>
+                        {downloads_count ?? 0}
+                      </span>
                     </span>
                   </ShadTooltip>
                 </div>
@@ -250,7 +256,7 @@ export default function CollectionCardComponent({
                     >
                       <Button
                         variant="ghost"
-                        size="xs"
+                        size="icon"
                         className={
                           "whitespace-nowrap" +
                           (!authorized ? " cursor-not-allowed" : "")
@@ -275,7 +281,7 @@ export default function CollectionCardComponent({
                     <Button
                       disabled={loadingLike}
                       variant="ghost"
-                      size="xs"
+                      size="icon"
                       className={
                         "whitespace-nowrap" +
                         (!authorized ? " cursor-not-allowed" : "")
@@ -286,6 +292,7 @@ export default function CollectionCardComponent({
                         }
                         handleLike();
                       }}
+                      data-testid={`like-${data.name}`}
                     >
                       <IconComponent
                         name="Heart"
@@ -312,7 +319,7 @@ export default function CollectionCardComponent({
                   <Button
                     disabled={loading}
                     variant="ghost"
-                    size="xs"
+                    size="icon"
                     className={
                       "whitespace-nowrap" +
                       (!authorized ? " cursor-not-allowed" : "") +
@@ -324,6 +331,7 @@ export default function CollectionCardComponent({
                       }
                       handleInstall();
                     }}
+                    data-testid={`install-${data.name}`}
                   >
                     <IconComponent
                       name={loading ? "Loader2" : isStore ? "Download" : "Plus"}

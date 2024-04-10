@@ -204,23 +204,33 @@ export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
   return data;
 };
 
-export function updateIds(newFlow: ReactFlowJsonObject) {
+export function updateIds(
+  { edges, nodes }: { edges: Edge[]; nodes: Node[] },
+  selection?: { edges: Edge[]; nodes: Node[] }
+) {
   let idsMap = {};
-
-  if (newFlow.nodes)
-    newFlow.nodes.forEach((node: NodeType) => {
+  const selectionIds = selection?.nodes.map((n) => n.id);
+  if (nodes) {
+    nodes.forEach((node: NodeType) => {
       // Generate a unique node ID
-      let newId = getNodeId(
-        node.data.node?.flow ? "GroupNode" : node.data.type
-      );
+      let newId = getNodeId(node.data.type);
+      if (selection && !selectionIds?.includes(node.id)) {
+        newId = node.id;
+      }
       idsMap[node.id] = newId;
       node.id = newId;
       node.data.id = newId;
       // Add the new node to the list of nodes in state
     });
-
-  if (newFlow.edges)
-    newFlow.edges.forEach((edge: Edge) => {
+    selection?.nodes.forEach((sNode: NodeType) => {
+      let newId = idsMap[sNode.id];
+      sNode.id = newId;
+      sNode.data.id = newId;
+    });
+  }
+  const concatedEdges = [...edges, ...(selection?.edges ?? [])];
+  if (concatedEdges)
+    concatedEdges.forEach((edge: Edge) => {
       edge.source = idsMap[edge.source];
       edge.target = idsMap[edge.target];
       const sourceHandleObject: sourceHandleType = scapeJSONParse(
@@ -273,6 +283,8 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
     node: { template },
   } = node.data;
 
+  const displayName = node.data.node.display_name;
+
   return Object.keys(template).reduce((errors: Array<string>, t) => {
     if (
       template[t].required &&
@@ -288,7 +300,9 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
             node.id
       )
     ) {
-      errors.push(`${type} is missing ${getFieldTitle(template, t)}.`);
+      errors.push(
+        `${displayName || type} is missing ${getFieldTitle(template, t)}.`
+      );
     } else if (
       template[t].type === "dict" &&
       template[t].required &&
@@ -299,27 +313,40 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
     ) {
       if (hasDuplicateKeys(template[t].value))
         errors.push(
-          `${type} (${getFieldTitle(
+          `${displayName || type} (${getFieldTitle(
             template,
             t
           )}) contains duplicate keys with the same values.`
         );
       if (hasEmptyKey(template[t].value))
         errors.push(
-          `${type} (${getFieldTitle(template, t)}) field must not be empty.`
+          `${displayName || type} (${getFieldTitle(
+            template,
+            t
+          )}) field must not be empty.`
         );
     }
     return errors;
   }, [] as string[]);
 }
 
-export function validateNodes(nodes: Node[], edges: Edge[]) {
+export function validateNodes(
+  nodes: Node[],
+  edges: Edge[]
+): // this returns an array of tuples with the node id and the errors
+Array<{ id: string; errors: Array<string> }> {
   if (nodes.length === 0) {
     return [
-      "No nodes found in the flow. Please add at least one node to the flow.",
+      {
+        id: "",
+        errors: [
+          "No nodes found in the flow. Please add at least one node to the flow.",
+        ],
+      },
     ];
   }
-  return nodes.flatMap((n: NodeType) => validateNode(n, edges));
+  // validateNode(n, edges) returns an array of errors for the node
+  return nodes.map((n) => ({ id: n.id, errors: validateNode(n, edges) }));
 }
 
 export function updateEdges(edges: Edge[]) {
@@ -633,10 +660,13 @@ export function generateFlow(
 }
 
 export function reconnectEdges(groupNode: NodeType, excludedEdges: Edge[]) {
-  let newEdges = cloneDeep(excludedEdges);
   if (!groupNode.data.node!.flow) return [];
+  let newEdges = cloneDeep(excludedEdges);
   const { nodes, edges } = groupNode.data.node!.flow!.data!;
   const lastNode = findLastNode(groupNode.data.node!.flow!.data!);
+  newEdges = newEdges.filter(
+    (e) => !(nodes.some((n) => n.id === e.source) && e.source !== lastNode?.id)
+  );
   newEdges.forEach((edge) => {
     if (lastNode && edge.source === lastNode.id) {
       edge.source = groupNode.id;
@@ -951,7 +981,7 @@ export function connectedInputNodesOnHandle(
   return connectedNodes;
 }
 
-function updateProxyIdsOnTemplate(
+export function updateProxyIdsOnTemplate(
   template: APITemplateType,
   idsMap: { [key: string]: string }
 ) {
@@ -962,12 +992,16 @@ function updateProxyIdsOnTemplate(
   });
 }
 
-function updateEdgesIds(edges: Edge[], idsMap: { [key: string]: string }) {
+export function updateEdgesIds(
+  edges: Edge[],
+  idsMap: { [key: string]: string }
+) {
   edges.forEach((edge) => {
     let targetHandle: targetHandleType = edge.data.targetHandle;
     if (targetHandle.proxy && idsMap[targetHandle.proxy!.id]) {
       targetHandle.proxy!.id = idsMap[targetHandle.proxy!.id];
     }
+    console.log("edge", edge);
     edge.data.targetHandle = targetHandle;
     edge.targetHandle = scapedJSONStringfy(targetHandle);
   });
@@ -1139,7 +1173,7 @@ export function downloadNode(NodeFLow: FlowType) {
     type: "application/json",
   });
   element.href = URL.createObjectURL(file);
-  element.download = `${NodeFLow.name}.json`;
+  element.download = `${NodeFLow?.name ?? "node"}.json`;
   element.click();
 }
 
@@ -1157,6 +1191,20 @@ export function removeFileNameFromComponents(flow: FlowType) {
     });
     if (node.data.node?.flow) {
       removeFileNameFromComponents(node.data.node.flow);
+    }
+  });
+}
+
+export function removeGlobalVariableFromComponents(flow: FlowType) {
+  flow.data!.nodes.forEach((node: NodeType) => {
+    Object.keys(node.data.node!.template).forEach((field) => {
+      if (node.data?.node?.template[field]?.load_from_db) {
+        node.data.node!.template[field].value = "";
+        node.data.node!.template[field].load_from_db = false;
+      }
+    });
+    if (node.data.node?.flow) {
+      removeGlobalVariableFromComponents(node.data.node.flow);
     }
   });
 }
@@ -1254,4 +1302,19 @@ export function isInputType(type: string): boolean {
 
 export function isOutputType(type: string): boolean {
   return OUTPUT_TYPES.has(type);
+}
+
+export function updateGroupRecursion(groupNode: NodeType, edges: Edge[]) {
+  if (groupNode.data.node?.flow) {
+    groupNode.data.node.flow.data!.nodes.forEach((node) => {
+      if (node.data.node?.flow) {
+        updateGroupRecursion(node, node.data.node.flow.data!.edges);
+      }
+    });
+    let newFlow = groupNode.data.node!.flow;
+    const idsMap = updateIds(newFlow.data!);
+    updateProxyIdsOnTemplate(groupNode.data.node!.template, idsMap);
+    let flowEdges = edges;
+    updateEdgesIds(flowEdges, idsMap);
+  }
 }

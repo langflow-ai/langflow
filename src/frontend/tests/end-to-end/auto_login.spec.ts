@@ -9,11 +9,18 @@ test.describe("Auto_login tests", () => {
   test("auto_login block_admin", async ({ page }) => {
     await page.goto("http:localhost:3000/");
     await page.locator('//*[@id="new-project-btn"]').click();
-    await page.goto("http:localhost:3000/login");
+    await page.waitForTimeout(5000);
+
+    await page.goto("/login");
     await page.locator('//*[@id="new-project-btn"]').click();
-    await page.goto("http:localhost:3000/admin");
+    await page.waitForTimeout(5000);
+
+    await page.goto("/admin");
     await page.locator('//*[@id="new-project-btn"]').click();
-    await page.goto("http:localhost:3000/admin/login");
+    await page.waitForTimeout(5000);
+
+    await page.goto("/admin/login");
     await page.locator('//*[@id="new-project-btn"]').click();
+    await page.waitForTimeout(5000);
   });
 });

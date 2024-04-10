@@ -1,8 +1,8 @@
 import { useContext, useEffect, useState } from "react";
+import { ErrorBoundary } from "react-error-boundary";
+import { useNavigate } from "react-router-dom";
 import "reactflow/dist/style.css";
 import "./App.css";
-
-import { ErrorBoundary } from "react-error-boundary";
 import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
@@ -14,11 +14,12 @@ import {
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { getHealth } from "./controllers/API";
+import { autoLogin, getGlobalVariables, getHealth } from "./controllers/API";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
+import { useGlobalVariablesStore } from "./stores/globalVariables";
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
 
@@ -36,35 +37,79 @@ export default function App() {
     removeFromTempNotificationList(id);
   };
 
-  const { isAuthenticated } = useContext(AuthContext);
+  const { isAuthenticated, login, setUserData, setAutoLogin, getUser } =
+    useContext(AuthContext);
   const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
+  const setLoading = useAlertStore((state) => state.setLoading);
   const fetchApiData = useStoreStore((state) => state.fetchApiData);
   const getTypes = useTypesStore((state) => state.getTypes);
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
+  const setGlobalVariables = useGlobalVariablesStore(
+    (state) => state.setGlobalVariables
+  );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
+  const navigate = useNavigate();
+  const dark = useDarkStore((state) => state.dark);
+
+  const [isLoadingHealth, setIsLoadingHealth] = useState(false);
 
   useEffect(() => {
-    refreshStars();
-    refreshVersion();
-
-    // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
-    if (isAuthenticated === true) {
-      // get data from db
-      getTypes().then(() => {
-        refreshFlows();
-      });
-      checkHasStore();
-      fetchApiData();
+    if (!dark) {
+      document.getElementById("body")!.classList.remove("dark");
+    } else {
+      document.getElementById("body")!.classList.add("dark");
     }
+  }, [dark]);
+
+  useEffect(() => {
+    const isLoginPage = location.pathname.includes("login");
+
+    autoLogin()
+      .then(async (user) => {
+        if (user && user["access_token"]) {
+          user["refresh_token"] = "auto";
+          login(user["access_token"]);
+          setUserData(user);
+          setAutoLogin(true);
+          setLoading(false);
+          await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+        }
+      })
+      .catch(async () => {
+        setAutoLogin(false);
+        if (isAuthenticated && !isLoginPage) {
+          getUser();
+          await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+        } else {
+          setLoading(false);
+          useFlowsManagerStore.setState({ isLoading: false });
+        }
+      });
   }, [isAuthenticated]);
 
+  const fetchData = async () => {
+    if (isAuthenticated) {
+      try {
+        await getTypes();
+        refreshFlows();
+        const res = await getGlobalVariables();
+        setGlobalVariables(res);
+        checkHasStore();
+        fetchApiData();
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      }
+    }
+  };
+
   useEffect(() => {
+    checkApplicationHealth();
     // Timer to call getHealth every 5 seconds
     const timer = setInterval(() => {
       getHealth()
         .then(() => {
-          if (fetchError) setFetchError(false);
+          onHealthCheck();
         })
         .catch(() => {
           setFetchError(true);
@@ -77,6 +122,30 @@ export default function App() {
     };
   }, []);
 
+  const checkApplicationHealth = () => {
+    setIsLoadingHealth(true);
+    getHealth()
+      .then(() => {
+        onHealthCheck();
+      })
+      .catch(() => {
+        setFetchError(true);
+      });
+
+    setTimeout(() => {
+      setIsLoadingHealth(false);
+    }, 2000);
+  };
+
+  const onHealthCheck = () => {
+    setFetchError(false);
+    //This condition is necessary to avoid infinite loop on starter page when the application is not healthy
+    if (isLoading === true && window.location.pathname === "/") {
+      navigate("/flows");
+      window.location.reload();
+    }
+  };
+
   return (
     //need parent component with width and height
     <div className="flex h-full flex-col">
@@ -86,20 +155,29 @@ export default function App() {
         }}
         FallbackComponent={CrashErrorComponent}
       >
-        {fetchError ? (
-          <FetchErrorComponent
-            description={FETCH_ERROR_DESCRIPION}
-            message={FETCH_ERROR_MESSAGE}
-          ></FetchErrorComponent>
-        ) : isLoading ? (
-          <div className="loading-page-panel">
-            <LoadingComponent remSize={50} />
-          </div>
-        ) : (
-          <>
-            <Router />
-          </>
-        )}
+        <>
+          {
+            <FetchErrorComponent
+              description={FETCH_ERROR_DESCRIPION}
+              message={FETCH_ERROR_MESSAGE}
+              openModal={fetchError}
+              setRetry={() => {
+                checkApplicationHealth();
+              }}
+              isLoadingHealth={isLoadingHealth}
+            ></FetchErrorComponent>
+          }
+
+          {isLoading ? (
+            <div className="loading-page-panel">
+              <LoadingComponent remSize={50} />
+            </div>
+          ) : (
+            <>
+              <Router />
+            </>
+          )}
+        </>
       </ErrorBoundary>
       <div></div>
       <div className="app-div">

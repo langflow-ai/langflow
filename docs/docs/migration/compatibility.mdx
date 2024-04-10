@@ -1,0 +1,52 @@
+import Admonition from "@theme/Admonition";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
+# Compatibility with Previous Versions
+
+## TLDR;
+
+- You'll need to add a few components to your flow to make it compatible with the new version of Langflow.
+- Add a Runnable Executor, connect it to the last component (a Chain or an Agent) in your flow, and connect a Chat Input and a Chat Output to the Runnable Executor. This should work _most of the time_.
+- You might also need to update the Chain or Agent component to the latest version.
+- Most Components will work as they are, but you'll need to add an Input and an Output to your flow.
+- You can use the Runnable Executor to run a LangChain runnable (which is the output of many components before 1.0)
+- We need your feedback on this, so please let us know how it goes and what you think.
+
+## Introduction
+
+Langflow now works best with a flow that has an Input and an Output and that is mostly what you'll need to add to your existing flows.
+
+Hopefully, you'll find that even though you still can work with your current flows, updating all your components to the new version of Langflow will be worth it.
+
+We've tried to make it as easy as possible for you to adapt your existing flows to work seamlessly in the new version of Langflow.
+
+## How to Adapt Your Existing Flows
+
+The steps to take are few but not always simple. Here's how you can adapt your existing flows to work seamlessly in the new version of Langflow:
+
+<Admonition type="caution">
+  <p>
+    While this should work most of the time, it might not work for all flows.
+    You might need to update the Chain or Agent component to the latest version.
+    Please let us know if you encounter any issues.
+  </p>
+</Admonition>
+
+1. **Check if your flow ends with a Chain or Agent component**.
+   - If it does not, it _should_ work as it is because it probably was not a chat flow.
+2. **Add a Runnable Executor**.
+   - Add a Runnable Executor to the end of your flow.
+   - Connect the last component (a Chain or an Agent) in your flow to the Runnable Executor.
+3. **Add a Chat Input and a Chat Output**.
+   - Add a Chat Input and a Chat Output to your flow.
+   - Connect the Chat Input to the Runnable Executor.
+   - Connect the Chat Output to the Runnable Executor.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/runnable-executor.png",
+    dark: "img/runnable-executor.png",
+  }}
+  style={{ width: "100%", margin: "20px auto" }}
+/>

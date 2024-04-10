@@ -1,5 +1,4 @@
 from langchain_core.documents import Document
-
 from langflow.components import helpers
 from langflow.interface.custom.utils import build_custom_component_template
 from langflow.schema import Record
@@ -52,23 +51,9 @@ def test_uuid_generator_component():
     assert len(result) == 36
 
 
-def test_python_function_component():
-    # Arrange
-    python_function_component = helpers.PythonFunctionComponent()
-
-    # Act
-    # function must be a string representation
-    function = "def function():\n    return 'Hello, World!'"
-    # result is the callable function
-    result = python_function_component.build(function)
-
-    # Assert
-    assert result() == "Hello, World!"
-
-
 def test_records_as_text_component():
     # Arrange
-    records_as_text_component = helpers.RecordsAsTextComponent()
+    records_as_text_component = helpers.RecordsToTextComponent()
 
     # Act
     # Replace with your actual test data
@@ -83,12 +68,12 @@ def test_records_as_text_component():
 
 def test_text_to_record_component():
     # Arrange
-    text_to_record_component = helpers.TextToRecordComponent()
+    text_to_record_component = helpers.CreateRecordComponent()
 
     # Act
     # Replace with your actual test data
-    dict_with_text = {"key": "value"}
-    result = text_to_record_component.build(dict_with_text)
+    dict_with_text = {"field_1": {"key": "value"}}
+    result = text_to_record_component.build(number_of_fields=1, **dict_with_text)
 
     # Assert
     # Replace with your actual expected result

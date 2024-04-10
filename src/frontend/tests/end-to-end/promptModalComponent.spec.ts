@@ -1,27 +1,38 @@
 import { expect, test } from "@playwright/test";
 
 test("PromptTemplateComponent", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("http:localhost:3000/");
   await page.waitForTimeout(2000);
 
   await page.locator('//*[@id="new-project-btn"]').click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
+  await page.getByTestId("blank-flow").click();
+  await page.waitForTimeout(1000);
+  await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("prompt");
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page
-    .locator('//*[@id="promptsPrompt"]')
+    .locator('//*[@id="inputsPrompt"]')
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
 
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
+
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
   await page.getByTestId("prompt-input-template").click();
 
-  // await page.getByTestId("edit-prompt-sanitized").click();
-  // await page.getByTestId("modal-title").click();
   await page
     .getByTestId("modal-prompt-input-template")
     .fill("{prompt} example {prompt1}");
@@ -55,10 +66,10 @@ test("PromptTemplateComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("more-options-modal").click();
   await page.getByTestId("save-button-modal").click();
 
-  const replace = await page.getByTestId("replace-button");
+  const replace = await page.getByTestId("replace-button").isVisible();
+
   if (replace) {
     await page.getByTestId("replace-button").click();
   }

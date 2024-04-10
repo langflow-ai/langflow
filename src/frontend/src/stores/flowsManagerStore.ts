@@ -1,8 +1,11 @@
 import { AxiosError } from "axios";
-import { cloneDeep } from "lodash";
+import { cloneDeep, debounce } from "lodash";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
-import { STARTER_FOLDER_NAME } from "../constants/constants";
+import {
+  SAVE_DEBOUNCE_TIME,
+  STARTER_FOLDER_NAME,
+} from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   readFlowsFromDatabase,
@@ -85,6 +88,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           }
         })
         .catch((e) => {
+          set({ isLoading: false });
           useAlertStore.getState().setErrorData({
             title: "Could not load flows from database",
           });
@@ -93,22 +97,18 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     });
   },
   autoSaveCurrentFlow: (nodes: Node[], edges: Edge[], viewport: Viewport) => {
-    // Clear the previous timeout if it exists.
-    if (saveTimeoutId) {
-      clearTimeout(saveTimeoutId);
+    if (get().currentFlow) {
+      get().saveFlow(
+        { ...get().currentFlow!, data: { nodes, edges, viewport } },
+        true
+      );
     }
-    set({ saveLoading: true });
-    // Set up a new timeout.
-    saveTimeoutId = setTimeout(() => {
-      if (get().currentFlow) {
-        get().saveFlow(
-          { ...get().currentFlow!, data: { nodes, edges, viewport } },
-          true
-        );
-      }
-    }, 500); // Delay of 500ms because chat message depends on it.
   },
   saveFlow: (flow: FlowType, silent?: boolean) => {
+    set({ saveLoading: true }); // set saveLoading true immediately
+    return get().saveFlowDebounce(flow, silent); // call the debounced function directly
+  },
+  saveFlowDebounce: debounce((flow: FlowType, silent?: boolean) => {
     set({ saveLoading: true });
     return new Promise<void>((resolve, reject) => {
       updateFlowInDatabase(flow)
@@ -142,7 +142,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           reject(err);
         });
     });
-  },
+  }, SAVE_DEBOUNCE_TIME),
   uploadFlows: () => {
     return new Promise<void>((resolve) => {
       const input = document.createElement("input");

@@ -139,6 +139,7 @@ export type Component = {
 
 export type VerticesOrderTypeAPI = {
   ids: Array<string>;
+  vertices_to_run: Array<string>;
   run_id: string;
 };
 
@@ -146,6 +147,7 @@ export type VertexBuildTypeAPI = {
   id: string;
   inactivated_vertices: Array<string> | null;
   next_vertices_ids: Array<string>;
+  top_level_vertices: Array<string>;
   run_id: string;
   valid: boolean;
   params: string;
@@ -174,4 +176,7 @@ export type CodeErrorDataTypeAPI = {
 // error that has a response, that has a data, that has a detail, that has an error
 export type ResponseErrorTypeAPI = {
   response: { data: { detail: CodeErrorDataTypeAPI } };
+};
+export type ResponseErrorDetailAPI = {
+  response: { data: { detail: string } };
 };

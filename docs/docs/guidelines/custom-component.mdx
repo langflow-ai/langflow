@@ -30,7 +30,7 @@ Here is an example:
     <CH.Code linuNumbers={false}>
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class DocumentProcessor(CustomComponent):
@@ -92,7 +92,7 @@ The Python script for every Custom Component should follow a set of rules. Let's
 The script must contain a **single class** that inherits from _`CustomComponent`_.
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class MyComponent(CustomComponent):
@@ -113,7 +113,7 @@ class MyComponent(CustomComponent):
 This class requires a _`build`_ method used to run the component and define its fields.
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class MyComponent(CustomComponent):
@@ -131,10 +131,10 @@ class MyComponent(CustomComponent):
 
 ---
 
-The [Return Type Annotation](https://docs.python.org/3/library/typing.html) of the _`build`_ method defines the component type (e.g., Chain, BaseLLM, or basic Python types). Check out all supported types in the [component reference](../components/custom).
+The [Return Type Annotation](https://docs.python.org/3/library/typing.html) of the _`build`_ method defines the component type (e.g., Chain, BaseLanguageModel, or basic Python types). Check out all supported types in the [component reference](../components/custom).
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class MyComponent(CustomComponent):
@@ -153,7 +153,7 @@ class MyComponent(CustomComponent):
 ---
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class MyComponent(CustomComponent):
@@ -179,7 +179,7 @@ Check out the [component reference](../components/custom) for more details on th
 ---
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class MyComponent(CustomComponent):
@@ -204,7 +204,7 @@ Let's create a custom component that processes a document (_`langchain.schema.Do
 To start, let's choose a name for our component by adding a _`display_name`_ attribute. This name will appear on the canvas. The name of the class is not relevant, but let's call it _`DocumentProcessor`_.
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 # focus
@@ -227,7 +227,7 @@ class DocumentProcessor(CustomComponent):
 We can also write a description for it using a _`description`_ attribute.
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class DocumentProcessor(CustomComponent):
@@ -244,7 +244,7 @@ class DocumentProcessor(CustomComponent):
 ---
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class DocumentProcessor(CustomComponent):
@@ -283,11 +283,11 @@ The return type is _`Document`_.
 The _`build_config`_ method is here defined to customize the component fields.
 
 - _`options`_ determines that the field will be a dropdown menu. The list values and field type must be _`str`_.
-- _`value`_ is the default option of the dropdown menu.
+- _`value`_ is the default value of the field.
 - _`display_name`_ is the name of the field to be displayed.
 
 ```python
-from langflow import CustomComponent
+from langflow.custom import CustomComponent
 from langchain.schema import Document
 
 class DocumentProcessor(CustomComponent):
@@ -366,7 +366,7 @@ For advanced customization, Langflow offers the option to create and load custom
 
 ### Folder Structure
 
-Create a folder that follows the same structural conventions as the [config.yaml](https://github.com/logspace-ai/langflow/blob/dev/src/backend/langflow/config.yaml) file. Inside this main directory, use a `custom_components` subdirectory for your custom components.
+Create a folder that follows the same structural conventions as the [config.yaml](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/config.yaml) file. Inside this main directory, use a `custom_components` subdirectory for your custom components.
 
 Inside `custom_components`, you can create a Python file for each component. Similarly, any custom agents should be housed in an `agents` subdirectory.
 
@@ -406,4 +406,5 @@ Langflow will attempt to load all of the components found in the specified direc
 
 Once your custom components have been loaded successfully, they will appear in Langflow's sidebar. From there, you can add them to your Langflow canvas for use. However, please note that components with errors will not be available for addition to the canvas. Always ensure your code is error-free before attempting to load components.
 
-Remember, creating custom components allows you to extend the functionality of Langflow to better suit your unique needs. Happy coding!
+Remember, creating custom components allows you to extend the functionality of Langflow to better suit your unique needs. Happy coding!import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";

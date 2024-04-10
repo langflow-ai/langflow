@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -86,7 +86,11 @@ export default function GenericNode({
     if (!thisNodeTemplate.code) return;
     const currentCode = thisNodeTemplate.code?.value;
     const thisNodesCode = data.node!.template?.code?.value;
-    if (currentCode !== thisNodesCode) {
+    const componentsToIgnore = ["Custom Component", "Prompt"];
+    if (
+      currentCode !== thisNodesCode &&
+      !componentsToIgnore.includes(data.node!.display_name)
+    ) {
       setIsOutdated(true);
     } else {
       setIsOutdated(false);
@@ -211,9 +215,11 @@ export default function GenericNode({
     }
   }, [validationStatus, validationStatus?.params]);
 
-  // const showNode = data.showNode ?? true;
-
   const [showNode, setShowNode] = useState(data.showNode ?? true);
+
+  useEffect(() => {
+    setShowNode(data.showNode ?? true);
+  }, [data.showNode]);
 
   const nameEditable = true;
 
@@ -275,7 +281,8 @@ export default function GenericNode({
               name="Play"
               className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-green opacity-30 transition-all group-hover:opacity-0"
             />
-          ) : validationStatus && !validationStatus.valid ? (
+          ) : buildStatus === BuildStatus.ERROR ||
+            (validationStatus && !validationStatus.valid) ? (
             <Xmark
               isVisible={true}
               className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-red opacity-100 transition-all group-hover:opacity-0"
@@ -290,7 +297,6 @@ export default function GenericNode({
       );
     }
   };
-
   const getSpecificClassFromBuildStatus = (
     buildStatus: BuildStatus | undefined,
     validationStatus: validationStatusType | null
@@ -301,7 +307,10 @@ export default function GenericNode({
       // INACTIVE should have its own class
       return "inactive-status";
     }
-    if (buildStatus === BuildStatus.BUILT && isInvalid) {
+    if (
+      (buildStatus === BuildStatus.BUILT && isInvalid) ||
+      buildStatus === BuildStatus.ERROR
+    ) {
       return isDark ? "built-invalid-status-dark" : "built-invalid-status";
     } else if (buildStatus === BuildStatus.BUILDING) {
       return "building-status";
@@ -336,17 +345,16 @@ export default function GenericNode({
   const getNodeSizeClass = (showNode) =>
     showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full";
 
-  return (
-    <>
+  const memoizedNodeToolbarComponent = useMemo(() => {
+    return (
       <NodeToolbar>
         <NodeToolbarComponent
-          position={{ x: xPos, y: yPos }}
           data={data}
           deleteNode={(id) => {
             takeSnapshot();
             deleteNode(id);
           }}
-          setShowNode={(show: boolean) => {
+          setShowNode={(show) => {
             setNode(data.id, (old) => ({
               ...old,
               data: { ...old.data, showNode: show },
@@ -360,8 +368,25 @@ export default function GenericNode({
           updateNodeCode={updateNodeCode}
           isOutdated={isOutdated}
           selected={selected}
-        ></NodeToolbarComponent>
+        />
       </NodeToolbar>
+    );
+  }, [
+    data,
+    deleteNode,
+    takeSnapshot,
+    setNode,
+    setShowNode,
+    handles,
+    showNode,
+    updateNodeCode,
+    isOutdated,
+    selected,
+  ]);
+
+  return (
+    <>
+      {memoizedNodeToolbarComponent}
       <div
         className={getNodeBorderClassName(
           selected,
@@ -419,6 +444,7 @@ export default function GenericNode({
                         onChange={setNodeName}
                         password={false}
                         blurOnEnter={true}
+                        id={`input-title-${data.node?.display_name}`}
                       />
                     </div>
                   ) : (
@@ -434,7 +460,7 @@ export default function GenericNode({
                             event.preventDefault();
                           }}
                           data-testid={"title-" + data.node?.display_name}
-                          className="generic-node-tooltip-div text-primary"
+                          className="generic-node-tooltip-div cursor-text text-primary"
                         >
                           {data.node?.display_name}
                         </div>

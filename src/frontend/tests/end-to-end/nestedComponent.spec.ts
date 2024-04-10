@@ -1,16 +1,19 @@
 import { expect, test } from "@playwright/test";
 
 test("NestedComponent", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("http:localhost:3000/");
   await page.waitForTimeout(2000);
 
   await page.locator('//*[@id="new-project-btn"]').click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
+  await page.getByTestId("blank-flow").click();
+  await page.waitForTimeout(1000);
+  await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("pinecone");
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page
     .getByTestId("vectorstoresPinecone")

@@ -1,4 +1,4 @@
-import { cloneDeep } from "lodash";
+import { cloneDeep, zip } from "lodash";
 import {
   Edge,
   EdgeChange,
@@ -26,6 +26,7 @@ import {
   ChatOutputType,
   FlowPoolObjectType,
   FlowStoreType,
+  VertexLayerElementType,
   chatInputType,
 } from "../types/zustand/flow";
 import { buildVertices } from "../utils/buildUtils";
@@ -36,6 +37,7 @@ import {
   getNodeId,
   scapeJSONParse,
   scapedJSONStringfy,
+  updateGroupRecursion,
   validateNodes,
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
@@ -67,6 +69,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       newFlowPool[nodeId].push(data);
     }
     get().setFlowPool(newFlowPool);
+  },
+  getNodePosition: (nodeId: string) => {
+    const node = get().nodes.find((node) => node.id === nodeId);
+    return node?.position || { x: 0, y: 0 };
   },
   updateFlowPool: (
     nodeId: string,
@@ -221,6 +227,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
   },
   paste: (selection, position) => {
+    function updateGroup() {}
+
     if (
       selection.nodes.some((node) => node.data.type === "ChatInput") &&
       checkChatInput(get().nodes)
@@ -256,6 +264,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       // Generate a unique node ID
       let newId = getNodeId(node.data.type);
       idsMap[node.id] = newId;
+
+      updateGroupRecursion(node, selection.edges);
 
       // Create a new node object
       const newNode: NodeType = {
@@ -432,16 +442,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const setErrorData = useAlertStore.getState().setErrorData;
     const setNoticeData = useAlertStore.getState().setNoticeData;
     function validateSubgraph(nodes: string[]) {
-      const errors = validateNodes(
+      const errorsObjs = validateNodes(
         get().nodes.filter((node) => nodes.includes(node.id)),
         get().edges
       );
+
+      const errors = errorsObjs.map((obj) => obj.errors).flat();
       if (errors.length > 0) {
         setErrorData({
           title: MISSED_ERROR_ALERT,
           list: errors,
         });
         get().setIsBuilding(false);
+        const ids = errorsObjs.map((obj) => obj.id).flat();
+
+        get().updateBuildStatus(ids, BuildStatus.ERROR);
         throw new Error("Invalid nodes");
       }
     }
@@ -459,9 +474,18 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         // verticesLayers is a list of list of vertices ids, where each list is a layer of vertices
         // we want to add a new layer (next_vertices_ids) to the list of layers (verticesLayers)
         // and the values of next_vertices_ids to the list of vertices ids (verticesIds)
+
+        // const nextVertices will be the zip of vertexBuildData.next_vertices_ids and
+        // vertexBuildData.top_level_vertices
+        // the VertexLayerElementType as {id: next_vertices_id, layer: top_level_vertex}
+        const nextVertices: VertexLayerElementType[] = zip(
+          vertexBuildData.next_vertices_ids,
+          vertexBuildData.top_level_vertices
+        ).map(([id, reference]) => ({ id: id!, reference }));
+
         const newLayers = [
           ...get().verticesBuild!.verticesLayers,
-          vertexBuildData.next_vertices_ids,
+          nextVertices,
         ];
         const newIds = [
           ...get().verticesBuild!.verticesIds,
@@ -471,9 +495,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           verticesIds: newIds,
           verticesLayers: newLayers,
           runId: runId,
+          verticesToRun: get().verticesBuild!.verticesToRun,
         });
         get().updateBuildStatus(
-          vertexBuildData.next_vertices_ids,
+          vertexBuildData.top_level_vertices,
           BuildStatus.TO_BUILD
         );
       }
@@ -484,6 +509,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
 
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
+
+      const verticesIds = get().verticesBuild?.verticesIds;
+      const newFlowBuildStatus = { ...get().flowBuildStatus };
+      // filter out the vertices that are not status
+      const verticesToUpdate = verticesIds?.filter(
+        (id) => newFlowBuildStatus[id]?.status !== BuildStatus.BUILT
+      );
+
+      if (verticesToUpdate) {
+        useFlowStore.getState().updateBuildStatus(verticesToUpdate, status);
+      }
     }
     await buildVertices({
       input_value,
@@ -493,9 +529,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       onGetOrderSuccess: () => {
         setNoticeData({ title: "Running components" });
       },
-      onBuildComplete: () => {
+      onBuildComplete: (allNodesValid) => {
         const nodeId = startNodeId || stopNodeId;
-        if (nodeId) {
+        if (nodeId && allNodesValid) {
           setSuccessData({
             title: `${
               get().nodes.find((node) => node.id === nodeId)?.data.node
@@ -508,15 +544,22 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().setIsBuilding(false);
       },
       onBuildUpdate: handleBuildUpdate,
-      onBuildError: (title, list, idList) => {
+      onBuildError: (title: string, list: string[], elementList) => {
+        const idList = elementList
+          .map((element) => element.id)
+          .filter(Boolean) as string[];
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
         setErrorData({ list, title });
         get().setIsBuilding(false);
       },
-      onBuildStart: (idList) => {
+      onBuildStart: (elementList) => {
+        const idList = elementList
+          // reference is the id of the vertex or the id of the parent in a group node
+          .map((element) => element.reference)
+          .filter(Boolean) as string[];
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
-      validateNodes: validateSubgraph,
+      onValidateNodes: validateSubgraph,
     });
     get().setIsBuilding(false);
     get().revertBuiltStatusFromBuilding();
@@ -531,8 +574,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateVerticesBuild: (
     vertices: {
       verticesIds: string[];
-      verticesLayers: string[][];
+      verticesLayers: VertexLayerElementType[][];
       runId: string;
+      verticesToRun: string[];
     } | null
   ) => {
     set({ verticesBuild: vertices });

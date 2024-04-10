@@ -10,7 +10,6 @@ export default function DeleteAccountPage() {
     // Implement your account deletion logic here
     // For example, make an API call to delete the account
     // Upon successful deletion, you can redirect the user to another page
-    console.log("Account deleted!");
     // Implement the logic to redirect the user after account deletion.
     // For example, use react-router-dom's useHistory hook.
   };

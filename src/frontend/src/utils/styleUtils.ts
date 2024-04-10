@@ -25,6 +25,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
+  ChevronsUpDownIcon,
   Circle,
   FileX2,
   CircleDot,
@@ -63,6 +64,7 @@ import {
   GitBranchPlus,
   GitFork,
   GithubIcon,
+  Globe,
   Group,
   Hammer,
   Heart,
@@ -120,6 +122,7 @@ import {
   TerminalIcon,
   TerminalSquare,
   TextCursorInput,
+  TextSearch,
   ToyBrick,
   Trash2,
   Type,
@@ -145,6 +148,7 @@ import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
+import { AstraDBIcon } from "../icons/AstraDB";
 import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
 import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
@@ -155,6 +159,7 @@ import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
 import { GitBookIcon } from "../icons/GitBook";
 import { GoogleIcon } from "../icons/Google";
+import { GoogleGenerativeAIIcon } from "../icons/GoogleGenerativeAI";
 import {
   GradientInfinity,
   GradientSave,
@@ -223,11 +228,11 @@ export const gradients = [
 ];
 
 export const nodeColors: { [char: string]: string } = {
-  inputs: "#9AAE42",
+  inputs: "#10B981",
   outputs: "#AA2411",
-  data: "#6344BE",
+  data: "#4367BF",
   prompts: "#4367BF",
-  models: "#AA2411",
+  models: "#6344BE",
   model_specs: "#6344BE",
   chains: "#FE7500",
   Document: "#7AAE42",
@@ -242,6 +247,7 @@ export const nodeColors: { [char: string]: string } = {
   embeddings: "#42BAA7",
   documentloaders: "#7AAE42",
   vectorstores: "#AA8742",
+  vectorsearch: "#AA8742",
   textsplitters: "#B47CB5",
   toolkits: "#DB2C2C",
   wrappers: "#E6277A",
@@ -254,6 +260,8 @@ export const nodeColors: { [char: string]: string } = {
   retrievers: "#e6b25a",
   unknown: "#9CA3AF",
   custom_components: "#ab11ab",
+  Records: "#31a3cc",
+  Record: "#31a3cc",
 };
 
 export const nodeNames: { [char: string]: string } = {
@@ -273,6 +281,7 @@ export const nodeNames: { [char: string]: string } = {
   embeddings: "Embeddings",
   documentloaders: "Loaders",
   vectorstores: "Vector Stores",
+  vectorsearch: "Vector Search",
   toolkits: "Toolkits",
   wrappers: "Wrappers",
   textsplitters: "Text Splitters",
@@ -324,9 +333,11 @@ export const nodeIconsLucide: iconsType = {
   Amazon: AWSIcon,
   Anthropic: AnthropicIcon,
   ChatAnthropic: AnthropicIcon,
+  AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
   Cohere: CohereIcon,
+  ChevronsUpDownIcon,
   CohereEmbeddings: CohereIcon,
   EverNoteLoader: EvernoteIcon,
   FacebookChatLoader: FBIcon,
@@ -335,6 +346,7 @@ export const nodeIconsLucide: iconsType = {
   GoogleSearchResults: GoogleIcon,
   GoogleSearchRun: GoogleIcon,
   Google: GoogleIcon,
+  GoogleGenerativeAI: GoogleGenerativeAIIcon,
   HNLoader: HackerNewsIcon,
   HuggingFaceHub: HuggingFaceIcon,
   HuggingFace: HuggingFaceIcon,
@@ -379,6 +391,7 @@ export const nodeIconsLucide: iconsType = {
   saved_components: GradientSave,
   documentloaders: Paperclip,
   vectorstores: Layers,
+  vectorsearch: TextSearch,
   toolkits: Package2,
   textsplitters: Scissors,
   wrappers: Gift,
@@ -429,6 +442,7 @@ export const nodeIconsLucide: iconsType = {
   PlusCircle,
   PlusSquare,
   Code2,
+  Globe,
   Variable,
   Snowflake,
   Store,

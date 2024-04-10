@@ -1,0 +1,87 @@
+import Admonition from '@theme/Admonition';
+
+# Data
+
+### API Request
+
+This component makes HTTP requests to the specified URLs.
+
+**Params**
+
+- **URLs:** URLs to make requests to.
+- **Method:** The HTTP method to use.
+- **Headers:** The headers to send with the request.
+- **Body:** The body to send with the request (for POST, PATCH, PUT).
+- **Timeout:** The timeout to use for the request.
+
+<Admonition type="tip" title="Tip">
+    <p>
+        Use this component to make HTTP requests to external APIs or services and retrieve data.
+    </p>
+    <p>
+        Ensure that you provide valid URLs and configure the method, headers, body, and timeout appropriately.
+    </p>
+</Admonition>
+
+---
+
+### Directory
+
+This component recursively loads files from a directory.
+
+**Params**
+
+- **Path:** The path to the directory.
+- **Types:** File types to load. Leave empty to load all types.
+- **Depth:** Depth to search for files.
+- **Max Concurrency:** The maximum number of concurrent file loading operations.
+- **Load Hidden:** If true, hidden files will be loaded.
+- **Recursive:** If true, the search will be recursive.
+- **Silent Errors:** If true, errors will not raise an exception.
+- **Use Multithreading:** If true, use multithreading for loading files.
+
+<Admonition type="tip" title="Tip">
+    <p>
+        Use this component to load files from a directory, such as text files, JSON files, etc.
+    </p>
+    <p>
+        Ensure that you provide the correct path to the directory and configure other parameters as needed.
+    </p>
+</Admonition>
+
+
+---
+
+### File
+
+This component loads a generic file.
+
+**Params**
+
+- **Path:** The path to the file.
+- **Silent Errors:** If true, errors will not raise an exception.
+
+<Admonition type="tip" title="Tip">
+    <p>
+        Use this component to load a generic file, such as a text file, JSON file, etc.
+    </p>
+    <p>
+        Ensure that you provide the correct path to the file and configure other parameters as needed.
+    </p>
+</Admonition>
+
+---
+
+### URL
+
+This component fetches content from one or more URLs.
+
+**Params**
+
+- **URLs:** The URLs from which content will be fetched.
+
+<Admonition type="tip" title="Tip">
+    <p>
+        Ensure that you provide valid URLs and configure other parameters as needed.
+    </p>
+</Admonition>

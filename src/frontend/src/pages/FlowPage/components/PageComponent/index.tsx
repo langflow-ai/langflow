@@ -1,4 +1,4 @@
-import _ from "lodash";
+import _, { cloneDeep } from "lodash";
 import { MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import ReactFlow, {
   Background,
@@ -12,7 +12,6 @@ import ReactFlow, {
   updateEdge,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
-import FlowToolbar from "../../../../components/chatComponent";
 import {
   INVALID_SELECTION_ERROR_ALERT,
   UPLOAD_ALERT_LIST,
@@ -32,12 +31,12 @@ import {
   isValidConnection,
   reconnectEdges,
   scapeJSONParse,
+  updateIds,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
-import ExtraSidebar from "../extraSidebarComponent";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -58,6 +57,9 @@ export default function Page({
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const [showCanvas, setSHowCanvas] = useState(
+    Object.keys(templates).length > 0 && Object.keys(types).length > 0
+  );
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
@@ -93,10 +95,61 @@ export default function Page({
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
 
+  function handleGroupNode() {
+    takeSnapshot();
+    if (validateSelection(lastSelection!, edges).length === 0) {
+      const clonedNodes = cloneDeep(nodes);
+      const clonedEdges = cloneDeep(edges);
+      const clonedSelection = cloneDeep(lastSelection);
+      updateIds({ nodes: clonedNodes, edges: clonedEdges }, clonedSelection!);
+      const { newFlow, removedEdges } = generateFlow(
+        clonedSelection!,
+        clonedNodes,
+        clonedEdges,
+        getRandomName()
+      );
+      const newGroupNode = generateNodeFromFlow(newFlow, getNodeId);
+      const newEdges = reconnectEdges(newGroupNode, removedEdges);
+      setNodes([
+        ...clonedNodes.filter(
+          (oldNodes) =>
+            !clonedSelection?.nodes.some(
+              (selectionNode) => selectionNode.id === oldNodes.id
+            )
+        ),
+        newGroupNode,
+      ]);
+      setEdges([
+        ...clonedEdges.filter(
+          (oldEdge) =>
+            !clonedSelection!.nodes.some(
+              (selectionNode) =>
+                selectionNode.id === oldEdge.target ||
+                selectionNode.id === oldEdge.source
+            )
+        ),
+        ...newEdges,
+      ]);
+    } else {
+      setErrorData({
+        title: INVALID_SELECTION_ERROR_ALERT,
+        list: validateSelection(lastSelection!, edges),
+      });
+    }
+  }
+
   const setNode = useFlowStore((state) => state.setNode);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const selectedNode = nodes.filter((obj) => obj.selected);
+      if (
+        selectionMenuVisible &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key === "g"
+      ) {
+        event.preventDefault();
+        handleGroupNode();
+      }
       if (
         (event.ctrlKey || event.metaKey) &&
         event.key === "p" &&
@@ -201,7 +254,7 @@ export default function Page({
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [lastCopiedSelection, lastSelection, takeSnapshot]);
+  }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
 
   useEffect(() => {
     if (reactFlowInstance && currentFlowId) {
@@ -218,6 +271,12 @@ export default function Page({
       cleanFlow();
     };
   }, []);
+
+  useEffect(() => {
+    setSHowCanvas(
+      Object.keys(templates).length > 0 && Object.keys(types).length > 0
+    );
+  }, [templates, types]);
 
   const onConnectMod = useCallback(
     (params: Connection) => {
@@ -380,115 +439,60 @@ export default function Page({
   }
 
   return (
-    <div className="flex h-full overflow-hidden">
-      {!view && <ExtraSidebar />}
-      {/* Main area */}
-      <main className="flex flex-1">
-        {/* Primary column */}
-        <div className="h-full w-full">
-          <div className="h-full w-full" ref={reactFlowWrapper}>
-            {Object.keys(templates).length > 0 &&
-            Object.keys(types).length > 0 ? (
-              <div id="react-flow-id" className="h-full w-full">
-                <ReactFlow
-                  nodes={nodes}
-                  edges={edges}
-                  onNodesChange={onNodesChange}
-                  onEdgesChange={onEdgesChange}
-                  onConnect={onConnectMod}
-                  disableKeyboardA11y={true}
-                  onInit={setReactFlowInstance}
-                  nodeTypes={nodeTypes}
-                  onEdgeUpdate={onEdgeUpdate}
-                  onEdgeUpdateStart={onEdgeUpdateStart}
-                  onEdgeUpdateEnd={onEdgeUpdateEnd}
-                  onNodeDragStart={onNodeDragStart}
-                  onNodeDragStop={onNodeDragStop}
-                  onSelectionDragStart={onSelectionDragStart}
-                  onSelectionEnd={onSelectionEnd}
-                  onSelectionStart={onSelectionStart}
-                  connectionLineComponent={ConnectionLineComponent}
-                  onDragOver={onDragOver}
-                  onMoveEnd={onMoveEnd}
-                  onDrop={onDrop}
-                  onSelectionChange={onSelectionChange}
-                  deleteKeyCode={[]}
-                  className="theme-attribution"
-                  minZoom={0.01}
-                  maxZoom={8}
-                  zoomOnScroll={!view}
-                  zoomOnPinch={!view}
-                  panOnDrag={!view}
-                  proOptions={{ hideAttribution: true }}
-                  onPaneClick={onPaneClick}
-                >
-                  <Background className="" />
-                  {!view && (
-                    <Controls
-                      className="bg-muted fill-foreground stroke-foreground text-primary
-                   [&>button]:border-b-border hover:[&>button]:bg-border"
-                    ></Controls>
-                  )}
-                  <SelectionMenu
-                    isVisible={selectionMenuVisible}
-                    nodes={lastSelection?.nodes}
-                    onClick={() => {
-                      takeSnapshot();
-                      if (
-                        validateSelection(lastSelection!, edges).length === 0
-                      ) {
-                        const { newFlow, removedEdges } = generateFlow(
-                          lastSelection!,
-                          nodes,
-                          edges,
-                          getRandomName()
-                        );
-                        const newGroupNode = generateNodeFromFlow(
-                          newFlow,
-                          getNodeId
-                        );
-                        const newEdges = reconnectEdges(
-                          newGroupNode,
-                          removedEdges
-                        );
-                        setNodes((oldNodes) => [
-                          ...oldNodes.filter(
-                            (oldNodes) =>
-                              !lastSelection?.nodes.some(
-                                (selectionNode) =>
-                                  selectionNode.id === oldNodes.id
-                              )
-                          ),
-                          newGroupNode,
-                        ]);
-                        setEdges((oldEdges) => [
-                          ...oldEdges.filter(
-                            (oldEdge) =>
-                              !lastSelection!.nodes.some(
-                                (selectionNode) =>
-                                  selectionNode.id === oldEdge.target ||
-                                  selectionNode.id === oldEdge.source
-                              )
-                          ),
-                          ...newEdges,
-                        ]);
-                      } else {
-                        setErrorData({
-                          title: INVALID_SELECTION_ERROR_ALERT,
-                          list: validateSelection(lastSelection!, edges),
-                        });
-                      }
-                    }}
-                  />
-                </ReactFlow>
-                {!view && <FlowToolbar flow={flow} />}
-              </div>
-            ) : (
-              <></>
+    <div className="h-full w-full" ref={reactFlowWrapper}>
+      {showCanvas ? (
+        <div id="react-flow-id" className="h-full w-full">
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnectMod}
+            disableKeyboardA11y={true}
+            onInit={setReactFlowInstance}
+            nodeTypes={nodeTypes}
+            onEdgeUpdate={onEdgeUpdate}
+            onEdgeUpdateStart={onEdgeUpdateStart}
+            onEdgeUpdateEnd={onEdgeUpdateEnd}
+            onNodeDragStart={onNodeDragStart}
+            onNodeDragStop={onNodeDragStop}
+            onSelectionDragStart={onSelectionDragStart}
+            onSelectionEnd={onSelectionEnd}
+            onSelectionStart={onSelectionStart}
+            connectionLineComponent={ConnectionLineComponent}
+            onDragOver={onDragOver}
+            onMoveEnd={onMoveEnd}
+            onDrop={onDrop}
+            onSelectionChange={onSelectionChange}
+            deleteKeyCode={[]}
+            className="theme-attribution"
+            minZoom={0.01}
+            maxZoom={8}
+            zoomOnScroll={!view}
+            zoomOnPinch={!view}
+            panOnDrag={!view}
+            proOptions={{ hideAttribution: true }}
+            onPaneClick={onPaneClick}
+          >
+            <Background className="" />
+            {!view && (
+              <Controls
+                className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border
+                   [&>button]:bg-muted hover:[&>button]:bg-border"
+              ></Controls>
             )}
-          </div>
+            <SelectionMenu
+              isVisible={selectionMenuVisible}
+              nodes={lastSelection?.nodes}
+              onClick={() => {
+                handleGroupNode();
+              }}
+            />
+          </ReactFlow>
         </div>
-      </main>
+      ) : (
+        <></>
+      )}
     </div>
   );
 }

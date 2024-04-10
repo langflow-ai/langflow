@@ -36,6 +36,11 @@ export type FlowPoolObjectType = {
   artifacts: any;
 };
 
+export type VertexLayerElementType = {
+  id: string;
+  reference?: string;
+};
+
 export type FlowPoolType = {
   [key: string]: Array<FlowPoolObjectType>;
 };
@@ -104,16 +109,18 @@ export type FlowStoreType = {
   updateVerticesBuild: (
     vertices: {
       verticesIds: string[];
-      verticesLayers: string[][];
+      verticesLayers: VertexLayerElementType[][];
       runId: string;
+      verticesToRun: string[];
     } | null
   ) => void;
   addToVerticesBuild: (vertices: string[]) => void;
   removeFromVerticesBuild: (vertices: string[]) => void;
   verticesBuild: {
     verticesIds: string[];
-    verticesLayers: string[][];
+    verticesLayers: VertexLayerElementType[][];
     runId: string;
+    verticesToRun: string[];
   } | null;
   updateBuildStatus: (nodeId: string[], status: BuildStatus) => void;
   revertBuiltStatusFromBuilding: () => void;
@@ -125,4 +132,5 @@ export type FlowStoreType = {
     data: FlowPoolObjectType | ChatOutputType | chatInputType,
     buildId?: string
   ) => void;
+  getNodePosition: (nodeId: string) => { x: number; y: number };
 };

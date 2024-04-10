@@ -10,10 +10,6 @@ import orjson
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from sqlmodel import Session, SQLModel, create_engine, select
-from sqlmodel.pool import StaticPool
-from typer.testing import CliRunner
-
 from langflow.graph.graph.base import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
@@ -22,6 +18,9 @@ from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -30,6 +29,7 @@ if TYPE_CHECKING:
 def pytest_configure():
     pytest.BASIC_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "basic_example.json"
     pytest.COMPLEX_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "complex_example.json"
+    pytest.COMPLEX_DEPS_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "complex_deps_example.json"
     pytest.OPENAPI_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "Openapi.json"
     pytest.GROUPED_CHAT_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "grouped_chat.json"
     pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "one_group_chat.json"
@@ -192,26 +192,39 @@ def json_vector_store():
         return f.read()
 
 
+@pytest.fixture
+def complex_graph_with_groups():
+    with open(pytest.COMPLEX_DEPS_EXAMPLE_PATH, "r") as f:
+        flow_graph = json.load(f)
+    data_graph = flow_graph["data"]
+    nodes = data_graph["nodes"]
+    edges = data_graph["edges"]
+    return Graph(nodes, edges)
+
+
 @pytest.fixture(name="client", autouse=True)
-def client_fixture(session: Session, monkeypatch):
+def client_fixture(session: Session, monkeypatch, request):
     # Set the database url to a test database
-    db_dir = tempfile.mkdtemp()
-    db_path = Path(db_dir) / "test.db"
-    monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
-    monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+    if "noclient" in request.keywords:
+        yield
+    else:
+        db_dir = tempfile.mkdtemp()
+        db_path = Path(db_dir) / "test.db"
+        monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+        monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
 
-    from langflow.main import create_app
+        from langflow.main import create_app
 
-    app = create_app()
+        app = create_app()
 
-    # app.dependency_overrides[get_session] = get_session_override
-    with TestClient(app) as client:
-        yield client
-    # app.dependency_overrides.clear()
-    monkeypatch.undo()
-    # clear the temp db
-    with suppress(FileNotFoundError):
-        db_path.unlink()
+        # app.dependency_overrides[get_session] = get_session_override
+        with TestClient(app) as client:
+            yield client
+        # app.dependency_overrides.clear()
+        monkeypatch.undo()
+        # clear the temp db
+        with suppress(FileNotFoundError):
+            db_path.unlink()
 
 
 # create a fixture for session_getter above
@@ -252,7 +265,7 @@ def active_user(client):
             is_superuser=False,
         )
         # check if user exists
-        if active_user := session.query(User).filter(User.username == user.username).first():
+        if active_user := session.exec(select(User).where(User.username == user.username)).first():
             return active_user
         session.add(user)
         session.commit()
@@ -357,7 +370,7 @@ def created_api_key(active_user):
     )
     db_manager = get_db_service()
     with session_getter(db_manager) as session:
-        if existing_api_key := session.query(ApiKey).filter(ApiKey.api_key == api_key.api_key).first():
+        if existing_api_key := session.exec(select(ApiKey).where(ApiKey.api_key == api_key.api_key)).first():
             return existing_api_key
         session.add(api_key)
         session.commit()
@@ -369,7 +382,9 @@ def created_api_key(active_user):
 def get_starter_project(active_user):
     # once the client is created, we can get the starter project
     with session_getter(get_db_service()) as session:
-        flow = session.exec(select(Flow).where(Flow.folder == STARTER_FOLDER_NAME)).first()
+        flow = session.exec(
+            select(Flow).where(Flow.folder == STARTER_FOLDER_NAME).where(Flow.name == "Basic Prompting (Hello, World)")
+        ).first()
         if not flow:
             raise ValueError("No starter project found")
 

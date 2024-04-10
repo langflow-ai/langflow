@@ -4,6 +4,7 @@ import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import useFlowStore from "../stores/flowStore";
 import { VertexBuildTypeAPI } from "../types/api";
+import { VertexLayerElementType } from "../types/zustand/flow";
 
 type BuildVerticesParams = {
   flowId: string; // Assuming FlowType is the type for your flow
@@ -17,9 +18,9 @@ type BuildVerticesParams = {
     buildId: string
   ) => void; // Replace any with the actual type if it's not any
   onBuildComplete?: (allNodesValid: boolean) => void;
-  onBuildError?: (title, list, idList: string[]) => void;
-  onBuildStart?: (idList: string[]) => void;
-  validateNodes?: (nodes: string[]) => void;
+  onBuildError?: (title, list, idList: VertexLayerElementType[]) => void;
+  onBuildStart?: (idList: VertexLayerElementType[]) => void;
+  onValidateNodes?: (nodes: string[]) => void;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -35,6 +36,7 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
     inactivated_vertices: null,
     run_id: "",
     next_vertices_ids: [],
+    top_level_vertices: [],
     inactive_vertices: null,
     valid: false,
     timestamp: new Date().toISOString(),
@@ -48,9 +50,10 @@ export async function updateVerticesOrder(
   startNodeId?: string | null,
   stopNodeId?: string | null
 ): Promise<{
-  verticesLayers: string[][];
+  verticesLayers: VertexLayerElementType[][];
   verticesIds: string[];
   runId: string;
+  verticesToRun: string[];
 }> {
   return new Promise(async (resolve, reject) => {
     const setErrorData = useAlertStore.getState().setErrorData;
@@ -58,7 +61,6 @@ export async function updateVerticesOrder(
     try {
       orderResponse = await getVerticesOrder(flowId, startNodeId, stopNodeId);
     } catch (error: any) {
-      console.log(error);
       setErrorData({
         title: "Oops! Looks like you missed something",
         list: [error.response?.data?.detail ?? "Unknown Error"],
@@ -66,32 +68,25 @@ export async function updateVerticesOrder(
       useFlowStore.getState().setIsBuilding(false);
       throw new Error("Invalid nodes");
     }
-    let verticesLayers: Array<Array<string>> = [orderResponse.data.ids];
+    // orderResponse.data.ids,
+    // for each id we need to build the VertexLayerElementType object as
+    // {id: id, reference: id}
+    let verticesLayers: Array<Array<VertexLayerElementType>> =
+      orderResponse.data.ids.map((id: string) => {
+        return [{ id: id, reference: id }];
+      });
+
     const runId = orderResponse.data.run_id;
-    // if (nodeId) {
-    //   for (let i = 0; i < verticesOrder.length; i += 1) {
-    //     const innerArray = verticesOrder[i];
-    //     const idIndex = innerArray.indexOf(nodeId);
-    //     if (idIndex !== -1) {
-    //       // If there's a nodeId, we want to run just that component and not the entire layer
-    //       // because a layer contains dependencies for the next layer
-    //       // and we are stopping at the layer that contains the nodeId
-    //       verticesLayers.push([innerArray[idIndex]]);
-    //       break; // Stop searching after finding the first occurrence
-    //     }
-    //     // If the targetId is not found, include the entire inner array
-    //     verticesLayers.push(innerArray);
-    //   }
-    // } else {
-    //   verticesLayers = verticesOrder;
-    // }
+    const verticesToRun = orderResponse.data.vertices_to_run;
+
     const verticesIds = orderResponse.data.ids;
     useFlowStore.getState().updateVerticesBuild({
       verticesLayers,
       verticesIds,
       runId,
+      verticesToRun,
     });
-    resolve({ verticesLayers, verticesIds, runId });
+    resolve({ verticesLayers, verticesIds, runId, verticesToRun });
   });
 }
 
@@ -105,7 +100,7 @@ export async function buildVertices({
   onBuildComplete,
   onBuildError,
   onBuildStart,
-  validateNodes,
+  onValidateNodes,
 }: BuildVerticesParams) {
   let verticesBuild = useFlowStore.getState().verticesBuild;
   // if startNodeId and stopNodeId are provided
@@ -113,25 +108,30 @@ export async function buildVertices({
   if (startNodeId && stopNodeId) {
     return;
   }
+
   if (!verticesBuild || startNodeId || stopNodeId) {
-    verticesBuild = await updateVerticesOrder(flowId, startNodeId, stopNodeId);
+    let verticesOrderResponse = await updateVerticesOrder(
+      flowId,
+      startNodeId,
+      stopNodeId
+    );
+    if (onValidateNodes) {
+      try {
+        onValidateNodes(verticesOrderResponse.verticesToRun);
+      } catch (e) {
+        useFlowStore.getState().setIsBuilding(false);
+
+        return;
+      }
+    }
+    if (onGetOrderSuccess) onGetOrderSuccess();
+    verticesBuild = useFlowStore.getState().verticesBuild;
   }
 
   const verticesIds = verticesBuild?.verticesIds!;
   const verticesLayers = verticesBuild?.verticesLayers!;
   const runId = verticesBuild?.runId!;
   let stop = false;
-
-  if (onGetOrderSuccess) onGetOrderSuccess();
-
-  if (validateNodes) {
-    try {
-      const nodes = useFlowStore.getState().nodes;
-      validateNodes(nodes.map((node) => node.id));
-    } catch (e) {
-      return;
-    }
-  }
 
   useFlowStore.getState().updateBuildStatus(verticesIds, BuildStatus.TO_BUILD);
   useFlowStore.getState().setIsBuilding(true);
@@ -160,17 +160,17 @@ export async function buildVertices({
     if (onBuildStart) onBuildStart(currentLayer);
     // Build each vertex in the current layer
     await Promise.all(
-      currentLayer.map(async (vertexId) => {
+      currentLayer.map(async (element) => {
         // Check if id is in the list of inactive nodes
         if (
           !useFlowStore
             .getState()
-            .verticesBuild?.verticesIds.includes(vertexId) &&
+            .verticesBuild?.verticesIds.includes(element.id) &&
           onBuildUpdate
         ) {
           // If it is, skip building and set the state to inactive
           onBuildUpdate(
-            getInactiveVertexData(vertexId),
+            getInactiveVertexData(element.id),
             BuildStatus.INACTIVE,
             runId
           );
@@ -181,7 +181,7 @@ export async function buildVertices({
         // Build the vertex
         await buildVertex({
           flowId,
-          id: vertexId,
+          id: element.id,
           input_value,
           onBuildUpdate: (data: VertexBuildTypeAPI, status: BuildStatus) => {
             if (onBuildUpdate) onBuildUpdate(data, status, runId);
@@ -204,12 +204,11 @@ export async function buildVertices({
     if (stop) {
       break;
     }
-
-    if (onBuildComplete) {
-      const allNodesValid = buildResults.every((result) => result);
-      onBuildComplete(allNodesValid);
-      useFlowStore.getState().setIsBuilding(false);
-    }
+  }
+  if (onBuildComplete) {
+    const allNodesValid = buildResults.every((result) => result);
+    onBuildComplete(allNodesValid);
+    useFlowStore.getState().setIsBuilding(false);
   }
 }
 async function buildVertex({
@@ -226,7 +225,7 @@ async function buildVertex({
   id: string;
   input_value: string;
   onBuildUpdate?: (data: any, status: BuildStatus) => void;
-  onBuildError?: (title, list, idList: string[]) => void;
+  onBuildError?: (title, list, idList: VertexLayerElementType[]) => void;
   verticesIds: string[];
   buildResults: boolean[];
   stopBuild: () => void;
@@ -240,7 +239,7 @@ async function buildVertex({
         onBuildError!(
           "Error Building Component",
           [buildData.params],
-          verticesIds
+          verticesIds.map((id) => ({ id }))
         );
         stopBuild();
       }
@@ -251,7 +250,7 @@ async function buildVertex({
     onBuildError!(
       "Error Building Component",
       [(error as AxiosError<any>).response?.data?.detail ?? "Unknown Error"],
-      verticesIds
+      verticesIds.map((id) => ({ id }))
     );
     stopBuild();
   }
