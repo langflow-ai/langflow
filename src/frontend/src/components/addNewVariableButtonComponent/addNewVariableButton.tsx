@@ -77,7 +77,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             }}
             selectedOption={category}
             password={false}
-            options={["Generic", "Credential"]}
+            options={["Generic", "Credential", "Prompt"]}
             placeholder="Choose a category for the variable..."
           ></InputComponent>
           <Label>Value</Label>

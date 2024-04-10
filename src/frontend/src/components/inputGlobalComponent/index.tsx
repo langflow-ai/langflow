@@ -25,6 +25,9 @@ export default function InputGlobalComponent({
   const globalVariablesEntries = useGlobalVariablesStore(
     (state) => state.globalVariablesEntries
   );
+  const globalVariables = useGlobalVariablesStore(
+    (state) => state.globalVariables
+  );
 
   const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
   const removeGlobalVariable = useGlobalVariablesStore(
@@ -83,7 +86,7 @@ export default function InputGlobalComponent({
       disabled={disabled}
       password={data.node?.template[name].password ?? false}
       value={data.node?.template[name].value ?? ""}
-      options={globalVariablesEntries}
+      options={setPromptNodeClass ? Object.keys(globalVariables).filter((g) => globalVariables[g].category == "Prompt") : globalVariablesEntries}
       optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
       optionsButton={
