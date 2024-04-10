@@ -3876,7 +3876,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.26"
+version = "0.0.27"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.12"
@@ -3986,13 +3986,13 @@ regex = ["regex"]
 
 [[package]]
 name = "litellm"
-version = "1.34.39"
+version = "1.34.40"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.34.39-py3-none-any.whl", hash = "sha256:347b7c5ac8a105eb0dccfd4429af1bef550d839cd4f76c36640ade93a267f92a"},
-    {file = "litellm-1.34.39.tar.gz", hash = "sha256:887ef607a0103bd06535f1fc52ac223cfe80a6223e7a2c165e902761db432e84"},
+    {file = "litellm-1.34.40-py3-none-any.whl", hash = "sha256:ad6d321eec9819d1697223f5c528ca5c5f2476944bb2afc691cf8517804777e7"},
+    {file = "litellm-1.34.40.tar.gz", hash = "sha256:99faea82cc8bfa1ca6e3063adebfd9e65ecc60b00f4de9a47bda0559d6c9f637"},
 ]
 
 [package.dependencies]
