@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, List, Optional, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Tuple, Type, Union, cast
 
 from langflow.schema.schema import INPUT_FIELD_NAME, Record
 from langflow.services.database.models.flow.model import Flow
@@ -85,7 +85,7 @@ async def run_flow(
     return await graph.arun(inputs_list, inputs_components=inputs_components, types=types)
 
 
-def generate_function_for_flow(inputs: List["Vertex"], flow_id: str) -> Coroutine:
+def generate_function_for_flow(inputs: List["Vertex"], flow_id: str) -> Callable[..., Awaitable[Any]]:
     """
     Generate a dynamic flow function based on the given inputs and flow ID.
 

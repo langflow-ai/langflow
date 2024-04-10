@@ -7,8 +7,6 @@ from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class, import_module
 from langflow.interface.utils import build_template_from_class
 from langflow.services.deps import get_settings_service
-from langflow.interface.utils import build_template_from_class
-from langflow.services.deps import get_settings_service
 
 
 class ToolkitCreator(LangChainTypeCreator):
