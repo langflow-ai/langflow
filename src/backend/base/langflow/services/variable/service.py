@@ -3,12 +3,13 @@ from typing import TYPE_CHECKING, Optional, Union
 from uuid import UUID
 
 from fastapi import Depends
-from langflow.services.auth import utils as auth_utils
-from langflow.services.base import Service
-from langflow.services.database.models.variable.model import Variable
-from langflow.services.deps import get_session
 from loguru import logger
 from sqlmodel import Session, select
+
+from langflow.services.auth import utils as auth_utils
+from langflow.services.base import Service
+from langflow.services.database.models.variable.model import Variable, VariableCreate
+from langflow.services.deps import get_session
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -93,14 +94,13 @@ class VariableService(Service):
         _type: str = "Generic",
         session: Session = Depends(get_session),
     ):
-        variable = Variable(
-            user_id=user_id,
+        variable_base = VariableCreate(
             name=name,
             type=_type,
             value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
         )
+        variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
         session.add(variable)
         session.commit()
         session.refresh(variable)
-        return variable
         return variable
