@@ -1,0 +1,37 @@
+# Experimental Components in Langflow 1.0
+
+Langflow 1.0 is not only about solid, stable features; it's also about innovation. The platform introduces a range of experimental components that allow users to test and benefit from the latest advancements in workflow management. Experimental components like SubFlow and Flow as Tool offer dynamic new ways to utilize flows, paving the path for more sophisticated automation and integration.
+
+## Sub Flow
+
+The `Sub Flow` component dynamically generates a component from an existing flow. Its output is a list of records, each containing keys 'result' and 'message', which can be used to further process within the parent flow.
+
+**Configuration**
+
+- **Flow Name:** Select the flow you want to use as a sub-component within another flow.
+- **Record Output:** Toggle this on to receive the output as records, making it easy to iterate over results or integrate with other components that expect record inputs.
+
+**Usage**
+
+Leverage the `Sub Flow` component to create modular, maintainable workflows that can dynamically incorporate the logic of other flows, allowing for flexible and powerful composite workflows.
+
+Please note, these components are marked as experimental and may evolve based on user feedback and further development.
+
+## Flow as Tool
+
+`Flow as Tool` is a component that allows you to encapsulate an entire flow as a single tool within another flow. It runs the encapsulated flow and returns its output as if it were a standalone function.
+
+**Configuration**
+
+- **Flow Name:** The name of the flow you wish to encapsulate. Choose from existing flows in your workspace.
+- **Name:** Assign a unique name to the new tool for easy identification.
+- **Description:** Provide a clear and concise description of what this tool does and when to use it.
+
+**Usage**
+
+Use this component to streamline complex processes, reduce redundancy, and improve the organization of large workflows by encapsulating sub-flows into single, reusable components.
+
+
+## Why Experiment with These Components?
+
+Experimenting with new components can lead to more efficient workflow designs and can help you discover novel ways to solve complex problems. While these components are experimental and may have some limitations, they offer a glimpse into the future of workflow automation and the potential for even greater integration and modularity in Langflow.
