@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 class ApiKeyBase(SQLModel):
     name: Optional[str] = Field(index=True, nullable=True, default=None)
-    created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), server_default=func.now()))
+    created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False))
     last_used_at: Optional[datetime] = Field(default=None, nullable=True)
     total_uses: int = Field(default=0)
     is_active: bool = Field(default=True)
