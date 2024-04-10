@@ -203,6 +203,20 @@ files = [
 ]
 
 [[package]]
+name = "asyncer"
+version = "0.0.5"
+description = "Asyncer, async and await, focused on developer experience."
+optional = false
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "asyncer-0.0.5-py3-none-any.whl", hash = "sha256:ba06d6de3c750763868dffacf89b18d40b667605b0241d31c2ee43f188e2ab74"},
+    {file = "asyncer-0.0.5.tar.gz", hash = "sha256:2979f3e04cbedfe5cfeb79027dcf7d004fcc4430a0ca0066ae20490f218ec06e"},
+]
+
+[package.dependencies]
+anyio = ">=3.4.0,<5.0"
+
+[[package]]
 name = "attrs"
 version = "23.2.0"
 description = "Classes Without Boilerplate"
@@ -4444,4 +4458,4 @@ local = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "ab99a3fe4d80dff80dfa69347dcb22b85d48d33487a14e01c709b51f7b62699e"
+content-hash = "67dfc26573145c0b2b8daea7f07ae228d2a3403033a6c25b41e8e1b280b01e38"
