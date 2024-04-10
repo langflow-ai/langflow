@@ -56,6 +56,13 @@ class VariableRead(SQLModel):
     id: UUID
     name: Optional[str] = Field(None, description="Name of the variable")
     category: VariableCategories = Field(sa_column=Column(Enum(VariableCategories)), description="Type of the variable")
+    value: Optional[str] = Field(None, description="Unencrypted value of the variable if it is readable")
+
+    @model_validator(mode="before")
+    def validate_readable(cls, data):
+        if not data.get("is_readable"):
+            data["value"] = None
+        return data
 
 
 class VariableUpdate(SQLModel):

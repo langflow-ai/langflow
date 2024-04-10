@@ -3,26 +3,27 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from loguru import logger
-from sqlmodel import Session, select
-
 from langflow.services.auth import utils as auth_utils
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.database.models.variable.constants import VariableCategories
-from langflow.services.deps import get_session, get_settings_service
+from langflow.services.deps import get_session, get_settings_service, get_variable_service
+from langflow.services.variable.service import VariableService
+from loguru import logger
+from sqlmodel import Session, select
 
 router = APIRouter(prefix="/variables", tags=["Variables"])
 
 
-@router.post("/", response_model=VariableRead, status_code=201)
+@router.post("/", response_model=VariableRead, status_code=201, response_model_exclude_none=True)
 def create_variable(
     *,
     session: Session = Depends(get_session),
     variable: VariableCreate,
     current_user: User = Depends(get_current_active_user),
     settings_service=Depends(get_settings_service),
+    variable_service: VariableService = Depends(get_variable_service),
 ):
     """Create a new variable."""
     try:
@@ -48,7 +49,11 @@ def create_variable(
         session.add(db_variable)
         session.commit()
         session.refresh(db_variable)
-        return db_variable
+        variable = db_variable.model_dump()
+        variable["value"] = variable_service.get_variable(
+            user_id=current_user.id or "", name=variable["name"], session=session
+        )
+        return variable
     except Exception as e:
         logger.exception("Error creating variable")
         if isinstance(e, HTTPException):
@@ -56,12 +61,13 @@ def create_variable(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/", response_model=list[VariableRead], status_code=200)
+@router.get("/", response_model=list[VariableRead], status_code=200, response_model_exclude_none=True)
 def read_variables(
     *,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
     category: Optional[VariableCategories] = None,
+    variable_service: VariableService = Depends(get_variable_service),
 ):
     """Read all variables."""
     try:
@@ -72,9 +78,13 @@ def read_variables(
         variables = session.exec(stmt).all()
         # If variable.is_readable is False, remove the value
         variables_dump = [variable.model_dump() for variable in variables]
+
         for variable in variables_dump:
-            if not variable["is_readable"]:
-                variable["value"] = None
+            if variable["is_readable"]:
+                # Retrieve and decrypt the variable by name for the current user
+                variable["value"] = variable_service.get_variable(
+                    user_id=current_user.id or "", name=variable["name"], session=session
+                )
         return variables_dump
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
