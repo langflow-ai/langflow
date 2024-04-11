@@ -106,6 +106,7 @@ pytest-sugar = "^1.0.0"
 respx = "^0.21.1"
 pytest-instafail = "^0.5.0"
 pytest-asyncio = "^0.23.0"
+pytest-profiling = "^1.7.0"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
