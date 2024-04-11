@@ -211,7 +211,7 @@ def create_super_user(
     return super_user
 
 
-def create_user_longterm_token(db: Session = Depends(get_session)) -> dict:
+def create_user_longterm_token(db: Session = Depends(get_session)) -> tuple[UUID, dict]:
     settings_service = get_settings_service()
     username = settings_service.auth_settings.SUPERUSER
     password = settings_service.auth_settings.SUPERUSER_PASSWORD
