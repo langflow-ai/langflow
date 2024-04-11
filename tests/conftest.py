@@ -10,6 +10,7 @@ import orjson
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
+from sqlmodel import Session, SQLModel, create_engine, select
 from langflow.graph.graph.base import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
@@ -31,7 +32,6 @@ def pytest_configure():
 
     pytest.BASIC_EXAMPLE_PATH = data_path / "basic_example.json"
     pytest.COMPLEX_EXAMPLE_PATH = data_path / "complex_example.json"
-    pytest.COMPLEX_DEPS_EXAMPLE_PATH = data_path / "complex_deps_example.json"
     pytest.OPENAPI_EXAMPLE_PATH = data_path / "Openapi.json"
     pytest.GROUPED_CHAT_EXAMPLE_PATH = data_path / "grouped_chat.json"
     pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH = data_path / "one_group_chat.json"
@@ -50,7 +50,6 @@ def get_text():
     for path in [
         pytest.BASIC_EXAMPLE_PATH,
         pytest.COMPLEX_EXAMPLE_PATH,
-        pytest.COMPLEX_DEPS_EXAMPLE_PATH,
         pytest.OPENAPI_EXAMPLE_PATH,
         pytest.GROUPED_CHAT_EXAMPLE_PATH,
         pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH,
@@ -206,16 +205,6 @@ def json_flow_with_prompt_and_history():
 def json_vector_store():
     with open(pytest.VECTOR_STORE_PATH, "r") as f:
         return f.read()
-
-
-@pytest.fixture
-def complex_graph_with_groups():
-    with open(pytest.COMPLEX_DEPS_EXAMPLE_PATH, "r") as f:
-        flow_graph = json.load(f)
-    data_graph = flow_graph["data"]
-    nodes = data_graph["nodes"]
-    edges = data_graph["edges"]
-    return Graph(nodes, edges)
 
 
 @pytest.fixture(name="client", autouse=True)
