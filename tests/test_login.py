@@ -1,8 +1,8 @@
 import pytest
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.user import User
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.deps import session_scope
+from sqlalchemy.exc import IntegrityError
 
 
 @pytest.fixture
@@ -17,9 +17,12 @@ def test_user():
 
 def test_login_successful(client, test_user):
     # Adding the test user to the database
-    with session_getter(get_db_service()) as session:
-        session.add(test_user)
-        session.commit()
+    try:
+        with session_scope() as session:
+            session.add(test_user)
+            session.commit()
+    except IntegrityError:
+        pass
 
     response = client.post("api/v1/login", data={"username": "testuser", "password": "testpassword"})
     assert response.status_code == 200
