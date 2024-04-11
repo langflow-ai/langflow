@@ -135,7 +135,12 @@ export default function ChatMessage({
                 alt={!chat.isSend ? "robot_image" : "male_technology"}
               />
             </div>
-            <span className="max-w-24 truncate text-xs">
+            <span
+              className="max-w-24 truncate text-xs"
+              data-testid={
+                "sender_name_" + chat.sender_name?.toLocaleLowerCase()
+              }
+            >
               {chat.sender_name}
             </span>
           </div>
@@ -164,7 +169,12 @@ export default function ChatMessage({
               {chat.thought && chat.thought !== "" && !hidden && <br></br>}
               <div className="flex w-full flex-col">
                 <div className="flex w-full flex-col dark:text-white">
-                  <div data-testid={"chat-message-"+chat.sender_name+"-"+chatMessage} className="flex w-full flex-col">
+                  <div
+                    data-testid={
+                      "chat-message-" + chat.sender_name + "-" + chatMessage
+                    }
+                    className="flex w-full flex-col"
+                  >
                     {useMemo(
                       () =>
                         chatMessage === "" && lockChat ? (
@@ -313,7 +323,13 @@ dark:prose-invert"
                 </span>
               </>
             ) : (
-              <span data-testid={"chat-message-"+chat.sender_name+"-"+chatMessage}>{chatMessage}</span>
+              <span
+                data-testid={
+                  "chat-message-" + chat.sender_name + "-" + chatMessage
+                }
+              >
+                {chatMessage}
+              </span>
             )}
           </div>
         )}
