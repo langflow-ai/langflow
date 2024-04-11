@@ -6,7 +6,7 @@ from langflow.interface.custom.custom_component import CustomComponent
 
 class RunnableExecComponent(CustomComponent):
     description = "Execute a runnable. It will try to guess the input and output keys."
-    display_name = "Runnable Executor"
+    display_name = "LangChain Runnable"
     beta: bool = True
     field_order = [
         "input_key",
