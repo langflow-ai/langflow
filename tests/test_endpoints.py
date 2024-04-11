@@ -513,7 +513,7 @@ def test_successful_run_with_output_type_any(client, starter_project, created_ap
 
 def test_successful_run_with_output_type_debug(client, starter_project, created_api_key):
     # This one should return outputs for all components
-    # Let's just check the amount of outputs(there hsould be 7)
+    # Let's just check the amount of outputs(there should be 7)
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
     payload = {
