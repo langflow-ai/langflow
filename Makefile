@@ -39,8 +39,6 @@ coverage:
 
 # allow passing arguments to pytest
 tests:
-	@make install_backend
-
 	poetry run pytest tests --instafail $(args)
 # Use like:
 
@@ -50,9 +48,7 @@ format:
 	cd src/frontend && npm run format
 
 lint:
-	make install_backend
 	poetry run mypy --namespace-packages -p "langflow"
-	poetry run ruff . --fix
 
 install_frontend:
 	cd src/frontend && npm install
@@ -129,12 +125,12 @@ frontendc:
 	make run_frontend
 
 install_backend:
-	@echo 'Setting up the environment'
-	@make setup_env
 	@echo 'Installing backend dependencies'
 	@poetry install
 
 backend:
+	@echo 'Setting up the environment'
+	@make setup_env
 	make install_backend
 	@-kill -9 `lsof -t -i:7860`
 ifdef login
