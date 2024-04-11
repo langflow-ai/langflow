@@ -97,7 +97,7 @@ test("should filter by type", async ({ page }) => {
   await page.getByTestId("flows-button-store").click();
   await page.waitForTimeout(3000);
 
-  let iconGroup = await page.getByTestId("icon-Group").count();
+  let iconGroup = await page.getByTestId("icon-Group")?.count();
   expect(iconGroup).not.toBe(0);
 
   await page.getByText("icon-ToyBrick").isHidden();
@@ -106,14 +106,14 @@ test("should filter by type", async ({ page }) => {
   await page.waitForTimeout(3000);
 
   await page.getByTestId("icon-Group").isHidden();
-  let toyBrick = await page.getByTestId("icon-ToyBrick").count();
+  let toyBrick = await page.getByTestId("icon-ToyBrick")?.count();
   expect(toyBrick).not.toBe(0);
 
   await page.getByTestId("all-button-store").click();
   await page.waitForTimeout(3000);
 
-  iconGroup = await page.getByTestId("icon-Group").count();
-  toyBrick = await page.getByTestId("icon-ToyBrick").count();
+  iconGroup = await page.getByTestId("icon-Group")?.count();
+  toyBrick = await page.getByTestId("icon-ToyBrick")?.count();
 
   if (iconGroup === 0 || toyBrick === 0) {
     expect(false).toBe(true);

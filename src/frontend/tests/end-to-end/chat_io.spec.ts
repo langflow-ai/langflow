@@ -1,4 +1,4 @@
-import { test,expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 
 test("chat_io_teste", async ({ page }) => {
@@ -12,8 +12,13 @@ test("chat_io_teste", async ({ page }) => {
 
   await page.waitForTimeout(3000);
 
-  await page.locator('//*[@id="new-project-btn"]').click();
-  await page.locator('//*[@id="new-project-btn"]').click();
+  let modalCount = (await page.getByTestId("modal-title").count()) ?? 0;
+
+  while (modalCount === 0) {
+    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.waitForTimeout(5000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
 
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(2000);

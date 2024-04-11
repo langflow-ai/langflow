@@ -12,7 +12,12 @@ test.describe("save component tests", () => {
   /// <reference lib="dom"/>
   test("save group component tests", async ({ page }) => {
     await page.goto("http:localhost:3000/");
-    await page.locator('//*[@id="new-project-btn"]').click();
+    let modalCount = (await page.getByTestId("modal-title").count()) ?? 0;
+
+    while (modalCount === 0) {
+      await page.locator('//*[@id="new-project-btn"]').click();
+      modalCount = await page.getByTestId("modal-title")?.count();
+    }
 
     await page.getByTestId("blank-flow").click();
     await page.waitForTimeout(1000);
@@ -46,7 +51,7 @@ test.describe("save component tests", () => {
     );
 
     const genericNoda = page.getByTestId("div-generic-node");
-    const elementCount = await genericNoda.count();
+    const elementCount = await genericNoda?.count();
     if (elementCount > 0) {
       expect(true).toBeTruthy();
     }
@@ -68,13 +73,13 @@ test.describe("save component tests", () => {
     await page.getByRole("button", { name: "Group" }).click();
 
     let textArea = page.getByTestId("div-textarea-description");
-    let elementCountText = await textArea.count();
+    let elementCountText = await textArea?.count();
     if (elementCountText > 0) {
       expect(true).toBeTruthy();
     }
 
     let groupNode = page.getByTestId("title-Group");
-    let elementGroup = await groupNode.count();
+    let elementGroup = await groupNode?.count();
     if (elementGroup > 0) {
       expect(true).toBeTruthy();
     }
@@ -98,25 +103,18 @@ test.describe("save component tests", () => {
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    await page
-      .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-      .click();
-
-    await page
-      .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-      .click();
-
-    await page
-      .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-      .click();
+    await page.getByTitle("fit view").click();
+    await page.getByTitle("zoom out").click();
+    await page.getByTitle("zoom out").click();
+    await page.getByTitle("zoom out").click();
     textArea = page.getByTestId("div-textarea-description");
-    elementCountText = await textArea.count();
+    elementCountText = await textArea?.count();
     if (elementCountText > 0) {
       expect(true).toBeTruthy();
     }
 
     groupNode = page.getByTestId("title-Group");
-    elementGroup = await groupNode.count();
+    elementGroup = await groupNode?.count();
     if (elementGroup > 0) {
       expect(true).toBeTruthy();
     }

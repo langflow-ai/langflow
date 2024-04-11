@@ -36,7 +36,7 @@ test.describe("drag and drop test", () => {
     await page.waitForTimeout(1000);
 
     const genericNoda = page.getByTestId("div-generic-node");
-    const elementCount = await genericNoda.count();
+    const elementCount = await genericNoda?.count();
     if (elementCount > 0) {
       expect(true).toBeTruthy();
     }

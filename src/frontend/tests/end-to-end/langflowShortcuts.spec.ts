@@ -12,8 +12,13 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.goto("http:localhost:3000/");
   await page.waitForTimeout(1000);
 
-  await page.locator('//*[@id="new-project-btn"]').click();
-  await page.waitForTimeout(1000);
+  let modalCount = (await page.getByTestId("modal-title").count()) ?? 0;
+
+  while (modalCount === 0) {
+    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.waitForTimeout(5000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
 
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(1000);
@@ -30,17 +35,10 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.mouse.down();
 
   await page.locator('//*[@id="react-flow-id"]/div/div[2]/button[3]').click();
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
-
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
-
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
   await page.getByTestId("title-Ollama").click();
   await page.keyboard.press(`${control}+Shift+A`);
   await page.locator('//*[@id="saveChangesBtn"]').click();
@@ -48,7 +46,7 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.getByTestId("title-Ollama").click();
   await page.keyboard.press(`${control}+d`);
 
-  let numberOfNodes = await page.getByTestId("title-Ollama").count();
+  let numberOfNodes = await page.getByTestId("title-Ollama")?.count();
   if (numberOfNodes != 2) {
     expect(false).toBeTruthy();
   }
@@ -60,7 +58,7 @@ test("LangflowShortcuts", async ({ page }) => {
     .click();
   await page.keyboard.press("Backspace");
 
-  numberOfNodes = await page.getByTestId("title-Ollama").count();
+  numberOfNodes = await page.getByTestId("title-Ollama")?.count();
   if (numberOfNodes != 1) {
     expect(false).toBeTruthy();
   }
@@ -71,7 +69,7 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.getByTestId("title-Ollama").click();
   await page.keyboard.press(`${control}+v`);
 
-  numberOfNodes = await page.getByTestId("title-Ollama").count();
+  numberOfNodes = await page.getByTestId("title-Ollama")?.count();
   if (numberOfNodes != 2) {
     expect(false).toBeTruthy();
   }
@@ -86,12 +84,12 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.getByTestId("title-Ollama").click();
   await page.keyboard.press(`${control}+x`);
 
-  numberOfNodes = await page.getByTestId("title-Ollama").count();
+  numberOfNodes = await page.getByTestId("title-Ollama")?.count();
   if (numberOfNodes != 0) {
     expect(false).toBeTruthy();
   }
   await page.keyboard.press(`${control}+v`);
-  numberOfNodes = await page.getByTestId("title-Ollama").count();
+  numberOfNodes = await page.getByTestId("title-Ollama")?.count();
   if (numberOfNodes != 1) {
     expect(false).toBeTruthy();
   }

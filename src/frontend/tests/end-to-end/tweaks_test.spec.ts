@@ -2,7 +2,13 @@ import { expect, test } from "@playwright/test";
 
 test("curl_api_generation", async ({ page, context }) => {
   await page.goto("/");
-  await page.locator('//*[@id="new-project-btn"]').click();
+  let modalCount = (await page.getByTestId("modal-title").count()) ?? 0;
+
+  while (modalCount === 0) {
+    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.waitForTimeout(5000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(2000);

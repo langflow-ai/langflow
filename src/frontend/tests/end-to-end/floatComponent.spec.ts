@@ -20,28 +20,10 @@ test("FloatComponent", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
-
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
-
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
-
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
-
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
 
   await page.locator('//*[@id="float-input"]').click();
   await page.locator('//*[@id="float-input"]').fill("3");
@@ -145,7 +127,7 @@ test("FloatComponent", async ({ page }) => {
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
   const plusButtonLocator = page.locator('//*[@id="float-input"]');
-  const elementCount = await plusButtonLocator.count();
+  const elementCount = await plusButtonLocator?.count();
   if (elementCount === 0) {
     expect(true).toBeTruthy();
 
