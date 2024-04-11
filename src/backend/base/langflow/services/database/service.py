@@ -1,21 +1,22 @@
-from datetime import datetime
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
+from loguru import logger
+from sqlalchemy import inspect
+from sqlalchemy.exc import OperationalError
+from sqlmodel import Session, SQLModel, create_engine, select, text
+
 from langflow.services.base import Service
 from langflow.services.database import models  # noqa
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
-from loguru import logger
-from sqlalchemy import inspect
-from sqlalchemy.exc import OperationalError
-from sqlmodel import Session, SQLModel, create_engine, select, text
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -195,7 +196,10 @@ class DatabaseService(Service):
         # This method is used for testing purposes only
         # We will check that all models are in the database
         # and that the database is up to date with all columns
-        sql_models = [models.Flow, models.User, models.ApiKey]
+        # get all models that are subclasses of SQLModel
+        sql_models = [
+            model for model in models.__dict__.values() if isinstance(model, type) and issubclass(model, SQLModel)
+        ]
         return [TableResults(sql_model.__tablename__, self.check_table(sql_model)) for sql_model in sql_models]
 
     def check_table(self, model):
