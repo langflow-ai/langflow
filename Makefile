@@ -51,7 +51,7 @@ tests:
 # Use like:
 
 format:
-	poetry run ruff . --fix
+	poetry run ruff check . --fix
 	poetry run ruff format .
 	cd src/frontend && npm run format
 
