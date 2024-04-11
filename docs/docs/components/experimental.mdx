@@ -143,20 +143,20 @@ To use this component, provide the input value, specify the flow name to run, an
 
 ---
 
-### Runnable Executor
+### LangChain Runnable
 
-Execute a runnable.
+ The LangChain Runnable is a standard interface that helps create and run custom chains easily. It works with various components like chat models, retrievers, prompt templates and language models.
 
 **Params**
 
-- **Inputs:** The input value to pass to the runnable. (Type: Text)
+- **Inputs:** The input value to pass to the Runnable. (Type: Text)
 - **Runnable:** The runnable to execute. (Type: Runnable)
 - **Input Key:** The key to use for the input. (Type: str, Default: "input")
 - **Output Key:** The key to use for the output. (Type: str, Default: "output")
 
 **Usage**
 
-To use this component, specify the input key, provide the inputs to pass to the runnable, select the runnable to execute, and optionally specify the output key.
+To use this component, specify the input key, provide the inputs to pass to the Runnable, select the Runnable to execute, and optionally specify the output key.
 
 ---
 
@@ -180,7 +180,7 @@ To use this component, provide the SQL query, specify the database URL, and opti
 
 ### SubFlow
 
-This component dynamically generates a component from a flow. The output is a list of records with keys 'result' and 'message'.
+This component dynamically generates a component from a flow. When a flow name is provided, the method retrieves the corresponding flow data and constructs a graph representation of the flow. It then extracts the inputs required by the flow from the graph and adds them to the build configuration.
 
 **Params**
 
@@ -189,3 +189,7 @@ This component dynamically generates a component from a flow. The output is a li
 - **Flow Name:** The name of the flow to run. (Type: str)
 
 - **Tweaks:** Tweaks to apply to the flow. (Type: NestedDict)
+
+**Usage**
+
+If you choose "OpenAI test" from the options `Flow Name`, the component will execute a flow named "OpenAI test". It dynamically retrieves this flow's data, constructs its graph representation, and adds necessary inputs to configure it. Once executed, it processes the results, extracting messages and generating records containing result data and messages. This allows flexible execution and customization of the "OpenAI test" flow.
