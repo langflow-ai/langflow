@@ -37,7 +37,7 @@ def pytest_configure():
     pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH = data_path / "one_group_chat.json"
     pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH = data_path / "vector_store_grouped.json"
 
-    pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY = data_path / "BasicChatwithPromptAndHistory.json"
+    pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY = data_path / "BasicChatwithPromptandHistory.json"
     pytest.CHAT_INPUT = data_path / "ChatInputTest.json"
     pytest.TWO_OUTPUTS = data_path / "TwoOutputsTest.json"
     pytest.VECTOR_STORE_PATH = data_path / "Vector_store.json"
