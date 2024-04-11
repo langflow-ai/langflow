@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, Optional
 
 from loguru import logger
 
@@ -6,6 +6,10 @@ if TYPE_CHECKING:
     from langflow.services.base import Service
     from langflow.services.factory import ServiceFactory
     from langflow.services.schema import ServiceType
+
+
+class NoFactoryRegisteredError(Exception):
+    pass
 
 
 class ServiceManager:
@@ -28,24 +32,28 @@ class ServiceManager:
         service_name = service_factory.service_class.name
         self.factories[service_name] = service_factory
 
-    def get(self, service_name: "ServiceType") -> "Service":
+    def get(self, service_name: "ServiceType", default: Optional["ServiceFactory"] = None) -> "Service":
         """
         Get (or create) a service by its name.
         """
+
         if service_name not in self.services:
-            self._create_service(service_name)
+            self._create_service(service_name, default)
 
         return self.services[service_name]
 
-    def _create_service(self, service_name: "ServiceType"):
+    def _create_service(self, service_name: "ServiceType", default: Optional["ServiceFactory"] = None):
         """
         Create a new service given its name, handling dependencies.
         """
         logger.debug(f"Create service {service_name}")
-        self._validate_service_creation(service_name)
+        self._validate_service_creation(service_name, default)
 
         # Create dependencies first
         factory = self.factories.get(service_name)
+        if factory is None and default is not None:
+            self.register_factory(default)
+            factory = default
         for dependency in factory.dependencies:
             if dependency not in self.services:
                 self._create_service(dependency)
@@ -57,12 +65,12 @@ class ServiceManager:
         self.services[service_name] = self.factories[service_name].create(**dependent_services)
         self.services[service_name].set_ready()
 
-    def _validate_service_creation(self, service_name: "ServiceType"):
+    def _validate_service_creation(self, service_name: "ServiceType", default: Optional["ServiceFactory"] = None):
         """
         Validate whether the service can be created.
         """
-        if service_name not in self.factories:
-            raise ValueError(f"No factory registered for the service class '{service_name.name}'")
+        if service_name not in self.factories and default is None:
+            raise NoFactoryRegisteredError(f"No factory registered for the service class '{service_name.name}'")
 
     def update(self, service_name: "ServiceType"):
         """
@@ -106,9 +114,7 @@ def initialize_session_service():
     Initialize the session manager.
     """
     from langflow.services.cache import factory as cache_factory
-    from langflow.services.session import (
-        factory as session_service_factory,
-    )  # type: ignore
+    from langflow.services.session import factory as session_service_factory  # type: ignore
 
     initialize_settings_service()
 

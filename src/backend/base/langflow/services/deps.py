@@ -42,7 +42,9 @@ def get_state_service() -> "StateService":
     Returns:
         The StateService instance.
     """
-    return service_manager.get(ServiceType.STATE_SERVICE)  # type: ignore
+    from langflow.services.state.factory import StateServiceFactory
+
+    return service_manager.get(ServiceType.STATE_SERVICE, StateServiceFactory())  # type: ignore
 
 
 def get_socket_service() -> "SocketIOService":
@@ -62,7 +64,9 @@ def get_storage_service() -> "StorageService":
     Returns:
         The storage service instance.
     """
-    return service_manager.get(ServiceType.STORAGE_SERVICE)  # type: ignore
+    from langflow.services.storage.factory import StorageServiceFactory
+
+    return service_manager.get(ServiceType.STORAGE_SERVICE, default=StorageServiceFactory())  # type: ignore
 
 
 def get_variable_service() -> "VariableService":
@@ -73,7 +77,9 @@ def get_variable_service() -> "VariableService":
         The VariableService instance.
 
     """
-    return service_manager.get(ServiceType.VARIABLE_SERVICE)  # type: ignore
+    from langflow.services.variable.factory import VariableServiceFactory
+
+    return service_manager.get(ServiceType.VARIABLE_SERVICE, VariableServiceFactory())  # type: ignore
 
 
 def get_plugins_service() -> "PluginService":
@@ -98,14 +104,9 @@ def get_settings_service() -> "SettingsService":
     Raises:
         ValueError: If the service cannot be retrieved or initialized.
     """
-    try:
-        return service_manager.get(ServiceType.SETTINGS_SERVICE)  # type: ignore
-    except ValueError:
-        # initialize settings service
-        from langflow.services.manager import initialize_settings_service
+    from langflow.services.settings.factory import SettingsServiceFactory
 
-        initialize_settings_service()
-        return service_manager.get(ServiceType.SETTINGS_SERVICE)  # type: ignore
+    return service_manager.get(ServiceType.SETTINGS_SERVICE, SettingsServiceFactory())  # type: ignore
 
 
 def get_db_service() -> "DatabaseService":
@@ -116,7 +117,9 @@ def get_db_service() -> "DatabaseService":
         The DatabaseService instance.
 
     """
-    return service_manager.get(ServiceType.DATABASE_SERVICE)  # type: ignore
+    from langflow.services.database.factory import DatabaseServiceFactory
+
+    return service_manager.get(ServiceType.DATABASE_SERVICE, DatabaseServiceFactory())  # type: ignore
 
 
 def get_session() -> Generator["Session", None, None]:
@@ -165,7 +168,9 @@ def get_cache_service() -> "CacheService":
     Returns:
         The cache service instance.
     """
-    return service_manager.get(ServiceType.CACHE_SERVICE)  # type: ignore
+    from langflow.services.cache.factory import CacheServiceFactory
+
+    return service_manager.get(ServiceType.CACHE_SERVICE, CacheServiceFactory())  # type: ignore
 
 
 def get_session_service() -> "SessionService":
@@ -175,7 +180,9 @@ def get_session_service() -> "SessionService":
     Returns:
         The session service instance.
     """
-    return service_manager.get(ServiceType.SESSION_SERVICE)  # type: ignore
+    from langflow.services.session.factory import SessionServiceFactory
+
+    return service_manager.get(ServiceType.SESSION_SERVICE, SessionServiceFactory())  # type: ignore
 
 
 def get_monitor_service() -> "MonitorService":
@@ -185,7 +192,9 @@ def get_monitor_service() -> "MonitorService":
     Returns:
         MonitorService: The MonitorService instance.
     """
-    return service_manager.get(ServiceType.MONITOR_SERVICE)  # type: ignore
+    from langflow.services.monitor.factory import MonitorServiceFactory
+
+    return service_manager.get(ServiceType.MONITOR_SERVICE, MonitorServiceFactory())  # type: ignore
 
 
 def get_task_service() -> "TaskService":
@@ -196,7 +205,9 @@ def get_task_service() -> "TaskService":
         The TaskService instance.
 
     """
-    return service_manager.get(ServiceType.TASK_SERVICE)  # type: ignore
+    from langflow.services.task.factory import TaskServiceFactory
+
+    return service_manager.get(ServiceType.TASK_SERVICE, TaskServiceFactory())  # type: ignore
 
 
 def get_chat_service() -> "ChatService":
