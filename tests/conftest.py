@@ -59,7 +59,7 @@ def get_text():
         pytest.TWO_OUTPUTS,
         pytest.VECTOR_STORE_PATH,
     ]:
-        assert path.exists(), f"File {path} does not exist. Available files: {data_path.iterdir()}"
+        assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
 
 
 @pytest.fixture(autouse=True)
