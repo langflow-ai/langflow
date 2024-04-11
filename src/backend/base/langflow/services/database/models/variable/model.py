@@ -26,10 +26,12 @@ class Variable(VariableBase, table=True):
     )
     # name is unique per user
     created_at: datetime = Field(
+        default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=True),
         description="Creation time of the variable",
     )
     updated_at: Optional[datetime] = Field(
+        default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),
         description="Last update time of the variable",
     )
