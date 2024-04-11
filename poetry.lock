@@ -4014,13 +4014,13 @@ regex = ["regex"]
 
 [[package]]
 name = "litellm"
-version = "1.34.41"
+version = "1.34.42"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.34.41-py3-none-any.whl", hash = "sha256:ec6b1fb7f27178ad36f3be64e2f0fb73a637c0d7c128d5aa1d845414cc21be66"},
-    {file = "litellm-1.34.41.tar.gz", hash = "sha256:e8ad1a0b9cf4abea0471394db8c95f479e94e271bc1ce3d98204e1a6ed917e93"},
+    {file = "litellm-1.34.42-py3-none-any.whl", hash = "sha256:381e7c76f7ca038ca296f5d7f28aea1dafddaabd0d52fbcc9b8d53ef5deb6a4b"},
+    {file = "litellm-1.34.42.tar.gz", hash = "sha256:e18c6932ecfe17533de24d5b06352b0444a130016cc30c3cab456f16bc63f457"},
 ]
 
 [package.dependencies]
@@ -4471,6 +4471,7 @@ files = [
     {file = "lxml-5.2.1-cp36-cp36m-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:c38d7b9a690b090de999835f0443d8aa93ce5f2064035dfc48f27f02b4afc3d0"},
     {file = "lxml-5.2.1-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5670fb70a828663cc37552a2a85bf2ac38475572b0e9b91283dc09efb52c41d1"},
     {file = "lxml-5.2.1-cp36-cp36m-manylinux_2_28_x86_64.whl", hash = "sha256:958244ad566c3ffc385f47dddde4145088a0ab893504b54b52c041987a8c1863"},
+    {file = "lxml-5.2.1-cp36-cp36m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:b6241d4eee5f89453307c2f2bfa03b50362052ca0af1efecf9fef9a41a22bb4f"},
     {file = "lxml-5.2.1-cp36-cp36m-musllinux_1_1_aarch64.whl", hash = "sha256:2a66bf12fbd4666dd023b6f51223aed3d9f3b40fef06ce404cb75bafd3d89536"},
     {file = "lxml-5.2.1-cp36-cp36m-musllinux_1_1_ppc64le.whl", hash = "sha256:9123716666e25b7b71c4e1789ec829ed18663152008b58544d95b008ed9e21e9"},
     {file = "lxml-5.2.1-cp36-cp36m-musllinux_1_1_s390x.whl", hash = "sha256:0c3f67e2aeda739d1cc0b1102c9a9129f7dc83901226cc24dd72ba275ced4218"},
