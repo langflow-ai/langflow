@@ -27,7 +27,7 @@ class SessionService(Service):
         from langflow.graph.graph.base import Graph
 
         graph = Graph.from_payload(data_graph, flow_id=flow_id)
-        artifacts = {}
+        artifacts: dict = {}
         await self.cache_service.set(key, (graph, artifacts))
 
         return graph, artifacts
