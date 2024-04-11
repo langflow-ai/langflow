@@ -5,7 +5,7 @@ from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.supabase import SupabaseVectorStore
 from supabase.client import Client, create_client
 
-from langflow.field_typing import Embeddings, NestedDict
+from langflow.field_typing import Embeddings
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema.schema import Record
 

@@ -105,7 +105,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
         bulk_insert_batch_concurrency: Optional[int] = None,
         bulk_insert_overwrite_concurrency: Optional[int] = None,
         bulk_delete_concurrency: Optional[int] = None,
-        setup_mode: str = "Async",
+        setup_mode: str = "Sync",
         pre_delete_collection: bool = False,
         metadata_indexing_include: Optional[List[str]] = None,
         metadata_indexing_exclude: Optional[List[str]] = None,

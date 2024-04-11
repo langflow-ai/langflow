@@ -71,6 +71,8 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
         )
         if not vector_store:
             raise ValueError("Failed to load the Pinecone index.")
+        if search_kwargs is None:
+            search_kwargs = {}
 
         return self.search_with_vector_store(
             vector_store=vector_store,

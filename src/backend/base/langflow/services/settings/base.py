@@ -7,11 +7,12 @@ from typing import Any, List, Optional, Tuple, Type
 
 import orjson
 import yaml
-from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from loguru import logger
 from pydantic import field_validator, validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
+
+from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 
 # BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
 BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent.parent / "components")
@@ -27,9 +28,16 @@ def is_list_of_any(field: FieldInfo) -> bool:
     Returns:
         bool: True if the field is a list or a list of any type, False otherwise.
     """
+    if field.annotation is None:
+        return False
     try:
+        if hasattr(field.annotation, "__args__"):
+            union_args = field.annotation.__args__
+        else:
+            union_args = []
+
         return field.annotation.__origin__ == list or any(
-            arg.__origin__ == list for arg in field.annotation.__args__ if hasattr(arg, "__origin__")
+            arg.__origin__ == list for arg in union_args if hasattr(arg, "__origin__")
         )
     except AttributeError:
         return False
