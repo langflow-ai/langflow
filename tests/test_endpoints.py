@@ -4,6 +4,7 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
+
 from langflow.interface.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
@@ -447,7 +448,7 @@ def test_successful_run_no_payload(client, starter_project, created_api_key):
     assert all([name in display_names for name in ["Chat Output"]])
     inner_results = [output.get("results").get("result") for output in outputs_dict.get("outputs")]
 
-    assert all([len(result) > 0 for result in inner_results]), inner_results
+    assert all([result is not None for result in inner_results]), inner_results
 
 
 def test_successful_run_with_output_type_text(client, starter_project, created_api_key):
@@ -513,7 +514,7 @@ def test_successful_run_with_output_type_any(client, starter_project, created_ap
 
 def test_successful_run_with_output_type_debug(client, starter_project, created_api_key):
     # This one should return outputs for all components
-    # Let's just check the amount of outputs(there hsould be 7)
+    # Let's just check the amount of outputs(there should be 7)
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
     payload = {

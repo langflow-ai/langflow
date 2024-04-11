@@ -100,9 +100,9 @@ class Settings(BaseSettings):
 
     STORE: Optional[bool] = True
     STORE_URL: Optional[str] = "https://api.langflow.store"
-    DOWNLOAD_WEBHOOK_URL: Optional[
-        str
-    ] = "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
+    DOWNLOAD_WEBHOOK_URL: Optional[str] = (
+        "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
+    )
     LIKE_WEBHOOK_URL: Optional[str] = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
     STORAGE_TYPE: str = "local"

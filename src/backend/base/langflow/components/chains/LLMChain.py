@@ -1,9 +1,10 @@
 from typing import Optional
 
-from langchain.chains import LLMChain
+from langchain.chains.llm import LLMChain
 
-from langflow.field_typing import BaseLanguageModel, BaseMemory, BasePromptTemplate, Text
+from langflow.field_typing import BaseLanguageModel, BaseMemory, Text
 from langflow.interface.custom.custom_component import CustomComponent
+from langchain_core.prompts import PromptTemplate
 
 
 class LLMChainComponent(CustomComponent):
@@ -19,10 +20,11 @@ class LLMChainComponent(CustomComponent):
 
     def build(
         self,
-        prompt: BasePromptTemplate,
+        template: Text,
         llm: BaseLanguageModel,
         memory: Optional[BaseMemory] = None,
     ) -> Text:
+        prompt = PromptTemplate.from_template(template)
         runnable = LLMChain(prompt=prompt, llm=llm, memory=memory)
         result_dict = runnable.invoke({})
         output_key = runnable.output_key

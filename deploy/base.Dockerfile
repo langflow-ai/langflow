@@ -56,7 +56,7 @@ RUN apt-get update \
 
 # install poetry - respects $POETRY_VERSION & $POETRY_HOME
 # The --mount will mount the buildx cache directory to where
-# Poetry and Pip store their cache so that they can re-use it
+# Poetry and Pip store their cache so that they can reuse it
 RUN --mount=type=cache,target=/root/.cache \
     curl -sSL https://install.python-poetry.org | python3 -
 
