@@ -8,6 +8,14 @@ env ?= .env
 open_browser ?= true
 path = src/backend/base/langflow/frontend
 
+codespell:
+	@poetry install --with spelling
+	poetry run codespell --toml pyproject.toml
+
+fix_codespell:
+	@poetry install --with spelling
+	poetry run codespell --toml pyproject.toml --write
+
 setup_poetry:
 	pipx install poetry
 
