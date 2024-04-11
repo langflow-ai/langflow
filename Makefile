@@ -132,7 +132,7 @@ install_backend:
 	@echo 'Setting up the environment'
 	@make setup_env
 	@echo 'Installing backend dependencies'
-	@poetry install --extras deploy
+	@poetry install
 
 backend:
 	make install_backend
