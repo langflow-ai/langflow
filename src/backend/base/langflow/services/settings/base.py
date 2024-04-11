@@ -151,7 +151,7 @@ class Settings(BaseSettings):
                 # if there is a database in that location
                 if not values["CONFIG_DIR"]:
                     raise ValueError("CONFIG_DIR not set, please set it or provide a DATABASE_URL")
-                from langflow.version import is_pre_release
+                from langflow.version import is_pre_release  # type: ignore
 
                 pre_db_file_name = "langflow-pre.db"
                 db_file_name = "langflow.db"
