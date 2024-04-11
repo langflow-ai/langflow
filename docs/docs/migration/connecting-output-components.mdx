@@ -1,17 +1,59 @@
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+
 # Connecting to Output Components
 
 Connecting to Output components is an integral feature that facilitates the flow of information from one component to another, promoting a cohesive and well-orchestrated data pipeline. Follow these steps to connect an Output component:
 
 1. Identify the Output component you want to connect to another component.
-2. Ensure that the component you are connecting to has a Text output feature.
+2. Ensure that the component you are connecting to has a Text input.
 3. Click and drag from the output node of the source component to the input node of the Output component.
 
-By following these steps, you can create a direct link between components, streamlining your workflow.
+By following these steps, you can create a direct link between components, allowing you to see intermediary steps.
 
 ## Benefits of Connecting Output Components
 
-Connecting Output components allows you to:
+Connecting Output components allows you to monitor data transitions: Visualize how data moves through your workflow, enabling better tracking and management.
 
-- **Monitor Data Transitions:** Visualize how data moves through your workflow, enabling better tracking and management.
-- **Refine Data Output:** Directly feed the output of one component into another to refine the information being processed.
-- **Increase Workflow Efficiency:** Reduce the need for intermediary steps, creating a more efficient and less cluttered workflow.
+## Example
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/outputs-flow-demo.png",
+    dark: "img/outputs-flow-demo.png",
+  }}
+  style={{ width: "100%" }}
+/>
+
+Steps:
+
+1. *Chat Input*: The user provides input through the "Chat Input" module, where a question like "How old is Justin Bieber?" is entered.
+
+2. *Prompt 1*: The first "Prompt" module receives the user's chat input. Here, a template is used to format the user's question into a standardized prompt, requesting the answer to be only numbers.
+
+3. *OpenAI 1*: The formatted prompt is then sent to an "OpenAI" module, which calls an LLM (like GPT-3.5-turbo) using the provided API key and set parameters, such as temperature. 
+
+4. *First Output*: The response from the "OpenAI" module is directed to a "First output" module, which displays the AI's response in the Interaction Panel. 
+
+5. *Prompt 2*: After that, the output call another Prompt. Which takes the age input and multiples by four.
+
+6. *OpenAI 2*: Similarly, the second prompt is sent to another "OpenAI" module.
+
+7. *Age Times Four*: The output from this second OpenAI module goes to an "Age times four" output module, which again displays the result in the Interaction Panel.
+
+### Let's take a look in the Interaction Panel now
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/outputs-interaction-panel.png",
+    dark: "img/outputs-interaction-panel.png",
+  }}
+  style={{ width: "100%" }}
+/>
+
+In the interaction panel, we can see the user has sent a message asking, "How old is Justin Bieber?" Two separate outputs are provided:
+
+1. First Output: The response is "27" which is the answer to the user's question. Here we can see an intermediary step before passing this value ahead.
+
+2. Age Times Four: There's the result "108" which is four times the age provided in the first output.
