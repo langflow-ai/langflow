@@ -110,7 +110,6 @@ pytest-asyncio = "^0.23.0"
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
-all = ["deploy", "local"]
 
 
 [tool.pytest.ini_options]

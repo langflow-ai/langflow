@@ -3930,13 +3930,13 @@ url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
-version = "2.23.2"
+version = "2.24.0"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langfuse-2.23.2-py3-none-any.whl", hash = "sha256:591811d36fe42b26451615686ea91c04d96afd247ac023818b1ca72861e537a6"},
-    {file = "langfuse-2.23.2.tar.gz", hash = "sha256:11df6c6ff6ca5f6a079836f2530d5f7dcbe11d7058ae16efcafbf8275b0e14b6"},
+    {file = "langfuse-2.24.0-py3-none-any.whl", hash = "sha256:356e8260f093470f09ed8aabad769bae6e9eb1e8a8682f53f1d135c69e07d0d9"},
+    {file = "langfuse-2.24.0.tar.gz", hash = "sha256:c2f9f4c66578ea70da20c2f1bf6ac468b349471b9f2644f95add57aa00817827"},
 ]
 
 [package.dependencies]
@@ -3986,13 +3986,13 @@ regex = ["regex"]
 
 [[package]]
 name = "litellm"
-version = "1.34.40"
+version = "1.34.41"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.34.40-py3-none-any.whl", hash = "sha256:ad6d321eec9819d1697223f5c528ca5c5f2476944bb2afc691cf8517804777e7"},
-    {file = "litellm-1.34.40.tar.gz", hash = "sha256:99faea82cc8bfa1ca6e3063adebfd9e65ecc60b00f4de9a47bda0559d6c9f637"},
+    {file = "litellm-1.34.41-py3-none-any.whl", hash = "sha256:ec6b1fb7f27178ad36f3be64e2f0fb73a637c0d7c128d5aa1d845414cc21be66"},
+    {file = "litellm-1.34.41.tar.gz", hash = "sha256:e8ad1a0b9cf4abea0471394db8c95f479e94e271bc1ce3d98204e1a6ed917e93"},
 ]
 
 [package.dependencies]
@@ -10256,11 +10256,10 @@ test = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [extras]
-all = []
 deploy = ["celery", "flower", "redis"]
 local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "0d658da1ee75640f74d7335685760091df2a452e84eef81dcda2590dd4044e92"
+content-hash = "1cefa467b4141768fa73649db846f775c749391c26899cf4406ba67f0c6409e2"
