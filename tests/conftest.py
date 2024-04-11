@@ -46,6 +46,22 @@ def get_text():
     retun "Hello World"
     """
 
+    # validate that all the paths are correct and the files exist
+    for path in [
+        pytest.BASIC_EXAMPLE_PATH,
+        pytest.COMPLEX_EXAMPLE_PATH,
+        pytest.COMPLEX_DEPS_EXAMPLE_PATH,
+        pytest.OPENAPI_EXAMPLE_PATH,
+        pytest.GROUPED_CHAT_EXAMPLE_PATH,
+        pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH,
+        pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH,
+        pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY,
+        pytest.CHAT_INPUT,
+        pytest.TWO_OUTPUTS,
+        pytest.VECTOR_STORE_PATH,
+    ]:
+        assert path.exists(), f"File {path} does not exist"
+
 
 @pytest.fixture(autouse=True)
 def check_openai_api_key_in_environment_variables():
