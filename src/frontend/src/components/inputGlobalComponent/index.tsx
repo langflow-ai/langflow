@@ -90,7 +90,7 @@ export default function InputGlobalComponent({
       optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
       optionsButton={
-        <AddNewVariableButton>
+        <AddNewVariableButton defaultCategory={setPromptNodeClass ? "Prompt" : "Generic"}>
           <CommandItem value="doNotFilter-addNewVariable">
             <ForwardedIconComponent
               name="Plus"

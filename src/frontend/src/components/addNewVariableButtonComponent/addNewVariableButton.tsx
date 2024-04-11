@@ -13,10 +13,10 @@ import { Textarea } from "../ui/textarea";
 
 //TODO IMPLEMENT FORM LOGIC
 
-export default function AddNewVariableButton({ children }): JSX.Element {
+export default function AddNewVariableButton({ children, defaultCategory = "Generic" }: {children: JSX.Element, defaultCategory?: string;}): JSX.Element {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState(defaultCategory);
   const [open, setOpen] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const addGlobalVariable = useGlobalVariablesStore(
@@ -30,8 +30,8 @@ export default function AddNewVariableButton({ children }): JSX.Element {
     };
     registerGlobalVariable(data)
       .then((res) => {
-        const { name, id, category } = res.data;
-        addGlobalVariable(name, id, category);
+        const { name, id, category, value } = res.data;
+        addGlobalVariable(name, id, category, value);
         setKey("");
         setValue("");
         setCategory("");
@@ -70,7 +70,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             }}
             placeholder="Insert a name for the variable..."
           ></Input>
-          <Label>Category (optional)</Label>
+          <Label>Category</Label>
           <InputComponent
             setSelectedOption={(e) => {
               setCategory(e);
