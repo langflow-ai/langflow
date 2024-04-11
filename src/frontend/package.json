@@ -45,6 +45,7 @@
     "react-cookie": "^4.1.1",
     "react-dom": "^18.2.0",
     "react-error-boundary": "^4.0.11",
+    "react-hotkeys-hook": "^4.5.0",
     "react-icons": "^5.0.1",
     "react-laag": "^2.0.5",
     "react-markdown": "^8.0.7",
