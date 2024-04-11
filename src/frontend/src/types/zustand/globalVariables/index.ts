@@ -4,7 +4,7 @@ export type GlobalVariablesStore = {
   setGlobalVariables: (variables: {
     [name: string]: { id: string; category?: string; value?: string};
   }) => void;
-  addGlobalVariable: (name: string, id: string, category?: string) => void;
+  addGlobalVariable: (name: string, id: string, category?: string, value?: string) => void;
   removeGlobalVariable: (name: string) => void;
   getVariableId: (name: string) => string | undefined;
 };

@@ -881,7 +881,7 @@ export async function registerGlobalVariable({
   name: string;
   value: string;
   category?: string;
-}): Promise<AxiosResponse<{ name: string; id: string; category: string }>> {
+}): Promise<AxiosResponse<{ name: string; id: string; category: string; value?: string; }>> {
   return await api.post(`${BASE_URL_API}variables/`, {
     name,
     value,
