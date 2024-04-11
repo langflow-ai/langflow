@@ -166,7 +166,7 @@ class Settings(BaseSettings):
                         logger.debug("Copying existing database to new location")
                         copy2(new_path, new_pre_path)
                         logger.debug(f"Copied existing database to {new_pre_path}")
-                    elif Path(f"./{db_file_name}"):
+                    elif Path(f"./{db_file_name}").exists():
                         logger.debug("Copying existing database to new location")
                         copy2(f"./{db_file_name}", new_pre_path)
                         logger.debug(f"Copied existing database to {new_pre_path}")
