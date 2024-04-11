@@ -85,10 +85,10 @@ langchain-openai = "^0.1.1"
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
 ipykernel = "^6.29.0"
-mypy = "^1.8.0"
-ruff = "^0.2.1"
+mypy = "^1.9.0"
+ruff = "^0.3.5"
 httpx = "*"
-pytest = "^8.0.0"
+pytest = "^8.1.0"
 types-requests = "^2.31.0"
 requests = "^2.31.0"
 pytest-cov = "^4.1.0"
@@ -110,6 +110,18 @@ pytest-asyncio = "^0.23.0"
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
+
+
+[tool.poetry.group.spelling]
+optional = true
+
+[tool.poetry.group.spelling.dependencies]
+codespell = "^2.2.6"
+
+[tool.codespell]
+skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig'
+# Ignore latin etc
+ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
