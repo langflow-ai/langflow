@@ -35,7 +35,9 @@ def upgrade() -> None:
                 "created_at",
                 existing_type=sa.TIMESTAMP(timezone=True),
                 nullable=True,
-                existing_server_default=sa.text("now()"),
+                # existing_server_default expects str | bool | Identity | Computed | None
+                # sa.text("now()") is not a valid value for existing_server_default
+                existing_server_default=False,
             )
 
     # ### end Alembic commands ###
@@ -54,7 +56,7 @@ def downgrade() -> None:
                 "created_at",
                 existing_type=sa.TIMESTAMP(timezone=True),
                 nullable=False,
-                existing_server_default=sa.text("now()"),
+                existing_server_default=False,
             )
 
     # ### end Alembic commands ###
