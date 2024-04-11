@@ -580,6 +580,7 @@ export type genericModalPropsType = {
   field_name?: string;
   setValue: (value: string) => void;
   value: string;
+  globalValue?: string;
   buttonText: string;
   modalTitle: string;
   type: number;

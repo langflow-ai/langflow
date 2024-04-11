@@ -31,6 +31,7 @@ export default function GenericModal({
   field_name = "",
   value,
   setValue,
+  globalValue,
   buttonText,
   modalTitle,
   type,
@@ -127,9 +128,9 @@ export default function GenericModal({
   }
 
   // Function need some review, working for now
-  function validatePrompt(closeModal: boolean): void {
+  function validatePrompt(closeModal: boolean, value?): void {
     //nodeClass is always null on tweaks
-    postValidatePrompt(field_name, inputValue, nodeClass!)
+    postValidatePrompt(field_name, value ?? inputValue, nodeClass!)
       .then((apiReturn) => {
         // if field_name is an empty string, then we need to set it
         // to the first key of the custom_fields object
@@ -146,7 +147,7 @@ export default function GenericModal({
             JSON.stringify(apiReturn.data?.frontend_node) !== JSON.stringify({})
           ) {
             if (setNodeClass)
-              setNodeClass(apiReturn.data?.frontend_node, inputValue);
+              setNodeClass(apiReturn.data?.frontend_node, value ?? inputValue);
             setModalOpen(closeModal);
             setIsEdit(false);
           }
@@ -175,6 +176,13 @@ export default function GenericModal({
         });
       });
   }
+
+  useEffect(() => {
+    if(globalValue && globalValue !== "")
+      setTimeout(() => {
+        validatePrompt(false, globalValue);
+      }, 1000);
+  }, [globalValue]);
 
   return (
     <BaseModal
