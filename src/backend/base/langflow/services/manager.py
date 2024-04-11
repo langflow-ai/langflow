@@ -1,9 +1,12 @@
+import importlib
+import inspect
 from typing import TYPE_CHECKING, Dict, Optional
 
 from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.base import Service
+
     from langflow.services.factory import ServiceFactory
     from langflow.services.schema import ServiceType
 
@@ -20,6 +23,15 @@ class ServiceManager:
     def __init__(self):
         self.services: Dict[str, "Service"] = {}
         self.factories = {}
+        self.register_factories()
+
+    def register_factories(self):
+        for factory in self.get_factories():
+            try:
+                self.register_factory(factory)
+            except Exception as exc:
+                logger.exception(exc)
+                logger.error(f"Error initializing {factory}: {exc}")
 
     def register_factory(
         self,
@@ -95,6 +107,34 @@ class ServiceManager:
                 logger.exception(exc)
         self.services = {}
         self.factories = {}
+
+    @staticmethod
+    def get_factories():
+        from langflow.services.factory import ServiceFactory
+        from langflow.services.schema import ServiceType
+
+        service_names = [ServiceType(service_type).value.replace("_service", "") for service_type in ServiceType]
+        base_module = "langflow.services"
+        factories = []
+
+        for name in service_names:
+            try:
+                module_name = f"{base_module}.{name}.factory"
+                module = importlib.import_module(module_name)
+
+                # Find all classes in the module that are subclasses of ServiceFactory
+                for name, obj in inspect.getmembers(module, inspect.isclass):
+                    if issubclass(obj, ServiceFactory) and obj is not ServiceFactory:
+                        factories.append(obj())
+                        break
+
+            except Exception as exc:
+                logger.exception(exc)
+                raise RuntimeError(
+                    f"Could not initialize services. Please check your settings. Error in {name}."
+                ) from exc
+
+        return factories
 
 
 service_manager = ServiceManager()
