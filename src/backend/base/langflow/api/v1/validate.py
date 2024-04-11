@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from loguru import logger
 
 from langflow.api.v1.base import Code, CodeValidationResponse, PromptValidationResponse, ValidatePromptRequest
-from langflow.base.prompts.utils import (
+from langflow.base.prompts.api_utils import (
     add_new_variables_to_template,
     get_old_custom_fields,
     remove_old_variables_from_template,
