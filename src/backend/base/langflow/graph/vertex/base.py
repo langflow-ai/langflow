@@ -1,10 +1,10 @@
 import ast
 import asyncio
 import inspect
+import os
 import types
 from enum import Enum
 from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
-import os
 
 from loguru import logger
 
@@ -315,7 +315,8 @@ class Vertex:
                             raise e
                     params[field_name] = full_path
                 elif field.get("required"):
-                    raise ValueError(f"File path not found for {self.display_name}")
+                    field_display_name = field.get("display_name")
+                    raise ValueError(f"File path not found for {field_display_name} in component {self.display_name}")
             elif field.get("type") in DIRECT_TYPES and params.get(field_name) is None:
                 val = field.get("value")
                 if field.get("type") == "code":

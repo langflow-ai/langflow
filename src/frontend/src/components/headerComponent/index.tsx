@@ -1,4 +1,4 @@
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import { RiTwitterXFill } from "react-icons/ri";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -39,15 +39,6 @@ export default function Header(): JSX.Element {
   const dark = useDarkStore((state) => state.dark);
   const setDark = useDarkStore((state) => state.setDark);
   const stars = useDarkStore((state) => state.stars);
-
-  useEffect(() => {
-    if (dark) {
-      document.getElementById("body")!.classList.add("dark");
-    } else {
-      document.getElementById("body")!.classList.remove("dark");
-    }
-    window.localStorage.setItem("isDark", dark.toString());
-  }, [dark]);
 
   async function checkForChanges(nodes: Node[]): Promise<void> {
     if (nodes.length === 0) {

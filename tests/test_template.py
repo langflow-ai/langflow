@@ -2,14 +2,9 @@ import importlib
 from typing import Dict, List, Optional
 
 import pytest
+from langflow.interface.utils import build_template_from_class
 from langflow.utils.constants import CHAT_OPENAI_MODELS, OPENAI_MODELS
-from langflow.utils.util import (
-    build_template_from_class,
-    build_template_from_function,
-    format_dict,
-    get_base_classes,
-    get_default_factory,
-)
+from langflow.utils.util import build_template_from_function, format_dict, get_base_classes, get_default_factory
 from pydantic import BaseModel
 
 

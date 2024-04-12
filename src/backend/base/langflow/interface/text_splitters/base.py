@@ -4,9 +4,9 @@ from loguru import logger
 
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.custom_lists import textsplitter_type_to_cls_dict
+from langflow.interface.utils import build_template_from_class
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.textsplitters import TextSplittersFrontendNode
-from langflow.utils.util import build_template_from_class
 
 
 class TextSplitterCreator(LangChainTypeCreator):

@@ -11,9 +11,6 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlmodel import Session, SQLModel, create_engine, select
-from sqlmodel.pool import StaticPool
-from typer.testing import CliRunner
-
 from langflow.graph.graph.base import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
@@ -22,30 +19,47 @@ from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
+from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
 
 
 def pytest_configure():
-    pytest.BASIC_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "basic_example.json"
-    pytest.COMPLEX_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "complex_example.json"
-    pytest.COMPLEX_DEPS_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "complex_deps_example.json"
-    pytest.OPENAPI_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "Openapi.json"
-    pytest.GROUPED_CHAT_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "grouped_chat.json"
-    pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "one_group_chat.json"
-    pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "vector_store_grouped.json"
+    data_path = Path(__file__).parent.absolute() / "data"
 
-    pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY = (
-        Path(__file__).parent.absolute() / "data" / "BasicChatWithPromptAndHistory.json"
-    )
-    pytest.CHAT_INPUT = Path(__file__).parent.absolute() / "data" / "ChatInputTest.json"
-    pytest.TWO_OUTPUTS = Path(__file__).parent.absolute() / "data" / "TwoOutputsTest.json"
-    pytest.VECTOR_STORE_PATH = Path(__file__).parent.absolute() / "data" / "Vector_store.json"
+    pytest.BASIC_EXAMPLE_PATH = data_path / "basic_example.json"
+    pytest.COMPLEX_EXAMPLE_PATH = data_path / "complex_example.json"
+    pytest.OPENAPI_EXAMPLE_PATH = data_path / "Openapi.json"
+    pytest.GROUPED_CHAT_EXAMPLE_PATH = data_path / "grouped_chat.json"
+    pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH = data_path / "one_group_chat.json"
+    pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH = data_path / "vector_store_grouped.json"
+
+    pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY = data_path / "BasicChatwithPromptandHistory.json"
+    pytest.CHAT_INPUT = data_path / "ChatInputTest.json"
+    pytest.TWO_OUTPUTS = data_path / "TwoOutputsTest.json"
+    pytest.VECTOR_STORE_PATH = data_path / "Vector_store.json"
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
     retun "Hello World"
     """
+
+    # validate that all the paths are correct and the files exist
+    for path in [
+        pytest.BASIC_EXAMPLE_PATH,
+        pytest.COMPLEX_EXAMPLE_PATH,
+        pytest.OPENAPI_EXAMPLE_PATH,
+        pytest.GROUPED_CHAT_EXAMPLE_PATH,
+        pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH,
+        pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH,
+        pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY,
+        pytest.CHAT_INPUT,
+        pytest.TWO_OUTPUTS,
+        pytest.VECTOR_STORE_PATH,
+    ]:
+        assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
 
 
 @pytest.fixture(autouse=True)
@@ -193,36 +207,29 @@ def json_vector_store():
         return f.read()
 
 
-@pytest.fixture
-def complex_graph_with_groups():
-    with open(pytest.COMPLEX_DEPS_EXAMPLE_PATH, "r") as f:
-        flow_graph = json.load(f)
-    data_graph = flow_graph["data"]
-    nodes = data_graph["nodes"]
-    edges = data_graph["edges"]
-    return Graph(nodes, edges)
-
-
 @pytest.fixture(name="client", autouse=True)
-def client_fixture(session: Session, monkeypatch):
+def client_fixture(session: Session, monkeypatch, request):
     # Set the database url to a test database
-    db_dir = tempfile.mkdtemp()
-    db_path = Path(db_dir) / "test.db"
-    monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
-    monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+    if "noclient" in request.keywords:
+        yield
+    else:
+        db_dir = tempfile.mkdtemp()
+        db_path = Path(db_dir) / "test.db"
+        monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+        monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
 
-    from langflow.main import create_app
+        from langflow.main import create_app
 
-    app = create_app()
+        app = create_app()
 
-    # app.dependency_overrides[get_session] = get_session_override
-    with TestClient(app) as client:
-        yield client
-    # app.dependency_overrides.clear()
-    monkeypatch.undo()
-    # clear the temp db
-    with suppress(FileNotFoundError):
-        db_path.unlink()
+        # app.dependency_overrides[get_session] = get_session_override
+        with TestClient(app) as client:
+            yield client
+        # app.dependency_overrides.clear()
+        monkeypatch.undo()
+        # clear the temp db
+        with suppress(FileNotFoundError):
+            db_path.unlink()
 
 
 # create a fixture for session_getter above

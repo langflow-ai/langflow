@@ -19,9 +19,10 @@ from rich.table import Table
 
 from langflow.main import setup_app
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, get_settings_service
-from langflow.services.utils import initialize_services, initialize_settings_service
+from langflow.services.deps import get_db_service
+from langflow.services.utils import initialize_services
 from langflow.utils.logger import configure, logger
+from langflow.utils.util import update_settings
 
 console = Console()
 
@@ -66,36 +67,6 @@ def set_var_for_macos_issue():
         # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa
         os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
-
-
-def update_settings(
-    config: str,
-    cache: Optional[str] = None,
-    dev: bool = False,
-    remove_api_keys: bool = False,
-    components_path: Optional[Path] = None,
-    store: bool = True,
-):
-    """Update the settings from a config file."""
-
-    # Check for database_url in the environment variables
-    initialize_settings_service()
-    settings_service = get_settings_service()
-    if config:
-        logger.debug(f"Loading settings from {config}")
-        settings_service.settings.update_from_yaml(config, dev=dev)
-    if remove_api_keys:
-        logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
-        settings_service.settings.update_settings(REMOVE_API_KEYS=remove_api_keys)
-    if cache:
-        logger.debug(f"Setting cache to {cache}")
-        settings_service.settings.update_settings(CACHE=cache)
-    if components_path:
-        logger.debug(f"Adding component path {components_path}")
-        settings_service.settings.update_settings(COMPONENTS_PATH=components_path)
-    if not store:
-        logger.debug("Setting store to False")
-        settings_service.settings.update_settings(STORE=False)
 
 
 @app.command()
@@ -181,17 +152,21 @@ def run(
     # Define an env variable to know if we are just testing the server
     if "pytest" in sys.modules:
         return
-
-    if platform.system() in ["Windows"]:
-        # Run using uvicorn on MacOS and Windows
-        # Windows doesn't support gunicorn
-        # MacOS requires an env variable to be set to use gunicorn
-        run_on_windows(host, port, log_level, options, app)
-    else:
-        # Run using gunicorn on Linux
-        run_on_mac_or_linux(host, port, log_level, options, app, open_browser)
-    if open_browser:
-        click.launch(f"http://{host}:{port}")
+    try:
+        if platform.system() in ["Windows"]:
+            # Run using uvicorn on MacOS and Windows
+            # Windows doesn't support gunicorn
+            # MacOS requires an env variable to be set to use gunicorn
+            process = run_on_windows(host, port, log_level, options, app)
+        else:
+            # Run using gunicorn on Linux
+            process = run_on_mac_or_linux(host, port, log_level, options, app)
+        if open_browser:
+            click.launch(f"http://{host}:{port}")
+        if process:
+            process.join()
+    except KeyboardInterrupt:
+        pass
 
 
 def wait_for_server_ready(host, port):
@@ -212,6 +187,7 @@ def run_on_mac_or_linux(host, port, log_level, options, app):
     wait_for_server_ready(host, port)
 
     print_banner(host, port)
+    return webapp_process
 
 
 def run_on_windows(host, port, log_level, options, app):
@@ -220,6 +196,7 @@ def run_on_windows(host, port, log_level, options, app):
     """
     print_banner(host, port)
     run_langflow(host, port, log_level, options, app)
+    return None
 
 
 def is_port_in_use(port, host="localhost"):
@@ -316,7 +293,7 @@ def is_prerelease(version: str) -> bool:
     return "a" in version or "b" in version or "rc" in version
 
 
-def fetch_latest_version(package_name: str, include_prerelease: bool) -> str:
+def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optional[str]:
     response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
     versions = response.json()["releases"].keys()
     valid_versions = [v for v in versions if include_prerelease or not is_prerelease(v)]
@@ -358,7 +335,7 @@ def print_banner(host: str, port: int):
     package_name = ""
 
     try:
-        from langflow.version import __version__ as langflow_version
+        from langflow.version import __version__ as langflow_version  # type: ignore
 
         is_pre_release |= is_prerelease(langflow_version)  # Update pre-release status
         notice = build_version_notice(langflow_version, "langflow")

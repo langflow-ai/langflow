@@ -28,7 +28,7 @@ Then, run Langflow with:
 python -m langflow run
 ```
 
-You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Logspace/Langflow-Preview). [Clone the space using this link](https://huggingface.co/spaces/Logspace/Langflow-Preview?duplicate=true), to create your own Langflow workspace in minutes.
+You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview). [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true), to create your own Langflow workspace in minutes.
 
 # 🎨 Creating Flows
 
@@ -122,4 +122,4 @@ We welcome contributions from developers of all levels to our open-source projec
 
 # 📄 License
 
-Langflow is released under the MIT License. See the LICENSE file for details.
+Langflow is released under the MIT License. See the [LICENSE](LICENSE) file for details.

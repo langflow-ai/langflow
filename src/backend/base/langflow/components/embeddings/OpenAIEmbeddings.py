@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional
 
 from langchain_openai.embeddings.base import OpenAIEmbeddings
+from pydantic.v1 import SecretStr
 
 from langflow.field_typing import Embeddings, NestedDict
 from langflow.interface.custom.custom_component import CustomComponent
@@ -113,6 +114,10 @@ class OpenAIEmbeddingsComponent(CustomComponent):
         # This is to avoid errors with Vector Stores (e.g Chroma)
         if disallowed_special == ["all"]:
             disallowed_special = "all"  # type: ignore
+        if openai_api_key:
+            api_key = SecretStr(openai_api_key)
+        else:
+            api_key = None
 
         return OpenAIEmbeddings(
             tiktoken_enabled=tiktoken_enable,
@@ -128,7 +133,7 @@ class OpenAIEmbeddingsComponent(CustomComponent):
             model=model,
             model_kwargs=model_kwargs,
             base_url=openai_api_base,
-            api_key=openai_api_key,
+            api_key=api_key,
             openai_api_type=openai_api_type,
             api_version=openai_api_version,
             organization=openai_organization,

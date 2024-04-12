@@ -4,7 +4,7 @@ from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.qdrant import Qdrant
 
-from langflow.field_typing import Embeddings, NestedDict
+from langflow.field_typing import Embeddings
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema.schema import Record
 
@@ -37,7 +37,6 @@ class QdrantComponent(CustomComponent):
             "port": {"display_name": "Port", "advanced": True},
             "prefer_grpc": {"display_name": "Prefer gRPC", "advanced": True},
             "prefix": {"display_name": "Prefix", "advanced": True},
-            "search_kwargs": {"display_name": "Search Kwargs", "advanced": True},
             "timeout": {"display_name": "Timeout", "advanced": True},
             "url": {"display_name": "URL", "advanced": True},
         }
@@ -59,7 +58,6 @@ class QdrantComponent(CustomComponent):
         port: Optional[int] = 6333,
         prefer_grpc: bool = False,
         prefix: Optional[str] = None,
-        search_kwargs: Optional[NestedDict] = None,
         timeout: Optional[int] = None,
         url: Optional[str] = None,
     ) -> Union[VectorStore, Qdrant, BaseRetriever]:
@@ -111,7 +109,6 @@ class QdrantComponent(CustomComponent):
                 port=port,
                 prefer_grpc=prefer_grpc,
                 prefix=prefix,
-                search_kwargs=search_kwargs,
                 timeout=timeout,
                 url=url,
             )

@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 from langchain_community.vectorstores.mongodb_atlas import MongoDBAtlasVectorSearch
-from langflow.field_typing import Embeddings, NestedDict
+from langflow.field_typing import Embeddings
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema.schema import Record
 
@@ -19,7 +19,6 @@ class MongoDBAtlasComponent(CustomComponent):
             "db_name": {"display_name": "Database Name"},
             "index_name": {"display_name": "Index Name"},
             "mongodb_atlas_cluster_uri": {"display_name": "MongoDB Atlas Cluster URI"},
-            "search_kwargs": {"display_name": "Search Kwargs", "advanced": True},
         }
 
     def build(
@@ -30,9 +29,7 @@ class MongoDBAtlasComponent(CustomComponent):
         db_name: str = "",
         index_name: str = "",
         mongodb_atlas_cluster_uri: str = "",
-        search_kwargs: Optional[NestedDict] = None,
     ) -> MongoDBAtlasVectorSearch:
-        search_kwargs = search_kwargs or {}
         try:
             from pymongo import MongoClient
         except ImportError:
@@ -56,7 +53,6 @@ class MongoDBAtlasComponent(CustomComponent):
                 db_name=db_name,
                 index_name=index_name,
                 mongodb_atlas_cluster_uri=mongodb_atlas_cluster_uri,
-                search_kwargs=search_kwargs,
             )
         else:
             vector_store = MongoDBAtlasVectorSearch(

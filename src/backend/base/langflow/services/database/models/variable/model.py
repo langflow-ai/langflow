@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
 from pydantic import model_validator
-from sqlmodel import Column, Enum, Field, Relationship, SQLModel
+from sqlmodel import Column, DateTime, Enum, Field, Relationship, SQLModel, func
 
 from langflow.services.database.models.variable.constants import IS_READABLE_MAP, VariableCategories
 
@@ -28,8 +28,16 @@ class Variable(VariableBase, table=True):
         description="Unique ID for the variable",
     )
     # name is unique per user
-    created_at: datetime = Field(default_factory=utc_now, description="Creation time of the variable")
-    updated_at: Optional[datetime] = Field(None, description="Last update time of the variable")
+    created_at: datetime = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=True),
+        description="Creation time of the variable",
+    )
+    updated_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+        description="Last update time of the variable",
+    )
     # foreign key to user table
     user_id: UUID = Field(description="User ID associated with this variable", foreign_key="user.id")
     user: "User" = Relationship(back_populates="variables")
@@ -49,7 +57,9 @@ class Variable(VariableBase, table=True):
 
 
 class VariableCreate(VariableBase):
-    type: Optional[str] = Field(None, description="Type of the variable")
+    created_at: Optional[datetime] = Field(default_factory=utc_now, description="Creation time of the variable")
+
+    updated_at: Optional[datetime] = Field(default_factory=utc_now, description="Creation time of the variable")
 
 
 class VariableRead(SQLModel):
