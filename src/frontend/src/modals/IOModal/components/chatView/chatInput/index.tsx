@@ -6,10 +6,11 @@ import {
   CHAT_INPUT_PLACEHOLDER_SEND,
 } from "../../../../../constants/constants";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
-import { chatInputType } from "../../../../../types/components";
+import { FilePreviewType, chatInputType } from "../../../../../types/components";
 import { classNames } from "../../../../../utils/utils";
 import { uploadFile } from "../../../../../controllers/API";
-
+import ShortUniqueId from "short-unique-id";
+import FilePreview from "../filePreviewChat";
 export default function ChatInput({
   lockChat,
   chatValue,
@@ -21,6 +22,9 @@ export default function ChatInput({
   const [repeat, setRepeat] = useState(1);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const uid = new ShortUniqueId({ length: 3 });
+  const [files, setFiles] = useState<FilePreviewType[]>([]);
+
   useEffect(() => {
     if (!lockChat && inputRef.current) {
       inputRef.current.focus();
@@ -43,16 +47,15 @@ export default function ChatInput({
           if (items[i].type.indexOf("image") !== -1) {
             const blob = items[i].getAsFile();
             if (blob) {
-              // const reader = new FileReader();
-              // reader.onload = (e) => {
-              //   const data = e.target?.result;
-              //   if (typeof data === "string") {
-              //     // sendMessage(data);
-              //   }
-              // };
-              // reader.readAsDataURL(blob);
+              const id = uid()
+              setFiles([...files, { file: blob, loading: true, error: false,id}]);
               uploadFile(blob, currentFlowId).then((res) => {
-                console.log(res);
+                setFiles(prev=>{
+                  const newFiles = [...prev];
+                  const updatedIndex = newFiles.findIndex((file)=>file.id===id);
+                  newFiles[updatedIndex].loading = false;
+                  return newFiles;
+                })
               });
             }
           }
@@ -66,7 +69,7 @@ export default function ChatInput({
   }, []);
 
   return (
-    <div className="flex w-full gap-2">
+    <div className="flex w-full flex-col-reverse">
       <div className="relative w-full">
         <Textarea
           onKeyDown={(event) => {
@@ -146,6 +149,13 @@ export default function ChatInput({
             )}
           </button>
         </div>
+      </div>
+      <div className="flex w-full gap-2">
+      {
+        files.map((file)=>(
+          <FilePreview error={file.error} file={file.file} loading={file.loading} key={file.id}/>
+        ))
+      }
       </div>
       {/* 
       <Popover>
