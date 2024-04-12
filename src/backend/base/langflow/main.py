@@ -21,14 +21,24 @@ from langflow.utils.logger import configure
 
 
 def get_lifespan(fix_migration=False, socketio_server=None):
+    from langflow.version import __version__
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         nest_asyncio.apply()
-        initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
-        setup_llm_caching()
-        LangfuseInstance.update()
-        create_or_update_starter_projects()
-        yield
+        # Startup message
+        if __version__:
+            rprint(f"[bold green]Starting Langflow v{__version__}...[/bold green]")
+        else:
+            rprint("[bold green]Starting Langflow...[/bold green]")
+        try:
+            initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
+            setup_llm_caching()
+            LangfuseInstance.update()
+            create_or_update_starter_projects()
+            yield
+        except Exception as exc:
+            logger.error(exc)
         # Shutdown message
         rprint("[bold red]Shutting down Langflow...[/bold red]")
         teardown_services()
