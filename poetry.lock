@@ -4301,13 +4301,13 @@ llama-index-core = ">=0.10.7"
 
 [[package]]
 name = "llamaindex-py-client"
-version = "0.1.17"
+version = "0.1.18"
 description = ""
 optional = false
 python-versions = "<4,>=3.8"
 files = [
-    {file = "llamaindex_py_client-0.1.17-py3-none-any.whl", hash = "sha256:979d7c8307442f4208e2793f8e8f896827d4ac315af2df51c27bedbeb7ba8f07"},
-    {file = "llamaindex_py_client-0.1.17.tar.gz", hash = "sha256:cbfa65006abe248a6c17bfb3703f884d1d395c3609583ff60783b43ab5f7b0d6"},
+    {file = "llamaindex_py_client-0.1.18-py3-none-any.whl", hash = "sha256:5417e41666504a77ecf5bdd9b403ffff1d714880ee30d49e234fb7686177eeeb"},
+    {file = "llamaindex_py_client-0.1.18.tar.gz", hash = "sha256:091ee49a92592e3894777ade12516c2137093f9d6441a549f406461917ce9b7e"},
 ]
 
 [package.dependencies]
