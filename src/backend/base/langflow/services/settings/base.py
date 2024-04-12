@@ -3,16 +3,58 @@ import json
 import os
 from pathlib import Path
 from shutil import copy2
-from typing import List, Optional
+from typing import Any, List, Optional, Tuple, Type
 
 import orjson
 import yaml
 from loguru import logger
 from pydantic import field_validator, validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic.fields import FieldInfo
+from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
+
+from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 
 # BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
 BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent.parent / "components")
+
+
+def is_list_of_any(field: FieldInfo) -> bool:
+    """
+    Check if the given field is a list or an optional list of any type.
+
+    Args:
+        field (FieldInfo): The field to be checked.
+
+    Returns:
+        bool: True if the field is a list or a list of any type, False otherwise.
+    """
+    if field.annotation is None:
+        return False
+    try:
+        if hasattr(field.annotation, "__args__"):
+            union_args = field.annotation.__args__
+        else:
+            union_args = []
+
+        return field.annotation.__origin__ == list or any(
+            arg.__origin__ == list for arg in union_args if hasattr(arg, "__origin__")
+        )
+    except AttributeError:
+        return False
+
+
+class MyCustomSource(EnvSettingsSource):
+    def prepare_field_value(self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool) -> Any:
+        # allow comma-separated list parsing
+
+        # fieldInfo contains the annotation of the field
+        if is_list_of_any(field):
+            if isinstance(value, str):
+                value = value.split(",")
+            if isinstance(value, list):
+                return value
+
+        return super().prepare_field_value(field_name, field, value, value_is_complex)
 
 
 class Settings(BaseSettings):
@@ -58,14 +100,19 @@ class Settings(BaseSettings):
 
     STORE: Optional[bool] = True
     STORE_URL: Optional[str] = "https://api.langflow.store"
-    DOWNLOAD_WEBHOOK_URL: Optional[
-        str
-    ] = "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
+    DOWNLOAD_WEBHOOK_URL: Optional[str] = (
+        "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
+    )
     LIKE_WEBHOOK_URL: Optional[str] = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
     STORAGE_TYPE: str = "local"
 
     CELERY_ENABLED: bool = False
+
+    store_environment_variables: bool = True
+    """Whether to store environment variables as Global Variables in the database."""
+    variables_to_get_from_environment: list[str] = VARIABLES_TO_GET_FROM_ENVIRONMENT
+    """List of environment variables to get from the environment and store in the database."""
 
     @validator("CONFIG_DIR", pre=True, allow_reuse=True)
     def set_langflow_dir(cls, value):
@@ -104,21 +151,50 @@ class Settings(BaseSettings):
                 # if there is a database in that location
                 if not values["CONFIG_DIR"]:
                     raise ValueError("CONFIG_DIR not set, please set it or provide a DATABASE_URL")
+                from langflow.version import is_pre_release  # type: ignore
 
-                new_path = f"{values['CONFIG_DIR']}/langflow.db"
-                if Path("./langflow.db").exists():
+                pre_db_file_name = "langflow-pre.db"
+                db_file_name = "langflow.db"
+                new_pre_path = f"{values['CONFIG_DIR']}/{pre_db_file_name}"
+                new_path = f"{values['CONFIG_DIR']}/{db_file_name}"
+                final_path = None
+                if is_pre_release:
+                    if Path(new_pre_path).exists():
+                        final_path = new_pre_path
+                    elif Path(new_path).exists():
+                        # We need to copy the current db to the new location
+                        logger.debug("Copying existing database to new location")
+                        copy2(new_path, new_pre_path)
+                        logger.debug(f"Copied existing database to {new_pre_path}")
+                    elif Path(f"./{db_file_name}").exists():
+                        logger.debug("Copying existing database to new location")
+                        copy2(f"./{db_file_name}", new_pre_path)
+                        logger.debug(f"Copied existing database to {new_pre_path}")
+                    else:
+                        logger.debug(f"Database already exists at {new_pre_path}, using it")
+                        final_path = new_pre_path
+                else:
                     if Path(new_path).exists():
                         logger.debug(f"Database already exists at {new_path}, using it")
-                    else:
+                        final_path = new_path
+                    elif Path("./{db_file_name}").exists():
                         try:
                             logger.debug("Copying existing database to new location")
-                            copy2("./langflow.db", new_path)
+                            copy2("./{db_file_name}", new_path)
                             logger.debug(f"Copied existing database to {new_path}")
                         except Exception:
                             logger.error("Failed to copy database, using default path")
-                            new_path = "./langflow.db"
+                            new_path = "./{db_file_name}"
+                    else:
+                        final_path = new_path
 
-                value = f"sqlite:///{new_path}"
+                if final_path is None:
+                    if is_pre_release:
+                        final_path = new_pre_path
+                    else:
+                        final_path = new_path
+
+                value = f"sqlite:///{final_path}"
 
         return value
 
@@ -148,14 +224,6 @@ class Settings(BaseSettings):
         return value
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
-
-    # @model_validator()
-    # @classmethod
-    # def validate_lists(cls, values):
-    #     for key, value in values.items():
-    #         if key != "dev" and not value:
-    #             values[key] = []
-    #     return values
 
     def update_from_yaml(self, file_path: str, dev: bool = False):
         new_settings = load_settings_from_yaml(file_path)
@@ -208,6 +276,17 @@ class Settings(BaseSettings):
                 setattr(self, key, value)
                 logger.debug(f"Updated {key}")
             logger.debug(f"{key}: {getattr(self, key)}")
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        return (MyCustomSource(settings_cls),)
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):

@@ -5,7 +5,7 @@ from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.supabase import SupabaseVectorStore
 from supabase.client import Client, create_client
 
-from langflow.field_typing import Embeddings, NestedDict
+from langflow.field_typing import Embeddings
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema.schema import Record
 
@@ -19,7 +19,6 @@ class SupabaseComponent(CustomComponent):
             "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
             "embedding": {"display_name": "Embedding"},
             "query_name": {"display_name": "Query Name"},
-            "search_kwargs": {"display_name": "Search Kwargs", "advanced": True},
             "supabase_service_key": {"display_name": "Supabase Service Key"},
             "supabase_url": {"display_name": "Supabase URL"},
             "table_name": {"display_name": "Table Name", "advanced": True},
@@ -30,7 +29,6 @@ class SupabaseComponent(CustomComponent):
         embedding: Embeddings,
         inputs: Optional[List[Record]] = None,
         query_name: str = "",
-        search_kwargs: NestedDict = {},
         supabase_service_key: str = "",
         supabase_url: str = "",
         table_name: str = "",
@@ -46,7 +44,6 @@ class SupabaseComponent(CustomComponent):
             documents=documents,
             embedding=embedding,
             query_name=query_name,
-            search_kwargs=search_kwargs,
             client=supabase,
             table_name=table_name,
         )

@@ -4,7 +4,7 @@ test("curl_api_generation", async ({ page, context }) => {
   await page.goto("/");
   await page.locator('//*[@id="new-project-btn"]').click();
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.getByRole("heading", { name: "Data Ingestion" }).click();
+  await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(2000);
   await page.getByText("API", { exact: true }).click();
   await page.getByRole("tab", { name: "cURL" }).click();
@@ -17,15 +17,22 @@ test("curl_api_generation", async ({ page, context }) => {
   expect(clipboardContent.length).toBeGreaterThan(0);
   await page.getByRole("tab", { name: "Tweaks" }).click();
   await page
-    .getByRole("heading", { name: "URL" })
+    .getByRole("heading", { name: "OpenAi" })
     .locator("div")
     .first()
     .click();
-  await page.getByRole("textbox", { name: "Type something..." }).click();
   await page
     .getByRole("textbox", { name: "Type something..." })
+    .first()
+    .click();
+  await page
+    .getByRole("textbox", { name: "Type something..." })
+    .first()
     .press("Control+a");
-  await page.getByRole("textbox", { name: "Type something..." }).fill("teste");
+  await page
+    .getByRole("textbox", { name: "Type something..." })
+    .first()
+    .fill("teste");
   await page.getByRole("tab", { name: "cURL" }).click();
   await page.getByRole("button", { name: "Copy Code" }).click();
   const handle2 = await page.evaluateHandle(() =>

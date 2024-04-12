@@ -164,7 +164,12 @@ export default function ChatMessage({
               {chat.thought && chat.thought !== "" && !hidden && <br></br>}
               <div className="flex w-full flex-col">
                 <div className="flex w-full flex-col dark:text-white">
-                  <div className="flex w-full flex-col">
+                  <div
+                    data-testid={
+                      "chat-message-" + chat.sender_name + "-" + chatMessage
+                    }
+                    className="flex w-full flex-col"
+                  >
                     {useMemo(
                       () =>
                         chatMessage === "" && lockChat ? (
@@ -313,7 +318,13 @@ dark:prose-invert"
                 </span>
               </>
             ) : (
-              <span>{chatMessage}</span>
+              <span
+                data-testid={
+                  "chat-message-" + chat.sender_name + "-" + chatMessage
+                }
+              >
+                {chatMessage}
+              </span>
             )}
           </div>
         )}

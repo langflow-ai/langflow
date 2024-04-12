@@ -2,21 +2,55 @@ import json
 from pathlib import Path
 from typing import List, Optional, Union
 
+from dotenv import load_dotenv
 from langflow.graph import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.processing.process import process_tweaks, run_graph
+from langflow.utils.logger import configure
+from langflow.utils.util import update_settings
 
 
-def load_flow_from_json(flow: Union[Path, str, dict], tweaks: Optional[dict] = None) -> Graph:
+def load_flow_from_json(
+    flow: Union[Path, str, dict],
+    tweaks: Optional[dict] = None,
+    log_level: Optional[str] = None,
+    log_file: Optional[str] = None,
+    env_file: Optional[str] = None,
+    cache: Optional[str] = None,
+    disable_logs: Optional[bool] = True,
+) -> Graph:
     """
-    Load flow from a JSON file or a JSON object.
+    Load a flow graph from a JSON file or a JSON object.
 
-    :param flow: JSON file path or JSON object
-    :param tweaks: Optional tweaks to be processed
-    :param build: If True, build the graph, otherwise return the graph object
-    :return: Langchain object or Graph object depending on the build parameter
+    Args:
+        flow (Union[Path, str, dict]): The flow to load. It can be a file path (str or Path object)
+            or a JSON object (dict).
+        tweaks (Optional[dict]): Optional tweaks to apply to the loaded flow graph.
+        log_level (Optional[str]): Optional log level to configure for the flow processing.
+        log_file (Optional[str]): Optional log file to configure for the flow processing.
+        env_file (Optional[str]): Optional .env file to override environment variables.
+        cache (Optional[str]): Optional cache path to update the flow settings.
+        disable_logs (Optional[bool], default=True): Optional flag to disable logs during flow processing.
+            If log_level or log_file are set, disable_logs is not used.
+
+    Returns:
+        Graph: The loaded flow graph as a Graph object.
+
+    Raises:
+        TypeError: If the input is neither a file path (str or Path object) nor a JSON object (dict).
+
     """
     # If input is a file path, load JSON from the file
+    log_file_path = Path(log_file) if log_file else None
+    configure(log_level=log_level, log_file=log_file_path, disable=disable_logs)
+
+    # override env variables with .env file
+    if env_file:
+        load_dotenv(env_file, override=True)
+
+    # Update settings with cache and components path
+    update_settings(cache=cache)
+
     if isinstance(flow, (str, Path)):
         with open(flow, "r", encoding="utf-8") as f:
             flow_graph = json.load(f)
@@ -41,22 +75,44 @@ def run_flow_from_json(
     input_type: str = "chat",
     output_type: str = "chat",
     output_component: Optional[str] = None,
+    log_level: Optional[str] = None,
+    log_file: Optional[str] = None,
+    env_file: Optional[str] = None,
+    cache: Optional[str] = None,
+    disable_logs: Optional[bool] = True,
 ) -> List[RunOutputs]:
     """
-    Runs a JSON flow by loading it from a file or dictionary and executing it with the given input value.
+    Run a flow from a JSON file or dictionary.
 
     Args:
-        flow (Union[Path, str, dict]): The path to the JSON file, or the JSON dictionary representing the flow.
+        flow (Union[Path, str, dict]): The path to the JSON file or the JSON dictionary representing the flow.
         input_value (str): The input value to be processed by the flow.
         tweaks (Optional[dict], optional): Optional tweaks to be applied to the flow. Defaults to None.
         input_type (str, optional): The type of the input value. Defaults to "chat".
         output_type (str, optional): The type of the output value. Defaults to "chat".
-        output_component (Optional[str], optional): The specific output component to retrieve. Defaults to None.
+        output_component (Optional[str], optional): The specific component to output. Defaults to None.
+        log_level (Optional[str], optional): The log level to use. Defaults to None.
+        log_file (Optional[str], optional): The log file to write logs to. Defaults to None.
+        env_file (Optional[str], optional): The environment file to load. Defaults to None.
+        cache (Optional[str], optional): The cache directory to use. Defaults to None.
+        disable_logs (Optional[bool], optional): Whether to disable logs. Defaults to True.
 
     Returns:
-        None: The result of running the flow.
+        List[RunOutputs]: A list of RunOutputs objects representing the results of running the flow.
     """
-    graph = load_flow_from_json(flow, tweaks)
+    # Set all streaming to false
+    if tweaks is None:
+        tweaks = {}
+    tweaks["stream"] = False
+    graph = load_flow_from_json(
+        flow=flow,
+        tweaks=tweaks,
+        log_level=log_level,
+        log_file=log_file,
+        env_file=env_file,
+        cache=cache,
+        disable_logs=disable_logs,
+    )
     result = run_graph(
         graph=graph,
         input_value=input_value,

@@ -19,11 +19,11 @@ class ChatOutput(ChatComponent):
         return_record: Optional[bool] = False,
         record_template: Optional[str] = "{text}",
     ) -> Union[Text, Record]:
-        return super().build(
+        return super().build_with_record(
             sender=sender,
             sender_name=sender_name,
             input_value=input_value,
             session_id=session_id,
             return_record=return_record,
-            record_template=record_template,
+            record_template=record_template or "",
         )

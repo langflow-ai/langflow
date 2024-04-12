@@ -9,11 +9,6 @@ import click
 import httpx
 import typer
 from dotenv import load_dotenv
-from langflow.main import setup_app
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, get_settings_service
-from langflow.services.utils import initialize_services, initialize_settings_service
-from langflow.utils.logger import configure, logger
 from multiprocess import Process, cpu_count  # type: ignore
 from packaging import version as pkg_version
 from rich import box
@@ -21,6 +16,13 @@ from rich import print as rprint
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+from langflow.main import setup_app
+from langflow.services.database.utils import session_getter
+from langflow.services.deps import get_db_service
+from langflow.services.utils import initialize_services
+from langflow.utils.logger import configure, logger
+from langflow.utils.util import update_settings
 
 console = Console()
 
@@ -67,44 +69,10 @@ def set_var_for_macos_issue():
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
 
-def update_settings(
-    config: str,
-    cache: Optional[str] = None,
-    dev: bool = False,
-    remove_api_keys: bool = False,
-    components_path: Optional[Path] = None,
-    store: bool = True,
-):
-    """Update the settings from a config file."""
-
-    # Check for database_url in the environment variables
-    initialize_settings_service()
-    settings_service = get_settings_service()
-    if config:
-        logger.debug(f"Loading settings from {config}")
-        settings_service.settings.update_from_yaml(config, dev=dev)
-    if remove_api_keys:
-        logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
-        settings_service.settings.update_settings(REMOVE_API_KEYS=remove_api_keys)
-    if cache:
-        logger.debug(f"Setting cache to {cache}")
-        settings_service.settings.update_settings(CACHE=cache)
-    if components_path:
-        logger.debug(f"Adding component path {components_path}")
-        settings_service.settings.update_settings(COMPONENTS_PATH=components_path)
-    if not store:
-        logger.debug("Setting store to False")
-        settings_service.settings.update_settings(STORE=False)
-
-
 @app.command()
 def run(
-    host: str = typer.Option(
-        "127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"
-    ),
-    workers: int = typer.Option(
-        1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"
-    ),
+    host: str = typer.Option("127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"),
+    workers: int = typer.Option(1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"),
     timeout: int = typer.Option(300, help="Worker timeout in seconds."),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
     components_path: Optional[Path] = typer.Option(
@@ -112,19 +80,11 @@ def run(
         help="Path to the directory containing custom components.",
         envvar="LANGFLOW_COMPONENTS_PATH",
     ),
-    config: str = typer.Option(
-        Path(__file__).parent / "config.yaml", help="Path to the configuration file."
-    ),
+    config: str = typer.Option(Path(__file__).parent / "config.yaml", help="Path to the configuration file."),
     # .env file param
-    env_file: Path = typer.Option(
-        None, help="Path to the .env file containing environment variables."
-    ),
-    log_level: str = typer.Option(
-        "critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
-    ),
-    log_file: Path = typer.Option(
-        "logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"
-    ),
+    env_file: Path = typer.Option(None, help="Path to the .env file containing environment variables."),
+    log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    log_file: Path = typer.Option("logs/langflow.log", help="Path to the log file.", envvar="LANGFLOW_LOG_FILE"),
     cache: Optional[str] = typer.Option(
         envvar="LANGFLOW_LANGCHAIN_CACHE",
         help="Type of cache to use. (InMemoryCache, SQLiteCache)",
@@ -192,17 +152,21 @@ def run(
     # Define an env variable to know if we are just testing the server
     if "pytest" in sys.modules:
         return
-
-    if platform.system() in ["Windows"]:
-        # Run using uvicorn on MacOS and Windows
-        # Windows doesn't support gunicorn
-        # MacOS requires an env variable to be set to use gunicorn
-        run_on_windows(host, port, log_level, options, app)
-    else:
-        # Run using gunicorn on Linux
-        run_on_mac_or_linux(host, port, log_level, options, app, open_browser)
-    if open_browser:
-        click.launch(f"http://{host}:{port}")
+    try:
+        if platform.system() in ["Windows"]:
+            # Run using uvicorn on MacOS and Windows
+            # Windows doesn't support gunicorn
+            # MacOS requires an env variable to be set to use gunicorn
+            process = run_on_windows(host, port, log_level, options, app)
+        else:
+            # Run using gunicorn on Linux
+            process = run_on_mac_or_linux(host, port, log_level, options, app)
+        if open_browser:
+            click.launch(f"http://{host}:{port}")
+        if process:
+            process.join()
+    except KeyboardInterrupt:
+        pass
 
 
 def wait_for_server_ready(host, port):
@@ -218,13 +182,12 @@ def wait_for_server_ready(host, port):
 
 
 def run_on_mac_or_linux(host, port, log_level, options, app):
-    webapp_process = Process(
-        target=run_langflow, args=(host, port, log_level, options, app)
-    )
+    webapp_process = Process(target=run_langflow, args=(host, port, log_level, options, app))
     webapp_process.start()
     wait_for_server_ready(host, port)
 
     print_banner(host, port)
+    return webapp_process
 
 
 def run_on_windows(host, port, log_level, options, app):
@@ -233,6 +196,7 @@ def run_on_windows(host, port, log_level, options, app):
     """
     print_banner(host, port)
     run_langflow(host, port, log_level, options, app)
+    return None
 
 
 def is_port_in_use(port, host="localhost"):
@@ -316,9 +280,7 @@ def build_new_version_notice(current_version: str, package_name: str):
                 f"A new pre-release version of {package_name} is available: {latest_version}",
             )
     else:
-        latest_version = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()[
-            "info"
-        ]["version"]
+        latest_version = httpx.get(f"https://pypi.org/pypi/{package_name}/json").json()["info"]["version"]
         if not version_is_prerelease(latest_version):
             return (
                 False,
@@ -331,7 +293,7 @@ def is_prerelease(version: str) -> bool:
     return "a" in version or "b" in version or "rc" in version
 
 
-def fetch_latest_version(package_name: str, include_prerelease: bool) -> str:
+def fetch_latest_version(package_name: str, include_prerelease: bool) -> Optional[str]:
     response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
     versions = response.json()["releases"].keys()
     valid_versions = [v for v in versions if include_prerelease or not is_prerelease(v)]
@@ -342,9 +304,7 @@ def fetch_latest_version(package_name: str, include_prerelease: bool) -> str:
 
 def build_version_notice(current_version: str, package_name: str) -> str:
     latest_version = fetch_latest_version(package_name, is_prerelease(current_version))
-    if latest_version and pkg_version.parse(current_version) < pkg_version.parse(
-        latest_version
-    ):
+    if latest_version and pkg_version.parse(current_version) < pkg_version.parse(latest_version):
         release_type = "pre-release" if is_prerelease(latest_version) else "version"
         return f"A new {release_type} of {package_name} is available: {latest_version}"
     return ""
@@ -375,7 +335,7 @@ def print_banner(host: str, port: int):
     package_name = ""
 
     try:
-        from langflow.version import __version__ as langflow_version
+        from langflow.version import __version__ as langflow_version  # type: ignore
 
         is_pre_release |= is_prerelease(langflow_version)  # Update pre-release status
         notice = build_version_notice(langflow_version, "langflow")
@@ -393,9 +353,7 @@ def print_banner(host: str, port: int):
             from importlib import metadata
 
             langflow_base_version = metadata.version("langflow-base")
-            is_pre_release |= is_prerelease(
-                langflow_base_version
-            )  # Update pre-release status
+            is_pre_release |= is_prerelease(langflow_base_version)  # Update pre-release status
             notice = build_version_notice(langflow_base_version, "langflow-base")
             notice = stylize_text(notice, "langflow-base", is_pre_release)
             if notice:
@@ -414,12 +372,10 @@ def print_banner(host: str, port: int):
         notices.append(f"Run '{pip_command}' to update.")
 
     styled_notices = [f"[bold]{notice}[/bold]" for notice in notices if notice]
-    styled_package_name = stylize_text(
-        package_name, package_name, any("pre-release" in notice for notice in notices)
-    )
+    styled_package_name = stylize_text(package_name, package_name, any("pre-release" in notice for notice in notices))
 
     title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
-    info_text = "Collaborate, and contribute at our [bold][link=https://github.com/logspace-ai/langflow]GitHub Repo[/link][/bold] :rocket:"
+    info_text = "Collaborate, and contribute at our [bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :rocket:"
     access_link = f"Access [link=http://{host}:{port}]http://{host}:{port}[/link]"
 
     panel_content = "\n\n".join([title, *styled_notices, info_text, access_link])
@@ -459,12 +415,8 @@ def run_langflow(host, port, log_level, options, app):
 @app.command()
 def superuser(
     username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
-    password: str = typer.Option(
-        ..., prompt=True, hide_input=True, help="Password for the superuser."
-    ),
-    log_level: str = typer.Option(
-        "error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"
-    ),
+    password: str = typer.Option(..., prompt=True, hide_input=True, help="Password for the superuser."),
+    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
 ):
     """
     Create a superuser.
@@ -491,11 +443,23 @@ def superuser(
 
 
 @app.command()
-def migration(test: bool = typer.Option(True, help="Run migrations in test mode.")):
+def migration(
+    test: bool = typer.Option(True, help="Run migrations in test mode."),
+    fix: bool = typer.Option(
+        False,
+        help="Fix migrations. This is a destructive operation, and should only be used if you know what you are doing.",
+    ),
+):
     """
     Run or test migrations.
     """
-    initialize_services()
+    if fix:
+        if not typer.confirm(
+            "This will delete all data necessary to fix migrations. Are you sure you want to continue?"
+        ):
+            raise typer.Abort()
+
+    initialize_services(fix_migration=fix)
     db_service = get_db_service()
     if not test:
         db_service.run_migrations()

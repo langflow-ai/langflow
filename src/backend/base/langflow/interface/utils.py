@@ -3,14 +3,16 @@ import json
 import os
 import re
 from io import BytesIO
+from typing import Dict
 
 import yaml
+from docstring_parser import parse
 from langchain.base_language import BaseLanguageModel
-from loguru import logger
-from PIL.Image import Image
-
 from langflow.services.chat.config import ChatConfig
 from langflow.services.deps import get_settings_service
+from langflow.utils.util import format_dict, get_base_classes, get_default_factory
+from loguru import logger
+from PIL.Image import Image
 
 
 def load_file_into_dict(file_path: str) -> dict:
@@ -100,7 +102,6 @@ def setup_llm_caching():
 
 def set_langchain_cache(settings):
     from langchain.globals import set_llm_cache
-
     from langflow.interface.importing.utils import import_class
 
     if cache_type := os.getenv("LANGFLOW_LANGCHAIN_CACHE"):
@@ -114,3 +115,51 @@ def set_langchain_cache(settings):
             logger.warning(f"Could not import {cache_type}. ")
     else:
         logger.info("No LLM cache set.")
+
+
+def build_template_from_class(name: str, type_to_cls_dict: Dict, add_function: bool = False):
+    classes = [item.__name__ for item in type_to_cls_dict.values()]
+
+    # Raise error if name is not in chains
+    if name not in classes:
+        raise ValueError(f"{name} not found.")
+
+    for _type, v in type_to_cls_dict.items():
+        if v.__name__ == name:
+            _class = v
+
+            # Get the docstring
+            docs = parse(_class.__doc__)
+
+            variables = {"_type": _type}
+
+            if "__fields__" in _class.__dict__:
+                for class_field_items, value in _class.__fields__.items():
+                    if class_field_items in ["callback_manager"]:
+                        continue
+                    variables[class_field_items] = {}
+                    for name_, value_ in value.__repr_args__():
+                        if name_ == "default_factory":
+                            try:
+                                variables[class_field_items]["default"] = get_default_factory(
+                                    module=_class.__base__.__module__,
+                                    function=value_,
+                                )
+                            except Exception:
+                                variables[class_field_items]["default"] = None
+                        elif name_ not in ["name"]:
+                            variables[class_field_items][name_] = value_
+
+                    variables[class_field_items]["placeholder"] = (
+                        docs.params[class_field_items] if class_field_items in docs.params else ""
+                    )
+            base_classes = get_base_classes(_class)
+            # Adding function to base classes to allow
+            # the output to be a function
+            if add_function:
+                base_classes.append("Callable")
+            return {
+                "template": format_dict(variables, name),
+                "description": docs.short_description or "",
+                "base_classes": base_classes,
+            }

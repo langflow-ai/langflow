@@ -8,7 +8,10 @@ export const useDarkStore = create<DarkStoreType>((set, get) => ({
   dark: JSON.parse(window.localStorage.getItem("isDark")!) ?? false,
   stars: startedStars,
   version: "",
-  setDark: (dark) => set(() => ({ dark: dark })),
+  setDark: (dark) => {
+    set(() => ({ dark: dark }));
+    window.localStorage.setItem("isDark", dark.toString());
+  },
   refreshVersion: () => {
     getVersion().then((data) => {
       set(() => ({ version: data.version }));

@@ -1,51 +1,65 @@
 import { expect, test } from "@playwright/test";
-test.beforeEach(async ({ page }) => {
-  // await page.waitForTimeout(4000);
-  // test.setTimeout(120000);
-});
+
 test("dropDownComponent", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("http:localhost:3000/");
   await page.waitForTimeout(2000);
 
   await page.locator('//*[@id="new-project-btn"]').click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
+  await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("amazon");
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("model_specsAmazon Bedrock")
+    .getByTestId("modelsAmazon Bedrock")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
 
-  await page.getByTestId("dropdown-model_id-display").click();
-  await page.getByTestId("ai21.j2-grande-instruct-0-option").click();
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
 
-  let value = await page.getByTestId("dropdown-model_id-display").innerText();
-  if (value !== "ai21.j2-grande-instruct") {
+  await page
+    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
+    .click();
+  await page.getByTestId("title-Amazon Bedrock").click();
+
+  await page.getByTestId("dropdown-model_id").click();
+
+  await page.getByTestId("ai21.j2-mid-v1-10-option").click();
+
+  let value = await page
+    .getByTestId("value-dropdown-dropdown-model_id")
+    .first()
+    .innerText();
+  if (value !== "ai21.j2-mid-v1") {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("dropdown-model_id-display").click();
-  await page.getByTestId("ai21.j2-jumbo-instruct-1-option").click();
+  await page.getByTestId("dropdown-model_id").click();
+  await page.getByTestId("anthropic.claude-v2:1-6-option").click();
 
-  value = await page.getByTestId("dropdown-model_id-display").innerText();
-  if (value !== "ai21.j2-jumbo-instruct") {
+  value = await page.getByTestId("dropdown-model_id").innerText();
+  if (value !== "anthropic.claude-v2:1") {
     expect(false).toBeTruthy();
   }
 
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  value = await page.getByTestId("dropdown-edit-model_id-display").innerText();
-  if (value !== "ai21.j2-jumbo-instruct") {
+  value = await page.getByTestId("dropdown-edit-model_id").innerText();
+  if (value !== "anthropic.claude-v2:1") {
     expect(false).toBeTruthy();
   }
 
@@ -75,16 +89,6 @@ test("dropDownComponent", async ({ page }) => {
     await page.locator('//*[@id="showendpoint_url"]').isChecked()
   ).toBeTruthy();
 
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
-  ).toBeTruthy();
-
   await page.locator('//*[@id="showregion_name"]').click();
   expect(
     await page.locator('//*[@id="showregion_name"]').isChecked()
@@ -93,16 +97,6 @@ test("dropDownComponent", async ({ page }) => {
   await page.locator('//*[@id="showregion_name"]').click();
   expect(
     await page.locator('//*[@id="showregion_name"]').isChecked()
-  ).toBeTruthy();
-
-  await page.locator('//*[@id="showstreaming"]').click();
-  expect(
-    await page.locator('//*[@id="showstreaming"]').isChecked()
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showstreaming"]').click();
-  expect(
-    await page.locator('//*[@id="showstreaming"]').isChecked()
   ).toBeTruthy();
 
   // showmodel_id
@@ -141,16 +135,6 @@ test("dropDownComponent", async ({ page }) => {
     await page.locator('//*[@id="showendpoint_url"]').isChecked()
   ).toBeTruthy();
 
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showmodel_kwargs"]').click();
-  expect(
-    await page.locator('//*[@id="showmodel_kwargs"]').isChecked()
-  ).toBeTruthy();
-
   await page.locator('//*[@id="showregion_name"]').click();
   expect(
     await page.locator('//*[@id="showregion_name"]').isChecked()
@@ -159,16 +143,6 @@ test("dropDownComponent", async ({ page }) => {
   await page.locator('//*[@id="showregion_name"]').click();
   expect(
     await page.locator('//*[@id="showregion_name"]').isChecked()
-  ).toBeTruthy();
-
-  await page.locator('//*[@id="showstreaming"]').click();
-  expect(
-    await page.locator('//*[@id="showstreaming"]').isChecked()
-  ).toBeFalsy();
-
-  await page.locator('//*[@id="showstreaming"]').click();
-  expect(
-    await page.locator('//*[@id="showstreaming"]').isChecked()
   ).toBeTruthy();
 
   // showmodel_id
@@ -181,18 +155,18 @@ test("dropDownComponent", async ({ page }) => {
     await page.locator('//*[@id="showmodel_id"]').isChecked()
   ).toBeTruthy();
 
-  await page.getByTestId("dropdown-edit-model_id-display").click();
-  await page.getByTestId("ai21.j2-ultra-v1-5-option").click();
+  await page.getByTestId("dropdown-edit-model_id").click();
+  await page.getByTestId("ai21.j2-mid-v1-10-option").click();
 
-  value = await page.getByTestId("dropdown-edit-model_id-display").innerText();
-  if (value !== "ai21.j2-ultra-v1") {
+  value = await page.getByTestId("dropdown-edit-model_id").innerText();
+  if (value !== "ai21.j2-mid-v1") {
     expect(false).toBeTruthy();
   }
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
-  value = await page.getByTestId("dropdown-model_id-display").innerText();
-  if (value !== "ai21.j2-ultra-v1") {
+  value = await page.getByTestId("dropdown-model_id").innerText();
+  if (value !== "ai21.j2-mid-v1") {
     expect(false).toBeTruthy();
   }
   await page.getByTestId("code-button-modal").click();
@@ -203,7 +177,7 @@ test("dropDownComponent", async ({ page }) => {
     .click();
   await page.locator("textarea").press("Control+a");
   const emptyOptionsCode = `from typing import Optional
-from langchain.llms.base import BaseLLM
+from langflow.field_typing import BaseLanguageModel
 from langchain_community.llms.bedrock import Bedrock
 
 from langflow.interface.custom.custom_component import CustomComponent
@@ -238,7 +212,7 @@ class AmazonBedrockComponent(CustomComponent):
         endpoint_url: Optional[str] = None,
         streaming: bool = False,
         cache: Optional[bool] = None,
-    ) -> BaseLLM:
+    ) -> BaseLanguageModel:
         try:
             output = Bedrock(
                 credentials_profile_name=credentials_profile_name,

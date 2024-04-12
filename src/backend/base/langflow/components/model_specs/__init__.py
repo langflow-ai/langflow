@@ -1,10 +1,7 @@
 from .AmazonBedrockSpecs import AmazonBedrockComponent
-from .AnthropicLLMSpecs import AnthropicLLM
-from .AnthropicSpecs import AnthropicComponent
-from .AzureChatOpenAISpecs import AzureChatOpenAISpecsComponent
 from .BaiduQianfanChatEndpointsSpecs import QianfanChatEndpointComponent
 from .BaiduQianfanLLMEndpointsSpecs import QianfanLLMEndpointComponent
-from .ChatAnthropicSpecs import ChatAnthropicComponent
+from .ChatAnthropicSpecs import AnthropicLLM
 from .ChatLiteLLMSpecs import ChatLiteLLMComponent
 from .ChatOllamaEndpointSpecs import ChatOllamaComponent
 from .ChatOpenAISpecs import ChatOpenAIComponent
@@ -17,12 +14,11 @@ from .VertexAISpecs import VertexAIComponent
 
 __all__ = [
     "AmazonBedrockComponent",
-    "AnthropicLLM",
-    "AnthropicComponent",
+    "ChatAntropicSpecsComponent",
     "AzureChatOpenAISpecsComponent",
     "QianfanChatEndpointComponent",
     "QianfanLLMEndpointComponent",
-    "ChatAnthropicComponent",
+    "AnthropicLLM",
     "ChatLiteLLMComponent",
     "ChatOllamaComponent",
     "ChatOpenAIComponent",

@@ -28,6 +28,7 @@ export default function SidebarNav({
     >
       {items.map((item) => (
         <Link
+          data-testid={`sidebar-nav-${item.title}`}
           key={item.href}
           to={item.href}
           className={cn(

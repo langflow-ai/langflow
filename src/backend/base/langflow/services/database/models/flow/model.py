@@ -1,14 +1,15 @@
 # Path: src/backend/langflow/services/database/models/flow/model.py
 
+import warnings
 from datetime import datetime
 from typing import TYPE_CHECKING, Dict, Optional
 from uuid import UUID, uuid4
 
+import emoji
 from emoji import purely_emoji  # type: ignore
 from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from langflow.interface.custom.attributes import validate_icon
 from langflow.schema.schema import Record
 
 if TYPE_CHECKING:
@@ -45,12 +46,25 @@ class FlowBase(SQLModel):
         # emoji pattern in Python
         if v is None:
             return v
+        # we are going to use the emoji library to validate the emoji
+        # emojis can be defined using the :emoji_name: syntax
 
-        emoji = validate_icon(v)
+        if not v.startswith(":") and not v.endswith(":"):
+            return v
+        elif not v.startswith(":") or not v.endswith(":"):
+            # emoji should have both starting and ending colons
+            # so if one of them is missing, we will raise
+            raise ValueError(f"Invalid emoji. {v} is not a valid emoji.")
 
-        if purely_emoji(emoji):
+        emoji_value = emoji.emojize(v, variant="emoji_type")
+        if v == emoji_value:
+            warnings.warn(f"Invalid emoji. {v} is not a valid emoji.")
+            icon = v
+        icon = emoji_value
+
+        if purely_emoji(icon):
             # this is indeed an emoji
-            return emoji
+            return icon
         # otherwise it should be a valid lucide icon
         if v is not None and not isinstance(v, str):
             raise ValueError("Icon must be a string")

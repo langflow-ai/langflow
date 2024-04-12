@@ -1,11 +1,10 @@
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, List, Optional, Tuple, Type, Union, cast
-
-from pydantic.v1 import BaseModel, Field, create_model
-from sqlmodel import select
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Tuple, Type, Union, cast
 
 from langflow.schema.schema import INPUT_FIELD_NAME, Record
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
+from pydantic.v1 import BaseModel, Field, create_model
+from sqlmodel import select
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
@@ -86,7 +85,7 @@ async def run_flow(
     return await graph.arun(inputs_list, inputs_components=inputs_components, types=types)
 
 
-def generate_function_for_flow(inputs: List["Vertex"], flow_id: str) -> Coroutine:
+def generate_function_for_flow(inputs: List["Vertex"], flow_id: str) -> Callable[..., Awaitable[Any]]:
     """
     Generate a dynamic flow function based on the given inputs and flow ID.
 
@@ -145,7 +144,9 @@ async def flow_function({func_args}):
     return local_scope["flow_function"]
 
 
-def build_function_and_schema(flow_record: Record, graph: "Graph") -> Tuple[Callable, Type[BaseModel]]:
+def build_function_and_schema(
+    flow_record: Record, graph: "Graph"
+) -> Tuple[Callable[..., Awaitable[Any]], Type[BaseModel]]:
     """
     Builds a dynamic function and schema for a given flow.
 

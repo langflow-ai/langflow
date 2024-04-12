@@ -11,7 +11,7 @@ from langflow.template.field.base import TemplateField
 from langflow.template.template.base import Template
 from langflow.utils import util
 from langflow.utils.logger import logger
-from langflow.utils.util import build_template_from_class
+from langflow.interface.utils import build_template_from_class
 
 TOOL_INPUTS = {
     "str": TemplateField(
