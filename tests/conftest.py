@@ -10,6 +10,7 @@ import orjson
 import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
+from sqlmodel import Session, SQLModel, create_engine, select
 from langflow.graph.graph.base import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
@@ -27,24 +28,38 @@ if TYPE_CHECKING:
 
 
 def pytest_configure():
-    pytest.BASIC_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "basic_example.json"
-    pytest.COMPLEX_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "complex_example.json"
-    pytest.COMPLEX_DEPS_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "complex_deps_example.json"
-    pytest.OPENAPI_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "Openapi.json"
-    pytest.GROUPED_CHAT_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "grouped_chat.json"
-    pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "one_group_chat.json"
-    pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH = Path(__file__).parent.absolute() / "data" / "vector_store_grouped.json"
+    data_path = Path(__file__).parent.absolute() / "data"
 
-    pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY = (
-        Path(__file__).parent.absolute() / "data" / "BasicChatWithPromptAndHistory.json"
-    )
-    pytest.CHAT_INPUT = Path(__file__).parent.absolute() / "data" / "ChatInputTest.json"
-    pytest.TWO_OUTPUTS = Path(__file__).parent.absolute() / "data" / "TwoOutputsTest.json"
-    pytest.VECTOR_STORE_PATH = Path(__file__).parent.absolute() / "data" / "Vector_store.json"
+    pytest.BASIC_EXAMPLE_PATH = data_path / "basic_example.json"
+    pytest.COMPLEX_EXAMPLE_PATH = data_path / "complex_example.json"
+    pytest.OPENAPI_EXAMPLE_PATH = data_path / "Openapi.json"
+    pytest.GROUPED_CHAT_EXAMPLE_PATH = data_path / "grouped_chat.json"
+    pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH = data_path / "one_group_chat.json"
+    pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH = data_path / "vector_store_grouped.json"
+
+    pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY = data_path / "BasicChatwithPromptandHistory.json"
+    pytest.CHAT_INPUT = data_path / "ChatInputTest.json"
+    pytest.TWO_OUTPUTS = data_path / "TwoOutputsTest.json"
+    pytest.VECTOR_STORE_PATH = data_path / "Vector_store.json"
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
     retun "Hello World"
     """
+
+    # validate that all the paths are correct and the files exist
+    for path in [
+        pytest.BASIC_EXAMPLE_PATH,
+        pytest.COMPLEX_EXAMPLE_PATH,
+        pytest.OPENAPI_EXAMPLE_PATH,
+        pytest.GROUPED_CHAT_EXAMPLE_PATH,
+        pytest.ONE_GROUPED_CHAT_EXAMPLE_PATH,
+        pytest.VECTOR_STORE_GROUPED_EXAMPLE_PATH,
+        pytest.BASIC_CHAT_WITH_PROMPT_AND_HISTORY,
+        pytest.CHAT_INPUT,
+        pytest.TWO_OUTPUTS,
+        pytest.VECTOR_STORE_PATH,
+    ]:
+        assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
 
 
 @pytest.fixture(autouse=True)
@@ -190,16 +205,6 @@ def json_flow_with_prompt_and_history():
 def json_vector_store():
     with open(pytest.VECTOR_STORE_PATH, "r") as f:
         return f.read()
-
-
-@pytest.fixture
-def complex_graph_with_groups():
-    with open(pytest.COMPLEX_DEPS_EXAMPLE_PATH, "r") as f:
-        flow_graph = json.load(f)
-    data_graph = flow_graph["data"]
-    nodes = data_graph["nodes"]
-    edges = data_graph["edges"]
-    return Graph(nodes, edges)
 
 
 @pytest.fixture(name="client", autouse=True)

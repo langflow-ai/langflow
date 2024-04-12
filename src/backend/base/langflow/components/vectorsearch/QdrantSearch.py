@@ -86,12 +86,13 @@ class QdrantSearchComponent(QdrantComponent, LCVectorStoreComponent):
             port=port,
             prefer_grpc=prefer_grpc,
             prefix=prefix,
-            search_kwargs=search_kwargs,
             timeout=timeout,
             url=url,
         )
         if not vector_store:
             raise ValueError("Failed to load the Qdrant index.")
+        if search_kwargs is None:
+            search_kwargs = {}
 
         return self.search_with_vector_store(
             vector_store=vector_store,

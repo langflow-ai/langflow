@@ -26,11 +26,13 @@ class Variable(VariableBase, table=True):
     )
     # name is unique per user
     created_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False),
+        default=None,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=True),
         description="Creation time of the variable",
     )
     updated_at: Optional[datetime] = Field(
-        sa_column=Column(DateTime(timezone=True)),
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
         description="Last update time of the variable",
     )
     # foreign key to user table
@@ -39,7 +41,9 @@ class Variable(VariableBase, table=True):
 
 
 class VariableCreate(VariableBase):
-    type: Optional[str] = Field(None, description="Type of the variable")
+    created_at: Optional[datetime] = Field(default_factory=utc_now, description="Creation time of the variable")
+
+    updated_at: Optional[datetime] = Field(default_factory=utc_now, description="Creation time of the variable")
 
 
 class VariableRead(SQLModel):
