@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from rich import print as rprint
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from langflow.api import router
 from langflow.initial_setup.setup import create_or_update_starter_projects
@@ -18,6 +19,14 @@ from langflow.interface.utils import setup_llm_caching
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
 from langflow.utils.logger import configure
+
+
+class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        if "files/" not in request.url.path and request.url.path.endswith(".js") and response.status_code == 200:
+            response.headers["Content-Type"] = "text/javascript"
+        return response
 
 
 def get_lifespan(fix_migration=False, socketio_server=None):
@@ -62,6 +71,7 @@ def create_app():
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(JavaScriptMIMETypeMiddleware)
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
