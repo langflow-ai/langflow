@@ -1,4 +1,4 @@
-import { test,expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 
 test("chat_io_teste", async ({ page }) => {

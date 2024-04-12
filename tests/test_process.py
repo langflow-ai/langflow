@@ -46,8 +46,8 @@ def test_single_tweak():
                     "data": {
                         "node": {
                             "template": {
-                                "param1": {"value": 1},
-                                "param2": {"value": 2},
+                                "param1": {"value": 1, "type": "int"},
+                                "param2": {"value": 2, "type": "int"},
                             }
                         }
                     },
@@ -57,8 +57,8 @@ def test_single_tweak():
                     "data": {
                         "node": {
                             "template": {
-                                "param1": {"value": 3},
-                                "param2": {"value": 4},
+                                "param1": {"value": 3, "type": "int"},
+                                "param2": {"value": 4, "type": "int"},
                             }
                         }
                     },
@@ -75,8 +75,8 @@ def test_single_tweak():
                     "data": {
                         "node": {
                             "template": {
-                                "param1": {"value": 5},
-                                "param2": {"value": 2},
+                                "param1": {"value": 5, "type": "int"},
+                                "param2": {"value": 2, "type": "int"},
                             }
                         }
                     },
@@ -86,8 +86,8 @@ def test_single_tweak():
                     "data": {
                         "node": {
                             "template": {
-                                "param1": {"value": 3},
-                                "param2": {"value": 4},
+                                "param1": {"value": 3, "type": "int"},
+                                "param2": {"value": 4, "type": "int"},
                             }
                         }
                     },
@@ -108,8 +108,8 @@ def test_multiple_tweaks():
                     "data": {
                         "node": {
                             "template": {
-                                "param1": {"value": 1},
-                                "param2": {"value": 2},
+                                "param1": {"value": 1, "type": "int"},
+                                "param2": {"value": 2, "type": "int"},
                             }
                         }
                     },
@@ -119,8 +119,8 @@ def test_multiple_tweaks():
                     "data": {
                         "node": {
                             "template": {
-                                "param1": {"value": 3},
-                                "param2": {"value": 4},
+                                "param1": {"value": 3, "type": "int"},
+                                "param2": {"value": 4, "type": "int"},
                             }
                         }
                     },
@@ -140,8 +140,8 @@ def test_multiple_tweaks():
                     "data": {
                         "node": {
                             "template": {
-                                "param1": {"value": 5},
-                                "param2": {"value": 6},
+                                "param1": {"value": 5, "type": "int"},
+                                "param2": {"value": 6, "type": "int"},
                             }
                         }
                     },
@@ -151,8 +151,8 @@ def test_multiple_tweaks():
                     "data": {
                         "node": {
                             "template": {
-                                "param1": {"value": 7},
-                                "param2": {"value": 4},
+                                "param1": {"value": 7, "type": "int"},
+                                "param2": {"value": 4, "type": "int"},
                             }
                         }
                     },
@@ -175,8 +175,8 @@ def test_tweak_no_node_id():
                     "data": {
                         "node": {
                             "template": {
-                                "param1": {"value": 1},
-                                "param2": {"value": 2},
+                                "param1": {"value": 1, "type": "int"},
+                                "param2": {"value": 2, "type": "int"},
                             }
                         }
                     },
@@ -186,8 +186,8 @@ def test_tweak_no_node_id():
                     "data": {
                         "node": {
                             "template": {
-                                "param1": {"value": 3},
-                                "param2": {"value": 4},
+                                "param1": {"value": 3, "type": "int"},
+                                "param2": {"value": 4, "type": "int"},
                             }
                         }
                     },
@@ -204,8 +204,8 @@ def test_tweak_no_node_id():
                     "data": {
                         "node": {
                             "template": {
-                                "param1": {"value": 5},
-                                "param2": {"value": 2},
+                                "param1": {"value": 5, "type": "int"},
+                                "param2": {"value": 2, "type": "int"},
                             }
                         }
                     },
@@ -215,8 +215,8 @@ def test_tweak_no_node_id():
                     "data": {
                         "node": {
                             "template": {
-                                "param1": {"value": 5},
-                                "param2": {"value": 4},
+                                "param1": {"value": 5, "type": "int"},
+                                "param2": {"value": 4, "type": "int"},
                             }
                         }
                     },
@@ -237,8 +237,8 @@ def test_tweak_not_in_template():
                     "data": {
                         "node": {
                             "template": {
-                                "param1": {"value": 1},
-                                "param2": {"value": 2},
+                                "param1": {"value": 1, "type": "int"},
+                                "param2": {"value": 2, "type": "int"},
                             }
                         }
                     },
@@ -248,8 +248,8 @@ def test_tweak_not_in_template():
                     "data": {
                         "node": {
                             "template": {
-                                "param1": {"value": 3},
-                                "param2": {"value": 4},
+                                "param1": {"value": 3, "type": "int"},
+                                "param2": {"value": 4, "type": "int"},
                             }
                         }
                     },
