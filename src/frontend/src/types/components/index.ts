@@ -187,6 +187,8 @@ export type FloatComponentType = {
   id?: string;
 };
 
+export type FilePreviewType={loading:boolean,file:File,error:boolean,id:string}
+
 export type TooltipComponentType = {
   children: ReactElement;
   title: string | ReactElement;
