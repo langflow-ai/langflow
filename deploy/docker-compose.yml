@@ -69,10 +69,7 @@ services:
         - traefik.http.routers.${STACK_NAME?Variable not set}-proxy-http.middlewares=${STACK_NAME?Variable not set}-www-redirect,${STACK_NAME?Variable not set}-https-redirect
 
   backend: &backend
-    image: "ogabrielluiz/langflow:latest"
-    build:
-      context: ../
-      dockerfile: base.Dockerfile
+    image: "logspace/langflow:latest"
     depends_on:
       - db
       - broker
@@ -143,9 +140,6 @@ services:
     <<: *backend
     env_file:
       - .env
-    build:
-      context: ../
-      dockerfile: base.Dockerfile
     command: celery -A langflow.worker.celery_app worker --loglevel=INFO --concurrency=1 -n lf-worker@%h -P eventlet
     healthcheck:
       test: "exit 0"
@@ -158,9 +152,6 @@ services:
       - .env
     networks:
       - default
-    build:
-      context: ../
-      dockerfile: base.Dockerfile
     environment:
       - FLOWER_PORT=5555
 
