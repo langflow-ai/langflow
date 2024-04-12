@@ -142,15 +142,15 @@ export default function NodeToolbarComponent({
     downloadNode(flowComponent!);
   }
 
-  useHotkeys("ctrl+q", handleMinimizeWShortcut);
-  useHotkeys("ctrl+u", handleUpdateWShortcut);
-  useHotkeys("ctrl+g", handleGroupWShortcut);
-  useHotkeys("ctrl+shift+s", handleShareWShortcut);
-  useHotkeys("ctrl+shift+u", handleCodeWShortcut);
-  useHotkeys("ctrl+shift+a", handleAdvancedWShortcut);
-  useHotkeys("ctrl+s", handleSaveWShortcut);
-  useHotkeys("ctrl+shift+d", handleDocsWShortcut);
-  useHotkeys("ctrl+j", handleDownloadWShortcut);
+  useHotkeys("mod+q", handleMinimizeWShortcut);
+  useHotkeys("mod+u", handleUpdateWShortcut);
+  useHotkeys("mod+g", handleGroupWShortcut);
+  useHotkeys("mod+shift+s", handleShareWShortcut);
+  useHotkeys("mod+shift+u", handleCodeWShortcut);
+  useHotkeys("mod+shift+a", handleAdvancedWShortcut);
+  useHotkeys("mod+s", handleSaveWShortcut);
+  useHotkeys("mod+shift+d", handleDocsWShortcut);
+  useHotkeys("mod+j", handleDownloadWShortcut);
 
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
