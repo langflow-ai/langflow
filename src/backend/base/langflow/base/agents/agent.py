@@ -2,9 +2,10 @@ from typing import List, Optional, Union, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_core.runnables import Runnable
-
+from langflow.base.agents.utils import records_to_messages
 from langflow.custom import CustomComponent
 from langflow.field_typing import BaseMemory, Text, Tool
+from langflow.schema.schema import Record
 
 
 class LCAgentComponent(CustomComponent):
@@ -42,9 +43,8 @@ class LCAgentComponent(CustomComponent):
         self,
         agent: Union[Runnable, BaseSingleActionAgent, BaseMultiActionAgent, AgentExecutor],
         inputs: str,
-        input_variables: list[str],
         tools: List[Tool],
-        memory: Optional[BaseMemory] = None,
+        message_history: Optional[List[Record]] = None,
         handle_parsing_errors: bool = True,
         output_key: str = "output",
     ) -> Text:
@@ -55,13 +55,11 @@ class LCAgentComponent(CustomComponent):
                 agent=agent,  # type: ignore
                 tools=tools,
                 verbose=True,
-                memory=memory,
                 handle_parsing_errors=handle_parsing_errors,
             )
         input_dict = {"input": inputs}
-        for var in input_variables:
-            if var not in ["agent_scratchpad", "input"]:
-                input_dict[var] = ""
+        if message_history:
+            input_dict["chat_history"] = records_to_messages(message_history)
         result = await runnable.ainvoke(input_dict)
         self.status = result
         if output_key in result:

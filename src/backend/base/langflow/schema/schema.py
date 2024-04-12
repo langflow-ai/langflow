@@ -3,6 +3,7 @@ from typing import Literal, Optional
 
 from langchain_core.documents import Document
 from pydantic import BaseModel, model_validator
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 
 
 class Record(BaseModel):
@@ -84,6 +85,26 @@ class Record(BaseModel):
         """
         text = self.data.pop(self.text_key, self.default_value)
         return Document(page_content=text, metadata=self.data)
+
+    def to_lc_message(self) -> BaseMessage:
+        """
+        Converts the Record to a BaseMessage.
+
+        Returns:
+            BaseMessage: The converted BaseMessage.
+        """
+        # The idea of this function is to be a helper to convert a Record to a BaseMessage
+        # It will use the "sender" key to determine if the message is Human or AI
+        # If the key is not present, it will default to AI
+        # But first we check if all required keys are present in the data dictionary
+        # they are: "text", "sender"
+        if not all(key in self.data for key in ["text", "sender"]):
+            raise ValueError(f"Missing required keys ('text', 'sender') in Record: {self.data}")
+        sender = self.data.get("sender", "Machine")
+        text = self.data.get("text", "")
+        if sender == "User":
+            return HumanMessage(content=text)
+        return AIMessage(content=text)
 
     def __getattr__(self, key):
         """
