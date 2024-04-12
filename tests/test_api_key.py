@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.services.database.models.api_key import ApiKeyCreate
 
 
@@ -7,7 +6,7 @@ from langflow.services.database.models.api_key import ApiKeyCreate
 def api_key(client, logged_in_headers, active_user):
     api_key = ApiKeyCreate(name="test-api-key")
 
-    response = client.post("api/v1/api_key", data=api_key.json(), headers=logged_in_headers)
+    response = client.post("api/v1/api_key", data=api_key.model_dump_json(), headers=logged_in_headers)
     assert response.status_code == 200, response.text
     return response.json()
 

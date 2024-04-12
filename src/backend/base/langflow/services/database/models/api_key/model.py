@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
-from pydantic import validator
+from pydantic import field_validator, validator
 from sqlmodel import Field, Relationship, SQLModel, Column, func, DateTime
 
 if TYPE_CHECKING:
@@ -11,7 +11,9 @@ if TYPE_CHECKING:
 
 class ApiKeyBase(SQLModel):
     name: Optional[str] = Field(index=True, nullable=True, default=None)
-    created_at: datetime = Field(sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False))
+    created_at: datetime = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    )
     last_used_at: Optional[datetime] = Field(default=None, nullable=True)
     total_uses: int = Field(default=0)
     is_active: bool = Field(default=True)
@@ -32,6 +34,10 @@ class ApiKey(ApiKeyBase, table=True):
 class ApiKeyCreate(ApiKeyBase):
     api_key: Optional[str] = None
     user_id: Optional[UUID] = None
+
+    @field_validator("created_at", mode="before")
+    def set_created_at(cls, v):
+        return v or datetime.now(timezone.utc)
 
 
 class UnmaskedApiKeyRead(ApiKeyBase):
