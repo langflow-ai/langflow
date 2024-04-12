@@ -51,7 +51,8 @@ def get_lifespan(fix_migration=False, socketio_server=None):
             create_or_update_starter_projects()
             yield
         except Exception as exc:
-            logger.error(exc)
+            if "langflow migration --fix" not in str(exc):
+                logger.error(exc)
         # Shutdown message
         rprint("[bold red]Shutting down Langflow...[/bold red]")
         teardown_services()
