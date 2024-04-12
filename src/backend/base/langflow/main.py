@@ -30,7 +30,7 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
 
 
 def get_lifespan(fix_migration=False, socketio_server=None):
-    from langflow.version import __version__
+    from langflow.version import __version__  # type: ignore
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
