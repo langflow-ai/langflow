@@ -391,7 +391,7 @@ export default function NodeToolbarComponent({
 
           <ShadTooltip content={"Duplicate"} side="top">
             <button
-              data-testid="save-button-modal"
+              data-testid="duplicate-button-modal"
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
               )}

@@ -1,5 +1,3 @@
-from typing import Callable, Union
-
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
 from langchain_community.vectorstores import VectorStore
 
@@ -22,5 +20,5 @@ class VectorStoreInfoComponent(CustomComponent):
         vectorstore: VectorStore,
         description: str,
         name: str,
-    ) -> Union[VectorStoreInfo, Callable]:
+    ) -> VectorStoreInfo:
         return VectorStoreInfo(vectorstore=vectorstore, description=description, name=name)

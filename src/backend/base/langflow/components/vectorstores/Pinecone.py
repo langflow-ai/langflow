@@ -33,7 +33,6 @@ class PineconeComponent(CustomComponent):
                 "default": "",
                 "required": True,
             },
-            "search_kwargs": {"display_name": "Search Kwargs", "default": "{}"},
             "pool_threads": {
                 "display_name": "Pool Threads",
                 "default": 1,

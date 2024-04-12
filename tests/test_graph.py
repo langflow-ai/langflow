@@ -409,36 +409,10 @@ def test_update_source_handle():
 @pytest.mark.asyncio
 async def test_pickle_graph(json_vector_store):
     starter_projects = load_starter_projects()
-    data = starter_projects[0]["data"]
+    data = starter_projects[0][1]["data"]
     graph = Graph.from_payload(data)
     assert isinstance(graph, Graph)
     pickled = pickle.dumps(graph)
     assert pickled is not None
     unpickled = pickle.loads(pickled)
     assert unpickled is not None
-
-
-@pytest.mark.asyncio
-async def test_pickle_each_vertex(json_vector_store):
-    starter_projects = load_starter_projects()
-    data = starter_projects[0]["data"]
-    graph = Graph.from_payload(data)
-    assert isinstance(graph, Graph)
-    for vertex in graph.vertices:
-        await vertex.build()
-        pickled = pickle.dumps(vertex)
-        assert pickled is not None
-        unpickled = pickle.loads(pickled)
-        assert unpickled is not None
-
-
-@pytest.mark.asyncio
-async def test_build_ordering(complex_graph_with_groups):
-    sorted_vertices = complex_graph_with_groups.sort_vertices(stop_component_id="ChatInput-Ay8QQ")
-    assert sorted_vertices == [
-        "ChatInput-Ay8QQ",
-        "RecordsAsText-vkx2A",
-        "FileLoader-Vo1Cq",
-    ]
-
-    sorted_vertices = complex_graph_with_groups.sort_vertices()

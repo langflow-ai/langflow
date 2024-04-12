@@ -3,6 +3,7 @@ from typing import List, Optional
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.components.vectorstores.Pinecone import PineconeComponent
 from langflow.field_typing import Embeddings, Text
+from langflow.field_typing.constants import NestedDict
 from langflow.schema import Record
 
 
@@ -32,7 +33,6 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
                 "default": "",
                 "required": True,
             },
-            "search_kwargs": {"display_name": "Search Kwargs", "default": "{}"},
             "pool_threads": {
                 "display_name": "Pool Threads",
                 "default": 1,
@@ -57,6 +57,7 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
         pinecone_api_key: Optional[str] = None,
         namespace: Optional[str] = "default",
         search_type: str = "similarity",
+        search_kwargs: Optional[NestedDict] = None,
     ) -> List[Record]:  # type: ignore[override]
         vector_store = super().build(
             embedding=embedding,
@@ -70,7 +71,13 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
         )
         if not vector_store:
             raise ValueError("Failed to load the Pinecone index.")
+        if search_kwargs is None:
+            search_kwargs = {}
 
         return self.search_with_vector_store(
-            vector_store=vector_store, input_value=input_value, search_type=search_type, k=number_of_results
+            vector_store=vector_store,
+            input_value=input_value,
+            search_type=search_type,
+            k=number_of_results,
+            **search_kwargs,
         )

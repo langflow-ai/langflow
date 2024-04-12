@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from rich import print as rprint
 
 from langflow.api import router
 from langflow.initial_setup.setup import create_or_update_starter_projects
@@ -28,6 +29,8 @@ def get_lifespan(fix_migration=False, socketio_server=None):
         LangfuseInstance.update()
         create_or_update_starter_projects()
         yield
+        # Shutdown message
+        rprint("[bold red]Shutting down Langflow...[/bold red]")
         teardown_services()
 
     return lifespan

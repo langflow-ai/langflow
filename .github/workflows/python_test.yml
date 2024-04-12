@@ -29,19 +29,16 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install poetry
-        run: pipx install poetry==$POETRY_VERSION
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        id: setup-python
+      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "poetry"
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
       - name: Install Python dependencies
         run: |
           poetry env use ${{ matrix.python-version }}
           poetry install
-        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
       - name: Run unit tests
         run: |
-          make tests
+          make tests args="-n auto"

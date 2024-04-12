@@ -61,6 +61,6 @@ class MemoryComponent(CustomComponent):
             limit=n_messages,
             order=order,
         )
-        messages_str = records_to_text(template=record_template, records=messages)
+        messages_str = records_to_text(template=record_template or "", records=messages)
         self.status = messages_str
         return messages_str

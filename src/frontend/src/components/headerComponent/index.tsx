@@ -1,4 +1,4 @@
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import { RiTwitterXFill } from "react-icons/ri";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -39,15 +39,6 @@ export default function Header(): JSX.Element {
   const dark = useDarkStore((state) => state.dark);
   const setDark = useDarkStore((state) => state.setDark);
   const stars = useDarkStore((state) => state.stars);
-
-  useEffect(() => {
-    if (dark) {
-      document.getElementById("body")!.classList.add("dark");
-    } else {
-      document.getElementById("body")!.classList.remove("dark");
-    }
-    window.localStorage.setItem("isDark", dark.toString());
-  }, [dark]);
 
   async function checkForChanges(nodes: Node[]): Promise<void> {
     if (nodes.length === 0) {
@@ -103,6 +94,7 @@ export default function Header(): JSX.Element {
               onClick={() => {
                 checkForChanges(nodes);
               }}
+              data-testid="button-store"
             >
               <IconComponent name="Store" className="h-4 w-4" />
               <div className="flex-1">Store</div>
@@ -113,7 +105,7 @@ export default function Header(): JSX.Element {
       <div className="header-end-division lg:w-[30%]">
         <div className="header-end-display">
           <a
-            href="https://github.com/logspace-ai/langflow"
+            href="https://github.com/langflow-ai/langflow"
             target="_blank"
             rel="noreferrer"
             className="header-github-link gap-2"

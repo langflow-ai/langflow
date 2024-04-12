@@ -249,7 +249,10 @@ class Graph:
             vertex.update_raw_params({"session_id": session_id})
         # Process the graph
         try:
-            await self.process()
+            start_component_id = next(
+                (vertex_id for vertex_id in self._is_input_vertices if "chat" in vertex_id.lower()), None
+            )
+            await self.process(start_component_id=start_component_id)
             self.increment_run_count()
         except Exception as exc:
             logger.exception(exc)
@@ -293,17 +296,26 @@ class Graph:
         # run the async function in a sync way
         # this could be used in a FastAPI endpoint
         # so we should take care of the event loop
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(
-            self.arun(
-                inputs=inputs,
-                inputs_components=input_components,
-                types=types,
-                outputs=outputs,
-                session_id=session_id,
-                stream=stream,
-            )
+        coro = self.arun(
+            inputs=inputs,
+            inputs_components=input_components,
+            types=types,
+            outputs=outputs,
+            session_id=session_id,
+            stream=stream,
         )
+
+        try:
+            # Attempt to get the running event loop; if none, an exception is raised
+            loop = asyncio.get_running_loop()
+            if loop.is_closed():
+                raise RuntimeError("The running event loop is closed.")
+        except RuntimeError:
+            # If there's no running event loop or it's closed, use asyncio.run
+            return asyncio.run(coro)
+
+        # If there's an existing, open event loop, use it to run the async function
+        return loop.run_until_complete(coro)
 
     async def arun(
         self,
@@ -345,7 +357,7 @@ class Graph:
         if types is None:
             types = []
         for _ in range(len(inputs) - len(types)):
-            types.append("any")
+            types.append("chat")  # default to chat
         for run_inputs, components, input_type in zip(inputs, inputs_components, types):
             run_outputs = await self._run(
                 inputs=run_inputs,
@@ -733,8 +745,10 @@ class Graph:
                 vertices.append(vertex)
         return vertices
 
-    async def process(self) -> "Graph":
+    async def process(self, start_component_id: Optional[str] = None) -> "Graph":
         """Processes the graph with vertices in each layer run in parallel."""
+
+        self.sort_vertices(start_component_id=start_component_id)
         vertices_layers = self.sorted_vertices_layers
         vertex_task_run_count: Dict[str, int] = {}
         for layer_index, layer in enumerate(vertices_layers):
@@ -904,7 +918,7 @@ class Graph:
             return ChatVertex
         elif node_name in ["ShouldRunNext"]:
             return RoutingVertex
-        elif node_name in ["SharedState", "Notify", "GetNotified"]:
+        elif node_name in ["SharedState", "Notify", "Listen"]:
             return StateVertex
         elif node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_base_type]
@@ -1116,6 +1130,34 @@ class Graph:
 
         return vertices_layers
 
+    def sort_layer_by_dependency(self, vertices_layers: List[List[str]]) -> List[List[str]]:
+        """Sorts the vertices in each layer by dependency, ensuring no vertex depends on a subsequent vertex."""
+        sorted_layers = []
+
+        for layer in vertices_layers:
+            sorted_layer = self._sort_single_layer_by_dependency(layer)
+            sorted_layers.append(sorted_layer)
+
+        return sorted_layers
+
+    def _sort_single_layer_by_dependency(self, layer: List[str]) -> List[str]:
+        """Sorts a single layer by dependency using a stable sorting method."""
+        # Build a map of each vertex to its index in the layer for quick lookup.
+        index_map = {vertex: index for index, vertex in enumerate(layer)}
+        # Create a sorted copy of the layer based on dependency order.
+        sorted_layer = sorted(layer, key=lambda vertex: self._max_dependency_index(vertex, index_map), reverse=True)
+
+        return sorted_layer
+
+    def _max_dependency_index(self, vertex_id: str, index_map: Dict[str, int]) -> int:
+        """Finds the highest index a given vertex's dependencies occupy in the same layer."""
+        vertex = self.get_vertex(vertex_id)
+        max_index = -1
+        for successor in vertex.successors:  # Assuming vertex.successors is a list of successor vertex identifiers.
+            if successor.id in index_map:
+                max_index = max(max_index, index_map[successor.id])
+        return max_index
+
     def sort_vertices(
         self,
         stop_component_id: Optional[str] = None,
@@ -1137,6 +1179,9 @@ class Graph:
         vertices_layers = self.layered_topological_sort(vertices)
         vertices_layers = self.sort_by_avg_build_time(vertices_layers)
         # vertices_layers = self.sort_chat_inputs_first(vertices_layers)
+        # Now we should sort each layer in a way that we make sure
+        # vertex V does not depend on vertex V+1
+        vertices_layers = self.sort_layer_by_dependency(vertices_layers)
         self.increment_run_count()
         self._sorted_vertices_layers = vertices_layers
         first_layer = vertices_layers[0]

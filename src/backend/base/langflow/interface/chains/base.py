@@ -2,14 +2,14 @@ from typing import Any, ClassVar, Dict, List, Optional, Type
 
 from langchain import chains
 from langchain_experimental.sql import SQLDatabaseChain
-from loguru import logger
-
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
+from langflow.interface.utils import build_template_from_class
 from langflow.legacy_custom.customs import get_custom_nodes
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.chains import ChainFrontendNode
-from langflow.utils.util import build_template_from_class, build_template_from_method
+from langflow.utils.util import build_template_from_method
+from loguru import logger
 
 # Assuming necessary imports for Field, Template, and FrontendNode classes
 

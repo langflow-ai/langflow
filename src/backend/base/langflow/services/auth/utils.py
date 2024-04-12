@@ -11,7 +11,11 @@ from starlette.websockets import WebSocket
 
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.api_key.model import ApiKey
-from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
+from langflow.services.database.models.user.crud import (
+    get_user_by_id,
+    get_user_by_username,
+    update_user_last_login_at,
+)
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
 
@@ -207,7 +211,7 @@ def create_super_user(
     return super_user
 
 
-def create_user_longterm_token(db: Session = Depends(get_session)) -> dict:
+def create_user_longterm_token(db: Session = Depends(get_session)) -> tuple[UUID, dict]:
     settings_service = get_settings_service()
     username = settings_service.auth_settings.SUPERUSER
     password = settings_service.auth_settings.SUPERUSER_PASSWORD
@@ -227,7 +231,7 @@ def create_user_longterm_token(db: Session = Depends(get_session)) -> dict:
     # Update: last_login_at
     update_user_last_login_at(super_user.id, db)
 
-    return {
+    return super_user.id, {
         "access_token": access_token,
         "refresh_token": None,
         "token_type": "bearer",

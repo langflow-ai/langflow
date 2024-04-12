@@ -9,11 +9,12 @@ from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.interface.run import get_memory_key, update_memory_keys
+from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.session.service import SessionService
 
 if TYPE_CHECKING:
-    from langflow.api.v1.schemas import InputValueRequest, Tweaks
+    from langflow.api.v1.schemas import InputValueRequest
 
 
 def fix_memory_inputs(langchain_object):
@@ -188,7 +189,7 @@ def run_graph(
         List[RunOutputs]: A list of RunOutputs objects representing the outputs of the graph.
 
     """
-    inputs = [InputValueRequest(components=[], input_value=input_value, type=input_type)]
+    inputs = [InputValue(components=[], input_value=input_value, type=input_type)]
     if output_component:
         outputs = [output_component]
     else:
@@ -245,7 +246,7 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
             logger.warning(f"Node {node.get('id')} does not have a tweak named {tweak_name}")
             continue
         if tweak_name in template_data:
-            key = tweak_name if tweak_name == "file_path" else "value"
+            key = "file_path" if template_data[tweak_name]["type"] == "file" else "value"
             template_data[tweak_name][key] = tweak_value
 
 

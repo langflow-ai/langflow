@@ -1,9 +1,8 @@
 import { useContext, useEffect, useState } from "react";
-import "reactflow/dist/style.css";
-import "./App.css";
-
 import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
+import "reactflow/dist/style.css";
+import "./App.css";
 import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
@@ -15,7 +14,7 @@ import {
   FETCH_ERROR_MESSAGE,
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
-import { getGlobalVariables, getHealth } from "./controllers/API";
+import { autoLogin, getGlobalVariables, getHealth } from "./controllers/API";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
@@ -38,8 +37,10 @@ export default function App() {
     removeFromTempNotificationList(id);
   };
 
-  const { isAuthenticated } = useContext(AuthContext);
+  const { isAuthenticated, login, setUserData, setAutoLogin, getUser } =
+    useContext(AuthContext);
   const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
+  const setLoading = useAlertStore((state) => state.setLoading);
   const fetchApiData = useStoreStore((state) => state.fetchApiData);
   const getTypes = useTypesStore((state) => state.getTypes);
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
@@ -49,26 +50,58 @@ export default function App() {
   );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const navigate = useNavigate();
+  const dark = useDarkStore((state) => state.dark);
 
   const [isLoadingHealth, setIsLoadingHealth] = useState(false);
 
   useEffect(() => {
-    refreshStars();
-    refreshVersion();
-
-    // If the user is authenticated, fetch the types. This code is important to check if the user is auth because of the execution order of the useEffect hooks.
-    if (isAuthenticated === true) {
-      // get data from db
-      getTypes().then(() => {
-        refreshFlows();
-      });
-      getGlobalVariables().then((res) => {
-        setGlobalVariables(res);
-      });
-      checkHasStore();
-      fetchApiData();
+    if (!dark) {
+      document.getElementById("body")!.classList.remove("dark");
+    } else {
+      document.getElementById("body")!.classList.add("dark");
     }
+  }, [dark]);
+
+  useEffect(() => {
+    const isLoginPage = location.pathname.includes("login");
+
+    autoLogin()
+      .then(async (user) => {
+        if (user && user["access_token"]) {
+          user["refresh_token"] = "auto";
+          login(user["access_token"]);
+          setUserData(user);
+          setAutoLogin(true);
+          setLoading(false);
+          await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+        }
+      })
+      .catch(async () => {
+        setAutoLogin(false);
+        if (isAuthenticated && !isLoginPage) {
+          getUser();
+          await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+        } else {
+          setLoading(false);
+          useFlowsManagerStore.setState({ isLoading: false });
+        }
+      });
   }, [isAuthenticated]);
+
+  const fetchData = async () => {
+    if (isAuthenticated) {
+      try {
+        await getTypes();
+        refreshFlows();
+        const res = await getGlobalVariables();
+        setGlobalVariables(res);
+        checkHasStore();
+        fetchApiData();
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      }
+    }
+  };
 
   useEffect(() => {
     checkApplicationHealth();

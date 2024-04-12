@@ -1,6 +1,5 @@
 from typing import Coroutine, Optional
 
-from langflow.interface.run import build_sorted_vertices
 from langflow.services.base import Service
 from langflow.services.cache.base import CacheService
 from langflow.services.session.utils import compute_dict_hash, session_id_generator
@@ -25,8 +24,10 @@ class SessionService(Service):
         if data_graph is None:
             return (None, None)
         # If not cached, build the graph and cache it
-        graph, artifacts = await build_sorted_vertices(data_graph, flow_id)
+        from langflow.graph.graph.base import Graph
 
+        graph = Graph.from_payload(data_graph, flow_id=flow_id)
+        artifacts: dict = {}
         await self.cache_service.set(key, (graph, artifacts))
 
         return graph, artifacts
