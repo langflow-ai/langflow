@@ -12,6 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.engine.reflection import Inspector
+from loguru import logger
 
 # revision identifiers, used by Alembic.
 revision: str = "79e675cb6752"
@@ -36,6 +37,11 @@ def upgrade() -> None:
                     type_=sa.DateTime(timezone=True),
                     existing_nullable=False,
                 )
+        else:
+            if created_at_column is None:
+                logger.warning("Column 'created_at' not found in table 'apikey'")
+            else:
+                logger.warning(f"Column 'created_at' has type {created_at_column['type']} in table 'apikey'")
     if "variable" in table_names:
         columns = inspector.get_columns("variable")
         created_at_column = next((column for column in columns if column["name"] == "created_at"), None)
@@ -48,6 +54,11 @@ def upgrade() -> None:
                     type_=sa.DateTime(timezone=True),
                     existing_nullable=True,
                 )
+            else:
+                if created_at_column is None:
+                    logger.warning("Column 'created_at' not found in table 'variable'")
+                else:
+                    logger.warning(f"Column 'created_at' has type {created_at_column['type']} in table 'variable'")
             if updated_at_column is not None and updated_at_column["type"] == postgresql.TIMESTAMP():
                 batch_op.alter_column(
                     "updated_at",
@@ -55,6 +66,11 @@ def upgrade() -> None:
                     type_=sa.DateTime(timezone=True),
                     existing_nullable=True,
                 )
+            else:
+                if updated_at_column is None:
+                    logger.warning("Column 'updated_at' not found in table 'variable'")
+                else:
+                    logger.warning(f"Column 'updated_at' has type {updated_at_column['type']} in table 'variable'")
 
     # ### end Alembic commands ###
 
@@ -76,6 +92,11 @@ def downgrade() -> None:
                     type_=postgresql.TIMESTAMP(),
                     existing_nullable=True,
                 )
+            else:
+                if updated_at_column is None:
+                    logger.warning("Column 'updated_at' not found in table 'variable'")
+                else:
+                    logger.warning(f"Column 'updated_at' has type {updated_at_column['type']} in table 'variable'")
             if created_at_column is not None and created_at_column["type"] == sa.DateTime(timezone=True):
                 batch_op.alter_column(
                     "created_at",
@@ -83,6 +104,11 @@ def downgrade() -> None:
                     type_=postgresql.TIMESTAMP(),
                     existing_nullable=True,
                 )
+            else:
+                if created_at_column is None:
+                    logger.warning("Column 'created_at' not found in table 'variable'")
+                else:
+                    logger.warning(f"Column 'created_at' has type {created_at_column['type']} in table 'variable'")
 
     if "apikey" in table_names:
         columns = inspector.get_columns("apikey")
@@ -95,5 +121,10 @@ def downgrade() -> None:
                     type_=postgresql.TIMESTAMP(),
                     existing_nullable=False,
                 )
+        else:
+            if created_at_column is None:
+                logger.warning("Column 'created_at' not found in table 'apikey'")
+            else:
+                logger.warning(f"Column 'created_at' has type {created_at_column['type']} in table 'apikey'")
 
     # ### end Alembic commands ###
