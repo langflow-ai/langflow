@@ -6,6 +6,7 @@ Constants:
 - NODE_FORMAT_ATTRIBUTES: A list of attributes used for formatting nodes.
 - FIELD_FORMAT_ATTRIBUTES: A list of attributes used for formatting fields.
 """
+
 STREAM_INFO_TEXT = "Stream the response from the model. Streaming works only in Chat."
 
 NODE_FORMAT_ATTRIBUTES = ["beta", "icon", "display_name", "description"]
