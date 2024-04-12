@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from langflow.services.variable.service import VariableService
 
 
-def get_service(service_type: ServiceType, default=None):
+def get_service(service_type: ServiceType, default=None, partial=False):
     """
     Retrieves the service instance for the given service type.
 
@@ -38,7 +38,13 @@ def get_service(service_type: ServiceType, default=None):
         #! This is a workaround to ensure that the service manager is initialized
         #! Not optimal, but it works for now
         service_manager.register_factories()
-    return service_manager.get(service_type, default)  # type: ignore
+
+    def _get_service():
+        return service_manager.get(service_type, default)  # type: ignore
+
+    if partial:
+        return _get_service
+    return _get_service()
 
 
 def get_state_service() -> "StateService":
