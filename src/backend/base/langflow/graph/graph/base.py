@@ -167,13 +167,14 @@ class Graph:
             raise ValueError("Run ID not set")
         return self._run_id
 
-    def set_run_id(self, run_id: str):
+    def set_run_id(self, run_id: str | uuid.UUID):
         """
         Sets the ID of the current run.
 
         Args:
             run_id (str): The run ID.
         """
+        run_id = str(run_id)
         for vertex in self.vertices:
             self.state_manager.subscribe(run_id, vertex.update_graph_state)
         self._run_id = run_id
