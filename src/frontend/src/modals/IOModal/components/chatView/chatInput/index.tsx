@@ -56,6 +56,14 @@ export default function ChatInput({
                   newFiles[updatedIndex].loading = false;
                   return newFiles;
                 })
+              }).catch((err) => {
+                setFiles(prev=>{
+                  const newFiles = [...prev];
+                  const updatedIndex = newFiles.findIndex((file)=>file.id===id);
+                  newFiles[updatedIndex].loading = false;
+                  newFiles[updatedIndex].error = true;
+                  return newFiles;
+                })
               });
             }
           }
@@ -150,10 +158,13 @@ export default function ChatInput({
           </button>
         </div>
       </div>
-      <div className="flex w-full gap-2">
+      <div className="flex w-full gap-2 pb-2">
       {
         files.map((file)=>(
-          <FilePreview error={file.error} file={file.file} loading={file.loading} key={file.id}/>
+          <FilePreview error={file.error} file={file.file} loading={file.loading} key={file.id} onDelete={()=>{
+            setFiles(prev=>prev.filter((f)=>f.id!==file.id))
+            // TODO: delete file on backend
+          }}/>
         ))
       }
       </div>
