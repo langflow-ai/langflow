@@ -24,6 +24,7 @@ def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID
         api_key=generated_api_key,
         name=api_key_create.name,
         user_id=user_id,
+        created_at=api_key_create.created_at or datetime.datetime.now(datetime.timezone.utc),
     )
 
     session.add(api_key)
