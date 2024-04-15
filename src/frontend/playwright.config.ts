@@ -11,7 +11,7 @@ dotenv.config();
  * See https://playwright.dev/docs/test-configuration.
  */
 
-process.env.CI
+!process.env.CI
   ? dotenv.config({ path: path.resolve(__dirname, "../../.env") })
   : null;
 
