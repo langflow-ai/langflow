@@ -1,6 +1,5 @@
 from typing import Any, List, Optional
 
-
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts.chat import HumanMessagePromptTemplate, SystemMessagePromptTemplate
 
@@ -87,9 +86,19 @@ class AgentComponent(LCAgentComponent):
             user_prompt = None
             for message in prompt.messages:
                 if isinstance(message, SystemMessagePromptTemplate):
-                    system_message = message.template
+                    s_prompt = message.prompt
+                    if isinstance(s_prompt, list):
+                        s_prompt = " ".join(s_prompt.template)
+                    else:
+                        s_prompt = s_prompt.template
+                    system_message = s_prompt
                 elif isinstance(message, HumanMessagePromptTemplate):
-                    user_prompt = message.template
+                    h_prompt = message.prompt
+                    if isinstance(h_prompt, list):
+                        h_prompt = " ".join(h_prompt.template)
+                    else:
+                        h_prompt = h_prompt.template
+                    user_prompt = h_prompt
             return system_message, user_prompt
         return None, None
 
@@ -143,9 +152,9 @@ class AgentComponent(LCAgentComponent):
         tool_template: str = "{name}: {description}",
         handle_parsing_errors: bool = True,
     ) -> Text:
-        agent_name = AGENTS.get(agent_name)
-        if agent_name is None:
-            raise ValueError(f"{agent_name} not found.")
+        agent_data = AGENTS.get(agent_name)
+        if agent_data is None:
+            raise ValueError(f"{agent_data} not found.")
 
         def render_tool_description(tools):
             return "\n".join(
@@ -162,7 +171,7 @@ class AgentComponent(LCAgentComponent):
             ("placeholder", "{agent_scratchpad}"),
         ]
         prompt = ChatPromptTemplate.from_messages(messages)
-        agent_func = agent_name["func"]
+        agent_func = agent_data["func"]
         agent = agent_func(llm, tools, prompt, render_tool_description)
         result = await self.run_agent(
             agent=agent,
