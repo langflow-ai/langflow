@@ -62,7 +62,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "poetry run uvicorn --factory langflow.main:create_app --host 127.0.0.1 --port 7860",
+        "poetry run uvicorn --factory langflow.main:create_app --host 127.0.0.1 --port 7860 --loop asyncio",
       port: 7860,
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
