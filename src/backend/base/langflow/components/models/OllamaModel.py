@@ -31,13 +31,14 @@ class ChatOllamaComponent(LCModelComponent):
         "base_url",      
         "headers",
         "keep_alive",
+        "keep_alive_flag",
         "metadata",
         "model",
-        "cache_flag"
-        "CacheType",      
-        "temperature",
 
+        
+        "temperature",
         "cache",
+        "callbacks",
 
         "format",
         "metadata",
@@ -70,18 +71,15 @@ class ChatOllamaComponent(LCModelComponent):
                 "info": "Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
 
             },
-            "cache_flag": {
-                "display_name": "Cache",
-                "info": "If true, will use the global cache. If false, will not use a cache If None, will use the global cache if it’s set, otherwise no cache. If instance of BaseCache, will use the provided cache.",
-                "advanced": False,
-                "value": False,
-                "real_time_refresh": True,
-            },
+
             "cache": {
-                "display_name": "CacheType",
+                "display_name": "cache",
                 "info": "If true, will use the global cache. If false, will not use a cache If None, will use the global cache if it’s set, otherwise no cache. If instance of BaseCache, will use the provided cache.",
-                "options":["global cache","BaseCache"],
+                "field_type" :"str",
                 "advanced": False,
+                "options":["Global","OFF","AUTO"],
+                "input_types": ["BaseCache"],
+
 
             },
             "format": {
@@ -93,18 +91,25 @@ class ChatOllamaComponent(LCModelComponent):
                 
                 
             },
+            
+            "keep_alive_flag":{
+                "display_name": "Unload on..",
+                "options":["Minute","Hour","sec","Keep","Immediately"],
+                "real_time_refresh": True,
+                "refresh_button": True,
+            },
             "keep_alive":{
                 "display_name": "Keep Alive",
                 "info": "How long the model will stay loaded into memory.",             
-                
             },
             
+ 
             
             "model": {
                 "display_name": "Model Name",
                 "options":[],
                 "info": "Refer to https://ollama.ai/library for more models.",
-                #"real_time_refresh": True,
+                "real_time_refresh": True,
                 "refresh_button": True,
             },
             "temperature": {
@@ -137,6 +142,7 @@ class ChatOllamaComponent(LCModelComponent):
                 "info": "Enable/disable Mirostat sampling for controlling perplexity.",
                 "advanced": False,
                 "real_time_refresh": True,
+                "refresh_button": True,
 
             },
             "mirostat_eta": {
@@ -144,12 +150,14 @@ class ChatOllamaComponent(LCModelComponent):
                 "field_type": "float",
                 "info": "Learning rate for Mirostat algorithm. (Default: 0.1)",
                 "advanced": True,
+                "real_time_refresh": True,
             },
             "mirostat_tau": {
                 "display_name": "Mirostat Tau",
                 "field_type": "float",
                 "info": "Controls the balance between coherence and diversity of the output. (Default: 5.0)",
                 "advanced": True,
+                "real_time_refresh": True,
             },
             "num_ctx": {
                 "display_name": "Context Window Size",
@@ -247,11 +255,14 @@ class ChatOllamaComponent(LCModelComponent):
         }
         
         
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
         if field_name == "mirostat":
             if field_value == "Disabled":
                 build_config["mirostat_eta"]["advanced"] = True
                 build_config["mirostat_tau"]["advanced"] = True
+                build_config["mirostat_eta"]["value"] = None
+                build_config["mirostat_tau"]["value"] = None
+               # build_config["mirostat"]["value"] = "Disabled"
             else:
                 build_config["mirostat_eta"]["advanced"] = False
                 build_config["mirostat_tau"]["advanced"] = False
@@ -262,19 +273,23 @@ class ChatOllamaComponent(LCModelComponent):
                 else:
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
-    
-        # base_url의 값이 변경되었을 경우 처리
-        #if field_name == "base_url":
-        #    build_config["base_url"]["value"] = field_value
-    
+                    
         if field_name == "model":
             # base_url 값 사용
-            base_url = build_config.get("base_url", {}).get("value", "http://localhost:11434")  # 기본값 설정
+            base_url = build_config.get("base_url", {}).get("value", "http://localhost:11434")
             build_config["model"]["options"] = self.get_model(base_url + "/api/tags")
-    
-        
+            
+        if field_name == "keep_alive_flag":
+            if field_value == "Keep":
+                build_config["keep_alive"]["value"] = "-1"
+                build_config["keep_alive"]["advanced"] = True
+            elif field_value == "Immediately":
+                build_config["keep_alive"]["value"] = "0"
+                build_config["keep_alive"]["advanced"] = True
+            else:
+                build_config["keep_alive"]["advanced"] = False
+
                         
-                    
                     
         return build_config        
     
@@ -291,26 +306,23 @@ class ChatOllamaComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not retrieve models") from e
             return [""]  # API 호출 실패 시 빈 리스트 반환
-    
-
-
 
     def build(
         self,
         base_url: Optional[str],
         model: str,
         input_value: Text,
-        #mirostat: Optional[str],
-        #mirostat_eta: Optional[float] = None,
-        #mirostat_tau: Optional[float] = None,
+        mirostat: Optional[str],
+        mirostat_eta: Optional[float] = None,
+        mirostat_tau: Optional[float] = None,
         ### When a callback component is added to Langflow, the comment must be uncommented.###
         # callbacks: Optional[List[Callbacks]] = None,
         #######################################################################################
         repeat_last_n: Optional[int] = None,
         verbose: Optional[bool] = None,
-        cache_flag: Optional[bool]=None,
-        cache: Optional[str] = None,
-        keep_alive: Optional[Union[int, str]] = None,
+        cache: Union[BaseCache,str] = None,
+        keep_alive: Optional[int] = None,
+        keep_alive_flag: Optional[str] = None,
         num_ctx: Optional[int] = None,
         num_gpu: Optional[int] = None,
         format: Optional[str] = None,
@@ -331,32 +343,65 @@ class ChatOllamaComponent(LCModelComponent):
     ) -> Text:
         
 
+            
+            
         
         if not base_url:
             base_url = "http://localhost:11434"
             
 
-        #model_record = await self.get_model(url=ModelUrl)
-       # if not model_record:
-        #    raise ValueError("Model not found.")
+            
+        # 캐시 설정 처리
+        if isinstance(cache, BaseCache):
+            # BaseCache 인스턴스가 직접 제공된 경우, 추가 처리 없이 사용
+            cache_instance = cache
+            
+        elif isinstance(cache, str):
+            # 문자열 기반의 캐시 설정 처리
+            if cache == "Global":
+                cache_instance = True  # global_cache는 해당 범위에 정의되어 있어야 함
+            elif cache == "OFF":
+                cache_instance = False  # auto_cache는 해당 범위에 정의되어 있어야 함
+            elif cache == "AUTO":
+                cache_instance = None  # 캐시 비활성화
+        else:
+            cache_instance = None  # 캐시 설정이 제공되지 않은 경우
+        
 
-        # Mapping mirostat settings to their corresponding values
-        #mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
+        if keep_alive_flag == "Minute":
+            keep_alive_instance = f"{keep_alive}m"  # 분 단위로 변환
+        elif keep_alive_flag == "Hour":
+            keep_alive_instance = f"{keep_alive}h"  # 시간 단위로 변환
+        elif keep_alive_flag == "sec":
+            keep_alive_instance = f"{keep_alive}s"  # 초 단위로 변환
+        elif keep_alive_flag == "Keep":
+            keep_alive_instance = "-1"  # 모델을 계속 유지
+        elif keep_alive_flag == "Immediately":
+            keep_alive_instance = "0"  # 모델 즉시 언로드
+        else:
+            keep_alive_instance = "Invalid option"  # 유효하지 않은 옵션 처리
+            
 
-        # Default to 0 for 'Disabled'
-        #mirostat_value = mirostat_options.get(mirostat, 0)  # type: ignore
+            
+        
+        mirostat_instance = 0
+            
+        if mirostat=="disable":
+            mirostat_instance = 0
+            
+            
 
-        # Set mirostat_eta and mirostat_tau to None if mirostat is disabled
-        #if mirostat_value == 0:
-         #   mirostat_eta = None
-            #mirostat_tau = None
+        
+            
+
 
         # Mapping system settings to their corresponding values
         llm_params = {
             "base_url": base_url,
-            #"cache": cache,
+            "cache": cache_instance,
             "model": model,
-            #"mirostat": mirostat_value,
+            "mirostat": mirostat_instance,
+            #"keep_alive": keep_alive_instance,
             "format": format,
             "metadata": metadata,
             "tags": tags,
@@ -364,8 +409,8 @@ class ChatOllamaComponent(LCModelComponent):
             # "callback_manager": callback_manager,
             # "callbacks": callbacks,
             #####################################################################################
-            #"mirostat_eta": mirostat_eta,
-            #"mirostat_tau": mirostat_tau,
+            "mirostat_eta": mirostat_eta,
+            "mirostat_tau": mirostat_tau,
             "num_ctx": num_ctx,
             "num_gpu": num_gpu,
             "num_thread": num_thread,
