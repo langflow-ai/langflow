@@ -76,7 +76,7 @@ jobs:
       - name: Run Playwright Tests
         run: |
           cd src/frontend
-          npx playwright test --workers=1 --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --reporter list
+          npx playwright test
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
