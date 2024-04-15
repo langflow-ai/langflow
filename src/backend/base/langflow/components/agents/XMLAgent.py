@@ -76,8 +76,8 @@ class XMLAgentComponent(LCAgentComponent):
         llm: BaseLanguageModel,
         tools: List[Tool],
         user_prompt: str = "{input}",
+        system_message: str = "You are a helpful assistant",
         message_history: Optional[List[Record]] = None,
-        system_message: Optional[str] = "You are a helpful assistant",
         tool_template: str = "{name}: {description}",
         handle_parsing_errors: bool = True,
     ) -> Text:

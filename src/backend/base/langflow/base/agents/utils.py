@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 from langchain.agents import (
     create_json_chat_agent,
@@ -9,12 +9,29 @@ from langchain.agents import (
 from langchain.agents.xml.base import render_text_description
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.messages import BaseMessage
-from langchain_core.prompts import BasePromptTemplate
+from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate
 from langchain_core.tools import BaseTool
+from pydantic import BaseModel
 
 from langflow.schema.schema import Record
 
 from .default_prompts import XML_AGENT_PROMPT
+
+
+class AgentSpec(BaseModel):
+    func: Callable[
+        [
+            BaseLanguageModel,
+            Sequence[BaseTool],
+            BasePromptTemplate | ChatPromptTemplate,
+            Optional[Callable[[List[BaseTool]], str]],
+            Optional[Union[bool, List[str]]],
+        ],
+        Any,
+    ]
+    prompt: Optional[BasePromptTemplate] = None
+    fields: List[str]
+    hub_repo: Optional[str] = None
 
 
 def records_to_messages(records: List[Record]) -> List[BaseMessage]:
@@ -50,7 +67,7 @@ def validate_and_create_xml_agent(
 def validate_and_create_openai_tools_agent(
     llm: BaseLanguageModel,
     tools: Sequence[BaseTool],
-    prompt: BasePromptTemplate,
+    prompt: ChatPromptTemplate,
     tools_renderer: Callable[[List[BaseTool]], str] = render_text_description,
     *,
     stop_sequence: Union[bool, List[str]] = True,
@@ -65,7 +82,7 @@ def validate_and_create_openai_tools_agent(
 def validate_and_create_tool_calling_agent(
     llm: BaseLanguageModel,
     tools: Sequence[BaseTool],
-    prompt: BasePromptTemplate,
+    prompt: ChatPromptTemplate,
     tools_renderer: Callable[[List[BaseTool]], str] = render_text_description,
     *,
     stop_sequence: Union[bool, List[str]] = True,
@@ -80,7 +97,7 @@ def validate_and_create_tool_calling_agent(
 def validate_and_create_json_chat_agent(
     llm: BaseLanguageModel,
     tools: Sequence[BaseTool],
-    prompt: BasePromptTemplate,
+    prompt: ChatPromptTemplate,
     tools_renderer: Callable[[List[BaseTool]], str] = render_text_description,
     *,
     stop_sequence: Union[bool, List[str]] = True,
@@ -94,40 +111,31 @@ def validate_and_create_json_chat_agent(
     )
 
 
-AGENTS: Dict[
-    str,
-    Dict[
-        str,
-        Union[
-            Callable[[BaseLanguageModel, Sequence[BaseTool], BasePromptTemplate, Callable[[List[BaseTool]], str]], Any],
-            BasePromptTemplate,
-        ],
-    ],
-] = {
-    "Tool Calling Agent": {
-        "func": validate_and_create_tool_calling_agent,
-        "prompt": "",
-        "fields": ["llm", "tools", "prompt"],
-        "hub_repo": None,
-    },
-    "XML Agent": {
-        "func": validate_and_create_xml_agent,
-        "prompt": XML_AGENT_PROMPT,
-        "fields": ["llm", "tools", "prompt", "tools_renderer", "stop_sequence"],
-        "hub_repo": "hwchase17/xml-agent-convo",
-    },
-    "OpenAI Tools Agent": {
-        "func": validate_and_create_openai_tools_agent,
-        "prompt": "",
-        "fields": ["llm", "tools", "prompt"],
-        "hub_repo": None,
-    },
-    "JSON Chat Agent": {
-        "func": validate_and_create_json_chat_agent,
-        "prompt": "",
-        "fields": ["llm", "tools", "prompt", "tools_renderer", "stop_sequence"],
-        "hub_repo": "hwchase17/react-chat-json",
-    },
+AGENTS: Dict[str, AgentSpec] = {
+    "Tool Calling Agent": AgentSpec(
+        func=validate_and_create_tool_calling_agent,
+        prompt=None,
+        fields=["llm", "tools", "prompt"],
+        hub_repo=None,
+    ),
+    "XML Agent": AgentSpec(
+        func=validate_and_create_xml_agent,
+        prompt=XML_AGENT_PROMPT,  # Ensure XML_AGENT_PROMPT is properly defined and typed.
+        fields=["llm", "tools", "prompt", "tools_renderer", "stop_sequence"],
+        hub_repo="hwchase17/xml-agent-convo",
+    ),
+    "OpenAI Tools Agent": AgentSpec(
+        func=validate_and_create_openai_tools_agent,
+        prompt=None,
+        fields=["llm", "tools", "prompt"],
+        hub_repo=None,
+    ),
+    "JSON Chat Agent": AgentSpec(
+        func=validate_and_create_json_chat_agent,
+        prompt=None,
+        fields=["llm", "tools", "prompt", "tools_renderer", "stop_sequence"],
+        hub_repo="hwchase17/react-chat-json",
+    ),
 }
 
 

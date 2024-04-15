@@ -1,10 +1,12 @@
 from typing import List, Optional, Union, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
+from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
+
 from langflow.base.agents.utils import get_agents_list, records_to_messages
 from langflow.custom import CustomComponent
-from langflow.field_typing import BaseMemory, Text, Tool
+from langflow.field_typing import Text, Tool
 from langflow.schema.schema import Record
 
 
@@ -60,7 +62,7 @@ class LCAgentComponent(CustomComponent):
                 verbose=True,
                 handle_parsing_errors=handle_parsing_errors,
             )
-        input_dict = {"input": inputs}
+        input_dict: dict[str, str | list[BaseMessage]] = {"input": inputs}
         if message_history:
             input_dict["chat_history"] = records_to_messages(message_history)
         result = await runnable.ainvoke(input_dict)

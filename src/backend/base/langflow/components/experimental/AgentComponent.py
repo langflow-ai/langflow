@@ -1,10 +1,10 @@
-from typing import Any, List, Optional
+from typing import Any, List, Optional, cast
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts.chat import HumanMessagePromptTemplate, SystemMessagePromptTemplate
 
 from langflow.base.agents.agent import LCAgentComponent
-from langflow.base.agents.utils import AGENTS, get_agents_list
+from langflow.base.agents.utils import AGENTS, AgentSpec, get_agents_list
 from langflow.field_typing import BaseLanguageModel, Text, Tool
 from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import Record
@@ -88,17 +88,17 @@ class AgentComponent(LCAgentComponent):
                 if isinstance(message, SystemMessagePromptTemplate):
                     s_prompt = message.prompt
                     if isinstance(s_prompt, list):
-                        s_prompt = " ".join(s_prompt.template)
-                    else:
-                        s_prompt = s_prompt.template
-                    system_message = s_prompt
+                        s_template = " ".join([cast(str, s.template) for s in s_prompt if hasattr(s, "template")])
+                    elif hasattr(s_prompt, "template"):
+                        s_template = s_prompt.template
+                    system_message = s_template
                 elif isinstance(message, HumanMessagePromptTemplate):
                     h_prompt = message.prompt
                     if isinstance(h_prompt, list):
-                        h_prompt = " ".join(h_prompt.template)
-                    else:
-                        h_prompt = h_prompt.template
-                    user_prompt = h_prompt
+                        h_template = " ".join([cast(str, h.template) for h in h_prompt if hasattr(h, "template")])
+                    elif hasattr(h_prompt, "template"):
+                        h_template = h_prompt.template
+                    user_prompt = h_template
             return system_message, user_prompt
         return None, None
 
@@ -118,23 +118,24 @@ class AgentComponent(LCAgentComponent):
             build_config["agent"]["options"] = get_agents_list()
             if field_value in AGENTS:
                 # if langchain_hub_api_key is provided, fetch the prompt from LangChain Hub
-                if build_config["langchain_hub_api_key"]["value"] and AGENTS[field_value]["hub_repo"]:
+                if build_config["langchain_hub_api_key"]["value"] and AGENTS[field_value].hub_repo:
                     from langchain import hub
 
-                    prompt = hub.pull(
-                        AGENTS[field_value]["hub_repo"], api_key=build_config["langchain_hub_api_key"]["value"]
-                    )
-                    system_message, user_prompt = self.get_system_and_user_message_from_prompt(prompt)
-                    if system_message:
-                        build_config["system_message"]["value"] = system_message
-                    if user_prompt:
-                        build_config["user_prompt"]["value"] = user_prompt
+                    hub_repo: str | None = AGENTS[field_value].hub_repo
+                    if hub_repo:
+                        hub_api_key: str = build_config["langchain_hub_api_key"]["value"]
+                        prompt = hub.pull(hub_repo, api_key=hub_api_key)
+                        system_message, user_prompt = self.get_system_and_user_message_from_prompt(prompt)
+                        if system_message:
+                            build_config["system_message"]["value"] = system_message
+                        if user_prompt:
+                            build_config["user_prompt"]["value"] = user_prompt
 
-                if AGENTS[field_value]["prompt"]:
-                    build_config["user_prompt"]["value"] = AGENTS[field_value]["prompt"]
+                if AGENTS[field_value].prompt:
+                    build_config["user_prompt"]["value"] = AGENTS[field_value].prompt
                 else:
                     build_config["user_prompt"]["value"] = "{input}"
-            fields = AGENTS[field_value]["fields"]
+            fields = AGENTS[field_value].fields
             for field in ["llm", "tools", "prompt", "tools_renderer"]:
                 if field not in fields:
                     build_config[field]["show"] = False
@@ -142,19 +143,19 @@ class AgentComponent(LCAgentComponent):
 
     async def build(
         self,
-        agent_name: list[str],
+        agent_name: str,
         input_value: str,
         llm: BaseLanguageModel,
         tools: List[Tool],
-        system_message: Optional[str] = "You are a helpful assistant. Help the user answer any questions.",
-        user_prompt: Optional[str] = "{input}",
+        system_message: str = "You are a helpful assistant. Help the user answer any questions.",
+        user_prompt: str = "{input}",
         message_history: Optional[List[Record]] = None,
         tool_template: str = "{name}: {description}",
         handle_parsing_errors: bool = True,
     ) -> Text:
-        agent_data = AGENTS.get(agent_name)
-        if agent_data is None:
-            raise ValueError(f"{agent_data} not found.")
+        agent_spec: Optional[AgentSpec] = AGENTS.get(agent_name)
+        if agent_spec is None:
+            raise ValueError(f"{agent_name} not found.")
 
         def render_tool_description(tools):
             return "\n".join(
@@ -171,8 +172,8 @@ class AgentComponent(LCAgentComponent):
             ("placeholder", "{agent_scratchpad}"),
         ]
         prompt = ChatPromptTemplate.from_messages(messages)
-        agent_func = agent_data["func"]
-        agent = agent_func(llm, tools, prompt, render_tool_description)
+        agent_func = agent_spec.func
+        agent = agent_func(llm, tools, prompt, render_tool_description, True)
         result = await self.run_agent(
             agent=agent,
             inputs=input_value,
