@@ -1,27 +1,26 @@
 import { defineConfig, devices } from "@playwright/test";
-// import * as dotenv from "dotenv";
+import * as dotenv from "dotenv";
+import path from "path";
 
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
  */
-// dotenv.config();
+dotenv.config();
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
 
-// !process.env.CI
-//   ? dotenv.config({ path: path.resolve(__dirname, "../../.env") })
-//   : null;
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 export default defineConfig({
   testDir: "./tests",
   /* Run tests in files in parallel */
   fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
-  // forbidOnly: !!process.env.CI,
+  forbidOnly: !!process.env.CI,
   /* Retry on CI only */
-  // retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
   workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
@@ -39,7 +38,7 @@ export default defineConfig({
     trace: "on-first-retry",
   },
 
-  // globalTeardown: require.resolve("./tests/globalTeardown.ts"),
+  globalTeardown: require.resolve("./tests/globalTeardown.ts"),
 
   /* Configure projects for major browsers */
   projects: [
