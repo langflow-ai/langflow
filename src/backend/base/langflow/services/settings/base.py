@@ -151,21 +151,50 @@ class Settings(BaseSettings):
                 # if there is a database in that location
                 if not values["CONFIG_DIR"]:
                     raise ValueError("CONFIG_DIR not set, please set it or provide a DATABASE_URL")
+                from langflow.version import is_pre_release  # type: ignore
 
-                new_path = f"{values['CONFIG_DIR']}/langflow.db"
-                if Path("./langflow.db").exists():
+                pre_db_file_name = "langflow-pre.db"
+                db_file_name = "langflow.db"
+                new_pre_path = f"{values['CONFIG_DIR']}/{pre_db_file_name}"
+                new_path = f"{values['CONFIG_DIR']}/{db_file_name}"
+                final_path = None
+                if is_pre_release:
+                    if Path(new_pre_path).exists():
+                        final_path = new_pre_path
+                    elif Path(new_path).exists():
+                        # We need to copy the current db to the new location
+                        logger.debug("Copying existing database to new location")
+                        copy2(new_path, new_pre_path)
+                        logger.debug(f"Copied existing database to {new_pre_path}")
+                    elif Path(f"./{db_file_name}").exists():
+                        logger.debug("Copying existing database to new location")
+                        copy2(f"./{db_file_name}", new_pre_path)
+                        logger.debug(f"Copied existing database to {new_pre_path}")
+                    else:
+                        logger.debug(f"Database already exists at {new_pre_path}, using it")
+                        final_path = new_pre_path
+                else:
                     if Path(new_path).exists():
                         logger.debug(f"Database already exists at {new_path}, using it")
-                    else:
+                        final_path = new_path
+                    elif Path("./{db_file_name}").exists():
                         try:
                             logger.debug("Copying existing database to new location")
-                            copy2("./langflow.db", new_path)
+                            copy2("./{db_file_name}", new_path)
                             logger.debug(f"Copied existing database to {new_path}")
                         except Exception:
                             logger.error("Failed to copy database, using default path")
-                            new_path = "./langflow.db"
+                            new_path = "./{db_file_name}"
+                    else:
+                        final_path = new_path
 
-                value = f"sqlite:///{new_path}"
+                if final_path is None:
+                    if is_pre_release:
+                        final_path = new_pre_path
+                    else:
+                        final_path = new_path
+
+                value = f"sqlite:///{final_path}"
 
         return value
 

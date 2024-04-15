@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from rich import print as rprint
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from langflow.api import router
 from langflow.initial_setup.setup import create_or_update_starter_projects
@@ -19,15 +21,40 @@ from langflow.services.utils import initialize_services, teardown_services
 from langflow.utils.logger import configure
 
 
+class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            logger.error(exc)
+            raise exc
+        if "files/" not in request.url.path and request.url.path.endswith(".js") and response.status_code == 200:
+            response.headers["Content-Type"] = "text/javascript"
+        return response
+
+
 def get_lifespan(fix_migration=False, socketio_server=None):
+    from langflow.version import __version__  # type: ignore
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         nest_asyncio.apply()
-        initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
-        setup_llm_caching()
-        LangfuseInstance.update()
-        create_or_update_starter_projects()
-        yield
+        # Startup message
+        if __version__:
+            rprint(f"[bold green]Starting Langflow v{__version__}...[/bold green]")
+        else:
+            rprint("[bold green]Starting Langflow...[/bold green]")
+        try:
+            initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
+            setup_llm_caching()
+            LangfuseInstance.update()
+            create_or_update_starter_projects()
+            yield
+        except Exception as exc:
+            if "langflow migration --fix" not in str(exc):
+                logger.error(exc)
+        # Shutdown message
+        rprint("[bold red]Shutting down Langflow...[/bold red]")
         teardown_services()
 
     return lifespan
@@ -49,6 +76,7 @@ def create_app():
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(JavaScriptMIMETypeMiddleware)
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
