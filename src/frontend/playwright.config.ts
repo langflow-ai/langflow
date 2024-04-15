@@ -11,7 +11,9 @@ dotenv.config();
  * See https://playwright.dev/docs/test-configuration.
  */
 
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+process.env.CI
+  ? dotenv.config({ path: path.resolve(__dirname, "../../.env") })
+  : null;
 
 export default defineConfig({
   testDir: "./tests",
