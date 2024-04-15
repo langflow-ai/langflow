@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("InputListComponent", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   let modalCount = (await page.getByTestId("modal-title").count()) ?? 0;

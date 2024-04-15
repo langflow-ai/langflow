@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("should exists Store", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").isVisible();
@@ -9,7 +9,7 @@ test("should exists Store", async ({ page }) => {
 });
 
 test("should not have an API key", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
@@ -19,7 +19,7 @@ test("should not have an API key", async ({ page }) => {
 });
 
 test("should find a searched Component on Store", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
@@ -39,7 +39,7 @@ test("should find a searched Component on Store", async ({ page }) => {
 });
 
 test("should filter by tag", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
@@ -66,7 +66,7 @@ test("should filter by tag", async ({ page }) => {
 });
 
 test("should order the visualization", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
@@ -86,7 +86,7 @@ test("should order the visualization", async ({ page }) => {
 });
 
 test("should filter by type", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
@@ -121,7 +121,7 @@ test("should filter by type", async ({ page }) => {
 });
 
 test("should add API-KEY", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
@@ -154,7 +154,7 @@ test("should add API-KEY", async ({ page }) => {
 });
 
 test("should like and add components and flows", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
