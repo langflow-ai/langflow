@@ -194,9 +194,34 @@ class OllamaEmbeddingsComponent(CustomComponent):
               top_k: Optional[int] = None,
               top_p: Optional[float] = None
               ) -> Embeddings:
+                  
+        llm_params= {
+            "base_url":base_url,      
+            "embed_instruction":embed_instruction,
+            "headers":headers,
+            "model":model,
+            "model_kwargs":model_kwargs,
+            "num_ctx":num_ctx,
+            "num_gpu":num_gpu,
+            "num_thread":num_thread,
+            "query_instruction":query_instruction,
+            "repeat_last_n":repeat_last_n,
+            "repeat_penalty":repeat_penalty,
+            "show_progress":show_progress,
+            "stop":stop,
+            "temperature":temperature,
+            "tfs_z":tfs_z,
+            "top_k":top_k,
+            "top_p":top_p,
+        }
+          
+                  
+        
+                  
+        llm_params = {k: v for k, v in llm_params.items() if v is not None}
         
         try:
-            output = OllamaEmbeddings(model=model, base_url=base_url, temperature=temperature)  # type: ignore
+            output = OllamaEmbeddings(**llm_params)  # type: ignore
         except Exception as e:
             raise ValueError("Could not connect to Ollama API.") from e
         return output
