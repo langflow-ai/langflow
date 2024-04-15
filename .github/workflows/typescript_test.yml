@@ -72,12 +72,11 @@ jobs:
           poetry env use ${{ env.PYTHON_VERSION }}
           poetry install
           poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --loop asyncio &
-          sleep 2
 
       - name: Run Playwright Tests
         run: |
           cd src/frontend
-          npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+          npx playwright test --workers=1 --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --reporter list
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
