@@ -75,7 +75,7 @@ jobs:
       - name: Run Playwright Tests
         run: |
           cd src/frontend
-          npx playwright test &
+          npx playwright test
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
