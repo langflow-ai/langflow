@@ -5,9 +5,16 @@ from langchain_community.chat_models import ChatOllama
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-
+from langchain_core.caches import BaseCache
 # from langchain.chat_models import ChatOllama
 from langflow.field_typing import Text
+
+
+import asyncio
+import json
+
+import httpx
+
 
 # whe When a callback component is added to Langflow, the comment must be uncommented.
 # from langchain.callbacks.manager import CallbackManager
@@ -17,13 +24,14 @@ class ChatOllamaComponent(LCModelComponent):
     display_name = "Ollama"
     description = "Generate text using Ollama Local LLMs."
     icon = "Ollama"
+    
 
+    
     field_order = [
         "base_url",
         "model",
         "temperature",
         "cache",
-        "callback_manager",
         "callbacks",
         "format",
         "metadata",
@@ -56,10 +64,35 @@ class ChatOllamaComponent(LCModelComponent):
                 "info": "Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
                 "advanced": True,
             },
+            "cache": {
+                "display_name": "Cache",
+                "info": "If true, will use the global cache. If false, will not use a cache If None, will use the global cache if it’s set, otherwise no cache. If instance of BaseCache, will use the provided cache.",
+                "advanced": True,
+                "value": False,
+            },
+            "format": {
+                "display_name": "Format",
+                "info": "Specify the format of the output (e.g., json)",
+            },
+            "headers":{
+                "display_name": "Headers",
+                
+                
+            },
+            "keep_alive":{
+                "display_name": "Keep Alive",
+                "info": "How long the model will stay loaded into memory.",             
+                
+            },
+            
+            
             "model": {
                 "display_name": "Model Name",
+                "options":[],
                 "value": "llama2",
                 "info": "Refer to https://ollama.ai/library for more models.",
+                "real_time_refresh": True,
+                "refresh_button": True,
             },
             "temperature": {
                 "display_name": "Temperature",
@@ -67,19 +100,8 @@ class ChatOllamaComponent(LCModelComponent):
                 "value": 0.8,
                 "info": "Controls the creativity of model responses.",
             },
-            "cache": {
-                "display_name": "Cache",
-                "field_type": "bool",
-                "info": "Enable or disable caching.",
-                "advanced": True,
-                "value": False,
-            },
+
             ### When a callback component is added to Langflow, the comment must be uncommented. ###
-            # "callback_manager": {
-            #     "display_name": "Callback Manager",
-            #     "info": "Optional callback manager for additional functionality.",
-            #     "advanced": True,
-            # },
             # "callbacks": {
             #     "display_name": "Callbacks",
             #     "info": "Callbacks to execute during model runtime.",
@@ -90,7 +112,6 @@ class ChatOllamaComponent(LCModelComponent):
                 "display_name": "Format",
                 "field_type": "str",
                 "info": "Specify the format of the output (e.g., json).",
-                "advanced": True,
             },
             "metadata": {
                 "display_name": "Metadata",
@@ -102,7 +123,9 @@ class ChatOllamaComponent(LCModelComponent):
                 "options": ["Disabled", "Mirostat", "Mirostat 2.0"],
                 "info": "Enable/disable Mirostat sampling for controlling perplexity.",
                 "value": "Disabled",
-                "advanced": True,
+                "advanced": False,
+                "real_time_refresh": True,
+
             },
             "mirostat_eta": {
                 "display_name": "Mirostat Eta",
@@ -210,6 +233,44 @@ class ChatOllamaComponent(LCModelComponent):
                 "advanced": True,
             },
         }
+        
+        
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+        if field_name == "mirostat":
+            if field_value == "Disabled":
+                build_config["mirostat_eta"]["advanced"] = True
+                build_config["mirostat_tau"]["advanced"] = True
+            else:
+                build_config["mirostat_eta"]["advanced"] = False
+                build_config["mirostat_tau"]["advanced"] = False
+                # Mirostat 2.0이 선택된 경우, 특정 기본값을 설정
+                if field_value == "Mirostat 2.0":
+                    build_config["mirostat_eta"]["value"] = 0.2
+                    build_config["mirostat_tau"]["value"] = 10
+                else:
+                    build_config["mirostat_eta"]["value"] = 0.1
+                    build_config["mirostat_tau"]["value"] = 5
+        #if keep_alive ==              
+        if field_name == "model":
+            build_config["model"]["options"] = self.get_model()
+                    
+                    
+                    
+        return build_config        
+    
+    
+    def get_model(url:str) -> List[str]:
+        url = "http://localhost:11434/api/tags"
+        try:
+            with httpx.Client() as client:
+                response = client.get(url)
+                response.raise_for_status()  # 응답 코드가 200이 아니면 예외 발생
+                data = response.json()
+                model_names = [model['name'] for model in data.get("models", [])]
+                return model_names
+        except Exception as e:
+            print(f"API 호출 중 오류 발생: {str(e)}")
+            return ["ge"]  # API 호출 실패 시 빈 리스트 반환
 
     def build(
         self,
@@ -220,12 +281,12 @@ class ChatOllamaComponent(LCModelComponent):
         mirostat_eta: Optional[float] = None,
         mirostat_tau: Optional[float] = None,
         ### When a callback component is added to Langflow, the comment must be uncommented.###
-        # callback_manager: Optional[CallbackManager] = None,
         # callbacks: Optional[List[Callbacks]] = None,
         #######################################################################################
         repeat_last_n: Optional[int] = None,
         verbose: Optional[bool] = None,
-        cache: Optional[bool] = None,
+        cache: Union[BaseCache, bool, None] = None,
+        keep_alive: Optional[Union[int, str]] = None,
         num_ctx: Optional[int] = None,
         num_gpu: Optional[int] = None,
         format: Optional[str] = None,
@@ -244,8 +305,20 @@ class ChatOllamaComponent(LCModelComponent):
         stream: bool = False,
         system_message: Optional[str] = None,
     ) -> Text:
+        
+
+            
+            
+        
         if not base_url:
             base_url = "http://localhost:11434"
+            
+        ModelUrl = base_url + "/api/tags"    
+
+
+        model_record=self.get_model(url=ModelUrl)
+        if not model_record:
+            raise ValueError("Model not found.")
 
         # Mapping mirostat settings to their corresponding values
         mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
