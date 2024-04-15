@@ -76,6 +76,7 @@ jobs:
       - name: Run Playwright Tests
         run: |
           cd src/frontend
+          npx playwright install --with-deps
           npx playwright test
 
       - name: Upload blob report to GitHub Actions Artifacts
