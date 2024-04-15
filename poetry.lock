@@ -3881,7 +3881,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.30"
+version = "0.0.34"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.12"
