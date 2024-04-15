@@ -77,7 +77,7 @@ jobs:
         run: |
           cd src/frontend
           npm install
-          npm start
+          npm start &
           npx playwright test
 
       - name: Upload blob report to GitHub Actions Artifacts
