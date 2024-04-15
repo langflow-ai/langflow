@@ -2,13 +2,16 @@ from typing import List, Optional, Union, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_core.runnables import Runnable
-from langflow.base.agents.utils import records_to_messages
+from langflow.base.agents.utils import get_agents_list, records_to_messages
 from langflow.custom import CustomComponent
 from langflow.field_typing import BaseMemory, Text, Tool
 from langflow.schema.schema import Record
 
 
 class LCAgentComponent(CustomComponent):
+    def get_agents_list(self):
+        return get_agents_list()
+
     def build_config(self):
         return {
             "lc": {
