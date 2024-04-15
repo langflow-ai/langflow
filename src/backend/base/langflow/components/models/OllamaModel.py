@@ -28,11 +28,17 @@ class ChatOllamaComponent(LCModelComponent):
 
     
     field_order = [
-        "base_url",
+        "base_url",      
+        "headers",
+        "keep_alive",
+        "metadata",
         "model",
+        "cache_flag"
+        "CacheType",      
         "temperature",
+
         "cache",
-        "callbacks",
+
         "format",
         "metadata",
         "mirostat",
@@ -62,13 +68,21 @@ class ChatOllamaComponent(LCModelComponent):
             "base_url": {
                 "display_name": "Base URL",
                 "info": "Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
-                "advanced": True,
+
             },
-            "cache": {
+            "cache_flag": {
                 "display_name": "Cache",
                 "info": "If true, will use the global cache. If false, will not use a cache If None, will use the global cache if it’s set, otherwise no cache. If instance of BaseCache, will use the provided cache.",
-                "advanced": True,
+                "advanced": False,
                 "value": False,
+                "real_time_refresh": True,
+            },
+            "cache": {
+                "display_name": "CacheType",
+                "info": "If true, will use the global cache. If false, will not use a cache If None, will use the global cache if it’s set, otherwise no cache. If instance of BaseCache, will use the provided cache.",
+                "options":["global cache","BaseCache"],
+                "advanced": False,
+
             },
             "format": {
                 "display_name": "Format",
@@ -89,9 +103,8 @@ class ChatOllamaComponent(LCModelComponent):
             "model": {
                 "display_name": "Model Name",
                 "options":[],
-                "value": "llama2",
                 "info": "Refer to https://ollama.ai/library for more models.",
-                "real_time_refresh": True,
+                #"real_time_refresh": True,
                 "refresh_button": True,
             },
             "temperature": {
@@ -122,7 +135,6 @@ class ChatOllamaComponent(LCModelComponent):
                 "display_name": "Mirostat",
                 "options": ["Disabled", "Mirostat", "Mirostat 2.0"],
                 "info": "Enable/disable Mirostat sampling for controlling perplexity.",
-                "value": "Disabled",
                 "advanced": False,
                 "real_time_refresh": True,
 
@@ -250,42 +262,54 @@ class ChatOllamaComponent(LCModelComponent):
                 else:
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
-        #if keep_alive ==              
+    
+        # base_url의 값이 변경되었을 경우 처리
+        #if field_name == "base_url":
+        #    build_config["base_url"]["value"] = field_value
+    
         if field_name == "model":
-            build_config["model"]["options"] = self.get_model()
-                    
+            # base_url 값 사용
+            base_url = build_config.get("base_url", {}).get("value", "http://localhost:11434")  # 기본값 설정
+            build_config["model"]["options"] = self.get_model(base_url + "/api/tags")
+    
+        
+                        
                     
                     
         return build_config        
     
     
-    def get_model(url:str) -> List[str]:
-        url = "http://localhost:11434/api/tags"
+    def get_model(self, url: str) -> List[str]:
         try:
             with httpx.Client() as client:
                 response = client.get(url)
                 response.raise_for_status()  # 응답 코드가 200이 아니면 예외 발생
                 data = response.json()
+                # ":latest" 문자열을 제거하고 모델 이름 목록을 생성
                 model_names = [model['name'] for model in data.get("models", [])]
                 return model_names
         except Exception as e:
-            print(f"API 호출 중 오류 발생: {str(e)}")
-            return ["ge"]  # API 호출 실패 시 빈 리스트 반환
+            raise ValueError("Could not retrieve models") from e
+            return [""]  # API 호출 실패 시 빈 리스트 반환
+    
+
+
 
     def build(
         self,
         base_url: Optional[str],
         model: str,
         input_value: Text,
-        mirostat: Optional[str],
-        mirostat_eta: Optional[float] = None,
-        mirostat_tau: Optional[float] = None,
+        #mirostat: Optional[str],
+        #mirostat_eta: Optional[float] = None,
+        #mirostat_tau: Optional[float] = None,
         ### When a callback component is added to Langflow, the comment must be uncommented.###
         # callbacks: Optional[List[Callbacks]] = None,
         #######################################################################################
         repeat_last_n: Optional[int] = None,
         verbose: Optional[bool] = None,
-        cache: Union[BaseCache, bool, None] = None,
+        cache_flag: Optional[bool]=None,
+        cache: Optional[str] = None,
         keep_alive: Optional[Union[int, str]] = None,
         num_ctx: Optional[int] = None,
         num_gpu: Optional[int] = None,
@@ -307,36 +331,32 @@ class ChatOllamaComponent(LCModelComponent):
     ) -> Text:
         
 
-            
-            
         
         if not base_url:
             base_url = "http://localhost:11434"
             
-        ModelUrl = base_url + "/api/tags"    
 
-
-        model_record=self.get_model(url=ModelUrl)
-        if not model_record:
-            raise ValueError("Model not found.")
+        #model_record = await self.get_model(url=ModelUrl)
+       # if not model_record:
+        #    raise ValueError("Model not found.")
 
         # Mapping mirostat settings to their corresponding values
-        mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
+        #mirostat_options = {"Mirostat": 1, "Mirostat 2.0": 2}
 
         # Default to 0 for 'Disabled'
-        mirostat_value = mirostat_options.get(mirostat, 0)  # type: ignore
+        #mirostat_value = mirostat_options.get(mirostat, 0)  # type: ignore
 
         # Set mirostat_eta and mirostat_tau to None if mirostat is disabled
-        if mirostat_value == 0:
-            mirostat_eta = None
-            mirostat_tau = None
+        #if mirostat_value == 0:
+         #   mirostat_eta = None
+            #mirostat_tau = None
 
         # Mapping system settings to their corresponding values
         llm_params = {
             "base_url": base_url,
-            "cache": cache,
+            #"cache": cache,
             "model": model,
-            "mirostat": mirostat_value,
+            #"mirostat": mirostat_value,
             "format": format,
             "metadata": metadata,
             "tags": tags,
@@ -344,8 +364,8 @@ class ChatOllamaComponent(LCModelComponent):
             # "callback_manager": callback_manager,
             # "callbacks": callbacks,
             #####################################################################################
-            "mirostat_eta": mirostat_eta,
-            "mirostat_tau": mirostat_tau,
+            #"mirostat_eta": mirostat_eta,
+            #"mirostat_tau": mirostat_tau,
             "num_ctx": num_ctx,
             "num_gpu": num_gpu,
             "num_thread": num_thread,
