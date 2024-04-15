@@ -1,17 +1,16 @@
 import { defineConfig, devices } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
  */
-dotenv.config();
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
-
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 export default defineConfig({
   testDir: "./tests",
@@ -22,7 +21,7 @@ export default defineConfig({
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: 1,
+  workers: process.env.CI ? 10 : 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   timeout: 120 * 1000,
   // reporter: [
