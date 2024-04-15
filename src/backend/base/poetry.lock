@@ -1145,14 +1145,29 @@ langchain-core = ">=0.1.28,<0.2.0"
 extended-testing = ["lxml (>=5.1.0,<6.0.0)"]
 
 [[package]]
+name = "langchainhub"
+version = "0.1.15"
+description = "The LangChain Hub API client"
+optional = false
+python-versions = ">=3.8.1,<4.0"
+files = [
+    {file = "langchainhub-0.1.15-py3-none-any.whl", hash = "sha256:89a0951abd1db255e91c6d545d092a598fc255aa865d1ffc3ce8f93bbeae60e7"},
+    {file = "langchainhub-0.1.15.tar.gz", hash = "sha256:fa3ff81a31946860f84c119f1e2f6b7c7707e2bd7ed2394a7313b286d59f3bda"},
+]
+
+[package.dependencies]
+requests = ">=2,<3"
+types-requests = ">=2.31.0.2,<3.0.0.0"
+
+[[package]]
 name = "langsmith"
-version = "0.1.45"
+version = "0.1.47"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.45-py3-none-any.whl", hash = "sha256:5a5b7fafe767fa28826c925f175875c09bf5368bfdb141286381a94bf737e6ef"},
-    {file = "langsmith-0.1.45.tar.gz", hash = "sha256:713206107df636db1edf30867d64b92495afb1f09d2fee0857a77b7a8ee083d5"},
+    {file = "langsmith-0.1.47-py3-none-any.whl", hash = "sha256:17b0a908b8d39b6da3ecff658c8c00304b0b62f59945a5e16c2da5a254ea21a6"},
+    {file = "langsmith-0.1.47.tar.gz", hash = "sha256:f5ddd17628baa03a775525c5547a543a559313e425cdb2bf23579ffcf6056a76"},
 ]
 
 [package.dependencies]
@@ -2569,6 +2584,20 @@ shellingham = ">=1.3.0"
 typing-extensions = ">=3.7.4.3"
 
 [[package]]
+name = "types-requests"
+version = "2.31.0.20240406"
+description = "Typing stubs for requests"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types-requests-2.31.0.20240406.tar.gz", hash = "sha256:4428df33c5503945c74b3f42e82b181e86ec7b724620419a2966e2de604ce1a1"},
+    {file = "types_requests-2.31.0.20240406-py3-none-any.whl", hash = "sha256:6216cdac377c6b9a040ac1c0404f7284bd13199c0e1bb235f4324627e8898cf5"},
+]
+
+[package.dependencies]
+urllib3 = ">=2"
+
+[[package]]
 name = "typing-extensions"
 version = "4.11.0"
 description = "Backported and Experimental Type Hints for Python 3.8+"
@@ -2861,4 +2890,4 @@ local = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "4f3f355cb54985a10ab577f0f2b495c7e6d9e7a8e21838b1742c43de927aba88"
+content-hash = "4baea3d7c34ad33205fbb00a9da20b4c696b9487a2d62dada9babf1d21ed2dba"
