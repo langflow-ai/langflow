@@ -5,6 +5,23 @@ test.describe("drag and drop test", () => {
   /// <reference lib="dom"/>
   test("drop collection", async ({ page }) => {
     await page.goto("/");
+
+    let modalCount = 0;
+    try {
+      const modalTitleElement = await page?.getByTestId("modal-title");
+      if (modalTitleElement) {
+        modalCount = await modalTitleElement.count();
+      }
+    } catch (error) {
+      modalCount = 0;
+    }
+
+    while (modalCount === 0) {
+      await page.locator('//*[@id="new-project-btn"]').click();
+      await page.waitForTimeout(5000);
+      modalCount = await page.getByTestId("modal-title")?.count();
+    }
+
     await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
     // Read your file into a buffer.
     const jsonContent = readFileSync(

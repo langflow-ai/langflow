@@ -8,7 +8,15 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
 
   await page.waitForTimeout(1000);
 
-  let modalCount = (await page.getByTestId("modal-title")?.count()) ?? 0;
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
+    }
+  } catch (error) {
+    modalCount = 0;
+  }
 
   while (modalCount === 0) {
     await page.locator('//*[@id="new-project-btn"]').click();
@@ -86,7 +94,15 @@ test("chat_io_teste", async ({ page }) => {
 
   await page.waitForTimeout(3000);
 
-  let modalCount = (await page?.getByTestId("modal-title")?.count()) ?? 0;
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
+    }
+  } catch (error) {
+    modalCount = 0;
+  }
 
   while (modalCount === 0) {
     await page.locator('//*[@id="new-project-btn"]').click();
