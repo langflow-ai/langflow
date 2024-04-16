@@ -29,7 +29,7 @@ class AgentSpec(BaseModel):
         ],
         Any,
     ]
-    prompt: Optional[BasePromptTemplate] = None
+    prompt: Optional[Any] = None
     fields: List[str]
     hub_repo: Optional[str] = None
 
