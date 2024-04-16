@@ -1,9 +1,14 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import { readFileSync } from "fs";
+import path from "path";
 
 test("user must interact with chat with Input/Output", async ({ page }) => {
-  dotenv.config();
+  if (!process.env.CI) {
+    dotenv.config();
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
 
   await page.waitForTimeout(1000);
@@ -32,7 +37,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  if (process.env.OPENAI_API_KEY === undefined) {
+  if (!process.env.OPENAI_API_KEY) {
     //You must set the OPENAI_API_KEY on .env file to run this test
     expect(false).toBe(true);
   }

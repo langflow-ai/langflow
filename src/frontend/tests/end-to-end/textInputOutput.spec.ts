@@ -1,6 +1,13 @@
 import { expect, test } from "@playwright/test";
+import * as dotenv from "dotenv";
+import path from "path";
 
 test("TextInputOutputComponent", async ({ page }) => {
+  if (!process.env.CI) {
+    dotenv.config();
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
   await page.goto("/");
   await page.waitForTimeout(2000);
 
@@ -100,7 +107,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   // Release the mouse
   await page.mouse.up();
 
-  if (process.env.OPENAI_API_KEY === undefined) {
+  if (!process.env.OPENAI_API_KEY) {
     //You must set the OPENAI_API_KEY on .env file to run this test
     expect(false).toBe(true);
   }
