@@ -2,6 +2,7 @@ import copy
 from typing import Literal, Optional
 
 from langchain_core.documents import Document
+from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, model_validator
 
 
@@ -52,6 +53,21 @@ class Record(BaseModel):
         """
         data = document.metadata
         data["text"] = document.page_content
+        return cls(data=data, text_key="text")
+
+    @classmethod
+    def from_lc_message(cls, message: BaseMessage) -> "Record":
+        """
+        Converts a BaseMessage to a Record.
+
+        Args:
+            message (BaseMessage): The BaseMessage to convert.
+
+        Returns:
+            Record: The converted Record.
+        """
+        data = {"text": message.content}
+        data["metadata"] = message.to_json()
         return cls(data=data, text_key="text")
 
     def __add__(self, other: "Record") -> "Record":
