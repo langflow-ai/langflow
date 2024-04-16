@@ -21,6 +21,7 @@ test.describe("drag and drop test", () => {
       await page.waitForTimeout(5000);
       modalCount = await page.getByTestId("modal-title")?.count();
     }
+    await page.locator("span").filter({ hasText: "Close" }).first().click();
 
     await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
     // Read your file into a buffer.
