@@ -1,7 +1,7 @@
 """Add is_readable and type constraints to variable
 
 Revision ID: 18c3d829ab92
-Revises: 79e675cb6752
+Revises: 58b28437a398
 Create Date: 2024-04-08 11:14:34.096838
 
 """
@@ -14,7 +14,7 @@ from sqlalchemy.engine.reflection import Inspector
 from sqlalchemy.sql import column, func, table
 
 revision: str = "18c3d829ab92"
-down_revision: Union[str, None] = "79e675cb6752"
+down_revision: Union[str, None] = "58b28437a398"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
