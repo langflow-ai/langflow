@@ -36,19 +36,11 @@ test("LLMChain - Tooltip", async ({ page }) => {
     )
     .hover()
     .then(async () => {
-      await expect(
-        page.getByTestId("available-input-model_specs").first()
-      ).toBeVisible();
+      await expect(page.getByTestId("tooltip-Chains").first()).toBeVisible();
 
-      await expect(page.getByTestId("tooltip-Models").first()).toBeVisible();
+      await expect(page.getByTestId("tooltip-Inputs").first()).toBeVisible();
 
-      await expect(
-        page.getByTestId("tooltip-ChatLiteLLMModel, AzureOpenAIModel").first()
-      ).toBeVisible();
-
-      await expect(
-        page.getByTestId("tooltip-Model Specs").first()
-      ).toBeVisible();
+      await expect(page.getByTestId("tooltip-Outputs").first()).toBeVisible();
 
       await page.getByTestId("icon-X").click();
       await page.waitForTimeout(500);
@@ -65,8 +57,10 @@ test("LLMChain - Tooltip", async ({ page }) => {
     .hover()
     .then(async () => {
       await expect(
-        page.getByTestId("empty-tooltip-filter").first()
+        page.getByTestId("tooltip-Model Specs").first()
       ).toBeVisible();
+
+      await expect(page.getByTestId("tooltip-Models").first()).toBeVisible();
 
       await page.getByTestId("icon-Search").click();
 
@@ -123,21 +117,19 @@ test("LLMChain - Filter", async ({ page }) => {
 
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div/div/div[2]/div/div/div[2]/div[3]/div/button/div/div'
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div/div/div[2]/div[4]/div/button/div/div'
     )
     .click();
 
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div/div/div[2]/div/div/div[2]/div[3]/div/button/div/div'
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div/div/div[2]/div[4]/div/button/div/div'
     )
     .click();
-  await page.getByTestId("icon-Search").click();
+  await page.locator('//*[@id="headlessui-disclosure-button-:rld:"]').click();
 
   await expect(page.getByTestId("disclosure-models")).toBeVisible();
-  await expect(page.getByTestId("disclosure-model specs")).toBeVisible();
-
-  await expect(page.getByTestId("modelsAzure OpenAI")).toBeVisible();
+  await expect(page.getByTestId("model_specsAnthropic").first()).toBeVisible();
   await expect(page.getByTestId("model_specsAmazon Bedrock")).toBeVisible();
   await expect(page.getByTestId("model_specsAzureChatOpenAI")).toBeVisible();
   await expect(page.getByTestId("model_specsChatLiteLLM")).toBeVisible();
