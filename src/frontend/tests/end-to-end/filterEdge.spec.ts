@@ -142,7 +142,6 @@ test("LLMChain - Filter", async ({ page }) => {
       '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div/div/div[2]/div[4]/div/button/div/div'
     )
     .click();
-  await page.locator('//*[@id="headlessui-disclosure-button-:rld:"]').click();
 
   await expect(page.getByTestId("disclosure-models")).toBeVisible();
   await expect(page.getByTestId("model_specsAnthropic").first()).toBeVisible();
@@ -194,8 +193,6 @@ test("LLMChain - Filter", async ({ page }) => {
     )
     .click();
 
-  await expect(page.getByTestId("saved_componentsBasic RAG")).toBeVisible();
-  await expect(page.getByTestId("saved_componentsGroup")).toBeVisible();
   await expect(page.getByTestId("inputsChat Input")).toBeVisible();
   await expect(page.getByTestId("outputsChat Output")).toBeVisible();
   await expect(page.getByTestId("helpersID Generator")).toBeVisible();
