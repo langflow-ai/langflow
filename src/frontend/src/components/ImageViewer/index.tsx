@@ -134,7 +134,7 @@ export default function ImageViewer({image }) {
               
             </div>
           </div>
-          <div id="canvas" ref={viewerRef} className={`w-full h-full `} />
+          <div id="canvas" ref={viewerRef} className={`w-full h-[90%] `} />
           </>
         )
     );
