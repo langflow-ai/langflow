@@ -86,7 +86,7 @@ test("chat_io_teste", async ({ page }) => {
 
   await page.waitForTimeout(3000);
 
-  let modalCount = (await page.getByTestId("modal-title").count()) ?? 0;
+  let modalCount = (await page?.getByTestId("modal-title")?.count()) ?? 0;
 
   while (modalCount === 0) {
     await page.locator('//*[@id="new-project-btn"]').click();
