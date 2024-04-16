@@ -1,0 +1,66 @@
+# Basic prompting
+
+Prompts are the inputs given to a large language model. They are the interface between human instruction and computing tasks.
+
+By submitting natural language requests to an LLM in a prompt, you can answer questions, generate text, and solve problems.
+
+This article will show you how to use Langflow's prompt tools to submit basic prompts to an LLM, and how different prompting strategies can change your results.
+
+## Prerequisites
+
+1. Install Langflow.
+```bash
+pip install langflow
+```
+
+2. Start a local Langflow instance.
+```bash
+langflow
+```
+
+Result:
+```
+│ Welcome to ⛓ Langflow                             │
+│                                                   │
+│ Access http://127.0.0.1:7860                      │
+│ Collaborate, and contribute at our GitHub Repo 🚀 │
+```
+
+Alternatively, visit us on [HuggingFace Spaces](https://docs.langflow.org/getting-started/hugging-face-spaces) or [Lightning.ai Studio](https://lightning.ai/ogabrielluiz-8j6t8/studios/langflow) for a pre-built Langflow test environment.
+
+## Create components
+
+For this example, you'll build a OpenAI chat flow with four components, and then extend it with prompt templates to see the results.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/basic-prompting.png",
+    dark: "img/basic-prompting.png",
+  }}
+  style={{ width: "80%", margin: "20px auto" }}
+/>
+
+1. Create a **ChatOpenAI** component.
+2. In the OpenAI API Key field, paste your OpenAI API Key (`sk-...`).
+3. Create an **LLMChain** component. Connect the LLM input to the ChatOpenAI LLM's output.
+4. Create a **ChatPromptTemplate** component. Connect the output to the LLMChain Prompt's input.
+5. Create a **SystemMessagePromptTemplate** component. This represents a system message, which tells the model how to behave. The Prompt field can stay as default. Connect it to the input of **ChatPromptTemplate**.
+6. Create a **HumanMessagePromptTemplate** component. This represents a message from the user. In the Prompt field, enter `{text}`. Connect it to the input of **ChatPromptTemplate**.
+7. Select the Run icon. LangFlow will check your components for errors and return "Flow is Ready to Run".
+8. Select the Messages icon. A chat window will open to run your prompt.
+Chat with the bot to see how it responds according to the behavior described in Prompt.
+9. Change the behavior in the Prompt field of **SystemMessagePromptTemplate** and see what happens - for example, suggest it be an unhelpful, grumpy assistant, and see how the results change.
+
+## Other prompts
+
+Langflow also has **PromptTemplate** and **ChatMessagePromptTemplate** components.
+
+Connect **PromptTemplate** to the **LLMChain** Prompt output for use as a one-shot prompt.
+
+**ChatMessagePromptTemplate** has a `role` field that can be defined as `system`, `user`, `function`, or `assistant`, replacing the more specific template components you used in the example.
+
+
+
+
+
