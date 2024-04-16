@@ -350,7 +350,6 @@ export default function InputComponent({
             setOpen={setShowPrompt}
             type={TypeModal.PROMPT}
             value={value}
-            globalValue={selectedOption}
             buttonText="Check & Save"
             modalTitle="Edit Prompt"
             setValue={onChange}

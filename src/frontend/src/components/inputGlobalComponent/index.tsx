@@ -1,10 +1,15 @@
 import { useEffect } from "react";
+import {
+  PROMPT_SUCCESS_ALERT,
+  TEMP_NOTICE_ALERT,
+} from "../../constants/alerts_constants";
 import { deleteGlobalVariable } from "../../controllers/API";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import { ResponseErrorDetailAPI } from "../../types/api";
 import { InputGlobalComponentType } from "../../types/components";
+import { validatePrompt } from "../../utils/parameterUtils";
 import { cn } from "../../utils/utils";
 import AddNewVariableButton from "../addNewVariableButtonComponent/addNewVariableButton";
 import ForwardedIconComponent from "../genericIconComponent";
@@ -34,6 +39,8 @@ export default function InputGlobalComponent({
     (state) => state.removeGlobalVariable
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   useEffect(() => {
     if (data.node?.template[name])
@@ -76,7 +83,7 @@ export default function InputGlobalComponent({
   }
   return (
     <InputComponent
-      id={id || ("input-" + name)}
+      id={id || "input-" + name}
       editNode={editNode}
       multiline={multiline}
       setPromptNodeClass={setPromptNodeClass}
@@ -85,12 +92,24 @@ export default function InputGlobalComponent({
       readonly={data.node?.flow ? true : false}
       disabled={disabled}
       password={data.node?.template[name].password ?? false}
-      value={setPromptNodeClass && data.node?.template[name].load_from_db === true ? (globalVariables[data.node?.template[name].value]?.value ?? "") : (data.node?.template[name].value ?? "")}
-      options={setPromptNodeClass ? Object.keys(globalVariables).filter((g) => globalVariables[g].category == "Prompt") : globalVariablesEntries}
+      value={
+        setPromptNodeClass && data.node?.template[name].load_from_db === true
+          ? globalVariables[data.node?.template[name].value]?.value ?? ""
+          : data.node?.template[name].value ?? ""
+      }
+      options={
+        setPromptNodeClass
+          ? Object.keys(globalVariables).filter(
+              (g) => globalVariables[g].category == "Prompt"
+            )
+          : globalVariablesEntries
+      }
       optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
       optionsButton={
-        <AddNewVariableButton defaultCategory={setPromptNodeClass ? "Prompt" : "Generic"}>
+        <AddNewVariableButton
+          defaultCategory={setPromptNodeClass ? "Prompt" : "Generic"}
+        >
           <CommandItem value="doNotFilter-addNewVariable">
             <ForwardedIconComponent
               name="Plus"
@@ -133,8 +152,37 @@ export default function InputGlobalComponent({
           : ""
       }
       setSelectedOption={(value) => {
-        onChange(value);
-        setDb(value !== "" ? true : false);
+        if (setPromptNodeClass) {
+          let newNode = {
+            ...(data.node ?? {}),
+            template: {
+              ...data.node?.template,
+              [name]: {
+                ...data.node?.template?.[name],
+                value: value,
+                load_from_db: value !== "" ? true : false,
+              },
+            },
+          };
+          validatePrompt(value, name, newNode, setPromptNodeClass)
+            .then((inputVariables) => {
+              if (inputVariables.length === 0 && value !== "") {
+                setNoticeData({
+                  title: TEMP_NOTICE_ALERT,
+                });
+              } else {
+                setSuccessData({
+                  title: PROMPT_SUCCESS_ALERT,
+                });
+              }
+            })
+            .catch((e) => {
+              setErrorData(e);
+            });
+        } else {
+          onChange(value);
+          setDb(value !== "" ? true : false);
+        }
       }}
       onChange={(value) => {
         onChange(value);

@@ -6,8 +6,6 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import {
-  BUG_ALERT,
-  PROMPT_ERROR_ALERT,
   PROMPT_SUCCESS_ALERT,
   TEMP_NOTICE_ALERT,
 } from "../../constants/alerts_constants";
@@ -20,9 +18,9 @@ import {
   regexHighlight,
 } from "../../constants/constants";
 import { TypeModal } from "../../constants/enums";
-import { postValidatePrompt } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { genericModalPropsType } from "../../types/components";
+import { validatePrompt } from "../../utils/parameterUtils";
 import { handleKeyDown } from "../../utils/reactflowUtils";
 import { classNames, varHighlightHTML } from "../../utils/utils";
 import BaseModal from "../baseModal";
@@ -31,7 +29,6 @@ export default function GenericModal({
   field_name = "",
   value,
   setValue,
-  globalValue,
   buttonText,
   modalTitle,
   type,
@@ -100,6 +97,7 @@ export default function GenericModal({
   useEffect(() => {
     setInputValue(value);
   }, [value, modalOpen]);
+
   const coloredContent = (inputValue || "")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -126,63 +124,6 @@ export default function GenericModal({
       ? "code-highlight"
       : "code-nohighlight";
   }
-
-  // Function need some review, working for now
-  function validatePrompt(closeModal: boolean, value?): void {
-    //nodeClass is always null on tweaks
-    postValidatePrompt(field_name, value ?? inputValue, nodeClass!)
-      .then((apiReturn) => {
-        // if field_name is an empty string, then we need to set it
-        // to the first key of the custom_fields object
-        if (field_name === "") {
-          field_name = Array.isArray(
-            apiReturn.data?.frontend_node?.custom_fields?.[""]
-          )
-            ? apiReturn.data?.frontend_node?.custom_fields?.[""][0] ?? ""
-            : apiReturn.data?.frontend_node?.custom_fields?.[""] ?? "";
-        }
-        if (apiReturn.data) {
-          let inputVariables = apiReturn.data.input_variables ?? [];
-          if (
-            JSON.stringify(apiReturn.data?.frontend_node) !== JSON.stringify({})
-          ) {
-            if (setNodeClass)
-              setNodeClass(apiReturn.data?.frontend_node, value ?? inputValue);
-            setModalOpen(closeModal);
-            setIsEdit(false);
-          }
-          if (!inputVariables || inputVariables.length === 0) {
-            setNoticeData({
-              title: TEMP_NOTICE_ALERT,
-            });
-          } else {
-            setSuccessData({
-              title: PROMPT_SUCCESS_ALERT,
-            });
-          }
-        } else {
-          setIsEdit(true);
-          setErrorData({
-            title: BUG_ALERT,
-          });
-        }
-      })
-      .catch((error) => {
-        console.log(error);
-        setIsEdit(true);
-        return setErrorData({
-          title: PROMPT_ERROR_ALERT,
-          list: [error.response.data.detail ?? ""],
-        });
-      });
-  }
-
-  useEffect(() => {
-    if(globalValue && globalValue !== "")
-      setTimeout(() => {
-        validatePrompt(false, globalValue);
-      }, 1000);
-  }, [globalValue]);
 
   return (
     <BaseModal
@@ -332,7 +273,29 @@ export default function GenericModal({
                     setModalOpen(false);
                     break;
                   case TypeModal.PROMPT:
-                    validatePrompt(false);
+                    validatePrompt(
+                      inputValue,
+                      field_name,
+                      nodeClass,
+                      setNodeClass
+                    )
+                      .then((inputVariables) => {
+                        if (inputVariables.length === 0) {
+                          setNoticeData({
+                            title: TEMP_NOTICE_ALERT,
+                          });
+                        } else {
+                          setSuccessData({
+                            title: PROMPT_SUCCESS_ALERT,
+                          });
+                        }
+                        setModalOpen(false);
+                        setIsEdit(false);
+                      })
+                      .catch((e) => {
+                        setErrorData(e);
+                        setIsEdit(true);
+                      });
                     break;
 
                   default:
