@@ -67,6 +67,7 @@ test("LLMChain - Tooltip", async ({ page }) => {
       await expect(
         page.getByTestId("tooltip-Model Specs").first()
       ).toBeVisible();
+      await page.waitForTimeout(2000);
 
       await expect(page.getByTestId("tooltip-Models").first()).toBeVisible();
 
