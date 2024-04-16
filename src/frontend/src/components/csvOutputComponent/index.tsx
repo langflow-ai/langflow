@@ -22,13 +22,19 @@ function CsvOutputComponent({
   flowPool: FlowPoolObjectType;
 }) {
   const csvNodeArtifacts = flowPool?.data?.artifacts?.repr;
-  const file = csvNodeArtifacts?.data || "";
+  const jsonString = csvNodeArtifacts.replace(/'/g, '"');
+  
+  const file = JSON.parse(jsonString) || "";
   const separator = csvNode?.data?.node?.template?.separator?.value || ",";
 
   const dark = useDarkStore.getState().dark;
 
   const [rowData, setRowData] = useState([]);
   const [colDefs, setColDefs] = useState([]);
+
+  
+
+  
 
   const [status, setStatus] = useState("loading");
   var currentRowHeight: number;
@@ -57,7 +63,7 @@ function CsvOutputComponent({
     } else {
       setStatus("nodata");
     }
-  }, [separator, file]);
+  }, []);
 
   const getRowHeight = useCallback(() => {
     return currentRowHeight;
@@ -139,9 +145,6 @@ function CsvOutputComponent({
             rowData={rowData}
             columnDefs={colDefs}
             defaultColDef={defaultColDef}
-            autoSizeStrategy={{
-              type: "fitGridWidth",
-            }}
             getRowHeight={getRowHeight}
             onGridReady={onGridReady}
             onFirstDataRendered={onFirstDataRendered}
