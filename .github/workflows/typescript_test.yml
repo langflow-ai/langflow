@@ -72,6 +72,11 @@ jobs:
           poetry env use ${{ env.PYTHON_VERSION }}
           poetry install
 
+      - name: create .env
+        run: |
+          touch .env
+          echo "${{ secrets.ENV_VARS }}" > .env
+
       - name: Run Playwright Tests
         run: |
           cd src/frontend
