@@ -105,7 +105,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
         system_message: Optional[str] = None,
         max_tokens: Optional[int] = 1000,
         stream: bool = False,
-    ) -> BaseLanguageModel:
+    ) -> Text:
         if api_key:
             secret_api_key = SecretStr(api_key)
         else:

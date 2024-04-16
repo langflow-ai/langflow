@@ -10,8 +10,10 @@ from .RunFlow import RunFlowComponent
 from .RunnableExecutor import RunnableExecComponent
 from .SQLExecutor import SQLExecutorComponent
 from .SubFlow import SubFlowComponent
+from .AgentComponent import AgentComponent
 
 __all__ = [
+    "AgentComponent",
     "ClearMessageHistoryComponent",
     "ExtractKeyFromRecordComponent",
     "FlowToolComponent",
