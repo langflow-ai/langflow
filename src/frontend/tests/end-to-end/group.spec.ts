@@ -1,10 +1,9 @@
 import { test } from "@playwright/test";
 
 test.describe("group node test", () => {
+  await page.goto("/");
   /// <reference lib="dom"/>
   test("group and ungroup updating values", async ({ page }) => {
-    await page.goto("/");
-
     let modalCount = (await page.getByTestId("modal-title").count()) ?? 0;
 
     while (modalCount === 0) {

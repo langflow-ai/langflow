@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("curl_api_generation", async ({ page, context }) => {
-  await page.goto("http:localhost:3000/");
+  await page.goto("/");
   let modalCount = (await page.getByTestId("modal-title").count()) ?? 0;
 
   while (modalCount === 0) {

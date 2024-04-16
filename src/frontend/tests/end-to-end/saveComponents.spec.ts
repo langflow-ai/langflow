@@ -1,17 +1,10 @@
-import { Page, expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 
 test.describe("save component tests", () => {
-  async function saveComponent(page: Page, pattern: RegExp, n: number) {
-    for (let i = 0; i < n; i++) {
-      await page.getByTestId(pattern).click();
-      await page.getByLabel("Save").click();
-    }
-  }
-
   /// <reference lib="dom"/>
   test("save group component tests", async ({ page }) => {
-    await page.goto("http:localhost:3000/");
+    await page.goto("/");
     let modalCount = (await page.getByTestId("modal-title").count()) ?? 0;
 
     while (modalCount === 0) {

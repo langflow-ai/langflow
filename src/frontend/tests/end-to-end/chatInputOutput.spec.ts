@@ -3,9 +3,8 @@ import * as dotenv from "dotenv";
 import { readFileSync } from "fs";
 
 test("user must interact with chat with Input/Output", async ({ page }) => {
-  dotenv.config();
-
   await page.goto("/");
+  dotenv.config();
   await page.waitForTimeout(1000);
 
   let modalCount = (await page.getByTestId("modal-title").count()) ?? 0;
