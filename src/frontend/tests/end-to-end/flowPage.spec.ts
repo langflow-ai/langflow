@@ -21,9 +21,6 @@ test.describe("Flow Page tests", () => {
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
-    await page.locator('//*[@id="new-project-btn"]').click();
-    await page.waitForTimeout(1000);
-
     await page.getByTestId("blank-flow").click();
     await page.waitForTimeout(1000);
     await page.getByTestId("extended-disclosure").click();
@@ -41,7 +38,5 @@ test.describe("Flow Page tests", () => {
     await page.getByTitle("zoom out").click();
     await page.getByTitle("zoom out").click();
     await page.getByTitle("zoom out").click();
-    // await page.getByTestId("icon-ExternalLink").click();
-    // await page.locator('//*[@id="checkAndSaveBtn"]').click();
   });
 });

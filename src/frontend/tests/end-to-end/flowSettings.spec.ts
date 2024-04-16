@@ -35,9 +35,9 @@ test("flowSettings", async ({ page }) => {
   await page.getByText("Character limit reached").isVisible();
 
   await page.getByPlaceholder("Flow name").click();
-
-  await page.getByPlaceholder("Flow name").fill("Flow Name");
-
+  const randomName = Math.random().toString(36).substring(2);
+  await page.getByPlaceholder("Flow name").fill(randomName);
+  await page.getByPlaceholder("Flow name").click();
   await page
     .getByPlaceholder("Flow description")
     .fill(
@@ -58,7 +58,7 @@ test("flowSettings", async ({ page }) => {
     .getByPlaceholder("Flow description")
     .inputValue();
 
-  if (flowName != "Flow Name") {
+  if (flowName != randomName) {
     expect(false).toBeTruthy();
   }
 
