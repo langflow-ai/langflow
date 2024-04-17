@@ -89,15 +89,16 @@ export default function IOModal({
     }
   }, [open, currentFlow]);
 
-  async function sendMessage(count = 1): Promise<void> {
+  async function sendMessage({repeat=1,files}:{repeat:number,files?:string[]}): Promise<void> {
     if (isBuilding) return;
     setIsBuilding(true);
     setLockChat(true);
     setChatValue("");
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < repeat; i++) {
       await buildFlow({
         input_value: chatValue,
         startNodeId: chatInput?.id,
+        files:files
       }).catch((err) => {
         console.error(err);
         setLockChat(false);
@@ -382,7 +383,7 @@ export default function IOModal({
             <Button
               variant={"outline"}
               className="flex gap-2 px-3"
-              onClick={() => sendMessage(1)}
+              onClick={() => sendMessage({repeat:1})}
             >
               <IconComponent
                 name={isBuilding ? "Loader2" : "Zap"}

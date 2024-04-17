@@ -202,7 +202,7 @@ export default function ChatView({
               chatValue={chatValue}
               noInput={!inputTypes.includes("ChatInput")}
               lockChat={lockChat}
-              sendMessage={(count) => sendMessage(count)}
+              sendMessage={({repeat,files}) => sendMessage({repeat,files})}
               setChatValue={(value) => {
                 setChatValue(value);
               }}

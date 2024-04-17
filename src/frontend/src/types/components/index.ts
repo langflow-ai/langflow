@@ -187,7 +187,7 @@ export type FloatComponentType = {
   id?: string;
 };
 
-export type FilePreviewType={loading:boolean,file:File,error:boolean,id:string}
+export type FilePreviewType={loading:boolean,file:File,error:boolean,id:string,path?:string}
 
 export type TooltipComponentType = {
   children: ReactElement;
@@ -475,7 +475,7 @@ export type chatInputType = {
   };
   lockChat: boolean;
   noInput: boolean;
-  sendMessage: (count?: number) => void;
+  sendMessage: ({repeat,files}:{repeat:number,files?:string[]}) => void;
   setChatValue: (value: string) => void;
 };
 
@@ -716,7 +716,7 @@ export type IOFieldViewProps = {
 export type UndrawCardComponentProps = { flow: FlowType };
 
 export type chatViewProps = {
-  sendMessage: (count?: number) => void;
+  sendMessage: ({repeat,files}:{repeat:number,files?:string[]}) => void;
   chatValue: string;
   setChatValue: (value: string) => void;
   lockChat: boolean;
