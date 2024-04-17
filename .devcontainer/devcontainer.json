@@ -3,7 +3,7 @@
 {
   "name": "Langflow Dev Container",
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "image": "mcr.microsoft.com/devcontainers/python:3.10",
+  "image": "mcr.microsoft.com/devcontainers/python:3.10-bookworm",
 
   // Features to add to the dev container. More info: https://containers.dev/features.
   "features": {
