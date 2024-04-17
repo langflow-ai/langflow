@@ -431,10 +431,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     startNodeId,
     stopNodeId,
     input_value,
+    files,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
+    files?: string[];
   }) => {
     get().setIsBuilding(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
@@ -523,6 +525,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
     await buildVertices({
       input_value,
+      files,
       flowId: currentFlow!.id,
       startNodeId,
       stopNodeId,

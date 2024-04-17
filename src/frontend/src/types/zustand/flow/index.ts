@@ -12,6 +12,7 @@ import { FlowState } from "../../tabs";
 
 export type chatInputType = {
   result: string;
+  files?:string[];
 };
 
 export type ChatOutputType = {
@@ -19,6 +20,7 @@ export type ChatOutputType = {
   sender: string;
   sender_name: string;
   stream_url?: string;
+  files?:string[];
 };
 
 export type FlowPoolObjectType = {
@@ -31,6 +33,23 @@ export type FlowPoolObjectType = {
   };
   duration?: string;
   progress?: number;
+  id: string;
+  buildId: string;
+};
+
+export type FlowPoolObjectTypeNew = {
+  //build
+  //1 - error->logs
+  //2 - success-> result
+  timestamp: string;
+  valid: boolean;
+  data: {
+    logs?:any | ChatOutputType | chatInputType;
+    results: any | ChatOutputType | chatInputType;
+  };
+  duration?: string;
+  progress?: number;
+  //retrieve component type from id
   id: string;
   buildId: string;
 };
@@ -98,11 +117,13 @@ export type FlowStoreType = {
     startNodeId,
     stopNodeId,
     input_value,
+    files,
   }: {
     nodeId?: string;
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
+    files?:string[];
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
   updateVerticesBuild: (

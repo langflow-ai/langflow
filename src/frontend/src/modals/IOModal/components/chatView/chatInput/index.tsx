@@ -54,6 +54,7 @@ export default function ChatInput({
                   const newFiles = [...prev];
                   const updatedIndex = newFiles.findIndex((file)=>file.id===id);
                   newFiles[updatedIndex].loading = false;
+                  newFiles[updatedIndex].path = res.data.file_path;
                   return newFiles;
                 })
               }).catch((err) => {
@@ -76,6 +77,11 @@ export default function ChatInput({
     };
   }, []);
 
+  function send(){
+    sendMessage({repeat,files:files.map((file)=>file.path??"").filter((file)=>file!=="")});
+    setFiles([]);
+  }
+
   return (
     <div className="flex w-full flex-col-reverse">
       <div className="relative w-full">
@@ -88,7 +94,7 @@ export default function ChatInput({
               !event.shiftKey &&
               !event.nativeEvent.isComposing
             ) {
-              sendMessage(repeat);
+              send();
             }
           }}
           rows={1}
@@ -134,7 +140,7 @@ export default function ChatInput({
                 : "bg-chat-send text-background"
             )}
             disabled={lockChat || saveLoading}
-            onClick={(): void => sendMessage(repeat)}
+            onClick={(): void => send()}
           >
             {lockChat || saveLoading ? (
               <IconComponent
