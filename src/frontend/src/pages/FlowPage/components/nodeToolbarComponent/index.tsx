@@ -95,8 +95,8 @@ export default function NodeToolbarComponent({
   }
 
   function handleShareWShortcut(e: KeyboardEvent) {
-    e.preventDefault()
     if (hasApiKey || hasStore) {
+      e.preventDefault()
       setShowconfirmShare((state) => !state);
     }
   }
