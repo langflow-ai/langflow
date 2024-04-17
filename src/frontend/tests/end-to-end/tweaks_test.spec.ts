@@ -17,7 +17,7 @@ test("curl_api_generation", async ({ page, context }) => {
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(2000);
   await page.getByText("API", { exact: true }).click();
