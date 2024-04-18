@@ -64,11 +64,11 @@ export default function ChatView({
     const chatMessages: ChatMessageType[] = chatOutputResponses
       .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
       //
-      .filter((output) => output.data.artifacts?.message !== null)
+      .filter((output) => output.messages && output.messages.length > 0)
       .map((output, index) => {
         try {
-          const { sender, message, sender_name, stream_url } = output.data
-            .artifacts as ChatOutputType;
+          const { sender, message, sender_name, stream_url } = output
+            .messages[0] as ChatOutputType;
 
           const is_ai = sender === "Machine" || sender === null;
           return {
@@ -202,7 +202,9 @@ export default function ChatView({
               chatValue={chatValue}
               noInput={!inputTypes.includes("ChatInput")}
               lockChat={lockChat}
-              sendMessage={({repeat,files}) => sendMessage({repeat,files})}
+              sendMessage={({ repeat, files }) =>
+                sendMessage({ repeat, files })
+              }
               setChatValue={(value) => {
                 setChatValue(value);
               }}

@@ -14,6 +14,7 @@ class ChatOutputResponse(BaseModel):
     session_id: Optional[str] = None
     stream_url: Optional[str] = None
     component_id: Optional[str] = None
+    files: List[str] = []
 
     @classmethod
     def from_message(

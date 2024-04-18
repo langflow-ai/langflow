@@ -69,7 +69,7 @@ class MonitorService(Service):
         valid: Optional[bool] = None,
         order_by: Optional[str] = "timestamp",
     ):
-        query = "SELECT id, flow_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
+        query = "SELECT id, flow_id, valid, logs, data, timestamp FROM vertex_builds"
         conditions = []
         if flow_id:
             conditions.append(f"flow_id = '{flow_id}'")

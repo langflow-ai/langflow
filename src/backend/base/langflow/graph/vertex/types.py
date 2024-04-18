@@ -1,6 +1,7 @@
 import ast
 import json
 from typing import AsyncIterator, Callable, Dict, Iterator, List, Optional, Union
+
 import yaml
 from langchain_core.messages import AIMessage
 from loguru import logger
@@ -422,9 +423,9 @@ class ChatVertex(Vertex):
             flow_id=self.graph.flow_id,
             vertex_id=self.id,
             valid=True,
-            params=self._built_object_repr(),
+            logs=self._built_object_repr(),
             data=self.result,
-            artifacts=self.artifacts,
+            messages=self.artifacts,
         )
 
         self._validate_built_object()

@@ -36,13 +36,13 @@ class MessageModel(BaseModel):
     sender_name: str
     session_id: str
     message: str
-    artifacts: dict
+    files: list[str] = []
 
     class Config:
         from_attributes = True
         populate_by_name = True
 
-    @validator("artifacts", pre=True)
+    @validator("files", pre=True)
     def validate_target_args(cls, v):
         if isinstance(v, str):
             return json.loads(v)
@@ -58,7 +58,7 @@ class MessageModel(BaseModel):
             sender_name=record.sender_name,
             message=record.text,
             session_id=record.session_id,
-            artifacts=record.artifacts or {},
+            files=record.files or [],
         )
 
 
@@ -67,16 +67,15 @@ class VertexBuildModel(BaseModel):
     id: Optional[str] = Field(default=None, alias="id")
     flow_id: str
     valid: bool
-    params: Any
+    logs: Any
     data: dict
-    artifacts: dict
     timestamp: datetime = Field(default_factory=datetime.now)
 
     class Config:
         from_attributes = True
         populate_by_name = True
 
-    @field_serializer("data", "artifacts")
+    @field_serializer("data")
     def serialize_dict(v):
         if isinstance(v, dict):
             # check if the value of each key is a BaseModel or a list of BaseModels
@@ -88,7 +87,7 @@ class VertexBuildModel(BaseModel):
             return json.dumps(v)
         return v
 
-    @validator("params", pre=True)
+    @validator("logs", pre=True)
     def validate_params(cls, v):
         if isinstance(v, str):
             try:
@@ -97,7 +96,7 @@ class VertexBuildModel(BaseModel):
                 return v
         return v
 
-    @field_serializer("params")
+    @field_serializer("logs")
     def serialize_params(v):
         if isinstance(v, list) and all(isinstance(i, BaseModel) for i in v):
             return json.dumps([i.model_dump() for i in v])
@@ -109,15 +108,11 @@ class VertexBuildModel(BaseModel):
             return json.loads(v)
         return v
 
-    @validator("artifacts", pre=True)
-    def validate_artifacts(cls, v):
-        if isinstance(v, str):
-            return json.loads(v)
-        return v
-
 
 class VertexBuildResponseModel(VertexBuildModel):
-    @field_serializer("data", "artifacts")
+    messages: list[MessageModel] = []
+
+    @field_serializer("data")
     def serialize_dict(v):
         return v
 
