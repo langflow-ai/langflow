@@ -27,7 +27,7 @@ export const useDarkStore = create<DarkStoreType>((set, get) => ({
 
     // if lastUpdated is null or the difference is greater than 2 hours
     if (lastUpdated === null || diff > 7200000) {
-      getRepoStars("logspace-ai", "langflow").then((res) => {
+      getRepoStars("langflow-ai", "langflow").then((res) => {
         window.localStorage.setItem("githubStars", res.toString());
         window.localStorage.setItem(
           "githubStarsLastUpdated",

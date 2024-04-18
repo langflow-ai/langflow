@@ -2,7 +2,7 @@
 name = "langflow"
 version = "1.0.0a24"
 description = "A Python package with a built-in web application"
-authors = ["Logspace <contact@langflow.org>"]
+authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
     "Carlos Coelho <carlos@langflow.org>",
     "Cristhian Zanforlin <cristhian.lousa@gmail.com>",
