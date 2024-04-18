@@ -1,0 +1,86 @@
+from typing import Callable
+import ast
+
+from langchain.agents import Tool
+from langchain.pydantic_v1 import BaseModel, Field
+from langchain.tools import BaseTool, StructuredTool, tool
+
+from langflow.field_typing import Code
+from langflow.interface.custom.custom_component import CustomComponent
+from langflow.interface.custom.utils import get_function
+
+
+
+
+class PythonStructuredTool(LCModelComponent):
+    display_name = "Python Structured Tool"
+    description = "Define a Python Structured function."
+    icon = "Python"
+    
+    
+    field_order = [
+        "function_code",      
+        "name",
+        "description",
+        "return_direct",
+
+    ]
+    
+    def parse_function_parameters(code):
+        tree = ast.parse(code)
+        functions = [node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
+        for function in functions:
+            print(f'Function Name: {function.name}')
+            parameters = [arg.arg for arg in function.args.args]
+            print(f'Parameters: {parameters}')
+
+    def build_config(self):
+        return {
+            "function_code": {
+                "display_name": "Code",
+
+
+            },
+            "schema_code": {
+                "display_name": "Code schema",
+
+
+            },            
+            "name":{
+                "display_name": "Name",
+                "info": "Name of tool",
+                
+            },
+            "description":{
+                "display_name": "Description",
+            },
+            "return_direct":{
+                "display_name": "Return Direct",
+
+            },
+
+            
+            
+
+        }
+
+    def build(self,name:str, function_code: Code,schema_code: Code,return_direct:bool,description:str) -> Tool:
+        
+        
+        self.status = function_code
+        
+        
+       # args_schema_parser=
+        
+        tool = StructuredTool.from_function(
+            
+            func = get_function(function_code),
+            name = name,
+            args_schema = schema_code,
+            return_direct=return_direct
+            
+        )
+        
+        
+        
+        return tool
