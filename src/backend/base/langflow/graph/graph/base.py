@@ -32,6 +32,7 @@ class Graph:
         nodes: List[Dict],
         edges: List[Dict[str, str]],
         flow_id: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> None:
         """
         Initializes a new instance of the Graph class.
@@ -47,6 +48,7 @@ class Graph:
         self._runs = 0
         self._updates = 0
         self.flow_id = flow_id
+        self.user_id = user_id
         self._is_input_vertices: List[str] = []
         self._is_output_vertices: List[str] = []
         self._is_state_vertices: List[str] = []
@@ -450,7 +452,7 @@ class Graph:
         self.__init__(**state)
 
     @classmethod
-    def from_payload(cls, payload: Dict, flow_id: Optional[str] = None) -> "Graph":
+    def from_payload(cls, payload: Dict, flow_id: Optional[str] = None, user_id: Optional[str] = None) -> "Graph":
         """
         Creates a graph from a payload.
 
@@ -465,7 +467,7 @@ class Graph:
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
-            return cls(vertices, edges, flow_id)
+            return cls(vertices, edges, flow_id, user_id)
         except KeyError as exc:
             logger.exception(exc)
             if "nodes" not in payload and "edges" not in payload:
@@ -772,7 +774,7 @@ class Graph:
                         lock=lock,
                         set_cache_coro=set_cache_coro,
                         vertex_id=vertex_id,
-                        user_id=None,
+                        user_id=self.user_id,
                         inputs_dict={},
                     ),
                     name=f"{vertex.display_name} Run {vertex_task_run_count.get(vertex_id, 0)}",
