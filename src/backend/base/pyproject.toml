@@ -2,15 +2,15 @@
 name = "langflow-base"
 version = "0.0.36"
 description = "A Python package with a built-in web application"
-authors = ["Logspace <contact@logspace.ai>"]
+authors = ["Logspace <contact@.ai>"]
 maintainers = [
-    "Carlos Coelho <carlos@logspace.ai>",
+    "Carlos Coelho <carlos@langflow.org>",
     "Cristhian Zanforlin <cristhian.lousa@gmail.com>",
-    "Gabriel Almeida <gabriel@logspace.ai>",
+    "Gabriel Almeida <gabriel@langflow.org>",
     "Igor Carvalho <igorr.ackerman@gmail.com>",
     "Lucas Eduoli <lucaseduoli@gmail.com>",
     "Otávio Anovazzi <otavio2204@gmail.com>",
-    "Rodrigo Nader <rodrigo@logspace.ai>",
+    "Rodrigo Nader <rodrigo@langflow.org>",
 ]
 repository = "https://github.com/langflow-ai/langflow"
 license = "MIT"
