@@ -12,7 +12,7 @@ import { FlowState } from "../../tabs";
 
 export type chatInputType = {
   result: string;
-  files?:string[];
+  files?: string[];
 };
 
 export type ChatOutputType = {
@@ -20,13 +20,13 @@ export type ChatOutputType = {
   sender: string;
   sender_name: string;
   stream_url?: string;
-  files?:string[];
+  files?: string[];
 };
 
 export type FlowPoolObjectType = {
   timestamp: string;
   valid: boolean;
-  params: any;
+  messages: Array<ChatOutputType | chatInputType> | [];
   data: {
     artifacts: any | ChatOutputType | chatInputType;
     results: any | ChatOutputType | chatInputType;
@@ -44,7 +44,7 @@ export type FlowPoolObjectTypeNew = {
   timestamp: string;
   valid: boolean;
   data: {
-    logs?:any | ChatOutputType | chatInputType;
+    logs?: any | ChatOutputType | chatInputType;
     results: any | ChatOutputType | chatInputType;
   };
   duration?: string;
@@ -123,7 +123,7 @@ export type FlowStoreType = {
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
-    files?:string[];
+    files?: string[];
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
   updateVerticesBuild: (

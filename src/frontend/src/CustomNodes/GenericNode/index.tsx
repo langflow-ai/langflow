@@ -204,16 +204,21 @@ export default function GenericNode({
   }, [flowPool[data.id], data.id]);
 
   useEffect(() => {
-    if (validationStatus?.params) {
+    if (validationStatus?.logs) {
       // if it is not a string turn it into a string
-      let newValidationString = validationStatus.params;
+      let newValidationString = "";
+      if (validationStatus?.logs && Array.isArray(validationStatus.logs)) {
+        newValidationString = validationStatus.logs
+          .map((log) => log.message)
+          .join("\n");
+      }
       if (typeof newValidationString !== "string") {
-        newValidationString = JSON.stringify(validationStatus.params);
+        newValidationString = JSON.stringify(validationStatus.logs);
       }
 
       setValidationString(newValidationString);
     }
-  }, [validationStatus, validationStatus?.params]);
+  }, [validationStatus, validationStatus?.logs]);
 
   const [showNode, setShowNode] = useState(data.showNode ?? true);
 

@@ -28,7 +28,8 @@ export type chatInputType = {
 export type FlowPoolObjectType = {
   timestamp: string;
   valid: boolean;
-  params: any;
+  // list of chat outputs or list of chat inputs
+  messages: Array<ChatOutputType | chatInputType> | [];
   data: { artifacts: any; results: any | ChatOutputType | chatInputType };
   id: string;
 };

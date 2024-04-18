@@ -138,9 +138,9 @@ async def log_vertex_build(
     flow_id: str,
     vertex_id: str,
     valid: bool,
-    params: Any,
+    logs: Any,
     data: "ResultDataResponse",
-    artifacts: Optional[dict] = None,
+    messages: Optional[dict] = None,
 ):
     try:
         monitor_service = get_monitor_service()
@@ -149,9 +149,9 @@ async def log_vertex_build(
             "flow_id": flow_id,
             "id": vertex_id,
             "valid": valid,
-            "params": params,
+            "logs": logs,
             "data": data.model_dump(),
-            "artifacts": artifacts or {},
+            "messages": messages or {},
             "timestamp": monitor_service.get_timestamp(),
         }
         monitor_service.add_row(table_name="vertex_builds", data=row)

@@ -1,4 +1,6 @@
 import { Edge, Node, Viewport } from "reactflow";
+import { ChatOutputType, chatInputType } from "../chat";
+import { Log } from "../components";
 import { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
@@ -150,7 +152,8 @@ export type VertexBuildTypeAPI = {
   top_level_vertices: Array<string>;
   run_id: string;
   valid: boolean;
-  params: string;
+  logs: Log[];
+  messages: ChatOutputType[] | chatInputType[];
   data: VertexDataTypeAPI;
   timestamp: string;
 };
@@ -160,6 +163,7 @@ export type VertexBuildTypeAPI = {
 export type VertexDataTypeAPI = {
   results: { [key: string]: { [key: string]: string } };
   artifacts: { [key: string]: string };
+  messages: ChatOutputType[] | chatInputType[];
   timedelta?: number;
   duration?: string;
 };
