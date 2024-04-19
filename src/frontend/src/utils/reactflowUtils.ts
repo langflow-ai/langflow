@@ -1122,25 +1122,6 @@ export function expandGroupNode(
   setEdges(filteredEdges);
 }
 
-export function getGroupStatus(
-  flow: FlowType,
-  ssData: { [key: string]: { valid: boolean; params: string } }
-) {
-  let status = { valid: true, params: SUCCESS_BUILD };
-  const { nodes } = flow.data!;
-  const ids = nodes.map((n: NodeType) => n.data.id);
-  ids.forEach((id) => {
-    if (!ssData[id]) {
-      status = ssData[id];
-      return;
-    }
-    if (!ssData[id].valid) {
-      status = { valid: false, params: ssData[id].params };
-    }
-  });
-  return status;
-}
-
 export function createFlowComponent(
   nodeData: NodeDataType,
   version: string
