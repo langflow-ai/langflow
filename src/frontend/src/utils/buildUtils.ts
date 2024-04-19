@@ -243,7 +243,7 @@ async function buildVertex({
       if (!buildData.valid) {
         onBuildError!(
           "Error Building Component",
-          [buildData.params],
+          buildData.data.logs.map((log) => log.message),
           verticesIds.map((id) => ({ id }))
         );
         stopBuild();
@@ -252,6 +252,7 @@ async function buildVertex({
     }
     buildResults.push(buildData.valid);
   } catch (error) {
+    console.error(error);
     onBuildError!(
       "Error Building Component",
       [(error as AxiosError<any>).response?.data?.detail ?? "Unknown Error"],
