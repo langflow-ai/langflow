@@ -28,12 +28,13 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
   // Build VertexBuildTypeAPI
   let inactiveData = {
     results: {},
-    artifacts: { repr: "Inactive" },
+    logs:[],
+    messages:[],
+    inactive: true,
   };
   let inactiveVertexData = {
     id: vertexId,
     data: inactiveData,
-    params: "Inactive",
     inactivated_vertices: null,
     run_id: "",
     next_vertices_ids: [],
