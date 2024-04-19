@@ -69,7 +69,9 @@ test("LLMChain - Tooltip", async ({ page }) => {
       ).toBeVisible();
       await page.waitForTimeout(2000);
 
-      await expect(page.getByTestId("tooltip-Models").first()).toBeVisible();
+      await expect(
+        page.getByTestId("tooltip-Model Specs").first()
+      ).toBeVisible();
 
       await page.getByTestId("icon-Search").click();
 
@@ -138,13 +140,7 @@ test("LLMChain - Filter", async ({ page }) => {
     )
     .click();
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div/div/div[2]/div[4]/div/button/div/div'
-    )
-    .click();
-
-  await expect(page.getByTestId("disclosure-models")).toBeVisible();
+  await expect(page.getByTestId("disclosure-model specs")).toBeVisible();
   await expect(page.getByTestId("model_specsAnthropic").first()).toBeVisible();
   await expect(page.getByTestId("model_specsAmazon Bedrock")).toBeVisible();
   await expect(page.getByTestId("model_specsAzureChatOpenAI")).toBeVisible();
