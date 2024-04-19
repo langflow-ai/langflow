@@ -150,10 +150,8 @@ export type VertexBuildTypeAPI = {
   inactivated_vertices: Array<string> | null;
   next_vertices_ids: Array<string>;
   top_level_vertices: Array<string>;
-  run_id: string;
+  run_id?: string;
   valid: boolean;
-  logs: Log[];
-  messages: ChatOutputType[] | chatInputType[];
   data: VertexDataTypeAPI;
   timestamp: string;
 };
@@ -162,7 +160,7 @@ export type VertexBuildTypeAPI = {
 // it has results, artifacts, timedelta, duration
 export type VertexDataTypeAPI = {
   results: { [key: string]: { [key: string]: string } };
-  artifacts: { [key: string]: string };
+  logs:{message:string}[];
   messages: ChatOutputType[] | chatInputType[];
   timedelta?: number;
   duration?: string;
