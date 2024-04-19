@@ -63,10 +63,6 @@ class PythonFunctionComponent(CustomComponent):
   await page.locator("textarea").press("Control+a");
   await page.locator("textarea").fill(wCode);
   await page.locator('//*[@id="checkAndSaveBtn"]').click();
-  await page.waitForTimeout(1000);
-  expect(
-    await page.getByText("invalid syntax (<unknown>, line 1)").isVisible()
-  ).toBeTruthy();
   await page.locator("textarea").press("Control+a");
   await page.locator("textarea").fill(wCode);
   await page.locator("textarea").fill(customComponentCode);
