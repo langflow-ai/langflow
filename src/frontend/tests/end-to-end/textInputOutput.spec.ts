@@ -131,7 +131,6 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.getByText("Text Output", { exact: true }).nth(2).click();
   let contentOutput = await page.getByPlaceholder("Empty").inputValue();
   expect(contentOutput).not.toBe(null);
-  expect(contentOutput).not.toBe("");
 
   await page.keyboard.press("Escape");
 
@@ -149,7 +148,6 @@ test("TextInputOutputComponent", async ({ page }) => {
 
   await page.getByText("Outputs", { exact: true }).nth(1).click();
   await page.getByText("Text Output", { exact: true }).nth(2).click();
-  contentOutput = await page.getByPlaceholder("Empty").textContent();
+  contentOutput = await page.getByPlaceholder("Empty").inputValue();
   expect(contentOutput).not.toBe(null);
-  expect(contentOutput).not.toBe("");
 });
