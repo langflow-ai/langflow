@@ -68,6 +68,7 @@ install_frontendc:
 	cd src/frontend && rm -rf node_modules package-lock.json && npm install
 
 run_frontend:
+	@-kill -9 `lsof -t -i:3000`
 	cd src/frontend && npm start
 
 tests_frontend:
