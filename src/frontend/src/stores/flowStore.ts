@@ -62,7 +62,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setFlowPool: (flowPool) => {
     set({ flowPool });
   },
-  addDataToFlowPool: (data: FlowPoolObjectType, nodeId: string) => {
+  addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
     if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
     else {
@@ -76,7 +76,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateFlowPool: (
     nodeId: string,
-    data: FlowPoolObjectType | ChatOutputType | chatInputType,
+    data: VertexBuildTypeAPI | ChatOutputType | chatInputType,
     buildId?: string
   ) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
@@ -506,7 +506,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       }
 
       get().addDataToFlowPool(
-        { ...vertexBuildData, buildId: runId },
+        { ...vertexBuildData, run_id: runId },
         vertexBuildData.id
       );
 

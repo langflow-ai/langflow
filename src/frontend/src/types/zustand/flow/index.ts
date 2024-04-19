@@ -9,6 +9,7 @@ import {
 } from "reactflow";
 import { BuildStatus } from "../../../constants/enums";
 import { FlowState } from "../../tabs";
+import { VertexBuildTypeAPI } from "../../api";
 
 export type chatInputType = {
   result: string;
@@ -60,7 +61,7 @@ export type VertexLayerElementType = {
 };
 
 export type FlowPoolType = {
-  [key: string]: Array<FlowPoolObjectType>;
+  [key: string]: Array<VertexBuildTypeAPI>;
 };
 
 export type FlowStoreType = {
@@ -69,7 +70,7 @@ export type FlowStoreType = {
   outputs: Array<{ type: string; id: string; displayName: string }>;
   hasIO: boolean;
   setFlowPool: (flowPool: FlowPoolType) => void;
-  addDataToFlowPool: (data: FlowPoolObjectType, nodeId: string) => void;
+  addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => void;
   CleanFlowPool: () => void;
   isBuilding: boolean;
   isPending: boolean;
@@ -149,7 +150,7 @@ export type FlowStoreType = {
   };
   updateFlowPool: (
     nodeId: string,
-    data: FlowPoolObjectType | ChatOutputType | chatInputType,
+    data: VertexBuildTypeAPI | ChatOutputType | chatInputType,
     buildId?: string
   ) => void;
   getNodePosition: (nodeId: string) => { x: number; y: number };
