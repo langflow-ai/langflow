@@ -237,6 +237,7 @@ export default function ShareModal({
               onCheckedChange={(event: boolean) => {
                 setSharePublic(event);
               }}
+              data-testid="public-checkbox"
             />
             <label htmlFor="public" className="export-modal-save-api text-sm ">
               Set {nameComponent} status to public
