@@ -179,7 +179,6 @@ export default function NodeToolbarComponent({
   );
 
   useEffect(() => {
-    console.log(openWDoubleClick)
     if (openWDoubleClick) setShowModalAdvanced(true)
   }, [openWDoubleClick, setOpenWDoubleClick]);
 
