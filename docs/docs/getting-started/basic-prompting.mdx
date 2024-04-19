@@ -5,11 +5,11 @@ import ReactPlayer from "react-player";
 
 # Basic prompting
 
-Prompts are the inputs given to a large language model. They are the interface between human instruction and computing tasks.
+Prompts serve as the inputs to a large language model (LLM), acting as the interface between human instructions and computational tasks.
 
-By submitting natural language requests to an LLM in a prompt, you can answer questions, generate text, and solve problems.
+By submitting natural language requests in a prompt to an LLM, you can obtain answers, generate text, and solve problems.
 
-This article will show you how to use Langflow's prompt tools to submit basic prompts to an LLM, and how different prompting strategies can change your results.
+This article demonstrates how to use Langflow's prompt tools to issue basic prompts to an LLM, and how various prompting strategies can affect your outcomes.
 
 ## Prerequisites
 
@@ -35,11 +35,15 @@ Result:
 │ Collaborate, and contribute at our GitHub Repo 🚀 │
 ```
 
-Alternatively, visit us on [HuggingFace Spaces](https://docs.langflow.org/getting-started/hugging-face-spaces) or [Lightning.ai Studio](https://lightning.ai/ogabrielluiz-8j6t8/studios/langflow) for a pre-built Langflow test environment.
+Alternatively, go to [HuggingFace Spaces](https://docs.langflow.org/getting-started/hugging-face-spaces) or [Lightning.ai Studio](https://lightning.ai/ogabrielluiz-8j6t8/studios/langflow) for a pre-built Langflow test environment.
 
-## Create components
+3. Create an [OpenAI API key](https://platform.openai.com).
 
-For this example, you'll build a OpenAI chat flow with four components, and then extend it with prompt templates to see the results.
+## Create the basic prompting project
+
+1. From the Langflow dashboard, click **New Project**.
+2. Select **Basic Prompting**.
+3. The **Basic Prompting** flow is created.
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -50,25 +54,29 @@ For this example, you'll build a OpenAI chat flow with four components, and then
   style={{ width: "80%", margin: "20px auto" }}
 />
 
-1. Create a **ChatOpenAI** component.
-2. In the OpenAI API Key field, paste your OpenAI API Key (`sk-...`).
-3. Create an **LLMChain** component. Connect the LLM input to the ChatOpenAI LLM's output.
-4. Create a **ChatPromptTemplate** component. Connect the output to the LLMChain Prompt's input.
-5. Create a **SystemMessagePromptTemplate** component. This represents a system message, which tells the model how to behave. The Prompt field can stay as default. Connect it to the input of **ChatPromptTemplate**.
-6. Create a **HumanMessagePromptTemplate** component. This represents a message from the user. In the Prompt field, enter `{text}`. Connect it to the input of **ChatPromptTemplate**.
-7. Select the Run icon. LangFlow will check your components for errors and return "Flow is Ready to Run".
-8. Select the Messages icon. A chat window will open to run your prompt.
-Chat with the bot to see how it responds according to the behavior described in Prompt.
-9. Change the behavior in the Prompt field of **SystemMessagePromptTemplate** and see what happens - for example, suggest it be an unhelpful, grumpy assistant, and see how the results change.
+This flow allows you to chat with the **OpenAI** component via a **Prompt** component.
+Examine the **Prompt** component. The **Template** field instructs the LLM to `Answer the user as if you were a pirate.`
+This should be interesting...
 
-## Other prompts
+4. To create an environment variable for your OpenAI API key, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
+    1. In the **Variable Name** field, enter `openai_api_key`.
+    2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
+    3. Click **Save Variable**.
 
-Langflow also has **PromptTemplate** and **ChatMessagePromptTemplate** components.
+## Run the basic prompting flow
 
-Connect **PromptTemplate** to the **LLMChain** Prompt output for use as a one-shot prompt.
+1. Click the **Run** button.
+The **Interaction Panel** opens, where you can converse with your bot.
+2. Type a message and press Enter.
+The bot responds in a markedly piratical manner!
 
-**ChatMessagePromptTemplate** has a `role` field that can be defined as `system`, `user`, `function`, or `assistant`, replacing the more specific template components you used in the example.
+## Modify the prompt for a different result
 
+1. To modify your prompt results, in the **Prompt** template, click the **Template** field.
+The **Edit Prompt** window opens.
+2. Change `Answer the user as if you were a pirate` to a different character, perhaps `Answer the user as if you were Harold Abelson.`
+3. Run the basic prompting flow again.
+The response will be markedly different.
 
 
 
