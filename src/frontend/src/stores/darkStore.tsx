@@ -18,6 +18,11 @@ export const useDarkStore = create<DarkStoreType>((set, get) => ({
     });
   },
   refreshStars: () => {
+    if (import.meta.env.CI) {
+      window.localStorage.setItem("githubStars", "0");
+      set(() => ({ stars: 0, lastUpdated: new Date() }));
+      return;
+    }
     let lastUpdated = window.localStorage.getItem("githubStarsLastUpdated");
     let diff = 0;
     // check if lastUpdated actually exists
