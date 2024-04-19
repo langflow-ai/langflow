@@ -83,7 +83,9 @@ export const MenuBar = ({
           <DropdownMenuTrigger asChild>
             <Button asChild variant="primary" size="sm">
               <div className="header-menu-bar-display">
-                <div className="header-menu-flow-name">{currentFlow.name}</div>
+                <div className="header-menu-flow-name" data-testid="flow_name">
+                  {currentFlow.name}
+                </div>
                 <IconComponent name="ChevronDown" className="h-4 w-4" />
               </div>
             </Button>

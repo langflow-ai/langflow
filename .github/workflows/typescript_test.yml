@@ -19,8 +19,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shardIndex: [1, 2, 3, 4]
-        shardTotal: [4]
+        shardIndex: [1]
+        shardTotal: [1]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,27 +38,6 @@ jobs:
           npm ci
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
 
-      # Attempt to restore the correct Playwright browser binaries based on the
-      # currently installed version of Playwright (The browser binary versions
-      # may change with Playwright versions).
-      # Note: Playwright's cache directory is hard coded because that's what it
-      # says to do in the docs. There doesn't appear to be a command that prints
-      # it out for us.
-      # - uses: actions/cache@v4
-      #   id: playwright-cache
-      #   with:
-      #     path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
-      #     key: "${{ runner.os }}-playwright-${{ hashFiles('src/frontend/package-lock.json') }}"
-      #     # As a fallback, if the Playwright version has changed, try use the
-      #     # most recently cached version. There's a good chance that at least one
-      #     # of the browser binary versions haven't been updated, so Playwright can
-      #     # skip installing that in the next step.
-      #     # Note: When falling back to an old cache, `cache-hit` (used below)
-      #     # will be `false`. This allows us to restore the potentially out of
-      #     # date cache, but still let Playwright decide if it needs to download
-      #     # new binaries or not.
-      #     restore-keys: |
-      #       ${{ runner.os }}-playwright-
       - name: Cache playwright binaries
         uses: actions/cache@v4
         id: playwright-cache
@@ -82,32 +61,26 @@ jobs:
           npx playwright install-deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
 
-      # If the Playwright browser binaries weren't able to be restored, we tell
-      # paywright to install everything for us.
-      # - name: Install Playwright's dependencies
-      #   if: steps.playwright-cache.outputs.cache-hit != 'true'
-      #   run: npx playwright install --with-deps
-
-      - name: Install Poetry
-        run: pipx install "poetry==${{ env.POETRY_VERSION }}"
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        id: setup-python
+      - name: Set up Python ${{ env.PYTHON_VERSION }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: "poetry"
-
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
       - name: Install Python dependencies
         run: |
           poetry env use ${{ env.PYTHON_VERSION }}
           poetry install
-        if: ${{ steps.setup-python.outputs.cache-hit != 'true' }}
+
+      - name: create .env
+        run: |
+          touch .env
+          echo "${{ secrets.ENV_VARS }}" > .env
 
       - name: Run Playwright Tests
         run: |
           cd src/frontend
-          npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+          npx playwright test
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
