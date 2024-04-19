@@ -22,7 +22,7 @@ import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useTypesStore } from "../../stores/typesStore";
-import { APIClassType } from "../../types/api";
+import { APIClassType, VertexBuildTypeAPI } from "../../types/api";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
@@ -64,7 +64,7 @@ export default function GenericNode({
     (state) => state.flowBuildStatus[data.id]?.timestamp
   );
   const [validationStatus, setValidationStatus] =
-    useState<validationStatusType | null>(null);
+    useState<VertexBuildTypeAPI | null>(null);
   const [handles, setHandles] = useState<number>(0);
 
   const [validationString, setValidationString] = useState<string>("");
@@ -173,7 +173,7 @@ export default function GenericNode({
 
   // should be empty string if no duration
   // else should be `Duration: ${duration}`
-  const getDurationString = (duration: number | undefined): string => {
+  const getDurationString = (duration: number | undefined|string): string => {
     if (duration === undefined) {
       return "";
     } else {
@@ -196,6 +196,7 @@ export default function GenericNode({
         ? flowPool[data.id][flowPool[data.id].length - 1]
         : null;
     if (relevantData) {
+      console.log(relevantData)
       // Extract validation information from relevantData and update the validationStatus state
       setValidationStatus(relevantData);
     } else {
@@ -204,21 +205,21 @@ export default function GenericNode({
   }, [flowPool[data.id], data.id]);
 
   useEffect(() => {
-    if (validationStatus?.logs) {
+    if (validationStatus?.data.logs) {
       // if it is not a string turn it into a string
       let newValidationString = "";
-      if (validationStatus?.logs && Array.isArray(validationStatus.logs)) {
-        newValidationString = validationStatus.logs
+      if (Array.isArray(validationStatus.data.logs)) {
+        newValidationString = validationStatus.data.logs
           .map((log) => log.message)
           .join("\n");
       }
       if (typeof newValidationString !== "string") {
-        newValidationString = JSON.stringify(validationStatus.logs);
+        newValidationString = JSON.stringify(validationStatus.data.logs);
       }
 
       setValidationString(newValidationString);
     }
-  }, [validationStatus, validationStatus?.logs]);
+  }, [validationStatus, validationStatus?.data.logs]);
 
   const [showNode, setShowNode] = useState(data.showNode ?? true);
 
@@ -263,7 +264,7 @@ export default function GenericNode({
   const isDark = useDarkStore((state) => state.dark);
   const renderIconStatus = (
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null
+    validationStatus: VertexBuildTypeAPI | null
   ) => {
     if (buildStatus === BuildStatus.BUILDING) {
       return <Loading className="text-medium-indigo" />;
@@ -304,7 +305,7 @@ export default function GenericNode({
   };
   const getSpecificClassFromBuildStatus = (
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null
+    validationStatus: VertexBuildTypeAPI | null
   ) => {
     let isInvalid = validationStatus && !validationStatus.valid;
 
@@ -328,7 +329,7 @@ export default function GenericNode({
     selected: boolean,
     showNode: boolean,
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null
+    validationStatus: VertexBuildTypeAPI | null
   ) => {
     const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
       buildStatus,
