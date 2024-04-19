@@ -54,7 +54,7 @@ Alternatively, go to [HuggingFace Spaces](https://docs.langflow.org/getting-star
 This flow creates a basic chatbot with the **Chat Input**, **Prompt**, **OpenAI**, and **Chat Output** components.
 This chatbot is augmented with the **Files** component, which loads a file from your local machine into the **Prompt** component as `{Document}`.
 The **Prompt** component is instructed to answer questions based on the contents of `{Document}`.
-Including a file with the prompt gives the **OpenAI** component context it may not otherwise have.
+Including a file with the prompt gives the **OpenAI** component context it may not otherwise have access to.
 
 4. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
     1. In the **Variable Name** field, enter `openai_api_key`.
@@ -64,9 +64,9 @@ Including a file with the prompt gives the **OpenAI** component context it may n
 5. To select a document to load, in the **Files** component, click within the **Path** field.
     1. Select a local file, and then click **Open**.
     2. The file name appears in the field.
-<Admonition type="tip">
- The file must be of an extension type listed [here](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/base/data/utils.py#L13).
-</Admonition>
+    <Admonition type="tip">
+        The file must be of an extension type listed [here](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/base/data/utils.py#L13).
+    </Admonition>
 
 ## Run the Document QA flow
 
