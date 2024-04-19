@@ -88,12 +88,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         index = newFlowPool[nodeId].findIndex((flow) => flow.id === buildId);
       }
       //check if the data is a flowpool object
-      if ((data as FlowPoolObjectType).data?.artifacts !== undefined) {
-        newFlowPool[nodeId][index] = data as FlowPoolObjectType;
+      if ((data as VertexBuildTypeAPI).valid !== undefined) {
+        newFlowPool[nodeId][index] = data as VertexBuildTypeAPI;
       }
-      //update data artifact
+      //update data results
       else {
-        newFlowPool[nodeId][index].data.artifacts = data;
+        newFlowPool[nodeId][index].data.messages[0] = (data as ChatOutputType| chatInputType);
       }
     }
     get().setFlowPool(newFlowPool);
