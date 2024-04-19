@@ -86,7 +86,7 @@ export default function IOFieldView({
                 value={
                   (flowPool[node.id] ?? [])[
                     (flowPool[node.id]?.length ?? 1) - 1
-                  ]?.params ?? ""
+                  ]?.data.results.result ?? ""
                 }
                 readOnly
               />
@@ -103,7 +103,7 @@ export default function IOFieldView({
                 value={
                   (flowPool[node.id] ?? [])[
                     (flowPool[node.id]?.length ?? 1) - 1
-                  ]?.params ?? ""
+                  ]?.data.results.result ?? ""
                 }
                 readOnly
               />
