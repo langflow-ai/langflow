@@ -17,7 +17,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from langflow.main import setup_app
+from langflow.main import setup_app, setup_app_with_slack
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from langflow.services.utils import initialize_services

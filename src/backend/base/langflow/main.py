@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
 
+from langflow.integration.slack_app import create_slack_app
 import nest_asyncio  # type: ignore
 import socketio  # type: ignore
 from fastapi import FastAPI, Request
@@ -69,6 +70,8 @@ def create_app():
     app = FastAPI(lifespan=lifespan)
     origins = ["*"]
 
+    slack_app, socket_handler = create_slack_app()
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
@@ -91,6 +94,11 @@ def create_app():
     @app.get("/health")
     def health():
         return {"status": "ok"}
+    
+    @app.post("/slack/events")
+    async def slack_events(req: Request):
+        return await slack_app.handle(req)
+
 
     app.include_router(router)
 
@@ -144,7 +152,7 @@ def setup_app(static_files_dir: Optional[Path] = None, backend_only: bool = Fals
     app = create_app()
     if not backend_only and static_files_dir is not None:
         setup_static_files(app, static_files_dir)
-    return app
+    return app   
 
 
 if __name__ == "__main__":
