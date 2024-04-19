@@ -7,11 +7,11 @@ module.exports = {
   title: "Langflow Documentation",
   tagline: "Langflow is a GUI for LangChain, designed with react-flow",
   favicon: "img/favicon.ico",
-  url: "https://logspace-ai.github.io",
+  url: "https://langflow-ai.github.io",
   baseUrl: "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
-  organizationName: "logspace-ai",
+  organizationName: "langflow-ai",
   projectName: "langflow",
   trailingSlash: false,
   staticDirectories: ["static"],
@@ -131,7 +131,7 @@ module.exports = {
       },
       footer: {
         links: [],
-        copyright: `Copyright © ${new Date().getFullYear()} Logspace.`,
+        copyright: `Copyright © ${new Date().getFullYear()} Langflow.`,
       },
       zoom: {
         selector: ".markdown :not(a) > img:not(.no-zoom)",

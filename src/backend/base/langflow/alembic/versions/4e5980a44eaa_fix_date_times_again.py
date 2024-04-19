@@ -1,8 +1,8 @@
-"""Change datetime type
+"""Fix date times again
 
-Revision ID: 79e675cb6752
-Revises: e3bc869fa272
-Create Date: 2024-04-11 19:23:10.697335
+Revision ID: 4e5980a44eaa
+Revises: 79e675cb6752
+Create Date: 2024-04-12 18:11:06.454037
 
 """
 
@@ -10,13 +10,13 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from loguru import logger
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.engine.reflection import Inspector
-from loguru import logger
 
 # revision identifiers, used by Alembic.
-revision: str = "79e675cb6752"
-down_revision: Union[str, None] = "e3bc869fa272"
+revision: str = "4e5980a44eaa"
+down_revision: Union[str, None] = "79e675cb6752"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

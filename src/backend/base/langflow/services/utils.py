@@ -163,7 +163,6 @@ def initialize_services(fix_migration: bool = False, socketio_server=None):
     try:
         initialize_database(fix_migration=fix_migration)
     except Exception as exc:
-        logger.error(exc)
         raise exc
     setup_superuser(get_service(ServiceType.SETTINGS_SERVICE), next(get_session()))
     try:

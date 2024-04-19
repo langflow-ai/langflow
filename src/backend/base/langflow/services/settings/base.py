@@ -121,7 +121,7 @@ class Settings(BaseSettings):
 
             # Define the app name and author
             app_name = "langflow"
-            app_author = "logspace"
+            app_author = "langflow"
 
             # Get the cache directory for the application
             cache_dir = user_cache_dir(app_name, app_author)

@@ -13,9 +13,12 @@ env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
-  if_release:
+  release:
+    name: Release Langflow Base
     if: inputs.release_package == true
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check-version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
       - name: Install poetry
@@ -49,6 +52,12 @@ jobs:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           make publish base=true
+  docker_build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: release
+    steps:
+      - uses: actions/checkout@v4
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -65,4 +74,4 @@ jobs:
           push: true
           file: ./build_and_push_base.Dockerfile
           tags: |
-            logspace/langflow:base-${{ steps.check-version.outputs.version }}
+            logspace/langflow:base-${{ needs.release.outputs.version }}

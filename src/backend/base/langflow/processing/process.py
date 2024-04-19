@@ -243,7 +243,6 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
 
     for tweak_name, tweak_value in node_tweaks.items():
         if tweak_name not in template_data:
-            logger.warning(f"Node {node.get('id')} does not have a tweak named {tweak_name}")
             continue
         if tweak_name in template_data:
             key = "file_path" if template_data[tweak_name]["type"] == "file" else "value"
@@ -256,21 +255,24 @@ def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: Dict[str, Any]) -> None:
             vertex.params[tweak_name] = tweak_value
 
 
-def process_tweaks(graph_data: Dict[str, Any], tweaks: Union["Tweaks", Dict[str, Dict[str, Any]]]) -> Dict[str, Any]:
+def process_tweaks(
+    graph_data: Dict[str, Any], tweaks: Union["Tweaks", Dict[str, Dict[str, Any]]], stream: bool = False
+) -> Dict[str, Any]:
     """
     This function is used to tweak the graph data using the node id and the tweaks dict.
 
     :param graph_data: The dictionary containing the graph data. It must contain a 'data' key with
                        'nodes' as its child or directly contain 'nodes' key. Each node should have an 'id' and 'data'.
     :param tweaks: The dictionary containing the tweaks. The keys can be the node id or the name of the tweak.
-                     The values can be a dictionary containing the tweaks for the node or the value of the tweak.
+                   The values can be a dictionary containing the tweaks for the node or the value of the tweak.
+    :param stream: A boolean flag indicating whether streaming should be deactivated across all components or not. Default is False.
     :return: The modified graph_data dictionary.
-
     :raises ValueError: If the input is not in the expected format.
     """
     if not isinstance(tweaks, dict):
         tweaks = tweaks.model_dump()
-
+    if "stream" not in tweaks:
+        tweaks["stream"] = stream
     nodes = validate_input(graph_data, tweaks)
     nodes_map = {node.get("id"): node for node in nodes}
     nodes_display_name_map = {node.get("data", {}).get("node", {}).get("display_name"): node for node in nodes}
