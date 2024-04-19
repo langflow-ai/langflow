@@ -339,6 +339,8 @@ export default function GenericNode({
     );
   };
 
+  const [openWDoubleCLick, setOpenWDoubleCLick] = useState(false);
+
   const getBaseBorderClass = (selected) =>
     selected ? "border border-ring" : "border";
 
@@ -349,6 +351,8 @@ export default function GenericNode({
     return (
       <NodeToolbar>
         <NodeToolbarComponent
+          openWDoubleClick={openWDoubleCLick}
+          setOpenWDoubleClick={setOpenWDoubleCLick}
           data={data}
           deleteNode={(id) => {
             takeSnapshot();
@@ -382,12 +386,15 @@ export default function GenericNode({
     updateNodeCode,
     isOutdated,
     selected,
+    openWDoubleCLick,
+    setOpenWDoubleCLick
   ]);
 
   return (
     <>
       {memoizedNodeToolbarComponent}
       <div
+        onDoubleClick={() => setOpenWDoubleCLick(true)}
         className={getNodeBorderClassName(
           selected,
           showNode,

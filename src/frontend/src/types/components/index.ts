@@ -80,15 +80,6 @@ export type InputGlobalComponentType = {
   editNode?: boolean;
 };
 
-export type InputGlobalComponentType = {
-  disabled: boolean;
-  onChange: (value: string) => void;
-  setDb: (value: boolean) => void;
-  name: string;
-  data: NodeDataType;
-  editNode?: boolean;
-};
-
 export type KeyPairListComponentType = {
   value: any;
   onChange: (value: Object[]) => void;
@@ -511,6 +502,8 @@ export type fileCardPropsType = {
 };
 
 export type nodeToolbarPropsType = {
+  openWDoubleClick: boolean;
+  setOpenWDoubleClick: (open: boolean) => void;
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setShowNode: (boolean: any) => void;
