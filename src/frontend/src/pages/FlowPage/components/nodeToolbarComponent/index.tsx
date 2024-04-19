@@ -151,6 +151,7 @@ export default function NodeToolbarComponent({
   useHotkeys("mod+s", handleSaveWShortcut);
   useHotkeys("mod+shift+d", handleDocsWShortcut);
   useHotkeys("mod+j", handleDownloadWShortcut);
+  useHotkeys("space", handleCodeWShortcut)
 
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
