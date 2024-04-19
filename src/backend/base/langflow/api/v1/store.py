@@ -2,6 +2,7 @@ from typing import Annotated, List, Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from loguru import logger
 
 from langflow.api.utils import check_langflow_version
 from langflow.services.auth import utils as auth_utils
@@ -27,8 +28,11 @@ def get_user_store_api_key(
 ):
     if not user.store_api_key:
         raise HTTPException(status_code=400, detail="You must have a store API key set.")
-    decrypted = auth_utils.decrypt_api_key(user.store_api_key, settings_service)
-    return decrypted
+    try:
+        decrypted = auth_utils.decrypt_api_key(user.store_api_key, settings_service)
+        return decrypted
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to decrypt API key. Please set a new one.") from e
 
 
 def get_optional_user_store_api_key(
@@ -37,8 +41,12 @@ def get_optional_user_store_api_key(
 ):
     if not user.store_api_key:
         return None
-    decrypted = auth_utils.decrypt_api_key(user.store_api_key, settings_service)
-    return decrypted
+    try:
+        decrypted = auth_utils.decrypt_api_key(user.store_api_key, settings_service)
+        return decrypted
+    except Exception as e:
+        logger.error(f"Failed to decrypt API key: {e}")
+        return user.store_api_key
 
 
 @router.get("/check/")
