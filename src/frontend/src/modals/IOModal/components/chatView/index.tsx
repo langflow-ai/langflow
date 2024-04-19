@@ -8,7 +8,7 @@ import { deleteFlowPool } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { sendAllProps } from "../../../../types/api";
+import { VertexBuildTypeAPI, sendAllProps } from "../../../../types/api";
 import {
   ChatMessageType,
   ChatOutputType,
@@ -46,7 +46,7 @@ export default function ChatView({
 
   //build chat history
   useEffect(() => {
-    const chatOutputResponses: FlowPoolObjectType[] = [];
+    const chatOutputResponses: VertexBuildTypeAPI[] = [];
     outputIds.forEach((outputId) => {
       if (outputId.includes("ChatOutput")) {
         if (flowPool[outputId] && flowPool[outputId].length > 0) {
@@ -64,10 +64,10 @@ export default function ChatView({
     const chatMessages: ChatMessageType[] = chatOutputResponses
       .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
       //
-      .filter((output) => output.messages && output.messages.length > 0)
+      .filter((output) => output.data.messages && output.data.messages.length > 0)
       .map((output, index) => {
         try {
-          const { sender, message, sender_name, stream_url } = output
+          const { sender, message, sender_name, stream_url } = output.data
             .messages[0] as ChatOutputType;
 
           const is_ai = sender === "Machine" || sender === null;
