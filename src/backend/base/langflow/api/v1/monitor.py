@@ -2,7 +2,6 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-
 from langflow.services.deps import get_monitor_service
 from langflow.services.monitor.schema import VertexBuildMapModel
 from langflow.services.monitor.service import MonitorService
