@@ -19,6 +19,7 @@ export type ChatOutputType = {
   sender: string;
   sender_name: string;
   stream_url?: string;
+  files?: Array<{ path: string; type: string; name: string }>;
 };
 
 export type chatInputType = {

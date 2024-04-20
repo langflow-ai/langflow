@@ -666,6 +666,7 @@ class Graph:
         set_cache_coro: Callable[["Graph", asyncio.Lock], Coroutine],
         vertex_id: str,
         inputs_dict: Optional[Dict[str, str]] = None,
+        files: Optional[list[str]] = None,
         user_id: Optional[str] = None,
     ):
         """
@@ -688,7 +689,7 @@ class Graph:
         vertex = self.get_vertex(vertex_id)
         try:
             if not vertex.frozen or not vertex._built:
-                await vertex.build(user_id=user_id, inputs=inputs_dict)
+                await vertex.build(user_id=user_id, inputs=inputs_dict, files=files)
 
             if vertex.result is not None:
                 params = vertex._built_object_repr()

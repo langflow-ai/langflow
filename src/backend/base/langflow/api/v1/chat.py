@@ -115,6 +115,7 @@ async def build_vertex(
     vertex_id: str,
     background_tasks: BackgroundTasks,
     inputs: Annotated[Optional[InputValueRequest], Body(embed=True)] = None,
+    files: Optional[list[str]] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
 ):
@@ -139,7 +140,6 @@ async def build_vertex(
     start_time = time.perf_counter()
     next_runnable_vertices = []
     top_level_vertices = []
-    messages = []
     try:
         start_time = time.perf_counter()
         cache = await chat_service.get_cache(flow_id)
@@ -169,6 +169,7 @@ async def build_vertex(
                 vertex_id=vertex_id,
                 user_id=current_user.id,
                 inputs_dict=inputs.model_dump() if inputs else {},
+                files=files,
             )
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 

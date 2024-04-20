@@ -25,6 +25,7 @@ class ChatInput(ChatComponent):
         sender: Optional[str] = "User",
         sender_name: Optional[str] = "User",
         input_value: Optional[str] = None,
+        files: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         return_record: Optional[bool] = False,
     ) -> Union[Text, Record]:
@@ -32,6 +33,7 @@ class ChatInput(ChatComponent):
             sender=sender,
             sender_name=sender_name,
             input_value=input_value,
+            files=files,
             session_id=session_id,
             return_record=return_record,
         )
