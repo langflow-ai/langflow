@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
+import ShortUniqueId from "short-unique-id";
 import IconComponent from "../../../../../components/genericIconComponent";
 import { Textarea } from "../../../../../components/ui/textarea";
 import {
   CHAT_INPUT_PLACEHOLDER,
   CHAT_INPUT_PLACEHOLDER_SEND,
 } from "../../../../../constants/constants";
-import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
-import { FilePreviewType, chatInputType } from "../../../../../types/components";
-import { classNames } from "../../../../../utils/utils";
 import { uploadFile } from "../../../../../controllers/API";
-import ShortUniqueId from "short-unique-id";
+import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
+import {
+  FilePreviewType,
+  chatInputType,
+} from "../../../../../types/components";
+import { classNames } from "../../../../../utils/utils";
 import FilePreview from "../filePreviewChat";
 export default function ChatInput({
   lockChat,
@@ -47,25 +50,34 @@ export default function ChatInput({
           if (items[i].type.indexOf("image") !== -1) {
             const blob = items[i].getAsFile();
             if (blob) {
-              const id = uid()
-              setFiles([...files, { file: blob, loading: true, error: false,id}]);
-              uploadFile(blob, currentFlowId).then((res) => {
-                setFiles(prev=>{
-                  const newFiles = [...prev];
-                  const updatedIndex = newFiles.findIndex((file)=>file.id===id);
-                  newFiles[updatedIndex].loading = false;
-                  newFiles[updatedIndex].path = res.data.file_path;
-                  return newFiles;
+              const id = uid();
+              setFiles([
+                ...files,
+                { file: blob, loading: true, error: false, id },
+              ]);
+              uploadFile(blob, currentFlowId)
+                .then((res) => {
+                  setFiles((prev) => {
+                    const newFiles = [...prev];
+                    const updatedIndex = newFiles.findIndex(
+                      (file) => file.id === id
+                    );
+                    newFiles[updatedIndex].loading = false;
+                    newFiles[updatedIndex].path = res.data.file_path;
+                    return newFiles;
+                  });
                 })
-              }).catch((err) => {
-                setFiles(prev=>{
-                  const newFiles = [...prev];
-                  const updatedIndex = newFiles.findIndex((file)=>file.id===id);
-                  newFiles[updatedIndex].loading = false;
-                  newFiles[updatedIndex].error = true;
-                  return newFiles;
-                })
-              });
+                .catch((err) => {
+                  setFiles((prev) => {
+                    const newFiles = [...prev];
+                    const updatedIndex = newFiles.findIndex(
+                      (file) => file.id === id
+                    );
+                    newFiles[updatedIndex].loading = false;
+                    newFiles[updatedIndex].error = true;
+                    return newFiles;
+                  });
+                });
             }
           }
         }
@@ -77,8 +89,11 @@ export default function ChatInput({
     };
   }, []);
 
-  function send(){
-    sendMessage({repeat,files:files.map((file)=>file.path??"").filter((file)=>file!=="")});
+  function send() {
+    sendMessage({
+      repeat,
+      files: files.map((file) => file.path ?? "").filter((file) => file !== ""),
+    });
     setFiles([]);
   }
 
@@ -165,16 +180,20 @@ export default function ChatInput({
         </div>
       </div>
       <div className="flex w-full gap-2 pb-2">
-      {
-        files.map((file)=>(
-          <FilePreview error={file.error} file={file.file} loading={file.loading} key={file.id} onDelete={()=>{
-            setFiles(prev=>prev.filter((f)=>f.id!==file.id))
-            // TODO: delete file on backend
-          }}/>
-        ))
-      }
+        {files.map((file) => (
+          <FilePreview
+            error={file.error}
+            file={file.file}
+            loading={file.loading}
+            key={file.id}
+            onDelete={() => {
+              setFiles((prev) => prev.filter((f) => f.id !== file.id));
+              // TODO: delete file on backend
+            }}
+          />
+        ))}
       </div>
-      {/* 
+      {/*
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="primary" className="h-13 px-4">
