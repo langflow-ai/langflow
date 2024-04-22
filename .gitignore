@@ -260,3 +260,11 @@ langflow.db
 src/backend/langflow/frontend/
 .docker
 scratchpad*
+/tmp/*
+src/backend/langflow/frontend/
+src/backend/base/langflow/frontend/
+.docker
+scratchpad*
+chroma*/*
+stuff/*
+src/frontend/playwright-report/index.html
