@@ -235,7 +235,7 @@ dark:prose-invert"
                                       },
                                     ]}
                                     activeTab={"0"}
-                                    setActiveTab={() => {}}
+                                    setActiveTab={() => { }}
                                   />
                                 ) : (
                                   <code className={className} {...props}>
@@ -251,21 +251,6 @@ dark:prose-invert"
                       [chat.message, chatMessage]
                     )}
                   </div>
-                  {chat.files && (
-                    <div className="my-2 w-full">
-                      {chat.files.map((file, index) => {
-                        return (
-                          <div key={index} className="my-2 w-full">
-                            <FileCard
-                              fileName={"Generated File"}
-                              fileType={file.data_type}
-                              content={file.data}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -292,33 +277,33 @@ dark:prose-invert"
                 <span className="prose text-primary word-break-break-word dark:prose-invert">
                   {promptOpen
                     ? template?.split("\n")?.map((line, index) => {
-                        const regex = /{([^}]+)}/g;
-                        let match;
-                        let parts: Array<JSX.Element | string> = [];
-                        let lastIndex = 0;
-                        while ((match = regex.exec(line)) !== null) {
-                          // Push text up to the match
-                          if (match.index !== lastIndex) {
-                            parts.push(line.substring(lastIndex, match.index));
-                          }
-                          // Push div with matched text
-                          if (chat.message[match[1]]) {
-                            parts.push(
-                              <span className="chat-message-highlight">
-                                {chat.message[match[1]]}
-                              </span>
-                            );
-                          }
+                      const regex = /{([^}]+)}/g;
+                      let match;
+                      let parts: Array<JSX.Element | string> = [];
+                      let lastIndex = 0;
+                      while ((match = regex.exec(line)) !== null) {
+                        // Push text up to the match
+                        if (match.index !== lastIndex) {
+                          parts.push(line.substring(lastIndex, match.index));
+                        }
+                        // Push div with matched text
+                        if (chat.message[match[1]]) {
+                          parts.push(
+                            <span className="chat-message-highlight">
+                              {chat.message[match[1]]}
+                            </span>
+                          );
+                        }
 
-                          // Update last index
-                          lastIndex = regex.lastIndex;
-                        }
-                        // Push text after the last match
-                        if (lastIndex !== line.length) {
-                          parts.push(line.substring(lastIndex));
-                        }
-                        return <p>{parts}</p>;
-                      })
+                        // Update last index
+                        lastIndex = regex.lastIndex;
+                      }
+                      // Push text after the last match
+                      if (lastIndex !== line.length) {
+                        parts.push(line.substring(lastIndex));
+                      }
+                      return <p>{parts}</p>;
+                    })
                     : chatMessage}
                 </span>
               </>
@@ -335,6 +320,21 @@ dark:prose-invert"
         )}
       </div>
       <div id={lastMessage ? "last-chat-message" : ""}></div>
+      {chat.files && (
+        <div className="my-2 w-full">
+          {chat.files.map((file, index) => {
+            return (
+              <div key={index} className="my-2 w-full">
+                <FileCard
+                  fileName={file.name}
+                  fileType={file.type}
+                  content={file.path}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }

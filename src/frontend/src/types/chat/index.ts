@@ -6,7 +6,7 @@ export type ChatMessageType = {
   template?: string;
   isSend: boolean;
   thought?: string;
-  files?: Array<{ data: string; type: string; data_type: string }>;
+  files?: Array<{ path: string; type: string; name: string }>;
   prompt?: string;
   chatKey?: string;
   componentId: string;
