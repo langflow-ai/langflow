@@ -215,6 +215,15 @@ export default function NodeToolbarComponent({
 
   const handleSelectChange = (event) => {
     switch (event) {
+      case "save":
+        if (isSaved) {
+          return setShowOverrideModal(true);
+        }
+        saveComponent(cloneDeep(data), false);
+        break;
+      case "code":
+        setOpenModal(!openModal);
+        break;
       case "advanced":
         setShowModalAdvanced(true);
         break;
@@ -461,6 +470,18 @@ export default function NodeToolbarComponent({
               </SelectTrigger>
             </ShadTooltip>
             <SelectContent>
+              {hasCode && (
+                <SelectItem value={"code"}>
+                  <ToolbarSelectItem
+                    keyboardKey="U"
+                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                    shift={false}
+                    value={"Code"}
+                    icon={"Code"}
+                    dataTestId="code-button-modal"
+                  />
+                </SelectItem>
+              )}
               {nodeLength > 0 && (
                 <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
                   <ToolbarSelectItem
@@ -473,6 +494,26 @@ export default function NodeToolbarComponent({
                   />
                 </SelectItem>
               )}
+              <SelectItem value={"save"}>
+                <ToolbarSelectItem
+                  keyboardKey="S"
+                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                  shift={false}
+                  value={"Save"}
+                  icon={"SaveAll"}
+                  dataTestId="save-button-modal"
+                />
+              </SelectItem>
+              <SelectItem value={"duplicate"}>
+                <ToolbarSelectItem
+                  keyboardKey="D"
+                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                  shift={false}
+                  value={"Duplicate"}
+                  icon={"Copy"}
+                  dataTestId="duplicate-button-modal"
+                />
+              </SelectItem>
               {/* <SelectItem value={"duplicate"}>
                 <ToolbarSelectItem
                   keyboardKey="D"
