@@ -547,8 +547,7 @@ export default function ParameterComponent({
                       name={name}
                       data={data}
                       button_text={
-                        data.node?.template[name].refresh_button_text ??
-                        "Refresh"
+                        data.node?.template[name].refresh_button_text
                       }
                       className="extra-side-bar-buttons mt-1"
                       handleUpdateValues={handleRefreshButtonPress}
@@ -590,8 +589,7 @@ export default function ParameterComponent({
                       name={name}
                       data={data}
                       button_text={
-                        data.node?.template[name].refresh_button_text ??
-                        "Refresh"
+                        data.node?.template[name].refresh_button_text
                       }
                       className="extra-side-bar-buttons ml-2 mt-1"
                       handleUpdateValues={handleRefreshButtonPress}
