@@ -14,7 +14,6 @@ from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from langflow.api import router
-from langflow.api.v1.endpoints import webhook_run_flow
 from langflow.initial_setup.setup import create_or_update_starter_projects
 from langflow.interface.utils import setup_llm_caching
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
@@ -48,10 +47,11 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
             setup_llm_caching()
             LangfuseInstance.update()
             create_or_update_starter_projects()
-            yield
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
                 logger.error(exc)
+            raise exc
+        yield
         # Shutdown message
         rprint("[bold red]Shutting down Langflow...[/bold red]")
         teardown_services()

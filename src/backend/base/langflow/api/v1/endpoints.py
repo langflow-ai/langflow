@@ -27,6 +27,7 @@ from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow, get_flow_by_id
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_session_service, get_settings_service, get_task_service
 from langflow.services.session.service import SessionService
@@ -58,6 +59,7 @@ async def simple_run_flow(
     session_service: SessionService,
     stream: bool = False,
     api_key_user: Optional[User] = None,
+    flow: Optional[Flow] = None,
 ):
     task_result: List[RunOutputs] = []
     artifacts = {}
@@ -69,9 +71,10 @@ async def simple_run_flow(
     else:
         # Get the flow that matches the flow_id and belongs to the user
         # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-        flow = db.exec(select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)).first()
         if flow is None:
-            raise ValueError(f"Flow {flow_id} not found")
+            flow = db.exec(select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)).first()
+            if flow is None:
+                raise ValueError(f"Flow {flow_id} not found")
 
         if flow.data is None:
             raise ValueError(f"Flow {flow_id} has no data")
@@ -198,12 +201,13 @@ async def simplified_run_flow(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
-@router.post("/webhook", response_model=dict, status_code=HTTPStatus.ACCEPTED)
+@router.post("/webhook/{flow_id}", response_model=dict, status_code=HTTPStatus.ACCEPTED)
 async def webhook_run_flow(
     db: Annotated[Session, Depends(get_session)],
     request: Request,
     background_tasks: BackgroundTasks,
     session_service: SessionService = Depends(get_session_service),
+    flow: Flow = Depends(get_flow_by_id),
 ):
     """
     This endpoint is designed to receive webhook calls and initiate processes in the background without waiting for the process to complete.
@@ -240,29 +244,37 @@ async def webhook_run_flow(
     """
     try:
         logger.debug("Received webhook request")
-        if not await request.body():
+        data = await request.body()
+        if not data:
             logger.error("Request body is empty")
             raise ValueError(
                 "Request body is empty. You should provide a JSON payload containing the flow ID.",
             )
-
-        logger.debug("Parsing request body")
-        data = await request.json()
-        flow_id = data.get("flow_id")
-        if not flow_id:
-            raise HTTPException(status_code=400, detail="Flow ID is required")
+        if not flow:
+            raise HTTPException(status_code=404, detail="Flow not found")
+        # get all webhook components in the flow
+        webhook_components = get_all_webhook_components_in_flow(flow.data)
+        tweaks = {}
+        data_dict = await request.json()
+        for component in webhook_components:
+            tweaks[component["id"]] = {"data": data.decode() if isinstance(data, bytes) else data}
         input_request = SimplifiedAPIRequest(
-            input_value=data.get("input_value", ""),
-            input_type=data.get("input_type", "chat"),
-            output_type=data.get("output_type", "chat"),
-            tweaks=data.get("tweaks", {}),
-            session_id=data.get("session_id"),
+            input_value=data_dict.get("input_value", ""),
+            input_type=data_dict.get("input_type", "chat"),
+            output_type=data_dict.get("output_type", "chat"),
+            tweaks=tweaks,
+            session_id=data_dict.get("session_id"),
         )
         logger.debug("Starting background task")
         background_tasks.add_task(
-            simple_run_flow, db=db, flow_id=flow_id, input_request=input_request, session_service=session_service
+            simple_run_flow,
+            db=db,
+            flow_id=flow.id,
+            flow=flow,
+            input_request=input_request,
+            session_service=session_service,
         )
-        return {"message": "Task started in the background", "status": "success"}
+        return {"message": "Task started in the background", "status": "in progress"}
     except Exception as exc:
         if "Flow ID is required" in str(exc) or "Request body is empty" in str(exc):
             raise HTTPException(status_code=400, detail=str(exc)) from exc

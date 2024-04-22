@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
 
+from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
@@ -128,7 +129,10 @@ def update_flow(
     for key, value in flow_data.items():
         if value is not None:
             setattr(db_flow, key, value)
-    db_flow.updated_at = datetime.utcnow()
+    # Check if the flow has a webhook component
+    webhook_component = get_webhook_component_in_flow(db_flow.data)
+    db_flow.webhook = webhook_component is not None
+    db_flow.updated_at = datetime.now(timezone.utc)
     session.add(db_flow)
     session.commit()
     session.refresh(db_flow)

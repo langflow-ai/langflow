@@ -1,7 +1,7 @@
 # Path: src/backend/langflow/services/database/models/flow/model.py
 
 import warnings
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Dict, Optional
 from uuid import UUID, uuid4
 
@@ -23,8 +23,9 @@ class FlowBase(SQLModel):
     icon_bg_color: Optional[str] = Field(default=None, nullable=True)
     data: Optional[Dict] = Field(default=None, nullable=True)
     is_component: Optional[bool] = Field(default=False, nullable=True)
-    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow, nullable=True)
+    updated_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
     folder: Optional[str] = Field(default=None, nullable=True)
+    webhook: Optional[bool] = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
 
     @field_validator("icon_bg_color")
     def validate_icon_bg_color(cls, v):
