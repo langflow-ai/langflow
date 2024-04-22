@@ -48,7 +48,12 @@ Alternatively, go to [HuggingFace Spaces](https://docs.langflow.org/getting-star
     light: "img/blog-writer.png",
     dark: "img/blog-writer.png",
   }}
-  style={{ width: "80%", margin: "20px auto" }}
+  style={{
+    width: "80%",
+    margin: "20px auto",
+    display: "flex",
+    justifyContent: "center",
+  }}
 />
 
 This flow creates a one-shot prompt flow with **Prompt**, **OpenAI**, and **Chat Output** components, and augments the flow with reference content and instructions from the **URL** and **Instructions** components.
