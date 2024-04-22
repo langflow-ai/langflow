@@ -67,7 +67,7 @@ export default function ChatView({
       .filter((output) => output.data.messages && output.data.messages.length > 0)
       .map((output, index) => {
         try {
-          const { sender, message, sender_name, stream_url } = output.data
+          const { sender, message, sender_name, stream_url,files } = output.data
             .messages[0] as ChatOutputType;
 
           const is_ai = sender === "Machine" || sender === null;
@@ -77,6 +77,8 @@ export default function ChatView({
             sender_name,
             componentId: output.id,
             stream_url: stream_url,
+            files
+            
           };
         } catch (e) {
           console.error(e);
