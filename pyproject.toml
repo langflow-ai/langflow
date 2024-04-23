@@ -1,13 +1,12 @@
 [tool.poetry]
 name = "langflow"
-version = "0.6.10"
+version = "0.6.17"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
     "Carlos Coelho <carlos@logspace.ai>",
     "Cristhian Zanforlin <cristhian.lousa@gmail.com>",
     "Gabriel Almeida <gabriel@logspace.ai>",
-    "Gustavo Schaedler <gustavopoa@gmail.com>",
     "Igor Carvalho <igorr.ackerman@gmail.com>",
     "Lucas Eduoli <lucaseduoli@gmail.com>",
     "Otávio Anovazzi <otavio2204@gmail.com>",
@@ -60,7 +59,6 @@ cohere = "^4.47.0"
 python-multipart = "^0.0.7"
 sqlmodel = "^0.0.14"
 faiss-cpu = "^1.7.4"
-anthropic = "^0.15.0"
 orjson = "3.9.15"
 multiprocess = "^0.70.14"
 cachetools = "^5.3.1"
@@ -105,6 +103,8 @@ elasticsearch = "^8.12.0"
 pytube = "^15.0.0"
 llama-index = "0.9.48"
 langchain-openai = "^0.0.6"
+urllib3 = "<2"
+langchain-anthropic = "^0.1.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.1"
