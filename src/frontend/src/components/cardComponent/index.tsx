@@ -25,11 +25,13 @@ export default function CollectionCardComponent({
   disabled = false,
   button,
   onDelete,
+  playground
 }: {
   data: storeComponent;
   authorized?: boolean;
   disabled?: boolean;
   button?: JSX.Element;
+  playground?:JSX.Element;
   onDelete?: () => void;
 }) {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
@@ -345,6 +347,7 @@ export default function CollectionCardComponent({
               </div>
             )}
             {button && button}
+            {playground && playground}
           </div>
         </div>
       </CardFooter>
