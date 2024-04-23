@@ -78,7 +78,6 @@ export default function IOModal({
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setNode = useFlowStore((state) => state.setNode);
-  console.log(nodes)
 
   async function updateVertices() {
     return updateVerticesOrder(currentFlow!.id, null);
