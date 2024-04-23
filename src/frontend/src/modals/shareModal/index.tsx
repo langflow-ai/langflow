@@ -43,8 +43,10 @@ export default function ShareModal({
   disabled?: boolean;
 }): JSX.Element {
   function handleOpenWShortcut(e: KeyboardEvent) {
-    e.preventDefault()
-    internalSetOpen(state => !state);
+    if (hasApiKey || hasStore) {
+      e.preventDefault()
+      internalSetOpen(state => !state);
+    }
   }
   const version = useDarkStore((state) => state.version);
   const hasStore = useStoreStore((state) => state.hasStore);
