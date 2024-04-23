@@ -14,15 +14,12 @@ import {
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { FlowType } from "../../../../types/flow";
-import IOModal from "../../../../modals/IOModal";
-
 export default function ComponentsComponent({
   is_component = true,
 }: {
   is_component?: boolean;
 }) {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
-  const setCurrentFlowId = useFlowsManagerStore((state) => state.setCurrentFlowId);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const removeFlow = useFlowsManagerStore((state) => state.removeFlow);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
@@ -33,8 +30,6 @@ export default function ComponentsComponent({
   const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
   const [loadingScreen, setLoadingScreen] = useState(true);
-  const [openPlayground, setOpenPlayground] = useState(false);
-
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -175,33 +170,7 @@ export default function ComponentsComponent({
                         <></>
                       )
                     }
-                    playground={
-                      !is_component ? (
-                        <IOModal open={openPlayground} setOpen={setOpenPlayground}>
-                          <Button
-                            tabIndex={-1}
-                            variant="outline"
-                            size="sm"
-                            className="whitespace-nowrap "
-                            data-testid={
-                              "playground-flow-button-" + item.id + "-" + idx
-                            }
-                            onClick={() => {
-                              setCurrentFlowId(item.id);
-                              setOpenPlayground(true);
-                            }}
-                          >
-                            <IconComponent
-                              name="ExternalLink"
-                              className="main-page-nav-button select-none"
-                            />
-                            Playground
-                          </Button>
-                        </IOModal>
-                      ) : (
-                        <></>
-                      )
-                    }
+                    playground={!is_component}
                   />
                 ))
               ) : (
