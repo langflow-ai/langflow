@@ -216,37 +216,20 @@ async def webhook_run_flow(
     flow: Flow = Depends(get_flow_by_id),
 ):
     """
-    This endpoint is designed to receive webhook calls and initiate processes in the background without waiting for the process to complete.
+    Run a flow using a webhook request.
 
+    Args:
+        db (Session): The database session.
+        request (Request): The incoming HTTP request.
+        background_tasks (BackgroundTasks): The background tasks manager.
+        session_service (SessionService, optional): The session service. Defaults to Depends(get_session_service).
+        flow (Flow, optional): The flow to be executed. Defaults to Depends(get_flow_by_id).
 
-    ### Request JSON Structure:
-    - `flow_id`: Unique identifier for the flow to be executed (Required).
-    - `input_value`: Input value for the flow execution (Optional, default: empty string).
-    - `input_type`: Type of the input value (Optional, default: "chat").
-    - `output_type`: Desired type of output (Optional, default: "chat").
-    - `tweaks`: Dictionary containing any tweaks for the execution (Optional, default: empty dictionary).
-    - `session_id`: Session ID for reusing existing session data (Optional).
+    Returns:
+        dict: A dictionary containing the status of the task.
 
-    ### Response:
-    - JSON response with a message indicating the initiation of the task and its status.
-
-    ### Raises:
-    - HTTPException: 400 error if the flow ID is missing or the request body is empty.
-    - HTTPException: 500 error for any server-side issues during processing.
-
-    ### Example request:
-    ```bash
-    curl -X 'POST' 'http://<your-domain>/webhook' \
-        -H 'Content-Type: application/json' \
-        -d '{
-            "flow_id": "123",
-            "input_value": "Example input",
-            "input_type": "text",
-            "output_type": "chat",
-            "tweaks": {"example": "data"},
-            "session_id": "abc123"
-        }'
-    ```
+    Raises:
+        HTTPException: If the flow is not found or if there is an error processing the request.
     """
     try:
         logger.debug("Received webhook request")
