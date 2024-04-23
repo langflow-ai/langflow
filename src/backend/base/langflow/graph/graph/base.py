@@ -19,6 +19,7 @@ from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.schema import Record
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.deps import get_chat_service
+from langflow.services.monitor.utils import log_transaction
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
@@ -699,9 +700,11 @@ class Graph:
             next_runnable_vertices, top_level_vertices = await self.get_next_and_top_level_vertices(
                 lock, set_cache_coro, vertex
             )
+            log_transaction(vertex, status="success")
             return next_runnable_vertices, top_level_vertices, result_dict, params, valid, artifacts, vertex
         except Exception as exc:
             logger.exception(f"Error building vertex: {exc}")
+            log_transaction(vertex, status="failure", error=str(exc))
             raise exc
 
     async def get_next_and_top_level_vertices(

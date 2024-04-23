@@ -8,6 +8,7 @@ from langflow.services.deps import get_monitor_service
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import ResultDataResponse
+    from langflow.graph.vertex.base import Vertex
 
 
 INDEX_KEY = "index"
@@ -157,3 +158,35 @@ async def log_vertex_build(
         monitor_service.add_row(table_name="vertex_builds", data=row)
     except Exception as e:
         logger.exception(f"Error logging vertex build: {e}")
+
+
+def build_clean_params(target: "Vertex") -> dict:
+    """
+    Cleans the parameters of the target vertex.
+    """
+    # Removes all keys that the values aren't python types like str, int, bool, etc.
+    params = {
+        key: value for key, value in target.params.items() if isinstance(value, (str, int, bool, float, list, dict))
+    }
+    # if it is a list we need to check if the contents are python types
+    for key, value in params.items():
+        if isinstance(value, list):
+            params[key] = [item for item in value if isinstance(item, (str, int, bool, float, list, dict))]
+    return params
+
+
+def log_transaction(vertex: "Vertex", status, error=None):
+    try:
+        monitor_service = get_monitor_service()
+        clean_params = build_clean_params(vertex)
+        data = {
+            "vertex_id": vertex.id,
+            "inputs": clean_params,
+            "output": str(vertex.result),
+            "timestamp": monitor_service.get_timestamp(),
+            "status": status,
+            "error": error,
+        }
+        monitor_service.add_row(table_name="transactions", data=data)
+    except Exception as e:
+        logger.error(f"Error logging transaction: {e}")

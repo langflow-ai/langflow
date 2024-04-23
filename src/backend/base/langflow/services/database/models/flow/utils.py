@@ -21,7 +21,7 @@ def get_webhook_component_in_flow(flow_data: dict):
     """Get webhook component in flow data."""
 
     for node in flow_data.get("nodes", []):
-        if "WebhookComponent" in node.get("id"):
+        if "Webhook" in node.get("id"):
             return node
     return None
 
@@ -29,4 +29,4 @@ def get_webhook_component_in_flow(flow_data: dict):
 def get_all_webhook_components_in_flow(flow_data: dict):
     """Get all webhook components in flow data."""
 
-    return [node for node in flow_data.get("nodes", []) if "WebhookComponent" in node.get("id")]
+    return [node for node in flow_data.get("nodes", []) if "Webhook" in node.get("id")]

@@ -11,9 +11,9 @@ if TYPE_CHECKING:
 class TransactionModel(BaseModel):
     id: Optional[int] = Field(default=None, alias="id")
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
-    source: str
-    target: str
-    target_args: dict
+    vertex_id: str
+    inputs: dict
+    output: str
     status: str
     error: Optional[str] = None
 
@@ -22,8 +22,8 @@ class TransactionModel(BaseModel):
         populate_by_name = True
 
     # validate target_args in case it is a JSON
-    @validator("target_args", pre=True)
-    def validate_target_args(cls, v):
+    @validator("inputs", pre=True)
+    def validate_inputs(cls, v):
         if isinstance(v, str):
             return json.loads(v)
         return v
