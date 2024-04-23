@@ -45,6 +45,7 @@ module.exports = {
         "migration/global-variables",
         // "migration/experimental-components",
         // "migration/state-management",
+        "guides/rag-with-astradb",
       ],
     },
     {
@@ -52,6 +53,7 @@ module.exports = {
       label: "Guidelines",
       collapsed: false,
       items: [
+        "getting-started/cli",
         "guidelines/login",
         "guidelines/api",
         "guidelines/components",
