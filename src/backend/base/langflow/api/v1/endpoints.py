@@ -63,6 +63,11 @@ async def simple_run_flow(
 ):
     task_result: List[RunOutputs] = []
     artifacts = {}
+    user_id = None
+    if api_key_user:
+        user_id = api_key_user.id
+    elif flow:
+        user_id = flow.user_id
     if input_request.session_id:
         session_data = await session_service.load_session(input_request.session_id, flow_id=flow_id)
         graph, artifacts = session_data if session_data else (None, None)
@@ -80,7 +85,7 @@ async def simple_run_flow(
             raise ValueError(f"Flow {flow_id} has no data")
         graph_data = flow.data
         graph_data = process_tweaks(graph_data, input_request.tweaks or {})
-        graph = Graph.from_payload(graph_data, flow_id=flow_id)
+        graph = Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
     inputs = [InputValueRequest(components=[], input_value=input_request.input_value, type=input_request.input_type)]
     # outputs is a list of all components that should return output
     # we need to get them by checking their type
