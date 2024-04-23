@@ -25,6 +25,7 @@ import {
 import { getTagsIds } from "../../utils/storeUtils";
 import ConfirmationModal from "../ConfirmationModal";
 import BaseModal from "../baseModal";
+import { useHotkeys } from "react-hotkeys-hook";
 
 export default function ShareModal({
   component,
@@ -41,6 +42,10 @@ export default function ShareModal({
   setOpen?: (open: boolean) => void;
   disabled?: boolean;
 }): JSX.Element {
+  function handleOpenWShortcut(e: KeyboardEvent) {
+    e.preventDefault()
+    internalSetOpen(state => !state);
+  }
   const version = useDarkStore((state) => state.version);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -50,6 +55,8 @@ export default function ShareModal({
   const [internalOpen, internalSetOpen] = useState(children ? false : true);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
   const nameComponent = is_component ? "component" : "workflow";
+
+  useHotkeys("mod+alt+s", handleOpenWShortcut)
 
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [loadingTags, setLoadingTags] = useState<boolean>(false);
