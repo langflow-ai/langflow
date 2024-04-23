@@ -6,12 +6,11 @@ module.exports = {
       collapsed: false,
       items: [
         "index",
+        "getting-started/install-langflow",
+        "getting-started/quickstart",
+        "getting-started/huggingface-spaces",
         "getting-started/cli",
-        // "guides/basic-prompting",
-        // "guides/document-qa",
-        // "guides/blog-writer",
-        // "guides/memory-chatbot",
-        "guides/rag-with-astradb",
+        "getting-started/new-to-llms",
       ],
     },
     {
