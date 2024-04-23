@@ -58,7 +58,7 @@ function CsvOutputComponent({
     } else {
       setStatus("nodata");
     }
-  }, []);
+  }, [separator]);
 
   const getRowHeight = useCallback(() => {
     return currentRowHeight;
