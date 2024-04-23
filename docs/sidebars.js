@@ -9,7 +9,7 @@ module.exports = {
         "getting-started/install-langflow",
         "getting-started/quickstart",
         "getting-started/huggingface-spaces",
-        "getting-started/cli",
+        //"getting-started/cli",
         "getting-started/new-to-llms",
       ],
     },
