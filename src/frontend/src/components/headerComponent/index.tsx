@@ -168,50 +168,70 @@ export default function Header(): JSX.Element {
               />
             </button>
           )}
-          {!autoLogin && (
-            <>
-              <Separator orientation="vertical" />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className={
-                      "h-7 w-7 rounded-full focus-visible:outline-0 " +
-                      (userData?.profile_image ??
-                        gradients[
-                          parseInt(userData?.id ?? "", 30) % gradients.length
-                        ])
-                    }
-                  />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {isAdmin && (
+
+          <>
+            <Separator orientation="vertical" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={
+                    "h-7 w-7 rounded-full focus-visible:outline-0 " +
+                    (userData?.profile_image ??
+                      (userData?.id
+                        ? gradients[
+                            parseInt(userData?.id ?? "", 30) % gradients.length
+                          ]
+                        : "bg-gray-500"))
+                  }
+                />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>General</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={() => navigate("/global-variables")}
+                >
+                  Global Variables
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={() => navigate("/shortcuts")}
+                >
+                  Shortcuts
+                </DropdownMenuItem>
+                {!autoLogin && (
+                  <>
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {isAdmin && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => navigate("/admin")}
+                      >
+                        Admin Page
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       className="cursor-pointer"
-                      onClick={() => navigate("/admin")}
+                      onClick={() => navigate("/account/settings")}
                     >
-                      Admin Page
+                      Profile Settings
                     </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    onClick={() => navigate("/account/settings")}
-                  >
-                    Profile Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    onClick={() => {
-                      logout();
-                    }}
-                  >
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          )}
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => {
+                        logout();
+                      }}
+                    >
+                      Sign Out
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
         </div>
       </div>
     </div>
