@@ -1,14 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
+import * as dotenv from "dotenv";
+import path from "path";
+dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
  */
-// require('dotenv').config();
-
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
+
 export default defineConfig({
   testDir: "./tests",
   /* Run tests in files in parallel */
@@ -18,7 +21,7 @@ export default defineConfig({
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: 3,
+  workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   timeout: 120 * 1000,
   // reporter: [
@@ -40,24 +43,32 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        contextOptions: {
+          // chromium-specific permissions
+          permissions: ["clipboard-read", "clipboard-write"],
+        },
+      },
     },
 
     {
       name: "firefox",
-      use: { ...devices["Desktop Firefox"] },
+      use: {
+        ...devices["Desktop Firefox"],
+        launchOptions: {
+          firefoxUserPrefs: {
+            "dom.events.asyncClipboard.readText": true,
+            "dom.events.testing.asyncClipboard": true,
+          },
+        },
+      },
     },
-
-    // {
-    //   name: "webkit",
-    //   use: { ...devices["Desktop Safari"] },
-    // },
   ],
-  /* Run your local dev server before starting the tests */
   webServer: [
     {
       command:
-        "poetry run uvicorn --factory langflow.main:create_app --host 127.0.0.1 --port 7860",
+        "poetry run uvicorn --factory langflow.main:create_app --host 127.0.0.1 --port 7860 --loop asyncio",
       port: 7860,
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
@@ -65,7 +76,7 @@ export default defineConfig({
       },
       stdout: "ignore",
 
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: true,
       timeout: 120 * 1000,
     },
     {

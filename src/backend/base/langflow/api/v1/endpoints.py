@@ -171,6 +171,7 @@ async def simplified_run_flow(
     This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency, supporting a wide range of applications by allowing for dynamic input and output configuration along with performance optimizations through session management and caching.
     """
     session_id = input_request.session_id
+
     try:
         return await simple_run_flow(
             db=db,
