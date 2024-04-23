@@ -17,6 +17,7 @@ import ViewPage from "./pages/ViewPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
 import SignUp from "./pages/signUpPage";
+import GlobalVariablesPage from "./pages/GlobalVariablesPage";
 
 const Router = () => {
   const navigate = useNavigate();
@@ -124,6 +125,14 @@ const Router = () => {
           <ProtectedAdminRoute>
             <AdminPage />
           </ProtectedAdminRoute>
+        }
+      />
+      <Route
+        path="/global-variables"
+        element={
+          <ProtectedRoute>
+            <GlobalVariablesPage />
+          </ProtectedRoute>
         }
       />
 
