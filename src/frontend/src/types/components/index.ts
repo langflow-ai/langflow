@@ -80,14 +80,6 @@ export type InputGlobalComponentType = {
   editNode?: boolean;
 };
 
-export type InputGlobalComponentType = {
-  disabled: boolean;
-  onChange: (value: string) => void;
-  setDb: (value: boolean) => void;
-  name: string;
-  data: NodeDataType;
-  editNode?: boolean;
-};
 
 export type KeyPairListComponentType = {
   value: any;
@@ -601,6 +593,7 @@ export type IOModalPropsType = {
   open: boolean;
   setOpen: (open: boolean) => void;
   disable?: boolean;
+  isPlayground?: boolean;
 };
 
 export type buttonBoxPropsType = {
