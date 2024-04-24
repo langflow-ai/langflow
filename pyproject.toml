@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.0a24"
+version = "1.0.0a26"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -81,6 +81,7 @@ chromadb = "^0.4.24"
 langchain-anthropic = "^0.1.6"
 langchain-astradb = "^0.1.0"
 langchain-openai = "^0.1.1"
+zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
