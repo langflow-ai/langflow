@@ -51,8 +51,8 @@ class MemoryComponent(BaseMemoryComponent):
             kwargs["sender_name"] = None
         if "session_id" not in kwargs:
             kwargs["session_id"] = None
-        if "n_messages" not in kwargs:
-            kwargs["n_messages"] = 5
+        if "limit" not in kwargs:
+            kwargs["limit"] = 5
         if "order" not in kwargs:
             kwargs["order"] = "Descending"
 
@@ -74,7 +74,7 @@ class MemoryComponent(BaseMemoryComponent):
             sender=sender,
             sender_name=sender_name,
             session_id=session_id,
-            n_messages=n_messages,
+            limit=n_messages,
             order=order,
         )
         messages_str = records_to_text(template=record_template or "", records=messages)
