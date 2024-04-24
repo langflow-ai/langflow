@@ -17,9 +17,10 @@ test.describe("save component tests", () => {
 
     while (modalCount === 0) {
       await page.locator('//*[@id="new-project-btn"]').click();
+      await page.waitForTimeout(5000);
       modalCount = await page.getByTestId("modal-title")?.count();
     }
-
+    await page.waitForTimeout(1000);
     await page.getByTestId("blank-flow").click();
     await page.waitForTimeout(1000);
 
