@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, cast
 
 from langchain_community.chat_message_histories.zep import SearchScope, SearchType, ZepChatMessageHistory
 
@@ -73,7 +73,7 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
         Returns:
             list[Record]: A list of Record objects representing the search results.
         """
-        memory: ZepChatMessageHistory = kwargs.get("memory")
+        memory: ZepChatMessageHistory = cast(ZepChatMessageHistory, kwargs.get("memory"))
         if not memory:
             raise ValueError("ZepChatMessageHistory instance is required.")
         query = kwargs.get("query")

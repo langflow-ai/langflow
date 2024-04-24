@@ -75,6 +75,8 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
         memory: ZepChatMessageHistory | None = kwargs.pop("memory", None)
         if memory is None:
             raise ValueError("ZepChatMessageHistory instance is required.")
+        if metadata is None:
+            metadata = {}
         metadata["sender_name"] = sender_name
         metadata.update(kwargs)
         if sender == "Machine":
