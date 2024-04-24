@@ -108,14 +108,24 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
     def build(
         self,
         session_id: Text,
-        url: Text,
-        api_key: Text,
+        url: Optional[Text] = None,
+        api_key: Optional[Text] = None,
         query: Optional[Text] = None,
         search_scope: SearchScope = SearchScope.messages,
         search_type: SearchType = SearchType.similarity,
         limit: Optional[int] = None,
-    ):
-        memory = ZepChatMessageHistory(session_id, url, api_key)
+    ) -> list[Record]:
+        try:
+            from zep_python import ZepClient
+            from zep_python.langchain import ZepChatMessageHistory
+        except ImportError:
+            raise ImportError(
+                "Could not import zep-python package. " "Please install it with `pip install zep-python`."
+            )
+        if url == "":
+            url = None
+        zep_client = ZepClient(api_url=url, api_key=api_key)
+        memory = ZepChatMessageHistory(session_id=session_id, zep_client=zep_client)
         records = self.get_messages(
             memory=memory,
             query=query,

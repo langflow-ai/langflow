@@ -1,13 +1,17 @@
-from langchain_community.chat_message_histories.zep import ZepChatMessageHistory
+from typing import Optional, TYPE_CHECKING
+
 
 from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
 from langflow.schema.schema import Record
 
+if TYPE_CHECKING:
+    from zep_python.langchain import ZepChatMessageHistory
 
-class ZepMessageReaderComponent(BaseMemoryComponent):
-    display_name = "Zep Message Reader"
-    description = "Retrieves stored chat messages from Zep."
+
+class ZepMessageWriterComponent(BaseMemoryComponent):
+    display_name = "Zep Message Writer"
+    description = "Writes a message to Zep."
 
     def build_config(self):
         return {
@@ -26,36 +30,19 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
                 "info": "API Key for the Zep instance.",
                 "password": True,
             },
-            "query": {
-                "display_name": "Query",
-                "info": "Query to search for in the chat history.",
-            },
-            "metadata": {
-                "display_name": "Metadata",
-                "info": "Optional metadata to attach to the message.",
-                "advanced": True,
-            },
-            "search_scope": {
-                "options": ["Messages", "Summary"],
-                "display_name": "Search Scope",
-                "info": "Scope of the search.",
-                "advanced": True,
-            },
-            "search_type": {
-                "options": ["Similarity", "MMR"],
-                "display_name": "Search Type",
-                "info": "Type of search.",
-                "advanced": True,
-            },
             "limit": {
                 "display_name": "Limit",
                 "info": "Limit of search results.",
                 "advanced": True,
             },
+            "input_value": {
+                "display_name": "Input Record",
+                "info": "Record to write to Zep.",
+            },
         }
 
     def add_message(
-        self, sender: Text, sender_name: Text, message: Text, session_id: Text, metadata: dict | None = None, **kwargs
+        self, sender: Text, sender_name: Text, text: Text, session_id: Text, metadata: dict | None = None, **kwargs
     ):
         """
         Adds a message to the ZepChatMessageHistory memory.
@@ -63,7 +50,7 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
         Args:
             sender (Text): The type of the message sender. Valid values are "Machine" or "User".
             sender_name (Text): The name of the message sender.
-            message (Text): The content of the message.
+            text (Text): The content of the message.
             session_id (Text): The session ID associated with the message.
             metadata (dict | None, optional): Additional metadata for the message. Defaults to None.
             **kwargs: Additional keyword arguments.
@@ -80,9 +67,9 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
         metadata["sender_name"] = sender_name
         metadata.update(kwargs)
         if sender == "Machine":
-            memory.add_ai_message(message, metadata=metadata)
+            memory.add_ai_message(text, metadata=metadata)
         elif sender == "User":
-            memory.add_user_message(message, metadata=metadata)
+            memory.add_user_message(text, metadata=metadata)
         else:
             raise ValueError(f"Invalid sender type: {sender}")
 
@@ -90,10 +77,20 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
         self,
         input_value: Record,
         session_id: Text,
-        url: Text,
-        api_key: Text,
-    ):
-        memory = ZepChatMessageHistory(session_id, url, api_key)
+        url: Optional[Text] = None,
+        api_key: Optional[Text] = None,
+    ) -> Record:
+        try:
+            from zep_python import ZepClient
+            from zep_python.langchain import ZepChatMessageHistory
+        except ImportError:
+            raise ImportError(
+                "Could not import zep-python package. " "Please install it with `pip install zep-python`."
+            )
+        if url == "":
+            url = None
+        zep_client = ZepClient(api_url=url, api_key=api_key)
+        memory = ZepChatMessageHistory(session_id=session_id, zep_client=zep_client)
         self.add_message(**input_value.data, memory=memory)
         self.status = f"Added message to Zep memory for session {session_id}"
         return input_value
