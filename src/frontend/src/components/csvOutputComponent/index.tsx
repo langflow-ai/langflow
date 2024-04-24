@@ -23,7 +23,29 @@ function CsvOutputComponent({
 }) {
   const csvNodeArtifacts = flowPool?.data?.artifacts?.repr;
   const jsonString = csvNodeArtifacts?.replace(/'/g, '"');
-  const file = JSON.parse(jsonString) || "";
+  let file = null;
+  try {
+    file = JSON?.parse(jsonString) || "";
+  } catch (e) {
+    console.log("Error parsing JSON");
+  }
+
+  if (!file) {
+    return (
+      <div className=" align-center flex h-full w-full flex-col items-center justify-center gap-5">
+        <div className="align-center flex w-full justify-center gap-2">
+          <ForwardedIconComponent name="Table" />
+          {CSVViewErrorTitle}
+        </div>
+        <div className="align-center flex w-full justify-center">
+          <div className="langflow-chat-desc align-center flex justify-center px-6 py-8">
+            <div className="langflow-chat-desc-span">{CSVError}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const separator = csvNode?.data?.node?.template?.separator?.value || ",";
 
   const dark = useDarkStore.getState().dark;
