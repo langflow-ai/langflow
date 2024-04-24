@@ -1,10 +1,9 @@
 import copy
-from typing import Literal, Optional
+from typing import Literal, Optional, cast
 
 from langchain_core.documents import Document
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from pydantic import BaseModel, model_validator
-from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 
 
 class Record(BaseModel):
@@ -67,8 +66,8 @@ class Record(BaseModel):
         Returns:
             Record: The converted Record.
         """
-        data = {"text": message.content}
-        data["metadata"] = message.to_json()
+        data: dict = {"text": message.content}
+        data["metadata"] = cast(dict, message.to_json())
         return cls(data=data, text_key="text")
 
     def __add__(self, other: "Record") -> "Record":
