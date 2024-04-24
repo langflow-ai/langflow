@@ -272,6 +272,8 @@ def process_tweaks(
     tweaks_dict = {}
     if not isinstance(tweaks, dict):
         tweaks_dict = tweaks.model_dump()
+    else:
+        tweaks_dict = tweaks
     if "stream" not in tweaks_dict:
         tweaks_dict["stream"] = stream
     nodes = validate_input(graph_data, tweaks_dict)
