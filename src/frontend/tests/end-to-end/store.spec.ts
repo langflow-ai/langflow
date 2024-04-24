@@ -75,6 +75,7 @@ test("should order the visualization", async ({ page }) => {
   await page.getByText("Basic RAG").isVisible();
 
   await page.getByTestId("select-order-store").click();
+  await page.waitForTimeout(2000);
   await page.getByText("Alphabetical").click();
 
   await page.getByText("Album Cover Builder").isVisible();

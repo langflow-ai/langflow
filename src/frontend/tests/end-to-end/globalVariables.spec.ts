@@ -69,4 +69,11 @@ test("GlobalVariables", async ({ page }) => {
   await page.getByText("Save Variable", { exact: true }).click();
   expect(page.getByText(credentialName, { exact: true })).not.toBeNull();
   await page.getByText(credentialName, { exact: true }).isVisible();
+  await page
+    .getByText(credentialName, { exact: true })
+    .hover()
+    .then(async () => {
+      await page.getByTestId("icon-Trash2").last().click();
+      await page.getByText("Delete", { exact: true }).nth(1).click();
+    });
 });
