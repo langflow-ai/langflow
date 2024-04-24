@@ -121,6 +121,8 @@ export default function IOModal({
     setSelectedViewField(startView());
   }, [open]);
 
+  console.log(selectedViewField);
+
   return (
     <BaseModal
       size={selectedTab === 0 ? "large-thin" : "large"}
