@@ -149,7 +149,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: applyEdgeChanges(changes, get().edges),
     });
   },
-  setNodes: (change) => {
+  setNodes: (change,skipSave=false) => {
     let newChange = typeof change === "function" ? change(get().nodes) : change;
     let newEdges = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
@@ -164,7 +164,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
 
     const flowsManager = useFlowsManagerStore.getState();
-    if (!get().isBuilding) {
+    if (!get().isBuilding && !skipSave) {
       flowsManager.autoSaveCurrentFlow(
         newChange,
         newEdges,
@@ -172,7 +172,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
     }
   },
-  setEdges: (change) => {
+  setEdges: (change,skipSave=false) => {
     let newChange = typeof change === "function" ? change(get().edges) : change;
     set({
       edges: newChange,
@@ -180,7 +180,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
 
     const flowsManager = useFlowsManagerStore.getState();
-    if (!get().isBuilding) {
+    if (!get().isBuilding && !skipSave) {
       flowsManager.autoSaveCurrentFlow(
         get().nodes,
         newChange,

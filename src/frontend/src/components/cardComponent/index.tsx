@@ -63,8 +63,8 @@ export default function CollectionCardComponent({
 
   useEffect(() => {
     if (currentFlowId && playground) {
-      setNodes(currentFlow?.data?.nodes ?? []);
-      setEdges(currentFlow?.data?.edges ?? []);
+      setNodes(currentFlow?.data?.nodes ?? [],true);
+      setEdges(currentFlow?.data?.edges ?? [],true);
     }
   }, [currentFlowId]);
 
@@ -364,6 +364,7 @@ export default function CollectionCardComponent({
             {button && button}
             {playground &&
               <Button
+                key={data.id}
                 tabIndex={-1}
                 variant="outline"
                 size="sm"

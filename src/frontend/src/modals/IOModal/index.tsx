@@ -83,11 +83,11 @@ export default function IOModal({
     return updateVerticesOrder(currentFlow!.id, null);
   }
 
-  useEffect(() => {
-    if (open) {
-      updateVertices();
-    }
-  }, [open, currentFlow]);
+  // useEffect(() => {
+  //   if (open) {
+  //     updateVertices();
+  //   }
+  // }, [open, currentFlow]);
 
   async function sendMessage(count = 1): Promise<void> {
     if (isBuilding) return;
