@@ -190,16 +190,9 @@ export default function Header(): JSX.Element {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="cursor-pointer"
-                  onClick={() => navigate("/global-variables")}
+                  onClick={() => navigate("/settings")}
                 >
-                  Global Variables
-                </DropdownMenuItem>
-
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={() => navigate("/shortcuts")}
-                >
-                  Shortcuts
+                  Settings
                 </DropdownMenuItem>
                 {!autoLogin && (
                   <>

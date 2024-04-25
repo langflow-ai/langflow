@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Route, Routes, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { ProtectedAdminRoute } from "./components/authAdminGuard";
 import { ProtectedRoute } from "./components/authGuard";
 import { ProtectedLoginRoute } from "./components/authLoginGuard";
@@ -9,15 +9,16 @@ import AdminPage from "./pages/AdminPage";
 import LoginAdminPage from "./pages/AdminPage/LoginPage";
 import ApiKeysPage from "./pages/ApiKeysPage";
 import FlowPage from "./pages/FlowPage";
+import GlobalVariablesPage from "./pages/GlobalVariablesPage";
 import HomePage from "./pages/MainPage";
 import ComponentsComponent from "./pages/MainPage/components/components";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
+import SettingsPage from "./pages/SettingsPage";
 import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
 import SignUp from "./pages/signUpPage";
-import GlobalVariablesPage from "./pages/GlobalVariablesPage";
 
 const Router = () => {
   const navigate = useNavigate();
@@ -45,6 +46,18 @@ const Router = () => {
           path="components"
           element={<ComponentsComponent key="components" />}
         />
+      </Route>
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate replace to={"global-variables"} />} />
+        <Route path="global-variables" element={<GlobalVariablesPage />} />
+        <Route path="shortcuts" element={<GlobalVariablesPage />} />
       </Route>
       <Route
         path="/store"
@@ -125,14 +138,6 @@ const Router = () => {
           <ProtectedAdminRoute>
             <AdminPage />
           </ProtectedAdminRoute>
-        }
-      />
-      <Route
-        path="/global-variables"
-        element={
-          <ProtectedRoute>
-            <GlobalVariablesPage />
-          </ProtectedRoute>
         }
       />
 
