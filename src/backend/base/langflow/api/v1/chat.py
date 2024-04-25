@@ -51,8 +51,8 @@ async def try_running_celery_task(vertex, user_id):
     return vertex
 
 
-@router.get("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
-async def get_vertices(
+@router.post("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
+async def retrieve_vertices_order(
     flow_id: str,
     data: Optional[FlowDataRequest] = None,
     stop_component_id: Optional[str] = None,
@@ -65,6 +65,7 @@ async def get_vertices(
 
     Args:
         flow_id (str): The ID of the flow.
+        data (Optional[FlowDataRequest], optional): The flow data. Defaults to None.
         stop_component_id (str, optional): The ID of the stop component. Defaults to None.
         start_component_id (str, optional): The ID of the start component. Defaults to None.
         chat_service (ChatService, optional): The chat service dependency. Defaults to Depends(get_chat_service).
