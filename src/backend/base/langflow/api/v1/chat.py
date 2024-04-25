@@ -87,7 +87,9 @@ async def retrieve_vertices_order(
                 flow_id=flow_id, session=session, chat_service=chat_service, graph=graph
             )
         else:
-            graph = await build_and_cache_graph_from_data(flow_id=flow_id, data=data, chat_service=chat_service)
+            graph = await build_and_cache_graph_from_data(
+                flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
+            )
         if stop_component_id or start_component_id:
             try:
                 first_layer = graph.sort_vertices(stop_component_id, start_component_id)
