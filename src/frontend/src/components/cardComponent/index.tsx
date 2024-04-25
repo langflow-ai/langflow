@@ -52,6 +52,8 @@ export default function CollectionCardComponent({
     data?.downloads_count ?? 0
   );
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
+  const getFlowById = useFlowsManagerStore((state) => state.getFlowById);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
@@ -61,21 +63,16 @@ export default function CollectionCardComponent({
 
   const name = data.is_component ? "Component" : "Flow";
 
+  async function getFlowData(){
+    const res = await getComponent(data.id)
+    const newFlow = cloneFLowWithParent(res, res.id, data.is_component,true);
+    return newFlow;
+  }
+
   useEffect(() => {
     if (currentFlowId && playground) {
-      console.log(currentFlowId)
-      if(currentFlow){
         setNodes(currentFlow?.data?.nodes ?? [],true);
         setEdges(currentFlow?.data?.edges ?? [],true);
-      }
-      else{
-        getComponent(data.id)
-        .then((res) => {
-          const newFlow = cloneFLowWithParent(res, res.id, data.is_component);
-          setNodes(newFlow?.data?.nodes??[]);
-          setEdges(newFlow?.data?.edges??[]);
-        });  
-      }
       cleanFlowPool();
     }
   }, [currentFlowId]);
@@ -385,8 +382,17 @@ export default function CollectionCardComponent({
                   "playground-flow-button-" + data.id
                 }
                 onClick={() => {
-                  setCurrentFlowId(data.id);
-                  setOpenPlayground(true);
+                  if(getFlowById(data.id)){
+                    setCurrentFlowId(data.id);
+                    setOpenPlayground(true);
+                  }
+                  else{
+                    getFlowData().then((res) => {
+                      setCurrentFlow(res);
+                      setOpenPlayground(true);
+                    });
+                  
+                  }
                 }}
               >
                 <IconComponent
