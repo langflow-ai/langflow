@@ -2,6 +2,7 @@ import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 
 import PageLayout from "../../components/pageLayout";
+import TableComponent from "../../components/tableComponent";
 
 export default function GlobalVariablesPage() {
   return (
@@ -17,7 +18,9 @@ export default function GlobalVariablesPage() {
         </>
       }
     >
-      <div className="flex h-full w-full flex-col justify-between">Page</div>
+      <div className="flex h-full w-full flex-col justify-between">
+        <TableComponent />
+      </div>
     </PageLayout>
   );
 }

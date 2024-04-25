@@ -26,6 +26,7 @@
     "@tailwindcss/line-clamp": "^0.4.4",
     "@types/axios": "^0.14.0",
     "ace-builds": "^1.24.1",
+    "ag-grid-react": "^31.2.1",
     "ansi-to-html": "^0.7.2",
     "axios": "^1.5.0",
     "base64-js": "^1.5.1",
