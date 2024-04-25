@@ -40,6 +40,7 @@ export default function CollectionCardComponent({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
+  const cleanFlowPool = useFlowStore((state) => state.CleanFlowPool);
   const isStore = false;
   const [loading, setLoading] = useState(false);
   const [loadingLike, setLoadingLike] = useState(false);
@@ -64,6 +65,7 @@ export default function CollectionCardComponent({
     if (currentFlowId && playground) {
       setNodes(currentFlow?.data?.nodes ?? [],true);
       setEdges(currentFlow?.data?.edges ?? [],true);
+      cleanFlowPool();
     }
   }, [currentFlowId]);
 
