@@ -6,11 +6,14 @@ import { isInputNode, isOutputNode } from "./reactflowUtils";
 export default function cloneFLowWithParent(
   flow: FlowType,
   parent: string,
-  is_component: boolean
+  is_component: boolean,
+  keepId=false
 ) {
   let childFLow = cloneDeep(flow);
   childFLow.parent = parent;
-  childFLow.id = "";
+  if(!keepId){
+    childFLow.id = "";
+  }
   childFLow.is_component = is_component;
   return childFLow;
 }
