@@ -918,10 +918,12 @@ export async function getVerticesOrder(
   } else if (startNodeId) {
     config["params"] = { start_component_id: startNodeId };
   }
+  const data = {}
   if(nodes && Edges){
-    config.data = {nodes,Edges}
+    data["nodes"] = nodes
+    data["edges"] = Edges
   }
-  return await api.get(`${BASE_URL_API}build/${flowId}/vertices`, config);
+  return await api.post(`${BASE_URL_API}build/${flowId}/vertices`,data, config);
 }
 
 export async function postBuildVertex(
