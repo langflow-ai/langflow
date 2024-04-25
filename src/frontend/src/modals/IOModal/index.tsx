@@ -31,8 +31,10 @@ export default function IOModal({
   open,
   setOpen,
   disable,
+  cleanOnClose=false,
 }: IOModalPropsType): JSX.Element {
   const allNodes = useFlowStore((state) => state.nodes);
+  const cleanFlowPool = useFlowStore((state) => state.CleanFlowPool);
   const inputs = useFlowStore((state) => state.inputs).filter(
     (input) => input.type !== "ChatInput"
   );
@@ -127,6 +129,13 @@ export default function IOModal({
       open={open}
       setOpen={setOpen}
       disable={disable}
+      onChangeOpenModal={(open)=>{
+        if(!open && cleanOnClose){
+          console.log("cleaning flow pool") 
+          cleanFlowPool();
+        }
+      
+      }}
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}

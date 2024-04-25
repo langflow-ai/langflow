@@ -58,7 +58,6 @@ export default function CollectionCardComponent({
   const setCurrentFlowId = useFlowsManagerStore((state) => state.setCurrentFlowId);
 
 
-
   const name = data.is_component ? "Component" : "Flow";
 
   useEffect(() => {
@@ -382,7 +381,7 @@ export default function CollectionCardComponent({
                   className="main-page-nav-button select-none"
                 />
                 Playground
-                {openPlayground && < IOModal open={openPlayground} setOpen={setOpenPlayground}>
+                {openPlayground && < IOModal cleanOnClose={true} open={openPlayground} setOpen={setOpenPlayground}>
                   <></>
                 </IOModal>}
               </Button>

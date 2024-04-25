@@ -45,6 +45,8 @@ export type FlowPoolType = {
 };
 
 export type FlowStoreType = {
+  onFlowPage: boolean;
+  setOnFlowPage: (onFlowPage: boolean) => void;
   flowPool: FlowPoolType;
   inputs: Array<{ type: string; id: string; displayName: string }>;
   outputs: Array<{ type: string; id: string; displayName: string }>;
