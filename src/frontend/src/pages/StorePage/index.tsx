@@ -371,6 +371,7 @@ export default function StorePage(): JSX.Element {
                       data={item}
                       authorized={validApiKey}
                       disabled={loading}
+                      playground={item.last_tested_version?.includes("1.0.0")&& !item.is_component}
                     />
                   </>
                 );

@@ -63,8 +63,19 @@ export default function CollectionCardComponent({
 
   useEffect(() => {
     if (currentFlowId && playground) {
-      setNodes(currentFlow?.data?.nodes ?? [],true);
-      setEdges(currentFlow?.data?.edges ?? [],true);
+      console.log(currentFlowId)
+      if(currentFlow){
+        setNodes(currentFlow?.data?.nodes ?? [],true);
+        setEdges(currentFlow?.data?.edges ?? [],true);
+      }
+      else{
+        getComponent(data.id)
+        .then((res) => {
+          const newFlow = cloneFLowWithParent(res, res.id, data.is_component);
+          setNodes(newFlow?.data?.nodes??[]);
+          setEdges(newFlow?.data?.edges??[]);
+        });  
+      }
       cleanFlowPool();
     }
   }, [currentFlowId]);
