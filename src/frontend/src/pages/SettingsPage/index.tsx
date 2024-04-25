@@ -16,6 +16,46 @@ export default function SettingsPage(): JSX.Element {
 
   const sidebarNavItems = [
     {
+        title: "General",
+        href: "/settings/general",
+        icon: (
+          <ForwardedIconComponent
+            name="SlidersHorizontal"
+            className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]"
+          />
+        ),
+      },
+      {
+        title: "Theme",
+        href: "/settings/theme",
+        icon: (
+          <ForwardedIconComponent
+            name="Palette"
+            className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]"
+          />
+        ),
+      },
+      {
+        title: "Bundles",
+        href: "/settings/bundles",
+        icon: (
+          <ForwardedIconComponent
+            name="Boxes"
+            className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]"
+          />
+        ),
+      },
+      {
+        title: "Integrations",
+        href: "/settings/integrations",
+        icon: (
+          <ForwardedIconComponent
+            name="Blocks"
+            className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]"
+          />
+        ),
+      },
+    {
       title: "Global Variables",
       href: "/settings/global-variables",
       icon: (
@@ -26,7 +66,7 @@ export default function SettingsPage(): JSX.Element {
       ),
     },
     {
-      title: "Keyboard Shortcuts",
+      title: "Shortcuts",
       href: "/settings/shortcuts",
       icon: (
         <ForwardedIconComponent name="Keyboard" className="w-5 stroke-[1.5]" />
