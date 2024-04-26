@@ -20,6 +20,10 @@ import {
 } from "../ui/card";
 import IOModal from "../../modals/IOModal";
 import useFlowStore from "../../stores/flowStore";
+import { set } from "lodash";
+import LoadingComponent from "../loadingComponent";
+import { f } from "million/dist/shared/million.9d4df3c1";
+import Loading from "../ui/loading";
 
 export default function CollectionCardComponent({
   data,
@@ -59,20 +63,21 @@ export default function CollectionCardComponent({
   const setEdges = useFlowStore((state) => state.setEdges);
   const [openPlayground, setOpenPlayground] = useState(false);
   const setCurrentFlowId = useFlowsManagerStore((state) => state.setCurrentFlowId);
+  const [loadingPlayground, setLoadingPlayground] = useState(false);
 
 
   const name = data.is_component ? "Component" : "Flow";
 
-  async function getFlowData(){
+  async function getFlowData() {
     const res = await getComponent(data.id)
-    const newFlow = cloneFLowWithParent(res, res.id, data.is_component,true);
+    const newFlow = cloneFLowWithParent(res, res.id, data.is_component, true);
     return newFlow;
   }
 
   useEffect(() => {
     if (currentFlowId && playground) {
-        setNodes(currentFlow?.data?.nodes ?? [],true);
-        setEdges(currentFlow?.data?.edges ?? [],true);
+      setNodes(currentFlow?.data?.nodes ?? [], true);
+      setEdges(currentFlow?.data?.edges ?? [], true);
       cleanFlowPool();
     }
   }, [currentFlowId]);
@@ -373,6 +378,7 @@ export default function CollectionCardComponent({
             {button && button}
             {playground &&
               <Button
+                disabled={loadingPlayground}
                 key={data.id}
                 tabIndex={-1}
                 variant="outline"
@@ -382,24 +388,32 @@ export default function CollectionCardComponent({
                   "playground-flow-button-" + data.id
                 }
                 onClick={() => {
-                  if(getFlowById(data.id)){
+                  setLoadingPlayground(true);
+                  if (getFlowById(data.id)) {
                     setCurrentFlowId(data.id);
                     setOpenPlayground(true);
+                    setLoadingPlayground(false);
                   }
-                  else{
+                  else {
                     getFlowData().then((res) => {
                       setCurrentFlow(res);
                       setOpenPlayground(true);
+                      setLoadingPlayground(false);
                     });
-                  
+
                   }
                 }}
               >
-                <IconComponent
-                  name="ExternalLink"
-                  className="main-page-nav-button select-none"
-                />
-                Playground
+                {!loadingPlayground ?
+                  <>
+                    <IconComponent
+                      name="ExternalLink"
+                      className="main-page-nav-button select-none"
+                    />
+                    Playground
+                  </>:
+                  <Loading />
+              }
                 {openPlayground && < IOModal cleanOnClose={true} open={openPlayground} setOpen={setOpenPlayground}>
                   <></>
                 </IOModal>}
