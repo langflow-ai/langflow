@@ -35,7 +35,7 @@ export default function PlaygroundPage() {
                 setCurrentFlow(flow);
             });
         }
-    }, []);
+    }, [currentFlow]);
 
     useEffect(() => {
         if (currentFlow) {
@@ -44,7 +44,7 @@ export default function PlaygroundPage() {
             cleanFlowPool();
             setLoading(false);
         }
-    }, [currentFlowId]);
+    }, [currentFlow]);
 
 
     return (
