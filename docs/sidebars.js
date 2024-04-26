@@ -6,7 +6,7 @@ module.exports = {
       collapsed: false,
       items: [
         "whats-new/a-new-chapter-langflow"
-      ]
+      ],
     },
     {
       type: "category",
@@ -18,7 +18,7 @@ module.exports = {
         "getting-started/quickstart",
         "getting-started/huggingface-spaces",
         "getting-started/new-to-llms"
-      ]
+      ],
     },
     {
       type: "category",
@@ -29,7 +29,7 @@ module.exports = {
         "starter-projects/blog-writer",
         "starter-projects/document-qa",
         "starter-projects/memory-chatbot"
-      ]
+      ],
     },
     {
       type: "category",
@@ -43,7 +43,7 @@ module.exports = {
         "administration/collection",
         "administration/prompt-customization",
         "administration/langfuse_integration"
-      ]
+      ],
     },
     {
       type: "category",
@@ -58,7 +58,7 @@ module.exports = {
         "components/vector-stores",
         "components/embeddings",
         "components/custom"
-      ]
+      ],
     },
     {
       type: "category",
@@ -74,7 +74,7 @@ module.exports = {
         "components/text-splitters",
         "components/toolkits",
         "components/tools"
-      ]
+      ],
     },
     {
       type: "category",
@@ -88,7 +88,7 @@ module.exports = {
         "examples/searchapi-tool",
         "examples/serp-api-tool",
         "examples/python-function"
-      ]
+      ],
     },
     {
       type: "category",
@@ -111,7 +111,7 @@ module.exports = {
         //"tutorials/chatprompttemplate_guide",
         //"tutorials/loading_document",
         "tutorials/rag-with-astradb"
-      ]
+      ],
     },
     {
       type: "category",
@@ -119,7 +119,7 @@ module.exports = {
       collapsed: true,
       items: [
         "deployment/gcp-deployment"
-      ]
+      ],
     },
     {
       type: "category",
@@ -129,7 +129,7 @@ module.exports = {
         "contributing/how-contribute",
         "contributing/github-issues",
         "contributing/community"
-      ]
-    }
-  ]
+      ],
+    },
+  ],
 };
