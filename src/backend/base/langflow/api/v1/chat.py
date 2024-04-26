@@ -54,7 +54,7 @@ async def try_running_celery_task(vertex, user_id):
 @router.post("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
 async def retrieve_vertices_order(
     flow_id: str,
-    data: Optional[FlowDataRequest] = None,
+    data: Annotated[Optional[FlowDataRequest], Body(embed=True)] = None,
     stop_component_id: Optional[str] = None,
     start_component_id: Optional[str] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
