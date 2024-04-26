@@ -35,7 +35,7 @@ export default function PlaygroundPage() {
                 setCurrentFlow(flow);
             });
         }
-    }, [currentFlow]);
+    }, [id]);
 
     useEffect(() => {
         if (currentFlow) {
