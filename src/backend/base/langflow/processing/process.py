@@ -269,16 +269,19 @@ def process_tweaks(
     :return: The modified graph_data dictionary.
     :raises ValueError: If the input is not in the expected format.
     """
+    tweaks_dict = {}
     if not isinstance(tweaks, dict):
-        tweaks = tweaks.model_dump()
-    if "stream" not in tweaks:
-        tweaks["stream"] = stream
-    nodes = validate_input(graph_data, tweaks)
+        tweaks_dict = tweaks.model_dump()
+    else:
+        tweaks_dict = tweaks
+    if "stream" not in tweaks_dict:
+        tweaks_dict["stream"] = stream
+    nodes = validate_input(graph_data, tweaks_dict)
     nodes_map = {node.get("id"): node for node in nodes}
     nodes_display_name_map = {node.get("data", {}).get("node", {}).get("display_name"): node for node in nodes}
 
     all_nodes_tweaks = {}
-    for key, value in tweaks.items():
+    for key, value in tweaks_dict.items():
         if isinstance(value, dict):
             if node := nodes_map.get(key):
                 apply_tweaks(node, value)
