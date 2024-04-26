@@ -2,26 +2,44 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 import ReactPlayer from "react-player";
+import Admonition from "@theme/Admonition";
 
-# Basic prompting
+# ⚡️ Quickstart
 
-Prompts serve as the inputs to a large language model (LLM), acting as the interface between human instructions and computational tasks.
-
-By submitting natural language requests in a prompt to an LLM, you can obtain answers, generate text, and solve problems.
-
-This article demonstrates how to use Langflow's prompt tools to issue basic prompts to an LLM, and how various prompting strategies can affect your outcomes.
+This quickstart demonstrates how to install Langflow, run it locally, build a basic prompt flow, and modify that prompt for different outcomes.
 
 ## Prerequisites
 
-1. Install Langflow.
+* [Python 3.10](https://www.python.org/downloads/release/python-3100/)
+
+* [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/)
+
+* [OpenAI API key](https://platform.openai.com)
+
+## Install Langflow
+
+<Admonition type="info">
+  Langflow v1.0 is also available in a [HuggingFace Preview Space](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true) if you'd rather try it out before installing locally. This quickstart will run there, too.
+</Admonition>
+
+1. To install Langflow, enter the following command in pip or pipx:
+
+pip:
 ```bash
-python -m pip install langflow --pre
+python -m pip install langflow -U
 ```
+
+pipx:
+```bash
+pipx install langflow --python python3.10 --fetch-missing-python
+```
+Pipx can fetch the missing Python version for you with `--fetch-missing-python`, but you can also install the Python version manually.
 
 2. Start a local Langflow instance with the Langflow CLI:
 ```bash
 langflow run
 ```
+
 Or start Langflow with Python:
 ```bash
 python -m langflow run
@@ -35,11 +53,21 @@ Result:
 │ Collaborate, and contribute at our GitHub Repo 🚀 │
 ```
 
-Alternatively, go to [HuggingFace Spaces](https://docs.langflow.org/getting-started/hugging-face-spaces) or [Lightning.ai Studio](https://lightning.ai/ogabrielluiz-8j6t8/studios/langflow) for a pre-built Langflow test environment.
+3. Go to `http://127.0.0.1:7860` and confirm the Langflow UI is available.
 
-3. Create an [OpenAI API key](https://platform.openai.com).
+<Admonition type="info">
+    If you encounter a problem, see [Possible Installation Issues](/migration/possible-installation-issues).
+</Admonition>
 
 ## Create the basic prompting project
+
+Now that you have Langflow installed and running, let us formally welcome you to Langflow!👋
+
+You will use Langflow's prompt tools to issue prompts to the OpenAI LLM.
+
+Prompts serve as the inputs to a large language model (LLM), acting as the interface between human instructions and computational tasks.
+
+By submitting natural language requests in a prompt to an LLM, you can obtain answers, generate text, and solve problems.
 
 1. From the Langflow dashboard, click **New Project**.
 2. Select **Basic Prompting**.
@@ -48,8 +76,8 @@ Alternatively, go to [HuggingFace Spaces](https://docs.langflow.org/getting-star
 <ZoomableImage
   alt="Docusaurus themed image"
   sources={{
-    light: "img/basic-prompting.png",
-    dark: "img/basic-prompting.png",
+    light: "img/quickstart.png",
+    dark: "img/quickstart.png",
   }}
   style={{ width: "80%", margin: "20px auto" }}
 />
@@ -78,6 +106,14 @@ The **Edit Prompt** window opens.
 3. Run the basic prompting flow again.
 The response will be markedly different.
 
+## Next steps
 
+Well done! You've built your first prompt in Langflow. 🎉
+
+By adding Langflow components to this prompt, you can build all sorts of interesting flows.
+
+* [Memory chatbot](/guides/memory-chatbot.mdx)
+* [Blog writer](/guides/blog-writer.mdx)
+* [Document QA](/guides/document-qa.mdx)
 
 
