@@ -133,7 +133,7 @@ class DatabaseService(Service):
         alembic_cfg = Config(stdout=buffer)
         # alembic_cfg.attributes["connection"] = session
         alembic_cfg.set_main_option("script_location", str(self.script_location))
-        alembic_cfg.set_main_option("sqlalchemy.url", self.database_url)
+        alembic_cfg.set_main_option("sqlalchemy.url", self.database_url.replace('%', '%%'))
 
         should_initialize_alembic = False
         with Session(self.engine) as session:

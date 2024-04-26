@@ -109,6 +109,7 @@ async def simplified_run_flow(
     This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency, supporting a wide range of applications by allowing for dynamic input and output configuration along with performance optimizations through session management and caching.
     """
     session_id = input_request.session_id
+
     try:
         task_result: List[RunOutputs] = []
         artifacts = {}
@@ -127,8 +128,9 @@ async def simplified_run_flow(
             if flow.data is None:
                 raise ValueError(f"Flow {flow_id} has no data")
             graph_data = flow.data
-            graph_data = process_tweaks(graph_data, input_request.tweaks or {})
-            graph = Graph.from_payload(graph_data, flow_id=flow_id)
+
+            graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
+            graph = Graph.from_payload(graph_data, flow_id=flow_id, user_id=str(api_key_user.id))
         inputs = [
             InputValueRequest(components=[], input_value=input_request.input_value, type=input_request.input_type)
         ]
