@@ -108,8 +108,8 @@ module.exports = {
       label: "Tutorials",
       collapsed: true,
       items: [
-        //"tutorials/chatprompttemplate_guide",
-        //"tutorials/loading_document",
+        "tutorials/chatprompttemplate_guide",
+        "tutorials/loading_document",
         "tutorials/rag-with-astradb"
       ],
     },
