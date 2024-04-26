@@ -15,7 +15,7 @@ module.exports = {
 
     {
       type: "category",
-      label: " Starter projects",
+      label: " Starter Projects",
       collapsed: false,
       items: [
         "guides/basic-prompting",
