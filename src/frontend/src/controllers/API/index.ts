@@ -923,7 +923,7 @@ export async function getVerticesOrder(
     data["nodes"] = nodes
     data["edges"] = Edges
   }
-  return await api.post(`${BASE_URL_API}build/${flowId}/vertices`,data, config);
+  return await api.post(`${BASE_URL_API}build/${flowId}/vertices`,{data}, config);
 }
 
 export async function postBuildVertex(
