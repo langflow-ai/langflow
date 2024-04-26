@@ -26,7 +26,7 @@ class BuildStatus(Enum):
 
 
 class TweaksRequest(BaseModel):
-    tweaks: Optional[Dict[str, Dict[str, str]]] = Field(default_factory=dict)
+    tweaks: Optional[Dict[str, Dict[str, Any]]] = Field(default_factory=dict)
 
 
 class UpdateTemplateRequest(BaseModel):
