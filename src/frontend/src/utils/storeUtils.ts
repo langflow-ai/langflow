@@ -1,4 +1,4 @@
-import { cloneDeep } from "lodash";
+import { cloneDeep, uniqueId } from "lodash";
 import { Node } from "reactflow";
 import { FlowType, NodeDataType } from "../types/flow";
 import { isInputNode, isOutputNode } from "./reactflowUtils";
@@ -13,6 +13,9 @@ export default function cloneFLowWithParent(
   childFLow.parent = parent;
   if(!keepId){
     childFLow.id = "";
+  }
+  else{
+    childFLow.id = uniqueId()+"-"+childFLow.id;
   }
   childFLow.is_component = is_component;
   return childFLow;
