@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
-import nest_asyncio
+
 from langchain.agents import AgentExecutor
 from langchain.schema import AgentAction
 from loguru import logger
@@ -14,7 +14,6 @@ from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.session.service import SessionService
 
-nest_asyncio.apply()
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
