@@ -1,0 +1,22 @@
+/* set the background color of many elements across the grid */
+.ag-theme-quartz {
+  --ag-foreground-color: hsl(222 47% 11%);
+  --ag-background-color: hsl(0 0% 100%);
+  --ag-secondary-foreground-color: hsl(215 16% 46%);
+  --ag-data-color: hsl(222 47% 11%);
+  --ag-header-foreground-color: hsl(222 47% 11%);
+  --ag-header-background-color: hsl(210 40% 98%);
+  --ag-tooltip-background-color: hsl(210 40% 98%);
+  --ag-disabled-foreground-color: hsl(214 32% 91%);
+  
+  /* Add more color variables based on the ShadCN color palette */
+
+  --ag-border-color: hsl(214 32% 91%);
+  --ag-selected-row-background-color: hsl(210 40% 98%);
+  --ag-menu-background-color: hsl(210 40% 98%);
+  --ag-panel-background-color: hsl(210 40% 98%);
+  --ag-row-hover-color: hsl(210 40% 98%);
+  /* Set more color variables as per the ShadCN color scheme */
+
+}
+

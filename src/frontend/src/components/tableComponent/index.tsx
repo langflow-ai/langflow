@@ -1,20 +1,18 @@
+import { ColDef, ColGroupDef } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact } from "ag-grid-react";
-import { ColDef,ColGroupDef } from 'ag-grid-community';
 import { useState } from "react";
-import { Card, CardContent, CardFooter } from "../ui/card";
+import { useDarkStore } from "../../stores/darkStore";
+import "../../style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
+import { cn } from "../../utils/utils";
+import { Button } from "../ui/button";
 
 export default function TableComponent() {
   // Column Definitions: Defines the columns to be displayed.
   const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
-    { headerName: "Variable Name",
-     field: "name",
-      flex: 1,
-       editable: true 
-      }, //This column will be twice as wide as the others
+    { headerName: "Variable Name", field: "name", flex: 1, editable: true }, //This column will be twice as wide as the others
     {
-      
       field: "type",
       cellEditor: "agSelectCellEditor",
       cellEditorParams: {
@@ -72,20 +70,41 @@ export default function TableComponent() {
     },
   ]);
 
+  const dark = useDarkStore((state) => state.dark);
+
   return (
-    <Card className="mb-12 h-full">
-      <CardContent className="flex h-full flex-col pt-4">
+    <div className="flex h-full flex-col">
         <div
-          className="ag-theme-quartz h-full" // applying the grid theme
+          className={cn(
+            dark ? "ag-theme-quartz-dark" : "ag-theme-quartz",
+            "ag-theme-shadcn flex h-full flex-col"
+          )} // applying the grid theme
         >
           <AgGridReact columnDefs={colDefs} rowData={rowData} />
         </div>
-      </CardContent>
-      <CardFooter>
-        <div className="text-xs text-muted-foreground">
+        <div className="flex items-center justify-between w-full">
+        <div className="text-xs text-muted-foreground py-4">
           Showing <strong>1-3</strong> of <strong>3</strong> products
         </div>
-      </CardFooter>
-    </Card>
+        <div className="flex items-center justify-end space-x-2 py-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {}}
+            disabled={true}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {}}
+            disabled={false}
+          >
+            Next
+          </Button>
+        </div>
+        </div>
+    </div>
   );
 }
