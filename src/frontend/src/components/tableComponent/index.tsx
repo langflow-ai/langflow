@@ -77,33 +77,10 @@ export default function TableComponent() {
         <div
           className={cn(
             dark ? "ag-theme-quartz-dark" : "ag-theme-quartz",
-            "ag-theme-shadcn flex h-full flex-col"
+            "ag-theme-shadcn flex h-full flex-col pb-8"
           )} // applying the grid theme
         >
-          <AgGridReact columnDefs={colDefs} rowData={rowData} />
-        </div>
-        <div className="flex items-center justify-between w-full">
-        <div className="text-xs text-muted-foreground py-4">
-          Showing <strong>1-3</strong> of <strong>3</strong> products
-        </div>
-        <div className="flex items-center justify-end space-x-2 py-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {}}
-            disabled={true}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {}}
-            disabled={false}
-          >
-            Next
-          </Button>
-        </div>
+          <AgGridReact pagination={true} columnDefs={colDefs} rowData={rowData} />
         </div>
     </div>
   );
