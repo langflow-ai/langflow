@@ -4,8 +4,8 @@
   --ag-background-color: hsl(var(--background)); 
   --ag-secondary-foreground-color: hsl(var(--secondary-foreground));
   --ag-data-color: hsl(var(--foreground));
-  --ag-header-foreground-color: hsl(var(--foreground));
-  --ag-header-background-color: hsl(var(--muted));
+  --ag-header-foreground-color: hsl(var(--muted-foreground));
+  --ag-header-background-color: hsl(var(--background));
   --ag-tooltip-background-color: hsl(var(--muted));
   --ag-disabled-foreground-color: hsl(var(--muted-foreground));
   --ag-border-color: hsl(var(--border));
@@ -13,4 +13,5 @@
   --ag-menu-background-color: hsl(var(--accent));
   --ag-panel-background-color: hsl(var(--accent));
   --ag-row-hover-color: hsl(var(--accent));
+  --ag-header-height: 2.5rem;
 }
