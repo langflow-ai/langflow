@@ -1,42 +1,16 @@
 /* set the background color of many elements across the grid */
-.ag-theme-quartz {
-  --ag-foreground-color: hsl(222 47% 11%);
-  --ag-background-color: hsl(0 0% 100%);
-  --ag-secondary-foreground-color: hsl(215 16% 46%);
-  --ag-data-color: hsl(222 47% 11%);
-  --ag-header-foreground-color: hsl(222 47% 11%);
-  --ag-header-background-color: hsl(210 40% 98%);
-  --ag-tooltip-background-color: hsl(210 40% 98%);
-  --ag-disabled-foreground-color: hsl(214 32% 91%);
-  
-  /* Add more color variables based on the ShadCN color palette */
-
-  --ag-border-color: hsl(214 32% 91%);
-  --ag-selected-row-background-color: hsl(210 40% 98%);
-  --ag-menu-background-color: hsl(210 40% 98%);
-  --ag-panel-background-color: hsl(210 40% 98%);
-  --ag-row-hover-color: hsl(210 40% 98%);
-  /* Set more color variables as per the ShadCN color scheme */
-
+.ag-theme-shadcn {
+  --ag-foreground-color: hsl(var(--foreground));
+  --ag-background-color: hsl(var(--background)); 
+  --ag-secondary-foreground-color: hsl(var(--secondary-foreground));
+  --ag-data-color: hsl(var(--foreground));
+  --ag-header-foreground-color: hsl(var(--foreground));
+  --ag-header-background-color: hsl(var(--muted));
+  --ag-tooltip-background-color: hsl(var(--muted));
+  --ag-disabled-foreground-color: hsl(var(--muted-foreground));
+  --ag-border-color: hsl(var(--border));
+  --ag-selected-row-background-color: hsl(var(--accent));
+  --ag-menu-background-color: hsl(var(--accent));
+  --ag-panel-background-color: hsl(var(--accent));
+  --ag-row-hover-color: hsl(var(--accent));
 }
-
-.ag-theme-quartz-dark{
-  --ag-foreground-color:  hsl(213 31% 91%);
-  --ag-background-color:  224 35% 7.5%;
-  --ag-secondary-foreground-color: hsl(215 16% 46%);
-  --ag-data-color: hsl(210 20% 80%);
-  --ag-header-foreground-color: hsl(210 20% 80%);
-  --ag-header-background-color: hsl(223 27% 11%);
-  --ag-tooltip-background-color: hsl(223 27% 11%);
-  --ag-disabled-foreground-color: hsl(216 34% 17%);
-  
-  /* Add more color variables based on the ShadCN color palette */
-
-  --ag-border-color: hsl(216 34% 17%);
-  --ag-selected-row-background-color: 222.2 27.4% 1.2%;
-  --ag-menu-background-color: 222.2 27.4% 1.2%;
-  --ag-panel-background-color: 222.2 27.4% 1.2%;
-  --ag-row-hover-color: 222.2 27.4% 1.2%;
-
-}
-
