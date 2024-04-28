@@ -52,6 +52,7 @@ def get_messages(
                 "sender": row.sender,
                 "sender_name": row.sender_name,
                 "session_id": row.session_id,
+                "timestamp": row.timestamp,
             },
         )
         records.append(record)
@@ -103,17 +104,14 @@ def delete_messages(session_id: str):
 
 def store_message(
     message: Union[str, Record],
-    session_id: str = None,
-    sender: str = None,
-    sender_name: str = None,
+    session_id: Optional[str] = None,
+    sender: Optional[str] = None,
+    sender_name: Optional[str] = None,
 ) -> list[Record]:
-    
+
     if not message:
         warnings.warn("No message provided.")
         return []
-
-    if not session_id or not sender or not sender_name:
-        raise ValueError("All of session_id, sender, and sender_name must be provided.")
 
     if isinstance(message, Record):
         record = message
