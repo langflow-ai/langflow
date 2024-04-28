@@ -20,3 +20,23 @@
 
 }
 
+.ag-theme-quartz-dark{
+  --ag-foreground-color:  hsl(213 31% 91%);
+  --ag-background-color:  224 35% 7.5%;
+  --ag-secondary-foreground-color: hsl(215 16% 46%);
+  --ag-data-color: hsl(210 20% 80%);
+  --ag-header-foreground-color: hsl(210 20% 80%);
+  --ag-header-background-color: hsl(223 27% 11%);
+  --ag-tooltip-background-color: hsl(223 27% 11%);
+  --ag-disabled-foreground-color: hsl(216 34% 17%);
+  
+  /* Add more color variables based on the ShadCN color palette */
+
+  --ag-border-color: hsl(216 34% 17%);
+  --ag-selected-row-background-color: 222.2 27.4% 1.2%;
+  --ag-menu-background-color: 222.2 27.4% 1.2%;
+  --ag-panel-background-color: 222.2 27.4% 1.2%;
+  --ag-row-hover-color: 222.2 27.4% 1.2%;
+
+}
+
