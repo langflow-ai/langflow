@@ -30,7 +30,7 @@ export default function TableComponent() {
       editable: true,
     },
     {
-      headerName: "Default Fields",
+      headerName: "Apply To Fields",
       field: "defaultFields",
       flex: 1,
       editable: true,
