@@ -1,5 +1,6 @@
 import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
@@ -31,7 +32,6 @@ import {
 } from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
-import { useHotkeys } from "react-hotkeys-hook";
 
 export default function NodeToolbarComponent({
   data,
@@ -69,7 +69,7 @@ export default function NodeToolbarComponent({
   const validApiKey = useStoreStore((state) => state.validApiKey);
 
   function handleMinimizeWShortcut(e: KeyboardEvent) {
-    e.preventDefault()
+    e.preventDefault();
     if (isMinimal) {
       setShowState((show) => !show);
       setShowNode(data.showNode ?? true ? false : true);
@@ -83,14 +83,14 @@ export default function NodeToolbarComponent({
   }
 
   function handleUpdateWShortcut(e: KeyboardEvent) {
-    e.preventDefault()
-    if ((hasApiKey || hasStore)) {
+    e.preventDefault();
+    if (hasApiKey || hasStore) {
       handleSelectChange("update");
     }
   }
 
   function handleGroupWShortcut(e: KeyboardEvent) {
-    e.preventDefault()
+    e.preventDefault();
     if (isGroup) {
       handleSelectChange("ungroup");
     }
@@ -98,26 +98,26 @@ export default function NodeToolbarComponent({
 
   function handleShareWShortcut(e: KeyboardEvent) {
     if (hasApiKey || hasStore) {
-      e.preventDefault()
+      e.preventDefault();
       setShowconfirmShare((state) => !state);
     }
   }
 
   function handleCodeWShortcut(e: KeyboardEvent) {
-    e.preventDefault()
+    e.preventDefault();
     if (hasCode) return setOpenModal((state) => !state);
     setNoticeData({ title: `You can not access ${data.id} code` });
   }
 
   function handleAdvancedWShortcut(e: KeyboardEvent) {
-    e.preventDefault()
+    e.preventDefault();
     if (!isGroup) {
       setShowModalAdvanced((state) => !state);
     }
   }
 
   function handleSaveWShortcut(e: KeyboardEvent) {
-    e.preventDefault()
+    e.preventDefault();
     if (isSaved) {
       setShowOverrideModal((state) => !state);
       return;
@@ -153,7 +153,7 @@ export default function NodeToolbarComponent({
   useHotkeys("mod+s", handleSaveWShortcut);
   useHotkeys("mod+shift+d", handleDocsWShortcut);
   useHotkeys("mod+j", handleDownloadWShortcut);
-  useHotkeys("space", handleCodeWShortcut)
+  useHotkeys("space", handleCodeWShortcut);
 
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
@@ -165,7 +165,6 @@ export default function NodeToolbarComponent({
   const setNodes = useFlowStore((state) => state.setNodes);
 
   const setEdges = useFlowStore((state) => state.setEdges);
-  const unselectAll = useFlowStore((state) => state.unselectAll);
   const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
   const getNodePosition = useFlowStore((state) => state.getNodePosition);
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -179,9 +178,8 @@ export default function NodeToolbarComponent({
   );
 
   useEffect(() => {
-    if (openWDoubleClick) setShowModalAdvanced(true)
+    if (openWDoubleClick) setShowModalAdvanced(true);
   }, [openWDoubleClick, setOpenWDoubleClick]);
-
 
   const openInNewTab = (url) => {
     window.open(url, "_blank", "noreferrer");
@@ -473,9 +471,10 @@ export default function NodeToolbarComponent({
               {hasCode && (
                 <SelectItem value={"code"}>
                   <ToolbarSelectItem
-                    keyboardKey="U"
+                    keyboardKey="Space"
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
                     shift={false}
+                    mod={false}
                     value={"Code"}
                     icon={"Code"}
                     dataTestId="code-button-modal"
@@ -514,16 +513,6 @@ export default function NodeToolbarComponent({
                   dataTestId="duplicate-button-modal"
                 />
               </SelectItem>
-              {/* <SelectItem value={"duplicate"}>
-                <ToolbarSelectItem
-                  keyboardKey="D"
-                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                  shift={false}
-                  value={"Duplicate"}
-                  icon={"Copy"}
-                  dataTestId="duplicate-button-modal"
-                />
-              </SelectItem> */}
               <SelectItem value={"copy"}>
                 <ToolbarSelectItem
                   keyboardKey="C"

@@ -732,6 +732,7 @@ export type toolbarSelectItemProps = {
   isMac: boolean;
   shift: boolean;
   keyboardKey: string;
+  mod?:boolean;
   value: string;
   icon: string;
   styleObj?: {
