@@ -7,4 +7,7 @@ export type GlobalVariablesStore = {
   addGlobalVariable: (name: string, id: string, type?: string) => void;
   removeGlobalVariable: (name: string) => void;
   getVariableId: (name: string) => string | undefined;
+  avaliableFields: Array<string>;
+  setAvaliableFields: (fields: Array<string>) => void;
+  addAvaliableField: (field: string) => void;
 };
