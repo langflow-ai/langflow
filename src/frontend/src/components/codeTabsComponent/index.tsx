@@ -733,7 +733,7 @@ export default function CodeTabsComponent({
                                                   value={
                                                     node.data.node!.template[
                                                       templateField
-                                                    ].value.toString() === "{}"
+                                                    ].value?.toString() === "{}"
                                                       ? {
                                                           yourkey: "value",
                                                         }
