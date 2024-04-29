@@ -17,7 +17,7 @@ const TableComponent = forwardRef<
       <div
         className={cn(
           dark ? "ag-theme-quartz-dark" : "ag-theme-quartz",
-          "ag-theme-shadcn flex h-full flex-col pb-8"
+          "ag-theme-shadcn flex h-full flex-col"
         )} // applying the grid theme
       >
         <AgGridReact ref={ref} {...props} />

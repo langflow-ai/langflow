@@ -2,6 +2,13 @@ import { ColDef, ColGroupDef } from "ag-grid-community";
 import { useState } from "react";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../../../components/ui/card";
 
 export default function ShortcutsPage() {
   const advancedShortcut = "Ctrl + shift + A";
@@ -78,7 +85,7 @@ export default function ShortcutsPage() {
     },
   ]);
   return (
-    <div className="flex h-full w-full flex-col justify-between gap-6">
+    <div className="flex h-full w-full flex-col gap-6">
       <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
         <div className="flex w-full flex-col">
           <h2 className="flex items-center text-lg font-semibold tracking-tight">
@@ -94,9 +101,23 @@ export default function ShortcutsPage() {
           </p>
         </div>
       </div>
-
-      <div className="flex h-full w-full flex-col justify-between">
-        <TableComponent columnDefs={colDefs} rowData={rowData} />
+      <div className="grid gap-6">
+        <Card x-chunk="dashboard-04-chunk-2">
+          <CardHeader>
+            <CardTitle>Nodes</CardTitle>
+            <CardDescription>
+              Shortcuts relating to the nodes in the workspace.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TableComponent
+              domLayout="autoHeight"
+              pagination={false}
+              columnDefs={colDefs}
+              rowData={rowData}
+            />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
