@@ -95,7 +95,7 @@ export default function GlobalVariablesPage() {
         </div>
       </div>
 
-      <div className="flex h-full w-full flex-col justify-between">
+      <div className="flex h-full w-full flex-col justify-between pb-8">
         <TableComponent columnDefs={colDefs} rowData={rowData} />
       </div>
     </div>
