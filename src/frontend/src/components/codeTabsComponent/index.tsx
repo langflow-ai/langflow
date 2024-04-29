@@ -267,7 +267,7 @@ export default function CodeTabsComponent({
                                               <div className="mx-auto">
                                                 {node.data.node.template[
                                                   templateField
-                                                ].list ? (
+                                                ]?.list ? (
                                                   <InputListComponent
                                                     componentName={
                                                       templateField
@@ -745,7 +745,7 @@ export default function CodeTabsComponent({
                                                   isList={
                                                     node.data.node!.template[
                                                       templateField
-                                                    ].list ?? false
+                                                    ]?.list ?? false
                                                   }
                                                 />
                                               </div>

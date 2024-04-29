@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { getComponent, postLikeComponent } from "../../controllers/API";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
+import IOModal from "../../modals/IOModal";
 import useAlertStore from "../../stores/alertStore";
+import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
@@ -18,8 +20,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
-import IOModal from "../../modals/IOModal";
-import useFlowStore from "../../stores/flowStore";
 
 export default function CollectionCardComponent({
   data,
@@ -27,7 +27,7 @@ export default function CollectionCardComponent({
   disabled = false,
   button,
   onDelete,
-  playground
+  playground,
 }: {
   data: storeComponent;
   authorized?: boolean;
@@ -55,9 +55,9 @@ export default function CollectionCardComponent({
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
   const [openPlayground, setOpenPlayground] = useState(false);
-  const setCurrentFlowId = useFlowsManagerStore((state) => state.setCurrentFlowId);
-
-
+  const setCurrentFlowId = useFlowsManagerStore(
+    (state) => state.setCurrentFlowId
+  );
 
   const name = data.is_component ? "Component" : "Flow";
 
@@ -86,16 +86,18 @@ export default function CollectionCardComponent({
         addFlow(true, newFlow)
           .then((id) => {
             setSuccessData({
-              title: `${name} ${isStore ? "Downloaded" : "Installed"
-                } Successfully.`,
+              title: `${name} ${
+                isStore ? "Downloaded" : "Installed"
+              } Successfully.`,
             });
             setLoading(false);
           })
           .catch((error) => {
             setLoading(false);
             setErrorData({
-              title: `Error ${isStore ? "downloading" : "installing"
-                } the ${name}`,
+              title: `Error ${
+                isStore ? "downloading" : "installing"
+              } the ${name}`,
               list: [error["response"]["data"]["detail"]],
             });
           });
@@ -362,15 +364,13 @@ export default function CollectionCardComponent({
               </div>
             )}
             {button && button}
-            {playground &&
+            {playground && (
               <Button
                 tabIndex={-1}
                 variant="outline"
                 size="sm"
                 className="whitespace-nowrap "
-                data-testid={
-                  "playground-flow-button-" + data.id
-                }
+                data-testid={"playground-flow-button-" + data.id}
                 onClick={() => {
                   setCurrentFlowId(data.id);
                   setOpenPlayground(true);
@@ -381,14 +381,16 @@ export default function CollectionCardComponent({
                   className="main-page-nav-button select-none"
                 />
                 Playground
-                {openPlayground && < IOModal open={openPlayground} setOpen={setOpenPlayground}>
-                  <></>
-                </IOModal>}
+                {openPlayground && (
+                  <IOModal open={openPlayground} setOpen={setOpenPlayground}>
+                    <></>
+                  </IOModal>
+                )}
               </Button>
-            }
+            )}
           </div>
         </div>
       </CardFooter>
-    </Card >
+    </Card>
   );
 }
