@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID, uuid4
 
-from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
+from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel, func
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user.model import User
@@ -15,6 +15,7 @@ def utc_now():
 class VariableBase(SQLModel):
     name: Optional[str] = Field(None, description="Name of the variable")
     value: Optional[str] = Field(None, description="Encrypted value of the variable")
+    default_fields: Optional[List[str]] = Field(sa_column=Column(JSON))
     type: Optional[str] = Field(None, description="Type of the variable")
 
 
@@ -35,6 +36,7 @@ class Variable(VariableBase, table=True):
         sa_column=Column(DateTime(timezone=True), nullable=True),
         description="Last update time of the variable",
     )
+    default_fields: Optional[List[str]] = Field(sa_column=Column(JSON))
     # foreign key to user table
     user_id: UUID = Field(description="User ID associated with this variable", foreign_key="user.id")
     user: "User" = Relationship(back_populates="variables")
@@ -56,3 +58,4 @@ class VariableUpdate(SQLModel):
     id: UUID  # Include the ID for updating
     name: Optional[str] = Field(None, description="Name of the variable")
     value: Optional[str] = Field(None, description="Encrypted value of the variable")
+    default_fields: Optional[List[str]] = Field(None, description="Default fields for the variable")
