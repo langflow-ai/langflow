@@ -11,7 +11,7 @@ export default function GlobalVariablesPage() {
         <div className="flex w-full flex-col">
           <h2 className="flex items-center text-lg font-semibold tracking-tight">
             Global Variables
-            <ForwardedIconComponent name="Globe" className="ml-3 w-6 h-6 text-primary"  />
+            <ForwardedIconComponent name="Globe" className="ml-2 w-5 h-5 text-primary"  />
           </h2>
           <p className="text-sm text-muted-foreground">
             Manage and assign global variables to default fields. You can add
