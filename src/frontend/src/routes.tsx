@@ -19,7 +19,7 @@ import ViewPage from "./pages/ViewPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
 import SignUp from "./pages/signUpPage";
-import ShortcutsPage from "./pages/FlowPage/components/shortcutsPage";
+import ShortcutsPage from "./pages/ShortcutsPage";
 
 const Router = () => {
   const navigate = useNavigate();
