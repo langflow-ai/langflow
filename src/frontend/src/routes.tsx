@@ -146,14 +146,6 @@ const Router = () => {
 
       <Route path="/account">
         <Route
-          path="settings"
-          element={
-            <ProtectedRoute>
-              <ProfileSettingsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="delete"
           element={
             <ProtectedRoute>

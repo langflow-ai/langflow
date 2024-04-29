@@ -187,7 +187,6 @@ export default function Header(): JSX.Element {
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuLabel>General</DropdownMenuLabel>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="cursor-pointer"
                   onClick={() => navigate("/settings")}
@@ -196,8 +195,8 @@ export default function Header(): JSX.Element {
                 </DropdownMenuItem>
                 {!autoLogin && (
                   <>
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     {isAdmin && (
                       <DropdownMenuItem
                         className="cursor-pointer"
@@ -206,12 +205,6 @@ export default function Header(): JSX.Element {
                         Admin Page
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => navigate("/account/settings")}
-                    >
-                      Profile Settings
-                    </DropdownMenuItem>
                     <DropdownMenuItem
                       className="cursor-pointer"
                       onClick={() => {
