@@ -24,6 +24,7 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
             templates: templatesGenerator(data),
           }));
           setLoading(false);
+          console.log(templatesGenerator(data))
           resolve();
         })
         .catch((error) => {
