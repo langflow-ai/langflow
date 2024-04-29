@@ -142,7 +142,7 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         max_retries: int = 6,
         verbose: bool = False,
         system_message: Optional[str] = None,
-    ) -> BaseLanguageModel:
+    ) -> Text:
         try:
             import litellm  # type: ignore
 

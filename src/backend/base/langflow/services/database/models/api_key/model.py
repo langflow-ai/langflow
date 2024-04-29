@@ -3,17 +3,18 @@ from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
 from pydantic import field_validator, validator
-from sqlmodel import Field, Relationship, SQLModel, Column, func, DateTime
+from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
 
 
+def utc_now():
+    return datetime.now(timezone.utc)
+
+
 class ApiKeyBase(SQLModel):
     name: Optional[str] = Field(index=True, nullable=True, default=None)
-    created_at: datetime = Field(
-        default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    )
     last_used_at: Optional[datetime] = Field(default=None, nullable=True)
     total_uses: int = Field(default=0)
     is_active: bool = Field(default=True)
@@ -21,7 +22,9 @@ class ApiKeyBase(SQLModel):
 
 class ApiKey(ApiKeyBase, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
-
+    created_at: Optional[datetime] = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    )
     api_key: str = Field(index=True, unique=True)
     # User relationship
     # Delete API keys when user is deleted
@@ -34,10 +37,11 @@ class ApiKey(ApiKeyBase, table=True):
 class ApiKeyCreate(ApiKeyBase):
     api_key: Optional[str] = None
     user_id: Optional[UUID] = None
+    created_at: Optional[datetime] = Field(default_factory=utc_now)
 
     @field_validator("created_at", mode="before")
     def set_created_at(cls, v):
-        return v or datetime.now(timezone.utc)
+        return v or utc_now()
 
 
 class UnmaskedApiKeyRead(ApiKeyBase):

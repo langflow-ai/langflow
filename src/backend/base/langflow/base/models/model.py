@@ -2,7 +2,7 @@ from typing import Optional, Union
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from langflow.custom import CustomComponent
 
@@ -31,6 +31,47 @@ class LCModelComponent(CustomComponent):
             self.status = result
         return result
 
+    def build_status_message(self, message: AIMessage):
+        """
+        Builds a status message from an AIMessage object.
+
+        Args:
+            message (AIMessage): The AIMessage object to build the status message from.
+
+        Returns:
+            The status message.
+        """
+        if message.response_metadata:
+            # Build a well formatted status message
+            content = message.content
+            response_metadata = message.response_metadata
+            openai_keys = ["token_usage", "model_name", "finish_reason"]
+            inner_openai_keys = ["completion_tokens", "prompt_tokens", "total_tokens"]
+            anthropic_keys = ["model", "usage", "stop_reason"]
+            inner_anthropic_keys = ["input_tokens", "output_tokens"]
+            if all(key in response_metadata for key in openai_keys) and all(
+                key in response_metadata["token_usage"] for key in inner_openai_keys
+            ):
+                token_usage = response_metadata["token_usage"]
+                completion_tokens = token_usage["completion_tokens"]
+                prompt_tokens = token_usage["prompt_tokens"]
+                total_tokens = token_usage["total_tokens"]
+                finish_reason = response_metadata["finish_reason"]
+                status_message = f"Tokens:\n- Input: {prompt_tokens}\nOutput: {completion_tokens}\nTotal Tokens: {total_tokens}\nStop Reason: {finish_reason}\nResponse: {content}"
+            elif all(key in response_metadata for key in anthropic_keys) and all(
+                key in response_metadata["usage"] for key in inner_anthropic_keys
+            ):
+                usage = response_metadata["usage"]
+                input_tokens = usage["input_tokens"]
+                output_tokens = usage["output_tokens"]
+                stop_reason = response_metadata["stop_reason"]
+                status_message = f"Tokens:\n- Input: {input_tokens}\n- Output: {output_tokens}\nStop Reason: {stop_reason}\nResponse: {content}"
+            else:
+                status_message = f"Response: {content}"
+        else:
+            status_message = f"Response: {message.content}"
+        return status_message
+
     def get_chat_result(
         self, runnable: BaseChatModel, stream: bool, input_value: str, system_message: Optional[str] = None
     ):
@@ -46,5 +87,9 @@ class LCModelComponent(CustomComponent):
         else:
             message = runnable.invoke(messages)
             result = message.content
-            self.status = result
+            if isinstance(message, AIMessage):
+                status_message = self.build_status_message(message)
+                self.status = status_message
+            else:
+                self.status = result
             return result
