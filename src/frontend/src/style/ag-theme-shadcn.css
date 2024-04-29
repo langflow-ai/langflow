@@ -15,3 +15,7 @@
   --ag-row-hover-color: hsl(var(--accent));
   --ag-header-height: 2.5rem;
 }
+
+.ag-theme-shadcn .ag-paging-panel {
+  height: 3rem;
+}
