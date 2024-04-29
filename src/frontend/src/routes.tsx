@@ -19,6 +19,7 @@ import ViewPage from "./pages/ViewPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
 import SignUp from "./pages/signUpPage";
+import ShortcutsPage from "./pages/FlowPage/components/shortcutsPage";
 
 const Router = () => {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ const Router = () => {
       >
         <Route index element={<Navigate replace to={"global-variables"} />} />
         <Route path="global-variables" element={<GlobalVariablesPage />} />
-        <Route path="shortcuts" element={<GlobalVariablesPage />} />
+        <Route path="shortcuts" element={<ShortcutsPage />} />
       </Route>
       <Route
         path="/store"
