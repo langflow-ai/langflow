@@ -135,7 +135,12 @@ export default function ChatMessage({
                 alt={!chat.isSend ? "robot_image" : "male_technology"}
               />
             </div>
-            <span className="max-w-24 truncate text-xs">
+            <span
+              className="max-w-24 truncate text-xs"
+              data-testid={
+                "sender_name_" + chat.sender_name?.toLocaleLowerCase()
+              }
+            >
               {chat.sender_name}
             </span>
           </div>

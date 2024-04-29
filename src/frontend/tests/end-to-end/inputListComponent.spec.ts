@@ -1,36 +1,41 @@
 import { expect, test } from "@playwright/test";
 
 test("InputListComponent", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
-  await page.locator('//*[@id="new-project-btn"]').click();
-  await page.waitForTimeout(1000);
-  await page.locator('//*[@id="new-project-btn"]').click();
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
+    }
+  } catch (error) {
+    modalCount = 0;
+  }
+
+  while (modalCount === 0) {
+    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.waitForTimeout(5000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
 
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(1000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("astradb search");
+  await page.getByPlaceholder("Search").fill("astradb");
 
   await page.waitForTimeout(1000);
   await page
-    .getByTestId("vectorsearchAstraDB Search")
+    .getByTestId("vectorsearchAstra DB Search")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
-
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
-
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
   await page.getByTestId("div-generic-node").click();
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
@@ -90,7 +95,7 @@ test("InputListComponent", async ({ page }) => {
   const plusButtonLocator = page.getByTestId(
     "input-list-plus-btn_metadata_indexing_include-1"
   );
-  const elementCount = await plusButtonLocator.count();
+  const elementCount = await plusButtonLocator?.count();
 
   if (elementCount > 0) {
     expect(false).toBeTruthy();
@@ -161,12 +166,12 @@ test("InputListComponent", async ({ page }) => {
   const plusButtonLocatorEdit0 = await page.getByTestId(
     "input-list-plus-btn-edit_metadata_indexing_include-0"
   );
-  const elementCountEdit0 = await plusButtonLocatorEdit0.count();
+  const elementCountEdit0 = await plusButtonLocatorEdit0?.count();
 
   const plusButtonLocatorEdit2 = await page.getByTestId(
     "input-list-plus-btn-edit_metadata_indexing_include-2"
   );
-  const elementCountEdit2 = await plusButtonLocatorEdit2.count();
+  const elementCountEdit2 = await plusButtonLocatorEdit2?.count();
 
   if (elementCountEdit0 > 0 || elementCountEdit2 > 0) {
     expect(false).toBeTruthy();
@@ -176,13 +181,13 @@ test("InputListComponent", async ({ page }) => {
     "input-list-minus-btn-edit_metadata_indexing_include-1"
   );
 
-  const elementCountMinusEdit1 = await minusButtonLocatorEdit1.count();
+  const elementCountMinusEdit1 = await minusButtonLocatorEdit1?.count();
 
   const minusButtonLocatorEdit2 = await page.getByTestId(
     "input-list-minus-btn-edit_metadata_indexing_include-2"
   );
 
-  const elementCountMinusEdit2 = await minusButtonLocatorEdit2.count();
+  const elementCountMinusEdit2 = await minusButtonLocatorEdit2?.count();
 
   if (elementCountMinusEdit1 > 0 || elementCountMinusEdit2 > 0) {
     expect(false).toBeTruthy();

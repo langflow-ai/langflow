@@ -1,5 +1,6 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
+from langchain.schema import BaseRetriever
 from langchain_astradb import AstraDBVectorStore
 from langchain_astradb.utils.astradb import SetupMode
 
@@ -110,7 +111,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
         metadata_indexing_include: Optional[List[str]] = None,
         metadata_indexing_exclude: Optional[List[str]] = None,
         collection_indexing_policy: Optional[dict] = None,
-    ) -> VectorStore:
+    ) -> Union[VectorStore, BaseRetriever]:
         try:
             setup_mode_value = SetupMode[setup_mode.upper()]
         except KeyError:
