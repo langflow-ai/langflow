@@ -69,7 +69,7 @@ services:
         - traefik.http.routers.${STACK_NAME?Variable not set}-proxy-http.middlewares=${STACK_NAME?Variable not set}-www-redirect,${STACK_NAME?Variable not set}-https-redirect
 
   backend: &backend
-    image: "logspace/langflow:latest"
+    image: "langflowai/langflow:latest"
     depends_on:
       - db
       - broker

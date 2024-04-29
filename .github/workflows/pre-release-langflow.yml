@@ -80,8 +80,8 @@ jobs:
           push: true
           file: ./build_and_push.Dockerfile
           tags: |
-            logspace/langflow:${{ needs.release.outputs.version }}
-            logspace/langflow:1.0-alpha
+            langflowai/langflow:${{ needs.release.outputs.version }}
+            langflowai/langflow:1.0-alpha
 
   create_release:
     name: Create Release
