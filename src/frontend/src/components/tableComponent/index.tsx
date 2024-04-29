@@ -11,7 +11,7 @@ import { Button } from "../ui/button";
 export default function TableComponent() {
   // Column Definitions: Defines the columns to be displayed.
   const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
-    { headerName: "Variable Name", field: "name", flex: 1, editable: true }, //This column will be twice as wide as the others
+    { headerName: "Variable Name", field: "name", flex: 1 }, //This column will be twice as wide as the others
     {
       field: "type",
       cellEditor: "agSelectCellEditor",
@@ -30,7 +30,7 @@ export default function TableComponent() {
       editable: true,
     },
     {
-      headerName: "Default Fields",
+      headerName: "Apply To Fields",
       field: "defaultFields",
       flex: 1,
       editable: true,
