@@ -6,9 +6,19 @@ import { useState } from "react";
 import AddNewVariableButton from "../../../../components/addNewVariableButtonComponent/addNewVariableButton";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
+import { Badge } from "../../../../components/ui/badge";
 import { cn } from "../../../../utils/utils";
 
 export default function GlobalVariablesPage() {
+  const BadgeRenderer = (props) => {
+    return (
+      <div>
+        <Badge variant="outline" size="md" className="font-normal">
+          {props.value}
+        </Badge>
+      </div>
+    );
+  };
   // Column Definitions: Defines the columns to be displayed.
   const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
     {
@@ -21,6 +31,7 @@ export default function GlobalVariablesPage() {
     }, //This column will be twice as wide as the others
     {
       field: "type",
+      cellRenderer: BadgeRenderer,
       cellEditor: "agSelectCellEditor",
       cellEditorParams: {
         values: ["Prompt", "Credential"],
@@ -98,10 +109,15 @@ export default function GlobalVariablesPage() {
           <Button
             data-testid="api-key-button-store"
             variant="primary"
-            className="px-2 group"
+            className="group px-2"
             disabled={selectedRows.length === 0}
           >
-            <IconComponent name="Trash2" className={cn("h-5 w-5 text-destructive group-disabled:text-primary")} />
+            <IconComponent
+              name="Trash2"
+              className={cn(
+                "h-5 w-5 text-destructive group-disabled:text-primary"
+              )}
+            />
           </Button>
           <AddNewVariableButton>
             <Button data-testid="api-key-button-store" variant="primary">
