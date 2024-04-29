@@ -1,11 +1,82 @@
-import IconComponent from "../../components/genericIconComponent";
-import { Button } from "../../components/ui/button";
-
-import AddNewVariableButton from "../../components/addNewVariableButtonComponent/addNewVariableButton";
+import { ColDef, ColGroupDef } from "ag-grid-community";
+import { useState } from "react";
 import ForwardedIconComponent from "../../components/genericIconComponent";
 import TableComponent from "../../components/tableComponent";
 
 export default function ShortcutsPage() {
+  const advancedShortcut = "Ctrl + shift + A";
+  const minizmizeShortcut = "Ctrl + shift + Q";
+  const codeShortcut = "Ctrl + shift + C";
+  const copyShortcut = "Ctrl + C";
+  const duplicateShortcut = "Ctrl + D";
+  const shareShortcut = "Ctrl + shift + S";
+  const docsShortcut = "Ctrl + shift + D";
+  const saveShortcut = "Ctrl + S";
+  const deleteShortcut = "Backspace";
+  const interactionShortcut = "Ctrl + K";
+  const undoShortcut = "Ctrl + Z";
+  const redoShortcut = "Ctrl + Y";
+
+  // Column Definitions: Defines the columns to be displayed.
+  const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
+    { headerName: "Functionality", field: "name", flex: 1, editable: false }, //This column will be twice as wide as the others
+    {
+      field: "shortcut",
+      flex: 2,
+      editable: false,
+    },
+  ]);
+
+  const [rowData, setRowData] = useState([
+    {
+      name: "Open node advanced settings",
+      shortcut: advancedShortcut,
+    },
+    {
+      name: "Minimize",
+      shortcut: minizmizeShortcut,
+    },
+    {
+      name: "Open Code modal",
+      shortcut: codeShortcut,
+    },
+    {
+      name: "Copy",
+      shortcut: copyShortcut,
+    },
+    {
+      name: "Duplicate",
+      shortcut: duplicateShortcut,
+    },
+    {
+      name: "Share",
+      shortcut: shareShortcut,
+    },
+    {
+      name: "Open docs",
+      shortcut: docsShortcut,
+    },
+    {
+      name: "Save",
+      shortcut: saveShortcut,
+    },
+    {
+      name: "Delete",
+      shortcut: deleteShortcut,
+    },
+    {
+      name: "Open interaction panel",
+      shortcut: interactionShortcut,
+    },
+    {
+      name: "Undo",
+      shortcut: undoShortcut,
+    },
+    {
+      name: "Redo",
+      shortcut: redoShortcut,
+    },
+  ]);
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">
       <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
@@ -22,18 +93,10 @@ export default function ShortcutsPage() {
             frequently used actions.
           </p>
         </div>
-        <div className="flex-shrink-0">
-          <AddNewVariableButton>
-            <Button data-testid="api-key-button-store" variant="primary">
-              <IconComponent name="Plus" className="mr-2 w-4" />
-              Add New
-            </Button>
-          </AddNewVariableButton>
-        </div>
       </div>
 
       <div className="flex h-full w-full flex-col justify-between">
-        <TableComponent />
+        <TableComponent columnDefs={colDefs} rowData={rowData} />
       </div>
     </div>
   );
