@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   langflow:
-    image: logspace/langflow:latest
+    image: langflowai/langflow:latest
     ports:
       - "7860:7860"
     depends_on:
