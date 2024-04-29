@@ -9,7 +9,7 @@ import AdminPage from "./pages/AdminPage";
 import LoginAdminPage from "./pages/AdminPage/LoginPage";
 import ApiKeysPage from "./pages/ApiKeysPage";
 import FlowPage from "./pages/FlowPage";
-import GlobalVariablesPage from "./pages/GlobalVariablesPage";
+import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
 import HomePage from "./pages/MainPage";
 import ComponentsComponent from "./pages/MainPage/components/components";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
@@ -19,7 +19,7 @@ import ViewPage from "./pages/ViewPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
 import SignUp from "./pages/signUpPage";
-import ShortcutsPage from "./pages/ShortcutsPage";
+import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 
 const Router = () => {
   const navigate = useNavigate();

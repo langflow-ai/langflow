@@ -1,7 +1,7 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import { useState } from "react";
-import ForwardedIconComponent from "../../components/genericIconComponent";
-import TableComponent from "../../components/tableComponent";
+import ForwardedIconComponent from "../../../../components/genericIconComponent";
+import TableComponent from "../../../../components/tableComponent";
 
 export default function ShortcutsPage() {
   const advancedShortcut = "Ctrl + shift + A";
