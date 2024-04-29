@@ -25,7 +25,7 @@ class Variable(VariableBase, table=True):
         description="Unique ID for the variable",
     )
     # name is unique per user
-    created_at: datetime = Field(
+    created_at: Optional[datetime] = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=True),
         description="Creation time of the variable",
