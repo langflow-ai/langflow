@@ -31,7 +31,7 @@ export default function IOModal({
   open,
   setOpen,
   disable,
-  cleanOnClose=false,
+  cleanOnClose = false,
 }: IOModalPropsType): JSX.Element {
   const allNodes = useFlowStore((state) => state.nodes);
   const cleanFlowPool = useFlowStore((state) => state.CleanFlowPool);
@@ -85,12 +85,6 @@ export default function IOModal({
     return updateVerticesOrder(currentFlow!.id, null);
   }
 
-  // useEffect(() => {
-  //   if (open) {
-  //     updateVertices();
-  //   }
-  // }, [open, currentFlow]);
-
   async function sendMessage(count = 1): Promise<void> {
     if (isBuilding) return;
     setIsBuilding(true);
@@ -129,12 +123,11 @@ export default function IOModal({
       open={open}
       setOpen={setOpen}
       disable={disable}
-      onChangeOpenModal={(open)=>{
-        if(!open && cleanOnClose){
-          console.log("cleaning flow pool") 
+      onChangeOpenModal={(open) => {
+        if (!open && cleanOnClose) {
+          console.log("cleaning flow pool");
           cleanFlowPool();
         }
-      
       }}
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
