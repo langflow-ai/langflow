@@ -1,16 +1,24 @@
 import IconComponent from "../../../../components/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 
+import { ColDef, ColGroupDef, SelectionChangedEvent } from "ag-grid-community";
+import { useState } from "react";
 import AddNewVariableButton from "../../../../components/addNewVariableButtonComponent/addNewVariableButton";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
-import { useState } from "react";
-import { ColDef, ColGroupDef } from "ag-grid-community";
+import { cn } from "../../../../utils/utils";
 
 export default function GlobalVariablesPage() {
   // Column Definitions: Defines the columns to be displayed.
   const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
-    { headerName: "Variable Name", field: "name", flex: 1 }, //This column will be twice as wide as the others
+    {
+      headerCheckboxSelection: true,
+      checkboxSelection: true,
+      showDisabledCheckboxes: true,
+      headerName: "Variable Name",
+      field: "name",
+      flex: 1,
+    }, //This column will be twice as wide as the others
     {
       field: "type",
       cellEditor: "agSelectCellEditor",
@@ -69,6 +77,8 @@ export default function GlobalVariablesPage() {
     },
   ]);
 
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">
       <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
@@ -81,11 +91,18 @@ export default function GlobalVariablesPage() {
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Manage and assign global variables to default fields. You can add
-            new global variables by clicking the button.
+            Manage global variables and assign them to fields.
           </p>
         </div>
-        <div className="flex-shrink-0">
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <Button
+            data-testid="api-key-button-store"
+            variant="primary"
+            className="px-2 group"
+            disabled={selectedRows.length === 0}
+          >
+            <IconComponent name="Trash2" className={cn("h-5 w-5 text-destructive group-disabled:text-primary")} />
+          </Button>
           <AddNewVariableButton>
             <Button data-testid="api-key-button-store" variant="primary">
               <IconComponent name="Plus" className="mr-2 w-4" />
@@ -96,7 +113,15 @@ export default function GlobalVariablesPage() {
       </div>
 
       <div className="flex h-full w-full flex-col justify-between pb-8">
-        <TableComponent columnDefs={colDefs} rowData={rowData} />
+        <TableComponent
+          onSelectionChanged={(event: SelectionChangedEvent) => {
+            setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
+          }}
+          rowSelection="multiple"
+          suppressRowClickSelection={true}
+          columnDefs={colDefs}
+          rowData={rowData}
+        />
       </div>
     </div>
   );
