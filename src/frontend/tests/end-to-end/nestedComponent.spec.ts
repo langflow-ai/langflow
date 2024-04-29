@@ -1,11 +1,24 @@
 import { expect, test } from "@playwright/test";
 
 test("NestedComponent", async ({ page }) => {
-  await page.goto("http:localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(2000);
 
-  await page.locator('//*[@id="new-project-btn"]').click();
-  await page.waitForTimeout(1000);
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
+    }
+  } catch (error) {
+    modalCount = 0;
+  }
+
+  while (modalCount === 0) {
+    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.waitForTimeout(5000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
 
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(1000);

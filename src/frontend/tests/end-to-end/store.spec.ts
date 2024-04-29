@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("should exists Store", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").isVisible();
@@ -9,7 +9,7 @@ test("should exists Store", async ({ page }) => {
 });
 
 test("should not have an API key", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
@@ -19,7 +19,7 @@ test("should not have an API key", async ({ page }) => {
 });
 
 test("should find a searched Component on Store", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
@@ -39,7 +39,7 @@ test("should find a searched Component on Store", async ({ page }) => {
 });
 
 test("should filter by tag", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
@@ -66,7 +66,7 @@ test("should filter by tag", async ({ page }) => {
 });
 
 test("should order the visualization", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
@@ -75,6 +75,7 @@ test("should order the visualization", async ({ page }) => {
   await page.getByText("Basic RAG").isVisible();
 
   await page.getByTestId("select-order-store").click();
+  await page.waitForTimeout(2000);
   await page.getByText("Alphabetical").click();
 
   await page.getByText("Album Cover Builder").isVisible();
@@ -86,7 +87,7 @@ test("should order the visualization", async ({ page }) => {
 });
 
 test("should filter by type", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
@@ -97,7 +98,7 @@ test("should filter by type", async ({ page }) => {
   await page.getByTestId("flows-button-store").click();
   await page.waitForTimeout(3000);
 
-  let iconGroup = await page.getByTestId("icon-Group").count();
+  let iconGroup = await page.getByTestId("icon-Group")?.count();
   expect(iconGroup).not.toBe(0);
 
   await page.getByText("icon-ToyBrick").isHidden();
@@ -106,14 +107,14 @@ test("should filter by type", async ({ page }) => {
   await page.waitForTimeout(3000);
 
   await page.getByTestId("icon-Group").isHidden();
-  let toyBrick = await page.getByTestId("icon-ToyBrick").count();
+  let toyBrick = await page.getByTestId("icon-ToyBrick")?.count();
   expect(toyBrick).not.toBe(0);
 
   await page.getByTestId("all-button-store").click();
   await page.waitForTimeout(3000);
 
-  iconGroup = await page.getByTestId("icon-Group").count();
-  toyBrick = await page.getByTestId("icon-ToyBrick").count();
+  iconGroup = await page.getByTestId("icon-Group")?.count();
+  toyBrick = await page.getByTestId("icon-ToyBrick")?.count();
 
   if (iconGroup === 0 || toyBrick === 0) {
     expect(false).toBe(true);
@@ -121,7 +122,7 @@ test("should filter by type", async ({ page }) => {
 });
 
 test("should add API-KEY", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
@@ -154,7 +155,7 @@ test("should add API-KEY", async ({ page }) => {
 });
 
 test("should like and add components and flows", async ({ page }) => {
-  await page.goto("http://localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button-store").click();
@@ -215,4 +216,61 @@ test("should like and add components and flows", async ({ page }) => {
 
   await page.getByTestId("sidebar-nav-Components").click();
   await page.getByText("Basic RAG").first().isVisible();
+});
+
+test("should share component with share button", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForTimeout(2000);
+
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
+    }
+  } catch (error) {
+    modalCount = 0;
+  }
+
+  while (modalCount === 0) {
+    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.waitForTimeout(5000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
+  await page.waitForTimeout(1000);
+
+  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+  await page.waitForTimeout(1000);
+  const flowName = await page.getByTestId("flow_name").innerText();
+  await page.getByTestId("flow_name").click();
+  await page.getByText("Settings").click();
+  const flowDescription = await page
+    .getByPlaceholder("Flow description")
+    .inputValue();
+  await page.getByText("Save").last().click();
+
+  await page.getByTestId("icon-Share3").first().click();
+  await page.getByText("Name:").isVisible();
+  await page.getByText("Description:").isVisible();
+  await page.getByText("Set workflow status to public").isVisible();
+  await page
+    .getByText(
+      "Attention: API keys in specified fields are automatically removed upon sharing."
+    )
+    .isVisible();
+  await page.getByText("Export").first().isVisible();
+  await page.getByText("Share Flow").first().isVisible();
+
+  await page.waitForTimeout(5000);
+
+  await page.getByText("Agent").first().isVisible();
+  await page.getByText("Memory").first().isVisible();
+  await page.getByText("Chain").first().isVisible();
+  await page.getByText("Vector Store").first().isVisible();
+  await page.getByText("Prompt").last().isVisible();
+  await page.getByTestId("public-checkbox").isChecked();
+  await page.getByText(flowName).last().isVisible();
+  await page.getByText(flowDescription).last().isVisible();
+  await page.waitForTimeout(1000);
+  await page.getByText("Flow shared successfully").last().isVisible();
 });
