@@ -251,7 +251,7 @@ export default function ShareModal({
 
         <BaseModal.Footer>
           <div className="flex w-full justify-between gap-2">
-            <ExportModal>
+            {!is_component && <ExportModal>
               <Button
                 type="button"
                 variant="outline"
@@ -264,6 +264,21 @@ export default function ShareModal({
                 Export
               </Button>
             </ExportModal>
+            }
+            {is_component && <Button
+              type="button"
+              variant="outline"
+              className="gap-2"
+              onClick={() => {
+                (setOpen || internalSetOpen)(false);
+                handleExportComponent();
+              }}
+            >
+              <IconComponent name="Download" className="h-4 w-4" />
+              Export
+            </Button>
+
+            }
             <Button
               disabled={loadingNames}
               type="button"
