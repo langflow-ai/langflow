@@ -1,9 +1,9 @@
-import IconComponent from "../../components/genericIconComponent";
-import { Button } from "../../components/ui/button";
+import IconComponent from "../../../../components/genericIconComponent";
+import { Button } from "../../../../components/ui/button";
 
-import AddNewVariableButton from "../../components/addNewVariableButtonComponent/addNewVariableButton";
-import ForwardedIconComponent from "../../components/genericIconComponent";
-import TableComponent from "../../components/tableComponent";
+import AddNewVariableButton from "../../../../components/addNewVariableButtonComponent/addNewVariableButton";
+import ForwardedIconComponent from "../../../../components/genericIconComponent";
+import TableComponent from "../../../../components/tableComponent";
 import { useState } from "react";
 import { ColDef, ColGroupDef } from "ag-grid-community";
 
