@@ -25,7 +25,7 @@ export default function SettingsPage(): JSX.Element {
           />
         ),
       },
-      {
+      /* {
         title: "Theme",
         href: "/settings/theme",
         icon: (
@@ -54,7 +54,7 @@ export default function SettingsPage(): JSX.Element {
             className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]"
           />
         ),
-      },
+      }, */
     {
       title: "Global Variables",
       href: "/settings/global-variables",
