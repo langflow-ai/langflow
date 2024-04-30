@@ -55,7 +55,6 @@ export default function CodeTabsComponent({
   const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const dark = useDarkStore((state) => state.dark);
   const unselectAll = useFlowStore((state) => state.unselectAll);
-  const setNode = useFlowStore((state) => state.setNode);
 
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
@@ -374,20 +373,22 @@ export default function CodeTabsComponent({
                                                       );
                                                     }}
                                                     setDb={(value) => {
-                                                      setNode(
-                                                        node.data.id,
-                                                        (oldNode) => {
-                                                          let newNode =
-                                                            cloneDeep(oldNode);
-                                                          newNode.data = {
-                                                            ...newNode.data,
-                                                          };
-                                                          newNode.data.node.template[
-                                                            templateField
-                                                          ].load_from_db =
-                                                            value;
-                                                          return newNode;
-                                                        }
+                                                      setData((old) => {
+                                                        let newInputList =
+                                                          cloneDeep(old);
+                                                        newInputList![
+                                                          i
+                                                        ].data.node.template[
+                                                          templateField
+                                                        ].load_from_db = value;
+                                                        return newInputList;
+                                                      });
+                                                      tweaks.buildTweakObject!(
+                                                        node["data"]["id"],
+                                                        value,
+                                                        node.data.node.template[
+                                                          templateField
+                                                        ]
                                                       );
                                                     }}
                                                     name={templateField}
@@ -491,13 +492,19 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    /* tweaks.buildTweakObject!(
                                                       node["data"]["id"],
-                                                      target,
+                                                      {
+                                                        load_from_db: target,
+                                                        ...node.data.node
+                                                          .template[
+                                                          templateField
+                                                        ],
+                                                      },
                                                       node.data.node.template[
                                                         templateField
                                                       ]
-                                                    );
+                                                    ); */
                                                   }}
                                                 />
                                               </div>
