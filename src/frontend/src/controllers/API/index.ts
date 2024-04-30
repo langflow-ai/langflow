@@ -860,14 +860,14 @@ export async function requestLogout() {
 }
 
 export async function getGlobalVariables(): Promise<{
-  [key: string]: { id: string; type: string,default_fields:string[] };
+  [key: string]: { id: string; type: string; default_fields: string[] };
 }> {
   const globalVariables = {};
   (await api.get(`${BASE_URL_API}variables/`)).data.forEach((element) => {
     globalVariables[element.name] = {
       id: element.id,
       type: element.type,
-      default_fields:element.default_fields
+      default_fields: element.default_fields,
     };
   });
   return globalVariables;
@@ -877,7 +877,7 @@ export async function registerGlobalVariable({
   name,
   value,
   type,
-  default_fields=[],
+  default_fields = [],
 }: {
   name: string;
   value: string;
@@ -888,7 +888,7 @@ export async function registerGlobalVariable({
     name,
     value,
     type,
-    default_fields:default_fields
+    default_fields: default_fields,
   });
 }
 

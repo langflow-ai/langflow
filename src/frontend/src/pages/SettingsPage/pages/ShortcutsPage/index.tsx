@@ -124,9 +124,7 @@ export default function ShortcutsPage() {
         <Card x-chunk="dashboard-04-chunk-2">
           <CardHeader>
             <CardTitle>Flow</CardTitle>
-            <CardDescription>
-              Shortcuts relating to the flow.
-            </CardDescription>
+            <CardDescription>Shortcuts relating to the flow.</CardDescription>
           </CardHeader>
           <CardContent>
             <TableComponent

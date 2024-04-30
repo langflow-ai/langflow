@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { deleteGlobalVariable } from "../../controllers/API";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../stores/globalVariables";
@@ -43,7 +42,8 @@ export default function InputGlobalComponent({
   function handleDelete(key: string) {
     const id = getVariableId(key);
     if (id !== undefined) {
-      removeGlobalVariable(key).then((_) => {
+      removeGlobalVariable(key)
+        .then((_) => {
           if (
             data?.node?.template[name].value === key &&
             data?.node?.template[name].load_from_db
