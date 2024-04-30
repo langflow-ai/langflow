@@ -43,7 +43,6 @@ export default function GlobalVariablesPage() {
        name: string;default_fields:string | undefined}> = [];
     globalVariablesEntries.forEach((e) => {
       const globalVariableObj = globalVariables[e];
-      console.log(globalVariableObj);
       rows.push({
         type: globalVariableObj.type,
         id: globalVariableObj.id,
@@ -51,7 +50,6 @@ export default function GlobalVariablesPage() {
         name: e,
       });
     });
-    console.log(rows);
     setRowData(rows);
   }, [globalVariables]);
 

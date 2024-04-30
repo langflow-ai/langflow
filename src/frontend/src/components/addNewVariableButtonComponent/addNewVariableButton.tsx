@@ -27,9 +27,6 @@ export default function AddNewVariableButton({ children }): JSX.Element {
   const addGlobalVariable = useGlobalVariablesStore(
     (state) => state.addGlobalVariable
   );
-  console.log(componentFields);
-  console.log(unavaliableFields);
-  console.log(availableFields);
 
   function handleSaveVariable() {
     let data: { name: string; value: string; type?: string; default_fields?: string[] } = {
