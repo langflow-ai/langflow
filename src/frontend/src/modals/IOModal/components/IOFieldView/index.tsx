@@ -101,6 +101,7 @@ export default function IOFieldView({
                 }}
                 duplicateKey={errorDuplicateKey}
                 isList={node.data.node!.template["input_value"]?.list ?? false}
+                isInputField
               />
             );
 
@@ -118,6 +119,9 @@ export default function IOFieldView({
                 left={left}
               />
             );
+
+          case "StringListInput":
+            return <>diusahjduisahudsa</>;
 
           default:
             return (
@@ -225,6 +229,27 @@ export default function IOFieldView({
                 output
               />
             );
+
+          case "KeyPairOutput":
+            return (
+              <IOKeyPairInput
+                value={node.data.node!.template["input_value"]?.value}
+                onChange={(e) => {
+                  if (node) {
+                    let newNode = cloneDeep(node);
+                    newNode.data.node!.template["input_value"].value = e;
+                    setNode(node.id, newNode);
+                  }
+                  const valueToNumbers = convertValuesToNumbers(e);
+                  setErrorDuplicateKey(hasDuplicateKeys(valueToNumbers));
+                }}
+                duplicateKey={errorDuplicateKey}
+                isList={node.data.node!.template["input_value"]?.list ?? false}
+              />
+            );
+
+          case "StringListOutput":
+            return <>diusahjduisahudsa</>;
 
           default:
             return (

@@ -4,7 +4,21 @@ import IconComponent from "../../../../../../components/genericIconComponent";
 import { Input } from "../../../../../../components/ui/input";
 import { classNames } from "../../../../../../utils/utils";
 
-const IOKeyPairInput = ({ value, onChange, duplicateKey, isList = true }) => {
+export type IOKeyPairInputProps = {
+  value: any;
+  onChange: (value: any) => void;
+  duplicateKey: boolean;
+  isList: boolean;
+  isInputField?: boolean;
+};
+
+const IOKeyPairInput = ({
+  value,
+  onChange,
+  duplicateKey,
+  isList = true,
+  isInputField,
+}: IOKeyPairInputProps) => {
   const checkValueType = (value) => {
     return Array.isArray(value) ? value : [value];
   };
@@ -39,6 +53,7 @@ const IOKeyPairInput = ({ value, onChange, duplicateKey, isList = true }) => {
                   className={classNames(duplicateKey ? "input-invalid" : "")}
                   placeholder="Type key..."
                   onChange={(event) => handleChangeKey(event, index)}
+                  disabled={!isInputField}
                 />
 
                 <Input
@@ -48,9 +63,10 @@ const IOKeyPairInput = ({ value, onChange, duplicateKey, isList = true }) => {
                   onChange={(event) =>
                     handleChangeValue(event.target.value, index)
                   }
+                  disabled={!isInputField}
                 />
 
-                {isList && index === ref.current.length - 1 ? (
+                {isList && isInputField && index === ref.current.length - 1 ? (
                   <button
                     onClick={() => {
                       let newInputList = _.cloneDeep(ref.current);
@@ -63,7 +79,7 @@ const IOKeyPairInput = ({ value, onChange, duplicateKey, isList = true }) => {
                       className={"h-4 w-4 hover:text-accent-foreground"}
                     />
                   </button>
-                ) : isList ? (
+                ) : isList && isInputField ? (
                   <button
                     onClick={() => {
                       let newInputList = _.cloneDeep(ref.current);

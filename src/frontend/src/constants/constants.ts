@@ -716,6 +716,7 @@ export const INPUT_TYPES = new Set([
   "TextInput",
   "KeyPairInput",
   "JsonInput",
+  "StringListInput",
 ]);
 export const OUTPUT_TYPES = new Set([
   "ChatOutput",
@@ -724,6 +725,8 @@ export const OUTPUT_TYPES = new Set([
   "ImageOutput",
   "CSVOutput",
   "JsonOutput",
+  "KeyPairOutput",
+  "StringListOutput",
 ]);
 
 export const CHAT_FIRST_INITIAL_TEXT =
