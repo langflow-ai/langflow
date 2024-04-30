@@ -4,6 +4,7 @@ import { Button } from "../../../../components/ui/button";
 import { ColDef, ColGroupDef, SelectionChangedEvent } from "ag-grid-community";
 import { useState } from "react";
 import AddNewVariableButton from "../../../../components/addNewVariableButtonComponent/addNewVariableButton";
+import Dropdown from "../../../../components/dropdownComponent";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
 import { Badge } from "../../../../components/ui/badge";
@@ -19,6 +20,14 @@ export default function GlobalVariablesPage() {
       </div>
     );
   };
+
+  const DropdownEditor = ({ options, value, onValueChange }) => {
+    return (
+      <Dropdown options={options} value={value} onSelect={onValueChange}>
+        <div className="-mt-1.5 w-full"></div>
+      </Dropdown>
+    );
+  };
   // Column Definitions: Defines the columns to be displayed.
   const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
     {
@@ -32,10 +41,9 @@ export default function GlobalVariablesPage() {
     {
       field: "type",
       cellRenderer: BadgeRenderer,
-      cellEditor: "agSelectCellEditor",
+      cellEditor: DropdownEditor,
       cellEditorParams: {
-        values: ["Prompt", "Credential"],
-        valueListGap: 10,
+        options: ["Prompt", "Credential"],
       },
       flex: 1,
       editable: true,
