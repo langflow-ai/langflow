@@ -30,7 +30,6 @@ export default function CollectionCardComponent({
   onClick,
   onDelete,
   playground,
-  playground,
 }: {
   data: storeComponent;
   authorized?: boolean;
