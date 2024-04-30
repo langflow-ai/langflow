@@ -383,13 +383,19 @@ export default function CodeTabsComponent({
                                                         ].load_from_db = value;
                                                         return newInputList;
                                                       });
-                                                      tweaks.buildTweakObject!(
+                                                      /* tweaks.buildTweakObject!(
                                                         node["data"]["id"],
-                                                        value,
+                                                        {
+                                                          load_from_db: value,
+                                                          ...node.data.node
+                                                            .template[
+                                                            templateField
+                                                          ],
+                                                        },
                                                         node.data.node.template[
                                                           templateField
                                                         ]
-                                                      );
+                                                      ); */
                                                     }}
                                                     name={templateField}
                                                     data={node.data}
@@ -492,19 +498,13 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    /* tweaks.buildTweakObject!(
+                                                    tweaks.buildTweakObject!(
                                                       node["data"]["id"],
-                                                      {
-                                                        load_from_db: target,
-                                                        ...node.data.node
-                                                          .template[
-                                                          templateField
-                                                        ],
-                                                      },
+                                                      target,
                                                       node.data.node.template[
                                                         templateField
                                                       ]
-                                                    ); */
+                                                    );
                                                   }}
                                                 />
                                               </div>
