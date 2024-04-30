@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { GlobalVariablesStore } from "../types/zustand/globalVariables";
 import { deleteGlobalVariable } from "../controllers/API";
+import { getUnavailableFields } from "../utils/utils";
 
 export const useGlobalVariablesStore = create<GlobalVariablesStore>(
   (set, get) => ({
@@ -20,6 +21,7 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
       set({
         globalVariables: variables,
         globalVariablesEntries: Object.keys(variables),
+        unavaliableFields: getUnavailableFields(variables)
       });
     },
     addGlobalVariable: (name, id, type, default_fields) => {
@@ -28,6 +30,7 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
       set({
         globalVariables: newVariables,
         globalVariablesEntries: Object.keys(newVariables),
+        unavaliableFields: getUnavailableFields(newVariables)
       });
     },
     removeGlobalVariable:async (name) => {
@@ -39,6 +42,7 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
       set({
         globalVariables: newVariables,
         globalVariablesEntries: Object.keys(newVariables),
+        unavaliableFields: getUnavailableFields(newVariables)
       });
     },
     getVariableId: (name) => {

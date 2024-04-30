@@ -96,7 +96,6 @@ export default function App() {
         refreshFlows();
         const res = await getGlobalVariables();
         setGlobalVariables(res);
-        setUnavailableFields(getUnavailableFields(res));
         checkHasStore();
         fetchApiData();
       } catch (error) {
