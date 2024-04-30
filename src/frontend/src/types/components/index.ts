@@ -45,6 +45,7 @@ export type DropDownComponentType = {
   onSelect: (value: string) => void;
   editNode?: boolean;
   id?: string;
+  children?: ReactNode;
 };
 export type ParameterComponentType = {
   data: NodeDataType;
@@ -69,15 +70,6 @@ export type InputListComponentType = {
   disabled: boolean;
   editNode?: boolean;
   componentName?: string;
-};
-
-export type InputGlobalComponentType = {
-  disabled: boolean;
-  onChange: (value: string) => void;
-  setDb: (value: boolean) => void;
-  name: string;
-  data: NodeDataType;
-  editNode?: boolean;
 };
 
 export type InputGlobalComponentType = {
