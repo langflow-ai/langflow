@@ -18,6 +18,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
   const [type, setType] = useState("");
+  const [fields, setFields] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
@@ -91,6 +92,14 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             placeholder="Insert a value for the variable..."
             className="w-full resize-none custom-scroll"
           />
+          <Label>Apply To Fields (optional)</Label>
+          <InputComponent
+            setSelectedOptions={(value) => setFields(value)}
+            selectedOptions={fields}
+            password={false}
+            options={Array.from(componentFields)}
+            placeholder="Choose a type for the variable..."
+          ></InputComponent>
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>

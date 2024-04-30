@@ -28,6 +28,8 @@ export type InputComponentType = {
   optionButton?: (option: string) => ReactElement;
   selectedOption?: string;
   setSelectedOption?: (value: string) => void;
+  selectedOptions?: string[];
+  setSelectedOptions?: (value: string[]) => void;
 };
 export type ToggleComponentType = {
   enabled: boolean;
