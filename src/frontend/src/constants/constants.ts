@@ -791,11 +791,11 @@ export const defaultShortcuts = [
   },
   {
     name: "Minimize",
-    shortcut: "Ctrl + Shift + q"
+    shortcut: "Ctrl + q"
   },
   {
     name: "Code",
-    shortcut: "Ctrl + Shift + c"
+    shortcut: "Ctrl + Shift + u"
   },
   {
     name: "Copy",
@@ -823,4 +823,4 @@ export const defaultShortcuts = [
   },
 ];
 
-export const unavailableShortcutss = ["Ctrl + Shift + a", "Ctrl + Shift + q", "Ctrl + Shift + c", "Ctrl + c", "Ctrl + d", "Ctrl + Shift + s", "Ctrl + Shift + d", "Ctrl + s", "Backspace"];
+export const unavailableShortcutss = ["Ctrl + Shift + a", "Ctrl + q", "Ctrl + Shift + u", "Ctrl + c", "Ctrl + d", "Ctrl + Shift + s", "Ctrl + Shift + d", "Ctrl + s", "Backspace"];

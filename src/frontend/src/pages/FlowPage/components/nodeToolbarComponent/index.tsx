@@ -32,6 +32,7 @@ import {
 } from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
+import { useShortcutsStore } from "../../../../stores/shortcuts";
 
 export default function NodeToolbarComponent({
   data,
@@ -144,14 +145,21 @@ export default function NodeToolbarComponent({
     downloadNode(flowComponent!);
   }
 
-  useHotkeys("mod+q", handleMinimizeWShortcut);
+  const advanced = useShortcutsStore(state => state.advanced);
+  const minimize = useShortcutsStore(state => state.minimize);
+  const share = useShortcutsStore(state => state.share);
+  const save = useShortcutsStore(state => state.save);
+  const docs = useShortcutsStore(state => state.docs);
+  const code = useShortcutsStore(state => state.code);
+
+  useHotkeys(minimize, handleMinimizeWShortcut);
   useHotkeys("mod+u", handleUpdateWShortcut);
   useHotkeys("mod+g", handleGroupWShortcut);
-  useHotkeys("mod+shift+s", handleShareWShortcut);
-  useHotkeys("mod+shift+u", handleCodeWShortcut);
-  useHotkeys("mod+shift+a", handleAdvancedWShortcut);
-  useHotkeys("mod+s", handleSaveWShortcut);
-  useHotkeys("mod+shift+d", handleDocsWShortcut);
+  useHotkeys(share, handleShareWShortcut);
+  useHotkeys(code, handleCodeWShortcut);
+  useHotkeys(advanced, handleAdvancedWShortcut);
+  useHotkeys(save, handleSaveWShortcut);
+  useHotkeys(docs, handleDocsWShortcut);
   useHotkeys("mod+j", handleDownloadWShortcut);
   useHotkeys("space", handleCodeWShortcut);
 
