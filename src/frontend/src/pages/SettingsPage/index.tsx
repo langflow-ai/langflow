@@ -16,16 +16,16 @@ export default function SettingsPage(): JSX.Element {
 
   const sidebarNavItems = [
     {
-        title: "General",
-        href: "/settings/general",
-        icon: (
-          <ForwardedIconComponent
-            name="SlidersHorizontal"
-            className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]"
-          />
-        ),
-      },
-      /* {
+      title: "General",
+      href: "/settings/general",
+      icon: (
+        <ForwardedIconComponent
+          name="SlidersHorizontal"
+          className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]"
+        />
+      ),
+    },
+    /* {
         title: "Theme",
         href: "/settings/theme",
         icon: (
