@@ -46,11 +46,13 @@ const EditNodeModal = forwardRef(
       nodeLength,
       open,
       setOpen,
+      setOpenWDoubleClick,
     }: {
       data: NodeDataType;
       nodeLength: number;
       open: boolean;
       setOpen: (open: boolean) => void;
+      setOpenWDoubleClick: (open: boolean) => void;
     },
     ref
   ) => {
@@ -81,6 +83,12 @@ const EditNodeModal = forwardRef(
         setMyData(data); // reset data to what it is on node when opening modal
       }
     }, [open]);
+
+    useEffect(() => {
+      return () => {
+        setOpenWDoubleClick(false)
+      }
+    }, [])
 
     const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 

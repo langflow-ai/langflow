@@ -101,10 +101,16 @@ def add_row_to_table(
         conn.execute(insert_sql, values)
     except Exception as e:
         # Log values types
+        column_error_message = ""
         for key, value in validated_dict.items():
             logger.error(f"{key}: {type(value)}")
+            if value in str(e):
+                column_error_message = f"Column: {key} Value: {value} Error: {e}"
 
-        logger.error(f"Error adding row to table: {e}")
+        if column_error_message:
+            logger.error(f"Error adding row to {table_name}: {column_error_message}")
+        else:
+            logger.error(f"Error adding row to {table_name}: {e}")
 
 
 async def log_message(

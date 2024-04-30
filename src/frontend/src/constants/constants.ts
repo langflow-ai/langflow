@@ -161,6 +161,29 @@ export const IMPORT_DIALOG_SUBTITLE =
  */
 export const TOOLTIP_EMPTY = "No compatible components found.";
 
+export const CSVViewErrorTitle = "CSV output";
+
+export const CSVNoDataError = "No data available";
+
+export const PDFViewConstant = "Expand the ouptut to see the PDF";
+
+export const CSVError = "Error loading CSV";
+
+export const PDFLoadErrorTitle = "Error loading PDF";
+
+export const PDFCheckFlow = "Please check your flow and try again";
+
+export const PDFErrorTitle = "PDF Output";
+
+export const PDFLoadError = "Run the flow to see the pdf";
+
+export const IMGViewConstant = "Expand the view to see the image";
+
+export const IMGViewErrorMSG =
+  "Run the flow or inform a valid url to see your image";
+
+export const IMGViewErrorTitle = "Image output";
+
 /**
  * The base text for subtitle of code dialog
  * @constant
@@ -688,8 +711,14 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
 
 export const priorityFields = new Set(["code", "template"]);
 
-export const INPUT_TYPES = new Set(["ChatInput", "TextInput"]);
-export const OUTPUT_TYPES = new Set(["ChatOutput", "TextOutput"]);
+export const INPUT_TYPES = new Set(["ChatInput", "TextInput", "KeyPairInput"]);
+export const OUTPUT_TYPES = new Set([
+  "ChatOutput",
+  "TextOutput",
+  "PDFOutput",
+  "ImageOutput",
+  "CSVOutput",
+]);
 
 export const CHAT_FIRST_INITIAL_TEXT =
   "Start a conversation and click the agent's thoughts";

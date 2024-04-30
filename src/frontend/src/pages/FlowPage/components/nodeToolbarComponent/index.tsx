@@ -1,5 +1,6 @@
 import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { useUpdateNodeInternals } from "reactflow";
 import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
@@ -44,6 +45,8 @@ export default function NodeToolbarComponent({
   setShowState,
   onCloseAdvancedModal,
   isOutdated,
+  openWDoubleClick,
+  setOpenWDoubleClick,
 }: nodeToolbarPropsType): JSX.Element {
   const nodeLength = Object.keys(data.node!.template).filter(
     (templateField) =>
@@ -65,6 +68,93 @@ export default function NodeToolbarComponent({
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
 
+  function handleMinimizeWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (isMinimal) {
+      setShowState((show) => !show);
+      setShowNode(data.showNode ?? true ? false : true);
+      return;
+    }
+    setNoticeData({
+      title:
+        "Minimization are only available for nodes with one handle or fewer.",
+    });
+    return;
+  }
+
+  function handleUpdateWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (hasApiKey || hasStore) {
+      handleSelectChange("update");
+    }
+  }
+
+  function handleGroupWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (isGroup) {
+      handleSelectChange("ungroup");
+    }
+  }
+
+  function handleShareWShortcut(e: KeyboardEvent) {
+    if (hasApiKey || hasStore) {
+      e.preventDefault();
+      setShowconfirmShare((state) => !state);
+    }
+  }
+
+  function handleCodeWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (hasCode) return setOpenModal((state) => !state);
+    setNoticeData({ title: `You can not access ${data.id} code` });
+  }
+
+  function handleAdvancedWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (!isGroup) {
+      setShowModalAdvanced((state) => !state);
+    }
+  }
+
+  function handleSaveWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (isSaved) {
+      setShowOverrideModal((state) => !state);
+      return;
+    }
+    if (hasCode) {
+      saveComponent(cloneDeep(data), false);
+      setSuccessData({ title: `${data.id} saved successfully` });
+      return;
+    }
+  }
+
+  function handleDocsWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (data.node?.documentation) {
+      return openInNewTab(data.node?.documentation);
+    }
+    setNoticeData({
+      title: `${data.id} docs is not available at the moment.`,
+    });
+  }
+
+  function handleDownloadWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    downloadNode(flowComponent!);
+  }
+
+  useHotkeys("mod+q", handleMinimizeWShortcut);
+  useHotkeys("mod+u", handleUpdateWShortcut);
+  useHotkeys("mod+g", handleGroupWShortcut);
+  useHotkeys("mod+shift+s", handleShareWShortcut);
+  useHotkeys("mod+shift+u", handleCodeWShortcut);
+  useHotkeys("mod+shift+a", handleAdvancedWShortcut);
+  useHotkeys("mod+s", handleSaveWShortcut);
+  useHotkeys("mod+shift+d", handleDocsWShortcut);
+  useHotkeys("mod+j", handleDownloadWShortcut);
+  useHotkeys("space", handleCodeWShortcut);
+
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
@@ -75,7 +165,6 @@ export default function NodeToolbarComponent({
   const setNodes = useFlowStore((state) => state.setNodes);
 
   const setEdges = useFlowStore((state) => state.setEdges);
-  const unselectAll = useFlowStore((state) => state.unselectAll);
   const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
   const getNodePosition = useFlowStore((state) => state.getNodePosition);
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -87,6 +176,10 @@ export default function NodeToolbarComponent({
   const [flowComponent, setFlowComponent] = useState<FlowType>(
     createFlowComponent(cloneDeep(data), version)
   );
+
+  useEffect(() => {
+    if (openWDoubleClick) setShowModalAdvanced(true);
+  }, [openWDoubleClick, setOpenWDoubleClick]);
 
   const openInNewTab = (url) => {
     window.open(url, "_blank", "noreferrer");
@@ -120,6 +213,15 @@ export default function NodeToolbarComponent({
 
   const handleSelectChange = (event) => {
     switch (event) {
+      case "save":
+        if (isSaved) {
+          return setShowOverrideModal(true);
+        }
+        saveComponent(cloneDeep(data), false);
+        break;
+      case "code":
+        setOpenModal(!openModal);
+        break;
       case "advanced":
         setShowModalAdvanced(true);
         break;
@@ -265,112 +367,6 @@ export default function NodeToolbarComponent({
   const [openModal, setOpenModal] = useState(false);
   const hasCode = Object.keys(data.node!.template).includes("code");
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (
-        selected &&
-        (hasApiKey || hasStore) &&
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "u"
-      ) {
-        event.preventDefault();
-        handleSelectChange("update");
-      }
-      if (
-        selected &&
-        isGroup &&
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "g"
-      ) {
-        event.preventDefault();
-        handleSelectChange("ungroup");
-      }
-      if (
-        selected &&
-        (hasApiKey || hasStore) &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key === "S"
-      ) {
-        event.preventDefault();
-        setShowconfirmShare((state) => !state);
-      }
-
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key === "Q"
-      ) {
-        event.preventDefault();
-        if (isMinimal) {
-          setShowState((show) => !show);
-          setShowNode(data.showNode ?? true ? false : true);
-          return;
-        }
-        setNoticeData({
-          title:
-            "Minimization are only available for nodes with one handle or fewer.",
-        });
-      }
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key === "U"
-      ) {
-        event.preventDefault();
-        if (hasCode) return setOpenModal((state) => !state);
-        setNoticeData({ title: `You can not access ${data.id} code` });
-      }
-      if (
-        selected &&
-        !isGroup &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key === "A"
-      ) {
-        event.preventDefault();
-        setShowModalAdvanced((state) => !state);
-      }
-      if (selected && (event.ctrlKey || event.metaKey) && event.key === "s") {
-        if (isSaved) {
-          event.preventDefault();
-          return setShowOverrideModal((state) => !state);
-        }
-        if (hasCode) {
-          event.preventDefault();
-          saveComponent(cloneDeep(data), false);
-          setSuccessData({ title: `${data.id} saved successfully` });
-        }
-      }
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key === "D"
-      ) {
-        event.preventDefault();
-        if (data.node?.documentation) {
-          return openInNewTab(data.node?.documentation);
-        }
-        setNoticeData({
-          title: `${data.id} docs is not available at the moment.`,
-        });
-      }
-      if (selected && (event.ctrlKey || event.metaKey) && event.key === "j") {
-        event.preventDefault();
-        downloadNode(flowComponent!);
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [isSaved, showNode, data.showNode, isMinimal]);
-
   return (
     <>
       <div className="w-26 h-10">
@@ -472,6 +468,19 @@ export default function NodeToolbarComponent({
               </SelectTrigger>
             </ShadTooltip>
             <SelectContent>
+              {hasCode && (
+                <SelectItem value={"code"}>
+                  <ToolbarSelectItem
+                    keyboardKey="Space"
+                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                    shift={false}
+                    mod={false}
+                    value={"Code"}
+                    icon={"Code"}
+                    dataTestId="code-button-modal"
+                  />
+                </SelectItem>
+              )}
               {nodeLength > 0 && (
                 <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
                   <ToolbarSelectItem
@@ -484,7 +493,17 @@ export default function NodeToolbarComponent({
                   />
                 </SelectItem>
               )}
-              {/* <SelectItem value={"duplicate"}>
+              <SelectItem value={"save"}>
+                <ToolbarSelectItem
+                  keyboardKey="S"
+                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                  shift={false}
+                  value={"Save"}
+                  icon={"SaveAll"}
+                  dataTestId="save-button-modal"
+                />
+              </SelectItem>
+              <SelectItem value={"duplicate"}>
                 <ToolbarSelectItem
                   keyboardKey="D"
                   isMac={navigator.userAgent.toUpperCase().includes("MAC")}
@@ -493,7 +512,7 @@ export default function NodeToolbarComponent({
                   icon={"Copy"}
                   dataTestId="duplicate-button-modal"
                 />
-              </SelectItem> */}
+              </SelectItem>
               <SelectItem value={"copy"}>
                 <ToolbarSelectItem
                   keyboardKey="C"
@@ -567,7 +586,7 @@ export default function NodeToolbarComponent({
                     icon={showNode ? "Minimize2" : "Maximize2"}
                     value={showNode ? "Minimize" : "Expand"}
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={true}
+                    shift={false}
                     keyboardKey={"Q"}
                     dataTestId={"minimize-button-nodeToolbar"}
                   />
@@ -639,12 +658,15 @@ export default function NodeToolbarComponent({
               </span>
             </ConfirmationModal.Content>
           </ConfirmationModal>
-          <EditNodeModal
-            data={data}
-            nodeLength={nodeLength}
-            open={showModalAdvanced}
-            setOpen={setShowModalAdvanced}
-          />
+          {showModalAdvanced && (
+            <EditNodeModal
+              setOpenWDoubleClick={setOpenWDoubleClick}
+              data={data}
+              nodeLength={nodeLength}
+              open={showModalAdvanced}
+              setOpen={setShowModalAdvanced}
+            />
+          )}
           {showconfirmShare && (
             <ShareModal
               open={showconfirmShare}

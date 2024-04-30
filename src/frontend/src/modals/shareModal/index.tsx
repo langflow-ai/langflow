@@ -25,6 +25,8 @@ import {
 import { getTagsIds } from "../../utils/storeUtils";
 import ConfirmationModal from "../ConfirmationModal";
 import BaseModal from "../baseModal";
+import { useHotkeys } from "react-hotkeys-hook";
+import ExportModal from "../exportModal";
 
 export default function ShareModal({
   component,
@@ -41,6 +43,12 @@ export default function ShareModal({
   setOpen?: (open: boolean) => void;
   disabled?: boolean;
 }): JSX.Element {
+  function handleOpenWShortcut(e: KeyboardEvent) {
+    if (hasApiKey || hasStore) {
+      e.preventDefault()
+      internalSetOpen(state => !state);
+    }
+  }
   const version = useDarkStore((state) => state.version);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -50,6 +58,8 @@ export default function ShareModal({
   const [internalOpen, internalSetOpen] = useState(children ? false : true);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
   const nameComponent = is_component ? "component" : "workflow";
+
+  useHotkeys("mod+alt+s", handleOpenWShortcut)
 
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [loadingTags, setLoadingTags] = useState<boolean>(false);
@@ -206,9 +216,8 @@ export default function ShareModal({
           {children ? children : <></>}
         </BaseModal.Trigger>
         <BaseModal.Header
-          description={`Publish ${
-            is_component ? "your component" : "workflow"
-          } to the Langflow Store.`}
+          description={`Publish ${is_component ? "your component" : "workflow"
+            } to the Langflow Store.`}
         >
           <span className="pr-2">Share</span>
           <IconComponent
@@ -251,18 +260,34 @@ export default function ShareModal({
 
         <BaseModal.Footer>
           <div className="flex w-full justify-between gap-2">
-            <Button
+            {!is_component && <ExportModal>
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                onClick={() => {
+                  // (setOpen || internalSetOpen)(false);
+                }}
+              >
+                <IconComponent name="Download" className="h-4 w-4" />
+                Export
+              </Button>
+            </ExportModal>
+            }
+            {is_component && <Button
               type="button"
               variant="outline"
               className="gap-2"
               onClick={() => {
-                handleExportComponent();
                 (setOpen || internalSetOpen)(false);
+                handleExportComponent();
               }}
             >
               <IconComponent name="Download" className="h-4 w-4" />
               Export
             </Button>
+
+            }
             <Button
               disabled={loadingNames}
               type="button"

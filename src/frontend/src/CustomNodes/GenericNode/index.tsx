@@ -27,7 +27,13 @@ import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
-import { classNames, cn, getFieldTitle, sortFields } from "../../utils/utils";
+import {
+  classNames,
+  cn,
+  getFieldTitle,
+  isWrappedWithClass,
+  sortFields,
+} from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
@@ -339,6 +345,8 @@ export default function GenericNode({
     );
   };
 
+  const [openWDoubleCLick, setOpenWDoubleCLick] = useState(false);
+
   const getBaseBorderClass = (selected) =>
     selected ? "border border-ring" : "border";
 
@@ -349,6 +357,8 @@ export default function GenericNode({
     return (
       <NodeToolbar>
         <NodeToolbarComponent
+          openWDoubleClick={openWDoubleCLick}
+          setOpenWDoubleClick={setOpenWDoubleCLick}
           data={data}
           deleteNode={(id) => {
             takeSnapshot();
@@ -382,12 +392,18 @@ export default function GenericNode({
     updateNodeCode,
     isOutdated,
     selected,
+    openWDoubleCLick,
+    setOpenWDoubleCLick,
   ]);
 
   return (
     <>
       {memoizedNodeToolbarComponent}
       <div
+        onDoubleClick={(event) => {
+          if (!isWrappedWithClass(event, "nodoubleclick"))
+            setOpenWDoubleCLick(true);
+        }}
         className={getNodeBorderClassName(
           selected,
           showNode,
@@ -460,7 +476,7 @@ export default function GenericNode({
                             event.preventDefault();
                           }}
                           data-testid={"title-" + data.node?.display_name}
-                          className="generic-node-tooltip-div cursor-text text-primary"
+                          className="nodoubleclick generic-node-tooltip-div cursor-text text-primary"
                         >
                           {data.node?.display_name}
                         </div>
@@ -713,7 +729,7 @@ export default function GenericNode({
               ) : (
                 <div
                   className={cn(
-                    "generic-node-desc-text truncate-multiline word-break-break-word",
+                    "nodoubleclick generic-node-desc-text truncate-multiline word-break-break-word",
                     (data.node?.description === "" ||
                       !data.node?.description) &&
                       nameEditable

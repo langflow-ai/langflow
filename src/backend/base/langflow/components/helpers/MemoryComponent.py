@@ -1,12 +1,13 @@
 from typing import Optional
 
+from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
 from langflow.helpers.record import records_to_text
-from langflow.interface.custom.custom_component import CustomComponent
 from langflow.memory import get_messages
+from langflow.schema.schema import Record
 
 
-class MemoryComponent(CustomComponent):
+class MemoryComponent(BaseMemoryComponent):
     display_name = "Chat Memory"
     description = "Retrieves stored chat messages given a specific Session ID."
     beta: bool = True
@@ -42,6 +43,24 @@ class MemoryComponent(CustomComponent):
             },
         }
 
+    def get_messages(self, **kwargs) -> list[Record]:
+        # Validate kwargs by checking if it contains the correct keys
+        if "sender" not in kwargs:
+            kwargs["sender"] = None
+        if "sender_name" not in kwargs:
+            kwargs["sender_name"] = None
+        if "session_id" not in kwargs:
+            kwargs["session_id"] = None
+        if "limit" not in kwargs:
+            kwargs["limit"] = 5
+        if "order" not in kwargs:
+            kwargs["order"] = "Descending"
+
+        kwargs["order"] = "DESC" if kwargs["order"] == "Descending" else "ASC"
+        if kwargs["sender"] == "Machine and User":
+            kwargs["sender"] = None
+        return get_messages(**kwargs)
+
     def build(
         self,
         sender: Optional[str] = "Machine and User",
@@ -51,10 +70,7 @@ class MemoryComponent(CustomComponent):
         order: Optional[str] = "Descending",
         record_template: Optional[str] = "{sender_name}: {text}",
     ) -> Text:
-        order = "DESC" if order == "Descending" else "ASC"
-        if sender == "Machine and User":
-            sender = None
-        messages = get_messages(
+        messages = self.get_messages(
             sender=sender,
             sender_name=sender_name,
             session_id=session_id,
