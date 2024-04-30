@@ -3,7 +3,6 @@ import { GlobalVariablesStore } from "../types/zustand/globalVariables";
 
 export const useGlobalVariablesStore = create<GlobalVariablesStore>(
   (set, get) => ({
-    avaliableFields: new Set(),
     unavaliableFields: new Set(),
     setUnavaliableFields: (fields) => {
       set({ unavaliableFields: fields });
@@ -13,12 +12,6 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
     },
     removeUnavaliableField: (field) => {
       get().unavaliableFields.delete(field);
-    },
-    setAvaliableFields: (fields) => {
-      set({ avaliableFields: fields });
-    },
-    addAvaliableField: (field) => {
-      set({ avaliableFields: get().avaliableFields.add(field) });
     },
     globalVariablesEntries: [],
     globalVariables: {},
