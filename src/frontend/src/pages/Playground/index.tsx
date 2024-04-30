@@ -27,6 +27,7 @@ export default function PlaygroundPage() {
 
     // Set flow tab id
     useEffect(() => {
+        console.log("id", id);
         if (getFlowById(id!)) {
             setCurrentFlowId(id!);
         }
@@ -44,6 +45,11 @@ export default function PlaygroundPage() {
             cleanFlowPool();
             setLoading(false);
         }
+        return () => {
+            setNodes([], true);
+            setEdges([], true);
+            cleanFlowPool();
+        };
     }, [currentFlow]);
 
 
