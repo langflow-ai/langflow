@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getComponent, postLikeComponent } from "../../controllers/API";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import IOModal from "../../modals/IOModal";
+import IOModal from "../../modals/IOModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -27,12 +28,15 @@ export default function CollectionCardComponent({
   authorized = true,
   disabled = false,
   button,
+  onClick,
   onDelete,
+  playground,
   playground,
 }: {
   data: storeComponent;
   authorized?: boolean;
   disabled?: boolean;
+  onClick?: () => void;
   button?: JSX.Element;
   playground?: boolean;
   onDelete?: () => void;
@@ -165,72 +169,67 @@ export default function CollectionCardComponent({
   }
 
   return (
-    <>
-      <Card
-        className={cn(
-          "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:shadow-md",
-          disabled ? "pointer-events-none opacity-50" : ""
-        )}
-      >
-        <div>
-          <CardHeader>
-            <div>
-              <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
-                <IconComponent
-                  className={cn(
-                    "flex-shrink-0",
-                    data.is_component
-                      ? "mx-0.5 h-6 w-6 text-component-icon"
-                      : "h-7 w-7 flex-shrink-0 text-flow-icon"
-                  )}
-                  name={data.is_component ? "ToyBrick" : "Group"}
-                />
-                <ShadTooltip content={data.name}>
-                  <div className="w-full truncate">{data.name}</div>
-                </ShadTooltip>
-                {data?.metadata !== undefined && (
-                  <div className="flex gap-3">
-                    {data.private && (
-                      <ShadTooltip content="Private">
-                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <IconComponent name="Lock" className="h-4 w-4" />
-                        </span>
-                      </ShadTooltip>
-                    )}
-                    {!data.is_component && (
-                      <ShadTooltip content="Components">
-                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <IconComponent name="ToyBrick" className="h-4 w-4" />
-                          <span data-testid={`total-${data.name}`}>
-                            {data?.metadata?.total ?? 0}
-                          </span>
-                        </span>
-                      </ShadTooltip>
-                    )}
-                    <ShadTooltip content="Likes">
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <IconComponent
-                          name="Heart"
-                          className={cn("h-4 w-4 ")}
-                        />
-                        <span data-testid={`likes-${data.name}`}>
-                          {likes_count ?? 0}
-                        </span>
-                      </span>
-                    </ShadTooltip>
-                    <ShadTooltip content="Downloads">
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <IconComponent
-                          name="DownloadCloud"
-                          className="h-4 w-4"
-                        />
-                        <span data-testid={`downloads-${data.name}`}>
-                          {downloads_count ?? 0}
-                        </span>
-                      </span>
-                    </ShadTooltip>
-                  </div>
+    <Card
+      className={cn(
+        "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:shadow-md",
+        disabled ? "pointer-events-none opacity-50" : "",
+        onClick ? "cursor-pointer" : ""
+      )}
+      onClick={onClick}
+    >
+      <div>
+        <CardHeader>
+          <div>
+            <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
+              <IconComponent
+                className={cn(
+                  "flex-shrink-0",
+                  data.is_component
+                    ? "mx-0.5 h-6 w-6 text-component-icon"
+                    : "h-7 w-7 flex-shrink-0 text-flow-icon"
                 )}
+                name={data.is_component ? "ToyBrick" : "Group"}
+              />
+              <ShadTooltip content={data.name}>
+                <div className="w-full truncate">{data.name}</div>
+              </ShadTooltip>
+              {data?.metadata !== undefined && (
+                <div className="flex gap-3">
+                  {data.private && (
+                    <ShadTooltip content="Private">
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <IconComponent name="Lock" className="h-4 w-4" />
+                      </span>
+                    </ShadTooltip>
+                  )}
+                  {!data.is_component && (
+                    <ShadTooltip content="Components">
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <IconComponent name="ToyBrick" className="h-4 w-4" />
+                        <span data-testid={`total-${data.name}`}>
+                          {data?.metadata?.total ?? 0}
+                        </span>
+                      </span>
+                    </ShadTooltip>
+                  )}
+                  <ShadTooltip content="Likes">
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <IconComponent name="Heart" className={cn("h-4 w-4 ")} />
+                      <span data-testid={`likes-${data.name}`}>
+                        {likes_count ?? 0}
+                      </span>
+                    </span>
+                  </ShadTooltip>
+                  <ShadTooltip content="Downloads">
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <IconComponent name="DownloadCloud" className="h-4 w-4" />
+                      <span data-testid={`downloads-${data.name}`}>
+                        {downloads_count ?? 0}
+                      </span>
+                    </span>
+                  </ShadTooltip>
+                </div>
+              )}
 
                 {onDelete && data?.metadata === undefined && (
                   <DeleteConfirmationModal
@@ -268,180 +267,176 @@ export default function CollectionCardComponent({
           </CardHeader>
         </div>
 
-        <CardFooter>
-          <div className="flex w-full items-center justify-between gap-2">
-            <div className="flex w-full flex-wrap items-end justify-between gap-2">
-              <div className="flex w-full flex-1 flex-wrap gap-2">
-                {data.tags &&
-                  data.tags.length > 0 &&
-                  data.tags.map((tag, index) => (
-                    <Badge
-                      key={index}
-                      variant="outline"
-                      size="xq"
-                      className="text-muted-foreground"
-                    >
-                      {tag.name}
-                    </Badge>
-                  ))}
-              </div>
-              {data.liked_by_count != undefined && (
-                <div className="flex gap-0.5">
-                  {onDelete && data?.metadata !== undefined ? (
-                    <ShadTooltip
-                      content={
-                        authorized ? "Delete" : "Please review your API key."
-                      }
-                    >
-                      <DeleteConfirmationModal
-                        onConfirm={() => {
-                          onDelete();
-                        }}
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={
-                            "whitespace-nowrap" +
-                            (!authorized ? " cursor-not-allowed" : "")
-                          }
-                        >
-                          <IconComponent
-                            name="Trash2"
-                            className={cn(
-                              "h-5 w-5",
-                              !authorized ? " text-ring" : ""
-                            )}
-                          />
-                        </Button>
-                      </DeleteConfirmationModal>
-                    </ShadTooltip>
-                  ) : (
-                    <ShadTooltip
-                      content={
-                        authorized ? "Like" : "Please review your API key."
-                      }
+      <CardFooter>
+        <div className="flex w-full items-center justify-between gap-2">
+          <div className="flex w-full flex-wrap items-end justify-between gap-2">
+            <div className="flex w-full flex-1 flex-wrap gap-2">
+              {data.tags &&
+                data.tags.length > 0 &&
+                data.tags.map((tag, index) => (
+                  <Badge
+                    key={index}
+                    variant="outline"
+                    size="xq"
+                    className="text-muted-foreground"
+                  >
+                    {tag.name}
+                  </Badge>
+                ))}
+            </div>
+            {data.liked_by_count != undefined && (
+              <div className="flex gap-0.5">
+                {onDelete && data?.metadata !== undefined ? (
+                  <ShadTooltip
+                    content={
+                      authorized ? "Delete" : "Please review your API key."
+                    }
+                  >
+                    <DeleteConfirmationModal
+                      onConfirm={() => {
+                        onDelete();
+                      }}
                     >
                       <Button
-                        disabled={loadingLike}
                         variant="ghost"
                         size="icon"
                         className={
                           "whitespace-nowrap" +
                           (!authorized ? " cursor-not-allowed" : "")
                         }
-                        onClick={() => {
-                          if (!authorized) {
-                            return;
-                          }
-                          handleLike();
-                        }}
-                        data-testid={`like-${data.name}`}
                       >
                         <IconComponent
-                          name="Heart"
+                          name="Trash2"
                           className={cn(
                             "h-5 w-5",
-                            liked_by_user
-                              ? "fill-destructive stroke-destructive"
-                              : "",
                             !authorized ? " text-ring" : ""
                           )}
                         />
                       </Button>
-                    </ShadTooltip>
-                  )}
+                    </DeleteConfirmationModal>
+                  </ShadTooltip>
+                ) : (
                   <ShadTooltip
                     content={
-                      authorized
-                        ? isStore
-                          ? "Download"
-                          : "Install Locally"
-                        : "Please review your API key."
+                      authorized ? "Like" : "Please review your API key."
                     }
                   >
                     <Button
-                      disabled={loading}
+                      disabled={loadingLike}
                       variant="ghost"
                       size="icon"
                       className={
                         "whitespace-nowrap" +
-                        (!authorized ? " cursor-not-allowed" : "") +
-                        (!loading ? " p-0.5" : "")
+                        (!authorized ? " cursor-not-allowed" : "")
                       }
                       onClick={() => {
-                        if (loading || !authorized) {
+                        if (!authorized) {
                           return;
                         }
-                        handleInstall();
+                        handleLike();
                       }}
-                      data-testid={`install-${data.name}`}
+                      data-testid={`like-${data.name}`}
                     >
                       <IconComponent
-                        name={
-                          loading ? "Loader2" : isStore ? "Download" : "Plus"
-                        }
+                        name="Heart"
                         className={cn(
-                          loading ? "h-5 w-5 animate-spin" : "h-5 w-5",
+                          "h-5 w-5",
+                          liked_by_user
+                            ? "fill-destructive stroke-destructive"
+                            : "",
                           !authorized ? " text-ring" : ""
                         )}
                       />
                     </Button>
                   </ShadTooltip>
-                </div>
-              )}
-              {button && button}
-              {playground && (
-                <Button
-                  disabled={loadingPlayground}
-                  key={data.id}
-                  tabIndex={-1}
-                  variant="outline"
-                  size="sm"
-                  className="whitespace-nowrap "
-                  data-testid={"playground-flow-button-" + data.id}
-                  onClick={() => {
-                    setLoadingPlayground(true);
-                    if (getFlowById(data.id)) {
-                      setCurrentFlowId(data.id);
+                )}
+                <ShadTooltip
+                  content={
+                    authorized
+                      ? isStore
+                        ? "Download"
+                        : "Install Locally"
+                      : "Please review your API key."
+                  }
+                >
+                  <Button
+                    disabled={loading}
+                    variant="ghost"
+                    size="icon"
+                    className={
+                      "whitespace-nowrap" +
+                      (!authorized ? " cursor-not-allowed" : "") +
+                      (!loading ? " p-0.5" : "")
+                    }
+                    onClick={() => {
+                      if (loading || !authorized) {
+                        return;
+                      }
+                      handleInstall();
+                    }}
+                    data-testid={`install-${data.name}`}
+                  >
+                    <IconComponent
+                      name={loading ? "Loader2" : isStore ? "Download" : "Plus"}
+                      className={cn(
+                        loading ? "h-5 w-5 animate-spin" : "h-5 w-5",
+                        !authorized ? " text-ring" : ""
+                      )}
+                    />
+                  </Button>
+                </ShadTooltip>
+              </div>
+            )}
+            {button && button}
+            {playground && (
+              <Button
+                disabled={loadingPlayground}
+                key={data.id}
+                tabIndex={-1}
+                variant="outline"
+                size="sm"
+                className="whitespace-nowrap gap-2"
+                data-testid={"playground-flow-button-" + data.id}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setLoadingPlayground(true);
+                  if (getFlowById(data.id)) {
+                    setCurrentFlowId(data.id);
+                    setOpenPlayground(true);
+                    setLoadingPlayground(false);
+                  } else {
+                    getFlowData().then((res) => {
+                      setCurrentFlow(res);
                       setOpenPlayground(true);
                       setLoadingPlayground(false);
-                    } else {
-                      getFlowData().then((res) => {
-                        setCurrentFlow(res);
-                        setOpenPlayground(true);
-                        setLoadingPlayground(false);
-                      });
-                    }
-                  }}
-                >
-                  {!loadingPlayground ? (
-                    <>
-                      <IconComponent
-                        name="ExternalLink"
-                        className="main-page-nav-button select-none"
-                      />
-                      Playground
-                    </>
-                  ) : (
-                    <Loading />
-                  )}
-                </Button>
-              )}
-            </div>
+                    });
+                  }
+                }}
+              >
+                {!loadingPlayground ? (
+                  <IconComponent
+                    name="Zap"
+                    className="h-4 w-4 select-none fill-current text-medium-indigo"
+                  />
+                ) : (
+                  <Loading className="h-4 w-4 text-medium-indigo" />
+                )}
+                Playground
+              </Button>
+            )}
+            {openPlayground && (
+              <IOModal
+                cleanOnClose={true}
+                open={openPlayground}
+                setOpen={setOpenPlayground}
+              >
+                <></>
+              </IOModal>
+            )}
           </div>
-        </CardFooter>
-      </Card>
-
-      {openPlayground && (
-        <IOModal
-          cleanOnClose={true}
-          open={openPlayground}
-          setOpen={setOpenPlayground}
-        >
-          <></>
-        </IOModal>
-      )}
-    </>
+        </div>
+      </CardFooter>
+    </Card>
   );
 }
