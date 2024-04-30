@@ -3,7 +3,6 @@ import { deleteGlobalVariable } from "../../controllers/API";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../stores/globalVariables";
-import { ResponseErrorDetailAPI } from "../../types/api";
 import { InputGlobalComponentType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import AddNewVariableButton from "../addNewVariableButtonComponent/addNewVariableButton";
@@ -40,10 +39,12 @@ export default function InputGlobalComponent({
       }
   }, [globalVariablesEntries]);
 
-  function handleDelete(key: string) {
+  async function handleDelete(key: string) {
     const id = getVariableId(key);
     if (id !== undefined) {
-      removeGlobalVariable(key).then((_) => {
+      await deleteGlobalVariable(id)
+        .then(() => {
+          removeGlobalVariable(key);
           if (
             data?.node?.template[name].value === key &&
             data?.node?.template[name].load_from_db
@@ -52,11 +53,10 @@ export default function InputGlobalComponent({
             setDb(false);
           }
         })
-        .catch((error) => {
-          let responseError = error as ResponseErrorDetailAPI;
+        .catch(() => {
           setErrorData({
             title: "Error deleting variable",
-            list: [responseError.response.data.detail ?? "Unknown error"],
+            list: [cn("ID not found for variable: ", key)],
           });
         });
     } else {
