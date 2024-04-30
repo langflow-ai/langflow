@@ -20,6 +20,16 @@ export type StoreComponentResponse = {
 };
 
 export type shortcutsStoreType = {
+  updateUniqueShortcut: (name: string, combination: string) => void;
+  advanced: string;
+  minimize: string;
+  code: string;
+  copy: string;
+  duplicate: string;
+  share: string;
+  docs:string;
+  save:string;
+  delete: string;
   shortcuts: Array<{
     name: string;
     shortcut: string;

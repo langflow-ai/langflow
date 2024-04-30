@@ -43,6 +43,8 @@ export default function EditShortcutButton({ children, shortcut, defaultShortcut
     return !unavaliableShortcuts.includes(newCombination);
   }
 
+  const setUniqueShortcut = useShortcutsStore(state => state.updateUniqueShortcut);
+
   function editCombination(): void {
     if (canEditCombination(key)) {
       const newCombination = defaultShortcuts.map((s) => {
@@ -55,6 +57,11 @@ export default function EditShortcutButton({ children, shortcut, defaultShortcut
         if (s === defaultCombination) return s = key;
         return s;
       })
+      const fixCombination = key.split(" ")
+      fixCombination[0] = "mod"
+      const shortcutName = shortcut[0].split(" ")[0].toLowerCase();
+      console.log(shortcutName)
+      setUniqueShortcut(shortcutName, fixCombination.join("").toLowerCase())
       setShortcuts(newCombination, unavailable)
       setOpen(false)
       setSuccessData({title: `${shortcut[0]} shortcut successfully changed`})
