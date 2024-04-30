@@ -33,7 +33,7 @@ def upgrade() -> None:
                 "created_at",
                 existing_type=sa.DATETIME(),
                 nullable=False,
-                existing_server_default=sa.text("(CURRENT_TIMESTAMP)"),
+                existing_server_default=sa.text("(CURRENT_TIMESTAMP)"),  # type: ignore
             )
 
     # ### end Alembic commands ###
@@ -53,7 +53,7 @@ def downgrade() -> None:
                 "created_at",
                 existing_type=sa.DATETIME(),
                 nullable=True,
-                existing_server_default=sa.text("(CURRENT_TIMESTAMP)"),
+                existing_server_default=sa.text("(CURRENT_TIMESTAMP)"),  # type: ignore
             )
 
     # ### end Alembic commands ###
