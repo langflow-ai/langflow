@@ -505,6 +505,8 @@ export type fileCardPropsType = {
 };
 
 export type nodeToolbarPropsType = {
+  openWDoubleClick: boolean;
+  setOpenWDoubleClick: (open: boolean) => void;
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setShowNode: (boolean: any) => void;
@@ -733,6 +735,7 @@ export type toolbarSelectItemProps = {
   isMac: boolean;
   shift: boolean;
   keyboardKey: string;
+  mod?:boolean;
   value: string;
   icon: string;
   styleObj?: {

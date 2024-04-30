@@ -145,6 +145,7 @@ export default function Page({
       if (
         selectionMenuVisible &&
         (event.ctrlKey || event.metaKey) &&
+        !event.shiftKey &&
         event.key === "g"
       ) {
         event.preventDefault();
@@ -153,6 +154,7 @@ export default function Page({
       if (
         (event.ctrlKey || event.metaKey) &&
         event.key === "p" &&
+        !event.shiftKey &&
         selectedNode.length > 0
       ) {
         event.preventDefault();
@@ -169,6 +171,7 @@ export default function Page({
       }
       if (
         (event.ctrlKey || event.metaKey) &&
+        !event.shiftKey &&
         event.key === "d" &&
         selectedNode.length > 0
       ) {
@@ -183,12 +186,12 @@ export default function Page({
       }
       if (!isWrappedWithClass(event, "noundo")) {
         if (
-          (event.key === "y" || (event.key === "z" && event.shiftKey)) &&
+          ((event.key === "y" && !event.shiftKey) || (event.key === "z" && event.shiftKey)) &&
           (event.ctrlKey || event.metaKey)
         ) {
           event.preventDefault(); // prevent the default action
           redo();
-        } else if (event.key === "z" && (event.ctrlKey || event.metaKey)) {
+        } else if (event.key === "z" && (event.ctrlKey || event.metaKey) && !event.shiftKey) {
           event.preventDefault();
           undo();
         }
@@ -199,6 +202,7 @@ export default function Page({
       ) {
         if (
           (event.ctrlKey || event.metaKey) &&
+          !event.shiftKey &&
           event.key === "c" &&
           lastSelection
         ) {
@@ -206,6 +210,7 @@ export default function Page({
           setLastCopiedSelection(_.cloneDeep(lastSelection));
         } else if (
           (event.ctrlKey || event.metaKey) &&
+          !event.shiftKey &&
           event.key === "x" &&
           lastSelection
         ) {
@@ -213,6 +218,7 @@ export default function Page({
           setLastCopiedSelection(_.cloneDeep(lastSelection), true);
         } else if (
           (event.ctrlKey || event.metaKey) &&
+          !event.shiftKey &&
           event.key === "v" &&
           lastCopiedSelection
         ) {
@@ -224,6 +230,7 @@ export default function Page({
           });
         } else if (
           (event.ctrlKey || event.metaKey) &&
+          !event.shiftKey &&
           event.key === "g" &&
           lastSelection
         ) {

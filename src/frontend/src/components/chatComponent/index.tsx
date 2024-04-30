@@ -9,31 +9,31 @@ import { useStoreStore } from "../../stores/storeStore";
 import { classNames } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
+import { useHotkeys } from "react-hotkeys-hook";
 
 export default function FlowToolbar(): JSX.Element {
+  function handleAPIWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    setOpenCodeModal((oldOpen) => !oldOpen)
+  }
+
+  function handleChatWShortcut(e: KeyboardEvent) {
+    if (useFlowStore.getState().hasIO) {
+      e.preventDefault();
+      setOpen((oldState) => !oldState);
+    }
+  }
+
+  useHotkeys("mod+k", handleChatWShortcut);
+  useHotkeys("mod+r", handleAPIWShortcut);
   const [open, setOpen] = useState(false);
+  const [openCodeModal, setOpenCodeModal] = useState<boolean>(false);
+
   const hasIO = useFlowStore((state) => state.hasIO);
   const hasStore = useStoreStore((state) => state.hasStore);
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        (event.key === "K" || event.key === "k") &&
-        (event.metaKey || event.ctrlKey) &&
-        useFlowStore.getState().hasIO
-      ) {
-        event.preventDefault();
-        setOpen((oldState) => !oldState);
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
 
   const prevNodesRef = useRef<any[] | undefined>();
 
@@ -117,7 +117,7 @@ export default function FlowToolbar(): JSX.Element {
             </div>
             <div className="flex cursor-pointer items-center gap-2">
               {currentFlow && currentFlow.data && (
-                <ApiModal flow={currentFlow}>
+                <ApiModal flow={currentFlow} open={openCodeModal} setOpen={setOpenCodeModal}>
                   <div
                     className={classNames(
                       "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover"
