@@ -12,8 +12,6 @@ import { useGlobalVariablesStore } from "../../../../stores/globalVariables";
 import { cn } from "../../../../utils/utils";
 
 export default function GlobalVariablesPage() {
-  const rows: Array<{ type: string | undefined; id: string; name: string }> =
-    [];
   const globalVariablesEntries = useGlobalVariablesStore(
     (state) => state.globalVariablesEntries
   );
@@ -23,14 +21,6 @@ export default function GlobalVariablesPage() {
   const globalVariables = useGlobalVariablesStore(
     (state) => state.globalVariables
   );
-  globalVariablesEntries.forEach((e) => {
-    const globalVariableObj = globalVariables[e];
-    rows.push({
-      type: globalVariableObj.type,
-      id: globalVariableObj.id,
-      name: e,
-    });
-  });
 
   const BadgeRenderer = (props) => {
     return props.value !== "" ? (
@@ -43,8 +33,18 @@ export default function GlobalVariablesPage() {
       <div></div>
     );
   };
+  const [rowData, setRowData] = useState<{ type: string | undefined; id: string; name: string; }[]>();
 
   useEffect(() => {
+    const rows:Array<{type: string | undefined; id: string; name: string}> = [];
+    globalVariablesEntries.forEach((e) => {
+      const globalVariableObj = globalVariables[e];
+      rows.push({
+        type: globalVariableObj.type,
+        id: globalVariableObj.id,
+        name: e,
+      });
+    });
     setRowData(rows);
   }, [globalVariables]);
 
@@ -70,57 +70,24 @@ export default function GlobalVariablesPage() {
       cellRenderer: BadgeRenderer,
       cellEditor: DropdownEditor,
       cellEditorParams: {
-        options: ["Prompt", "Credential"],
+        options: ["Generic", "Credential"],
       },
       flex: 1,
-      editable: true,
+      editable: false,
     },
     {
       field: "value",
       cellEditor: "agLargeTextCellEditor",
-      cellEditorPopup: true,
       flex: 2,
-      editable: true,
+      editable: false,
     },
     {
       headerName: "Apply To Fields",
       field: "defaultFields",
       flex: 1,
-      editable: true,
+      editable: false,
     },
-  ]);
 
-  const [rowData, setRowData] = useState([
-    {
-      name: "OpenAI Key",
-      type: "Credential",
-      value: "apijpioj09u302j0982ejf",
-      defaultFields: "Open AI API Key",
-    },
-    {
-      name: "Prompt",
-      type: "Prompt",
-      value: `Answer user's questions based on the document below:
-
-    ---
-    
-    {Document}
-    
-    ---
-    
-    Question:
-    {Question}
-    
-    Answer:
-    `,
-      defaultFields: ["Prompt"],
-    },
-    {
-      name: "Azure Key",
-      type: "Credential",
-      value: "awowkdenvoaimojndofunoweoij0293u0n2e08n23",
-      defaultFields: ["Azure API Key"],
-    },
   ]);
 
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
