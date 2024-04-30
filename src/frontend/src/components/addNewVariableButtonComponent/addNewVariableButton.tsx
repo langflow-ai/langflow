@@ -26,15 +26,16 @@ export default function AddNewVariableButton({ children }): JSX.Element {
     (state) => state.addGlobalVariable
   );
   function handleSaveVariable() {
-    let data: { name: string; value: string; type?: string } = {
+    let data: { name: string; value: string; type?: string; default_fields?: string[] } = {
       name: key,
       type,
       value,
+      default_fields: fields
     };
     registerGlobalVariable(data)
       .then((res) => {
         const { name, id, type } = res.data;
-        addGlobalVariable(name, id, type);
+        addGlobalVariable(name, id, type, fields);
         setKey("");
         setValue("");
         setType("");
