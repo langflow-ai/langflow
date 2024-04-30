@@ -13,7 +13,9 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
       set({ unavaliableFields: get().unavaliableFields.add(field) });
     },
     removeUnavaliableField: (field) => {
-      get().unavaliableFields.delete(field);
+      const newFields = get().unavaliableFields;
+      newFields.delete(field);
+      set({ unavaliableFields: newFields });
     },
     globalVariablesEntries: [],
     globalVariables: {},
