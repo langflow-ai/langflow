@@ -320,9 +320,9 @@ export default function CollectionCardComponent({
                     >
                       {!loadingPlayground ? (
                         <IconComponent
-                          name="Zap"
+                          name="MonitorPlay"
                           className={cn(
-                            "h-5 w-5 select-none fill-current text-medium-indigo",
+                            "h-5 w-5 select-none",
                             !authorized ? " text-ring" : ""
                           )}
                         />
@@ -462,8 +462,8 @@ export default function CollectionCardComponent({
               >
                 {!loadingPlayground ? (
                   <IconComponent
-                    name="Zap"
-                    className="h-4 w-4 select-none fill-current text-medium-indigo"
+                    name="MonitorPlay"
+                    className="h-4 w-4 select-none"
                   />
                 ) : (
                   <Loading className="h-4 w-4 text-medium-indigo" />
