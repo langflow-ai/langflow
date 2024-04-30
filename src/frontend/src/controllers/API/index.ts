@@ -876,15 +876,18 @@ export async function registerGlobalVariable({
   name,
   value,
   type,
+  default_fields=[],
 }: {
   name: string;
   value: string;
   type?: string;
+  default_fields?: string[];
 }): Promise<AxiosResponse<{ name: string; id: string; type: string }>> {
   return await api.post(`${BASE_URL_API}variables/`, {
     name,
     value,
     type,
+    default_fields:default_fields
   });
 }
 
