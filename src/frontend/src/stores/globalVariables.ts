@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { deleteGlobalVariable } from "../controllers/API";
 import { GlobalVariablesStore } from "../types/zustand/globalVariables";
 import { getUnavailableFields } from "../utils/utils";
 
@@ -35,7 +34,6 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
     removeGlobalVariable: async (name) => {
       const id = get().globalVariables[name]?.id;
       if (id === undefined) return;
-      await deleteGlobalVariable(id);
       const newVariables = { ...get().globalVariables };
       delete newVariables[name];
       set({
