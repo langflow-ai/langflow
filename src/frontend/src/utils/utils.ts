@@ -91,6 +91,21 @@ export function toTitleCase(
     .join(" ");
 }
 
+export function getUnavailableFields(
+  variables:{[key: string]: { id: string; type: string,default_fields:string[] }}
+): Set<string> {
+  console.log(variables)
+  const set = new Set<string>();
+  Object.keys(variables).forEach((key) => {
+    if(variables[key].default_fields){
+      variables[key].default_fields.forEach((field) => {
+        set.add(field);
+      });
+    }
+  });
+  return set;
+}
+
 export const upperCaseWords: string[] = ["llm", "uri"];
 export function checkUpperWords(str: string): string {
   const words = str.split(" ").map((word) => {
