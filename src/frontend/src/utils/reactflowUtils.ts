@@ -1244,7 +1244,6 @@ export function extractFieldsFromComponenents(data:APIObjectType ) {
       });
     });
   });
-  console.log(fields);
   return fields;
 }
 
