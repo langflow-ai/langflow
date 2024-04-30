@@ -125,7 +125,8 @@ export default function InputGlobalComponent({
         </DeleteConfirmationModal>
       )}
       selectedOption={
-        data?.node?.template[name].load_from_db ?? false
+        data?.node?.template[name].load_from_db &&
+         globalVariablesEntries.includes(data?.node?.template[name].value??"")
           ? data?.node?.template[name].value
           : ""
       }
