@@ -77,10 +77,8 @@ export default function CollectionCardComponent({
       if(openPlayground){
         setNodes(currentFlow?.data?.nodes ?? [], true);
         setEdges(currentFlow?.data?.edges ?? [], true);
-        console.log("currentFlow", currentFlow);
       }
       else{
-        console.log("cleaning");
         setNodes([], true);
         setEdges([], true);
         cleanFlowPool();
