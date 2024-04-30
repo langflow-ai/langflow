@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { getComponent, postLikeComponent } from "../../controllers/API";
 import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import IOModal from "../../modals/IOModal";
-import IOModal from "../../modals/IOModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
