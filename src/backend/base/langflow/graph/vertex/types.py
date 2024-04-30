@@ -1,6 +1,7 @@
 import ast
 import json
 from typing import AsyncIterator, Callable, Dict, Iterator, List, Optional, Union
+
 import yaml
 from langchain_core.messages import AIMessage
 from loguru import logger
@@ -442,7 +443,7 @@ class RoutingVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="custom_components")
         self.use_result = True
-        self.steps = [self._build]
+        self.steps = [self._build, self._run]
 
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
@@ -451,9 +452,9 @@ class RoutingVertex(Vertex):
 
     @property
     def successors_ids(self):
-        if isinstance(self._built_object, bool):
+        if isinstance(self._built_object, dict):
             ids = super().successors_ids
-            if self._built_object:
+            if self._built_object.get("condition"):
                 return ids
             return []
         raise ValueError("RoutingVertex should return a boolean value.")
