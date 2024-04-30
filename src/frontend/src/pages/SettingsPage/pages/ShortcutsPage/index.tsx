@@ -36,44 +36,41 @@ export default function ShortcutsPage() {
 
   const [nodesRowData, setNodesRowData] = useState([
     {
-      name: "Advanced Settings",
+      name: "Component Advanced Settings",
       shortcut: advancedShortcut,
     },
     {
-      name: "Minimize",
+      name: "Component Minimize",
       shortcut: minizmizeShortcut,
     },
     {
-      name: "Code",
+      name: "Component Code",
       shortcut: codeShortcut,
     },
     {
-      name: "Copy",
+      name: "Component Copy",
       shortcut: copyShortcut,
     },
     {
-      name: "Duplicate",
+      name: "Component Duplicate",
       shortcut: duplicateShortcut,
     },
     {
-      name: "Share",
+      name: "Component Share",
       shortcut: shareShortcut,
     },
     {
-      name: "Docs",
+      name: "Component Docs",
       shortcut: docsShortcut,
     },
     {
-      name: "Save",
+      name: "Component Save",
       shortcut: saveShortcut,
     },
     {
-      name: "Delete",
+      name: "Component Delete",
       shortcut: deleteShortcut,
     },
-  ]);
-
-  const [flowRowData, setFlowRowData] = useState([
     {
       name: "Open Playground",
       shortcut: interactionShortcut,
@@ -87,6 +84,7 @@ export default function ShortcutsPage() {
       shortcut: redoShortcut,
     },
   ]);
+  
   return (
     <div className="flex h-full w-full flex-col gap-6">
       <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
@@ -99,39 +97,19 @@ export default function ShortcutsPage() {
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Customize, manage and create shortcuts for quick access to
+            Manage Shortcuts for quick access to
             frequently used actions.
           </p>
         </div>
       </div>
       <div className="grid gap-6 pb-8">
-        <Card x-chunk="dashboard-04-chunk-2">
-          <CardHeader>
-            <CardTitle>Nodes</CardTitle>
-            <CardDescription>
-              Shortcuts relating to the nodes in the workspace.
-            </CardDescription>
-          </CardHeader>
+        <Card x-chunk="dashboard-04-chunk-2" className="pt-4">
           <CardContent>
             <TableComponent
               domLayout="autoHeight"
               pagination={false}
               columnDefs={colDefs}
               rowData={nodesRowData}
-            />
-          </CardContent>
-        </Card>
-        <Card x-chunk="dashboard-04-chunk-2">
-          <CardHeader>
-            <CardTitle>Flow</CardTitle>
-            <CardDescription>Shortcuts relating to the flow.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TableComponent
-              domLayout="autoHeight"
-              pagination={false}
-              columnDefs={colDefs}
-              rowData={flowRowData}
             />
           </CardContent>
         </Card>
