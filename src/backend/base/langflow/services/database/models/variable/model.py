@@ -52,6 +52,7 @@ class VariableRead(SQLModel):
     id: UUID
     name: Optional[str] = Field(None, description="Name of the variable")
     type: Optional[str] = Field(None, description="Type of the variable")
+    default_fields: Optional[List[str]] = Field(None, description="Default fields for the variable")
 
 
 class VariableUpdate(SQLModel):
