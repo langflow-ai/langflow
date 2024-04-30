@@ -8,32 +8,45 @@ import Dropdown from "../../../../components/dropdownComponent";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
 import { Badge } from "../../../../components/ui/badge";
-import { cn } from "../../../../utils/utils";
 import { useGlobalVariablesStore } from "../../../../stores/globalVariables";
+import { cn } from "../../../../utils/utils";
 
 export default function GlobalVariablesPage() {
-  const rows: Array<{type: string | undefined; id: string; name: string}> = [];
-  const globalVariablesEntries = useGlobalVariablesStore(state => state.globalVariablesEntries);
-  const removeGlobalVariable = useGlobalVariablesStore(state => state.removeGlobalVariable);
-  const globalVariables = useGlobalVariablesStore(state => state.globalVariables);
+  const rows: Array<{ type: string | undefined; id: string; name: string }> =
+    [];
+  const globalVariablesEntries = useGlobalVariablesStore(
+    (state) => state.globalVariablesEntries
+  );
+  const removeGlobalVariable = useGlobalVariablesStore(
+    (state) => state.removeGlobalVariable
+  );
+  const globalVariables = useGlobalVariablesStore(
+    (state) => state.globalVariables
+  );
   globalVariablesEntries.forEach((e) => {
-    const globalVariableObj = globalVariables[e]
-    rows.push({type: globalVariableObj.type, id: globalVariableObj.id, name: e})
-  })
+    const globalVariableObj = globalVariables[e];
+    rows.push({
+      type: globalVariableObj.type,
+      id: globalVariableObj.id,
+      name: e,
+    });
+  });
 
   const BadgeRenderer = (props) => {
-    return (
+    return props.value !== "" ? (
       <div>
         <Badge variant="outline" size="md" className="font-normal">
           {props.value}
         </Badge>
       </div>
+    ) : (
+      <div></div>
     );
   };
 
   useEffect(() => {
-    setRowData(rows)
-  }, [globalVariables])
+    setRowData(rows);
+  }, [globalVariables]);
 
   const DropdownEditor = ({ options, value, onValueChange }) => {
     return (
@@ -113,9 +126,9 @@ export default function GlobalVariablesPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   function removeVariables() {
-    selectedRows.forEach(row => {
-      removeGlobalVariable(row)
-    })
+    selectedRows.forEach((row) => {
+      removeGlobalVariable(row);
+    });
   }
 
   return (
