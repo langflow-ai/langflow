@@ -8,6 +8,8 @@ import Dropdown from "../../../../components/dropdownComponent";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
 import { Badge } from "../../../../components/ui/badge";
+import { deleteGlobalVariable } from "../../../../controllers/API";
+import useAlertStore from "../../../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../../../stores/globalVariables";
 import { cn } from "../../../../utils/utils";
 
@@ -21,6 +23,8 @@ export default function GlobalVariablesPage() {
   const globalVariables = useGlobalVariablesStore(
     (state) => state.globalVariables
   );
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
 
   const BadgeRenderer = (props) => {
     return props.value !== "" ? (
@@ -34,25 +38,31 @@ export default function GlobalVariablesPage() {
     );
   };
 
-
-  const [rowData, setRowData] = useState<{ type: string | undefined;
-     id: string; name: string; default_fields:string | undefined }[]>();
+  const [rowData, setRowData] = useState<
+    {
+      type: string | undefined;
+      id: string;
+      name: string;
+      default_fields: string | undefined;
+    }[]
+  >();
 
   useEffect(() => {
-    const rows:Array<{type: string | undefined; id: string;
-       name: string;default_fields:string | undefined}> = [];
-
+    const rows: Array<{
+      type: string | undefined;
+      id: string;
+      name: string;
+      default_fields: string | undefined;
+    }> = [];
     globalVariablesEntries.forEach((entrie) => {
       const globalVariableObj = globalVariables[entrie];
-
       rows.push({
         type: globalVariableObj.type,
         id: globalVariableObj.id,
-        default_fields: (globalVariableObj.default_fields??[]).join(", "),
+        default_fields: (globalVariableObj.default_fields ?? []).join(", "),
         name: entrie,
       });
     });
-    console.log(rows);
     setRowData(rows);
   }, [globalVariables]);
 
@@ -95,15 +105,27 @@ export default function GlobalVariablesPage() {
       flex: 1,
       editable: false,
     },
-
   ]);
 
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  function removeVariables() {
-    selectedRows.forEach((row) => {
-      removeGlobalVariable(row);
+  async function removeVariables() {
+    const deleteGlobalVariablesPromise = selectedRows.map(async (row) => {
+      const id = getVariableId(row);
+      const deleteGlobalVariables = deleteGlobalVariable(id!);
+      await deleteGlobalVariables;
     });
+    Promise.all(deleteGlobalVariablesPromise)
+      .then(() => {
+        selectedRows.forEach((row) => {
+          removeGlobalVariable(row);
+        });
+      })
+      .catch(() => {
+        setErrorData({
+          title: `Error deleting global variables.`,
+        });
+      });
   }
 
   return (

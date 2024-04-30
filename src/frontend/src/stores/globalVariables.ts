@@ -1,18 +1,17 @@
 import { create } from "zustand";
 import { GlobalVariablesStore } from "../types/zustand/globalVariables";
-import { deleteGlobalVariable } from "../controllers/API";
+import { getUnavailableFields } from "../utils/utils";
 
 export const useGlobalVariablesStore = create<GlobalVariablesStore>(
   (set, get) => ({
-    unavaliableFields: new Set(),
+    unavaliableFields: {},
     setUnavaliableFields: (fields) => {
       set({ unavaliableFields: fields });
     },
-    addUnavaliableField: (field) => {
-      set({ unavaliableFields: get().unavaliableFields.add(field) });
-    },
     removeUnavaliableField: (field) => {
-      get().unavaliableFields.delete(field);
+      const newFields = get().unavaliableFields;
+      delete newFields[field];
+      set({ unavaliableFields: newFields });
     },
     globalVariablesEntries: [],
     globalVariables: {},
@@ -20,6 +19,7 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
       set({
         globalVariables: variables,
         globalVariablesEntries: Object.keys(variables),
+        unavaliableFields: getUnavailableFields(variables),
       });
     },
     addGlobalVariable: (name, id, type, default_fields) => {
@@ -28,17 +28,18 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
       set({
         globalVariables: newVariables,
         globalVariablesEntries: Object.keys(newVariables),
+        unavaliableFields: getUnavailableFields(newVariables),
       });
     },
-    removeGlobalVariable:async (name) => {
+    removeGlobalVariable: async (name) => {
       const id = get().globalVariables[name]?.id;
       if (id === undefined) return;
-      await deleteGlobalVariable(id)
       const newVariables = { ...get().globalVariables };
       delete newVariables[name];
       set({
         globalVariables: newVariables,
         globalVariablesEntries: Object.keys(newVariables),
+        unavaliableFields: getUnavailableFields(newVariables),
       });
     },
     getVariableId: (name) => {

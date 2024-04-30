@@ -22,7 +22,6 @@ import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useGlobalVariablesStore } from "./stores/globalVariables";
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
-
 export default function App() {
   const removeFromTempNotificationList = useAlertStore(
     (state) => state.removeFromTempNotificationList
@@ -47,6 +46,9 @@ export default function App() {
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const setGlobalVariables = useGlobalVariablesStore(
     (state) => state.setGlobalVariables
+  );
+  const setUnavailableFields = useGlobalVariablesStore(
+    (state) => state.setUnavaliableFields
   );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const navigate = useNavigate();
