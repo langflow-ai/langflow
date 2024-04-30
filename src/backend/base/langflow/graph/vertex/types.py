@@ -439,41 +439,6 @@ class ChatVertex(Vertex):
         return self.vertex_type == InterfaceComponentTypes.ChatInput and self.is_input
 
 
-class RoutingVertex(Vertex):
-    def __init__(self, data: Dict, graph):
-        super().__init__(data, graph=graph, base_type="custom_components")
-        self.use_result = True
-        self.steps = [self._build, self._run]
-
-    def _built_object_repr(self):
-        if self.artifacts and "repr" in self.artifacts:
-            return self.artifacts["repr"] or super()._built_object_repr()
-        return super()._built_object_repr()
-
-    @property
-    def successors_ids(self):
-        if isinstance(self._built_object, dict):
-            ids = super().successors_ids
-            if self._built_object.get("condition"):
-                return ids
-            return []
-        raise ValueError("RoutingVertex should return a boolean value.")
-
-    def _run(self, *args, **kwargs):
-        if self._built_object:
-            condition = self._built_object.get("condition")
-            result = self._built_object.get("result")
-            if condition is None:
-                raise ValueError("Condition is required for the routing vertex.")
-            if result is None:
-                raise ValueError("Result is required for the routing vertex.")
-            if condition is True:
-                self._built_result = result
-            else:
-                self.graph.mark_branch(self.id, "INACTIVE")
-                self._built_result = None
-
-
 class StateVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="custom_components")

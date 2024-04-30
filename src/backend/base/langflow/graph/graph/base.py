@@ -963,8 +963,6 @@ class Graph:
         node_name = node_id.split("-")[0]
         if node_name in ["ChatOutput", "ChatInput"]:
             return ChatVertex
-        elif node_name in ["ShouldRunNext"]:
-            return RoutingVertex
         elif node_name in ["SharedState", "Notify", "Listen"]:
             return StateVertex
         elif node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
