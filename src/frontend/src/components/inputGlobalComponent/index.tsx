@@ -37,8 +37,10 @@ export default function InputGlobalComponent({
         !globalVariablesEntries.includes(data.node?.template[name].value) &&
         data.node?.template[name].load_from_db
       ) {
-        onChange("");
-        setDb(false);
+        setTimeout(() => {
+          onChange("");
+          setDb(false);
+        }, 100);
       }
   }, [globalVariablesEntries]);
 
@@ -48,8 +50,10 @@ export default function InputGlobalComponent({
       data.node?.template[name].display_name
     ) {
       if (unavaliableFields[data.node?.template[name].display_name!]) {
-        setDb(true);
-        onChange(unavaliableFields[data.node?.template[name].display_name!]);
+        setTimeout(() => {
+          setDb(true);
+          onChange(unavaliableFields[data.node?.template[name].display_name!]);
+        }, 100);
       }
     }
   }, [unavaliableFields]);
@@ -81,6 +85,9 @@ export default function InputGlobalComponent({
       });
     }
   }
+
+  console.log(data.node?.template[name], data.node?.template[name].password);
+
   return (
     <InputComponent
       id={"input-" + name}
@@ -131,7 +138,7 @@ export default function InputGlobalComponent({
       )}
       selectedOption={
         data?.node?.template[name].load_from_db &&
-         globalVariablesEntries.includes(data?.node?.template[name].value??"")
+        globalVariablesEntries.includes(data?.node?.template[name].value ?? "")
           ? data?.node?.template[name].value
           : ""
       }
