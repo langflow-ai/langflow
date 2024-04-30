@@ -10,6 +10,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
+import { useTypesStore } from "../../stores/typesStore";
 
 //TODO IMPLEMENT FORM LOGIC
 
@@ -19,6 +20,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
   const [type, setType] = useState("");
   const [open, setOpen] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const componentFields = useTypesStore((state) => state.ComponentFields);
   const addGlobalVariable = useGlobalVariablesStore(
     (state) => state.addGlobalVariable
   );
