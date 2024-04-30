@@ -22,7 +22,7 @@ import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useGlobalVariablesStore } from "./stores/globalVariables";
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
-
+import { getUnavailableFields } from "./utils/utils";
 export default function App() {
   const removeFromTempNotificationList = useAlertStore(
     (state) => state.removeFromTempNotificationList
@@ -48,6 +48,7 @@ export default function App() {
   const setGlobalVariables = useGlobalVariablesStore(
     (state) => state.setGlobalVariables
   );
+  const setUnavailableFields = useGlobalVariablesStore((state) => state.setUnavaliableFields);
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const navigate = useNavigate();
   const dark = useDarkStore((state) => state.dark);
@@ -95,6 +96,7 @@ export default function App() {
         refreshFlows();
         const res = await getGlobalVariables();
         setGlobalVariables(res);
+        setUnavailableFields(getUnavailableFields(res));
         checkHasStore();
         fetchApiData();
       } catch (error) {

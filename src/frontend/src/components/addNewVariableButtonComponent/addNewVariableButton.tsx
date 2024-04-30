@@ -22,9 +22,15 @@ export default function AddNewVariableButton({ children }): JSX.Element {
   const [open, setOpen] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
+  const unavaliableFields = useGlobalVariablesStore((state) => state.unavaliableFields);
+  const availableFields = Array.from(componentFields).filter((field) => !unavaliableFields.has(field));
   const addGlobalVariable = useGlobalVariablesStore(
     (state) => state.addGlobalVariable
   );
+  console.log(componentFields);
+  console.log(unavaliableFields);
+  console.log(availableFields);
+
   function handleSaveVariable() {
     let data: { name: string; value: string; type?: string; default_fields?: string[] } = {
       name: key,
@@ -39,6 +45,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
         setKey("");
         setValue("");
         setType("");
+        setFields([]);
         setOpen(false);
       })
       .catch((error) => {
@@ -98,8 +105,8 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             setSelectedOptions={(value) => setFields(value)}
             selectedOptions={fields}
             password={false}
-            options={Array.from(componentFields)}
-            placeholder="Choose a type for the variable..."
+            options={availableFields}
+            placeholder="Choose a field for the variable..."
           ></InputComponent>
         </div>
       </BaseModal.Content>
