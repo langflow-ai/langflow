@@ -754,3 +754,44 @@ export const NATIVE_CATEGORIES = [
 ];
 
 export const SAVE_DEBOUNCE_TIME = 300;
+
+export const defaultShortcuts = [
+  {
+    name: "Advanced Settings",
+    shortcut: "Ctrl + Shift + a"
+  },
+  {
+    name: "Minimize",
+    shortcut: "Ctrl + Shift + q"
+  },
+  {
+    name: "Code",
+    shortcut: "Ctrl + Shift + c"
+  },
+  {
+    name: "Copy",
+    shortcut: "Ctrl + c"
+  },
+  {
+    name: "Duplicate",
+    shortcut: "Ctrl + d"
+  },
+  {
+    name: "Share",
+    shortcut: "Ctrl + Shift + s"
+  },
+  {
+    name: "Docs",
+    shortcut: "Ctrl + Shift + d"
+  },
+  {
+    name: "Save",
+    shortcut: "Ctrl + s"
+  },
+  {
+    name: "Delete",
+    shortcut: "Backspace"
+  },
+];
+
+export const unavailableShortcutss = ["Ctrl + Shift + a", "Ctrl + Shift + q", "Ctrl + Shift + c", "Ctrl + c", "Ctrl + d", "Ctrl + Shift + s", "Ctrl + Shift + d", "Ctrl + s", "Backspace"];

@@ -20,6 +20,10 @@ export type StoreComponentResponse = {
 };
 
 export type shortcutsStoreType = {
-  openCodeModalWShortcut: boolean;
-  handleModalWShortcut: (str: string) => void;
+  shortcuts: Array<{
+    name: string;
+    shortcut: string;
+  }>
+  unavailableShortcuts: string[];
+  setShortcuts: (newShortcuts: Array<{name: string; shortcut: string;}>, unavailable: string[]) => void;
 };
