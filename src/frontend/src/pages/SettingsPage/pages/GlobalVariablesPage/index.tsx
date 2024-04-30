@@ -37,17 +37,29 @@ export default function GlobalVariablesPage() {
       <div></div>
     );
   };
-  const [rowData, setRowData] =
-    useState<{ type: string | undefined; id: string; name: string }[]>();
+
+  const [rowData, setRowData] = useState<
+    {
+      type: string | undefined;
+      id: string;
+      name: string;
+      default_fields: string | undefined;
+    }[]
+  >();
 
   useEffect(() => {
-    const rows: Array<{ type: string | undefined; id: string; name: string }> =
-      [];
+    const rows: Array<{
+      type: string | undefined;
+      id: string;
+      name: string;
+      default_fields: string | undefined;
+    }> = [];
     globalVariablesEntries.forEach((e) => {
       const globalVariableObj = globalVariables[e];
       rows.push({
         type: globalVariableObj.type,
         id: globalVariableObj.id,
+        default_fields: (globalVariableObj.default_fields ?? []).join(", "),
         name: e,
       });
     });
@@ -81,15 +93,15 @@ export default function GlobalVariablesPage() {
       flex: 1,
       editable: false,
     },
-    {
-      field: "value",
-      cellEditor: "agLargeTextCellEditor",
-      flex: 2,
-      editable: false,
-    },
+    // {
+    //   field: "value",
+    //   cellEditor: "agLargeTextCellEditor",
+    //   flex: 2,
+    //   editable: false,
+    // },
     {
       headerName: "Apply To Fields",
-      field: "defaultFields",
+      field: "default_fields",
       flex: 1,
       editable: false,
     },
