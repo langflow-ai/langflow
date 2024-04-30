@@ -41,14 +41,15 @@ export default function GlobalVariablesPage() {
   useEffect(() => {
     const rows:Array<{type: string | undefined; id: string;
        name: string;default_fields:string | undefined}> = [];
-    globalVariablesEntries.forEach((e) => {
-      const globalVariableObj = globalVariables[e];
-      console.log(globalVariableObj);
+
+    globalVariablesEntries.forEach((entrie) => {
+      const globalVariableObj = globalVariables[entrie];
+
       rows.push({
         type: globalVariableObj.type,
         id: globalVariableObj.id,
         default_fields: (globalVariableObj.default_fields??[]).join(", "),
-        name: e,
+        name: entrie,
       });
     });
     console.log(rows);

@@ -173,7 +173,7 @@ export default function InputComponent({
             >
               <Command
                 filter={(value, search) => {
-                  if (value.includes(search) || value.includes("doNotFilter-"))
+                  if (value.toLowerCase().includes(search.toLowerCase()) || value.includes("doNotFilter-"))
                     return 1; // ensures items arent filtered
                   return 0;
                 }}
