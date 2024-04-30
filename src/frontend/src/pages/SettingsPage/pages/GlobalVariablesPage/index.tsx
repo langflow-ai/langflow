@@ -2,15 +2,25 @@ import IconComponent from "../../../../components/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 
 import { ColDef, ColGroupDef, SelectionChangedEvent } from "ag-grid-community";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AddNewVariableButton from "../../../../components/addNewVariableButtonComponent/addNewVariableButton";
 import Dropdown from "../../../../components/dropdownComponent";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
 import { Badge } from "../../../../components/ui/badge";
 import { cn } from "../../../../utils/utils";
+import { useGlobalVariablesStore } from "../../../../stores/globalVariables";
 
 export default function GlobalVariablesPage() {
+  const rows: Array<{type: string | undefined; id: string; name: string}> = [];
+  const globalVariablesEntries = useGlobalVariablesStore(state => state.globalVariablesEntries);
+  const removeGlobalVariable = useGlobalVariablesStore(state => state.removeGlobalVariable);
+  const globalVariables = useGlobalVariablesStore(state => state.globalVariables);
+  globalVariablesEntries.forEach((e) => {
+    const globalVariableObj = globalVariables[e]
+    rows.push({type: globalVariableObj.type, id: globalVariableObj.id, name: e})
+  })
+
   const BadgeRenderer = (props) => {
     return (
       <div>
@@ -20,6 +30,10 @@ export default function GlobalVariablesPage() {
       </div>
     );
   };
+
+  useEffect(() => {
+    setRowData(rows)
+  }, [globalVariables])
 
   const DropdownEditor = ({ options, value, onValueChange }) => {
     return (
@@ -98,6 +112,12 @@ export default function GlobalVariablesPage() {
 
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
+  function removeVariables() {
+    selectedRows.forEach(row => {
+      removeGlobalVariable(row)
+    })
+  }
+
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">
       <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
@@ -119,6 +139,7 @@ export default function GlobalVariablesPage() {
             variant="primary"
             className="group px-2"
             disabled={selectedRows.length === 0}
+            onClick={removeVariables}
           >
             <IconComponent
               name="Trash2"
