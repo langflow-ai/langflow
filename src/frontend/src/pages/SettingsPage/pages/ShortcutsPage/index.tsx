@@ -36,39 +36,39 @@ export default function ShortcutsPage() {
 
   const [nodesRowData, setNodesRowData] = useState([
     {
-      name: "Component Advanced Settings",
+      name: "Advanced Settings Component",
       shortcut: advancedShortcut,
     },
     {
-      name: "Component Minimize",
+      name: "Minimize Component",
       shortcut: minizmizeShortcut,
     },
     {
-      name: "Component Code",
+      name: "Code Component",
       shortcut: codeShortcut,
     },
     {
-      name: "Component Copy",
+      name: "Copy Component",
       shortcut: copyShortcut,
     },
     {
-      name: "Component Duplicate",
+      name: "Duplicate Component",
       shortcut: duplicateShortcut,
     },
     {
-      name: "Component Share",
+      name: "Share Component",
       shortcut: shareShortcut,
     },
     {
-      name: "Component Docs",
+      name: "Docs Component",
       shortcut: docsShortcut,
     },
     {
-      name: "Component Save",
+      name: "Save Component",
       shortcut: saveShortcut,
     },
     {
-      name: "Component Delete",
+      name: "Delete Component",
       shortcut: deleteShortcut,
     },
     {
