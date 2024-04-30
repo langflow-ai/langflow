@@ -186,7 +186,9 @@ export default function InputGlobalComponent({
       }}
       onChange={(value) => {
         onChange(value);
-        setDb(false);
+        if(data?.node?.template[name].load_from_db){
+          setDb(false);
+        }
       }}
     />
   );

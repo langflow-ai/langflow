@@ -355,27 +355,16 @@ export default function CodeTabsComponent({
                                                     editNode={true}
                                                     disabled={false}
                                                     onChange={(target) => {
-                                                      if (node.data) {
-                                                        setNode(
-                                                          node.data.id,
-                                                          (oldNode) => {
-                                                            let newNode =
-                                                              cloneDeep(
-                                                                oldNode
-                                                              );
-
-                                                            newNode.data = {
-                                                              ...newNode.data,
-                                                            };
-
-                                                            newNode.data.node.template[
-                                                              templateField
-                                                            ].value = target;
-
-                                                            return newNode;
-                                                          }
-                                                        );
-                                                      }
+                                                      setData((old) => {
+                                                        let newInputList =
+                                                          cloneDeep(old);
+                                                        newInputList![
+                                                          i
+                                                        ].data.node.template[
+                                                          templateField
+                                                        ].value = target;
+                                                        return newInputList;
+                                                      });
                                                       tweaks.buildTweakObject!(
                                                         node["data"]["id"],
                                                         target,
