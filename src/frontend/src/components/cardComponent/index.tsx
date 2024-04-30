@@ -74,11 +74,19 @@ export default function CollectionCardComponent({
 
   useEffect(() => {
     if (currentFlowId && playground) {
-      setNodes(currentFlow?.data?.nodes ?? [], true);
-      setEdges(currentFlow?.data?.edges ?? [], true);
-      cleanFlowPool();
+      if(openPlayground){
+        setNodes(currentFlow?.data?.nodes ?? [], true);
+        setEdges(currentFlow?.data?.edges ?? [], true);
+        console.log("currentFlow", currentFlow);
+      }
+      else{
+        console.log("cleaning");
+        setNodes([], true);
+        setEdges([], true);
+        cleanFlowPool();
+      }
     }
-  }, [currentFlowId]);
+  }, [openPlayground]);
 
   useEffect(() => {
     if (data) {
@@ -157,10 +165,6 @@ export default function CollectionCardComponent({
         });
     }
   }
-
-  useEffect(() => {
-    console.log(openPlayground);
-  }, [openPlayground]);
 
   return (
     <>
