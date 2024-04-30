@@ -1234,13 +1234,16 @@ export function templatesGenerator(data: APIObjectType) {
   }, {});
 }
 
-export function extractFieldsFromComponenents(data:APIObjectType ) {
+export function extractFieldsFromComponenents(data: APIObjectType) {
   const fields = new Set<string>();
   Object.keys(data).forEach((key) => {
     Object.keys(data[key]).forEach((kind) => {
       Object.keys(data[key][kind].template).forEach((field) => {
-        if(data[key][kind].template[field].display_name && data[key][kind].template[field].show)
-        fields.add(data[key][kind].template[field].display_name!);
+        if (
+          data[key][kind].template[field].display_name &&
+          data[key][kind].template[field].show
+        )
+          fields.add(data[key][kind].template[field].display_name!);
       });
     });
   });

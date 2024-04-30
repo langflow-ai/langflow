@@ -34,19 +34,29 @@ export default function GlobalVariablesPage() {
     );
   };
 
-
-  const [rowData, setRowData] = useState<{ type: string | undefined;
-     id: string; name: string; default_fields:string | undefined }[]>();
+  const [rowData, setRowData] =
+    useState<
+      {
+        type: string | undefined;
+        id: string;
+        name: string;
+        default_fields: string | undefined;
+      }[]
+    >();
 
   useEffect(() => {
-    const rows:Array<{type: string | undefined; id: string;
-       name: string;default_fields:string | undefined}> = [];
+    const rows: Array<{
+      type: string | undefined;
+      id: string;
+      name: string;
+      default_fields: string | undefined;
+    }> = [];
     globalVariablesEntries.forEach((e) => {
       const globalVariableObj = globalVariables[e];
       rows.push({
         type: globalVariableObj.type,
         id: globalVariableObj.id,
-        default_fields: (globalVariableObj.default_fields??[]).join(", "),
+        default_fields: (globalVariableObj.default_fields ?? []).join(", "),
         name: e,
       });
     });
@@ -92,7 +102,6 @@ export default function GlobalVariablesPage() {
       flex: 1,
       editable: false,
     },
-
   ]);
 
   const [selectedRows, setSelectedRows] = useState<string[]>([]);

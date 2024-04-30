@@ -91,12 +91,12 @@ export function toTitleCase(
     .join(" ");
 }
 
-export function getUnavailableFields(
-  variables:{[key: string]: { default_fields?:string[] }}
-): Set<string> {
+export function getUnavailableFields(variables: {
+  [key: string]: { default_fields?: string[] };
+}): Set<string> {
   const set = new Set<string>();
   Object.keys(variables).forEach((key) => {
-    if(variables[key].default_fields){
+    if (variables[key].default_fields) {
       variables[key].default_fields!.forEach((field) => {
         set.add(field);
       });

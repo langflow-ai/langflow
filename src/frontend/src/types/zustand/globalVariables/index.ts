@@ -9,7 +9,12 @@ export type GlobalVariablesStore = {
     };
   };
   setGlobalVariables: (variables: {
-    [name: string]: { id: string; type?: string; default_fields?: string[],value?: string };
+    [name: string]: {
+      id: string;
+      type?: string;
+      default_fields?: string[];
+      value?: string;
+    };
   }) => void;
   addGlobalVariable: (
     name: string,
