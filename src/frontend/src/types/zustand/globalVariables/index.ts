@@ -10,4 +10,8 @@ export type GlobalVariablesStore = {
   avaliableFields: Array<string>;
   setAvaliableFields: (fields: Array<string>) => void;
   addAvaliableField: (field: string) => void;
+  unavaliableFields: Set<string>;
+  setUnavaliableFields: (fields: Set<string>) => void;
+  addUnavaliableField: (field: string) => void;
+  removeUnavaliableField: (field: string) => void;
 };
