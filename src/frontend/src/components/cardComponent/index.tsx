@@ -76,11 +76,10 @@ export default function CollectionCardComponent({
 
   useEffect(() => {
     if (currentFlowId && playground) {
-      if(openPlayground){
+      if (openPlayground) {
         setNodes(currentFlow?.data?.nodes ?? [], true);
         setEdges(currentFlow?.data?.edges ?? [], true);
-      }
-      else{
+      } else {
         setNodes([], true);
         setEdges([], true);
         cleanFlowPool();
@@ -229,41 +228,41 @@ export default function CollectionCardComponent({
                 </div>
               )}
 
-                {onDelete && data?.metadata === undefined && (
-                  <DeleteConfirmationModal
-                    onConfirm={() => {
-                      onDelete();
-                    }}
-                  >
-                    <IconComponent
-                      name="Trash2"
-                      className="h-5 w-5 text-primary opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
-                    />
-                  </DeleteConfirmationModal>
-                )}
-              </CardTitle>
-            </div>
-            {data.user_created && data.user_created.username && (
-              <span className="text-sm text-primary">
-                by <b>{data.user_created.username}</b>
-                {data.last_tested_version && (
-                  <>
+              {onDelete && data?.metadata === undefined && (
+                <DeleteConfirmationModal
+                  onConfirm={() => {
+                    onDelete();
+                  }}
+                >
+                  <IconComponent
+                    name="Trash2"
+                    className="h-5 w-5 text-primary opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
+                  />
+                </DeleteConfirmationModal>
+              )}
+            </CardTitle>
+          </div>
+          {data.user_created && data.user_created.username && (
+            <span className="text-sm text-primary">
+              by <b>{data.user_created.username}</b>
+              {data.last_tested_version && (
+                <>
+                  {" "}
+                  |{" "}
+                  <span className="text-xs">
                     {" "}
-                    |{" "}
-                    <span className="text-xs">
-                      {" "}
-                      ⛓︎ v{data.last_tested_version}
-                    </span>
-                  </>
-                )}
-              </span>
-            )}
+                    ⛓︎ v{data.last_tested_version}
+                  </span>
+                </>
+              )}
+            </span>
+          )}
 
-            <CardDescription className="pb-2 pt-2">
-              <div className="truncate-doubleline">{data.description}</div>
-            </CardDescription>
-          </CardHeader>
-        </div>
+          <CardDescription className="pb-2 pt-2">
+            <div className="truncate-doubleline">{data.description}</div>
+          </CardDescription>
+        </CardHeader>
+      </div>
 
       <CardFooter>
         <div className="flex w-full items-center justify-between gap-2">
@@ -284,6 +283,55 @@ export default function CollectionCardComponent({
             </div>
             {data.liked_by_count != undefined && (
               <div className="flex gap-0.5">
+                {playground && data?.metadata !== undefined && (
+                  <ShadTooltip
+                    content={
+                      authorized ? "Playground" : "Please review your API key."
+                    }
+                  >
+                    <Button
+                      disabled={loadingLike}
+                      variant="ghost"
+                      size="icon"
+                      className={
+                        "whitespace-nowrap" +
+                        (!authorized ? " cursor-not-allowed" : "")
+                      }
+                      onClick={(e) => {
+                        if (!authorized) {
+                          return;
+                        }
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setLoadingPlayground(true);
+                        if (getFlowById(data.id)) {
+                          setCurrentFlowId(data.id);
+                          setOpenPlayground(true);
+                          setLoadingPlayground(false);
+                        } else {
+                          getFlowData().then((res) => {
+                            setCurrentFlow(res);
+                            setOpenPlayground(true);
+                            setLoadingPlayground(false);
+                          });
+                        }
+                      }}
+                      data-testid={`like-${data.name}`}
+                    >
+                      {!loadingPlayground ? (
+                        <IconComponent
+                          name="Zap"
+                          className={cn(
+                            "h-5 w-5 select-none fill-current text-medium-indigo",
+                            !authorized ? " text-ring" : ""
+                          )}
+                        />
+                      ) : (
+                        <Loading className="h-4 w-4 select-none text-medium-indigo" />
+                      )}
+                    </Button>
+                  </ShadTooltip>
+                )}
                 {onDelete && data?.metadata !== undefined ? (
                   <ShadTooltip
                     content={
@@ -386,14 +434,14 @@ export default function CollectionCardComponent({
               </div>
             )}
             {button && button}
-            {playground && (
+            {playground && data?.metadata === undefined && (
               <Button
                 disabled={loadingPlayground}
                 key={data.id}
                 tabIndex={-1}
                 variant="outline"
                 size="sm"
-                className="whitespace-nowrap gap-2"
+                className="gap-2 whitespace-nowrap"
                 data-testid={"playground-flow-button-" + data.id}
                 onClick={(e) => {
                   e.preventDefault();
