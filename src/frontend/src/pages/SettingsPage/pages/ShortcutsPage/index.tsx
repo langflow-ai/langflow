@@ -11,13 +11,13 @@ import {
 } from "../../../../components/ui/card";
 
 export default function ShortcutsPage() {
-  const advancedShortcut = "Ctrl + shift + A";
-  const minizmizeShortcut = "Ctrl + shift + Q";
-  const codeShortcut = "Ctrl + shift + C";
+  const advancedShortcut = "Ctrl + Shift + A";
+  const minizmizeShortcut = "Ctrl + Shift + Q";
+  const codeShortcut = "Ctrl + Shift + C";
   const copyShortcut = "Ctrl + C";
   const duplicateShortcut = "Ctrl + D";
-  const shareShortcut = "Ctrl + shift + S";
-  const docsShortcut = "Ctrl + shift + D";
+  const shareShortcut = "Ctrl + Shift + S";
+  const docsShortcut = "Ctrl + Shift + D";
   const saveShortcut = "Ctrl + S";
   const deleteShortcut = "Backspace";
   const interactionShortcut = "Ctrl + K";
@@ -34,9 +34,9 @@ export default function ShortcutsPage() {
     },
   ]);
 
-  const [rowData, setRowData] = useState([
+  const [nodesRowData, setNodesRowData] = useState([
     {
-      name: "Open node advanced settings",
+      name: "Advanced Settings",
       shortcut: advancedShortcut,
     },
     {
@@ -44,7 +44,7 @@ export default function ShortcutsPage() {
       shortcut: minizmizeShortcut,
     },
     {
-      name: "Open Code modal",
+      name: "Code",
       shortcut: codeShortcut,
     },
     {
@@ -60,7 +60,7 @@ export default function ShortcutsPage() {
       shortcut: shareShortcut,
     },
     {
-      name: "Open docs",
+      name: "Docs",
       shortcut: docsShortcut,
     },
     {
@@ -71,8 +71,11 @@ export default function ShortcutsPage() {
       name: "Delete",
       shortcut: deleteShortcut,
     },
+  ]);
+
+  const [flowRowData, setFlowRowData] = useState([
     {
-      name: "Open interaction panel",
+      name: "Open Playground",
       shortcut: interactionShortcut,
     },
     {
@@ -101,7 +104,7 @@ export default function ShortcutsPage() {
           </p>
         </div>
       </div>
-      <div className="grid gap-6">
+      <div className="grid gap-6 pb-8">
         <Card x-chunk="dashboard-04-chunk-2">
           <CardHeader>
             <CardTitle>Nodes</CardTitle>
@@ -114,7 +117,23 @@ export default function ShortcutsPage() {
               domLayout="autoHeight"
               pagination={false}
               columnDefs={colDefs}
-              rowData={rowData}
+              rowData={nodesRowData}
+            />
+          </CardContent>
+        </Card>
+        <Card x-chunk="dashboard-04-chunk-2">
+          <CardHeader>
+            <CardTitle>Flow</CardTitle>
+            <CardDescription>
+              Shortcuts relating to the flow.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TableComponent
+              domLayout="autoHeight"
+              pagination={false}
+              columnDefs={colDefs}
+              rowData={flowRowData}
             />
           </CardContent>
         </Card>
