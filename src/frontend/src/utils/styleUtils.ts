@@ -136,6 +136,7 @@ import {
   X,
   XCircle,
   Zap,
+  MonitorPlay
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -504,6 +505,7 @@ export const nodeIconsLucide: iconsType = {
   Bot,
   Delete,
   Command,
+  MonitorPlay,
   ArrowBigUp,
   Dot,
 };
