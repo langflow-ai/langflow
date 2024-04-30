@@ -43,9 +43,7 @@ export default function InputGlobalComponent({
   function handleDelete(key: string) {
     const id = getVariableId(key);
     if (id !== undefined) {
-      deleteGlobalVariable(id)
-        .then((_) => {
-          removeGlobalVariable(key);
+      removeGlobalVariable(key).then((_) => {
           if (
             data?.node?.template[name].value === key &&
             data?.node?.template[name].load_from_db
