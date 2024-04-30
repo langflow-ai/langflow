@@ -95,7 +95,7 @@ export default function FlowToolbar(): JSX.Element {
                       name="Zap"
                       className={"message-button-icon h-5 w-5 transition-all"}
                     />
-                    Run
+                    Playground
                   </div>
                 </IOModal>
               ) : (
