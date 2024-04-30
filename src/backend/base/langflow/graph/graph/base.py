@@ -413,7 +413,7 @@ class Graph:
             "inactivated_vertices": self.inactivated_vertices,
         }
 
-    def build_graph_maps(self, edges: List[ContractEdge] = None, vertices: List[Vertex] = None):
+    def build_graph_maps(self, edges: Optional[List[ContractEdge]] = None, vertices: Optional[List[Vertex]] = None):
         """
         Builds the adjacency maps for the graph.
         """
@@ -1295,7 +1295,7 @@ class Graph:
         self.run_manager.remove_from_predecessors(vertex_id)
 
     def build_in_degree(self, edges: List[ContractEdge]) -> Dict[str, int]:
-        in_degree = defaultdict(int)
+        in_degree: Dict[str, int] = defaultdict(int)
         for edge in edges:
             in_degree[edge.target_id] += 1
         return in_degree
