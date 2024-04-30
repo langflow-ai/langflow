@@ -92,7 +92,7 @@ export default function FlowToolbar(): JSX.Element {
                 <IOModal open={open} setOpen={setOpen} disable={!hasIO}>
                   <div className="relative inline-flex w-full items-center justify-center   gap-1 px-5 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover">
                     <ForwardedIconComponent
-                      name="MonitorPlay"
+                      name="BotMessageSquareIcon"
                       className={" h-5 w-5 transition-all"}
                     />
                     Playground

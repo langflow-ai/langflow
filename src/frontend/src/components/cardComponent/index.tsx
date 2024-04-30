@@ -316,11 +316,11 @@ export default function CollectionCardComponent({
                           });
                         }
                       }}
-                      data-testid={`like-${data.name}`}
+                      data-testid={`playground-${data.name}`}
                     >
                       {!loadingPlayground ? (
                         <IconComponent
-                          name="MonitorPlay"
+                          name="BotMessageSquareIcon"
                           className={cn(
                             "h-5 w-5 select-none",
                             !authorized ? " text-ring" : ""
@@ -462,7 +462,7 @@ export default function CollectionCardComponent({
               >
                 {!loadingPlayground ? (
                   <IconComponent
-                    name="MonitorPlay"
+                    name="BotMessageSquareIcon"
                     className="h-4 w-4 select-none"
                   />
                 ) : (
