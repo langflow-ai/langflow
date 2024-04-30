@@ -23,6 +23,7 @@ export default function InputGlobalComponent({
   );
 
   const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
+  const unavaliableFields = useGlobalVariablesStore((state) => state.unavaliableFields);
   const removeGlobalVariable = useGlobalVariablesStore(
     (state) => state.removeGlobalVariable
   );
@@ -38,6 +39,15 @@ export default function InputGlobalComponent({
         setDb(false);
       }
   }, [globalVariablesEntries]);
+
+  useEffect(() => {
+    if (!data.node?.template[name].value && data.node?.template[name].display_name) {
+      if(unavaliableFields[data.node?.template[name].display_name!]){
+        setDb(true);
+        onChange(unavaliableFields[data.node?.template[name].display_name!]);
+      }
+    }
+  },[unavaliableFields]);
 
   function handleDelete(key: string) {
     const id = getVariableId(key);
