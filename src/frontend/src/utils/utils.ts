@@ -93,16 +93,16 @@ export function toTitleCase(
 
 export function getUnavailableFields(variables: {
   [key: string]: { default_fields?: string[] };
-}): Set<string> {
-  const set = new Set<string>();
+}): {[name: string]: string} {
+  const unVariables:{[name: string]: string} = {};
   Object.keys(variables).forEach((key) => {
     if (variables[key].default_fields) {
       variables[key].default_fields!.forEach((field) => {
-        set.add(field);
+        unVariables[field] = key;
       });
     }
   });
-  return set;
+  return unVariables;
 }
 
 export const upperCaseWords: string[] = ["llm", "uri"];

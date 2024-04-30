@@ -5,16 +5,13 @@ import { getUnavailableFields } from "../utils/utils";
 
 export const useGlobalVariablesStore = create<GlobalVariablesStore>(
   (set, get) => ({
-    unavaliableFields: new Set(),
+    unavaliableFields: {},
     setUnavaliableFields: (fields) => {
       set({ unavaliableFields: fields });
     },
-    addUnavaliableField: (field) => {
-      set({ unavaliableFields: get().unavaliableFields.add(field) });
-    },
     removeUnavaliableField: (field) => {
       const newFields = get().unavaliableFields;
-      newFields.delete(field);
+      delete newFields[field];
       set({ unavaliableFields: newFields });
     },
     globalVariablesEntries: [],
