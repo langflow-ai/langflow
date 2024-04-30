@@ -17,7 +17,7 @@ import { useTypesStore } from "../../stores/typesStore";
 export default function AddNewVariableButton({ children }): JSX.Element {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
-  const [type, setType] = useState("");
+  const [type, setType] = useState("Generic");
   const [fields, setFields] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
