@@ -1,6 +1,5 @@
 from typing import Optional
 
-from langchain.llms.base import BaseLanguageModel
 from langchain_openai import AzureChatOpenAI
 from pydantic.v1 import SecretStr
 
