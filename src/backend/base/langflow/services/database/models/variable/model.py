@@ -13,8 +13,8 @@ def utc_now():
 
 
 class VariableBase(SQLModel):
-    name: Optional[str] = Field(None, description="Name of the variable")
-    value: Optional[str] = Field(None, description="Encrypted value of the variable")
+    name: str = Field(description="Name of the variable")
+    value: str = Field(description="Encrypted value of the variable")
     default_fields: Optional[List[str]] = Field(sa_column=Column(JSON))
     type: Optional[str] = Field(None, description="Type of the variable")
 
