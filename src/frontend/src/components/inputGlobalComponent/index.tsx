@@ -85,9 +85,6 @@ export default function InputGlobalComponent({
       });
     }
   }
-
-  console.log(data.node?.template[name], data.node?.template[name].password);
-
   return (
     <InputComponent
       id={"input-" + name}
