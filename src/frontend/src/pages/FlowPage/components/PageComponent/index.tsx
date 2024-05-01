@@ -1,5 +1,5 @@
 import _, { cloneDeep } from "lodash";
-import { MouseEvent, useCallback, useEffect, useRef, useState } from "react";
+import { KeyboardEvent, MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import ReactFlow, {
   Background,
   Connection,
@@ -37,6 +37,8 @@ import {
 import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
+import { useHotkeys } from "react-hotkeys-hook";
+import { useShortcutsStore } from "../../../../stores/shortcuts";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -140,125 +142,13 @@ export default function Page({
 
   const setNode = useFlowStore((state) => state.setNode);
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const selectedNode = nodes.filter((obj) => obj.selected);
-      if (
-        selectionMenuVisible &&
-        (event.ctrlKey || event.metaKey) &&
-        !event.shiftKey &&
-        event.key === "g"
-      ) {
-        event.preventDefault();
-        handleGroupNode();
-      }
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "p" &&
-        !event.shiftKey &&
-        selectedNode.length > 0
-      ) {
-        event.preventDefault();
-        setNode(selectedNode[0].id, (old) => ({
-          ...old,
-          data: {
-            ...old.data,
-            node: {
-              ...old.data.node,
-              frozen: old.data?.node?.frozen ? false : true,
-            },
-          },
-        }));
-      }
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        !event.shiftKey &&
-        event.key === "d" &&
-        selectedNode.length > 0
-      ) {
-        event.preventDefault();
-        paste(
-          { nodes: selectedNode, edges: [] },
-          {
-            x: position.current.x,
-            y: position.current.y,
-          }
-        );
-      }
-      if (!isWrappedWithClass(event, "noundo")) {
-        if (
-          ((event.key === "y" && !event.shiftKey) || (event.key === "z" && event.shiftKey)) &&
-          (event.ctrlKey || event.metaKey)
-        ) {
-          event.preventDefault(); // prevent the default action
-          redo();
-        } else if (event.key === "z" && (event.ctrlKey || event.metaKey) && !event.shiftKey) {
-          event.preventDefault();
-          undo();
-        }
-      }
-      if (
-        !isWrappedWithClass(event, "nocopy") &&
-        window.getSelection()?.toString().length === 0
-      ) {
-        if (
-          (event.ctrlKey || event.metaKey) &&
-          !event.shiftKey &&
-          event.key === "c" &&
-          lastSelection
-        ) {
-          event.preventDefault();
-          setLastCopiedSelection(_.cloneDeep(lastSelection));
-        } else if (
-          (event.ctrlKey || event.metaKey) &&
-          !event.shiftKey &&
-          event.key === "x" &&
-          lastSelection
-        ) {
-          event.preventDefault();
-          setLastCopiedSelection(_.cloneDeep(lastSelection), true);
-        } else if (
-          (event.ctrlKey || event.metaKey) &&
-          !event.shiftKey &&
-          event.key === "v" &&
-          lastCopiedSelection
-        ) {
-          event.preventDefault();
-          takeSnapshot();
-          paste(lastCopiedSelection, {
-            x: position.current.x,
-            y: position.current.y,
-          });
-        } else if (
-          (event.ctrlKey || event.metaKey) &&
-          !event.shiftKey &&
-          event.key === "g" &&
-          lastSelection
-        ) {
-          event.preventDefault();
-        }
-      }
-      if (!isWrappedWithClass(event, "nodelete")) {
-        if (
-          (event.key === "Delete" || event.key === "Backspace") &&
-          lastSelection
-        ) {
-          event.preventDefault();
-          takeSnapshot();
-          deleteNode(lastSelection.nodes.map((node) => node.id));
-          deleteEdge(lastSelection.edges.map((edge) => edge.id));
-        }
-      }
-    };
-
     const handleMouseMove = (event) => {
       position.current = { x: event.clientX, y: event.clientY };
     };
 
-    document.addEventListener("keydown", onKeyDown);
     document.addEventListener("mousemove", handleMouseMove);
 
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousemove", handleMouseMove);
     };
   }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
@@ -278,6 +168,93 @@ export default function Page({
       cleanFlow();
     };
   }, []);
+
+  
+  function handleUndo(e: KeyboardEvent) {
+    e.preventDefault()
+    if (!isWrappedWithClass(e, "noundo")) {
+      undo();
+    }
+  }
+  
+  function handleRedo(e: KeyboardEvent) {
+    e.preventDefault()
+    if (!isWrappedWithClass(e, "noundo")) {
+      redo();
+    }
+  }
+  
+  function handleGroup(e: KeyboardEvent) {
+    e.preventDefault()
+    if (selectionMenuVisible) {
+      handleGroupNode()
+    }
+  }
+  
+  function handleDuplicate(e: KeyboardEvent) {
+    const selectedNode = nodes.filter((obj) => obj.selected);
+    e.preventDefault()
+    if (selectedNode.length > 0) {
+      paste(
+        { nodes: selectedNode, edges: [] },
+        {
+          x: position.current.x,
+          y: position.current.y,
+        }
+      );
+    }
+  }
+  
+  function handleCopy(e: KeyboardEvent) {
+    e.preventDefault()
+    if (!isWrappedWithClass(e, "nocopy") &&
+    window.getSelection()?.toString().length === 0 && lastSelection) {
+      setLastCopiedSelection(_.cloneDeep(lastSelection));
+    }
+  }
+  
+  function handleCut(e: KeyboardEvent) {
+    e.preventDefault()
+    if (!isWrappedWithClass(e, "nocopy") &&
+    window.getSelection()?.toString().length === 0 && lastSelection) {
+      setLastCopiedSelection(_.cloneDeep(lastSelection), true);
+    }
+  }
+  
+  function handlePaste(e: KeyboardEvent) {
+    e.preventDefault()
+    if (!isWrappedWithClass(e, "nocopy") &&
+    window.getSelection()?.toString().length === 0 && lastCopiedSelection) {
+      takeSnapshot();
+      paste(lastCopiedSelection, {
+        x: position.current.x,
+        y: position.current.y,
+      });
+    }
+  }
+  
+  function handleDelete(e: KeyboardEvent) {
+    e.preventDefault()
+    if (!isWrappedWithClass(event, "nodelete") && lastSelection) {
+      takeSnapshot();
+      deleteNode(lastSelection.nodes.map((node) => node.id));
+      deleteEdge(lastSelection.edges.map((edge) => edge.id));
+    }
+  }
+
+  const undoAction = useShortcutsStore(state => state.undo);
+  const redoAction = useShortcutsStore(state => state.redo);
+  const copyAction = useShortcutsStore(state => state.copy);
+
+  useHotkeys(undoAction, handleUndo);
+  useHotkeys(redoAction, handleRedo);
+  useHotkeys("mod+g", handleGroup);
+  useHotkeys("mod+d", handleDuplicate);
+  useHotkeys(copyAction, handleCopy);
+  useHotkeys("mod+x", handleCut);
+  useHotkeys("mod+v", handlePaste);
+  useHotkeys("backspace", handleDelete);
+  useHotkeys("delete", handleDelete);
 
   useEffect(() => {
     setSHowCanvas(

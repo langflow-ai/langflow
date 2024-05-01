@@ -8,6 +8,9 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   setShortcuts: (newShortcuts, unavailable) => {
     set({shortcuts: newShortcuts, unavailableShortcuts: unavailable} );
   },
+  undo: "mod+z",
+  redo: "mod+y",
+  open: "mod+k",
   advanced: "mod+shift+a",
   minimize: "mod+shift+q",
   code: "mod+shift+u",
