@@ -32,20 +32,20 @@ export default function EditShortcutButton({ children, shortcut, defaultShortcut
 
   const [key, setKey] = useState<string>(isMac ? "Meta" : 'Ctrl');
 
-  const availableFields = Array.from(componentFields).filter(
-    (field) => !unavaliableFields.has(field)
-  );
-  const addGlobalVariable = useGlobalVariablesStore(
-    (state) => state.addGlobalVariable
-  );
-
   function canEditCombination(newCombination: string): boolean {
-    return !unavaliableShortcuts.includes(newCombination);
-  }
+    let canSave = true;
+    unavaliableShortcuts.forEach((s) => {
+      if (s.toLowerCase() === newCombination.toLowerCase()) {
+        canSave = false
+      }
+    })
+    return canSave;
+    }
 
   const setUniqueShortcut = useShortcutsStore(state => state.updateUniqueShortcut);
 
   function editCombination(): void {
+    console.log(canEditCombination(key))
     if (canEditCombination(key)) {
       const newCombination = defaultShortcuts.map((s) => {
         if (s.name === shortcut[0]) {
@@ -54,33 +54,31 @@ export default function EditShortcutButton({ children, shortcut, defaultShortcut
         return {name: s.name, shortcut: s.shortcut};
       })
       const unavailable = unavaliableShortcuts.map((s) => {
-        if (s === defaultCombination) return s = key;
+        if (s.toLowerCase() === defaultCombination.toLowerCase()) return s = key.toUpperCase();
         return s;
       })
       const fixCombination = key.split(" ")
       fixCombination[0] = "mod"
       const shortcutName = shortcut[0].split(" ")[0].toLowerCase();
-      console.log(shortcutName)
       setUniqueShortcut(shortcutName, fixCombination.join("").toLowerCase())
       setShortcuts(newCombination, unavailable)
       setOpen(false)
       setSuccessData({title: `${shortcut[0]} shortcut successfully changed`})
-      setKey(isMac ? "Meta" : 'Ctrl')
+      setKey(isMac ? "META" : 'CTRL')
       return;
     }
     setErrorData({title: "Error saving key combination", list: ["This combination already exists!"]})
   }
 
   useEffect(() => {
-    if (!open) setKey(isMac ? "Meta" : 'Ctrl')
+    if (!open) setKey(isMac ? "META" : 'CTRL')
   }, [open, setOpen])
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       e.preventDefault()
-      console.log(e.key)
-      if (key.includes(e.key)) return;
-      setKey(oldKey => `${oldKey} + ${e.key}`)
+      if (key.toUpperCase().includes(e.key.toUpperCase())) return;
+      setKey(oldKey => `${oldKey.toUpperCase()} + ${e.key.toUpperCase()}`)
     }
 
     document.addEventListener("keydown", onKeyDown);
@@ -107,8 +105,8 @@ export default function EditShortcutButton({ children, shortcut, defaultShortcut
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content>
         <div className="flex h-full w-full gap-4 align-center justify-center">
-          <div>
-            {key}
+          <div className="font-bold">
+            {key.toUpperCase()}
           </div>
         </div>
       </BaseModal.Content>

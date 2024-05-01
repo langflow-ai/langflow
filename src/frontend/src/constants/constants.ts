@@ -823,16 +823,16 @@ export const defaultShortcuts = [
   },
   {
     name: "Open playground",
-    shortcut: "Ctrl K"
+    shortcut: "Ctrl + k"
   },
   {
     name: "Undo",
-    shortcut: "Ctrl Z"
+    shortcut: "Ctrl + z"
   },
   {
     name: "Redo",
-    shortcut: "Ctrl Y"
+    shortcut: "Ctrl + y"
   }
 ];
 
-export const unavailableShortcutss = ["Ctrl + Shift + a", "Ctrl + q", "Ctrl + Shift + u", "Ctrl + c", "Ctrl + d", "Ctrl + Shift + s", "Ctrl + Shift + d", "Ctrl + s", "Backspace", "Ctrl + K", "Ctrl + Z", "Ctrl + Y"];
+export const unavailableShortcutss = ["CTRL + SHIFT + A", "CTRL + Q", "CTRL + SHIFT + U", "CTRL + C", "CTRL + D", "CTRL + SHIFT + S", "CTRL + SHIFT + D", "CTRL + S", "BACKSPACE", "CTRL + K", "CTRL + Z", "CTRL + Y"];
