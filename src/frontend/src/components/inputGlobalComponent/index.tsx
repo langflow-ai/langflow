@@ -49,7 +49,7 @@ export default function InputGlobalComponent({
       !data.node?.template[name].value &&
       data.node?.template[name].display_name
     ) {
-      if (unavaliableFields[data.node?.template[name].display_name!]) {
+      if (unavaliableFields[data.node?.template[name].display_name!] && !disabled) {
         setTimeout(() => {
           setDb(true);
           onChange(unavaliableFields[data.node?.template[name].display_name!]);
