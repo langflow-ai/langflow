@@ -50,44 +50,41 @@ export default function ShortcutsPage() {
 
   const [nodesRowData, setNodesRowData] = useState([
     {
-      name: "Advanced Settings",
+      name: "Advanced Settings Component",
       shortcut: advancedShortcut,
     },
     {
-      name: "Minimize",
+      name: "Minimize Component",
       shortcut: minizmizeShortcut,
     },
     {
-      name: "Code",
+      name: "Code Component",
       shortcut: codeShortcut,
     },
     {
-      name: "Copy",
+      name: "Copy Component",
       shortcut: copyShortcut,
     },
     {
-      name: "Duplicate",
+      name: "Duplicate Component",
       shortcut: duplicateShortcut,
     },
     {
-      name: "Share",
+      name: "Share Component",
       shortcut: shareShortcut,
     },
     {
-      name: "Docs",
+      name: "Docs Component",
       shortcut: docsShortcut,
     },
     {
-      name: "Save",
+      name: "Save Component",
       shortcut: saveShortcut,
     },
     {
-      name: "Delete",
+      name: "Delete Component",
       shortcut: deleteShortcut,
     },
-  ]);
-
-  const [flowRowData, setFlowRowData] = useState([
     {
       name: "Open Playground",
       shortcut: interactionShortcut,
@@ -121,19 +118,13 @@ export default function ShortcutsPage() {
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Customize, manage and create shortcuts for quick access to
+            Manage Shortcuts for quick access to
             frequently used actions.
           </p>
         </div>
       </div>
       <div className="grid gap-6 pb-8">
-        <Card x-chunk="dashboard-04-chunk-2">
-          <CardHeader>
-            <CardTitle>Nodes</CardTitle>
-            <CardDescription>
-              Shortcuts relating to the nodes in the workspace.
-            </CardDescription>
-          </CardHeader>
+        <Card x-chunk="dashboard-04-chunk-2" className="pt-4">
           <CardContent>
             <div className="w-full flex justify-end align-end mb-4">
               <div className="">
@@ -177,7 +168,7 @@ export default function ShortcutsPage() {
               domLayout="autoHeight"
               pagination={false}
               columnDefs={colDefs}
-              rowData={flowRowData}
+              rowData={nodesRowData}
             />
           </CardContent>
         </Card>
