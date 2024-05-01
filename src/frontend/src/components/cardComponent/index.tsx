@@ -249,31 +249,22 @@ export default function CollectionCardComponent({
                 )}
               </CardTitle>
             </div>
-            {data.user_created && data.user_created.username && (
-              <span className="text-sm text-primary">
-                by <b>{data.user_created.username}</b>
-                {data.last_tested_version && (
-                  <>
-                    {" "}
-                    |{" "}
-                    <span className="text-xs">
+            <div className="flex gap-2">
+              {data.user_created && data.user_created.username && (
+                <span className="text-sm text-primary">
+                  by <b>{data.user_created.username}</b>
+                  {data.last_tested_version && (
+                    <>
                       {" "}
-                      ⛓︎ v{data.last_tested_version}
-                    </span>
-                  </>
-                )}
-              </span>
-            )}
-
-            <CardDescription className="pb-2 pt-2">
-              <div className="truncate-doubleline">{data.description}</div>
-            </CardDescription>
-          </CardHeader>
-        </div>
-
-        <CardFooter>
-          <div className="flex w-full items-center justify-between gap-2">
-            <div className="flex w-full flex-wrap items-end justify-between gap-2">
+                      |{" "}
+                      <span className="text-xs">
+                        {" "}
+                        ⛓︎ v{data.last_tested_version}
+                      </span>
+                    </>
+                  )}
+                </span>
+              )}
               <div className="flex w-full flex-1 flex-wrap gap-2">
                 {data.tags &&
                   data.tags.length > 0 &&
@@ -288,59 +279,58 @@ export default function CollectionCardComponent({
                     </Badge>
                   ))}
               </div>
+            </div>
+
+            <CardDescription className="pb-2 pt-2">
+              <div className="truncate-doubleline">{data.description}</div>
+            </CardDescription>
+          </CardHeader>
+        </div>
+
+        <CardFooter>
+          <div className="flex w-full items-center justify-between gap-2">
+            <div className="flex w-full flex-wrap items-end justify-between gap-2">
+              {playground && data?.metadata !== undefined ? (
+                <Button
+                  disabled={loadingPlayground}
+                  key={data.id}
+                  tabIndex={-1}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 whitespace-nowrap"
+                  data-testid={"playground-flow-button-" + data.id}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setLoadingPlayground(true);
+                    if (getFlowById(data.id)) {
+                      setCurrentFlowId(data.id);
+                      setOpenPlayground(true);
+                      setLoadingPlayground(false);
+                    } else {
+                      getFlowData().then((res) => {
+                        setCurrentFlow(res);
+                        setOpenPlayground(true);
+                        setLoadingPlayground(false);
+                      });
+                    }
+                  }}
+                >
+                  {!loadingPlayground ? (
+                    <IconComponent
+                      name="BotMessageSquareIcon"
+                      className="h-4 w-4 select-none"
+                    />
+                  ) : (
+                    <Loading className="h-4 w-4 text-medium-indigo" />
+                  )}
+                  Playground
+                </Button>
+              ) : (
+                <div></div>
+              )}
               {data.liked_by_count != undefined && (
                 <div className="flex gap-0.5">
-                  {playground && data?.metadata !== undefined && (
-                    <ShadTooltip
-                      content={
-                        authorized
-                          ? "Playground"
-                          : "Please review your API key."
-                      }
-                    >
-                      <Button
-                        disabled={loadingLike}
-                        variant="ghost"
-                        size="icon"
-                        className={
-                          "whitespace-nowrap" +
-                          (!authorized ? " cursor-not-allowed" : "")
-                        }
-                        onClick={(e) => {
-                          if (!authorized) {
-                            return;
-                          }
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setLoadingPlayground(true);
-                          if (getFlowById(data.id)) {
-                            setCurrentFlowId(data.id);
-                            setOpenPlayground(true);
-                            setLoadingPlayground(false);
-                          } else {
-                            getFlowData().then((res) => {
-                              setCurrentFlow(res);
-                              setOpenPlayground(true);
-                              setLoadingPlayground(false);
-                            });
-                          }
-                        }}
-                        data-testid={`playground-${data.name}`}
-                      >
-                        {!loadingPlayground ? (
-                          <IconComponent
-                            name="BotMessageSquareIcon"
-                            className={cn(
-                              "h-5 w-5 select-none",
-                              !authorized ? " text-ring" : ""
-                            )}
-                          />
-                        ) : (
-                          <Loading className="h-4 w-4 select-none text-medium-indigo" />
-                        )}
-                      </Button>
-                    </ShadTooltip>
-                  )}
                   {onDelete && data?.metadata !== undefined ? (
                     <ShadTooltip
                       content={
