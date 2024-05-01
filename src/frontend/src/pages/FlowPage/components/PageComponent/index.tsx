@@ -235,7 +235,7 @@ export default function Page({
   
   function handleDelete(e: KeyboardEvent) {
     e.preventDefault()
-    if (!isWrappedWithClass(event, "nodelete") && lastSelection) {
+    if (!isWrappedWithClass(e, "nodelete") && lastSelection) {
       takeSnapshot();
       deleteNode(lastSelection.nodes.map((node) => node.id));
       deleteEdge(lastSelection.edges.map((edge) => edge.id));
@@ -245,15 +245,20 @@ export default function Page({
   const undoAction = useShortcutsStore(state => state.undo);
   const redoAction = useShortcutsStore(state => state.redo);
   const copyAction = useShortcutsStore(state => state.copy);
+  const duplicate = useShortcutsStore(state => state.duplicate);
+  const deleteAction = useShortcutsStore(state => state.delete);
+  const groupAction = useShortcutsStore(state => state.group);
+  const cutAction = useShortcutsStore(state => state.cut);
+  const pasteAction = useShortcutsStore(state => state.paste);
 
   useHotkeys(undoAction, handleUndo);
   useHotkeys(redoAction, handleRedo);
-  useHotkeys("mod+g", handleGroup);
-  useHotkeys("mod+d", handleDuplicate);
+  useHotkeys(groupAction, handleGroup);
+  useHotkeys(duplicate, handleDuplicate);
   useHotkeys(copyAction, handleCopy);
-  useHotkeys("mod+x", handleCut);
-  useHotkeys("mod+v", handlePaste);
-  useHotkeys("backspace", handleDelete);
+  useHotkeys(cutAction, handleCut);
+  useHotkeys(pasteAction, handlePaste);
+  useHotkeys(deleteAction, handleDelete);
   useHotkeys("delete", handleDelete);
 
   useEffect(() => {
