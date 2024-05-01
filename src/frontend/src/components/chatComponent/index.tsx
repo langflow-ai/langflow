@@ -10,6 +10,7 @@ import { classNames } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useShortcutsStore } from "../../stores/shortcuts";
 
 export default function FlowToolbar(): JSX.Element {
   function handleAPIWShortcut(e: KeyboardEvent) {
@@ -24,8 +25,11 @@ export default function FlowToolbar(): JSX.Element {
     }
   }
 
-  useHotkeys("mod+k", handleChatWShortcut);
-  useHotkeys("mod+r", handleAPIWShortcut);
+  const openPlayground = useShortcutsStore(state => state.open);
+  const api = useShortcutsStore(state => state.api);
+
+  useHotkeys(openPlayground, handleChatWShortcut);
+  useHotkeys(api, handleAPIWShortcut);
   const [open, setOpen] = useState(false);
   const [openCodeModal, setOpenCodeModal] = useState<boolean>(false);
 

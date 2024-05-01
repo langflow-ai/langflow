@@ -832,7 +832,23 @@ export const defaultShortcuts = [
   {
     name: "Redo",
     shortcut: "Ctrl + y"
-  }
+  },
+  {
+    name: "Group",
+    shortcut: "Ctrl + g"
+  },
+  {
+    name: "Cut",
+    shortcut: "Ctrl + x"
+  },
+  {
+    name: "Paste",
+    shortcut: "Ctrl + v"
+  },
+  {
+    name: "API",
+    shortcut: "Ctrl + r"
+  },
 ];
 
-export const unavailableShortcutss = ["CTRL + SHIFT + A", "CTRL + Q", "CTRL + SHIFT + U", "CTRL + C", "CTRL + D", "CTRL + SHIFT + S", "CTRL + SHIFT + D", "CTRL + S", "BACKSPACE", "CTRL + K", "CTRL + Z", "CTRL + Y"];
+export const unavailableShortcutss = ["CTRL + R","CTRL + V", "CTRL + X", "CTRL + G", "CTRL + SHIFT + A", "CTRL + Q", "CTRL + SHIFT + U", "CTRL + C", "CTRL + D", "CTRL + SHIFT + S", "CTRL + SHIFT + D", "CTRL + S", "BACKSPACE", "CTRL + K", "CTRL + Z", "CTRL + Y"];

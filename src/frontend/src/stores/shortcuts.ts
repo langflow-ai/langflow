@@ -20,6 +20,10 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   docs: "mod+shift+d",
   save: "mod+s",
   delete: "backspace",
+  group: "mod+g",
+  cut: "mod+x",
+  paste: "mod+v",
+  api: "mod+r",
   updateUniqueShortcut: (name, combination) => {
     set({
       [name]: combination
