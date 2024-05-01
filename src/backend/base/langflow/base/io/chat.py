@@ -50,9 +50,6 @@ class ChatComponent(CustomComponent):
         sender_name: Optional[str] = None,
     ) -> list[Record]:
 
-        if not session_id or not sender or not sender_name:
-            raise ValueError("All of session_id, sender, and sender_name must be provided.")
-
         records = store_message(
             message,
             session_id=session_id,

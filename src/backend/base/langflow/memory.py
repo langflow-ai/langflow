@@ -113,6 +113,9 @@ def store_message(
         warnings.warn("No message provided.")
         return []
 
+    if not session_id or not sender or not sender_name:
+        raise ValueError("All of session_id, sender, and sender_name must be provided.")
+
     if isinstance(message, Record):
         record = message
         record.data.update(
