@@ -53,7 +53,7 @@ jobs:
         run: |
           make publish main=true
       - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist
