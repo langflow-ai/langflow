@@ -6,12 +6,29 @@ repos:
       - id: eslint
         files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
         types: [file]
+        args: ["--fix", "--no-warn-ignored"]
         additional_dependencies:
+          - eslint@9.1.1
           - eslint-plugin-prettier
           - eslint-config-prettier
           - prettier
           - eslint-plugin-react@latest
-          - typescript-eslint
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.1.0
+    hooks:
+      - id: check-case-conflict
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args:
+          - --fix=lf
+      - id: trailing-whitespace
+      - id: pretty-format-json
+        exclude: ^tsconfig.*.json
+        args:
+          - --autofix
+          - --indent=4
+          - --no-sort-keys
+      - id: check-merge-conflict
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
     rev: v0.4.2
