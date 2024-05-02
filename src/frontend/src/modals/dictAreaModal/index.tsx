@@ -11,6 +11,7 @@ import "react18-json-view/src/style.css";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { CODE_DICT_DIALOG_SUBTITLE } from "../../constants/constants";
+import { useDarkStore } from "../../stores/darkStore";
 import BaseModal from "../baseModal";
 
 export default function DictAreaModal({
@@ -19,7 +20,7 @@ export default function DictAreaModal({
   value,
 }): JSX.Element {
   const [open, setOpen] = useState(false);
-
+  const isDark = useDarkStore((state) => state.dark);
   const ref = useRef(value);
 
   useEffect(() => {
@@ -41,7 +42,8 @@ export default function DictAreaModal({
         <div className="flex h-full w-full flex-col transition-all ">
           <JsonView
             theme="vscode"
-            dark={true}
+            dark={isDark}
+            className={!isDark ? "json-view-white" : "json-view-dark"}
             editable
             enableClipboard
             onEdit={(edit) => {

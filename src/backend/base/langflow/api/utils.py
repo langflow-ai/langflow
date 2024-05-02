@@ -201,7 +201,7 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def build_and_cache_graph(
+async def build_and_cache_graph_from_db(
     flow_id: str,
     session: Session,
     chat_service: "ChatService",
@@ -216,6 +216,17 @@ async def build_and_cache_graph(
         graph = other_graph
     else:
         graph = graph.update(other_graph)
+    await chat_service.set_cache(flow_id, graph)
+    return graph
+
+
+async def build_and_cache_graph_from_data(
+    flow_id: str,
+    chat_service: "ChatService",
+    graph_data: dict,
+):  # -> Graph | Any:
+    """Build and cache the graph."""
+    graph = Graph.from_payload(graph_data, flow_id)
     await chat_service.set_cache(flow_id, graph)
     return graph
 

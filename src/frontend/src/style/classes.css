@@ -68,3 +68,31 @@ select:-webkit-autofill:focus {
   background-color: #bbb;
   border-radius: 999px;
 }
+
+.json-view-playground-white-left {
+  background-color: #fff !important;
+  height: fit-content !important;
+}
+
+.json-view-playground-dark {
+  background-color: #141924 !important;
+  height: fit-content !important;
+}
+
+.json-view-playground-white {
+  background-color: #f8fafc !important;
+  height: fit-content !important;
+}
+
+.json-view-playground-dark-left {
+  background-color: #0c101a !important;
+  height: fit-content !important;
+}
+
+.json-view-white {
+  background-color: #f8fafc !important;
+}
+
+.json-view-dark {
+  background-color: #141924 !important;
+}

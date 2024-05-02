@@ -1,14 +1,17 @@
 import { create } from "zustand";
 import { GlobalVariablesStore } from "../types/zustand/globalVariables";
+import { getUnavailableFields } from "../utils/utils";
 
 export const useGlobalVariablesStore = create<GlobalVariablesStore>(
   (set, get) => ({
-    avaliableFields: [],
-    setAvaliableFields: (fields) => {
-      set({ avaliableFields: fields });
+    unavaliableFields: {},
+    setUnavaliableFields: (fields) => {
+      set({ unavaliableFields: fields });
     },
-    addAvaliableField: (field) => {
-      set({ avaliableFields: [...get().avaliableFields, field] });
+    removeUnavaliableField: (field) => {
+      const newFields = get().unavaliableFields;
+      delete newFields[field];
+      set({ unavaliableFields: newFields });
     },
     globalVariablesEntries: [],
     globalVariables: {},
@@ -16,22 +19,27 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
       set({
         globalVariables: variables,
         globalVariablesEntries: Object.keys(variables),
+        unavaliableFields: getUnavailableFields(variables),
       });
     },
-    addGlobalVariable: (name, id, type) => {
-      const data = { id, type };
+    addGlobalVariable: (name, id, type, default_fields) => {
+      const data = { id, type, default_fields };
       const newVariables = { ...get().globalVariables, [name]: data };
       set({
         globalVariables: newVariables,
         globalVariablesEntries: Object.keys(newVariables),
+        unavaliableFields: getUnavailableFields(newVariables),
       });
     },
-    removeGlobalVariable: (name) => {
+    removeGlobalVariable: async (name) => {
+      const id = get().globalVariables[name]?.id;
+      if (id === undefined) return;
       const newVariables = { ...get().globalVariables };
       delete newVariables[name];
       set({
         globalVariables: newVariables,
         globalVariablesEntries: Object.keys(newVariables),
+        unavaliableFields: getUnavailableFields(newVariables),
       });
     },
     getVariableId: (name) => {

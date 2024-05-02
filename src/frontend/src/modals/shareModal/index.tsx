@@ -25,6 +25,7 @@ import {
 import { getTagsIds } from "../../utils/storeUtils";
 import ConfirmationModal from "../ConfirmationModal";
 import BaseModal from "../baseModal";
+import ExportModal from "../exportModal";
 
 export default function ShareModal({
   component,
@@ -206,9 +207,8 @@ export default function ShareModal({
           {children ? children : <></>}
         </BaseModal.Trigger>
         <BaseModal.Header
-          description={`Publish ${
-            is_component ? "your component" : "workflow"
-          } to the Langflow Store.`}
+          description={`Publish ${is_component ? "your component" : "workflow"
+            } to the Langflow Store.`}
         >
           <span className="pr-2">Share</span>
           <IconComponent
@@ -251,18 +251,34 @@ export default function ShareModal({
 
         <BaseModal.Footer>
           <div className="flex w-full justify-between gap-2">
-            <Button
+            {!is_component && <ExportModal>
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                onClick={() => {
+                  // (setOpen || internalSetOpen)(false);
+                }}
+              >
+                <IconComponent name="Download" className="h-4 w-4" />
+                Export
+              </Button>
+            </ExportModal>
+            }
+            {is_component && <Button
               type="button"
               variant="outline"
               className="gap-2"
               onClick={() => {
-                handleExportComponent();
                 (setOpen || internalSetOpen)(false);
+                handleExportComponent();
               }}
             >
               <IconComponent name="Download" className="h-4 w-4" />
               Export
             </Button>
+
+            }
             <Button
               disabled={loadingNames}
               type="button"

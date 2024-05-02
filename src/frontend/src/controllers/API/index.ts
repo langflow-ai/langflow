@@ -1,5 +1,5 @@
-import { AxiosResponse } from "axios";
-import { ReactFlowJsonObject } from "reactflow";
+import { AxiosRequestConfig, AxiosResponse } from "axios";
+import { Edge, ReactFlowJsonObject,Node } from "reactflow";
 import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
@@ -406,9 +406,11 @@ export async function onLogin(user: LoginType) {
   }
 }
 
-export async function autoLogin() {
+export async function autoLogin(abortSignal) {
   try {
-    const response = await api.get(`${BASE_URL_API}auto_login`);
+    const response = await api.get(`${BASE_URL_API}auto_login`, {
+      signal: abortSignal,
+    });
 
     if (response.status === 200) {
       const data = response.data;
@@ -860,13 +862,14 @@ export async function requestLogout() {
 }
 
 export async function getGlobalVariables(): Promise<{
-  [key: string]: { id: string; type: string };
+  [key: string]: { id: string; type: string; default_fields: string[] };
 }> {
   const globalVariables = {};
   (await api.get(`${BASE_URL_API}variables/`)).data.forEach((element) => {
     globalVariables[element.name] = {
       id: element.id,
       type: element.type,
+      default_fields: element.default_fields,
     };
   });
   return globalVariables;
@@ -876,20 +879,33 @@ export async function registerGlobalVariable({
   name,
   value,
   type,
+  default_fields = [],
 }: {
   name: string;
   value: string;
   type?: string;
+  default_fields?: string[];
 }): Promise<AxiosResponse<{ name: string; id: string; type: string }>> {
-  return await api.post(`${BASE_URL_API}variables/`, {
-    name,
-    value,
-    type,
-  });
+  try {
+    const response = await api.post(`${BASE_URL_API}variables/`, {
+      name,
+      value,
+      type,
+      default_fields: default_fields,
+    });
+    return response;
+  } catch (error) {
+    throw error;
+  }
 }
 
 export async function deleteGlobalVariable(id: string) {
-  api.delete(`${BASE_URL_API}variables/${id}`);
+  try {
+    const response = await api.delete(`${BASE_URL_API}variables/${id}`);
+    return response;
+  } catch (error) {
+    throw error;
+  }
 }
 
 export async function updateGlobalVariable(
@@ -897,26 +913,41 @@ export async function updateGlobalVariable(
   value: string,
   id: string
 ) {
-  api.patch(`${BASE_URL_API}variables/${id}`, {
-    name,
-    value,
-  });
+  try {
+    const response = api.patch(`${BASE_URL_API}variables/${id}`, {
+      name,
+      value,
+    });
+
+    return response;
+  } catch (error) {
+    throw error;
+  }
 }
 
 export async function getVerticesOrder(
   flowId: string,
   startNodeId?: string | null,
-  stopNodeId?: string | null
+  stopNodeId?: string | null,
+  nodes?:Node[],
+  Edges?:Edge[]
 ): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
   // nodeId is optional and is a query parameter
   // if nodeId is not provided, the API will return all vertices
-  const config = {};
+  const config:AxiosRequestConfig<any> = {};
   if (stopNodeId) {
     config["params"] = { stop_component_id: stopNodeId };
   } else if (startNodeId) {
     config["params"] = { start_component_id: startNodeId };
   }
-  return await api.get(`${BASE_URL_API}build/${flowId}/vertices`, config);
+  const data = {
+    data:{}
+  }
+  if(nodes && Edges){
+    data["data"]["nodes"] = nodes
+    data["data"]["edges"] = Edges
+  }
+  return await api.post(`${BASE_URL_API}build/${flowId}/vertices`,data, config);
 }
 
 export async function postBuildVertex(

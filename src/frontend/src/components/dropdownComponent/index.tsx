@@ -33,7 +33,9 @@ export default function Dropdown({
 
   const refButton = useRef<HTMLButtonElement>(null);
 
-  const PopoverContentDropdown = children ? PopoverContent : PopoverContentWithoutPortal;
+  const PopoverContentDropdown = children
+    ? PopoverContent
+    : PopoverContentWithoutPortal;
 
   return (
     <>
@@ -77,7 +79,11 @@ export default function Dropdown({
             )}
             <PopoverContentDropdown
               className="nocopy nowheel nopan nodelete nodrag noundo p-0"
-              style={children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }}
+              style={
+                children
+                  ? {}
+                  : { minWidth: refButton?.current?.clientWidth ?? "200px" }
+              }
             >
               <Command>
                 <CommandInput placeholder="Search options..." className="h-9" />

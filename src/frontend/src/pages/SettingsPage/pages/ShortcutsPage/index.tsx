@@ -11,13 +11,13 @@ import {
 } from "../../../../components/ui/card";
 
 export default function ShortcutsPage() {
-  const advancedShortcut = "Ctrl + shift + A";
-  const minizmizeShortcut = "Ctrl + shift + Q";
-  const codeShortcut = "Ctrl + shift + C";
+  const advancedShortcut = "Ctrl + Shift + A";
+  const minizmizeShortcut = "Ctrl + Shift + Q";
+  const codeShortcut = "Ctrl + Shift + C";
   const copyShortcut = "Ctrl + C";
   const duplicateShortcut = "Ctrl + D";
-  const shareShortcut = "Ctrl + shift + S";
-  const docsShortcut = "Ctrl + shift + D";
+  const shareShortcut = "Ctrl + Shift + S";
+  const docsShortcut = "Ctrl + Shift + D";
   const saveShortcut = "Ctrl + S";
   const deleteShortcut = "Backspace";
   const interactionShortcut = "Ctrl + K";
@@ -34,45 +34,45 @@ export default function ShortcutsPage() {
     },
   ]);
 
-  const [rowData, setRowData] = useState([
+  const [nodesRowData, setNodesRowData] = useState([
     {
-      name: "Open node advanced settings",
+      name: "Advanced Settings Component",
       shortcut: advancedShortcut,
     },
     {
-      name: "Minimize",
+      name: "Minimize Component",
       shortcut: minizmizeShortcut,
     },
     {
-      name: "Open Code modal",
+      name: "Code Component",
       shortcut: codeShortcut,
     },
     {
-      name: "Copy",
+      name: "Copy Component",
       shortcut: copyShortcut,
     },
     {
-      name: "Duplicate",
+      name: "Duplicate Component",
       shortcut: duplicateShortcut,
     },
     {
-      name: "Share",
+      name: "Share Component",
       shortcut: shareShortcut,
     },
     {
-      name: "Open docs",
+      name: "Docs Component",
       shortcut: docsShortcut,
     },
     {
-      name: "Save",
+      name: "Save Component",
       shortcut: saveShortcut,
     },
     {
-      name: "Delete",
+      name: "Delete Component",
       shortcut: deleteShortcut,
     },
     {
-      name: "Open interaction panel",
+      name: "Open Playground",
       shortcut: interactionShortcut,
     },
     {
@@ -84,6 +84,7 @@ export default function ShortcutsPage() {
       shortcut: redoShortcut,
     },
   ]);
+  
   return (
     <div className="flex h-full w-full flex-col gap-6">
       <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
@@ -96,25 +97,19 @@ export default function ShortcutsPage() {
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Customize, manage and create shortcuts for quick access to
+            Manage Shortcuts for quick access to
             frequently used actions.
           </p>
         </div>
       </div>
-      <div className="grid gap-6">
-        <Card x-chunk="dashboard-04-chunk-2">
-          <CardHeader>
-            <CardTitle>Nodes</CardTitle>
-            <CardDescription>
-              Shortcuts relating to the nodes in the workspace.
-            </CardDescription>
-          </CardHeader>
+      <div className="grid gap-6 pb-8">
+        <Card x-chunk="dashboard-04-chunk-2" className="pt-4">
           <CardContent>
             <TableComponent
               domLayout="autoHeight"
               pagination={false}
               columnDefs={colDefs}
-              rowData={rowData}
+              rowData={nodesRowData}
             />
           </CardContent>
         </Card>

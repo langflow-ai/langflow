@@ -1,7 +1,7 @@
 from langchain import tools
 from langchain.agents import Tool
 from langchain.agents.load_tools import _BASE_TOOLS, _EXTRA_LLM_TOOLS, _EXTRA_OPTIONAL_TOOLS, _LLM_TOOLS
-from langchain.tools.json.tool import JsonSpec
+from langchain_community.tools.json.tool import JsonSpec
 
 from langflow.interface.importing.utils import import_class
 from langflow.interface.tools.custom import PythonFunctionTool

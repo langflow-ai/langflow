@@ -22,7 +22,6 @@ import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useGlobalVariablesStore } from "./stores/globalVariables";
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
-
 export default function App() {
   const removeFromTempNotificationList = useAlertStore(
     (state) => state.removeFromTempNotificationList
@@ -48,6 +47,9 @@ export default function App() {
   const setGlobalVariables = useGlobalVariablesStore(
     (state) => state.setGlobalVariables
   );
+  const setUnavailableFields = useGlobalVariablesStore(
+    (state) => state.setUnavaliableFields
+  );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const navigate = useNavigate();
   const dark = useDarkStore((state) => state.dark);
@@ -63,9 +65,10 @@ export default function App() {
   }, [dark]);
 
   useEffect(() => {
+    const abortController = new AbortController();
     const isLoginPage = location.pathname.includes("login");
 
-    autoLogin()
+    autoLogin(abortController.signal)
       .then(async (user) => {
         if (user && user["access_token"]) {
           user["refresh_token"] = "auto";
@@ -76,31 +79,44 @@ export default function App() {
           await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
         }
       })
-      .catch(async () => {
-        setAutoLogin(false);
-        if (isAuthenticated && !isLoginPage) {
-          getUser();
-          await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
-        } else {
-          setLoading(false);
-          useFlowsManagerStore.setState({ isLoading: false });
+      .catch(async (error) => {
+        if (error.name !== "CanceledError") {
+          setAutoLogin(false);
+          if (isAuthenticated && !isLoginPage) {
+            getUser();
+            await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+          } else {
+            setLoading(false);
+            useFlowsManagerStore.setState({ isLoading: false });
+          }
         }
       });
-  }, [isAuthenticated]);
+
+    /* 
+      Abort the request as it isn't needed anymore, the component being 
+      unmounted. It helps avoid, among other things, the well-known "can't
+      perform a React state update on an unmounted component" warning.
+    */
+    return () => abortController.abort();
+  }, []);
 
   const fetchData = async () => {
-    if (isAuthenticated) {
-      try {
-        await getTypes();
-        refreshFlows();
-        const res = await getGlobalVariables();
-        setGlobalVariables(res);
-        checkHasStore();
-        fetchApiData();
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
+    return new Promise<void>(async (resolve, reject) => {
+      if (isAuthenticated) {
+        try {
+          await getTypes();
+          await refreshFlows();
+          const res = await getGlobalVariables();
+          setGlobalVariables(res);
+          checkHasStore();
+          fetchApiData();
+          resolve();
+        } catch (error) {
+          console.error("Failed to fetch data:", error);
+          reject();
+        }
       }
-    }
+    });
   };
 
   useEffect(() => {

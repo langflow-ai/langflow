@@ -26,7 +26,7 @@ class BuildStatus(Enum):
 
 
 class TweaksRequest(BaseModel):
-    tweaks: Optional[Dict[str, Dict[str, str]]] = Field(default_factory=dict)
+    tweaks: Optional[Dict[str, Dict[str, Any]]] = Field(default_factory=dict)
 
 
 class UpdateTemplateRequest(BaseModel):
@@ -294,3 +294,15 @@ class SimplifiedAPIRequest(BaseModel):
     )
     tweaks: Optional[Tweaks] = Field(default=None, description="The tweaks")
     session_id: Optional[str] = Field(default=None, description="The session id")
+
+
+# (alias) type ReactFlowJsonObject<NodeData = any, EdgeData = any> = {
+#     nodes: Node<NodeData>[];
+#     edges: Edge<EdgeData>[];
+#     viewport: Viewport;
+# }
+# import ReactFlowJsonObject
+class FlowDataRequest(BaseModel):
+    nodes: List[dict]
+    edges: List[dict]
+    viewport: Optional[dict] = None
