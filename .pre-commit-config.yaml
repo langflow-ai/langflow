@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: "96c6321"
+    rev: "v9.1.1"
     hooks:
       - id: eslint
         files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
