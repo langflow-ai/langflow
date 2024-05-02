@@ -86,9 +86,9 @@ const EditNodeModal = forwardRef(
 
     useEffect(() => {
       return () => {
-        setOpenWDoubleClick(false)
-      }
-    }, [])
+        setOpenWDoubleClick(false);
+      };
+    }, []);
 
     const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 

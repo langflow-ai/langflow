@@ -22,9 +22,9 @@ export default function AddNewVariableButton({ children }): JSX.Element {
   const [open, setOpen] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
-  const unavaliableFields =new Set(Object.keys(useGlobalVariablesStore(
-    (state) => state.unavaliableFields
-  )));
+  const unavaliableFields = new Set(
+    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields))
+  );
 
   const availableFields = Array.from(componentFields).filter(
     (field) => !unavaliableFields.has(field)

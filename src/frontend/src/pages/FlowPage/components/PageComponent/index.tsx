@@ -1,5 +1,13 @@
 import _, { cloneDeep } from "lodash";
-import { KeyboardEvent, MouseEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  KeyboardEvent,
+  MouseEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import ReactFlow, {
   Background,
   Connection,
@@ -21,6 +29,7 @@ import {
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
@@ -37,8 +46,6 @@ import {
 import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
-import { useHotkeys } from "react-hotkeys-hook";
-import { useShortcutsStore } from "../../../../stores/shortcuts";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -169,31 +176,30 @@ export default function Page({
     };
   }, []);
 
-  
   function handleUndo(e: KeyboardEvent) {
-    e.preventDefault()
+    e.preventDefault();
     if (!isWrappedWithClass(e, "noundo")) {
       undo();
     }
   }
-  
+
   function handleRedo(e: KeyboardEvent) {
-    e.preventDefault()
+    e.preventDefault();
     if (!isWrappedWithClass(e, "noundo")) {
       redo();
     }
   }
-  
+
   function handleGroup(e: KeyboardEvent) {
-    e.preventDefault()
+    e.preventDefault();
     if (selectionMenuVisible) {
-      handleGroupNode()
+      handleGroupNode();
     }
   }
-  
+
   function handleDuplicate(e: KeyboardEvent) {
     const selectedNode = nodes.filter((obj) => obj.selected);
-    e.preventDefault()
+    e.preventDefault();
     if (selectedNode.length > 0) {
       paste(
         { nodes: selectedNode, edges: [] },
@@ -204,27 +210,36 @@ export default function Page({
       );
     }
   }
-  
+
   function handleCopy(e: KeyboardEvent) {
-    e.preventDefault()
-    if (!isWrappedWithClass(e, "nocopy") &&
-    window.getSelection()?.toString().length === 0 && lastSelection) {
+    e.preventDefault();
+    if (
+      !isWrappedWithClass(e, "nocopy") &&
+      window.getSelection()?.toString().length === 0 &&
+      lastSelection
+    ) {
       setLastCopiedSelection(_.cloneDeep(lastSelection));
     }
   }
-  
+
   function handleCut(e: KeyboardEvent) {
-    e.preventDefault()
-    if (!isWrappedWithClass(e, "nocopy") &&
-    window.getSelection()?.toString().length === 0 && lastSelection) {
+    e.preventDefault();
+    if (
+      !isWrappedWithClass(e, "nocopy") &&
+      window.getSelection()?.toString().length === 0 &&
+      lastSelection
+    ) {
       setLastCopiedSelection(_.cloneDeep(lastSelection), true);
     }
   }
-  
+
   function handlePaste(e: KeyboardEvent) {
-    e.preventDefault()
-    if (!isWrappedWithClass(e, "nocopy") &&
-    window.getSelection()?.toString().length === 0 && lastCopiedSelection) {
+    e.preventDefault();
+    if (
+      !isWrappedWithClass(e, "nocopy") &&
+      window.getSelection()?.toString().length === 0 &&
+      lastCopiedSelection
+    ) {
       takeSnapshot();
       paste(lastCopiedSelection, {
         x: position.current.x,
@@ -232,9 +247,9 @@ export default function Page({
       });
     }
   }
-  
+
   function handleDelete(e: KeyboardEvent) {
-    e.preventDefault()
+    e.preventDefault();
     if (!isWrappedWithClass(e, "nodelete") && lastSelection) {
       takeSnapshot();
       deleteNode(lastSelection.nodes.map((node) => node.id));
@@ -242,14 +257,14 @@ export default function Page({
     }
   }
 
-  const undoAction = useShortcutsStore(state => state.undo);
-  const redoAction = useShortcutsStore(state => state.redo);
-  const copyAction = useShortcutsStore(state => state.copy);
-  const duplicate = useShortcutsStore(state => state.duplicate);
-  const deleteAction = useShortcutsStore(state => state.delete);
-  const groupAction = useShortcutsStore(state => state.group);
-  const cutAction = useShortcutsStore(state => state.cut);
-  const pasteAction = useShortcutsStore(state => state.paste);
+  const undoAction = useShortcutsStore((state) => state.undo);
+  const redoAction = useShortcutsStore((state) => state.redo);
+  const copyAction = useShortcutsStore((state) => state.copy);
+  const duplicate = useShortcutsStore((state) => state.duplicate);
+  const deleteAction = useShortcutsStore((state) => state.delete);
+  const groupAction = useShortcutsStore((state) => state.group);
+  const cutAction = useShortcutsStore((state) => state.cut);
+  const pasteAction = useShortcutsStore((state) => state.paste);
 
   useHotkeys(undoAction, handleUndo);
   useHotkeys(redoAction, handleRedo);

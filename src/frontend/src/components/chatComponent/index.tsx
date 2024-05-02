@@ -1,21 +1,21 @@
 import { Transition } from "@headlessui/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import ApiModal from "../../modals/ApiModal";
 import IOModal from "../../modals/IOModal";
 import ShareModal from "../../modals/shareModal";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useShortcutsStore } from "../../stores/shortcuts";
 import { useStoreStore } from "../../stores/storeStore";
 import { classNames } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
-import { useHotkeys } from "react-hotkeys-hook";
-import { useShortcutsStore } from "../../stores/shortcuts";
 
 export default function FlowToolbar(): JSX.Element {
   function handleAPIWShortcut(e: KeyboardEvent) {
     e.preventDefault();
-    setOpenCodeModal((oldOpen) => !oldOpen)
+    setOpenCodeModal((oldOpen) => !oldOpen);
   }
 
   function handleChatWShortcut(e: KeyboardEvent) {
@@ -25,8 +25,8 @@ export default function FlowToolbar(): JSX.Element {
     }
   }
 
-  const openPlayground = useShortcutsStore(state => state.open);
-  const api = useShortcutsStore(state => state.api);
+  const openPlayground = useShortcutsStore((state) => state.open);
+  const api = useShortcutsStore((state) => state.api);
 
   useHotkeys(openPlayground, handleChatWShortcut);
   useHotkeys(api, handleAPIWShortcut);
@@ -121,7 +121,11 @@ export default function FlowToolbar(): JSX.Element {
             </div>
             <div className="flex cursor-pointer items-center gap-2">
               {currentFlow && currentFlow.data && (
-                <ApiModal flow={currentFlow} open={openCodeModal} setOpen={setOpenCodeModal}>
+                <ApiModal
+                  flow={currentFlow}
+                  open={openCodeModal}
+                  setOpen={setOpenCodeModal}
+                >
                   <div
                     className={classNames(
                       "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover"

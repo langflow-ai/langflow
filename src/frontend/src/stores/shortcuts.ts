@@ -1,12 +1,15 @@
 import { create } from "zustand";
+import {
+  defaultShortcuts,
+  unavailableShortcutss,
+} from "../constants/constants";
 import { shortcutsStoreType } from "../types/store";
-import { defaultShortcuts, unavailableShortcutss } from "../constants/constants";
 
 export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   unavailableShortcuts: unavailableShortcutss,
   shortcuts: defaultShortcuts,
   setShortcuts: (newShortcuts, unavailable) => {
-    set({shortcuts: newShortcuts, unavailableShortcuts: unavailable} );
+    set({ shortcuts: newShortcuts, unavailableShortcuts: unavailable });
   },
   undo: "mod+z",
   redo: "mod+y",
@@ -26,7 +29,7 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   api: "mod+r",
   updateUniqueShortcut: (name, combination) => {
     set({
-      [name]: combination
-    })
-  }
+      [name]: combination,
+    });
+  },
 }));

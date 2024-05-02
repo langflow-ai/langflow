@@ -2,22 +2,18 @@ import { ColDef, ColGroupDef } from "ag-grid-community";
 import { useEffect, useState } from "react";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../../../../components/ui/card";
 import { Button } from "../../../../components/ui/button";
-import EditShortcutButton from "./EditShortcutButton";
+import {
+  defaultShortcuts,
+  unavailableShortcutss,
+} from "../../../../constants/constants";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
-import { defaultShortcuts, unavailableShortcutss } from "../../../../constants/constants";
+import EditShortcutButton from "./EditShortcutButton";
 
 export default function ShortcutsPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const shortcuts = useShortcutsStore(state => state.shortcuts);
-  const setShortcuts = useShortcutsStore(state => state.setShortcuts);
+  const shortcuts = useShortcutsStore((state) => state.shortcuts);
+  const setShortcuts = useShortcutsStore((state) => state.setShortcuts);
 
   // Column Definitions: Defines the columns to be displayed.
   const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
@@ -37,23 +33,27 @@ export default function ShortcutsPage() {
     },
   ]);
 
-  const [nodesRowData, setNodesRowData] = useState<Array<{name: string; shortcut: string;}>>([]);
+  const [nodesRowData, setNodesRowData] = useState<
+    Array<{ name: string; shortcut: string }>
+  >([]);
 
   useEffect(() => {
-    setNodesRowData(shortcuts)
-  }, [shortcuts])
+    setNodesRowData(shortcuts);
+  }, [shortcuts]);
 
-  const combinationToEdit = shortcuts.filter((s) => s.name === selectedRows[0])
+  const combinationToEdit = shortcuts.filter((s) => s.name === selectedRows[0]);
   const [open, setOpen] = useState(false);
 
-  const unavaliableShortcuts = useShortcutsStore(state => state.unavailableShortcuts);
+  const unavaliableShortcuts = useShortcutsStore(
+    (state) => state.unavailableShortcuts
+  );
   useEffect(() => {
     if (localStorage.getItem("langflow-shortcuts")) {
       const savedShortcuts = localStorage.getItem("langflow-shortcuts");
       const savedUShortcuts = localStorage.getItem("langflow-UShortcuts");
       setShortcuts(JSON.parse(savedShortcuts!), JSON.parse(savedUShortcuts!));
     }
-  }, [])
+  }, []);
 
   function handleRestore() {
     setShortcuts(defaultShortcuts, unavailableShortcutss);
@@ -73,13 +73,12 @@ export default function ShortcutsPage() {
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Manage Shortcuts for quick access to
-            frequently used actions.
+            Manage Shortcuts for quick access to frequently used actions.
           </p>
         </div>
         <div>
-          <div className="w-full flex justify-end align-end mb-4">
-            <div className="flex items-center justify center">
+          <div className="align-end mb-4 flex w-full justify-end">
+            <div className="justify center flex items-center">
               <EditShortcutButton
                 disable={selectedRows.length === 0}
                 defaultCombination={combinationToEdit[0]?.shortcut}
@@ -93,7 +92,11 @@ export default function ShortcutsPage() {
                   Customize
                 </Button>
               </EditShortcutButton>
-              <Button variant="primary" className="ml-3" onClick={handleRestore}>
+              <Button
+                variant="primary"
+                className="ml-3"
+                onClick={handleRestore}
+              >
                 <ForwardedIconComponent name="RotateCcw" className="mr-2 w-4" />
                 Restore
               </Button>
@@ -105,7 +108,9 @@ export default function ShortcutsPage() {
         <div>
           <TableComponent
             onSelectionChanged={(event: SelectionChangedEvent) => {
-              setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
+              setSelectedRows(
+                event.api.getSelectedRows().map((row) => row.name)
+              );
             }}
             suppressRowClickSelection={true}
             domLayout="autoHeight"

@@ -787,68 +787,85 @@ export const SAVE_DEBOUNCE_TIME = 300;
 export const defaultShortcuts = [
   {
     name: "Advanced Settings",
-    shortcut: "Ctrl + Shift + a"
+    shortcut: "Ctrl + Shift + a",
   },
   {
     name: "Minimize",
-    shortcut: "Ctrl + q"
+    shortcut: "Ctrl + q",
   },
   {
     name: "Code",
-    shortcut: "Ctrl + Shift + u"
+    shortcut: "Ctrl + Shift + u",
   },
   {
     name: "Copy",
-    shortcut: "Ctrl + c"
+    shortcut: "Ctrl + c",
   },
   {
     name: "Duplicate",
-    shortcut: "Ctrl + d"
+    shortcut: "Ctrl + d",
   },
   {
     name: "Share",
-    shortcut: "Ctrl + Shift + s"
+    shortcut: "Ctrl + Shift + s",
   },
   {
     name: "Docs",
-    shortcut: "Ctrl + Shift + d"
+    shortcut: "Ctrl + Shift + d",
   },
   {
     name: "Save",
-    shortcut: "Ctrl + s"
+    shortcut: "Ctrl + s",
   },
   {
     name: "Delete",
-    shortcut: "Backspace"
+    shortcut: "Backspace",
   },
   {
     name: "Open playground",
-    shortcut: "Ctrl + k"
+    shortcut: "Ctrl + k",
   },
   {
     name: "Undo",
-    shortcut: "Ctrl + z"
+    shortcut: "Ctrl + z",
   },
   {
     name: "Redo",
-    shortcut: "Ctrl + y"
+    shortcut: "Ctrl + y",
   },
   {
     name: "Group",
-    shortcut: "Ctrl + g"
+    shortcut: "Ctrl + g",
   },
   {
     name: "Cut",
-    shortcut: "Ctrl + x"
+    shortcut: "Ctrl + x",
   },
   {
     name: "Paste",
-    shortcut: "Ctrl + v"
+    shortcut: "Ctrl + v",
   },
   {
     name: "API",
-    shortcut: "Ctrl + r"
+    shortcut: "Ctrl + r",
   },
 ];
 
-export const unavailableShortcutss = ["CTRL + R","CTRL + V", "CTRL + X", "CTRL + G", "CTRL + SHIFT + A", "CTRL + Q", "CTRL + SHIFT + U", "CTRL + C", "CTRL + D", "CTRL + SHIFT + S", "CTRL + SHIFT + D", "CTRL + S", "BACKSPACE", "CTRL + K", "CTRL + Z", "CTRL + Y"];
+export const unavailableShortcutss = [
+  "CTRL + R",
+  "CTRL + V",
+  "CTRL + X",
+  "CTRL + G",
+  "CTRL + SHIFT + A",
+  "CTRL + Q",
+  "CTRL + SHIFT + U",
+  "CTRL + C",
+  "CTRL + D",
+  "CTRL + SHIFT + S",
+  "CTRL + SHIFT + D",
+  "CTRL + S",
+  "BACKSPACE",
+  "CTRL + K",
+  "CTRL + Z",
+  "CTRL + Y",
+];
