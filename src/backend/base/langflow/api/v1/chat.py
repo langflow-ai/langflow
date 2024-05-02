@@ -51,10 +51,10 @@ async def try_running_celery_task(vertex, user_id):
     return vertex
 
 
-@router.get("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
-async def get_vertices(
+@router.post("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
+async def retrieve_vertices_order(
     flow_id: str,
-    data: Optional[FlowDataRequest] = None,
+    data: Annotated[Optional[FlowDataRequest], Body(embed=True)] = None,
     stop_component_id: Optional[str] = None,
     start_component_id: Optional[str] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
@@ -65,6 +65,7 @@ async def get_vertices(
 
     Args:
         flow_id (str): The ID of the flow.
+        data (Optional[FlowDataRequest], optional): The flow data. Defaults to None.
         stop_component_id (str, optional): The ID of the stop component. Defaults to None.
         start_component_id (str, optional): The ID of the start component. Defaults to None.
         chat_service (ChatService, optional): The chat service dependency. Defaults to Depends(get_chat_service).
@@ -86,7 +87,9 @@ async def get_vertices(
                 flow_id=flow_id, session=session, chat_service=chat_service, graph=graph
             )
         else:
-            graph = await build_and_cache_graph_from_data(flow_id=flow_id, data=data, chat_service=chat_service)
+            graph = await build_and_cache_graph_from_data(
+                flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
+            )
         if stop_component_id or start_component_id:
             try:
                 first_layer = graph.sort_vertices(stop_component_id, start_component_id)

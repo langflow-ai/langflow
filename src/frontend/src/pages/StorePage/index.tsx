@@ -9,7 +9,7 @@ import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
 import { Badge } from "../../components/ui/badge";
 import {
@@ -64,6 +64,8 @@ export default function StorePage(): JSX.Element {
   const [tabActive, setTabActive] = useState("All");
   const [searchNow, setSearchNow] = useState("");
   const [selectFilter, setSelectFilter] = useState("all");
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!loadingApiKey) {
@@ -149,6 +151,11 @@ export default function StorePage(): JSX.Element {
       .catch((err) => {
         if (err.response?.status === 403 || err.response?.status === 401) {
           setValidApiKey(false);
+        } else if (
+          err.response?.data?.detail ===
+          "Unexpected error: Object of type UUID is not JSON serializable"
+        ) {
+          navigate("/store/" + inputText);
         } else {
           setSearchData([]);
           setTotalRowsCount(0);
@@ -371,6 +378,10 @@ export default function StorePage(): JSX.Element {
                       data={item}
                       authorized={validApiKey}
                       disabled={loading}
+                      playground={
+                        item.last_tested_version?.includes("1.0.0") &&
+                        !item.is_component
+                      }
                     />
                   </>
                 );

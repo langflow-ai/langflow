@@ -46,6 +46,16 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     set({ examples });
   },
   currentFlowId: "",
+  setCurrentFlow: (flow: FlowType) => {
+    set((state) => ({
+      currentFlow: flow,
+      currentFlowId: flow.id,
+    }));
+  
+  },
+  getFlowById: (id: string) => {
+    return get().flows.find((flow) => flow.id === id);
+  },
   setCurrentFlowId: (currentFlowId: string) => {
     set((state) => ({
       currentFlowId,

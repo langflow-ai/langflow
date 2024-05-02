@@ -1,5 +1,5 @@
-import { AxiosResponse } from "axios";
-import { ReactFlowJsonObject } from "reactflow";
+import { AxiosRequestConfig, AxiosResponse } from "axios";
+import { Edge, ReactFlowJsonObject,Node } from "reactflow";
 import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
@@ -906,17 +906,26 @@ export async function updateGlobalVariable(
 export async function getVerticesOrder(
   flowId: string,
   startNodeId?: string | null,
-  stopNodeId?: string | null
+  stopNodeId?: string | null,
+  nodes?:Node[],
+  Edges?:Edge[]
 ): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
   // nodeId is optional and is a query parameter
   // if nodeId is not provided, the API will return all vertices
-  const config = {};
+  const config:AxiosRequestConfig<any> = {};
   if (stopNodeId) {
     config["params"] = { stop_component_id: stopNodeId };
   } else if (startNodeId) {
     config["params"] = { start_component_id: startNodeId };
   }
-  return await api.get(`${BASE_URL_API}build/${flowId}/vertices`, config);
+  const data = {
+    data:{}
+  }
+  if(nodes && Edges){
+    data["data"]["nodes"] = nodes
+    data["data"]["edges"] = Edges
+  }
+  return await api.post(`${BASE_URL_API}build/${flowId}/vertices`,data, config);
 }
 
 export async function postBuildVertex(
