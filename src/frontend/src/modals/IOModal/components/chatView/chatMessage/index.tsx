@@ -271,7 +271,7 @@ dark:prose-invert"
             </div>
           </div>
         ) : (
-          <div>
+          <div className="form-modal-chat-text-position min-w-96 flex-grow">
             {template ? (
               <>
                 <button
