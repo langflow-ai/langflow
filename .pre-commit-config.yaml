@@ -1,3 +1,4 @@
+fail_fast: true
 repos:
   - repo: https://github.com/pre-commit/mirrors-eslint
     rev: "v9.1.1"
