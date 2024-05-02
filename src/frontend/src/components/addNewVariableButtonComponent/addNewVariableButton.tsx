@@ -22,9 +22,9 @@ export default function AddNewVariableButton({ children }): JSX.Element {
   const [open, setOpen] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
-  const unavaliableFields =new Set(Object.keys(useGlobalVariablesStore(
-    (state) => state.unavaliableFields
-  )));
+  const unavaliableFields = new Set(
+    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields))
+  );
 
   const availableFields = Array.from(componentFields).filter(
     (field) => !unavaliableFields.has(field)
@@ -97,6 +97,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             password={false}
             options={["Generic", "Credential"]}
             placeholder="Choose a type for the variable..."
+            id={"type-global-variables"}
           ></InputComponent>
           <Label>Value</Label>
           <Textarea
@@ -114,6 +115,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             password={false}
             options={availableFields}
             placeholder="Choose a field for the variable..."
+            id={"apply-to-fields"}
           ></InputComponent>
         </div>
       </BaseModal.Content>

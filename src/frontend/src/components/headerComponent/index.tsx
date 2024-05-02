@@ -174,6 +174,7 @@ export default function Header(): JSX.Element {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
+                  data-testid="user-profile-settings"
                   className={
                     "h-7 w-7 rounded-full focus-visible:outline-0 " +
                     (userData?.profile_image ??
