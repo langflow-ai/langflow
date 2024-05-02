@@ -86,7 +86,6 @@ export default function ComponentsComponent({
       }
     }
   };
-
   function resetFilter() {
     setPageIndex(1);
     setPageSize(20);
