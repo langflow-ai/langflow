@@ -2,6 +2,7 @@ from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
 from langflow.field_typing import Text
 
+
 class TextOperatorComponent(CustomComponent):
     display_name = "Text Operator"
     description = "Compares two text inputs based on a specified condition such as equality or inequality, with optional case sensitivity."
@@ -19,19 +20,40 @@ class TextOperatorComponent(CustomComponent):
             "operator": {
                 "display_name": "Operator",
                 "info": "The operator to apply for comparing the texts.",
-                "options": ["equals", "not equals", "contains", "starts with", "ends with"],
+                "options": [
+                    "equals",
+                    "not equals",
+                    "contains",
+                    "starts with",
+                    "ends with",
+                ],
             },
             "case_sensitive": {
                 "display_name": "Case Sensitive",
                 "info": "If true, the comparison will be case sensitive.",
                 "field_type": "bool",
                 "default": False,
-            }
+            },
+            "true_output": {
+                "display_name": "Output",
+                "info": "The output to return or display when the comparison is true.",
+                "input_types": ["Text", "Record"],  # Allow both text and record types
+            },
         }
 
-    def build(self, input_text: Text, match_text: Text, operator: Text, case_sensitive: bool = False) -> Text:
+    def build(
+        self,
+        input_text: Text,
+        match_text: Text,
+        operator: Text,
+        case_sensitive: bool = False,
+        true_output: Optional[Text] = None,
+    ) -> Record:
+
         if not input_text or not match_text:
-            raise ValueError("Both 'input_text' and 'match_text' must be provided and non-empty.")
+            raise ValueError(
+                "Both 'input_text' and 'match_text' must be provided and non-empty."
+            )
 
         if not case_sensitive:
             input_text = input_text.lower()
@@ -49,7 +71,15 @@ class TextOperatorComponent(CustomComponent):
         elif operator == "ends with":
             result = input_text.endswith(match_text)
 
-        if not result:
+        out = true_output if true_output else input_text
+        if isinstance(out, Text):
+            out = Record(data={"result": out})
+
+        if result:
+            self.status = out
+            return out
+        else:
+            self.status = "Comparison failed, stopping execution.\n\n"
             self.stop()
-        self.status = f"{result} \n\n {input_text}"
-        return input_text
+
+        return out
