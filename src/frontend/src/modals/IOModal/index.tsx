@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import AccordionComponent from "../../components/AccordionComponent";
-import ShadTooltip from "../../components/ShadTooltipComponent";
+import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
+import ShadTooltip from "../../components/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {

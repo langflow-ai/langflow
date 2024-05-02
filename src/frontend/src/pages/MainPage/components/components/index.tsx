@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import PaginatorComponent from "../../../../components/PaginatorComponent";
 import CollectionCardComponent from "../../../../components/cardComponent";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
 import IconComponent from "../../../../components/genericIconComponent";
+import PaginatorComponent from "../../../../components/paginatorComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
 import {

@@ -1,7 +1,7 @@
 import { Transition } from "@headlessui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import ApiModal from "../../modals/ApiModal";
 import IOModal from "../../modals/IOModal";
+import ApiModal from "../../modals/apiModal";
 import ShareModal from "../../modals/shareModal";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";

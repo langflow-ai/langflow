@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getComponent, postLikeComponent } from "../../controllers/API";
-import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import IOModal from "../../modals/IOModal";
+import DeleteConfirmationModal from "../../modals/deleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -9,8 +9,8 @@ import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import cloneFLowWithParent from "../../utils/storeUtils";
 import { cn } from "../../utils/utils";
-import ShadTooltip from "../ShadTooltipComponent";
 import IconComponent from "../genericIconComponent";
+import ShadTooltip from "../shadTooltipComponent";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import {
