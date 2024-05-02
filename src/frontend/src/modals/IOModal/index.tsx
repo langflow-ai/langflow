@@ -83,12 +83,6 @@ export default function IOModal({
     return updateVerticesOrder(currentFlow!.id, null);
   }
 
-  useEffect(() => {
-    if (open) {
-      updateVertices();
-    }
-  }, [open, currentFlow]);
-
   async function sendMessage(count = 1): Promise<void> {
     if (isBuilding) return;
     setIsBuilding(true);
@@ -132,9 +126,9 @@ export default function IOModal({
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
       <BaseModal.Header description={CHAT_FORM_DIALOG_SUBTITLE}>
         <div className="flex items-center">
-          <span className="pr-2">Interaction Panel</span>
+          <span className="pr-2">Playground</span>
           <IconComponent
-            name="prompts"
+            name="BotMessageSquareIcon"
             className="h-6 w-6 pl-1 text-foreground"
             aria-hidden="true"
           />

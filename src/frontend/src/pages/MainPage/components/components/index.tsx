@@ -56,7 +56,7 @@ export default function ComponentsComponent({
     const start = (pageIndex - 1) * pageSize;
     const end = start + pageSize;
     setData(all.slice(start, end));
-  }, [flows, isLoading, pageIndex, pageSize]);
+  }, [flows,isLoading, pageIndex, pageSize]);
 
   const [data, setData] = useState<FlowType[]>([]);
 
@@ -146,30 +146,11 @@ export default function ComponentsComponent({
                     }}
                     key={idx}
                     data={item}
-                    disabled={isLoading}
-                    button={
-                      !is_component ? (
-                        <Link to={"/flow/" + item.id}>
-                          <Button
-                            tabIndex={-1}
-                            variant="outline"
-                            size="sm"
-                            className="whitespace-nowrap "
-                            data-testid={
-                              "edit-flow-button-" + item.id + "-" + idx
-                            }
-                          >
-                            <IconComponent
-                              name="ExternalLink"
-                              className="main-page-nav-button select-none"
-                            />
-                            Edit Flow
-                          </Button>
-                        </Link>
-                      ) : (
-                        <></>
-                      )
+                    data-testid={
+                      "edit-flow-button-" + item.id + "-" + idx
                     }
+                    onClick={!is_component ? () => {navigate("/flow/" + item.id);} : undefined}
+                    disabled={isLoading}
                     playground={!is_component}
                   />
                 ))
