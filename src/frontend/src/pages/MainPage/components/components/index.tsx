@@ -90,7 +90,6 @@ export default function ComponentsComponent({
     setPageIndex(1);
     setPageSize(20);
   }
-
   return (
     <CardsWrapComponent
       onFileDrop={onFileDrop}
