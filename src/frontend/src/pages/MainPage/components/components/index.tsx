@@ -14,7 +14,6 @@ import {
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { FlowType } from "../../../../types/flow";
-
 export default function ComponentsComponent({
   is_component = true,
 }: {
@@ -144,6 +143,7 @@ export default function ComponentsComponent({
                     key={idx}
                     data={{ is_component: item.is_component ?? false, ...item }}
                     disabled={isLoading}
+                    data-testid={"edit-flow-button-" + item.id + "-" + idx}
                     button={
                       !is_component ? (
                         <Link to={"/flow/" + item.id}>
@@ -167,6 +167,14 @@ export default function ComponentsComponent({
                         <></>
                       )
                     }
+                    onClick={
+                      !is_component
+                        ? () => {
+                            navigate("/flow/" + item.id);
+                          }
+                        : undefined
+                    }
+                    playground={!is_component}
                   />
                 ))
               ) : (

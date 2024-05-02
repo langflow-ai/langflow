@@ -16,6 +16,7 @@ import ViewPage from "./pages/ViewPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
 import LoginPage from "./pages/loginPage";
 import SignUp from "./pages/signUpPage";
+import PlaygroundPage from "./pages/Playground";
 
 const Router = () => {
   return (
@@ -58,7 +59,13 @@ const Router = () => {
           </ProtectedRoute>
         }
       />
-
+      <Route path="/playground/:id/">
+        element={
+          <Route path="" element={<ProtectedRoute>
+            <PlaygroundPage />
+          </ProtectedRoute>} />
+        }
+      </Route>
       <Route path="/flow/:id/">
         <Route
           path=""
