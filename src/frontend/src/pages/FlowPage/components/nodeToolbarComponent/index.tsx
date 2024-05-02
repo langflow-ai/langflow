@@ -19,6 +19,7 @@ import useAlertStore from "../../../../stores/alertStore";
 import { useDarkStore } from "../../../../stores/darkStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useStoreStore } from "../../../../stores/storeStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
@@ -32,7 +33,6 @@ import {
 } from "../../../../utils/reactflowUtils";
 import { classNames } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
-import { useShortcutsStore } from "../../../../stores/shortcuts";
 
 export default function NodeToolbarComponent({
   data,
@@ -145,12 +145,12 @@ export default function NodeToolbarComponent({
     downloadNode(flowComponent!);
   }
 
-  const advanced = useShortcutsStore(state => state.advanced);
-  const minimize = useShortcutsStore(state => state.minimize);
-  const share = useShortcutsStore(state => state.share);
-  const save = useShortcutsStore(state => state.save);
-  const docs = useShortcutsStore(state => state.docs);
-  const code = useShortcutsStore(state => state.code);
+  const advanced = useShortcutsStore((state) => state.advanced);
+  const minimize = useShortcutsStore((state) => state.minimize);
+  const share = useShortcutsStore((state) => state.share);
+  const save = useShortcutsStore((state) => state.save);
+  const docs = useShortcutsStore((state) => state.docs);
+  const code = useShortcutsStore((state) => state.code);
 
   useHotkeys(minimize, handleMinimizeWShortcut);
   useHotkeys("mod+u", handleUpdateWShortcut);

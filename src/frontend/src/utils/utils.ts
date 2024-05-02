@@ -93,8 +93,8 @@ export function toTitleCase(
 
 export function getUnavailableFields(variables: {
   [key: string]: { default_fields?: string[] };
-}): {[name: string]: string} {
-  const unVariables:{[name: string]: string} = {};
+}): { [name: string]: string } {
+  const unVariables: { [name: string]: string } = {};
   Object.keys(variables).forEach((key) => {
     if (variables[key].default_fields) {
       variables[key].default_fields!.forEach((field) => {

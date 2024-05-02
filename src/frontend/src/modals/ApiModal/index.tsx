@@ -49,9 +49,9 @@ const ApiModal = forwardRef(
   ) => {
     const { autoLogin } = useContext(AuthContext);
     const [open, setOpen] =
-    mySetOpen !== undefined && myOpen !== undefined
-      ? [myOpen, mySetOpen]
-      : useState(false);
+      mySetOpen !== undefined && myOpen !== undefined
+        ? [myOpen, mySetOpen]
+        : useState(false);
     const [activeTab, setActiveTab] = useState("0");
     const tweak = useRef<tweakType>([]);
     const tweaksList = useRef<string[]>([]);

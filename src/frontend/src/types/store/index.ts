@@ -34,13 +34,16 @@ export type shortcutsStoreType = {
   copy: string;
   duplicate: string;
   share: string;
-  docs:string;
-  save:string;
+  docs: string;
+  save: string;
   delete: string;
   shortcuts: Array<{
     name: string;
     shortcut: string;
-  }>
+  }>;
   unavailableShortcuts: string[];
-  setShortcuts: (newShortcuts: Array<{name: string; shortcut: string;}>, unavailable: string[]) => void;
+  setShortcuts: (
+    newShortcuts: Array<{ name: string; shortcut: string }>,
+    unavailable: string[]
+  ) => void;
 };

@@ -101,6 +101,7 @@ import {
   Redo,
   RefreshCcw,
   Repeat,
+  RotateCcw,
   Save,
   SaveAll,
   Scissors,
@@ -140,7 +141,6 @@ import {
   X,
   XCircle,
   Zap,
-  RotateCcw,
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -515,5 +515,5 @@ export const nodeIconsLucide: iconsType = {
   Command,
   ArrowBigUp,
   Dot,
-  RotateCcw
+  RotateCcw,
 };
