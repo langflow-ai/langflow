@@ -15,7 +15,8 @@ import { useShortcutsStore } from "../../../../stores/shortcuts";
 
 export default function ShortcutsPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const shortcuts = useShortcutsStore(state => state.shortcuts)
+  const shortcuts = useShortcutsStore(state => state.shortcuts);
+  const setShortcuts = useShortcutsStore(state => state.setShortcuts);
 
   // Column Definitions: Defines the columns to be displayed.
   const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
@@ -44,10 +45,17 @@ export default function ShortcutsPage() {
   const combinationToEdit = shortcuts.filter((s) => s.name === selectedRows[0])
   const [open, setOpen] = useState(false);
 
+  const unavaliableShortcuts = useShortcutsStore(state => state.unavailableShortcuts);
+  useEffect(() => {
+    if (localStorage.getItem("langflow-shortcuts")) {
+      const savedShortcuts = localStorage.getItem("langflow-shortcuts");
+      const savedUShortcuts = localStorage.getItem("langflow-UShortcuts");
+      setShortcuts(JSON.parse(savedShortcuts!), JSON.parse(savedUShortcuts!));
+    }
+  }, [])
+
   return (
-
-
-    <div className="flex h-full w-full flex-col gap-6">
+    <div className="flex h-full w-full flex-col gap-6 ">
       <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
         <div className="flex w-full flex-col">
           <h2 className="flex items-center text-lg font-semibold tracking-tight">
