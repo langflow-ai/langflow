@@ -7,7 +7,7 @@ class StringListOutput(CustomComponent):
     display_name = "String List Output"
 
     def build_config(self):
-        return {"param": {"display_name": "String List Output", "field_type": "str", "list": True}}
+        return {"input_value": {"display_name": "String List Output", "field_type": "str", "list": True}}
 
-    def build(self, param: list) -> Record:
-        return Record(data=param)
+    def build(self, input_value: list) -> Record:
+        return Record(data=input_value)
