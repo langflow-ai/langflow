@@ -113,8 +113,7 @@ export default function GeneralPage() {
       </div>
 
       <div className="grid gap-6">
-        {!autoLogin && (
-          <>
+        
             <Form.Root
               onSubmit={(event) => {
                 handlePatchGradient();
@@ -152,7 +151,7 @@ export default function GeneralPage() {
                   </Form.Submit>
                 </CardFooter>
               </Card>
-            </Form.Root>
+            </Form.Root>{!autoLogin && (
             <Form.Root
               onSubmit={(event) => {
                 handlePatchPassword();
@@ -218,7 +217,6 @@ export default function GeneralPage() {
                 </CardFooter>
               </Card>
             </Form.Root>
-          </>
         )}
       </div>
     </div>
