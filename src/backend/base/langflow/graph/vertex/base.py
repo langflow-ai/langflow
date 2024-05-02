@@ -72,7 +72,6 @@ class Vertex:
         self.load_from_db_fields: List[str] = []
         self.parent_is_top_level = False
         self.layer = None
-        self.should_run = True
         self.result: Optional[ResultData] = None
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
