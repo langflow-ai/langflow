@@ -64,7 +64,7 @@ def get_id_from_search_string(search_string: str) -> Optional[str]:
         possible_id = search_string.split("/")[-1]
 
     try:
-        possible_id = UUID(search_string)
+        possible_id = str(UUID(search_string))
     except ValueError:
         possible_id = None
     return possible_id
