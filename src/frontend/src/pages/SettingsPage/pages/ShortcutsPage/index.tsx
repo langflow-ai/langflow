@@ -12,6 +12,7 @@ import {
 import { Button } from "../../../../components/ui/button";
 import EditShortcutButton from "./EditShortcutButton";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
+import { defaultShortcuts, unavailableShortcutss } from "../../../../constants/constants";
 
 export default function ShortcutsPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -54,6 +55,12 @@ export default function ShortcutsPage() {
     }
   }, [])
 
+  function handleRestore() {
+    setShortcuts(defaultShortcuts, unavailableShortcutss);
+    localStorage.removeItem("langflow-shortcuts");
+    localStorage.removeItem("langflow-UShortcuts");
+  }
+
   return (
     <div className="flex h-full w-full flex-col gap-6 ">
       <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
@@ -70,38 +77,43 @@ export default function ShortcutsPage() {
             frequently used actions.
           </p>
         </div>
+        <div>
+          <div className="w-full flex justify-end align-end mb-4">
+            <div className="flex items-center justify center">
+              <EditShortcutButton
+                disable={selectedRows.length === 0}
+                defaultCombination={combinationToEdit[0]?.shortcut}
+                shortcut={selectedRows}
+                defaultShortcuts={shortcuts}
+                open={open}
+                setOpen={setOpen}
+              >
+                <Button variant="primary">
+                  <ForwardedIconComponent name="Plus" className="mr-2 w-4" />
+                  Customize
+                </Button>
+              </EditShortcutButton>
+              <Button variant="primary" className="ml-3" onClick={handleRestore}>
+                <ForwardedIconComponent name="RotateCcw" className="mr-2 w-4" />
+                Restore
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
       <div className="grid gap-6 pb-8">
-        <Card x-chunk="dashboard-04-chunk-2" className="pt-4">
-        <CardContent>
-            <div className="w-full flex justify-end align-end mb-4">
-              <div className="">
-                <EditShortcutButton
-                  defaultCombination={combinationToEdit[0]?.shortcut}
-                  shortcut={selectedRows}
-                  defaultShortcuts={shortcuts}
-                  open={open}
-                  setOpen={setOpen}
-                >
-                  <Button data-testid="api-key-button-store" variant="primary">
-                    <ForwardedIconComponent name="Plus" className="mr-2 w-4" />
-                    New key combination
-                  </Button>
-                </EditShortcutButton>
-              </div>
-            </div>
-            <TableComponent
-              onSelectionChanged={(event: SelectionChangedEvent) => {
-                setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
-              }}
-              suppressRowClickSelection={true}
-              domLayout="autoHeight"
-              pagination={false}
-              columnDefs={colDefs}
-              rowData={nodesRowData}
-            />
-          </CardContent>
-        </Card>
+        <div>
+          <TableComponent
+            onSelectionChanged={(event: SelectionChangedEvent) => {
+              setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
+            }}
+            suppressRowClickSelection={true}
+            domLayout="autoHeight"
+            pagination={false}
+            columnDefs={colDefs}
+            rowData={nodesRowData}
+          />
+        </div>
       </div>
     </div>
   );

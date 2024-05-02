@@ -12,7 +12,8 @@ export default function EditShortcutButton({
   defaultShortcuts,
   defaultCombination,
   open,
-  setOpen
+  setOpen,
+  disable,
 }: {
   children: JSX.Element;
   shortcut: string[];
@@ -20,6 +21,7 @@ export default function EditShortcutButton({
   defaultCombination: string;
   open: boolean;
   setOpen: (bool: boolean) => void;
+  disable?: boolean;
 }): JSX.Element {
   const isMac = navigator.userAgent.toUpperCase().includes("MAC");
   const [key, setKey] = useState<string>(isMac ? "Meta" : 'Ctrl');
@@ -88,10 +90,10 @@ export default function EditShortcutButton({
   }, [key, setKey])
 
   return (
-    <BaseModal open={open} setOpen={setOpen} size="smaller">
+    <BaseModal open={open} setOpen={setOpen} size="smaller" disable={disable}>
       <BaseModal.Header
         description={
-          "Set your new key combination"
+          "Recording your keyboard"
         }
       >
         <span className="pr-2"> Key Combination </span>
