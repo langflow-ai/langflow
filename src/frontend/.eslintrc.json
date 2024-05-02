@@ -2,15 +2,18 @@
   "extends": [
     "eslint:recommended",
     "plugin:react/recommended",
-    "plugin:prettier/recommended",
-    "standard"
+    "plugin:prettier/recommended"
   ],
-  "plugins": ["react"],
+  "plugins": ["react", "import-helpers", "prettier"],
+  "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "ecmaVersion": 2018
+    "project": ["./tsconfig.node.json", "./tsconfig.json"],
+    "extraFileExtensions:": [".mdx"],
+    "extensions:": [".mdx"]
   },
   "env": {
-    "browser": true
+    "browser": true,
+    "es2021": true
   },
   "settings": {
     "react": {
