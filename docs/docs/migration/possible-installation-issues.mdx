@@ -25,3 +25,16 @@ For this error to occur, two scenarios are possible:
    In this case, you might not be running the correct executable.
    To solve this issue, you can run the correct executable by running _`python -m langflow run`_ instead of _`langflow run`_ and if that doesn't work, you can try uninstalling langflow and reinstalling it using _`python -m pip install langflow --pre -U`_.
 2. Some version conflicts might have occurred during the installation process. Run _`python -m pip install langflow --pre -U --force-reinstall`_ to reinstall langflow and its dependencies.
+
+## _`Something went wrong running migrations. Please, run 'langflow migration --fix'`_
+
+TLDR;
+
+- Clear the cache by deleting the contents of the cache folder.
+This folder can be found at:
+  - **Linux or WSL2 on Windows**: `home/<username>/.cache/langflow/`
+  - **MacOS**: `/Users/<username>/Library/Caches/langflow/`
+
+If you wish to retain your files, ensure to back them up before clearing the folder.
+
+This error often occurs when upgrading Langflow, the new version can't override `langflow-pre.db` in `.cache/langflow/`. Clearing the cache removes this file but will also erase your settings.

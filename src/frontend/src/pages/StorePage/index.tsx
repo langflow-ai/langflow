@@ -9,7 +9,7 @@ import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
 import { Badge } from "../../components/ui/badge";
 import {
@@ -64,6 +64,8 @@ export default function StorePage(): JSX.Element {
   const [tabActive, setTabActive] = useState("All");
   const [searchNow, setSearchNow] = useState("");
   const [selectFilter, setSelectFilter] = useState("all");
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!loadingApiKey) {
@@ -371,6 +373,10 @@ export default function StorePage(): JSX.Element {
                       data={item}
                       authorized={validApiKey}
                       disabled={loading}
+                      playground={
+                        item.last_tested_version?.includes("1.0.0") &&
+                        !item.is_component
+                      }
                     />
                   </>
                 );

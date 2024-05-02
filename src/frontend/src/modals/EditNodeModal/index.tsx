@@ -203,7 +203,7 @@ const EditNodeModal = forwardRef(
                                 !myData.node.template[templateParam].options ? (
                                   <div className="mx-auto">
                                     {myData.node.template[templateParam]
-                                      .list ? (
+                                      ?.list ? (
                                       <InputListComponent
                                         componentName={templateParam}
                                         editNode={true}
@@ -345,7 +345,7 @@ const EditNodeModal = forwardRef(
                                       }}
                                       isList={
                                         data.node?.template[templateParam]
-                                          .list ?? false
+                                          ?.list ?? false
                                       }
                                     />
                                   </div>
@@ -420,6 +420,10 @@ const EditNodeModal = forwardRef(
                                     .type === "int" ? (
                                   <div className="mx-auto">
                                     <IntComponent
+                                      rangeSpec={
+                                        data.node?.template[templateParam]
+                                          ?.rangeSpec
+                                      }
                                       id={
                                         "edit-int-input-" +
                                         myData.node.template[templateParam].name
