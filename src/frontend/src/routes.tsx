@@ -7,7 +7,9 @@ import { StoreGuard } from "./components/storeGuard";
 import AdminPage from "./pages/AdminPage";
 import LoginAdminPage from "./pages/AdminPage/LoginPage";
 import ApiKeysPage from "./pages/ApiKeysPage";
+import DeleteAccountPage from "./pages/DeleteAccountPage";
 import FlowPage from "./pages/FlowPage";
+import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/MainPage";
 import ComponentsComponent from "./pages/MainPage/components/components";
 import PlaygroundPage from "./pages/Playground";
@@ -18,8 +20,6 @@ import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import SignUp from "./pages/SignUpPage";
 import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
-import DeleteAccountPage from "./pages/deleteAccountPage";
-import LoginPage from "./pages/loginPage";
 
 const Router = () => {
   return (
