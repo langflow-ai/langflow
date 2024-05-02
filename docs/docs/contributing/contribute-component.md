@@ -1,6 +1,6 @@
 # How to contribute components?
 
-As of Langflow 1.0 alpha, new components are added as objects of the `CustomComponent` class and any dependencies are added to the pyproject.toml file.
+As of Langflow 1.0 alpha, new components are added as objects of the [CustomComponent](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/interface/custom/custom_component/custom_component.py) class and any dependencies are added to the [pyproject.toml](https://github.com/langflow-ai/langflow/blob/dev/pyproject.toml#L27) file.
 
 ## Add an example component
 
