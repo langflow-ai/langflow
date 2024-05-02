@@ -151,11 +151,6 @@ export default function StorePage(): JSX.Element {
       .catch((err) => {
         if (err.response?.status === 403 || err.response?.status === 401) {
           setValidApiKey(false);
-        } else if (
-          err.response?.data?.detail ===
-          "Unexpected error: Object of type UUID is not JSON serializable"
-        ) {
-          navigate("/store/" + inputText);
         } else {
           setSearchData([]);
           setTotalRowsCount(0);
