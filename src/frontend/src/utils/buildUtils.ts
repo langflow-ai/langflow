@@ -1,11 +1,11 @@
 import { AxiosError } from "axios";
+import { Edge, Node } from "reactflow";
 import { BuildStatus } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
 import useFlowStore from "../stores/flowStore";
 import { VertexBuildTypeAPI } from "../types/api";
 import { VertexLayerElementType } from "../types/zustand/flow";
-import { Edge, Node } from "reactflow";
 
 type BuildVerticesParams = {
   flowId: string; // Assuming FlowType is the type for your flow
@@ -52,8 +52,8 @@ export async function updateVerticesOrder(
   flowId: string,
   startNodeId?: string | null,
   stopNodeId?: string | null,
-  nodes?:Node[],
-  edges?:Edge[]
+  nodes?: Node[],
+  edges?: Edge[]
 ): Promise<{
   verticesLayers: VertexLayerElementType[][];
   verticesIds: string[];
@@ -64,12 +64,19 @@ export async function updateVerticesOrder(
     const setErrorData = useAlertStore.getState().setErrorData;
     let orderResponse;
     try {
-      orderResponse = await getVerticesOrder(flowId, startNodeId, stopNodeId, nodes, edges);
+      orderResponse = await getVerticesOrder(
+        flowId,
+        startNodeId,
+        stopNodeId,
+        nodes,
+        edges
+      );
     } catch (error: any) {
       setErrorData({
         title: "Oops! Looks like you missed something",
         list: [error.response?.data?.detail ?? "Unknown Error"],
       });
+      debugger;
       useFlowStore.getState().setIsBuilding(false);
       throw new Error("Invalid nodes");
     }

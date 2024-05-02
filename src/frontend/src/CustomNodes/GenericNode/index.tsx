@@ -645,7 +645,11 @@ export default function GenericNode({
                   variant="secondary"
                   className={"group h-9 px-1.5"}
                 >
-                  <div>
+                  <div
+                    data-testid={
+                      `button_run_` + data?.node?.display_name.toLowerCase()
+                    }
+                  >
                     <div className="generic-node-status-position flex items-center justify-center">
                       {renderIconStatus(buildStatus, validationStatus)}
                     </div>
