@@ -28,8 +28,8 @@ class StoreMessageComponent(CustomComponent):
     def build(
         self,
         sender: str = "User",
-        sender_name: str = None,
-        session_id: str = None,
+        sender_name: Optional[str] = None,
+        session_id: Optional[str] = None,
         message: str = "",
     ) -> List[Record]:
 

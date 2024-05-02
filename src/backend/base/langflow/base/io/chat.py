@@ -57,9 +57,8 @@ class ChatComponent(CustomComponent):
             sender_name=sender_name,
         )
 
-        record = records[0]
-        self.status = record
-        return record
+        self.status = records
+        return records
 
     def build_with_record(
         self,
