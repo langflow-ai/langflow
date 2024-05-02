@@ -2,6 +2,7 @@ import { cloneDeep } from "lodash";
 import { useState } from "react";
 import ImageViewer from "../../../../components/ImageViewer";
 import CsvOutputComponent from "../../../../components/csvOutputComponent";
+import InputListComponent from "../../../../components/inputListComponent";
 import PdfViewer from "../../../../components/pdfViewer";
 import {
   Select,
@@ -121,7 +122,21 @@ export default function IOFieldView({
             );
 
           case "StringListInput":
-            return <>diusahjduisahudsa</>;
+            return (
+              <>
+                <InputListComponent
+                  value={node.data.node!.template["input_value"]?.value}
+                  onChange={(e) => {
+                    if (node) {
+                      let newNode = cloneDeep(node);
+                      newNode.data.node!.template["input_value"].value = e;
+                      setNode(node.id, newNode);
+                    }
+                  }}
+                  disabled={false}
+                />
+              </>
+            );
 
           default:
             return (
@@ -249,7 +264,22 @@ export default function IOFieldView({
             );
 
           case "StringListOutput":
-            return <>diusahjduisahudsa</>;
+            return (
+              <>
+                <InputListComponent
+                  value={node.data.node!.template["input_value"]?.value}
+                  onChange={(e) => {
+                    if (node) {
+                      let newNode = cloneDeep(node);
+                      newNode.data.node!.template["input_value"].value = e;
+                      setNode(node.id, newNode);
+                    }
+                  }}
+                  playgroundDisabled
+                  disabled={false}
+                />
+              </>
+            );
 
           default:
             return (
