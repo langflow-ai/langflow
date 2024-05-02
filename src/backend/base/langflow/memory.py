@@ -1,3 +1,4 @@
+import warnings
 from typing import Optional, Union
 
 from loguru import logger
@@ -51,6 +52,7 @@ def get_messages(
                 "sender": row.sender,
                 "sender_name": row.sender_name,
                 "session_id": row.session_id,
+                "timestamp": row.timestamp,
             },
         )
         records.append(record)
@@ -98,3 +100,39 @@ def delete_messages(session_id: str):
     """
     monitor_service = get_monitor_service()
     monitor_service.delete_messages(session_id)
+
+
+def store_message(
+    message: Union[str, Record],
+    session_id: Optional[str] = None,
+    sender: Optional[str] = None,
+    sender_name: Optional[str] = None,
+) -> list[Record]:
+
+    if not message:
+        warnings.warn("No message provided.")
+        return []
+
+    if not session_id or not sender or not sender_name:
+        raise ValueError("All of session_id, sender, and sender_name must be provided.")
+
+    if isinstance(message, Record):
+        record = message
+        record.data.update(
+            {
+                "session_id": session_id,
+                "sender": sender,
+                "sender_name": sender_name,
+            }
+        )
+    elif isinstance(message, str):
+        record = Record(
+            data={
+                "text": message,
+                "session_id": session_id,
+                "sender": sender,
+                "sender_name": sender_name,
+            },
+        )
+
+    return add_messages([record])
