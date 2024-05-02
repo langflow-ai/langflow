@@ -28,6 +28,8 @@ export type InputComponentType = {
   optionButton?: (option: string) => ReactElement;
   selectedOption?: string;
   setSelectedOption?: (value: string) => void;
+  selectedOptions?: string[];
+  setSelectedOptions?: (value: string[]) => void;
 };
 export type ToggleComponentType = {
   enabled: boolean;
@@ -45,6 +47,7 @@ export type DropDownComponentType = {
   onSelect: (value: string) => void;
   editNode?: boolean;
   id?: string;
+  children?: ReactNode;
 };
 export type ParameterComponentType = {
   data: NodeDataType;
@@ -70,15 +73,6 @@ export type InputListComponentType = {
   editNode?: boolean;
   componentName?: string;
   playgroundDisabled?: boolean;
-};
-
-export type InputGlobalComponentType = {
-  disabled: boolean;
-  onChange: (value: string) => void;
-  setDb: (value: boolean) => void;
-  name: string;
-  data: NodeDataType;
-  editNode?: boolean;
 };
 
 export type KeyPairListComponentType = {

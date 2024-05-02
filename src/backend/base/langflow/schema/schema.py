@@ -4,6 +4,7 @@ from typing import Literal, Optional, cast
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from pydantic import BaseModel, model_validator
+from langchain_core.messages import HumanMessage, AIMessage
 
 
 class Record(BaseModel):

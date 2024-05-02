@@ -10,7 +10,10 @@ import ApiKeysPage from "./pages/ApiKeysPage";
 import FlowPage from "./pages/FlowPage";
 import HomePage from "./pages/MainPage";
 import ComponentsComponent from "./pages/MainPage/components/components";
-import ProfileSettingsPage from "./pages/ProfileSettingsPage";
+import SettingsPage from "./pages/SettingsPage";
+import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
+import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
+import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
 import DeleteAccountPage from "./pages/deleteAccountPage";
@@ -38,6 +41,19 @@ const Router = () => {
           path="components"
           element={<ComponentsComponent key="components" />}
         />
+      </Route>
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate replace to={"general"} />} />
+        <Route path="global-variables" element={<GlobalVariablesPage />} />
+        <Route path="general" element={<GeneralPage />} />
+        <Route path="shortcuts" element={<ShortcutsPage />} />
       </Route>
       <Route
         path="/store"
@@ -128,14 +144,6 @@ const Router = () => {
       />
 
       <Route path="/account">
-        <Route
-          path="settings"
-          element={
-            <ProtectedRoute>
-              <ProfileSettingsPage />
-            </ProtectedRoute>
-          }
-        />
         <Route
           path="delete"
           element={

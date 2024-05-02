@@ -22,6 +22,7 @@ import {
   addVersionToDuplicates,
   createFlowComponent,
   createNewFlow,
+  extractFieldsFromComponenents,
   processDataFromFlow,
   processFlows,
 } from "../utils/reactflowUtils";
@@ -92,6 +93,10 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
             );
             useTypesStore.setState((state) => ({
               data: { ...state.data, ["saved_components"]: data },
+              ComponentFields: extractFieldsFromComponenents({
+                ...state.data,
+                ["saved_components"]: data,
+              }),
             }));
             set({ isLoading: false });
             resolve();
@@ -207,6 +212,10 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           set({ isLoading: false });
           useTypesStore.setState((state) => ({
             data: { ...state.data, ["saved_components"]: data },
+            ComponentFields: extractFieldsFromComponenents({
+              ...state.data,
+              ["saved_components"]: data,
+            }),
           }));
         }, 200);
         // addFlowToLocalState(newFlow);
@@ -229,6 +238,10 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         set({ isLoading: false });
         useTypesStore.setState((state) => ({
           data: { ...state.data, ["saved_components"]: data },
+          ComponentFields: extractFieldsFromComponenents({
+            ...state.data,
+            ["saved_components"]: data,
+          }),
         }));
 
         // Return the id
@@ -258,6 +271,10 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           set({ isLoading: false });
           useTypesStore.setState((state) => ({
             data: { ...state.data, ["saved_components"]: data },
+            ComponentFields: extractFieldsFromComponenents({
+              ...state.data,
+              ["saved_components"]: data,
+            }),
           }));
           resolve();
         });
