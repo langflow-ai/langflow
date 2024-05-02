@@ -123,7 +123,6 @@ setup_devcontainer:
 setup_env:
 	@sh ./scripts/setup/update_poetry.sh 1.8.2
 	@sh ./scripts/setup/setup_env.sh
-	@poetry run pre-commit install
 
 frontend:
 	make install_frontend
@@ -136,6 +135,7 @@ frontendc:
 install_backend:
 	@echo 'Installing backend dependencies'
 	@poetry install
+	@poetry run pre-commit install
 
 backend:
 	@echo 'Setting up the environment'
