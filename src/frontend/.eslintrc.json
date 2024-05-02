@@ -1,7 +1,21 @@
 {
-  "extends": ["eslint:recommended", "plugin:node/recommended"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:prettier/recommended",
+    "standard"
+  ],
+  "plugins": ["react"],
   "parserOptions": {
     "ecmaVersion": 2018
+  },
+  "env": {
+    "browser": true
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
   },
   "rules": {
     "no-console": "warn",
@@ -16,6 +30,7 @@
     "no-redeclare": "error",
     "no-empty": "error",
     "no-await-in-loop": "error",
+    "react/react-in-jsx-scope": 0,
     "node/exports-style": ["error", "module.exports"],
     "node/file-extension-in-import": ["error", "always"],
     "node/prefer-global/buffer": ["error", "always"],
