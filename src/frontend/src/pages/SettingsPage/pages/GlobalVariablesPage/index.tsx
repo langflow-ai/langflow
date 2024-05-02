@@ -2,24 +2,69 @@ import IconComponent from "../../../../components/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 
 import { ColDef, ColGroupDef, SelectionChangedEvent } from "ag-grid-community";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AddNewVariableButton from "../../../../components/addNewVariableButtonComponent/addNewVariableButton";
 import Dropdown from "../../../../components/dropdownComponent";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
 import { Badge } from "../../../../components/ui/badge";
+import { deleteGlobalVariable } from "../../../../controllers/API";
+import useAlertStore from "../../../../stores/alertStore";
+import { useGlobalVariablesStore } from "../../../../stores/globalVariables";
 import { cn } from "../../../../utils/utils";
 
 export default function GlobalVariablesPage() {
+  const globalVariablesEntries = useGlobalVariablesStore(
+    (state) => state.globalVariablesEntries
+  );
+  const removeGlobalVariable = useGlobalVariablesStore(
+    (state) => state.removeGlobalVariable
+  );
+  const globalVariables = useGlobalVariablesStore(
+    (state) => state.globalVariables
+  );
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
+
   const BadgeRenderer = (props) => {
-    return (
+    return props.value !== "" ? (
       <div>
         <Badge variant="outline" size="md" className="font-normal">
           {props.value}
         </Badge>
       </div>
+    ) : (
+      <div></div>
     );
   };
+
+  const [rowData, setRowData] = useState<
+    {
+      type: string | undefined;
+      id: string;
+      name: string;
+      default_fields: string | undefined;
+    }[]
+  >();
+
+  useEffect(() => {
+    const rows: Array<{
+      type: string | undefined;
+      id: string;
+      name: string;
+      default_fields: string | undefined;
+    }> = [];
+    globalVariablesEntries.forEach((entrie) => {
+      const globalVariableObj = globalVariables[entrie];
+      rows.push({
+        type: globalVariableObj.type,
+        id: globalVariableObj.id,
+        default_fields: (globalVariableObj.default_fields ?? []).join(", "),
+        name: entrie,
+      });
+    });
+    setRowData(rows);
+  }, [globalVariables]);
 
   const DropdownEditor = ({ options, value, onValueChange }) => {
     return (
@@ -43,60 +88,45 @@ export default function GlobalVariablesPage() {
       cellRenderer: BadgeRenderer,
       cellEditor: DropdownEditor,
       cellEditorParams: {
-        options: ["Prompt", "Credential"],
+        options: ["Generic", "Credential"],
       },
       flex: 1,
-      editable: true,
+      editable: false,
     },
-    {
-      field: "value",
-      cellEditor: "agLargeTextCellEditor",
-      cellEditorPopup: true,
-      flex: 2,
-      editable: true,
-    },
+    // {
+    //   field: "value",
+    //   cellEditor: "agLargeTextCellEditor",
+    //   flex: 2,
+    //   editable: false,
+    // },
     {
       headerName: "Apply To Fields",
-      field: "defaultFields",
+      field: "default_fields",
       flex: 1,
-      editable: true,
-    },
-  ]);
-
-  const [rowData, setRowData] = useState([
-    {
-      name: "OpenAI Key",
-      type: "Credential",
-      value: "apijpioj09u302j0982ejf",
-      defaultFields: "Open AI API Key",
-    },
-    {
-      name: "Prompt",
-      type: "Prompt",
-      value: `Answer user's questions based on the document below:
-
-    ---
-    
-    {Document}
-    
-    ---
-    
-    Question:
-    {Question}
-    
-    Answer:
-    `,
-      defaultFields: ["Prompt"],
-    },
-    {
-      name: "Azure Key",
-      type: "Credential",
-      value: "awowkdenvoaimojndofunoweoij0293u0n2e08n23",
-      defaultFields: ["Azure API Key"],
+      editable: false,
     },
   ]);
 
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+
+  async function removeVariables() {
+    const deleteGlobalVariablesPromise = selectedRows.map(async (row) => {
+      const id = getVariableId(row);
+      const deleteGlobalVariables = deleteGlobalVariable(id!);
+      await deleteGlobalVariables;
+    });
+    Promise.all(deleteGlobalVariablesPromise)
+      .then(() => {
+        selectedRows.forEach((row) => {
+          removeGlobalVariable(row);
+        });
+      })
+      .catch(() => {
+        setErrorData({
+          title: `Error deleting global variables.`,
+        });
+      });
+  }
 
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">
@@ -119,6 +149,7 @@ export default function GlobalVariablesPage() {
             variant="primary"
             className="group px-2"
             disabled={selectedRows.length === 0}
+            onClick={removeVariables}
           >
             <IconComponent
               name="Trash2"

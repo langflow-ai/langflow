@@ -1,10 +1,9 @@
-import warnings
 from typing import Optional, Union
 
 from langflow.field_typing import Text
 from langflow.helpers.record import records_to_text
 from langflow.interface.custom.custom_component import CustomComponent
-from langflow.memory import add_messages
+from langflow.memory import store_message
 from langflow.schema import Record
 
 
@@ -50,34 +49,16 @@ class ChatComponent(CustomComponent):
         sender: Optional[str] = None,
         sender_name: Optional[str] = None,
     ) -> list[Record]:
-        if not message:
-            warnings.warn("No message provided.")
-            return []
 
-        if not session_id or not sender or not sender_name:
-            raise ValueError("All of session_id, sender, and sender_name must be provided.")
-        if isinstance(message, Record):
-            record = message
-            record.data.update(
-                {
-                    "session_id": session_id,
-                    "sender": sender,
-                    "sender_name": sender_name,
-                }
-            )
-        else:
-            record = Record(
-                data={
-                    "text": message,
-                    "session_id": session_id,
-                    "sender": sender,
-                    "sender_name": sender_name,
-                },
-            )
+        records = store_message(
+            message,
+            session_id=session_id,
+            sender=sender,
+            sender_name=sender_name,
+        )
 
-        self.status = record
-        records = add_messages([record])
-        return records[0]
+        self.status = records
+        return records
 
     def build_with_record(
         self,

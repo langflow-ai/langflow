@@ -96,6 +96,18 @@ body {
 }
 
 .custom-hover:hover {
-  background-color: rgba(99, 102, 241, 0.1); /* Medium indigo color with 20% opacity */
+  background-color: rgba(
+    99,
+    102,
+    241,
+    0.1
+  ); /* Medium indigo color with 20% opacity */
 }
 
+.json-view-playground .json-view {
+  background-color: #fff !important;
+}
+
+.json-view-flow .json-view {
+  background-color: #bbb !important;
+}

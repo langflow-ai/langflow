@@ -33,6 +33,8 @@ export default function InputComponent({
   optionsIcon = "ChevronsUpDown",
   selectedOption,
   setSelectedOption,
+  selectedOptions = [],
+  setSelectedOptions,
   options = [],
   optionsPlaceholder = "Search options...",
   optionsButton,
@@ -101,13 +103,18 @@ export default function InputComponent({
                 value={
                   (selectedOption !== "" || !onChange) && setSelectedOption
                     ? selectedOption
+                    : (selectedOptions?.length !== 0 || !onChange) &&
+                      setSelectedOptions
+                    ? selectedOptions?.join(", ")
                     : value
                 }
                 autoFocus={autoFocus}
                 disabled={disabled}
                 onClick={() => {
-                  (selectedOption !== "" || !onChange) &&
-                    setSelectedOption &&
+                  (((selectedOption !== "" || !onChange) &&
+                    setSelectedOption) ||
+                    ((selectedOptions?.length !== 0 || !onChange) &&
+                      setSelectedOptions)) &&
                     setShowOptions(true);
                 }}
                 required={required}
@@ -119,9 +126,11 @@ export default function InputComponent({
                     ? " text-clip password "
                     : "",
                   editNode ? " input-edit-node " : "",
-                  password && setSelectedOption ? "pr-[62.9px]" : "",
-                  (!password && setSelectedOption) ||
-                    (password && !setSelectedOption)
+                  password && (setSelectedOption || setSelectedOptions)
+                    ? "pr-[62.9px]"
+                    : "",
+                  (!password && (setSelectedOption || setSelectedOptions)) ||
+                    (password && !(setSelectedOption || setSelectedOptions))
                     ? "pr-8"
                     : "",
 
@@ -164,7 +173,10 @@ export default function InputComponent({
             >
               <Command
                 filter={(value, search) => {
-                  if (value.includes(search) || value.includes("doNotFilter-"))
+                  if (
+                    value.toLowerCase().includes(search.toLowerCase()) ||
+                    value.includes("doNotFilter-")
+                  )
                     return 1; // ensures items arent filtered
                   return 0;
                 }}
@@ -184,7 +196,15 @@ export default function InputComponent({
                                 ? ""
                                 : currentValue
                             );
-                          setShowOptions(false);
+                          setSelectedOptions &&
+                            setSelectedOptions(
+                              selectedOptions?.includes(currentValue)
+                                ? selectedOptions.filter(
+                                    (item) => item !== currentValue
+                                  )
+                                : [...selectedOptions, currentValue]
+                            );
+                          !setSelectedOptions && setShowOptions(false);
                         }}
                       >
                         <div className="group flex w-full items-center justify-between">
@@ -192,7 +212,8 @@ export default function InputComponent({
                             <div
                               className={cn(
                                 "relative mr-2 h-4 w-4",
-                                selectedOption === option
+                                selectedOption === option ||
+                                  selectedOptions?.includes(option)
                                   ? "opacity-100"
                                   : "opacity-0"
                               )}
@@ -228,12 +249,16 @@ export default function InputComponent({
           <div
             className={cn(
               "pointer-events-auto absolute inset-y-0 h-full w-full cursor-pointer",
-              (selectedOption !== "" || !onChange) && setSelectedOption
+              ((selectedOption !== "" || !onChange) && setSelectedOption) ||
+                ((selectedOptions?.length !== 0 || !onChange) &&
+                  setSelectedOptions)
                 ? ""
                 : "hidden"
             )}
             onClick={
-              (selectedOption !== "" || !onChange) && setSelectedOption
+              ((selectedOption !== "" || !onChange) && setSelectedOption) ||
+              ((selectedOptions?.length !== 0 || !onChange) &&
+                setSelectedOptions)
                 ? (e) => {
                     setShowOptions((old) => !old);
                     e.preventDefault();
@@ -245,7 +270,7 @@ export default function InputComponent({
         </>
       )}
 
-      {setSelectedOption && (
+      {(setSelectedOption || setSelectedOptions) && (
         <span
           className={cn(
             password && selectedOption === "" ? "right-8" : "right-0",

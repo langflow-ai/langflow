@@ -13,8 +13,8 @@ def utc_now():
 
 
 class VariableBase(SQLModel):
-    name: Optional[str] = Field(None, description="Name of the variable")
-    value: Optional[str] = Field(None, description="Encrypted value of the variable")
+    name: str = Field(description="Name of the variable")
+    value: str = Field(description="Encrypted value of the variable")
     default_fields: Optional[List[str]] = Field(sa_column=Column(JSON))
     type: Optional[str] = Field(None, description="Type of the variable")
 
@@ -26,7 +26,7 @@ class Variable(VariableBase, table=True):
         description="Unique ID for the variable",
     )
     # name is unique per user
-    created_at: datetime = Field(
+    created_at: Optional[datetime] = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=True),
         description="Creation time of the variable",
@@ -52,6 +52,7 @@ class VariableRead(SQLModel):
     id: UUID
     name: Optional[str] = Field(None, description="Name of the variable")
     type: Optional[str] = Field(None, description="Type of the variable")
+    default_fields: Optional[List[str]] = Field(None, description="Default fields for the variable")
 
 
 class VariableUpdate(SQLModel):

@@ -39,8 +39,8 @@ import { classNames } from "../../utils/utils";
 import ShadTooltip from "../ShadTooltipComponent";
 import DictComponent from "../dictComponent";
 import IconComponent from "../genericIconComponent";
-import InputGlobalComponent from "../inputGlobalComponent";
 import KeypairListComponent from "../keypairListComponent";
+import InputComponent from "../inputComponent";
 
 export default function CodeTabsComponent({
   flow,
@@ -267,7 +267,7 @@ export default function CodeTabsComponent({
                                               <div className="mx-auto">
                                                 {node.data.node.template[
                                                   templateField
-                                                ].list ? (
+                                                ]?.list ? (
                                                   <InputListComponent
                                                     componentName={
                                                       templateField
@@ -351,31 +351,38 @@ export default function CodeTabsComponent({
                                                     />
                                                   </div>
                                                 ) : (
-                                                  <InputGlobalComponent
+                                                  <InputComponent
                                                     editNode={true}
                                                     disabled={false}
+                                                    password={
+                                                      node.data.node.template[
+                                                        templateField
+                                                      ].password ?? false
+                                                    }
+                                                    value={
+                                                      !node.data.node.template[
+                                                        templateField
+                                                      ].value ||
+                                                      node.data.node.template[
+                                                        templateField
+                                                      ].value === ""
+                                                        ? ""
+                                                        : node.data.node
+                                                            .template[
+                                                            templateField
+                                                          ].value
+                                                    }
                                                     onChange={(target) => {
-                                                      if (node.data) {
-                                                        setNode(
-                                                          node.data.id,
-                                                          (oldNode) => {
-                                                            let newNode =
-                                                              cloneDeep(
-                                                                oldNode
-                                                              );
-
-                                                            newNode.data = {
-                                                              ...newNode.data,
-                                                            };
-
-                                                            newNode.data.node.template[
-                                                              templateField
-                                                            ].value = target;
-
-                                                            return newNode;
-                                                          }
-                                                        );
-                                                      }
+                                                      setData((old) => {
+                                                        let newInputList =
+                                                          cloneDeep(old);
+                                                        newInputList![
+                                                          i
+                                                        ].data.node.template[
+                                                          templateField
+                                                        ].value = target;
+                                                        return newInputList;
+                                                      });
                                                       tweaks.buildTweakObject!(
                                                         node["data"]["id"],
                                                         target,
@@ -384,25 +391,6 @@ export default function CodeTabsComponent({
                                                         ]
                                                       );
                                                     }}
-                                                    setDb={(value) => {
-                                                      setNode(
-                                                        node.data.id,
-                                                        (oldNode) => {
-                                                          let newNode =
-                                                            cloneDeep(oldNode);
-                                                          newNode.data = {
-                                                            ...newNode.data,
-                                                          };
-                                                          newNode.data.node.template[
-                                                            templateField
-                                                          ].load_from_db =
-                                                            value;
-                                                          return newNode;
-                                                        }
-                                                      );
-                                                    }}
-                                                    name={templateField}
-                                                    data={node.data}
                                                   />
                                                 )}
                                               </div>
@@ -745,7 +733,7 @@ export default function CodeTabsComponent({
                                                   isList={
                                                     node.data.node!.template[
                                                       templateField
-                                                    ].list ?? false
+                                                    ]?.list ?? false
                                                   }
                                                 />
                                               </div>

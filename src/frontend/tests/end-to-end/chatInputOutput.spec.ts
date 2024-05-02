@@ -45,7 +45,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page
     .getByTestId("input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
-  await page.getByText("Run", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).click();
   await page.getByPlaceholder("Send a message...").fill("Hello, how are you?");
   await page.getByTestId("icon-LucideSend").click();
   let valueUser = await page.getByTestId("sender_name_user").textContent();
@@ -65,7 +65,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   await page.getByTestId("input-sender_name").nth(1).fill("TestSenderNameUser");
   await page.getByTestId("input-sender_name").nth(0).fill("TestSenderNameAI");
 
-  await page.getByText("Run", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).click();
   await page.getByTestId("icon-LucideSend").click();
 
   valueUser = await page
@@ -138,7 +138,7 @@ test("chat_io_teste", async ({ page }) => {
     }
   );
   await page.getByLabel("fit view").click();
-  await page.getByText("Run", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).click();
   await page.getByPlaceholder("Send a message...").click();
   await page.getByPlaceholder("Send a message...").fill("teste");
   await page.getByRole("button").nth(1).click();
