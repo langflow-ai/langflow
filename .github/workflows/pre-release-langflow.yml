@@ -53,7 +53,7 @@ jobs:
         run: |
           make publish main=true
       - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist
@@ -80,15 +80,15 @@ jobs:
           push: true
           file: ./build_and_push.Dockerfile
           tags: |
-            logspace/langflow:${{ needs.release.outputs.version }}
-            logspace/langflow:1.0-alpha
+            langflowai/langflow:${{ needs.release.outputs.version }}
+            langflowai/langflow:1.0-alpha
 
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [docker_build, release]
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist

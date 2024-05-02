@@ -175,14 +175,26 @@ export async function buildVertices({
           !useFlowStore
             .getState()
             .verticesBuild?.verticesIds.includes(element.id) &&
+          !useFlowStore
+            .getState()
+            .verticesBuild?.verticesIds.includes(element.reference ?? "") &&
           onBuildUpdate
         ) {
           // If it is, skip building and set the state to inactive
-          onBuildUpdate(
-            getInactiveVertexData(element.id),
-            BuildStatus.INACTIVE,
-            runId
-          );
+          if (element.id) {
+            onBuildUpdate(
+              getInactiveVertexData(element.id),
+              BuildStatus.INACTIVE,
+              runId
+            );
+          }
+          if (element.reference) {
+            onBuildUpdate(
+              getInactiveVertexData(element.reference),
+              BuildStatus.INACTIVE,
+              runId
+            );
+          }
           buildResults.push(false);
           return;
         }

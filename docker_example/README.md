@@ -35,7 +35,7 @@ The Docker Compose configuration spins up two services: `langflow` and `postgres
 
 ### LangFlow Service
 
-The `langflow` service uses the `logspace/langflow:latest` Docker image and exposes port 7860. It depends on the `postgres` service.
+The `langflow` service uses the `langflowai/langflow:latest` Docker image and exposes port 7860. It depends on the `postgres` service.
 
 Environment variables:
 
@@ -62,4 +62,4 @@ Volumes:
 
 ## Switching to a Specific LangFlow Version
 
-If you want to use a specific version of LangFlow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version 1.0-alpha, change `logspace/langflow:latest` to `logspace/langflow:1.0-alpha`.
+If you want to use a specific version of LangFlow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version 1.0-alpha, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.

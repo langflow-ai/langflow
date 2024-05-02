@@ -74,4 +74,4 @@ jobs:
           push: true
           file: ./build_and_push_base.Dockerfile
           tags: |
-            logspace/langflow:base-${{ needs.release.outputs.version }}
+            langflowai/langflow:base-${{ needs.release.outputs.version }}

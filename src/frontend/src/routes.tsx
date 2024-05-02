@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { Route, Routes, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedAdminRoute } from "./components/authAdminGuard";
 import { ProtectedRoute } from "./components/authGuard";
 import { ProtectedLoginRoute } from "./components/authLoginGuard";
@@ -20,13 +19,6 @@ import SignUp from "./pages/signUpPage";
 import PlaygroundPage from "./pages/Playground";
 
 const Router = () => {
-  const navigate = useNavigate();
-  useEffect(() => {
-    // Redirect from root to /flows
-    if (window.location.pathname === "/") {
-      navigate("/flows");
-    }
-  }, [navigate]);
   return (
     <Routes>
       <Route
@@ -37,6 +29,7 @@ const Router = () => {
           </ProtectedRoute>
         }
       >
+        <Route index element={<Navigate replace to={"flows"} />} />
         <Route
           path="flows"
           element={<ComponentsComponent key="flows" is_component={false} />}
