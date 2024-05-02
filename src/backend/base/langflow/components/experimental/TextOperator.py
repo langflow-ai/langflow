@@ -1,7 +1,8 @@
+from typing import Optional
+
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
 from langflow.field_typing import Text
-
 
 class TextOperatorComponent(CustomComponent):
     display_name = "Text Operator"
@@ -47,9 +48,9 @@ class TextOperatorComponent(CustomComponent):
         match_text: Text,
         operator: Text,
         case_sensitive: bool = False,
-        true_output: Optional[Text] = None,
+        true_output: Optional[Text] = "",
     ) -> Record:
-
+        
         if not input_text or not match_text:
             raise ValueError(
                 "Both 'input_text' and 'match_text' must be provided and non-empty."
@@ -72,14 +73,13 @@ class TextOperatorComponent(CustomComponent):
             result = input_text.endswith(match_text)
 
         out = true_output if true_output else input_text
-        if isinstance(out, Text):
-            out = Record(data={"result": out})
+        output_record = Record(data={"result": out}) if not isinstance(out, Record) else out
 
         if result:
-            self.status = out
-            return out
+            self.status = output_record
+            return output_record
         else:
-            self.status = "Comparison failed, stopping execution.\n\n"
+            self.status = "Comparison failed, stopping execution."
             self.stop()
 
-        return out
+        return output_record
