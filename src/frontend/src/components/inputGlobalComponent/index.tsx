@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { deleteGlobalVariable } from "../../controllers/API";
-import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
+import DeleteConfirmationModal from "../../modals/deleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import { InputGlobalComponentType } from "../../types/components";
@@ -49,7 +49,10 @@ export default function InputGlobalComponent({
       !data.node?.template[name].value &&
       data.node?.template[name].display_name
     ) {
-      if (unavaliableFields[data.node?.template[name].display_name!] && !disabled) {
+      if (
+        unavaliableFields[data.node?.template[name].display_name!] &&
+        !disabled
+      ) {
         setTimeout(() => {
           setDb(true);
           onChange(unavaliableFields[data.node?.template[name].display_name!]);

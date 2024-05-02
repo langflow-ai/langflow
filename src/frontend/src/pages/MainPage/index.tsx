@@ -1,7 +1,7 @@
 import { Group, ToyBrick } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import DropdownButton from "../../components/DropdownButtonComponent";
+import DropdownButton from "../../components/dropdownButtonComponent";
 import IconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
 import SidebarNav from "../../components/sidebarComponent";
@@ -11,7 +11,7 @@ import {
   MY_COLLECTION_DESC,
   USER_PROJECTS_HEADER,
 } from "../../constants/constants";
-import NewFlowModal from "../../modals/NewFlowModal";
+import NewFlowModal from "../../modals/newFlowModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { downloadFlows } from "../../utils/reactflowUtils";

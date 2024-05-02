@@ -11,13 +11,13 @@ import ReactFlow, {
   SelectionDragHandler,
   updateEdge,
 } from "reactflow";
-import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
   INVALID_SELECTION_ERROR_ALERT,
   UPLOAD_ALERT_LIST,
   UPLOAD_ERROR_ALERT,
   WRONG_FILE_ERROR_ALERT,
 } from "../../../../constants/alerts_constants";
+import GenericNode from "../../../../customNodes/genericNode";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";

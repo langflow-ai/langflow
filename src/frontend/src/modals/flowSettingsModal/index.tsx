@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import EditFlowSettings from "../../components/EditFlowSettingsComponent";
+import EditFlowSettings from "../../components/editFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
