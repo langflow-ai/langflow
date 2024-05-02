@@ -5,6 +5,7 @@ import useAlertStore from "../stores/alertStore";
 import useFlowStore from "../stores/flowStore";
 import { VertexBuildTypeAPI } from "../types/api";
 import { VertexLayerElementType } from "../types/zustand/flow";
+import { Edge, Node } from "reactflow";
 
 type BuildVerticesParams = {
   flowId: string; // Assuming FlowType is the type for your flow
@@ -21,6 +22,8 @@ type BuildVerticesParams = {
   onBuildError?: (title, list, idList: VertexLayerElementType[]) => void;
   onBuildStart?: (idList: VertexLayerElementType[]) => void;
   onValidateNodes?: (nodes: string[]) => void;
+  nodes?: Node[];
+  edges?: Edge[];
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -48,7 +51,9 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
 export async function updateVerticesOrder(
   flowId: string,
   startNodeId?: string | null,
-  stopNodeId?: string | null
+  stopNodeId?: string | null,
+  nodes?:Node[],
+  edges?:Edge[]
 ): Promise<{
   verticesLayers: VertexLayerElementType[][];
   verticesIds: string[];
@@ -59,7 +64,7 @@ export async function updateVerticesOrder(
     const setErrorData = useAlertStore.getState().setErrorData;
     let orderResponse;
     try {
-      orderResponse = await getVerticesOrder(flowId, startNodeId, stopNodeId);
+      orderResponse = await getVerticesOrder(flowId, startNodeId, stopNodeId, nodes, edges);
     } catch (error: any) {
       setErrorData({
         title: "Oops! Looks like you missed something",
@@ -101,6 +106,8 @@ export async function buildVertices({
   onBuildError,
   onBuildStart,
   onValidateNodes,
+  nodes,
+  edges,
 }: BuildVerticesParams) {
   let verticesBuild = useFlowStore.getState().verticesBuild;
   // if startNodeId and stopNodeId are provided
@@ -113,7 +120,9 @@ export async function buildVertices({
     let verticesOrderResponse = await updateVerticesOrder(
       flowId,
       startNodeId,
-      stopNodeId
+      stopNodeId,
+      nodes,
+      edges
     );
     if (onValidateNodes) {
       try {

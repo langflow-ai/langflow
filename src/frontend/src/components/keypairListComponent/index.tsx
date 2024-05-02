@@ -20,7 +20,13 @@ export default function KeypairListComponent({
     }
   }, [disabled]);
 
-  const ref = useRef(value.length === 0 ? [{ "": "" }] : value);
+  const checkValueType = (value) => {
+    return Array.isArray(value) ? value : [value];
+  };
+
+  const ref = useRef<any>([]);
+  ref.current =
+    !value || value?.length === 0 ? [{ "": "" }] : checkValueType(value);
 
   useEffect(() => {
     if (JSON.stringify(value) !== JSON.stringify(ref.current)) {

@@ -2,6 +2,7 @@ import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { FlowType } from "../../flow";
 
 export type FlowsManagerStoreType = {
+  getFlowById: (id: string) => FlowType | undefined;
   flows: Array<FlowType>;
   setFlows: (flows: FlowType[]) => void;
   currentFlow: FlowType | undefined;
@@ -50,6 +51,7 @@ export type FlowsManagerStoreType = {
   takeSnapshot: () => void;
   examples: Array<FlowType>;
   setExamples: (examples: FlowType[]) => void;
+  setCurrentFlow: (flow: FlowType) => void;
 };
 
 export type UseUndoRedoOptions = {

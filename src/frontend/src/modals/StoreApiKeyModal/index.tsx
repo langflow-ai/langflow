@@ -86,6 +86,7 @@ export default function StoreApiKeyModal({
         <Form.Root
           onSubmit={(event) => {
             event.preventDefault();
+            handleSaveKey();
           }}
         >
           <div className="grid gap-5">
@@ -131,9 +132,6 @@ export default function StoreApiKeyModal({
                 <Button
                   data-testid="api-key-save-button-store"
                   className="mt-8"
-                  onClick={() => {
-                    handleSaveKey();
-                  }}
                 >
                   Save
                 </Button>
