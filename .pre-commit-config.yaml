@@ -11,6 +11,7 @@ repos:
           - eslint-config-prettier
           - prettier
           - eslint-plugin-react@latest
+          - typescript-eslint
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
     rev: v0.4.2
