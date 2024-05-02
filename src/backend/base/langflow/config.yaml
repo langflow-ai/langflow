@@ -232,3 +232,4 @@ output_parsers:
 custom_components:
   CustomComponent:
     documentation: "https://docs.langflow.org/guidelines/custom-component"
+    # documentation: "https://docs.langflow.org/administration/custom-component"

@@ -87,15 +87,15 @@ export default function FlowToolbar(): JSX.Element {
           }
         >
           <div className="flex">
-            <div className="flex h-full w-full  gap-1 rounded-sm text-medium-indigo transition-all">
+            <div className="flex h-full w-full  gap-1 rounded-sm transition-all">
               {hasIO ? (
                 <IOModal open={open} setOpen={setOpen} disable={!hasIO}>
-                  <div className="relative inline-flex w-full items-center justify-center   gap-1 px-5 py-3 text-sm font-semibold text-medium-indigo transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
+                  <div className="relative inline-flex w-full items-center justify-center   gap-1 px-5 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover">
                     <ForwardedIconComponent
-                      name="Zap"
-                      className={"message-button-icon h-5 w-5 transition-all"}
+                      name="BotMessageSquareIcon"
+                      className={" h-5 w-5 transition-all"}
                     />
-                    Run
+                    Playground
                   </div>
                 </IOModal>
               ) : (

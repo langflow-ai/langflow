@@ -15,7 +15,6 @@ from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils.lazy_load import LazyLoadDictBase
 
 CHAT_COMPONENTS = ["ChatInput", "ChatOutput", "TextInput", "SessionID"]
-ROUTING_COMPONENTS = ["ShouldRunNext"]
 
 
 class VertexTypesDict(LazyLoadDictBase):
@@ -51,7 +50,6 @@ class VertexTypesDict(LazyLoadDictBase):
             **{t: types.CustomComponentVertex for t in custom_component_creator.to_list()},
             **{t: types.RetrieverVertex for t in retriever_creator.to_list()},
             **{t: types.ChatVertex for t in CHAT_COMPONENTS},
-            **{t: types.RoutingVertex for t in ROUTING_COMPONENTS},
         }
 
     def get_custom_component_vertex_type(self):

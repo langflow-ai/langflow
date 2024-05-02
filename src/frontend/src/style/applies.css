@@ -323,7 +323,7 @@
     muted-foreground is too strong, maybe use a lighter shade of it?
 
      */
-    @apply border-none ring ring-muted-foreground;
+    @apply border-none ring grayscale;
   }
   .built-invalid-status {
     @apply border-none ring ring-[#FF9090];

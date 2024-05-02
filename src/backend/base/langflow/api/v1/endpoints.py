@@ -130,7 +130,7 @@ async def simplified_run_flow(
             graph_data = flow.data
 
             graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
-            graph = Graph.from_payload(graph_data, flow_id=flow_id, user_id=api_key_user.id)
+            graph = Graph.from_payload(graph_data, flow_id=flow_id, user_id=str(api_key_user.id))
         inputs = [
             InputValueRequest(components=[], input_value=input_request.input_value, type=input_request.input_type)
         ]

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PaginatorComponent from "../../../../components/PaginatorComponent";
 import CollectionCardComponent from "../../../../components/cardComponent";
@@ -14,7 +14,6 @@ import {
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { FlowType } from "../../../../types/flow";
-
 export default function ComponentsComponent({
   is_component = true,
 }: {
@@ -24,43 +23,36 @@ export default function ComponentsComponent({
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const removeFlow = useFlowsManagerStore((state) => state.removeFlow);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
-  const setExamples = useFlowsManagerStore((state) => state.setExamples);
   const flows = useFlowsManagerStore((state) => state.flows);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
-  const [loadingScreen, setLoadingScreen] = useState(true);
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (isLoading) return;
-    let all = flows
-      .filter((f) => (f.is_component ?? false) === is_component)
-      .sort((a, b) => {
-        if (a?.updated_at && b?.updated_at) {
-          return (
-            new Date(b?.updated_at!).getTime() -
-            new Date(a?.updated_at!).getTime()
-          );
-        } else if (a?.updated_at && !b?.updated_at) {
-          return 1;
-        } else if (!a?.updated_at && b?.updated_at) {
-          return -1;
-        } else {
-          return (
-            new Date(b?.date_created!).getTime() -
-            new Date(a?.date_created!).getTime()
-          );
-        }
-      });
-    const start = (pageIndex - 1) * pageSize;
-    const end = start + pageSize;
-    setData(all.slice(start, end));
-  }, [flows, isLoading, pageIndex, pageSize]);
-
-  const [data, setData] = useState<FlowType[]>([]);
+  const all: FlowType[] = flows
+    .filter((f) => (f.is_component ?? false) === is_component)
+    .sort((a, b) => {
+      if (a?.updated_at && b?.updated_at) {
+        return (
+          new Date(b?.updated_at!).getTime() -
+          new Date(a?.updated_at!).getTime()
+        );
+      } else if (a?.updated_at && !b?.updated_at) {
+        return 1;
+      } else if (!a?.updated_at && b?.updated_at) {
+        return -1;
+      } else {
+        return (
+          new Date(b?.date_created!).getTime() -
+          new Date(a?.date_created!).getTime()
+        );
+      }
+    });
+  const start = (pageIndex - 1) * pageSize;
+  const end = start + pageSize;
+  const data: FlowType[] = all.slice(start, end);
 
   const name = is_component ? "Component" : "Flow";
 
@@ -149,8 +141,9 @@ export default function ComponentsComponent({
                       resetFilter();
                     }}
                     key={idx}
-                    data={item}
+                    data={{ is_component: item.is_component ?? false, ...item }}
                     disabled={isLoading}
+                    data-testid={"edit-flow-button-" + item.id + "-" + idx}
                     button={
                       !is_component ? (
                         <Link to={"/flow/" + item.id}>
@@ -174,6 +167,14 @@ export default function ComponentsComponent({
                         <></>
                       )
                     }
+                    onClick={
+                      !is_component
+                        ? () => {
+                            navigate("/flow/" + item.id);
+                          }
+                        : undefined
+                    }
+                    playground={!is_component}
                   />
                 ))
               ) : (

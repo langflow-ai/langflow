@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import List, Optional, Union
 
 from dotenv import load_dotenv
+from loguru import logger
+
 from langflow.graph import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.processing.process import process_tweaks, run_graph
@@ -101,6 +103,12 @@ def run_flow_from_json(
         List[RunOutputs]: A list of RunOutputs objects representing the results of running the flow.
     """
     # Set all streaming to false
+    try:
+        import nest_asyncio  # type: ignore
+
+        nest_asyncio.apply()
+    except Exception as e:
+        logger.warning(f"Could not apply nest_asyncio: {e}")
     if tweaks is None:
         tweaks = {}
     tweaks["stream"] = False
