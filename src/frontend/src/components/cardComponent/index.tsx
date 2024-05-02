@@ -82,8 +82,8 @@ export default function CollectionCardComponent({
       } else {
         setNodes([], true);
         setEdges([], true);
-        cleanFlowPool();
       }
+      cleanFlowPool();
     }
   }, [openPlayground]);
 
