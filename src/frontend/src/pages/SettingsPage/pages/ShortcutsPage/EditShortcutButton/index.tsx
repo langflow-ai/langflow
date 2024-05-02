@@ -1,36 +1,32 @@
-
-
-//TODO IMPLEMENT FORM LOGIC
-
 import { useEffect, useState } from "react";
 import useAlertStore from "../../../../../stores/alertStore";
-import { useTypesStore } from "../../../../../stores/typesStore";
-import { useGlobalVariablesStore } from "../../../../../stores/globalVariables";
-import { registerGlobalVariable } from "../../../../../controllers/API";
-import { ResponseErrorDetailAPI } from "../../../../../types/api";
+
 import BaseModal from "../../../../../modals/baseModal";
-import { Label } from "@radix-ui/react-select";
-import { Input } from "../../../../../components/ui/input";
-import InputComponent from "../../../../../components/inputComponent";
-import { Textarea } from "../../../../../components/ui/textarea";
 import { Button } from "../../../../../components/ui/button";
 import ForwardedIconComponent from "../../../../../components/genericIconComponent";
-import { defaultShortcuts } from "../../../../../constants/constants";
 import { useShortcutsStore } from "../../../../../stores/shortcuts";
 
-export default function EditShortcutButton({ children, shortcut, defaultShortcuts, defaultCombination, open, setOpen, }: {children: JSX.Element; shortcut: string[]; defaultShortcuts: Array<{name: string; shortcut: string;}>; defaultCombination: string; open: boolean; setOpen: (bool: boolean) => void;}): JSX.Element {
+export default function EditShortcutButton({
+  children,
+  shortcut,
+  defaultShortcuts,
+  defaultCombination,
+  open,
+  setOpen
+}: {
+  children: JSX.Element;
+  shortcut: string[];
+  defaultShortcuts: Array<{name: string; shortcut: string;}>;
+  defaultCombination: string;
+  open: boolean;
+  setOpen: (bool: boolean) => void;
+}): JSX.Element {
+  const isMac = navigator.userAgent.toUpperCase().includes("MAC");
+  const [key, setKey] = useState<string>(isMac ? "Meta" : 'Ctrl');
   const setSuccessData = useAlertStore(state => state.setSuccessData)
   const setShortcuts = useShortcutsStore(state => state.setShortcuts);
   const unavaliableShortcuts = useShortcutsStore(state => state.unavailableShortcuts);
-  const isMac = navigator.userAgent.toUpperCase().includes("MAC");
-  const [fields, setFields] = useState<string[]>([]);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const componentFields = useTypesStore((state) => state.ComponentFields);
-  const unavaliableFields =new Set(Object.keys(useGlobalVariablesStore(
-    (state) => state.unavaliableFields
-  )));
-
-  const [key, setKey] = useState<string>(isMac ? "Meta" : 'Ctrl');
 
   function canEditCombination(newCombination: string): boolean {
     let canSave = true;
@@ -64,7 +60,9 @@ export default function EditShortcutButton({ children, shortcut, defaultShortcut
       setShortcuts(newCombination, unavailable)
       setOpen(false)
       setSuccessData({title: `${shortcut[0]} shortcut successfully changed`})
-      setKey(isMac ? "META" : 'CTRL')
+      setKey(isMac ? "META" : 'CTRL');
+      localStorage.setItem("langflow-shortcuts", JSON.stringify(newCombination));
+      localStorage.setItem("langflow-UShortcuts", JSON.stringify(unavailable));
       return;
     }
     setErrorData({title: "Error saving key combination", list: ["This combination already exists!"]})
@@ -72,7 +70,8 @@ export default function EditShortcutButton({ children, shortcut, defaultShortcut
 
   useEffect(() => {
     if (!open) setKey(isMac ? "META" : 'CTRL')
-  }, [open, setOpen])
+      console.log(key)
+  }, [open, setOpen, key])
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -89,7 +88,7 @@ export default function EditShortcutButton({ children, shortcut, defaultShortcut
   }, [key, setKey])
 
   return (
-    <BaseModal open={open} setOpen={setOpen} size="x-small">
+    <BaseModal open={open} setOpen={setOpen} size="smaller">
       <BaseModal.Header
         description={
           "Set your new key combination"
@@ -105,13 +104,14 @@ export default function EditShortcutButton({ children, shortcut, defaultShortcut
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content>
         <div className="flex h-full w-full gap-4 align-center justify-center">
-          <div className="font-bold">
+          <div className="font-bold text-lg flex items-center justify-center text-center">
             {key.toUpperCase()}
           </div>
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>
-        <Button onClick={editCombination}>Edit Combination</Button>
+        <Button onClick={editCombination} >Edit Combination</Button>
+        <Button className="mr-5" variant={"destructive"}  onClick={() => setKey(isMac ? "META" : 'CTRL')}>Reset Combination</Button>
       </BaseModal.Footer>
     </BaseModal>
   );
