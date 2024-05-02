@@ -327,7 +327,7 @@ export default function CollectionCardComponent({
                   Playground
                 </Button>
               ) : (
-                <div></div>
+                undefined
               )}
               {data.liked_by_count != undefined && (
                 <div className="flex gap-0.5">
