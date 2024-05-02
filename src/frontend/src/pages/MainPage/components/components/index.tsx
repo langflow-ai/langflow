@@ -30,7 +30,6 @@ export default function ComponentsComponent({
   const [pageIndex, setPageIndex] = useState(1);
 
   const navigate = useNavigate();
-
   const all: FlowType[] = flows
     .filter((f) => (f.is_component ?? false) === is_component)
     .sort((a, b) => {
