@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
@@ -27,6 +27,7 @@ class TextOperatorComponent(CustomComponent):
                     "contains",
                     "starts with",
                     "ends with",
+                    "exists"
                 ],
             },
             "case_sensitive": {
@@ -49,7 +50,7 @@ class TextOperatorComponent(CustomComponent):
         operator: Text,
         case_sensitive: bool = False,
         true_output: Optional[Text] = "",
-    ) -> Record:
+    ) -> Union[Text, Record]:
         
         if not input_text or not match_text:
             raise ValueError(
@@ -72,8 +73,7 @@ class TextOperatorComponent(CustomComponent):
         elif operator == "ends with":
             result = input_text.endswith(match_text)
 
-        out = true_output if true_output else input_text
-        output_record = Record(data={"result": out}) if not isinstance(out, Record) else out
+        output_record = true_output if true_output else input_text
 
         if result:
             self.status = output_record
