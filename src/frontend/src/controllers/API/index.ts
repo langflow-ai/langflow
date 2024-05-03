@@ -406,9 +406,11 @@ export async function onLogin(user: LoginType) {
   }
 }
 
-export async function autoLogin() {
+export async function autoLogin(abortSignal) {
   try {
-    const response = await api.get(`${BASE_URL_API}auto_login`);
+    const response = await api.get(`${BASE_URL_API}auto_login`, {
+      signal: abortSignal,
+    });
 
     if (response.status === 200) {
       const data = response.data;
