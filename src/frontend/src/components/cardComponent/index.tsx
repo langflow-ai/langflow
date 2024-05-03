@@ -170,14 +170,14 @@ export default function CollectionCardComponent({
     <>
       <Card
         data-testid={`card-${convertTestName(data.name)}`}
+        //TODO check color schema
         className={cn(
-          "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:shadow-md",
+          "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#202635]",
           disabled ? "pointer-events-none opacity-50" : "",
           onClick ? "cursor-pointer" : "",
         )}
         onClick={onClick}
       >
-        <div className="hover:card-filter absolute bottom-0 left-0 right-0 top-0 h-full w-full overflow-hidden"></div>
         <div>
           <CardHeader>
             <div>
