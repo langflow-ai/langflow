@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
+import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import {
   Table,
@@ -12,8 +12,8 @@ import {
 } from "../../components/ui/table";
 import { AuthContext } from "../../contexts/authContext";
 import { deleteApiKey, getApiKey } from "../../controllers/API";
-import ConfirmationModal from "../../modals/ConfirmationModal";
-import SecretKeyModal from "../../modals/SecretKeyModal";
+import ConfirmationModal from "../../modals/confirmationModal";
+import SecretKeyModal from "../../modals/secretKeyModal";
 
 import moment from "moment";
 import Header from "../../components/headerComponent";

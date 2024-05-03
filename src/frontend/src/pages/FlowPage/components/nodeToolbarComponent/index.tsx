@@ -1,9 +1,9 @@
 import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import { useUpdateNodeInternals } from "reactflow";
-import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import IconComponent from "../../../../components/genericIconComponent";
+import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
   Select,
   SelectContent,
@@ -11,8 +11,8 @@ import {
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
 import { postCustomComponent } from "../../../../controllers/API";
-import ConfirmationModal from "../../../../modals/ConfirmationModal";
-import EditNodeModal from "../../../../modals/EditNodeModal";
+import ConfirmationModal from "../../../../modals/confirmationModal";
+import EditNodeModal from "../../../../modals/editNodeModal";
 import ShareModal from "../../../../modals/shareModal";
 import useAlertStore from "../../../../stores/alertStore";
 import { useDarkStore } from "../../../../stores/darkStore";

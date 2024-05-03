@@ -135,6 +135,7 @@ frontendc:
 install_backend:
 	@echo 'Installing backend dependencies'
 	@poetry install
+	@poetry run pre-commit install
 
 backend:
 	@echo 'Setting up the environment'

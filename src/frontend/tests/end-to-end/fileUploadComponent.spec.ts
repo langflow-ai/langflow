@@ -79,7 +79,7 @@ test("dropDownComponent", async ({ page }) => {
   // Release the mouse
   await page.mouse.up();
 
-  await page.getByText("Run", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).click();
   await page.getByText("Run Flow", { exact: true }).click();
   await page.waitForTimeout(3000);
   const textOutput = await page.getByPlaceholder("Empty").first().inputValue();

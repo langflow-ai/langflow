@@ -5,6 +5,7 @@ import {
   ArrowUpToLine,
   Bell,
   Binary,
+  Blocks,
   BookMarked,
   BookmarkPlus,
   Bot,
@@ -67,6 +68,7 @@ import {
   Home,
   Info,
   Key,
+  Keyboard,
   Laptop2,
   Layers,
   Link,
@@ -86,6 +88,7 @@ import {
   MoreHorizontal,
   Network,
   Package2,
+  Palette,
   Paperclip,
   Pencil,
   PencilLine,
@@ -108,6 +111,7 @@ import {
   Share2,
   Shield,
   Sliders,
+  SlidersHorizontal,
   Snowflake,
   Sparkles,
   Square,
@@ -136,6 +140,7 @@ import {
   X,
   XCircle,
   Zap,
+  PlaySquare
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -144,7 +149,7 @@ import { AnthropicIcon } from "../icons/Anthropic";
 import { AstraDBIcon } from "../icons/AstraDB";
 import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
-import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
+import { BotMessageSquareIcon} from "../icons/BotMessageSquare";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { CohereIcon } from "../icons/Cohere";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
@@ -292,7 +297,8 @@ export const nodeIconsLucide: iconsType = {
   ListFlows: Group,
   ClearMessageHistory: FileClock,
   Python: PythonIcon,
-  ChatOutput: BotMessageSquareIcon,
+  ChatOutput: MessagesSquare,
+  BotMessageSquareIcon,
   ChatInput: MessagesSquare,
   inputs: Download,
   outputs: Upload,
@@ -374,6 +380,7 @@ export const nodeIconsLucide: iconsType = {
   tools: Hammer,
   advanced: Laptop2,
   chat: MessageCircle,
+  Keyboard: Keyboard,
   embeddings: Binary,
   saved_components: GradientSave,
   documentloaders: Paperclip,
@@ -412,6 +419,9 @@ export const nodeIconsLucide: iconsType = {
   MoonIcon,
   Bell,
   ChevronLeft,
+  SlidersHorizontal,
+  Palette,
+  Blocks,
   ChevronDown,
   ArrowLeft,
   Shield,

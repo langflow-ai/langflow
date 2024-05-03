@@ -1,9 +1,8 @@
 import { useEffect } from "react";
 import { deleteGlobalVariable } from "../../controllers/API";
-import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
+import DeleteConfirmationModal from "../../modals/deleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../stores/globalVariables";
-import { ResponseErrorDetailAPI } from "../../types/api";
 import { InputGlobalComponentType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import AddNewVariableButton from "../addNewVariableButtonComponent/addNewVariableButton";
@@ -24,6 +23,9 @@ export default function InputGlobalComponent({
   );
 
   const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
+  const unavaliableFields = useGlobalVariablesStore(
+    (state) => state.unavaliableFields
+  );
   const removeGlobalVariable = useGlobalVariablesStore(
     (state) => state.removeGlobalVariable
   );
@@ -35,16 +37,35 @@ export default function InputGlobalComponent({
         !globalVariablesEntries.includes(data.node?.template[name].value) &&
         data.node?.template[name].load_from_db
       ) {
-        onChange("");
-        setDb(false);
+        setTimeout(() => {
+          onChange("");
+          setDb(false);
+        }, 100);
       }
   }, [globalVariablesEntries]);
 
-  function handleDelete(key: string) {
+  useEffect(() => {
+    if (
+      !data.node?.template[name].value &&
+      data.node?.template[name].display_name
+    ) {
+      if (
+        unavaliableFields[data.node?.template[name].display_name!] &&
+        !disabled
+      ) {
+        setTimeout(() => {
+          setDb(true);
+          onChange(unavaliableFields[data.node?.template[name].display_name!]);
+        }, 100);
+      }
+    }
+  }, [unavaliableFields]);
+
+  async function handleDelete(key: string) {
     const id = getVariableId(key);
     if (id !== undefined) {
-      deleteGlobalVariable(id)
-        .then((_) => {
+      await deleteGlobalVariable(id)
+        .then(() => {
           removeGlobalVariable(key);
           if (
             data?.node?.template[name].value === key &&
@@ -54,11 +75,10 @@ export default function InputGlobalComponent({
             setDb(false);
           }
         })
-        .catch((error) => {
-          let responseError = error as ResponseErrorDetailAPI;
+        .catch(() => {
           setErrorData({
             title: "Error deleting variable",
-            list: [responseError.response.data.detail ?? "Unknown error"],
+            list: [cn("ID not found for variable: ", key)],
           });
         });
     } else {
@@ -117,7 +137,8 @@ export default function InputGlobalComponent({
         </DeleteConfirmationModal>
       )}
       selectedOption={
-        data?.node?.template[name].load_from_db ?? false
+        data?.node?.template[name].load_from_db &&
+        globalVariablesEntries.includes(data?.node?.template[name].value ?? "")
           ? data?.node?.template[name].value
           : ""
       }
