@@ -293,7 +293,7 @@ export default function CollectionCardComponent({
         </div>
 
         <CardFooter>
-          <div className="flex w-full items-center justify-between gap-2">
+          <div className="z-50 flex w-full items-center justify-between gap-2">
             <div className="flex w-full flex-wrap items-end justify-end gap-2">
               {playground && data?.metadata !== undefined ? (
                 <Button
@@ -302,7 +302,7 @@ export default function CollectionCardComponent({
                   tabIndex={-1}
                   variant="outline"
                   size="sm"
-                  className="gap-2 whitespace-nowrap"
+                  className="z-50 gap-2 whitespace-nowrap"
                   data-testid={"playground-flow-button-" + data.id}
                   onClick={(e) => {
                     e.preventDefault();
