@@ -5,6 +5,7 @@ import useAlertStore from "../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../stores/globalVariables";
 import { useTypesStore } from "../../stores/typesStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
+import { sortByName } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import { Button } from "../ui/button";
@@ -23,14 +24,19 @@ export default function AddNewVariableButton({ children }): JSX.Element {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
   const unavaliableFields = new Set(
-    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields))
+    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields)),
   );
 
-  const availableFields = Array.from(componentFields).filter(
-    (field) => !unavaliableFields.has(field)
-  );
+  const availableFields = () => {
+    const fields = Array.from(componentFields).filter(
+      (field) => !unavaliableFields.has(field),
+    );
+
+    return sortByName(fields);
+  };
+
   const addGlobalVariable = useGlobalVariablesStore(
-    (state) => state.addGlobalVariable
+    (state) => state.addGlobalVariable,
   );
 
   function handleSaveVariable() {
@@ -113,7 +119,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             setSelectedOptions={(value) => setFields(value)}
             selectedOptions={fields}
             password={false}
-            options={availableFields}
+            options={availableFields()}
             placeholder="Choose a field for the variable..."
             id={"apply-to-fields"}
           ></InputComponent>
