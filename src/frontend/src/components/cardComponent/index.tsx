@@ -177,6 +177,7 @@ export default function CollectionCardComponent({
         )}
         onClick={onClick}
       >
+        <div className="hover:card-filter absolute bottom-0 left-0 right-0 top-0 h-full w-full overflow-hidden"></div>
         <div>
           <CardHeader>
             <div>
@@ -292,7 +293,7 @@ export default function CollectionCardComponent({
 
         <CardFooter>
           <div className="flex w-full items-center justify-between gap-2">
-            <div className="flex w-full flex-wrap items-end justify-between gap-2">
+            <div className="flex w-full flex-wrap items-end justify-end gap-2">
               {playground && data?.metadata !== undefined ? (
                 <Button
                   disabled={loadingPlayground}
@@ -436,7 +437,6 @@ export default function CollectionCardComponent({
                   </ShadTooltip>
                 </div>
               )}
-              {button && button}
               {playground && data?.metadata === undefined && (
                 <Button
                   disabled={loadingPlayground}
