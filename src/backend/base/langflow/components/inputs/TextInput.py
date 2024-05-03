@@ -6,7 +6,7 @@ from langflow.field_typing import Text
 
 class TextInput(TextComponent):
     display_name = "Text Input"
-    description = "Get text inputs from the Interaction Panel."
+    description = "Get text inputs from the Playground."
     icon = "type"
 
     def build_config(self):

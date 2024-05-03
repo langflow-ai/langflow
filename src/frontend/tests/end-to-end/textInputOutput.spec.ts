@@ -117,7 +117,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page
     .getByTestId("input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
-  await page.getByText("Run", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).click();
   await page.getByText("Run Flow", { exact: true }).click();
 
   await page.waitForTimeout(5000);
@@ -138,7 +138,7 @@ test("TextInputOutputComponent", async ({ page }) => {
     .getByTestId("input-input_value")
     .nth(0)
     .fill("This is a test, again just to be sure!");
-  await page.getByText("Run", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).click();
   await page.getByText("Run Flow", { exact: true }).click();
 
   await page.waitForTimeout(5000);

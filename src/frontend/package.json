@@ -26,6 +26,7 @@
     "@tailwindcss/line-clamp": "^0.4.4",
     "@types/axios": "^0.14.0",
     "ace-builds": "^1.24.1",
+    "ag-grid-community": "^31.2.1",
     "ag-grid-react": "^31.2.1",
     "ansi-to-html": "^0.7.2",
     "axios": "^1.5.0",
@@ -44,10 +45,10 @@
     "moment": "^2.29.4",
     "openseadragon": "^4.1.1",
     "playwright": "^1.42.0",
-    "react": "^18.2.0",
+    "react": "^18.2.21",
     "react-ace": "^10.1.0",
     "react-cookie": "^4.1.1",
-    "react-dom": "^18.2.0",
+    "react-dom": "^18.2.21",
     "react-error-boundary": "^4.0.11",
     "react-icons": "^5.0.1",
     "react-laag": "^2.0.5",
@@ -74,8 +75,11 @@
     "start": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "format": "npx prettier --write \"./**/*.{js,jsx,ts,tsx,json,md}\"",
+    "format": "npx prettier --write \"./**/*.{js,jsx,ts,tsx,json,md}\" --ignore-path .prettierignore",
     "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx pretty-quick --staged"
   },
   "eslintConfig": {
     "extends": [
@@ -120,6 +124,7 @@
     "prettier-plugin-organize-imports": "^3.2.3",
     "prettier-plugin-tailwindcss": "^0.3.0",
     "pretty-quick": "^3.1.3",
+    "simple-git-hooks": "^2.11.1",
     "tailwindcss": "^3.3.3",
     "tailwindcss-dotted-background": "^1.1.0",
     "typescript": "^5.2.2",

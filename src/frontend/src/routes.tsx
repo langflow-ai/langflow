@@ -7,15 +7,19 @@ import { StoreGuard } from "./components/storeGuard";
 import AdminPage from "./pages/AdminPage";
 import LoginAdminPage from "./pages/AdminPage/LoginPage";
 import ApiKeysPage from "./pages/ApiKeysPage";
+import DeleteAccountPage from "./pages/DeleteAccountPage";
 import FlowPage from "./pages/FlowPage";
+import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/MainPage";
 import ComponentsComponent from "./pages/MainPage/components/components";
-import ProfileSettingsPage from "./pages/ProfileSettingsPage";
+import PlaygroundPage from "./pages/Playground";
+import SettingsPage from "./pages/SettingsPage";
+import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
+import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
+import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
+import SignUp from "./pages/SignUpPage";
 import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
-import DeleteAccountPage from "./pages/deleteAccountPage";
-import LoginPage from "./pages/loginPage";
-import SignUp from "./pages/signUpPage";
 
 const Router = () => {
   return (
@@ -39,6 +43,19 @@ const Router = () => {
         />
       </Route>
       <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate replace to={"general"} />} />
+        <Route path="global-variables" element={<GlobalVariablesPage />} />
+        <Route path="general" element={<GeneralPage />} />
+        <Route path="shortcuts" element={<ShortcutsPage />} />
+      </Route>
+      <Route
         path="/store"
         element={
           <ProtectedRoute>
@@ -58,7 +75,19 @@ const Router = () => {
           </ProtectedRoute>
         }
       />
-
+      <Route path="/playground/:id/">
+        element=
+        {
+          <Route
+            path=""
+            element={
+              <ProtectedRoute>
+                <PlaygroundPage />
+              </ProtectedRoute>
+            }
+          />
+        }
+      </Route>
       <Route path="/flow/:id/">
         <Route
           path=""
@@ -121,14 +150,6 @@ const Router = () => {
       />
 
       <Route path="/account">
-        <Route
-          path="settings"
-          element={
-            <ProtectedRoute>
-              <ProfileSettingsPage />
-            </ProtectedRoute>
-          }
-        />
         <Route
           path="delete"
           element={
