@@ -63,7 +63,7 @@ test("should interact with global variables", async ({ page }) => {
     .nth(0)
     .click();
   await page.getByTestId("icon-Trash2").click();
-  await page.getByText("No Rows To Show").isVisible();
+  await page.getByText("No data available").isVisible();
 });
 
 test("should see shortcuts", async ({ page }) => {

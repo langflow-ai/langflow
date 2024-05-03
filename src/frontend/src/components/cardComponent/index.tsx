@@ -11,7 +11,6 @@ import cloneFLowWithParent from "../../utils/storeUtils";
 import { cn, convertTestName } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import ShadTooltip from "../shadTooltipComponent";
-import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -170,8 +169,9 @@ export default function CollectionCardComponent({
     <>
       <Card
         data-testid={`card-${convertTestName(data.name)}`}
+        //TODO check color schema
         className={cn(
-          "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:shadow-md",
+          "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#ffffff10]",
           disabled ? "pointer-events-none opacity-50" : "",
           onClick ? "cursor-pointer" : "",
         )}
@@ -239,6 +239,7 @@ export default function CollectionCardComponent({
 
                 {onDelete && data?.metadata === undefined && (
                   <button
+                    className="z-50"
                     onClick={(e) => {
                       e.stopPropagation();
                       setOpenDelete(true);
@@ -269,7 +270,7 @@ export default function CollectionCardComponent({
                 </span>
               )}
               <div className="flex w-full flex-1 flex-wrap gap-2">
-                {data.tags &&
+                {/* {data.tags &&
                   data.tags.length > 0 &&
                   data.tags.map((tag, index) => (
                     <Badge
@@ -280,7 +281,7 @@ export default function CollectionCardComponent({
                     >
                       {tag.name}
                     </Badge>
-                  ))}
+                  ))} */}
               </div>
             </div>
 
@@ -291,8 +292,8 @@ export default function CollectionCardComponent({
         </div>
 
         <CardFooter>
-          <div className="flex w-full items-center justify-between gap-2">
-            <div className="flex w-full flex-wrap items-end justify-between gap-2">
+          <div className="z-50 flex w-full items-center justify-between gap-2">
+            <div className="flex w-full flex-wrap items-end justify-end gap-2">
               {playground && data?.metadata !== undefined ? (
                 <Button
                   disabled={loadingPlayground}
@@ -300,7 +301,7 @@ export default function CollectionCardComponent({
                   tabIndex={-1}
                   variant="outline"
                   size="sm"
-                  className="gap-2 whitespace-nowrap"
+                  className="z-50 gap-2 whitespace-nowrap"
                   data-testid={"playground-flow-button-" + data.id}
                   onClick={(e) => {
                     e.preventDefault();
@@ -436,15 +437,14 @@ export default function CollectionCardComponent({
                   </ShadTooltip>
                 </div>
               )}
-              {button && button}
               {playground && data?.metadata === undefined && (
                 <Button
                   disabled={loadingPlayground}
                   key={data.id}
                   tabIndex={-1}
-                  variant="outline"
+                  variant="primary"
                   size="sm"
-                  className="gap-2 whitespace-nowrap"
+                  className="gap-2 whitespace-nowrap bg-muted"
                   data-testid={"playground-flow-button-" + data.id}
                   onClick={(e) => {
                     e.preventDefault();

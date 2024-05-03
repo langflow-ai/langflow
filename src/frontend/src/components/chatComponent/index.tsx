@@ -54,7 +54,7 @@ export default function FlowToolbar(): JSX.Element {
             "relative inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-background hover:bg-hover ",
             !hasApiKey || !validApiKey || !hasStore
               ? " button-disable text-muted-foreground  "
-              : ""
+              : "",
           )}
         >
           <ForwardedIconComponent
@@ -63,14 +63,14 @@ export default function FlowToolbar(): JSX.Element {
               "-m-0.5 -ml-1 h-6 w-6",
               !hasApiKey || !validApiKey || !hasStore
                 ? "extra-side-bar-save-disable"
-                : ""
+                : "",
             )}
           />
           Share
         </button>
       </ShareModal>
     ),
-    [hasApiKey, validApiKey, currentFlow, hasStore]
+    [hasApiKey, validApiKey, currentFlow, hasStore],
   );
 
   return (
@@ -112,7 +112,7 @@ export default function FlowToolbar(): JSX.Element {
                       "message-button-icon h-5 w-5 fill-muted-foreground stroke-muted-foreground transition-all"
                     }
                   />
-                  Run
+                  Playground
                 </div>
               )}
             </div>
@@ -128,7 +128,7 @@ export default function FlowToolbar(): JSX.Element {
                 >
                   <div
                     className={classNames(
-                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover"
+                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover",
                     )}
                   >
                     <ForwardedIconComponent
