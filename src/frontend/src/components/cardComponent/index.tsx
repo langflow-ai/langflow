@@ -240,6 +240,7 @@ export default function CollectionCardComponent({
 
                 {onDelete && data?.metadata === undefined && (
                   <button
+                    className="z-50"
                     onClick={(e) => {
                       e.stopPropagation();
                       setOpenDelete(true);
