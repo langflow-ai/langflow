@@ -28,7 +28,8 @@ module.exports = {
         "starter-projects/basic-prompting",
         "starter-projects/blog-writer",
         "starter-projects/document-qa",
-        "starter-projects/memory-chatbot"
+        "starter-projects/memory-chatbot",
+        "tutorials/rag-with-astradb"
       ],
     },
     {
