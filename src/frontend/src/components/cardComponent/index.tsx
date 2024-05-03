@@ -61,6 +61,7 @@ export default function CollectionCardComponent({
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
   const [openPlayground, setOpenPlayground] = useState(false);
+  const [openDelete, setOpenDelete] = useState(false);
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId
   );
@@ -105,18 +106,16 @@ export default function CollectionCardComponent({
         addFlow(true, newFlow)
           .then((id) => {
             setSuccessData({
-              title: `${name} ${
-                isStore ? "Downloaded" : "Installed"
-              } Successfully.`,
+              title: `${name} ${isStore ? "Downloaded" : "Installed"
+                } Successfully.`,
             });
             setLoading(false);
           })
           .catch((error) => {
             setLoading(false);
             setErrorData({
-              title: `Error ${
-                isStore ? "downloading" : "installing"
-              } the ${name}`,
+              title: `Error ${isStore ? "downloading" : "installing"
+                } the ${name}`,
               list: [error["response"]["data"]["detail"]],
             });
           });
@@ -236,16 +235,17 @@ export default function CollectionCardComponent({
                 )}
 
                 {onDelete && data?.metadata === undefined && (
-                  <DeleteConfirmationModal
-                    onConfirm={() => {
-                      onDelete();
+                    <button onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenDelete(true);
                     }}
-                  >
-                    <IconComponent
-                      name="Trash2"
-                      className="h-5 w-5 text-primary opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
-                    />
-                  </DeleteConfirmationModal>
+                    >
+
+                      <IconComponent
+                        name="Trash2"
+                        className="h-5 w-5 text-primary opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
+                      />
+                    </button>
                 )}
               </CardTitle>
             </div>
@@ -485,6 +485,18 @@ export default function CollectionCardComponent({
           <></>
         </IOModal>
       )}
+      {openDelete && (
+        <DeleteConfirmationModal
+          open={openDelete}
+          setOpen={setOpenDelete}
+          onConfirm={() => {
+            if(onDelete) onDelete();
+          }}
+        >
+          <></>
+        </DeleteConfirmationModal>
+      )
+      }
     </>
   );
 }
