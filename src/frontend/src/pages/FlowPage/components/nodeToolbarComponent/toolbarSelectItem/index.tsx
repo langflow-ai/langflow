@@ -2,16 +2,27 @@ import ForwardedIconComponent from "../../../../../components/genericIconCompone
 import { toolbarSelectItemProps } from "../../../../../types/components";
 
 export default function ToolbarSelectItem({
-  shift,
-  isMac,
-  mod = true,
-  keyboardKey,
   value,
   icon,
   styleObj,
   dataTestId,
   ping,
+  shortcut,
+  isMac,
 }: toolbarSelectItemProps) {
+  let hasShift = false;
+  const fixedShortcut = shortcut?.split("+");
+  fixedShortcut.forEach((key) => {
+    if (key.toLowerCase().includes("shift")) {
+      hasShift = true;
+    }
+  });
+  const filteredShortcut = fixedShortcut.filter(
+    (key) => !key.toLowerCase().includes("shift"),
+  );
+  let shortcutWPlus = "";
+  if (!hasShift) shortcutWPlus = filteredShortcut.join("+");
+
   return (
     <div className="flex" data-testid={dataTestId}>
       <ForwardedIconComponent
@@ -21,32 +32,25 @@ export default function ToolbarSelectItem({
         }`}
       />
       <span className={styleObj?.valueClasses}>{value}</span>
-
-      {mod &&
-        (isMac ? (
-          <ForwardedIconComponent
-            name="Command"
-            className={`absolute
-    ${shift ? " right-[2rem] " : "right-[1.15rem]"}
-    top-[0.65em] h-3.5 w-3.5 stroke-2 ${styleObj?.commandClasses}`}
-          ></ForwardedIconComponent>
+      <span
+        className={`absolute right-2 top-[0.43em] flex ${styleObj?.keyClasses}`}
+      >
+        {hasShift ? (
+          <>
+            {filteredShortcut[0]}
+            <ForwardedIconComponent
+              name="ArrowBigUp"
+              className="ml-1 h-5 w-5"
+            />
+            {filteredShortcut.map((key, idx) => {
+              if (idx > 0) {
+                return <span className="ml-1"> {key.toUpperCase()} </span>;
+              }
+            })}
+          </>
         ) : (
-          <span
-            className={`absolute ${
-              shift ? " right-[2.15rem] " : "right-[1.15rem]"
-            } top-[0.43em] stroke-2 `}
-          >
-            {shift ? "Ctrl" : "Ctrl +"}
-          </span>
-        ))}
-      {shift && (
-        <ForwardedIconComponent
-          name="ArrowBigUp"
-          className={`absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2 ${styleObj?.shiftClasses}`}
-        />
-      )}
-      <span className={`absolute right-2 top-[0.43em] ${styleObj?.keyClasses}`}>
-        {keyboardKey}
+          shortcutWPlus
+        )}
       </span>
     </div>
   );

@@ -796,35 +796,35 @@ export const SAVE_DEBOUNCE_TIME = 300;
 export const defaultShortcuts = [
   {
     name: "Advanced Settings",
-    shortcut: "Ctrl + Shift + a",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + Shift + A`,
   },
   {
     name: "Minimize",
-    shortcut: "Ctrl + q",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + Q`,
   },
   {
     name: "Code",
-    shortcut: "Ctrl + Shift + u",
+    shortcut: `Space`,
   },
   {
     name: "Copy",
-    shortcut: "Ctrl + c",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + C`,
   },
   {
     name: "Duplicate",
-    shortcut: "Ctrl + d",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + D`,
   },
   {
     name: "Share",
-    shortcut: "Ctrl + Shift + s",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + Shift + S`,
   },
   {
     name: "Docs",
-    shortcut: "Ctrl + Shift + d",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + Shift + D`,
   },
   {
     name: "Save",
-    shortcut: "Ctrl + s",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + S`,
   },
   {
     name: "Delete",
@@ -832,31 +832,39 @@ export const defaultShortcuts = [
   },
   {
     name: "Open playground",
-    shortcut: "Ctrl + k",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + K`,
   },
   {
     name: "Undo",
-    shortcut: "Ctrl + z",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + Z`,
   },
   {
     name: "Redo",
-    shortcut: "Ctrl + y",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + Y`,
   },
   {
     name: "Group",
-    shortcut: "Ctrl + g",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + G`,
   },
   {
     name: "Cut",
-    shortcut: "Ctrl + x",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + X`,
   },
   {
     name: "Paste",
-    shortcut: "Ctrl + v",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + V`,
   },
   {
     name: "API",
-    shortcut: "Ctrl + r",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + R`,
+  },
+  {
+    name: "Download",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + J`,
+  },
+  {
+    name: "Update",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + U`,
   },
 ];
 
@@ -877,4 +885,5 @@ export const unavailableShortcutss = [
   "CTRL + K",
   "CTRL + Z",
   "CTRL + Y",
+  "CTRL + J",
 ];
