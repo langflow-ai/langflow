@@ -271,7 +271,7 @@ export default function CollectionCardComponent({
                 </span>
               )}
               <div className="flex w-full flex-1 flex-wrap gap-2">
-                {data.tags &&
+                {/* {data.tags &&
                   data.tags.length > 0 &&
                   data.tags.map((tag, index) => (
                     <Badge
@@ -282,7 +282,7 @@ export default function CollectionCardComponent({
                     >
                       {tag.name}
                     </Badge>
-                  ))}
+                  ))} */}
               </div>
             </div>
 
