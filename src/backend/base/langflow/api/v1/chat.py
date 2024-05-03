@@ -79,13 +79,8 @@ async def retrieve_vertices_order(
     """
     try:
         # First, we need to check if the flow_id is in the cache
-        graph = None
         if not data:
-            if cache := await chat_service.get_cache(flow_id):
-                graph = cache.get("result")
-            graph = await build_and_cache_graph_from_db(
-                flow_id=flow_id, session=session, chat_service=chat_service, graph=graph
-            )
+            graph = await build_and_cache_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
         else:
             graph = await build_and_cache_graph_from_data(
                 flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
