@@ -93,14 +93,14 @@ class APIRequest(CustomComponent):
         self,
         method: str,
         urls: List[str],
-        _headers: Optional[Record] = None,
+        headers: Optional[Record] = None,
         body: Optional[Record] = None,
         timeout: int = 5,
     ) -> List[Record]:
-        if _headers is None:
+        if headers is None:
             headers = {}
         else:
-            headers = _headers.data
+            headers = headers.data
 
         bodies = []
         if body:
