@@ -64,10 +64,12 @@ export default function NodeToolbarComponent({
         data.node.template[templateField].type === "dict" ||
         data.node.template[templateField].type === "NestedDict"),
   ).length;
+
   const templates = useTypesStore((state) => state.templates);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
+  const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
   function handleMinimizeWShortcut(e: KeyboardEvent) {
     e.preventDefault();
@@ -479,10 +481,10 @@ export default function NodeToolbarComponent({
               {hasCode && (
                 <SelectItem value={"code"}>
                   <ToolbarSelectItem
-                    keyboardKey="Space"
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Code")?.shortcut!
+                    }
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={false}
-                    mod={false}
                     value={"Code"}
                     icon={"Code"}
                     dataTestId="code-button-modal"
@@ -492,9 +494,11 @@ export default function NodeToolbarComponent({
               {nodeLength > 0 && (
                 <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
                   <ToolbarSelectItem
-                    keyboardKey="A"
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Advanced Settings")
+                        ?.shortcut!
+                    }
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={true}
                     value={"Advanced"}
                     icon={"Settings2"}
                     dataTestId="edit-button-modal"
@@ -503,9 +507,10 @@ export default function NodeToolbarComponent({
               )}
               <SelectItem value={"save"}>
                 <ToolbarSelectItem
-                  keyboardKey="S"
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Save")?.shortcut!
+                  }
                   isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                  shift={false}
                   value={"Save"}
                   icon={"SaveAll"}
                   dataTestId="save-button-modal"
@@ -513,19 +518,21 @@ export default function NodeToolbarComponent({
               </SelectItem>
               <SelectItem value={"duplicate"}>
                 <ToolbarSelectItem
-                  keyboardKey="D"
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Duplicate")?.shortcut!
+                  }
                   isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                  shift={false}
                   value={"Duplicate"}
                   icon={"Copy"}
-                  dataTestId="duplicate-button-modal"
+                  dataTestId="copy-button-modal"
                 />
               </SelectItem>
               <SelectItem value={"copy"}>
                 <ToolbarSelectItem
-                  keyboardKey="C"
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Copy")?.shortcut!
+                  }
                   isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                  shift={false}
                   value={"Copy"}
                   icon={"Clipboard"}
                   dataTestId="copy-button-modal"
@@ -534,9 +541,10 @@ export default function NodeToolbarComponent({
               {isOutdated && (
                 <SelectItem value={"update"}>
                   <ToolbarSelectItem
-                    keyboardKey="U"
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Update")?.shortcut!
+                    }
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={false}
                     value={"Update"}
                     icon={"Code"}
                     dataTestId="update-button-modal"
@@ -550,14 +558,12 @@ export default function NodeToolbarComponent({
                   disabled={!hasApiKey || !validApiKey}
                 >
                   <ToolbarSelectItem
-                    keyboardKey="S"
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Share")?.shortcut!
+                    }
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={true}
                     value={"Share"}
                     icon={"Share3"}
-                    styleObj={{
-                      iconClasses: "relative top-0.5 -m-1 mr-[0.25rem] h-6 w-6",
-                    }}
                     dataTestId="share-button-modal"
                   />
                 </SelectItem>
@@ -565,13 +571,14 @@ export default function NodeToolbarComponent({
               {(!hasStore || !hasApiKey || !validApiKey) && (
                 <SelectItem value={"Download"}>
                   <ToolbarSelectItem
-                    value="Download"
-                    shift={false}
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Download")
+                        ?.shortcut!
+                    }
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    icon="Download"
-                    styleObj={{ iconClasses: "relative top-0.5 mr-2 h-4 w-4" }}
-                    keyboardKey={"J"}
-                    dataTestId={"Dowload-button-nodeToolbar"}
+                    value={"Download"}
+                    icon={"Download"}
+                    dataTestId="Download-button-modal"
                   />
                 </SelectItem>
               )}
@@ -580,9 +587,10 @@ export default function NodeToolbarComponent({
                 disabled={data.node?.documentation === ""}
               >
                 <ToolbarSelectItem
-                  keyboardKey="D"
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
+                  }
                   isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                  shift={true}
                   value={"Docs"}
                   icon={"FileText"}
                   dataTestId="docs-button-modal"
@@ -591,12 +599,14 @@ export default function NodeToolbarComponent({
               {isMinimal && (
                 <SelectItem value={"show"}>
                   <ToolbarSelectItem
-                    icon={showNode ? "Minimize2" : "Maximize2"}
-                    value={showNode ? "Minimize" : "Expand"}
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Minimize")
+                        ?.shortcut!
+                    }
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={false}
-                    keyboardKey={"Q"}
-                    dataTestId={"minimize-button-nodeToolbar"}
+                    value={showNode ? "Minimize" : "Expand"}
+                    icon={showNode ? "Minimize2" : "Maximize2"}
+                    dataTestId="minimize-button-modal"
                   />
                 </SelectItem>
               )}

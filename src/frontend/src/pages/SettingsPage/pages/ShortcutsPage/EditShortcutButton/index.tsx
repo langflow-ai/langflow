@@ -5,6 +5,7 @@ import ForwardedIconComponent from "../../../../../components/genericIconCompone
 import { Button } from "../../../../../components/ui/button";
 import BaseModal from "../../../../../modals/baseModal";
 import { useShortcutsStore } from "../../../../../stores/shortcuts";
+import { toTitleCase } from "../../../../../utils/utils";
 
 export default function EditShortcutButton({
   children,
@@ -24,11 +25,11 @@ export default function EditShortcutButton({
   disable?: boolean;
 }): JSX.Element {
   const isMac = navigator.userAgent.toUpperCase().includes("MAC");
-  const [key, setKey] = useState<string>(isMac ? "Meta" : "Ctrl");
+  const [key, setKey] = useState<string>(isMac ? "Cmd" : "Ctrl");
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setShortcuts = useShortcutsStore((state) => state.setShortcuts);
   const unavaliableShortcuts = useShortcutsStore(
-    (state) => state.unavailableShortcuts
+    (state) => state.unavailableShortcuts,
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -43,7 +44,7 @@ export default function EditShortcutButton({
   }
 
   const setUniqueShortcut = useShortcutsStore(
-    (state) => state.updateUniqueShortcut
+    (state) => state.updateUniqueShortcut,
   );
 
   function editCombination(): void {
@@ -70,7 +71,7 @@ export default function EditShortcutButton({
       setKey(isMac ? "META" : "CTRL");
       localStorage.setItem(
         "langflow-shortcuts",
-        JSON.stringify(newCombination)
+        JSON.stringify(newCombination),
       );
       localStorage.setItem("langflow-UShortcuts", JSON.stringify(unavailable));
       return;
@@ -82,7 +83,7 @@ export default function EditShortcutButton({
   }
 
   useEffect(() => {
-    if (!open) setKey(isMac ? "META" : "CTRL");
+    if (!open) setKey(isMac ? "Cmd" : "Ctrl");
     console.log(key);
   }, [open, setOpen, key]);
 
@@ -90,7 +91,10 @@ export default function EditShortcutButton({
     function onKeyDown(e: KeyboardEvent) {
       e.preventDefault();
       if (key.toUpperCase().includes(e.key.toUpperCase())) return;
-      setKey((oldKey) => `${oldKey.toUpperCase()} + ${e.key.toUpperCase()}`);
+      setKey(
+        (oldKey) =>
+          `${oldKey.length > 0 ? toTitleCase(oldKey) : oldKey.toUpperCase()} + ${e.key.length > 0 ? toTitleCase(e.key) : e.key.toUpperCase()}`,
+      );
     }
 
     document.addEventListener("keydown", onKeyDown);
