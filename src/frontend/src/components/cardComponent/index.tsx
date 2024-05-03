@@ -442,9 +442,9 @@ export default function CollectionCardComponent({
                   disabled={loadingPlayground}
                   key={data.id}
                   tabIndex={-1}
-                  variant="outline"
+                  variant="primary"
                   size="sm"
-                  className="gap-2 whitespace-nowrap"
+                  className="gap-2 whitespace-nowrap bg-muted"
                   data-testid={"playground-flow-button-" + data.id}
                   onClick={(e) => {
                     e.preventDefault();
