@@ -97,6 +97,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             password={false}
             options={["Generic", "Credential"]}
             placeholder="Choose a type for the variable..."
+            id={"type-global-variables"}
           ></InputComponent>
           <Label>Value</Label>
           <Textarea
@@ -114,6 +115,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             password={false}
             options={availableFields}
             placeholder="Choose a field for the variable..."
+            id={"apply-to-fields"}
           ></InputComponent>
         </div>
       </BaseModal.Content>

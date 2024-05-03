@@ -278,7 +278,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
-                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Interaction Panel.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n        record_template: Optional[str] = \"{text}\",\n    ) -> Union[Text, Record]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n            record_template=record_template or \"\",\n        )\n",
+                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n        record_template: Optional[str] = \"{text}\",\n    ) -> Union[Text, Record]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n            record_template=record_template or \"\",\n        )\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -422,7 +422,7 @@
               },
               "_type": "CustomComponent"
             },
-            "description": "Display a chat message in the Interaction Panel.",
+            "description": "Display a chat message in the Playground.",
             "icon": "ChatOutput",
             "base_classes": [
               "Text",
@@ -836,7 +836,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
-                "value": "from typing import Optional\n\nfrom langflow.base.io.text import TextComponent\nfrom langflow.field_typing import Text\n\n\nclass TextInput(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Interaction Panel.\"\n    icon = \"type\"\n\n    def build_config(self):\n        return {\n            \"input_value\": {\n                \"display_name\": \"Value\",\n                \"input_types\": [\"Record\", \"Text\"],\n                \"info\": \"Text or Record to be passed as input.\",\n            },\n            \"record_template\": {\n                \"display_name\": \"Record Template\",\n                \"multiline\": True,\n                \"info\": \"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        input_value: Optional[str] = \"\",\n        record_template: Optional[str] = \"\",\n    ) -> Text:\n        return super().build(input_value=input_value, record_template=record_template)\n",
+                "value": "from typing import Optional\n\nfrom langflow.base.io.text import TextComponent\nfrom langflow.field_typing import Text\n\n\nclass TextInput(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Playground.\"\n    icon = \"type\"\n\n    def build_config(self):\n        return {\n            \"input_value\": {\n                \"display_name\": \"Value\",\n                \"input_types\": [\"Record\", \"Text\"],\n                \"info\": \"Text or Record to be passed as input.\",\n            },\n            \"record_template\": {\n                \"display_name\": \"Record Template\",\n                \"multiline\": True,\n                \"info\": \"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        input_value: Optional[str] = \"\",\n        record_template: Optional[str] = \"\",\n    ) -> Text:\n        return super().build(input_value=input_value, record_template=record_template)\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -894,7 +894,7 @@
               },
               "_type": "CustomComponent"
             },
-            "description": "Get text inputs from the Interaction Panel.",
+            "description": "Get text inputs from the Playground.",
             "icon": "type",
             "base_classes": [
               "object",

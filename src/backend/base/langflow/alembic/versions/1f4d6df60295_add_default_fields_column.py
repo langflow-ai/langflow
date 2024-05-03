@@ -1,7 +1,7 @@
 """Add default_fields column
 
 Revision ID: 1f4d6df60295
-Revises: 58b28437a398
+Revises: 6e7b581b5648
 Create Date: 2024-04-29 09:49:46.864145
 
 """
@@ -14,7 +14,7 @@ from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision: str = "1f4d6df60295"
-down_revision: Union[str, None] = "58b28437a398"
+down_revision: Union[str, None] = "6e7b581b5648"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

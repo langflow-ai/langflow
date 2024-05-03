@@ -1,6 +1,5 @@
 import { cloneDeep } from "lodash";
 import { forwardRef, useEffect, useState } from "react";
-import ShadTooltip from "../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../components/codeAreaComponent";
 import DictComponent from "../../components/dictComponent";
 import Dropdown from "../../components/dropdownComponent";
@@ -12,6 +11,7 @@ import InputListComponent from "../../components/inputListComponent";
 import IntComponent from "../../components/intComponent";
 import KeypairListComponent from "../../components/keypairListComponent";
 import PromptAreaComponent from "../../components/promptComponent";
+import ShadTooltip from "../../components/shadTooltipComponent";
 import TextAreaComponent from "../../components/textAreaComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
 import { Badge } from "../../components/ui/badge";
@@ -211,7 +211,7 @@ const EditNodeModal = forwardRef(
                                 !myData.node.template[templateParam].options ? (
                                   <div className="mx-auto">
                                     {myData.node.template[templateParam]
-                                      .list ? (
+                                      ?.list ? (
                                       <InputListComponent
                                         componentName={templateParam}
                                         editNode={true}
@@ -353,7 +353,7 @@ const EditNodeModal = forwardRef(
                                       }}
                                       isList={
                                         data.node?.template[templateParam]
-                                          .list ?? false
+                                          ?.list ?? false
                                       }
                                     />
                                   </div>
@@ -428,6 +428,10 @@ const EditNodeModal = forwardRef(
                                     .type === "int" ? (
                                   <div className="mx-auto">
                                     <IntComponent
+                                      rangeSpec={
+                                        data.node?.template[templateParam]
+                                          ?.rangeSpec
+                                      }
                                       id={
                                         "edit-int-input-" +
                                         myData.node.template[templateParam].name

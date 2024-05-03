@@ -247,6 +247,7 @@ export default function InputComponent({
             </PopoverContentWithoutPortal>
           </Popover>
           <div
+            data-testid={"popover-anchor-" + id}
             className={cn(
               "pointer-events-auto absolute inset-y-0 h-full w-full cursor-pointer",
               ((selectedOption !== "" || !onChange) && setSelectedOption) ||

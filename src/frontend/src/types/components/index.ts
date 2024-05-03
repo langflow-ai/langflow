@@ -72,15 +72,7 @@ export type InputListComponentType = {
   disabled: boolean;
   editNode?: boolean;
   componentName?: string;
-};
-
-export type InputGlobalComponentType = {
-  disabled: boolean;
-  onChange: (value: string) => void;
-  setDb: (value: boolean) => void;
-  name: string;
-  data: NodeDataType;
-  editNode?: boolean;
+  playgroundDisabled?: boolean;
 };
 
 export type KeyPairListComponentType = {
@@ -96,9 +88,11 @@ export type KeyPairListComponentType = {
 export type DictComponentType = {
   value: any;
   onChange: (value) => void;
-  disabled: boolean;
+  disabled?: boolean;
   editNode?: boolean;
   id?: string;
+  left?: boolean;
+  output?: boolean;
 };
 
 export type TextAreaComponentType = {
@@ -597,6 +591,8 @@ export type IOModalPropsType = {
   open: boolean;
   setOpen: (open: boolean) => void;
   disable?: boolean;
+  isPlayground?: boolean;
+  cleanOnClose?: boolean;
 };
 
 export type buttonBoxPropsType = {

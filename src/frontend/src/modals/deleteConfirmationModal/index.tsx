@@ -15,14 +15,18 @@ export default function DeleteConfirmationModal({
   onConfirm,
   description,
   asChild,
+  open,
+  setOpen,
 }: {
   children: JSX.Element;
   onConfirm: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
   description?: string;
   asChild?: boolean;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
 }) {
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild={asChild} tabIndex={-1}>
         {children}
       </DialogTrigger>

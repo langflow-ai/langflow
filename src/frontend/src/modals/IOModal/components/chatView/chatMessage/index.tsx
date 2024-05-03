@@ -6,9 +6,9 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import MaleTechnology from "../../../../../assets/male-technologist.png";
 import Robot from "../../../../../assets/robot.png";
-import SanitizedHTMLWrapper from "../../../../../components/SanitizedHTMLWrapper";
 import CodeTabsComponent from "../../../../../components/codeTabsComponent";
 import IconComponent from "../../../../../components/genericIconComponent";
+import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
@@ -271,7 +271,7 @@ dark:prose-invert"
             </div>
           </div>
         ) : (
-          <div>
+          <div className="form-modal-chat-text-position min-w-96 flex-grow">
             {template ? (
               <>
                 <button
@@ -324,6 +324,7 @@ dark:prose-invert"
               </>
             ) : (
               <span
+              className="prose text-primary word-break-break-word dark:prose-invert"
                 data-testid={
                   "chat-message-" + chat.sender_name + "-" + chatMessage
                 }

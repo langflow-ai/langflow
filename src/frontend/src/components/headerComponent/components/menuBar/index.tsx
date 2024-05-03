@@ -17,8 +17,8 @@ import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { cn } from "../../../../utils/utils";
-import ShadTooltip from "../../../ShadTooltipComponent";
 import IconComponent from "../../../genericIconComponent";
+import ShadTooltip from "../../../shadTooltipComponent";
 import { Button } from "../../../ui/button";
 
 export const MenuBar = ({
