@@ -61,7 +61,7 @@ export function normalCaseToSnakeCase(str: string): string {
 
 export function toTitleCase(
   str: string | undefined,
-  isNodeField?: boolean
+  isNodeField?: boolean,
 ): string {
   if (!str) return "";
   let result = str
@@ -70,7 +70,7 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase()
+          word[0].toUpperCase() + word.slice(1).toLowerCase(),
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -83,7 +83,7 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase()
+          word[0].toUpperCase() + word.slice(1).toLowerCase(),
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -123,7 +123,7 @@ export function groupByFamily(
   data: APIDataType,
   baseClasses: string,
   left: boolean,
-  flow?: NodeType[]
+  flow?: NodeType[],
 ): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
   let arrOfPossibleInputs: Array<{
@@ -149,7 +149,7 @@ export function groupByFamily(
         baseClassesSet.has(template.type)) ||
         (template.input_types &&
           template.input_types.some((inputType) =>
-            baseClassesSet.has(inputType)
+            baseClassesSet.has(inputType),
           )))
     );
   };
@@ -169,7 +169,7 @@ export function groupByFamily(
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
           nodeData.node!.base_classes.some((baseClass) =>
-            baseClassesSet.has(baseClass)
+            baseClassesSet.has(baseClass),
           ), //seta como anterior ou verifica se o node tem base class
         displayName: nodeData.node?.display_name,
       });
@@ -186,10 +186,10 @@ export function groupByFamily(
       if (!foundNode) {
         foundNode = {
           hasBaseClassInTemplate: Object.values(node!.template).some(
-            checkBaseClass
+            checkBaseClass,
           ),
           hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
-            baseClassesSet.has(baseClass)
+            baseClassesSet.has(baseClass),
           ),
           displayName: node?.display_name,
         };
@@ -246,7 +246,7 @@ export function getRandomDescription(): string {
 export function getRandomName(
   retry: number = 0,
   noSpace: boolean = false,
-  maxRetries: number = 3
+  maxRetries: number = 3,
 ): string {
   const left: string[] = ADJECTIVES;
   const right: string[] = NOUNS;
@@ -325,7 +325,7 @@ export function getChatInputField(flowState?: FlowState) {
 export function getPythonApiCode(
   flow: FlowType,
   isAuth: boolean,
-  tweak?: any[]
+  tweak?: any[],
 ): string {
   const flowId = flow.id;
 
@@ -393,7 +393,7 @@ print(run_flow(message=message, flow_id=FLOW_ID, tweaks=TWEAKS${
 export function getCurlCode(
   flow: FlowType,
   isAuth: boolean,
-  tweak?: any[]
+  tweak?: any[],
 ): string {
   const flowId = flow.id;
   const tweaks = buildTweaks(flow);
@@ -463,7 +463,7 @@ result = run_flow_from_json(flow="${flowName}.json",
 export function getWidgetCode(
   flow: FlowType,
   isAuth: boolean,
-  flowState?: FlowState
+  flowState?: FlowState,
 ): string {
   const flowId = flow.id;
   const flowName = flow.name;
@@ -593,7 +593,7 @@ export function checkLocalStorageKey(key: string): boolean {
 
 export function IncrementObjectKey(
   object: object,
-  key: string
+  key: string,
 ): { newKey: string; increment: number } {
   let count = 1;
   const type = removeCountFromString(key);
@@ -665,7 +665,7 @@ export function getSetFromObject(obj: object, key?: string): Set<string> {
 
 export function getFieldTitle(
   template: APITemplateType,
-  templateField: string
+  templateField: string,
 ): string {
   return template[templateField].display_name
     ? template[templateField].display_name!
@@ -714,4 +714,8 @@ export function sortFields(a, b, fieldOrder) {
 export function freezeObject(obj: any) {
   if (!obj) return obj;
   return JSON.parse(JSON.stringify(obj));
+}
+
+export function convertTestName(name: string): string {
+  return name.replace(/ /g, "-").toLowerCase();
 }

@@ -1,6 +1,8 @@
 import { cloneDeep } from "lodash";
+import { useState } from "react";
 import ImageViewer from "../../../../components/ImageViewer";
 import CsvOutputComponent from "../../../../components/csvOutputComponent";
+import InputListComponent from "../../../../components/inputListComponent";
 import PdfViewer from "../../../../components/pdfViewer";
 import {
   Select,
@@ -15,7 +17,13 @@ import { PDFViewConstant } from "../../../../constants/constants";
 import { InputOutput } from "../../../../constants/enums";
 import useFlowStore from "../../../../stores/flowStore";
 import { IOFieldViewProps } from "../../../../types/components";
+import {
+  convertValuesToNumbers,
+  hasDuplicateKeys,
+} from "../../../../utils/reactflowUtils";
 import IOFileInput from "./components/FileInput";
+import IoJsonInput from "./components/JSONInput";
+import IOKeyPairInput from "./components/keyPairInput";
 
 export default function IOFieldView({
   type,
@@ -39,6 +47,7 @@ export default function IOFieldView({
       }
     }
   };
+  const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   function handleOutputType() {
     if (!node) return <>"No node found!"</>;
@@ -76,6 +85,57 @@ export default function IOFieldView({
                   }
                 }}
               />
+            );
+
+          case "KeyPairInput":
+            return (
+              <IOKeyPairInput
+                value={node.data.node!.template["input_value"]?.value}
+                onChange={(e) => {
+                  if (node) {
+                    let newNode = cloneDeep(node);
+                    newNode.data.node!.template["input_value"].value = e;
+                    setNode(node.id, newNode);
+                  }
+                  const valueToNumbers = convertValuesToNumbers(e);
+                  setErrorDuplicateKey(hasDuplicateKeys(valueToNumbers));
+                }}
+                duplicateKey={errorDuplicateKey}
+                isList={node.data.node!.template["input_value"]?.list ?? false}
+                isInputField
+              />
+            );
+
+          case "JsonInput":
+            return (
+              <IoJsonInput
+                value={node.data.node!.template["input_value"]?.value}
+                onChange={(e) => {
+                  if (node) {
+                    let newNode = cloneDeep(node);
+                    newNode.data.node!.template["input_value"].value = e;
+                    setNode(node.id, newNode);
+                  }
+                }}
+                left={left}
+              />
+            );
+
+          case "StringListInput":
+            return (
+              <>
+                <InputListComponent
+                  value={node.data.node!.template["input_value"]?.value}
+                  onChange={(e) => {
+                    if (node) {
+                      let newNode = cloneDeep(node);
+                      newNode.data.node!.template["input_value"].value = e;
+                      setNode(node.id, newNode);
+                    }
+                  }}
+                  disabled={false}
+                />
+              </>
             );
 
           default:
@@ -167,6 +227,58 @@ export default function IOFieldView({
                   ]?.params ?? ""
                 }
               />
+            );
+
+          case "JsonOutput":
+            return (
+              <IoJsonInput
+                value={node.data.node!.template["input_value"]?.value}
+                onChange={(e) => {
+                  if (node) {
+                    let newNode = cloneDeep(node);
+                    newNode.data.node!.template["input_value"].value = e;
+                    setNode(node.id, newNode);
+                  }
+                }}
+                left={left}
+                output
+              />
+            );
+
+          case "KeyPairOutput":
+            return (
+              <IOKeyPairInput
+                value={node.data.node!.template["input_value"]?.value}
+                onChange={(e) => {
+                  if (node) {
+                    let newNode = cloneDeep(node);
+                    newNode.data.node!.template["input_value"].value = e;
+                    setNode(node.id, newNode);
+                  }
+                  const valueToNumbers = convertValuesToNumbers(e);
+                  setErrorDuplicateKey(hasDuplicateKeys(valueToNumbers));
+                }}
+                duplicateKey={errorDuplicateKey}
+                isList={node.data.node!.template["input_value"]?.list ?? false}
+              />
+            );
+
+          case "StringListOutput":
+            return (
+              <>
+                <InputListComponent
+                  value={node.data.node!.template["input_value"]?.value}
+                  onChange={(e) => {
+                    if (node) {
+                      let newNode = cloneDeep(node);
+                      newNode.data.node!.template["input_value"].value = e;
+                      setNode(node.id, newNode);
+                    }
+                  }}
+                  playgroundDisabled
+                  disabled={false}
+                />
+              </>
             );
 
           default:

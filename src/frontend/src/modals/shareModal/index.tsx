@@ -1,7 +1,7 @@
 import { Loader2 } from "lucide-react";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import EditFlowSettings from "../../components/EditFlowSettingsComponent";
+import EditFlowSettings from "../../components/editFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
 import { Button } from "../../components/ui/button";
@@ -24,8 +24,8 @@ import {
   removeGlobalVariableFromComponents,
 } from "../../utils/reactflowUtils";
 import { getTagsIds } from "../../utils/storeUtils";
-import ConfirmationModal from "../ConfirmationModal";
 import BaseModal from "../baseModal";
+import ConfirmationModal from "../confirmationModal";
 import ExportModal from "../exportModal";
 
 export default function ShareModal({
@@ -234,7 +234,7 @@ export default function ShareModal({
           <div className="mt-3 flex h-8 w-full">
             <TagsSelector
               tags={tags}
-              loadingTags={loadingTags}
+               loadingTags={loadingTags}
               disabled={false}
               selectedTags={selectedTags}
               setSelectedTags={setSelectedTags}

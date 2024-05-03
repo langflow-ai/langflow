@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import PaginatorComponent from "../../../../components/PaginatorComponent";
 import CollectionCardComponent from "../../../../components/cardComponent";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
 import IconComponent from "../../../../components/genericIconComponent";
+import PaginatorComponent from "../../../../components/paginatorComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
 import {
@@ -14,7 +14,6 @@ import {
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { FlowType } from "../../../../types/flow";
-
 export default function ComponentsComponent({
   is_component = true,
 }: {
@@ -31,7 +30,6 @@ export default function ComponentsComponent({
   const [pageIndex, setPageIndex] = useState(1);
 
   const navigate = useNavigate();
-
   const all: FlowType[] = flows
     .filter((f) => (f.is_component ?? false) === is_component)
     .sort((a, b) => {
@@ -87,12 +85,10 @@ export default function ComponentsComponent({
       }
     }
   };
-
   function resetFilter() {
     setPageIndex(1);
     setPageSize(20);
   }
-
   return (
     <CardsWrapComponent
       onFileDrop={onFileDrop}
@@ -144,6 +140,7 @@ export default function ComponentsComponent({
                     key={idx}
                     data={{ is_component: item.is_component ?? false, ...item }}
                     disabled={isLoading}
+                    data-testid={"edit-flow-button-" + item.id + "-" + idx}
                     button={
                       !is_component ? (
                         <Link to={"/flow/" + item.id}>
@@ -167,6 +164,14 @@ export default function ComponentsComponent({
                         <></>
                       )
                     }
+                    onClick={
+                      !is_component
+                        ? () => {
+                            navigate("/flow/" + item.id);
+                          }
+                        : undefined
+                    }
+                    playground={!is_component}
                   />
                 ))
               ) : (
