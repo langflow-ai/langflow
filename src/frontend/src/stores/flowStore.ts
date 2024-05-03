@@ -478,8 +478,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         // const nextVertices will be the zip of vertexBuildData.next_vertices_ids and
         // vertexBuildData.top_level_vertices
         // the VertexLayerElementType as {id: next_vertices_id, layer: top_level_vertex}
+
+        // next_vertices_ids should be next_vertices_ids without the inactivated vertices
+        const next_vertices_ids = vertexBuildData.next_vertices_ids.filter(
+          (id) => !vertexBuildData.inactivated_vertices?.includes(id)
+        );
         const nextVertices: VertexLayerElementType[] = zip(
-          vertexBuildData.next_vertices_ids,
+          next_vertices_ids,
           vertexBuildData.top_level_vertices
         ).map(([id, reference]) => ({ id: id!, reference }));
 
@@ -489,7 +494,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         ];
         const newIds = [
           ...get().verticesBuild!.verticesIds,
-          ...vertexBuildData.next_vertices_ids,
+          ...next_vertices_ids,
         ];
         get().updateVerticesBuild({
           verticesIds: newIds,
@@ -598,7 +603,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({
       verticesBuild: {
         ...verticesBuild,
+        // remove the vertices from the list of vertices ids
+        // that are going to be built
         verticesIds: get().verticesBuild!.verticesIds.filter(
+          // keep the vertices that are not in the list of vertices to remove
           (vertex) => !vertices.includes(vertex)
         ),
       },

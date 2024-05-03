@@ -15,6 +15,7 @@ class RunnableVerticesManager:
 
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Determines if a vertex is runnable."""
+
         return vertex_id in self.vertices_to_run and not self.run_predecessors.get(vertex_id)
 
     def find_runnable_predecessors_for_successors(self, vertex_id: str) -> List[str]:
