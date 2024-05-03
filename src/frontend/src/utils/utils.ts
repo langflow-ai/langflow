@@ -719,3 +719,7 @@ export function freezeObject(obj: any) {
 export function convertTestName(name: string): string {
   return name.replace(/ /g, "-").toLowerCase();
 }
+
+export function sortByName(stringList: string[]): string[] {
+  return stringList.sort((a, b) => a.localeCompare(b));
+}

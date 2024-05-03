@@ -2,13 +2,6 @@ import { ColDef, ColGroupDef } from "ag-grid-community";
 import { useState } from "react";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../../../../components/ui/card";
 
 export default function ShortcutsPage() {
   const advancedShortcut = "Ctrl + Shift + A";
@@ -84,7 +77,7 @@ export default function ShortcutsPage() {
       shortcut: redoShortcut,
     },
   ]);
-  
+
   return (
     <div className="flex h-full w-full flex-col gap-6">
       <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
@@ -97,22 +90,17 @@ export default function ShortcutsPage() {
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Manage Shortcuts for quick access to
-            frequently used actions.
+            Manage Shortcuts for quick access to frequently used actions.
           </p>
         </div>
       </div>
       <div className="grid gap-6 pb-8">
-        <Card x-chunk="dashboard-04-chunk-2" className="pt-4">
-          <CardContent>
-            <TableComponent
-              domLayout="autoHeight"
-              pagination={false}
-              columnDefs={colDefs}
-              rowData={nodesRowData}
-            />
-          </CardContent>
-        </Card>
+        <TableComponent
+          domLayout="autoHeight"
+          pagination={false}
+          columnDefs={colDefs}
+          rowData={nodesRowData}
+        />
       </div>
     </div>
   );

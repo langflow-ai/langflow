@@ -69,7 +69,7 @@ function CsvOutputComponent({
     if (file) {
       const { rowData: data, colDefs: columns } = convertCSVToData(
         file,
-        separator
+        separator,
       );
       setRowData(data);
       setColDefs(columns);
@@ -114,14 +114,14 @@ function CsvOutputComponent({
     (params: any) => {
       updateRowHeight(params);
     },
-    [updateRowHeight]
+    [updateRowHeight],
   );
 
   const onGridSizeChanged = useCallback(
     (params: any) => {
       updateRowHeight(params);
     },
-    [updateRowHeight]
+    [updateRowHeight],
   );
 
   return (
@@ -167,6 +167,7 @@ function CsvOutputComponent({
             onFirstDataRendered={onFirstDataRendered}
             onGridSizeChanged={onGridSizeChanged}
             scrollbarWidth={8}
+            overlayNoRowsTemplate="No data available"
           />
         </div>
       )}

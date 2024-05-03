@@ -11,7 +11,6 @@ import cloneFLowWithParent from "../../utils/storeUtils";
 import { cn, convertTestName } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import ShadTooltip from "../shadTooltipComponent";
-import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -172,7 +171,7 @@ export default function CollectionCardComponent({
         data-testid={`card-${convertTestName(data.name)}`}
         //TODO check color schema
         className={cn(
-          "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#202635]",
+          "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#ffffff10]",
           disabled ? "pointer-events-none opacity-50" : "",
           onClick ? "cursor-pointer" : "",
         )}
