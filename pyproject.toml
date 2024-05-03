@@ -1,24 +1,15 @@
 [tool.poetry]
-name = "langflow"
-version = "1.0.0a30"
-description = "A Python package with a built-in web application"
-authors = ["Langflow <contact@langflow.org>"]
-maintainers = [
-    "Carlos Coelho <carlos@langflow.org>",
-    "Cristhian Zanforlin <cristhian.lousa@gmail.com>",
-    "Gabriel Almeida <gabriel@langflow.org>",
-    "Igor Carvalho <igorr.ackerman@gmail.com>",
-    "Lucas Eduoli <lucaseduoli@gmail.com>",
-    "Otávio Anovazzi <otavio2204@gmail.com>",
-    "Rodrigo Nader <rodrigo@langflow.org>",
-]
-repository = "https://github.com/langflow-ai/langflow"
-license = "MIT"
+name = "ragstack-ai-langflow"
+version = "0.0.1.alpha"
+description = "RAGStack Langflow"
+license = "BUSL-1.1"
+authors = ["DataStax"]
+repository = "https://github.com/datastax/ragstack-ai-langflow"
 readme = "README.md"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 packages = [{ include = "langflow", from = "src/backend" }]
 include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
-documentation = "https://docs.langflow.org"
+documentation = "https://docs.datastax.com/en/ragstack"
 
 [tool.poetry.scripts]
 langflow = "langflow.__main__:main"
@@ -26,7 +17,8 @@ langflow = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-langflow-base = { path = "./src/backend/base", develop = true }
+# TO CHANGE WHEN RELEASED
+ragstack-ai-langflow-base = { path = "./src/backend/base", develop = true }
 beautifulsoup4 = "^4.12.2"
 google-search-results = "^2.4.1"
 google-api-python-client = "^2.118.0"
@@ -67,21 +59,20 @@ numexpr = "^2.8.6"
 qianfan = "0.3.5"
 pgvector = "^0.2.3"
 pyautogen = "^0.2.0"
-langchain-google-genai = "^1.0.1"
 langchain-cohere = "^0.1.0rc1"
 elasticsearch = "^8.12.0"
 pytube = "^15.0.0"
-llama-index = "^0.10.13"
-unstructured = { extras = ["md"], version = "^0.12.4" }
 dspy-ai = "^2.4.0"
 html2text = "^2024.2.26"
 assemblyai = "^0.23.1"
 litellm = "^1.34.22"
 chromadb = "^0.4.24"
 langchain-anthropic = "^0.1.6"
-langchain-astradb = "^0.1.0"
-langchain-openai = "^0.1.1"
 zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
+
+[tool.poetry.group.test.dependencies]
+ragstack-ai-langflow-base = { path = "./src/backend/base", develop = true }
+
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
