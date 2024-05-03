@@ -117,7 +117,7 @@ export default function IOModal({
 
   return (
     <BaseModal
-      size={selectedTab === 0 ? "large-thin" : "md-thin"}
+      size={selectedTab === 0 ? "sm-thin" : "md-thin"}
       open={open}
       setOpen={setOpen}
       disable={disable}

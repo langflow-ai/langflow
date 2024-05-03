@@ -205,17 +205,12 @@ async def build_and_cache_graph_from_db(
     flow_id: str,
     session: Session,
     chat_service: "ChatService",
-    graph: Optional[Graph] = None,
 ):
     """Build and cache the graph."""
     flow: Optional[Flow] = session.get(Flow, flow_id)
     if not flow or not flow.data:
         raise ValueError("Invalid flow ID")
-    other_graph = Graph.from_payload(flow.data, flow_id)
-    if graph is None:
-        graph = other_graph
-    else:
-        graph = graph.update(other_graph)
+    graph = Graph.from_payload(flow.data, flow_id)
     await chat_service.set_cache(flow_id, graph)
     return graph
 

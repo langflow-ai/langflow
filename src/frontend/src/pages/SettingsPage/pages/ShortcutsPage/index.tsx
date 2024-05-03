@@ -43,10 +43,6 @@ export default function ShortcutsPage() {
 
   const combinationToEdit = shortcuts.filter((s) => s.name === selectedRows[0]);
   const [open, setOpen] = useState(false);
-
-  const unavaliableShortcuts = useShortcutsStore(
-    (state) => state.unavailableShortcuts
-  );
   useEffect(() => {
     if (localStorage.getItem("langflow-shortcuts")) {
       const savedShortcuts = localStorage.getItem("langflow-shortcuts");
@@ -109,7 +105,7 @@ export default function ShortcutsPage() {
           <TableComponent
             onSelectionChanged={(event: SelectionChangedEvent) => {
               setSelectedRows(
-                event.api.getSelectedRows().map((row) => row.name)
+                event.api.getSelectedRows().map((row) => row.name),
               );
             }}
             suppressRowClickSelection={true}

@@ -59,7 +59,7 @@ def get_id_from_search_string(search_string: str) -> Optional[str]:
     Returns:
         Optional[str]: The extracted ID, or None if no ID is found.
     """
-    possible_id = search_string
+    possible_id: Optional[str] = search_string
     if "www.langflow.store/store/" in search_string:
         possible_id = search_string.split("/")[-1]
 
