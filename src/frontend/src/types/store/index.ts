@@ -37,6 +37,8 @@ export type shortcutsStoreType = {
   docs: string;
   save: string;
   delete: string;
+  update: string;
+  download: string;
   shortcuts: Array<{
     name: string;
     shortcut: string;
@@ -44,6 +46,6 @@ export type shortcutsStoreType = {
   unavailableShortcuts: string[];
   setShortcuts: (
     newShortcuts: Array<{ name: string; shortcut: string }>,
-    unavailable: string[]
+    unavailable: string[],
   ) => void;
 };
