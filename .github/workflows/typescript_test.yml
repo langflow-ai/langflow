@@ -2,7 +2,10 @@ name: Run Frontend Tests
 
 on:
   pull_request:
+    branches:
+      - ragstack-main
     paths:
+      - ".github/workflows/**"
       - "src/frontend/**"
 
 env:

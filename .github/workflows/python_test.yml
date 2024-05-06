@@ -2,7 +2,10 @@ name: test
 
 on:
   pull_request:
+    branches:
+      - ragstack-main
     paths:
+      - ".github/workflows/**"
       - "poetry.lock"
       - "pyproject.toml"
       - "src/backend/**"

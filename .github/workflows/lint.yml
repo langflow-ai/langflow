@@ -2,7 +2,7 @@ name: lint
 
 on:
   push:
-    branches: [main]
+    branches: [ragstack-main]
     paths:
       - "poetry.lock"
       - "pyproject.toml"
