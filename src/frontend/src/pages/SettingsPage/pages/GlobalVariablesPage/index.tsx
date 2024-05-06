@@ -82,7 +82,7 @@ export default function GlobalVariablesPage() {
       showDisabledCheckboxes: true,
       headerName: "Variable Name",
       field: "name",
-      flex: 1,
+      flex: 2,
     }, //This column will be twice as wide as the others
     {
       field: "type",
