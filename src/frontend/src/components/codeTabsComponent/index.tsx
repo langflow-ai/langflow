@@ -109,7 +109,7 @@ export default function CodeTabsComponent({
 
   function openAccordions() {
     let accordionsToOpen: string[] = [];
-    tweaks?.tweak!.current.forEach((el) => {
+    tweaks?.tweak!.forEach((el) => {
       Object.keys(el).forEach((key) => {
         if (Object.keys(el[key]).length > 0) {
           accordionsToOpen.push(key);
@@ -205,14 +205,12 @@ export default function CodeTabsComponent({
               <div className="api-modal-according-display">
                 <div
                   className={classNames(
-                    "h-[70vh] w-full overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll"
+                    "h-[70vh] w-full overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll",
                   )}
                 >
                   {data?.map((node: any, i) => (
                     <div className="px-3" key={i}>
-                      {tweaks?.tweaksList!.current.includes(
-                        node["data"]["id"]
-                      ) && (
+                      {tweaks?.tweaksList!.includes(node["data"]["id"]) && (
                         <AccordionComponent
                           trigger={
                             <ShadTooltip
@@ -247,8 +245,8 @@ export default function CodeTabsComponent({
                                         .show &&
                                       LANGFLOW_SUPPORTED_TYPES.has(
                                         node.data.node.template[templateField]
-                                          .type
-                                      )
+                                          .type,
+                                      ),
                                   )
                                   .map((templateField, indx) => {
                                     return (
@@ -303,7 +301,7 @@ export default function CodeTabsComponent({
                                                         target,
                                                         node.data.node.template[
                                                           templateField
-                                                        ]
+                                                        ],
                                                       );
                                                     }}
                                                   />
@@ -345,7 +343,7 @@ export default function CodeTabsComponent({
                                                           node.data.node
                                                             .template[
                                                             templateField
-                                                          ]
+                                                          ],
                                                         );
                                                       }}
                                                     />
@@ -388,7 +386,7 @@ export default function CodeTabsComponent({
                                                         target,
                                                         node.data.node.template[
                                                           templateField
-                                                        ]
+                                                        ],
                                                       );
                                                     }}
                                                   />
@@ -421,7 +419,7 @@ export default function CodeTabsComponent({
                                                       e,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                   size="small"
@@ -447,7 +445,7 @@ export default function CodeTabsComponent({
                                                     ].fileTypes
                                                   }
                                                   onFileChange={(
-                                                    value: any
+                                                    value: any,
                                                   ) => {
                                                     node.data.node.template[
                                                       templateField
@@ -495,7 +493,7 @@ export default function CodeTabsComponent({
                                                       target,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                 />
@@ -530,7 +528,7 @@ export default function CodeTabsComponent({
                                                       target,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                   value={
@@ -587,7 +585,7 @@ export default function CodeTabsComponent({
                                                       target,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                 />
@@ -628,7 +626,7 @@ export default function CodeTabsComponent({
                                                       target,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                 />
@@ -669,7 +667,7 @@ export default function CodeTabsComponent({
                                                       target,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                 />
@@ -693,7 +691,7 @@ export default function CodeTabsComponent({
                                                           node.data.node!
                                                             .template[
                                                             templateField
-                                                          ].value
+                                                          ].value,
                                                         )
                                                   }
                                                   duplicateKey={
@@ -702,15 +700,15 @@ export default function CodeTabsComponent({
                                                   onChange={(target) => {
                                                     const valueToNumbers =
                                                       convertValuesToNumbers(
-                                                        target
+                                                        target,
                                                       );
                                                     node.data.node!.template[
                                                       templateField
                                                     ].value = valueToNumbers;
                                                     setErrorDuplicateKey(
                                                       hasDuplicateKeys(
-                                                        valueToNumbers
-                                                      )
+                                                        valueToNumbers,
+                                                      ),
                                                     );
                                                     setData((old) => {
                                                       let newInputList =
@@ -727,7 +725,7 @@ export default function CodeTabsComponent({
                                                       target,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                   isList={
@@ -772,7 +770,7 @@ export default function CodeTabsComponent({
                                                       target,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                 />
@@ -795,7 +793,7 @@ export default function CodeTabsComponent({
                         </AccordionComponent>
                       )}
 
-                      {tweaks?.tweaksList!.current.length === 0 && (
+                      {tweaks?.tweaksList!.length === 0 && (
                         <>
                           <div className="pt-3">
                             No tweaks are available for this flow.

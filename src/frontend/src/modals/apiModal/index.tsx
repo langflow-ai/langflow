@@ -2,14 +2,7 @@ import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
-import {
-  ReactNode,
-  forwardRef,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { ReactNode, forwardRef, useContext, useEffect, useState } from "react";
 // import "ace-builds/webpack-resolver";
 import CodeTabsComponent from "../../components/codeTabsComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -18,7 +11,7 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
 } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
-import useFlowStore from "../../stores/flowStore";
+import { useTweaksStore } from "../../stores/tweaksStore";
 import { TemplateVariableType } from "../../types/api";
 import { tweakType, uniqueTweakType } from "../../types/components";
 import { FlowType, NodeType } from "../../types/flow/index";
@@ -41,19 +34,23 @@ const ApiModal = forwardRef(
       flow: FlowType;
       children: ReactNode;
     },
-    ref
+    ref,
   ) => {
+    const tweak = useTweaksStore((state) => state.tweak);
+    const addTweaks = useTweaksStore((state) => state.setTweak);
+    const setTweaksList = useTweaksStore((state) => state.setTweaksList);
+    const tweaksList = useTweaksStore((state) => state.tweaksList);
+    const tweaksObject = useTweaksStore((state) => state.tweaksObject);
+    const setTweaksObject = useTweaksStore((state) => state.setTweaksObject);
+
     const { autoLogin } = useContext(AuthContext);
     const [open, setOpen] = useState(false);
     const [activeTab, setActiveTab] = useState("0");
-    const tweak = useRef<tweakType>([]);
-    const tweaksList = useRef<string[]>([]);
     const [getTweak, setTweak] = useState<tweakType>([]);
-    const flowState = useFlowStore((state) => state.flowState);
-    const pythonApiCode = getPythonApiCode(flow, autoLogin, tweak.current);
-    const curl_code = getCurlCode(flow, autoLogin, tweak.current);
-    const pythonCode = getPythonCode(flow, tweak.current);
-    const widgetCode = getWidgetCode(flow, autoLogin, flowState);
+    const pythonApiCode = getPythonApiCode(flow?.id, autoLogin, tweak);
+    const curl_code = getCurlCode(flow?.id, autoLogin, tweak);
+    const pythonCode = getPythonCode(flow?.name, tweak);
+    const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
     const tweaksCode = buildTweaks(flow);
     const codesArray = [
       curl_code,
@@ -65,18 +62,20 @@ const ApiModal = forwardRef(
     const [tabs, setTabs] = useState(tabsArray(codesArray, 0));
 
     function startState() {
-      tweak.current = [];
+      addTweaks([]);
       setTweak([]);
-      tweaksList.current = [];
+      setTweaksList([]);
     }
 
     useEffect(() => {
       if (flow["data"]!["nodes"].length == 0) {
         startState();
       } else {
-        tweak.current = [];
+        const newTweak: any = [];
         const t = buildTweaks(flow);
-        tweak.current.push(t);
+        newTweak.push(t);
+        setTweak(newTweak);
+        addTweaks(newTweak);
       }
 
       filterNodes();
@@ -88,6 +87,29 @@ const ApiModal = forwardRef(
         setTabs(tabsArray(codesArray, 1));
       }
     }, [flow["data"]!["nodes"], open]);
+
+    useEffect(() => {
+      if (
+        flow &&
+        flow["data"] &&
+        flow["data"]!["nodes"] &&
+        tweak &&
+        tweak?.length > 0
+      ) {
+        const nodes = flow["data"]!["nodes"];
+        nodes.forEach((element) => {
+          const nodeId = element["id"];
+          const template = element["data"]["node"]["template"];
+          Object.keys(template).forEach((templateField) => {
+            buildTweakObject(
+              nodeId,
+              element.data.node.template[templateField].value,
+              element.data.node.template[templateField],
+            );
+          });
+        });
+      }
+    }, [tweak]);
 
     function filterNodes() {
       let arrNodesWithValues: string[] = [];
@@ -102,22 +124,25 @@ const ApiModal = forwardRef(
               templateField.charAt(0) !== "_" &&
               node.data.node.template[templateField].show &&
               LANGFLOW_SUPPORTED_TYPES.has(
-                node.data.node.template[templateField].type
-              )
+                node.data.node.template[templateField].type,
+              ),
           )
           .map((n, i) => {
             arrNodesWithValues.push(node["id"]);
           });
       });
 
-      tweaksList.current = arrNodesWithValues.filter((value, index, self) => {
-        return self.indexOf(value) === index;
-      });
+      const tweaksListFiltered = arrNodesWithValues.filter(
+        (value, index, self) => {
+          return self.indexOf(value) === index;
+        },
+      );
+      setTweaksList(tweaksListFiltered);
     }
-    function buildTweakObject(
+    async function buildTweakObject(
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: TemplateVariableType
+      template: TemplateVariableType,
     ) {
       if (typeof changes === "string" && template.type === "float") {
         changes = parseFloat(changes);
@@ -137,20 +162,19 @@ const ApiModal = forwardRef(
         changes = JSON.stringify(changes);
       }
 
-      const existingTweak = tweak.current.find((element) =>
-        element.hasOwnProperty(tw)
-      );
+      const existingTweak = tweak.find((element) => element.hasOwnProperty(tw));
 
       if (existingTweak) {
         existingTweak[tw][template["name"]!] = changes as string;
 
         if (existingTweak[tw][template["name"]!] == template.value) {
-          tweak.current.forEach((element) => {
+          tweak.forEach((element) => {
             if (element[tw] && Object.keys(element[tw])?.length === 0) {
-              tweak.current = tweak.current.filter((obj) => {
+              const filteredTweaks = tweak.filter((obj) => {
                 const prop = obj[Object.keys(obj)[0]].prop;
                 return prop !== undefined && prop !== null && prop !== "";
               });
+              addTweaks(filteredTweaks);
             }
           });
         }
@@ -160,20 +184,28 @@ const ApiModal = forwardRef(
             [template["name"]!]: changes,
           },
         } as uniqueTweakType;
-        tweak.current.push(newTweak);
+        tweak.push(newTweak);
       }
 
-      const pythonApiCode = getPythonApiCode(flow, autoLogin, tweak.current);
-      const curl_code = getCurlCode(flow, autoLogin, tweak.current);
-      const pythonCode = getPythonCode(flow, tweak.current);
-      const widgetCode = getWidgetCode(flow, autoLogin, flowState);
+      if (tweak && tweak.length > 0) {
+        await setTweaksObject(tweak);
 
-      tabs![0].code = curl_code;
-      tabs![1].code = pythonApiCode;
-      tabs![2].code = pythonCode;
-      tabs![3].code = widgetCode;
+        const pythonApiCode = getPythonApiCode(
+          flow?.id,
+          autoLogin,
+          tweaksObject,
+        );
+        const curl_code = getCurlCode(flow?.id, autoLogin, tweaksObject);
+        const pythonCode = getPythonCode(flow?.name, tweaksObject);
+        const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
 
-      setTweak(tweak.current);
+        tabs![0].code = curl_code;
+        tabs![1].code = pythonApiCode;
+        tabs![2].code = pythonCode;
+        tabs![3].code = widgetCode;
+
+        setTweak(tweak);
+      }
     }
 
     function buildContent(value: string) {
@@ -188,7 +220,7 @@ const ApiModal = forwardRef(
     function getValue(
       value: string,
       node: NodeType,
-      template: TemplateVariableType
+      template: TemplateVariableType,
     ) {
       let returnValue = value ?? "";
 
@@ -239,7 +271,7 @@ const ApiModal = forwardRef(
         </BaseModal.Content>
       </BaseModal>
     );
-  }
+  },
 );
 
 export default ApiModal;
