@@ -86,7 +86,7 @@ export default function ParameterComponent({
   let disabled =
     edges.some(
       (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
+        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
     ) ?? false;
 
   const myData = useTypesStore((state) => state.data);
@@ -97,6 +97,7 @@ export default function ParameterComponent({
     setIsLoading(true);
     try {
       let newTemplate = await handleUpdateValues(name, data);
+
       if (newTemplate) {
         setNode(data.id, (oldNode) => {
           let newNode = cloneDeep(oldNode);
@@ -130,6 +131,7 @@ export default function ParameterComponent({
         setIsLoading(true);
         try {
           let newTemplate = await handleUpdateValues(name, data);
+
           if (newTemplate) {
             setNode(data.id, (oldNode) => {
               let newNode = cloneDeep(oldNode);
@@ -154,23 +156,35 @@ export default function ParameterComponent({
     }
     fetchData();
   }, []);
+
   const handleOnNewValue = async (
-    newValue: string | string[] | boolean | Object[]
+    newValue: string | string[] | boolean | Object[],
   ): Promise<void> => {
-    if (data.node!.template[name].value !== newValue) {
+    const nodeTemplate = data.node!.template[name];
+    const currentValue = nodeTemplate.value;
+
+    if (currentValue !== newValue) {
       takeSnapshot();
     }
+
     const shouldUpdate =
       data.node?.template[name].real_time_refresh &&
       !data.node?.template[name].refresh_button &&
-      data.node!.template[name].value !== newValue;
+      currentValue !== newValue;
 
-    data.node!.template[name].value = newValue; // necessary to enable ctrl+z inside the input
+    const typeToDebounce = nodeTemplate.type;
+
+    nodeTemplate.value = newValue;
+
     let newTemplate;
     if (shouldUpdate) {
       setIsLoading(true);
       try {
-        newTemplate = await debouncedHandleUpdateValues(name, data);
+        if (["int"].includes(typeToDebounce)) {
+          newTemplate = await handleUpdateValues(name, data);
+        } else {
+          newTemplate = await debouncedHandleUpdateValues(name, data);
+        }
       } catch (error) {
         let responseError = error as ResponseErrorTypeAPI;
         setErrorData({
@@ -179,18 +193,19 @@ export default function ParameterComponent({
         });
       }
       setIsLoading(false);
-      // this de
     }
-    setNode(data.id, (oldNode) => {
-      let newNode = cloneDeep(oldNode);
 
+    setNode(data.id, (oldNode) => {
+      const newNode = cloneDeep(oldNode);
       newNode.data = {
         ...newNode.data,
       };
 
       if (data.node?.template[name].real_time_refresh && newTemplate) {
         newNode.data.node.template = newTemplate;
-      } else newNode.data.node.template[name].value = newValue;
+      } else {
+        newNode.data.node.template[name].value = newValue;
+      }
 
       return newNode;
     });
@@ -264,7 +279,7 @@ export default function ParameterComponent({
             <span
               key={index}
               className={classNames(
-                index > 0 ? "mt-2 flex items-center" : "mt-3 flex items-center"
+                index > 0 ? "mt-2 flex items-center" : "mt-3 flex items-center",
               )}
             >
               <div
@@ -380,7 +395,7 @@ export default function ParameterComponent({
               className={classNames(
                 left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
                 "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : ""
+                !showNode ? "mt-0" : "",
               )}
               style={{
                 borderColor: color ?? nodeColors.unknown,
@@ -476,7 +491,7 @@ export default function ParameterComponent({
                   }
                   className={classNames(
                     left ? "-ml-0.5 " : "-mr-0.5 ",
-                    "h-3 w-3 rounded-full border-2 bg-background"
+                    "h-3 w-3 rounded-full border-2 bg-background",
                   )}
                   style={{
                     borderColor: color ?? nodeColors.unknown,
