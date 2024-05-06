@@ -54,6 +54,10 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
                 "info": "Limit of search results.",
                 "advanced": True,
             },
+            "api_base_path": {
+                "display_name": "API Base Path",
+                "options": ["api/v1", "api/v2"],
+            },
         }
 
     def get_messages(self, **kwargs) -> list[Record]:
@@ -114,14 +118,10 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
         search_scope: SearchScope = SearchScope.messages,
         search_type: SearchType = SearchType.similarity,
         limit: Optional[int] = None,
+        api_base_path: Optional[str] = "api/v1",
     ) -> list[Record]:
         try:
-            # Monkeypatch API_BASE_PATH to
-            # avoid 404
-            import zep_python.zep_client
             from zep_python import ZepClient
-
-            zep_python.zep_client.API_BASE_PATH = "api/v1"
             from zep_python.langchain import ZepChatMessageHistory
         except ImportError:
             raise ImportError(
@@ -129,6 +129,15 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
             )
         if url == "":
             url = None
+        if api_base_path == "api/v1":
+            # Monkeypatch API_BASE_PATH to
+            # avoid 404
+            # This is a workaround for the local Zep instance
+            # cloud Zep works with v2
+            import zep_python.zep_client
+
+            zep_python.zep_client.API_BASE_PATH = "api/v1"
+
         zep_client = ZepClient(api_url=url, api_key=api_key)
         memory = ZepChatMessageHistory(session_id=session_id, zep_client=zep_client)
         records = self.get_messages(
