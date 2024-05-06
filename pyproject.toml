@@ -68,6 +68,7 @@ litellm = "^1.34.22"
 chromadb = "^0.4.24"
 langchain-anthropic = "^0.1.6"
 zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
+langchain-google-vertexai = "^1.0.3"
 
 [tool.poetry.group.test.dependencies]
 ragstack-ai-langflow-base = { path = "./src/backend/base", develop = true }

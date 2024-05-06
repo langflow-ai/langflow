@@ -4134,13 +4134,22 @@ images = ["pillow (>=10.1.0,<11.0.0)"]
 
 [[package]]
 name = "langchain-google-vertexai"
+<<<<<<< HEAD
 version = "1.0.1"
+=======
+version = "1.0.3"
+>>>>>>> 8975bf9ba (Add langchain-google-vertexai dependency to pyproject.toml)
 description = "An integration package connecting Google VertexAI and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
+<<<<<<< HEAD
     {file = "langchain_google_vertexai-1.0.1-py3-none-any.whl", hash = "sha256:29dc243098a6a5a6972578bc5543c281b871c772a9969abb905d31a4ea39d019"},
     {file = "langchain_google_vertexai-1.0.1.tar.gz", hash = "sha256:a3eb99f1001181f5fa6ccb95c28cd8a3202379775cc7366f5c64e5421a537482"},
+=======
+    {file = "langchain_google_vertexai-1.0.3-py3-none-any.whl", hash = "sha256:407caa2b10cd20d4748cebfc6e405d28d8ef4a0e4f21b01739eca4e24c4f04d2"},
+    {file = "langchain_google_vertexai-1.0.3.tar.gz", hash = "sha256:a3929bc07b971072e7cd21ffe28d843640faaf93763f473077d6786745cce247"},
+>>>>>>> 8975bf9ba (Add langchain-google-vertexai dependency to pyproject.toml)
 ]
 
 [package.dependencies]
@@ -10393,4 +10402,8 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
+<<<<<<< HEAD
 content-hash = "e4a35d744331a3fb2dbf1646b23594fbc0fea4a5bfbe2c2c140a0c99d76c29d1"
+=======
+content-hash = "f3ff2734049f016f662c61e65efb63aee34455df7ee7d89b24ce49ea523db629"
+>>>>>>> 8975bf9ba (Add langchain-google-vertexai dependency to pyproject.toml)
