@@ -106,14 +106,26 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             id={"type-global-variables"}
           ></InputComponent>
           <Label>Value</Label>
-          <Textarea
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-            }}
-            placeholder="Insert a value for the variable..."
-            className="w-full resize-none custom-scroll"
-          />
+          {type === "Credential" ? (
+            <InputComponent
+              password
+              value={value}
+              onChange={(e) => {
+                setValue(e);
+              }}
+              placeholder="Insert a value for the variable..."
+            />
+          ) : (
+            <Textarea
+              value={value}
+              onChange={(e) => {
+                setValue(e.target.value);
+              }}
+              placeholder="Insert a value for the variable..."
+              className="w-full resize-none custom-scroll"
+            />
+          )}
+
           <Label>Apply To Fields (optional)</Label>
           <InputComponent
             setSelectedOptions={(value) => setFields(value)}
