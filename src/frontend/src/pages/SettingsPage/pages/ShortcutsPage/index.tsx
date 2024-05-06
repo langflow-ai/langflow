@@ -86,7 +86,7 @@ export default function ShortcutsPage() {
                 setOpen={setOpen}
               >
                 <Button variant="primary">
-                  <ForwardedIconComponent name="Plus" className="mr-2 w-4" />
+                  <ForwardedIconComponent name="Wrench" className="mr-2 w-4" />
                   Customize
                 </Button>
               </EditShortcutButton>
