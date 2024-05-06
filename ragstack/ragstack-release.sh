@@ -26,12 +26,12 @@ fi
 
 cd $directory
 
-git checkout main
+git checkout ragstack-main
 git pull
 echo ":: Bumping version to $version for package $package"
 poetry version $version
 git commit -am "Release $package $version"
 git tag $tag
-git push origin main
+git push origin ragstack-main
 git push origin $tag
 echo "done."
