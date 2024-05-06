@@ -25,11 +25,13 @@ export default function ShortcutsPage() {
       headerCheckboxSelection: true,
       checkboxSelection: true,
       showDisabledCheckboxes: true,
+      resizable: false,
     }, //This column will be twice as wide as the others
     {
       field: "shortcut",
       flex: 2,
       editable: false,
+      resizable: false,
     },
   ]);
 

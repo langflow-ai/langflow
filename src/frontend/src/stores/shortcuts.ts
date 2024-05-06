@@ -27,6 +27,8 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   cut: "mod+x",
   paste: "mod+v",
   api: "mod+r",
+  update: "mod+u",
+  download: "mod+j",
   updateUniqueShortcut: (name, combination) => {
     set({
       [name]: combination,

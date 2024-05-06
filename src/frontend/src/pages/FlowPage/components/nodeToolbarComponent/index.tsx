@@ -153,16 +153,19 @@ export default function NodeToolbarComponent({
   const save = useShortcutsStore((state) => state.save);
   const docs = useShortcutsStore((state) => state.docs);
   const code = useShortcutsStore((state) => state.code);
+  const group = useShortcutsStore((state) => state.group);
+  const update = useShortcutsStore((state) => state.update);
+  const download = useShortcutsStore((state) => state.download);
 
   useHotkeys(minimize, handleMinimizeWShortcut);
-  useHotkeys("mod+u", handleUpdateWShortcut);
-  useHotkeys("mod+g", handleGroupWShortcut);
+  useHotkeys(update, handleUpdateWShortcut);
+  useHotkeys(group, handleGroupWShortcut);
   useHotkeys(share, handleShareWShortcut);
   useHotkeys(code, handleCodeWShortcut);
   useHotkeys(advanced, handleAdvancedWShortcut);
   useHotkeys(save, handleSaveWShortcut);
   useHotkeys(docs, handleDocsWShortcut);
-  useHotkeys("mod+j", handleDownloadWShortcut);
+  useHotkeys(download, handleDownloadWShortcut);
   useHotkeys("space", handleCodeWShortcut);
 
   const isMinimal = numberOfHandles <= 1;
@@ -612,24 +615,15 @@ export default function NodeToolbarComponent({
               )}
               {isGroup && (
                 <SelectItem value="ungroup">
-                  <div className="flex">
-                    <IconComponent
-                      name="Ungroup"
-                      className="relative top-0.5 mr-2 h-4 w-4 "
-                    />{" "}
-                    <span className="">Ungroup</span>{" "}
-                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                      <IconComponent
-                        name="Command"
-                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                      ></IconComponent>
-                    ) : (
-                      <span className="absolute right-[1.30rem] top-[0.40em] stroke-2">
-                        Ctrl +{" "}
-                      </span>
-                    )}
-                    <span className="absolute right-2 top-[0.43em]">G</span>
-                  </div>
+                  <ToolbarSelectItem
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Group")?.shortcut!
+                    }
+                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                    value={"Ungroup"}
+                    icon={"Ungroup"}
+                    dataTestId="group-button-modal"
+                  />
                 </SelectItem>
               )}
 

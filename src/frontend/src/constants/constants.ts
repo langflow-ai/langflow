@@ -886,4 +886,5 @@ export const unavailableShortcutss = [
   "CTRL + Z",
   "CTRL + Y",
   "CTRL + J",
+  "CTRL + U",
 ];
