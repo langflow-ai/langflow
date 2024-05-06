@@ -2,6 +2,7 @@ import { ColDef, ColGroupDef } from "ag-grid-community";
 import { useState } from "react";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
+import { Card, CardContent } from "../../../../components/ui/card";
 
 export default function ShortcutsPage() {
   const advancedShortcut = "Ctrl + Shift + A";
@@ -95,12 +96,16 @@ export default function ShortcutsPage() {
         </div>
       </div>
       <div className="grid gap-6 pb-8">
-        <TableComponent
-          domLayout="autoHeight"
-          pagination={false}
-          columnDefs={colDefs}
-          rowData={nodesRowData}
-        />
+        <Card x-chunk="dashboard-04-chunk-2" className="h-full pt-4">
+          <CardContent className="h-full">
+            <TableComponent
+              domLayout="autoHeight"
+              pagination={false}
+              columnDefs={colDefs}
+              rowData={nodesRowData}
+            />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
