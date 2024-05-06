@@ -9,14 +9,14 @@ import { cn } from "../../utils/utils";
 const TableComponent = forwardRef<
   ElementRef<typeof AgGridReact>,
   ComponentPropsWithoutRef<typeof AgGridReact>
->(({ pagination = true, ...props }, ref) => {
+>(({ ...props }, ref) => {
   const dark = useDarkStore((state) => state.dark);
 
   return (
     <div
       className={cn(
         dark ? "ag-theme-quartz-dark" : "ag-theme-quartz",
-        "ag-theme-shadcn flex h-full min-h-2 flex-col",
+        "ag-theme-shadcn flex h-full flex-col",
       )} // applying the grid theme
     >
       <AgGridReact ref={ref} {...props} />
