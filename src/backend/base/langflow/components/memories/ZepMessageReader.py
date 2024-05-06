@@ -123,20 +123,20 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
         try:
             from zep_python import ZepClient
             from zep_python.langchain import ZepChatMessageHistory
-        except ImportError:
-            raise ImportError(
-                "Could not import zep-python package. " "Please install it with `pip install zep-python`."
-            )
-        if url == "":
-            url = None
-        if api_base_path == "api/v1":
+
             # Monkeypatch API_BASE_PATH to
             # avoid 404
             # This is a workaround for the local Zep instance
             # cloud Zep works with v2
             import zep_python.zep_client
 
-            zep_python.zep_client.API_BASE_PATH = "api/v1"
+            zep_python.zep_client.API_BASE_PATH = api_base_path
+        except ImportError:
+            raise ImportError(
+                "Could not import zep-python package. " "Please install it with `pip install zep-python`."
+            )
+        if url == "":
+            url = None
 
         zep_client = ZepClient(api_url=url, api_key=api_key)
         memory = ZepChatMessageHistory(session_id=session_id, zep_client=zep_client)
