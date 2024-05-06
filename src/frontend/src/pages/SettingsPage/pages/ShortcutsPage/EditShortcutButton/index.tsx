@@ -25,7 +25,7 @@ export default function EditShortcutButton({
   disable?: boolean;
 }): JSX.Element {
   const isMac = navigator.userAgent.toUpperCase().includes("MAC");
-  const [key, setKey] = useState<string>(isMac ? "Cmd" : "Ctrl");
+  const [key, setKey] = useState<string | null>("");
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setShortcuts = useShortcutsStore((state) => state.setShortcuts);
   const unavaliableShortcuts = useShortcutsStore(
@@ -48,33 +48,45 @@ export default function EditShortcutButton({
   );
 
   function editCombination(): void {
-    console.log(canEditCombination(key));
-    if (canEditCombination(key)) {
-      const newCombination = defaultShortcuts.map((s) => {
-        if (s.name === shortcut[0]) {
-          return { name: s.name, shortcut: key };
+    if (key) {
+      if (canEditCombination(key)) {
+        const newCombination = defaultShortcuts.map((s) => {
+          if (s.name === shortcut[0]) {
+            return { name: s.name, shortcut: key };
+          }
+          return { name: s.name, shortcut: s.shortcut };
+        });
+        const unavailable = unavaliableShortcuts.map((s) => {
+          if (s.toLowerCase() === defaultCombination.toLowerCase())
+            return (s = key.toUpperCase());
+          return s;
+        });
+        const fixCombination = key.split(" ");
+        if (
+          fixCombination[0].toLowerCase().includes("ctrl") ||
+          fixCombination[0].toLowerCase().includes("cmd")
+        ) {
+          fixCombination[0] = "mod";
         }
-        return { name: s.name, shortcut: s.shortcut };
-      });
-      const unavailable = unavaliableShortcuts.map((s) => {
-        if (s.toLowerCase() === defaultCombination.toLowerCase())
-          return (s = key.toUpperCase());
-        return s;
-      });
-      const fixCombination = key.split(" ");
-      fixCombination[0] = "mod";
-      const shortcutName = shortcut[0].split(" ")[0].toLowerCase();
-      setUniqueShortcut(shortcutName, fixCombination.join("").toLowerCase());
-      setShortcuts(newCombination, unavailable);
-      setOpen(false);
-      setSuccessData({ title: `${shortcut[0]} shortcut successfully changed` });
-      setKey(isMac ? "META" : "CTRL");
-      localStorage.setItem(
-        "langflow-shortcuts",
-        JSON.stringify(newCombination),
-      );
-      localStorage.setItem("langflow-UShortcuts", JSON.stringify(unavailable));
-      return;
+        const shortcutName = shortcut[0].split(" ")[0].toLowerCase();
+        setUniqueShortcut(shortcutName, fixCombination.join("").toLowerCase());
+        console.log(newCombination);
+        setShortcuts(newCombination, unavailable);
+        setOpen(false);
+        setSuccessData({
+          title: `${shortcut[0]} shortcut successfully changed`,
+        });
+        setKey(null);
+        localStorage.setItem(
+          "langflow-shortcuts",
+          JSON.stringify(newCombination),
+        );
+        localStorage.setItem(
+          "langflow-UShortcuts",
+          JSON.stringify(unavailable),
+        );
+        return;
+      }
     }
     setErrorData({
       title: "Error saving key combination",
@@ -83,18 +95,29 @@ export default function EditShortcutButton({
   }
 
   useEffect(() => {
-    if (!open) setKey(isMac ? "Cmd" : "Ctrl");
-    console.log(key);
+    if (!open) setKey(null);
   }, [open, setOpen, key]);
+
+  function getFixedCombination({
+    oldKey,
+    key,
+  }: {
+    oldKey: string;
+    key: string;
+  }): string {
+    if (oldKey === null) {
+      return `${key.length > 0 ? toTitleCase(key) : toTitleCase(key)}`;
+    }
+    return `${oldKey.length > 0 ? toTitleCase(oldKey) : oldKey.toUpperCase()} + ${key.length > 0 ? toTitleCase(key) : key.toUpperCase()}`;
+  }
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       e.preventDefault();
-      if (key.toUpperCase().includes(e.key.toUpperCase())) return;
-      setKey(
-        (oldKey) =>
-          `${oldKey.length > 0 ? toTitleCase(oldKey) : oldKey.toUpperCase()} + ${e.key.length > 0 ? toTitleCase(e.key) : e.key.toUpperCase()}`,
-      );
+      if (key) {
+        if (key.toUpperCase().includes(e.key.toUpperCase())) return;
+      }
+      setKey((oldKey) => getFixedCombination({ oldKey: oldKey!, key: e.key }));
     }
 
     document.addEventListener("keydown", onKeyDown);
@@ -118,7 +141,7 @@ export default function EditShortcutButton({
       <BaseModal.Content>
         <div className="align-center flex h-full w-full justify-center gap-4">
           <div className="flex items-center justify-center text-center text-lg font-bold">
-            {key.toUpperCase()}
+            {key && key.toUpperCase()}
           </div>
         </div>
       </BaseModal.Content>
@@ -127,7 +150,7 @@ export default function EditShortcutButton({
         <Button
           className="mr-5"
           variant={"destructive"}
-          onClick={() => setKey(isMac ? "META" : "CTRL")}
+          onClick={() => setKey(null)}
         >
           Reset Combination
         </Button>
