@@ -23,9 +23,7 @@ jobs:
           cache: "poetry"
       - name: Build project for distribution
         run: |
-          make init
-          make build_frontend
-          make build_langflow_base
+          make build base=true
       - name: Check Version
         id: check-version
         run: |
