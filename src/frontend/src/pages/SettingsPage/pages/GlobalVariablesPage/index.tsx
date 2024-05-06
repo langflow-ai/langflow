@@ -181,7 +181,6 @@ export default function GlobalVariablesPage() {
               }}
               rowSelection="multiple"
               suppressRowClickSelection={true}
-              domLayout="autoHeight"
               pagination={true}
               columnDefs={colDefs}
               rowData={rowData}
