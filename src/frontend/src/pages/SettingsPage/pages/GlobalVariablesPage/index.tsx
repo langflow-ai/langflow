@@ -178,6 +178,7 @@ export default function GlobalVariablesPage() {
           pagination={false}
           columnDefs={colDefs}
           rowData={rowData}
+          containerStyle={{ overflow: "auto", maxWidth: "80vh" }}
         />
       </div>
     </div>

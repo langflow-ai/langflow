@@ -114,10 +114,18 @@ export default function EditShortcutButton({
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       e.preventDefault();
+      let fixedKey = e.key;
       if (key) {
         if (key.toUpperCase().includes(e.key.toUpperCase())) return;
       }
-      setKey((oldKey) => getFixedCombination({ oldKey: oldKey!, key: e.key }));
+      if (e.key?.toLowerCase() === "control") {
+        console.log("oi");
+        fixedKey = "Ctrl";
+        console.log(fixedKey);
+      }
+      setKey((oldKey) =>
+        getFixedCombination({ oldKey: oldKey!, key: fixedKey }),
+      );
     }
 
     document.addEventListener("keydown", onKeyDown);
