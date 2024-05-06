@@ -1,5 +1,4 @@
-from typing import Optional, TYPE_CHECKING
-
+from typing import TYPE_CHECKING, Optional
 
 from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
@@ -81,8 +80,13 @@ class ZepMessageWriterComponent(BaseMemoryComponent):
         api_key: Optional[Text] = None,
     ) -> Record:
         try:
+            # Monkeypatch API_BASE_PATH to
+            # avoid 404
+            import zep_python.zep_client
             from zep_python import ZepClient
             from zep_python.langchain import ZepChatMessageHistory
+
+            zep_python.zep_client.API_BASE_PATH = "api/v1"
         except ImportError:
             raise ImportError(
                 "Could not import zep-python package. " "Please install it with `pip install zep-python`."

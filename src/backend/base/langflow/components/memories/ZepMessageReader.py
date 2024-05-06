@@ -116,7 +116,12 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
         limit: Optional[int] = None,
     ) -> list[Record]:
         try:
+            # Monkeypatch API_BASE_PATH to
+            # avoid 404
+            import zep_python.zep_client
             from zep_python import ZepClient
+
+            zep_python.zep_client.API_BASE_PATH = "api/v1"
             from zep_python.langchain import ZepChatMessageHistory
         except ImportError:
             raise ImportError(
