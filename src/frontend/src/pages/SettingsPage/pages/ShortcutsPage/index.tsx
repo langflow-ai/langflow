@@ -5,18 +5,19 @@ import TableComponent from "../../../../components/tableComponent";
 import { Card, CardContent } from "../../../../components/ui/card";
 
 export default function ShortcutsPage() {
-  const advancedShortcut = "Ctrl + Shift + A";
-  const minizmizeShortcut = "Ctrl + Shift + Q";
-  const codeShortcut = "Ctrl + Shift + C";
-  const copyShortcut = "Ctrl + C";
-  const duplicateShortcut = "Ctrl + D";
-  const shareShortcut = "Ctrl + Shift + S";
-  const docsShortcut = "Ctrl + Shift + D";
-  const saveShortcut = "Ctrl + S";
-  const deleteShortcut = "Backspace";
-  const interactionShortcut = "Ctrl + K";
-  const undoShortcut = "Ctrl + Z";
-  const redoShortcut = "Ctrl + Y";
+  const isMac = navigator.userAgent.toUpperCase().includes("MAC");
+  const advancedShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + A`;
+  const minizmizeShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + Q`;
+  const codeShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + C`;
+  const copyShortcut = `${isMac ? "Cmd" : "Ctrl"} + C`;
+  const duplicateShortcut = `${isMac ? "Cmd" : "Ctrl"} + D`;
+  const shareShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + S`;
+  const docsShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + D`;
+  const saveShortcut = `${isMac ? "Cmd" : "Ctrl"} + S`;
+  const deleteShortcut = `Backspace`;
+  const interactionShortcut = `${isMac ? "Cmd" : "Ctrl"} + K`;
+  const undoShortcut = `${isMac ? "Cmd" : "Ctrl"} + Z`;
+  const redoShortcut = `${isMac ? "Cmd" : "Ctrl"} + Y`;
 
   // Column Definitions: Defines the columns to be displayed.
   const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
