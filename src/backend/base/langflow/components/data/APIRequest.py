@@ -93,14 +93,14 @@ class APIRequest(CustomComponent):
         self,
         method: str,
         urls: List[str],
-        _headers: Optional[Record] = None,
+        headers: Optional[Record] = None,
         body: Optional[Record] = None,
         timeout: int = 5,
     ) -> List[Record]:
-        if _headers is None:
-            headers = {}
+        if headers is None:
+            headers_dict = {}
         else:
-            headers = _headers.data
+            headers_dict = headers.data
 
         bodies = []
         if body:
@@ -114,7 +114,7 @@ class APIRequest(CustomComponent):
             bodies += [None] * (len(urls) - len(bodies))  # type: ignore
         async with httpx.AsyncClient() as client:
             results = await asyncio.gather(
-                *[self.make_request(client, method, u, headers, rec, timeout) for u, rec in zip(urls, bodies)]
+                *[self.make_request(client, method, u, headers_dict, rec, timeout) for u, rec in zip(urls, bodies)]
             )
         self.status = results
         return results

@@ -1,7 +1,24 @@
 {
-  "extends": ["eslint:recommended", "plugin:node/recommended"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:prettier/recommended"
+  ],
+  "plugins": ["react", "import-helpers", "prettier"],
+  "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "ecmaVersion": 2018
+    "project": ["./tsconfig.node.json", "./tsconfig.json"],
+    "extraFileExtensions:": [".mdx"],
+    "extensions:": [".mdx"]
+  },
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
   },
   "rules": {
     "no-console": "warn",
@@ -16,6 +33,7 @@
     "no-redeclare": "error",
     "no-empty": "error",
     "no-await-in-loop": "error",
+    "react/react-in-jsx-scope": 0,
     "node/exports-style": ["error", "module.exports"],
     "node/file-extension-in-import": ["error", "always"],
     "node/prefer-global/buffer": ["error", "always"],

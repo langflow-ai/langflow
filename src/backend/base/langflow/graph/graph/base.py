@@ -445,9 +445,16 @@ class Graph:
         vertex = self.get_vertex(vertex_id)
         vertex.set_state(state)
 
-    def mark_branch(self, vertex_id: str, state: str):
+    def mark_branch(self, vertex_id: str, state: str, visited: Optional[set] = None):
         """Marks a branch of the graph."""
+        if visited is None:
+            visited = set()
+        visited.add(vertex_id)
+        if vertex_id in visited:
+            return
+
         self.mark_vertex(vertex_id, state)
+
         for child_id in self.parent_child_map[vertex_id]:
             self.mark_branch(child_id, state)
 

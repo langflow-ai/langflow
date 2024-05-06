@@ -116,33 +116,29 @@ export async function buildVertices({
   nodes,
   edges,
 }: BuildVerticesParams) {
-  let verticesBuild = useFlowStore.getState().verticesBuild;
   // if startNodeId and stopNodeId are provided
   // something is wrong
   if (startNodeId && stopNodeId) {
     return;
   }
+  let verticesOrderResponse = await updateVerticesOrder(
+    flowId,
+    startNodeId,
+    stopNodeId,
+    nodes,
+    edges
+  );
+  if (onValidateNodes) {
+    try {
+      onValidateNodes(verticesOrderResponse.verticesToRun);
+    } catch (e) {
+      useFlowStore.getState().setIsBuilding(false);
 
-  if (!verticesBuild || startNodeId || stopNodeId) {
-    let verticesOrderResponse = await updateVerticesOrder(
-      flowId,
-      startNodeId,
-      stopNodeId,
-      nodes,
-      edges
-    );
-    if (onValidateNodes) {
-      try {
-        onValidateNodes(verticesOrderResponse.verticesToRun);
-      } catch (e) {
-        useFlowStore.getState().setIsBuilding(false);
-
-        return;
-      }
+      return;
     }
-    if (onGetOrderSuccess) onGetOrderSuccess();
-    verticesBuild = useFlowStore.getState().verticesBuild;
   }
+  if (onGetOrderSuccess) onGetOrderSuccess();
+  let verticesBuild = useFlowStore.getState().verticesBuild;
 
   const verticesIds = verticesBuild?.verticesIds!;
   const verticesLayers = verticesBuild?.verticesLayers!;

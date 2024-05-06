@@ -185,7 +185,7 @@ async def instantiate_custom_component(params, user_id, vertex):
         # Call the build method directly if it's sync
         build_result = custom_component.build(**params_copy)
     custom_repr = custom_component.custom_repr()
-    if not custom_repr and isinstance(build_result, (dict, Record, str)):
+    if custom_repr is None and isinstance(build_result, (dict, Record, str)):
         custom_repr = build_result
     if not isinstance(custom_repr, str):
         custom_repr = str(custom_repr)

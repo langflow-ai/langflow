@@ -393,13 +393,13 @@ def test_various_prompts(client, prompt, expected_input_variables):
 
 
 def test_get_vertices_flow_not_found(client, logged_in_headers):
-    response = client.get("/api/v1/build/nonexistent_id/vertices", headers=logged_in_headers)
+    response = client.post("/api/v1/build/nonexistent_id/vertices", headers=logged_in_headers)
     assert response.status_code == 500  # Or whatever status code you've set for invalid ID
 
 
 def test_get_vertices(client, added_flow_with_prompt_and_history, logged_in_headers):
     flow_id = added_flow_with_prompt_and_history["id"]
-    response = client.get(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    response = client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
     assert response.status_code == 200
     assert "ids" in response.json()
     # The response should contain the list in this order

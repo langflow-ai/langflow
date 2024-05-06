@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import ShadTooltip from "../../components/ShadTooltipComponent";
+import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import {
   ConfirmationModalType,
