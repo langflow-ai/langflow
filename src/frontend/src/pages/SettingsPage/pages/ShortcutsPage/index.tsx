@@ -20,11 +20,18 @@ export default function ShortcutsPage() {
 
   // Column Definitions: Defines the columns to be displayed.
   const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
-    { headerName: "Functionality", field: "name", flex: 1, editable: false }, //This column will be twice as wide as the others
+    {
+      headerName: "Functionality",
+      field: "name",
+      flex: 1,
+      editable: false,
+      resizable: false,
+    }, //This column will be twice as wide as the others
     {
       field: "shortcut",
       flex: 2,
       editable: false,
+      resizable: false,
     },
   ]);
 
@@ -32,50 +39,62 @@ export default function ShortcutsPage() {
     {
       name: "Advanced Settings Component",
       shortcut: advancedShortcut,
+      resizable: false,
     },
     {
       name: "Minimize Component",
       shortcut: minizmizeShortcut,
+      resizable: false,
     },
     {
       name: "Code Component",
       shortcut: codeShortcut,
+      resizable: false,
     },
     {
       name: "Copy Component",
       shortcut: copyShortcut,
+      resizable: false,
     },
     {
       name: "Duplicate Component",
       shortcut: duplicateShortcut,
+      resizable: false,
     },
     {
       name: "Share Component",
       shortcut: shareShortcut,
+      resizable: false,
     },
     {
       name: "Docs Component",
       shortcut: docsShortcut,
+      resizable: false,
     },
     {
       name: "Save Component",
       shortcut: saveShortcut,
+      resizable: false,
     },
     {
       name: "Delete Component",
       shortcut: deleteShortcut,
+      resizable: false,
     },
     {
       name: "Open Playground",
       shortcut: interactionShortcut,
+      resizable: false,
     },
     {
       name: "Undo",
       shortcut: undoShortcut,
+      resizable: false,
     },
     {
       name: "Redo",
       shortcut: redoShortcut,
+      resizable: false,
     },
   ]);
 
