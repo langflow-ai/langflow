@@ -4050,19 +4050,32 @@ langchain-core = ">=0.1.42,<0.2.0"
 
 [[package]]
 name = "langchain-community"
+<<<<<<< HEAD
 version = "0.0.34"
+=======
+version = "0.0.37"
+>>>>>>> 9b201740e (Update versions)
 description = "Community contributed LangChain integrations."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
+<<<<<<< HEAD
     {file = "langchain_community-0.0.34-py3-none-any.whl", hash = "sha256:bc13b21a44bbfca01bff8b35c10a26d71485b57c1d284f499b577ba6e1a5d84a"},
     {file = "langchain_community-0.0.34.tar.gz", hash = "sha256:96e9a807d9b4777820df5a970996f6bf3ad5632137bf0f4d863bd832bdeb2b0f"},
+=======
+    {file = "langchain_community-0.0.37-py3-none-any.whl", hash = "sha256:52e8557602dc099c2e236ec8a0599a956e2f08cfeb61e501815f5ec2d8545747"},
+    {file = "langchain_community-0.0.37.tar.gz", hash = "sha256:db2b5829bb20bc5b04c126b69143dbc31a880e949e94110c236b2c176906889f"},
+>>>>>>> 9b201740e (Update versions)
 ]
 
 [package.dependencies]
 aiohttp = ">=3.8.3,<4.0.0"
 dataclasses-json = ">=0.5.7,<0.7"
+<<<<<<< HEAD
 langchain-core = ">=0.1.45,<0.2.0"
+=======
+langchain-core = ">=0.1.51,<0.2.0"
+>>>>>>> 9b201740e (Update versions)
 langsmith = ">=0.1.0,<0.2.0"
 numpy = ">=1,<2"
 PyYAML = ">=5.3"
@@ -4072,17 +4085,30 @@ tenacity = ">=8.1.0,<9.0.0"
 
 [package.extras]
 cli = ["typer (>=0.9.0,<0.10.0)"]
+<<<<<<< HEAD
 extended-testing = ["aiosqlite (>=0.19.0,<0.20.0)", "aleph-alpha-client (>=2.15.0,<3.0.0)", "anthropic (>=0.3.11,<0.4.0)", "arxiv (>=1.4,<2.0)", "assemblyai (>=0.17.0,<0.18.0)", "atlassian-python-api (>=3.36.0,<4.0.0)", "azure-ai-documentintelligence (>=1.0.0b1,<2.0.0)", "beautifulsoup4 (>=4,<5)", "bibtexparser (>=1.4.0,<2.0.0)", "cassio (>=0.1.0,<0.2.0)", "chardet (>=5.1.0,<6.0.0)", "cloudpickle (>=2.0.0)", "cohere (>=4,<5)", "databricks-vectorsearch (>=0.21,<0.22)", "datasets (>=2.15.0,<3.0.0)", "dgml-utils (>=0.3.0,<0.4.0)", "elasticsearch (>=8.12.0,<9.0.0)", "esprima (>=4.0.1,<5.0.0)", "faiss-cpu (>=1,<2)", "feedparser (>=6.0.10,<7.0.0)", "fireworks-ai (>=0.9.0,<0.10.0)", "friendli-client (>=1.2.4,<2.0.0)", "geopandas (>=0.13.1,<0.14.0)", "gitpython (>=3.1.32,<4.0.0)", "google-cloud-documentai (>=2.20.1,<3.0.0)", "gql (>=3.4.1,<4.0.0)", "gradientai (>=1.4.0,<2.0.0)", "hdbcli (>=2.19.21,<3.0.0)", "hologres-vector (>=0.0.6,<0.0.7)", "html2text (>=2020.1.16,<2021.0.0)", "httpx (>=0.24.1,<0.25.0)", "httpx-sse (>=0.4.0,<0.5.0)", "javelin-sdk (>=0.1.8,<0.2.0)", "jinja2 (>=3,<4)", "jq (>=1.4.1,<2.0.0)", "jsonschema (>1)", "lxml (>=4.9.3,<6.0)", "markdownify (>=0.11.6,<0.12.0)", "motor (>=3.3.1,<4.0.0)", "msal (>=1.25.0,<2.0.0)", "mwparserfromhell (>=0.6.4,<0.7.0)", "mwxml (>=0.3.3,<0.4.0)", "newspaper3k (>=0.2.8,<0.3.0)", "numexpr (>=2.8.6,<3.0.0)", "nvidia-riva-client (>=2.14.0,<3.0.0)", "oci (>=2.119.1,<3.0.0)", "openai (<2)", "openapi-pydantic (>=0.3.2,<0.4.0)", "oracle-ads (>=2.9.1,<3.0.0)", "pandas (>=2.0.1,<3.0.0)", "pdfminer-six (>=20221105,<20221106)", "pgvector (>=0.1.6,<0.2.0)", "praw (>=7.7.1,<8.0.0)", "premai (>=0.3.25,<0.4.0)", "psychicapi (>=0.8.0,<0.9.0)", "py-trello (>=0.19.0,<0.20.0)", "pyjwt (>=2.8.0,<3.0.0)", "pymupdf (>=1.22.3,<2.0.0)", "pypdf (>=3.4.0,<4.0.0)", "pypdfium2 (>=4.10.0,<5.0.0)", "pyspark (>=3.4.0,<4.0.0)", "rank-bm25 (>=0.2.2,<0.3.0)", "rapidfuzz (>=3.1.1,<4.0.0)", "rapidocr-onnxruntime (>=1.3.2,<2.0.0)", "rdflib (==7.0.0)", "requests-toolbelt (>=1.0.0,<2.0.0)", "rspace_client (>=2.5.0,<3.0.0)", "scikit-learn (>=1.2.2,<2.0.0)", "sqlite-vss (>=0.1.2,<0.2.0)", "streamlit (>=1.18.0,<2.0.0)", "sympy (>=1.12,<2.0)", "telethon (>=1.28.5,<2.0.0)", "tidb-vector (>=0.0.3,<1.0.0)", "timescale-vector (>=0.0.1,<0.0.2)", "tqdm (>=4.48.0)", "tree-sitter (>=0.20.2,<0.21.0)", "tree-sitter-languages (>=1.8.0,<2.0.0)", "upstash-redis (>=0.15.0,<0.16.0)", "vdms (>=0.0.20,<0.0.21)", "xata (>=1.0.0a7,<2.0.0)", "xmltodict (>=0.13.0,<0.14.0)"]
 
 [[package]]
 name = "langchain-core"
 version = "0.1.45"
+=======
+extended-testing = ["aiosqlite (>=0.19.0,<0.20.0)", "aleph-alpha-client (>=2.15.0,<3.0.0)", "anthropic (>=0.3.11,<0.4.0)", "arxiv (>=1.4,<2.0)", "assemblyai (>=0.17.0,<0.18.0)", "atlassian-python-api (>=3.36.0,<4.0.0)", "azure-ai-documentintelligence (>=1.0.0b1,<2.0.0)", "azure-identity (>=1.15.0,<2.0.0)", "azure-search-documents (==11.4.0)", "beautifulsoup4 (>=4,<5)", "bibtexparser (>=1.4.0,<2.0.0)", "cassio (>=0.1.6,<0.2.0)", "chardet (>=5.1.0,<6.0.0)", "cloudpickle (>=2.0.0)", "cohere (>=4,<5)", "databricks-vectorsearch (>=0.21,<0.22)", "datasets (>=2.15.0,<3.0.0)", "dgml-utils (>=0.3.0,<0.4.0)", "elasticsearch (>=8.12.0,<9.0.0)", "esprima (>=4.0.1,<5.0.0)", "faiss-cpu (>=1,<2)", "feedparser (>=6.0.10,<7.0.0)", "fireworks-ai (>=0.9.0,<0.10.0)", "friendli-client (>=1.2.4,<2.0.0)", "geopandas (>=0.13.1,<0.14.0)", "gitpython (>=3.1.32,<4.0.0)", "google-cloud-documentai (>=2.20.1,<3.0.0)", "gql (>=3.4.1,<4.0.0)", "gradientai (>=1.4.0,<2.0.0)", "hdbcli (>=2.19.21,<3.0.0)", "hologres-vector (>=0.0.6,<0.0.7)", "html2text (>=2020.1.16,<2021.0.0)", "httpx (>=0.24.1,<0.25.0)", "httpx-sse (>=0.4.0,<0.5.0)", "javelin-sdk (>=0.1.8,<0.2.0)", "jinja2 (>=3,<4)", "jq (>=1.4.1,<2.0.0)", "jsonschema (>1)", "lxml (>=4.9.3,<6.0)", "markdownify (>=0.11.6,<0.12.0)", "motor (>=3.3.1,<4.0.0)", "msal (>=1.25.0,<2.0.0)", "mwparserfromhell (>=0.6.4,<0.7.0)", "mwxml (>=0.3.3,<0.4.0)", "newspaper3k (>=0.2.8,<0.3.0)", "numexpr (>=2.8.6,<3.0.0)", "nvidia-riva-client (>=2.14.0,<3.0.0)", "oci (>=2.119.1,<3.0.0)", "openai (<2)", "openapi-pydantic (>=0.3.2,<0.4.0)", "oracle-ads (>=2.9.1,<3.0.0)", "oracledb (>=2.2.0,<3.0.0)", "pandas (>=2.0.1,<3.0.0)", "pdfminer-six (>=20221105,<20221106)", "pgvector (>=0.1.6,<0.2.0)", "praw (>=7.7.1,<8.0.0)", "premai (>=0.3.25,<0.4.0)", "psychicapi (>=0.8.0,<0.9.0)", "py-trello (>=0.19.0,<0.20.0)", "pyjwt (>=2.8.0,<3.0.0)", "pymupdf (>=1.22.3,<2.0.0)", "pypdf (>=3.4.0,<4.0.0)", "pypdfium2 (>=4.10.0,<5.0.0)", "pyspark (>=3.4.0,<4.0.0)", "rank-bm25 (>=0.2.2,<0.3.0)", "rapidfuzz (>=3.1.1,<4.0.0)", "rapidocr-onnxruntime (>=1.3.2,<2.0.0)", "rdflib (==7.0.0)", "requests-toolbelt (>=1.0.0,<2.0.0)", "rspace_client (>=2.5.0,<3.0.0)", "scikit-learn (>=1.2.2,<2.0.0)", "sqlite-vss (>=0.1.2,<0.2.0)", "streamlit (>=1.18.0,<2.0.0)", "sympy (>=1.12,<2.0)", "telethon (>=1.28.5,<2.0.0)", "tidb-vector (>=0.0.3,<1.0.0)", "timescale-vector (>=0.0.1,<0.0.2)", "tqdm (>=4.48.0)", "tree-sitter (>=0.20.2,<0.21.0)", "tree-sitter-languages (>=1.8.0,<2.0.0)", "upstash-redis (>=0.15.0,<0.16.0)", "vdms (>=0.0.20,<0.0.21)", "xata (>=1.0.0a7,<2.0.0)", "xmltodict (>=0.13.0,<0.14.0)"]
+
+[[package]]
+name = "langchain-core"
+version = "0.1.51"
+>>>>>>> 9b201740e (Update versions)
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
+<<<<<<< HEAD
     {file = "langchain_core-0.1.45-py3-none-any.whl", hash = "sha256:91eff20de0bcf5f025e1d8c4582cb597a9c17527965eb03b314486e7c834e7df"},
     {file = "langchain_core-0.1.45.tar.gz", hash = "sha256:526532c1af279a9e2debe7a4e143ba6e980cf90b5ab2e0991c2230ee04c693e2"},
+=======
+    {file = "langchain_core-0.1.51-py3-none-any.whl", hash = "sha256:3058bdb04d43a8eaae2e249365fe2e8d0356a09c7b2c1afa1a8100f8888da4fa"},
+    {file = "langchain_core-0.1.51.tar.gz", hash = "sha256:f7ea116f939be9e74c385baf95d6c84cd7a402b59c2c1893fc054bf98abbefc2"},
+>>>>>>> 9b201740e (Update versions)
 ]
 
 [package.dependencies]
@@ -4164,11 +4190,16 @@ anthropic = ["anthropic[vertexai] (>=0.23.0,<1)"]
 
 [[package]]
 name = "langchain-openai"
+<<<<<<< HEAD
 version = "0.1.3"
+=======
+version = "0.1.6"
+>>>>>>> 9b201740e (Update versions)
 description = "An integration package connecting OpenAI and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
+<<<<<<< HEAD
     {file = "langchain_openai-0.1.3-py3-none-any.whl", hash = "sha256:fa1f27815649291447e5370cb08e2f5a84e5c7c6121d0c055a6e296bd16d1e47"},
     {file = "langchain_openai-0.1.3.tar.gz", hash = "sha256:7f6e377d6bf88d6c2b1969fe5eecc1326271757512739e2f17c855cd7af53345"},
 ]
@@ -4176,6 +4207,15 @@ files = [
 [package.dependencies]
 langchain-core = ">=0.1.42,<0.2.0"
 openai = ">=1.10.0,<2.0.0"
+=======
+    {file = "langchain_openai-0.1.6-py3-none-any.whl", hash = "sha256:7f62ecb12d3cdd0d96679abea00e4e3ceb1f829f6d1f127a5f7b97c1315d157f"},
+    {file = "langchain_openai-0.1.6.tar.gz", hash = "sha256:7d2e838e57ef231cb7689fd58ac5fa8a6e9e504174f8c5698c837739786e2030"},
+]
+
+[package.dependencies]
+langchain-core = ">=0.1.46,<0.2.0"
+openai = ">=1.24.0,<2.0.0"
+>>>>>>> 9b201740e (Update versions)
 tiktoken = ">=0.5.2,<1"
 
 [[package]]
@@ -4283,13 +4323,22 @@ regex = ["regex"]
 
 [[package]]
 name = "litellm"
+<<<<<<< HEAD
 version = "1.36.1"
+=======
+version = "1.35.38"
+>>>>>>> 9b201740e (Update versions)
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
+<<<<<<< HEAD
     {file = "litellm-1.36.1-py3-none-any.whl", hash = "sha256:3a41db4c139989ef24171a69eba72b814b1ac60591af2da7ed689e57bd62b015"},
     {file = "litellm-1.36.1.tar.gz", hash = "sha256:709cb3a9f31186a093c191c01e0df162e5b08c8cc257a2b746668f29fa99a628"},
+=======
+    {file = "litellm-1.35.38-py3-none-any.whl", hash = "sha256:79ab3403c945b340a751d889cf49030fee050487dff6294a21fb9586c49e3faf"},
+    {file = "litellm-1.35.38.tar.gz", hash = "sha256:1a0b195c74d45ba0c2391c5be533c211ee1bcdba6be09e6950037432f62f79ea"},
+>>>>>>> 9b201740e (Update versions)
 ]
 
 [package.dependencies]
@@ -4330,6 +4379,303 @@ server = ["PyYAML (>=5.1)", "fastapi (>=0.100.0)", "pydantic-settings (>=2.0.1)"
 test = ["httpx (>=0.24.1)", "pytest (>=7.4.0)", "scipy (>=1.10)"]
 
 [[package]]
+<<<<<<< HEAD
+=======
+name = "llama-index"
+version = "0.10.34"
+description = "Interface between LLMs and your data"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "llama_index-0.10.34-py3-none-any.whl", hash = "sha256:da2fe7bf0cde25070ba144e2b8ca0fc0e0d42bff1b32521dc1a28ae4ab7c9c32"},
+    {file = "llama_index-0.10.34.tar.gz", hash = "sha256:29c882665fc3a78df8682224620919dc42a95e372fd3afc3c8504822a69892f9"},
+]
+
+[package.dependencies]
+llama-index-agent-openai = ">=0.1.4,<0.3.0"
+llama-index-cli = ">=0.1.2,<0.2.0"
+llama-index-core = ">=0.10.34,<0.11.0"
+llama-index-embeddings-openai = ">=0.1.5,<0.2.0"
+llama-index-indices-managed-llama-cloud = ">=0.1.2,<0.2.0"
+llama-index-legacy = ">=0.9.48,<0.10.0"
+llama-index-llms-openai = ">=0.1.13,<0.2.0"
+llama-index-multi-modal-llms-openai = ">=0.1.3,<0.2.0"
+llama-index-program-openai = ">=0.1.3,<0.2.0"
+llama-index-question-gen-openai = ">=0.1.2,<0.2.0"
+llama-index-readers-file = ">=0.1.4,<0.2.0"
+llama-index-readers-llama-parse = ">=0.1.2,<0.2.0"
+
+[[package]]
+name = "llama-index-agent-openai"
+version = "0.2.3"
+description = "llama-index agent openai integration"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "llama_index_agent_openai-0.2.3-py3-none-any.whl", hash = "sha256:3782b24dd611364e391672dadc8308efd58d731a097c34a40e29f28c3abc5034"},
+    {file = "llama_index_agent_openai-0.2.3.tar.gz", hash = "sha256:c899d90b32036656a8ef86d0f0378d4168e00eb2d75a10901eab58ba5b2656a4"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.10.30,<0.11.0"
+llama-index-llms-openai = ">=0.1.5,<0.2.0"
+openai = ">=1.14.0"
+
+[[package]]
+name = "llama-index-cli"
+version = "0.1.12"
+description = "llama-index cli"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "llama_index_cli-0.1.12-py3-none-any.whl", hash = "sha256:d80d546786f02d3f16f6183b8e86b22b8b5c33a1500923659f2ccbff8d5df634"},
+    {file = "llama_index_cli-0.1.12.tar.gz", hash = "sha256:3cf1f706c3c69c6b1aab07fca7faad3959db1709808efd50491b669d38b0b580"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.10.11.post1,<0.11.0"
+llama-index-embeddings-openai = ">=0.1.1,<0.2.0"
+llama-index-llms-openai = ">=0.1.1,<0.2.0"
+
+[[package]]
+name = "llama-index-core"
+version = "0.10.34"
+description = "Interface between LLMs and your data"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "llama_index_core-0.10.34-py3-none-any.whl", hash = "sha256:073eb6f2617686826065c68b0934a2cd127bf6f762220601c00d20712b48d586"},
+    {file = "llama_index_core-0.10.34.tar.gz", hash = "sha256:d41beeff56f7581d924f2a27c0020f291827b15a18bb7bd80f3ab38ccc95e4ca"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.8.6,<4.0.0"
+dataclasses-json = "*"
+deprecated = ">=1.2.9.3"
+dirtyjson = ">=1.0.8,<2.0.0"
+fsspec = ">=2023.5.0"
+httpx = "*"
+llamaindex-py-client = ">=0.1.18,<0.2.0"
+nest-asyncio = ">=1.5.8,<2.0.0"
+networkx = ">=3.0"
+nltk = ">=3.8.1,<4.0.0"
+numpy = "*"
+openai = ">=1.1.0"
+pandas = "*"
+pillow = ">=9.0.0"
+PyYAML = ">=6.0.1"
+requests = ">=2.31.0"
+SQLAlchemy = {version = ">=1.4.49", extras = ["asyncio"]}
+tenacity = ">=8.2.0,<9.0.0"
+tiktoken = ">=0.3.3"
+tqdm = ">=4.66.1,<5.0.0"
+typing-extensions = ">=4.5.0"
+typing-inspect = ">=0.8.0"
+wrapt = "*"
+
+[package.extras]
+gradientai = ["gradientai (>=1.4.0)"]
+html = ["beautifulsoup4 (>=4.12.2,<5.0.0)"]
+langchain = ["langchain (>=0.0.303)"]
+local-models = ["optimum[onnxruntime] (>=1.13.2,<2.0.0)", "sentencepiece (>=0.1.99,<0.2.0)", "transformers[torch] (>=4.33.1,<5.0.0)"]
+postgres = ["asyncpg (>=0.29.0,<0.30.0)", "pgvector (>=0.2.4,<0.3.0)", "psycopg2-binary (>=2.9.9,<3.0.0)"]
+query-tools = ["guidance (>=0.0.64,<0.0.65)", "jsonpath-ng (>=1.6.0,<2.0.0)", "lm-format-enforcer (>=0.4.3,<0.5.0)", "rank-bm25 (>=0.2.2,<0.3.0)", "scikit-learn", "spacy (>=3.7.1,<4.0.0)"]
+
+[[package]]
+name = "llama-index-embeddings-openai"
+version = "0.1.9"
+description = "llama-index embeddings openai integration"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "llama_index_embeddings_openai-0.1.9-py3-none-any.whl", hash = "sha256:fbd16d6197b91f4dbdc6d0707e573cc224ac2b0a48d5b370c6232dd8a2282473"},
+    {file = "llama_index_embeddings_openai-0.1.9.tar.gz", hash = "sha256:0fd292b2f9a0ad4534a790d6374726bc885853188087eb018167dcf239643924"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.10.1,<0.11.0"
+
+[[package]]
+name = "llama-index-indices-managed-llama-cloud"
+version = "0.1.6"
+description = "llama-index indices llama-cloud integration"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "llama_index_indices_managed_llama_cloud-0.1.6-py3-none-any.whl", hash = "sha256:cba33e1a3677b2a2ae7f239119acbf6dc3818f105edc92315729842b56fbc949"},
+    {file = "llama_index_indices_managed_llama_cloud-0.1.6.tar.gz", hash = "sha256:74b3b0e9ebf9d348d3054f9fc0c657031acceb9351c31116ad8d5a7ae4729f5c"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.10.0,<0.11.0"
+llamaindex-py-client = ">=0.1.19,<0.2.0"
+
+[[package]]
+name = "llama-index-legacy"
+version = "0.9.48"
+description = "Interface between LLMs and your data"
+optional = false
+python-versions = ">=3.8.1,<4.0"
+files = [
+    {file = "llama_index_legacy-0.9.48-py3-none-any.whl", hash = "sha256:714ada95beac179b4acefa4d2deff74bb7b2f22b0f699ac247d4cb67738d16d4"},
+    {file = "llama_index_legacy-0.9.48.tar.gz", hash = "sha256:82ddc4691edbf49533d65582c249ba22c03fe96fbd3e92f7758dccef28e43834"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.8.6,<4.0.0"
+dataclasses-json = "*"
+deprecated = ">=1.2.9.3"
+dirtyjson = ">=1.0.8,<2.0.0"
+fsspec = ">=2023.5.0"
+httpx = "*"
+nest-asyncio = ">=1.5.8,<2.0.0"
+networkx = ">=3.0"
+nltk = ">=3.8.1,<4.0.0"
+numpy = "*"
+openai = ">=1.1.0"
+pandas = "*"
+requests = ">=2.31.0"
+SQLAlchemy = {version = ">=1.4.49", extras = ["asyncio"]}
+tenacity = ">=8.2.0,<9.0.0"
+tiktoken = ">=0.3.3"
+typing-extensions = ">=4.5.0"
+typing-inspect = ">=0.8.0"
+
+[package.extras]
+gradientai = ["gradientai (>=1.4.0)"]
+html = ["beautifulsoup4 (>=4.12.2,<5.0.0)"]
+langchain = ["langchain (>=0.0.303)"]
+local-models = ["optimum[onnxruntime] (>=1.13.2,<2.0.0)", "sentencepiece (>=0.1.99,<0.2.0)", "transformers[torch] (>=4.33.1,<5.0.0)"]
+postgres = ["asyncpg (>=0.28.0,<0.29.0)", "pgvector (>=0.1.0,<0.2.0)", "psycopg2-binary (>=2.9.9,<3.0.0)"]
+query-tools = ["guidance (>=0.0.64,<0.0.65)", "jsonpath-ng (>=1.6.0,<2.0.0)", "lm-format-enforcer (>=0.4.3,<0.5.0)", "rank-bm25 (>=0.2.2,<0.3.0)", "scikit-learn", "spacy (>=3.7.1,<4.0.0)"]
+
+[[package]]
+name = "llama-index-llms-openai"
+version = "0.1.16"
+description = "llama-index llms openai integration"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "llama_index_llms_openai-0.1.16-py3-none-any.whl", hash = "sha256:4a9c0fe969302731907c8fa31631812397637e114a44ebbad11fd6c59def9315"},
+    {file = "llama_index_llms_openai-0.1.16.tar.gz", hash = "sha256:313bbc17c241992430a6bf686a1b1edc4276c8256ad6b0550aa1bea1e0fed1a6"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.10.24,<0.11.0"
+
+[[package]]
+name = "llama-index-multi-modal-llms-openai"
+version = "0.1.5"
+description = "llama-index multi-modal-llms openai integration"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "llama_index_multi_modal_llms_openai-0.1.5-py3-none-any.whl", hash = "sha256:bb332580e7e4b5f2f87488b3649d2ceb53ee82c848e59694578a982c3982ce0b"},
+    {file = "llama_index_multi_modal_llms_openai-0.1.5.tar.gz", hash = "sha256:9a237f4f886d1e20c27e9493e80b3e1f8753859481ff1b58fe25b7aa39b198a2"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.10.1,<0.11.0"
+llama-index-llms-openai = ">=0.1.1,<0.2.0"
+
+[[package]]
+name = "llama-index-program-openai"
+version = "0.1.6"
+description = "llama-index program openai integration"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "llama_index_program_openai-0.1.6-py3-none-any.whl", hash = "sha256:4660b338503537c5edca1e0dab606af6ce372b4f1b597e2833c6b602447c5d8d"},
+    {file = "llama_index_program_openai-0.1.6.tar.gz", hash = "sha256:c6a4980c5ea826088b28b4dee3367edb20221e6d05eb0e05019049190131d772"},
+]
+
+[package.dependencies]
+llama-index-agent-openai = ">=0.1.1,<0.3.0"
+llama-index-core = ">=0.10.1,<0.11.0"
+llama-index-llms-openai = ">=0.1.1,<0.2.0"
+
+[[package]]
+name = "llama-index-question-gen-openai"
+version = "0.1.3"
+description = "llama-index question_gen openai integration"
+optional = false
+python-versions = ">=3.8.1,<4.0"
+files = [
+    {file = "llama_index_question_gen_openai-0.1.3-py3-none-any.whl", hash = "sha256:1f83b49e8b2e665030d1ec8c54687d6985d9fa8426147b64e46628a9e489b302"},
+    {file = "llama_index_question_gen_openai-0.1.3.tar.gz", hash = "sha256:4486198117a45457d2e036ae60b93af58052893cc7d78fa9b6f47dd47b81e2e1"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.10.1,<0.11.0"
+llama-index-llms-openai = ">=0.1.1,<0.2.0"
+llama-index-program-openai = ">=0.1.1,<0.2.0"
+
+[[package]]
+name = "llama-index-readers-file"
+version = "0.1.20"
+description = "llama-index readers file integration"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "llama_index_readers_file-0.1.20-py3-none-any.whl", hash = "sha256:055999f86ad11130445bfe10c0886ddecb63e1b727678ab4ba58602282443289"},
+    {file = "llama_index_readers_file-0.1.20.tar.gz", hash = "sha256:1258c016bc8ee1efe37a3b081384ba47dbca13b92c205d3154ba235fc09cc2fb"},
+]
+
+[package.dependencies]
+beautifulsoup4 = ">=4.12.3,<5.0.0"
+llama-index-core = ">=0.10.1,<0.11.0"
+pypdf = ">=4.0.1,<5.0.0"
+striprtf = ">=0.0.26,<0.0.27"
+
+[package.extras]
+pymupdf = ["pymupdf (>=1.23.21,<2.0.0)"]
+
+[[package]]
+name = "llama-index-readers-llama-parse"
+version = "0.1.4"
+description = "llama-index readers llama-parse integration"
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "llama_index_readers_llama_parse-0.1.4-py3-none-any.whl", hash = "sha256:c4914b37d12cceee56fbd185cca80f87d60acbf8ea7a73f9719610180be1fcdd"},
+    {file = "llama_index_readers_llama_parse-0.1.4.tar.gz", hash = "sha256:78608b193c818894aefeee0aa303f02b7f80f2e4caf13866c2fd3b0b1023e2c0"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.10.7,<0.11.0"
+llama-parse = ">=0.4.0,<0.5.0"
+
+[[package]]
+name = "llama-parse"
+version = "0.4.2"
+description = "Parse files into RAG-Optimized formats."
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "llama_parse-0.4.2-py3-none-any.whl", hash = "sha256:5ce0390141f216dcd88c1123fea7f2a4f561d177f791a97217a3db3509dec4ff"},
+    {file = "llama_parse-0.4.2.tar.gz", hash = "sha256:fa04c09730b102155f6505de9cf91998c86d334581f0f12597c5eb47ca5db859"},
+]
+
+[package.dependencies]
+llama-index-core = ">=0.10.29"
+
+[[package]]
+name = "llamaindex-py-client"
+version = "0.1.19"
+description = ""
+optional = false
+python-versions = "<4,>=3.8"
+files = [
+    {file = "llamaindex_py_client-0.1.19-py3-none-any.whl", hash = "sha256:fd9416fd78b97209bf323bc3c7fab314499778563e7274f10853ad560563d10e"},
+    {file = "llamaindex_py_client-0.1.19.tar.gz", hash = "sha256:73f74792bb8c092bae6dc626627a09ac13a099fa8d10f8fcc83e17a2b332cca7"},
+]
+
+[package.dependencies]
+httpx = ">=0.20.0"
+pydantic = ">=1.10"
+
+[[package]]
+>>>>>>> 9b201740e (Update versions)
 name = "locust"
 version = "2.27.0"
 description = "Developer friendly load testing framework"
