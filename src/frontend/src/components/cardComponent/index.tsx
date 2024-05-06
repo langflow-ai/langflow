@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
 import { getComponent, postLikeComponent } from "../../controllers/API";
-import DeleteConfirmationModal from "../../modals/DeleteConfirmationModal";
 import IOModal from "../../modals/IOModal";
+import DeleteConfirmationModal from "../../modals/deleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import cloneFLowWithParent from "../../utils/storeUtils";
-import { cn } from "../../utils/utils";
-import ShadTooltip from "../ShadTooltipComponent";
+import { cn, convertTestName } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
-import { Badge } from "../ui/badge";
+import ShadTooltip from "../shadTooltipComponent";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -48,11 +47,11 @@ export default function CollectionCardComponent({
   const [loading, setLoading] = useState(false);
   const [loadingLike, setLoadingLike] = useState(false);
   const [liked_by_user, setLiked_by_user] = useState(
-    data?.liked_by_user ?? false
+    data?.liked_by_user ?? false,
   );
   const [likes_count, setLikes_count] = useState(data?.liked_by_count ?? 0);
   const [downloads_count, setDownloads_count] = useState(
-    data?.downloads_count ?? 0
+    data?.downloads_count ?? 0,
   );
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
@@ -61,8 +60,9 @@ export default function CollectionCardComponent({
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
   const [openPlayground, setOpenPlayground] = useState(false);
+  const [openDelete, setOpenDelete] = useState(false);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
   const [loadingPlayground, setLoadingPlayground] = useState(false);
 
@@ -82,8 +82,8 @@ export default function CollectionCardComponent({
       } else {
         setNodes([], true);
         setEdges([], true);
-        cleanFlowPool();
       }
+      cleanFlowPool();
     }
   }, [openPlayground]);
 
@@ -168,10 +168,12 @@ export default function CollectionCardComponent({
   return (
     <>
       <Card
+        data-testid={`card-${convertTestName(data.name)}`}
+        //TODO check color schema
         className={cn(
-          "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:shadow-md",
+          "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#ffffff10]",
           disabled ? "pointer-events-none opacity-50" : "",
-          onClick ? "cursor-pointer" : ""
+          onClick ? "cursor-pointer" : "",
         )}
         onClick={onClick}
       >
@@ -184,7 +186,7 @@ export default function CollectionCardComponent({
                     "flex-shrink-0",
                     data.is_component
                       ? "mx-0.5 h-6 w-6 text-component-icon"
-                      : "h-7 w-7 flex-shrink-0 text-flow-icon"
+                      : "h-7 w-7 flex-shrink-0 text-flow-icon",
                   )}
                   name={data.is_component ? "ToyBrick" : "Group"}
                 />
@@ -236,16 +238,18 @@ export default function CollectionCardComponent({
                 )}
 
                 {onDelete && data?.metadata === undefined && (
-                  <DeleteConfirmationModal
-                    onConfirm={() => {
-                      onDelete();
+                  <button
+                    className="z-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenDelete(true);
                     }}
                   >
                     <IconComponent
                       name="Trash2"
                       className="h-5 w-5 text-primary opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
                     />
-                  </DeleteConfirmationModal>
+                  </button>
                 )}
               </CardTitle>
             </div>
@@ -266,7 +270,7 @@ export default function CollectionCardComponent({
                 </span>
               )}
               <div className="flex w-full flex-1 flex-wrap gap-2">
-                {data.tags &&
+                {/* {data.tags &&
                   data.tags.length > 0 &&
                   data.tags.map((tag, index) => (
                     <Badge
@@ -277,7 +281,7 @@ export default function CollectionCardComponent({
                     >
                       {tag.name}
                     </Badge>
-                  ))}
+                  ))} */}
               </div>
             </div>
 
@@ -288,8 +292,8 @@ export default function CollectionCardComponent({
         </div>
 
         <CardFooter>
-          <div className="flex w-full items-center justify-between gap-2">
-            <div className="flex w-full flex-wrap items-end justify-between gap-2">
+          <div className="z-50 flex w-full items-center justify-between gap-2">
+            <div className="flex w-full flex-wrap items-end justify-end gap-2">
               {playground && data?.metadata !== undefined ? (
                 <Button
                   disabled={loadingPlayground}
@@ -297,7 +301,7 @@ export default function CollectionCardComponent({
                   tabIndex={-1}
                   variant="outline"
                   size="sm"
-                  className="gap-2 whitespace-nowrap"
+                  className="z-50 gap-2 whitespace-nowrap"
                   data-testid={"playground-flow-button-" + data.id}
                   onClick={(e) => {
                     e.preventDefault();
@@ -326,9 +330,7 @@ export default function CollectionCardComponent({
                   )}
                   Playground
                 </Button>
-              ) : (
-                <div></div>
-              )}
+              ) : undefined}
               {data.liked_by_count != undefined && (
                 <div className="flex gap-0.5">
                   {onDelete && data?.metadata !== undefined ? (
@@ -351,10 +353,11 @@ export default function CollectionCardComponent({
                           }
                         >
                           <IconComponent
+                            data-testid={`delete-${convertTestName(data.name)}`}
                             name="Trash2"
                             className={cn(
                               "h-5 w-5",
-                              !authorized ? " text-ring" : ""
+                              !authorized ? " text-ring" : "",
                             )}
                           />
                         </Button>
@@ -389,7 +392,7 @@ export default function CollectionCardComponent({
                             liked_by_user
                               ? "fill-destructive stroke-destructive"
                               : "",
-                            !authorized ? " text-ring" : ""
+                            !authorized ? " text-ring" : "",
                           )}
                         />
                       </Button>
@@ -427,22 +430,21 @@ export default function CollectionCardComponent({
                         }
                         className={cn(
                           loading ? "h-5 w-5 animate-spin" : "h-5 w-5",
-                          !authorized ? " text-ring" : ""
+                          !authorized ? " text-ring" : "",
                         )}
                       />
                     </Button>
                   </ShadTooltip>
                 </div>
               )}
-              {button && button}
               {playground && data?.metadata === undefined && (
                 <Button
                   disabled={loadingPlayground}
                   key={data.id}
                   tabIndex={-1}
-                  variant="outline"
+                  variant="primary"
                   size="sm"
-                  className="gap-2 whitespace-nowrap"
+                  className="gap-2 whitespace-nowrap bg-muted"
                   data-testid={"playground-flow-button-" + data.id}
                   onClick={(e) => {
                     e.preventDefault();
@@ -484,6 +486,17 @@ export default function CollectionCardComponent({
         >
           <></>
         </IOModal>
+      )}
+      {openDelete && (
+        <DeleteConfirmationModal
+          open={openDelete}
+          setOpen={setOpenDelete}
+          onConfirm={() => {
+            if (onDelete) onDelete();
+          }}
+        >
+          <></>
+        </DeleteConfirmationModal>
       )}
     </>
   );

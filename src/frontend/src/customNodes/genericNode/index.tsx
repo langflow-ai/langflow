@@ -1,9 +1,9 @@
 import { cloneDeep } from "lodash";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
-import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
+import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import Checkmark from "../../components/ui/checkmark";
 import Loading from "../../components/ui/loading";
