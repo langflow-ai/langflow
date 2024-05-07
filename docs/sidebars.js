@@ -29,7 +29,7 @@ module.exports = {
         "starter-projects/blog-writer",
         "starter-projects/document-qa",
         "starter-projects/memory-chatbot",
-        "tutorials/rag-with-astradb"
+        "starter-projects/vector-store-rag"
       ],
     },
     {
