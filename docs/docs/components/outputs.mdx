@@ -2,36 +2,33 @@ import Admonition from '@theme/Admonition';
 
 # Outputs
 
-### Chat Output
+## Chat Output
 
-This component is designed to send a message to the chat.
+This component sends a message to the chat.
 
-**Params**
+**Parameters**
 
-- **Sender Type:** specifies the sender type. Defaults to _`"Machine"`_. Options are _`"Machine"`_ and _`"User"`_.
+- **Sender Type:** Specifies the sender type. Default is `"Machine"`. Options are `"Machine"` and `"User"`.
 
-- **Sender Name:** specifies the name of the sender. Defaults to _`"AI"`_.
+- **Sender Name:** Specifies the sender's name. Default is `"AI"`.
 
-- **Session ID:** specifies the session ID of the chat history. If provided, the message will be saved in the Message History.
+- **Session ID:** Specifies the session ID of the chat history. If provided, messages are saved in the Message History.
 
-- **Message:** specifies the message text.
-
-<Admonition type="note" title="Note">
-    <p>
-        If _`As Record`_ is _`true`_ and the _`Message`_ is a _`Record`_, the data of the _`Record`_ will be updated with the _`Sender`_, _`Sender Name`_, and _`Session ID`_.
-    </p>
-</Admonition>
-
-### Text Output
-
-This component is designed to display text data to the user. It's particularly useful for scenarios where you don't want to send the text data to the chat, but still want to display it.
-
-**Params**
-
-- **Value:** Specifies the text data to be displayed. This is where the text data to be displayed is provided. If no value is provided, it defaults to an empty string.
+- **Message:** Specifies the text of the message.
 
 <Admonition type="note" title="Note">
     <p>
-        The `TextOutput` component serves as a straightforward means for displaying text data. It ensures that textual data can be seamlessly observed in the chat window throughout your flow.
+        If `As Record` is `true` and the `Message` is a `Record`, the data in the `Record` is updated with the `Sender`, `Sender Name`, and `Session ID`.
     </p>
 </Admonition>
+
+## Text Output
+
+This component displays text data to the user. It is useful when you want to show text without sending it to the chat.
+
+**Parameters**
+
+- **Value:** Specifies the text data to be displayed. Defaults to an empty string.
+
+
+The `TextOutput` component provides a simple way to display text data. It allows textual data to be visible in the chat window during your interaction flow.
