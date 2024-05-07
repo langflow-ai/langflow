@@ -16,6 +16,7 @@ import {
 import { FlowType, NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
+import { ColDef, ColGroupDef } from "ag-grid-community";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -722,4 +723,40 @@ export function convertTestName(name: string): string {
 
 export function sortByName(stringList: string[]): string[] {
   return stringList.sort((a, b) => a.localeCompare(b));
+}
+
+export function extractColumnsFromRows(
+  rows: object[],
+  mode: "intersection" | "union",
+): (ColDef<any> | ColGroupDef<any>)[] {
+  const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
+  if (rows.length === 0) {
+    return [];
+  }
+  function intersection() {
+    for (const key in rows[0]) {
+      columnsKeys[key] = { headerName: key, field: key };
+    }
+    for (const row of rows) {
+      for (const key in columnsKeys) {
+        if (!row[key]) {
+          delete columnsKeys[key];
+        }
+      }
+    }
+  }
+  function union() {
+    for (const row of rows) {
+      for (const key in row) {
+        columnsKeys[key] = { headerName: key, field: key };
+      }
+    }
+  }
+  if (mode === "intersection") {
+    intersection();
+  } else {
+    union();
+  }
+
+  return Object.values(columnsKeys);
 }

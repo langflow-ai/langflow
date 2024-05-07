@@ -1,10 +1,10 @@
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 
 from langflow.services.deps import get_monitor_service
-from langflow.services.monitor.schema import VertexBuildMapModel
+from langflow.services.monitor.schema import TransactionModel, VertexBuildMapModel
 from langflow.services.monitor.service import MonitorService
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
@@ -59,7 +59,7 @@ async def get_messages(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/transactions")
+@router.get("/transactions", response_model=List[TransactionModel])
 async def get_transactions(
     source: Optional[str] = Query(None),
     target: Optional[str] = Query(None),
