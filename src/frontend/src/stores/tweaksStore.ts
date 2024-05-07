@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { tweakType } from "../types/components";
+import { TweaksStoreType } from "../types/zustand/tweaks";
 
-export const useTweaksStore = create<any>((set, get) => ({
-  tweaksObject: {},
+export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
+  tweaksObject: [{}],
   setTweaksObject: (tweak: tweakType) => {
     tweak.forEach((el) => {
       Object.keys(el).forEach((key) => {

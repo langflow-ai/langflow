@@ -646,7 +646,7 @@ export type codeTabsPropsType = {
   setActiveTab: (value: string) => void;
   isMessage?: boolean;
   tweaks?: {
-    tweak?: [tweakType];
+    tweak?: tweakType;
     tweaksList?: Array<string>;
     buildContent?: (value: string) => ReactNode;
     getValue?: (

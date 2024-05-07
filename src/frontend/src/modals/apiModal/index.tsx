@@ -100,12 +100,23 @@ const ApiModal = forwardRef(
         nodes.forEach((element) => {
           const nodeId = element["id"];
           const template = element["data"]["node"]["template"];
+
           Object.keys(template).forEach((templateField) => {
-            buildTweakObject(
-              nodeId,
-              element.data.node.template[templateField].value,
-              element.data.node.template[templateField],
-            );
+            const canBuildTweakObject =
+              element.data.node.template[templateField] &&
+              templateField.charAt(0) !== "_" &&
+              element.data.node.template[templateField].show &&
+              LANGFLOW_SUPPORTED_TYPES.has(
+                element.data.node.template[templateField].type,
+              );
+
+            if (canBuildTweakObject) {
+              buildTweakObject(
+                nodeId,
+                element.data.node.template[templateField].value,
+                element.data.node.template[templateField],
+              );
+            }
           });
         });
       }
