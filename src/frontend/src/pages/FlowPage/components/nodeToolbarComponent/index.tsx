@@ -267,6 +267,9 @@ export default function NodeToolbarComponent({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if ((event.target! as HTMLElement).tagName === "INPUT") {
+        return;
+      }
       if (selected && (hasApiKey || hasStore) && event.key === "u") {
         event.preventDefault();
         handleSelectChange("update");
@@ -303,7 +306,6 @@ export default function NodeToolbarComponent({
         setNoticeData({ title: `You can not access ${data.id} code` });
       }
       if (selected && event.key === "a") {
-        console.log("oi");
         event.preventDefault();
         setShowModalAdvanced((state) => !state);
       }

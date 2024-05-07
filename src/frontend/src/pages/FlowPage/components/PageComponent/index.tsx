@@ -141,6 +141,9 @@ export default function Page({
   const setNode = useFlowStore((state) => state.setNode);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.target! as HTMLElement).tagName === "INPUT") {
+        return;
+      }
       const selectedNode = nodes.filter((obj) => obj.selected);
       if (selectionMenuVisible && event.key === "g") {
         event.preventDefault();
