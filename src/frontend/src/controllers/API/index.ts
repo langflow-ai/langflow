@@ -1,5 +1,5 @@
 import { AxiosRequestConfig, AxiosResponse } from "axios";
-import { Edge, ReactFlowJsonObject,Node } from "reactflow";
+import { Edge, ReactFlowJsonObject, Node } from "reactflow";
 import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
@@ -26,6 +26,7 @@ import {
   UploadFileTypeAPI,
   errorsTypeAPI,
 } from "./../../types/api/index";
+import { extractColumnsFromRows } from "../../utils/utils";
 
 /**
  * Fetches all objects from the API endpoint.
@@ -59,7 +60,7 @@ export async function sendAll(data: sendAllProps) {
 }
 
 export async function postValidateCode(
-  code: string
+  code: string,
 ): Promise<AxiosResponse<errorsTypeAPI>> {
   return await api.post(`${BASE_URL_API}validate/code`, { code });
 }
@@ -74,7 +75,7 @@ export async function postValidateCode(
 export async function postValidatePrompt(
   name: string,
   template: string,
-  frontend_node: APIClassType
+  frontend_node: APIClassType,
 ): Promise<AxiosResponse<PromptTypeAPI>> {
   return api.post(`${BASE_URL_API}validate/prompt`, {
     name,
@@ -145,7 +146,7 @@ export async function saveFlowToDatabase(newFlow: {
  * @throws Will throw an error if the update fails.
  */
 export async function updateFlowInDatabase(
-  updatedFlow: FlowType
+  updatedFlow: FlowType,
 ): Promise<FlowType> {
   try {
     const response = await api.patch(`${BASE_URL_API}flows/${updatedFlow.id}`, {
@@ -321,7 +322,7 @@ export async function getHealth() {
  *
  */
 export async function getBuildStatus(
-  flowId: string
+  flowId: string,
 ): Promise<AxiosResponse<BuildStatusTypeAPI>> {
   return await api.get(`${BASE_URL_API}build/${flowId}/status`);
 }
@@ -334,7 +335,7 @@ export async function getBuildStatus(
  *
  */
 export async function postBuildInit(
-  flow: FlowType
+  flow: FlowType,
 ): Promise<AxiosResponse<InitTypeAPI>> {
   return await api.post(`${BASE_URL_API}build/init/${flow.id}`, flow);
 }
@@ -350,7 +351,7 @@ export async function postBuildInit(
  */
 export async function uploadFile(
   file: File,
-  id: string
+  id: string,
 ): Promise<AxiosResponse<UploadFileTypeAPI>> {
   const formData = new FormData();
   formData.append("file", file);
@@ -359,7 +360,7 @@ export async function uploadFile(
 
 export async function postCustomComponent(
   code: string,
-  apiClass: APIClassType
+  apiClass: APIClassType,
 ): Promise<AxiosResponse<APIClassType>> {
   // let template = apiClass.template;
   return await api.post(`${BASE_URL_API}custom_component`, {
@@ -372,7 +373,7 @@ export async function postCustomComponentUpdate(
   code: string,
   template: APITemplateType,
   field: string,
-  field_value: any
+  field_value: any,
 ): Promise<AxiosResponse<APIClassType>> {
   return await api.post(`${BASE_URL_API}custom_component/update`, {
     code,
@@ -394,7 +395,7 @@ export async function onLogin(user: LoginType) {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-      }
+      },
     );
 
     if (response.status === 200) {
@@ -456,11 +457,11 @@ export async function addUser(user: UserInputType): Promise<Array<Users>> {
 
 export async function getUsersPage(
   skip: number,
-  limit: number
+  limit: number,
 ): Promise<Array<Users>> {
   try {
     const res = await api.get(
-      `${BASE_URL_API}users/?skip=${skip}&limit=${limit}`
+      `${BASE_URL_API}users/?skip=${skip}&limit=${limit}`,
     );
     if (res.status === 200) {
       return res.data;
@@ -497,7 +498,7 @@ export async function resetPassword(user_id: string, user: resetPasswordType) {
   try {
     const res = await api.patch(
       `${BASE_URL_API}users/${user_id}/reset-password`,
-      user
+      user,
     );
     if (res.status === 200) {
       return res.data;
@@ -571,7 +572,7 @@ export async function saveFlowStore(
     last_tested_version?: string;
   },
   tags: string[],
-  publicFlow = false
+  publicFlow = false,
 ): Promise<FlowType> {
   try {
     const response = await api.post(`${BASE_URL_API}store/components/`, {
@@ -700,7 +701,7 @@ export async function postStoreComponents(component: Component) {
 export async function getComponent(component_id: string) {
   try {
     const res = await api.get(
-      `${BASE_URL_API}store/components/${component_id}`
+      `${BASE_URL_API}store/components/${component_id}`,
     );
     if (res.status === 200) {
       return res.data;
@@ -715,7 +716,7 @@ export async function searchComponent(
   page?: number | null,
   limit?: number | null,
   status?: string | null,
-  tags?: string[]
+  tags?: string[],
 ): Promise<StoreComponentResponse | undefined> {
   try {
     let url = `${BASE_URL_API}store/components/`;
@@ -827,7 +828,7 @@ export async function updateFlowStore(
   },
   tags: string[],
   publicFlow = false,
-  id: string
+  id: string,
 ): Promise<FlowType> {
   try {
     const response = await api.patch(`${BASE_URL_API}store/components/${id}`, {
@@ -911,7 +912,7 @@ export async function deleteGlobalVariable(id: string) {
 export async function updateGlobalVariable(
   name: string,
   value: string,
-  id: string
+  id: string,
 ) {
   try {
     const response = api.patch(`${BASE_URL_API}variables/${id}`, {
@@ -929,36 +930,40 @@ export async function getVerticesOrder(
   flowId: string,
   startNodeId?: string | null,
   stopNodeId?: string | null,
-  nodes?:Node[],
-  Edges?:Edge[]
+  nodes?: Node[],
+  Edges?: Edge[],
 ): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
   // nodeId is optional and is a query parameter
   // if nodeId is not provided, the API will return all vertices
-  const config:AxiosRequestConfig<any> = {};
+  const config: AxiosRequestConfig<any> = {};
   if (stopNodeId) {
     config["params"] = { stop_component_id: stopNodeId };
   } else if (startNodeId) {
     config["params"] = { start_component_id: startNodeId };
   }
   const data = {
-    data:{}
+    data: {},
+  };
+  if (nodes && Edges) {
+    data["data"]["nodes"] = nodes;
+    data["data"]["edges"] = Edges;
   }
-  if(nodes && Edges){
-    data["data"]["nodes"] = nodes
-    data["data"]["edges"] = Edges
-  }
-  return await api.post(`${BASE_URL_API}build/${flowId}/vertices`,data, config);
+  return await api.post(
+    `${BASE_URL_API}build/${flowId}/vertices`,
+    data,
+    config,
+  );
 }
 
 export async function postBuildVertex(
   flowId: string,
   vertexId: string,
-  input_value: string
+  input_value: string,
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
   // input_value is optional and is a query parameter
   return await api.post(
     `${BASE_URL_API}build/${flowId}/vertices/${vertexId}`,
-    input_value ? { inputs: { input_value: input_value } } : undefined
+    input_value ? { inputs: { input_value: input_value } } : undefined,
   );
 }
 
@@ -982,9 +987,18 @@ export async function getFlowPool({
 }
 
 export async function deleteFlowPool(
-  flowId: string
+  flowId: string,
 ): Promise<AxiosResponse<any>> {
   const config = {};
   config["params"] = { flow_id: flowId };
   return await api.delete(`${BASE_URL_API}monitor/builds`, config);
+}
+
+export async function getTransactionTable(
+  id: string,
+  mode: "intersection" | "union",
+): Promise<{ rows: Array<any>; columns: Array<any> }> {
+  const rows = await api.get(`${BASE_URL_API}monitor/transactions/${id}`);
+  const columns = extractColumnsFromRows(rows.data.rows, mode);
+  return { rows: rows.data.rows, columns };
 }
