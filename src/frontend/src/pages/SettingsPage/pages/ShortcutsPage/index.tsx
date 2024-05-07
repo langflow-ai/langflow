@@ -9,7 +9,7 @@ export default function ShortcutsPage() {
   const advancedShortcut = `A`;
   const minizmizeShortcut = `Q`;
   const codeShortcut = `Shift + C`;
-  const copyShortcut = `C`;
+  const copyShortcut = `${isMac ? "Cmd" : "Ctrl"} + C`;
   const duplicateShortcut = `D`;
   const shareShortcut = `Shift + S`;
   const docsShortcut = `Shift + D`;
