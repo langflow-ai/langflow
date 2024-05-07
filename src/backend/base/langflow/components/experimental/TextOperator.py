@@ -1,6 +1,6 @@
 from langflow.interface.custom.custom_component import CustomComponent
-from langflow.schema import Record
 from langflow.field_typing import Text
+
 
 class TextOperatorComponent(CustomComponent):
     display_name = "Text Operator"
@@ -26,7 +26,7 @@ class TextOperatorComponent(CustomComponent):
                 "info": "If true, the comparison will be case sensitive.",
                 "field_type": "bool",
                 "default": False,
-            }
+            },
         }
 
     def build(self, input_text: Text, match_text: Text, operator: Text, case_sensitive: bool = False) -> Text:
