@@ -3396,7 +3396,7 @@
             "zoom": 0.2687057134854984
         }
     },
-    "description": "Visit https://pre-release.langflow.org/guides/rag-with-astradb for a detailed guide of this project.\nThis project give you both Ingestion and RAG in a single file. You'll need to visit https://astra.datastax.com/ to create an Astra DB instance, your Token and grab an API Endpoint.\nRunning this project requires you to add a file in the Files component, then define a Collection Name and click on the Play icon on the Astra DB component. \n\nAfter the ingestion ends you are ready to click on the Run button at the lower left corner and start asking questions about your data.",
+    "description": "Visit https://pre-release.langflow.org/tutorials/rag-with-astradb for a detailed guide of this project.\nThis project give you both Ingestion and RAG in a single file. You'll need to visit https://astra.datastax.com/ to create an Astra DB instance, your Token and grab an API Endpoint.\nRunning this project requires you to add a file in the Files component, then define a Collection Name and click on the Play icon on the Astra DB component. \n\nAfter the ingestion ends you are ready to click on the Run button at the lower left corner and start asking questions about your data.",
     "name": "Vector Store RAG",
     "last_tested_version": "1.0.0a0",
     "is_component": false
