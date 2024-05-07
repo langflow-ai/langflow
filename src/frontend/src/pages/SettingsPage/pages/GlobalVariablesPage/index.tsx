@@ -83,7 +83,6 @@ export default function GlobalVariablesPage() {
       headerName: "Variable Name",
       field: "name",
       flex: 2,
-      resizable: false,
     }, //This column will be twice as wide as the others
     {
       field: "type",
@@ -94,7 +93,6 @@ export default function GlobalVariablesPage() {
       },
       flex: 1,
       editable: false,
-      resizable: false,
     },
     // {
     //   field: "value",
