@@ -24,6 +24,11 @@ from langflow.services.utils import initialize_services
 from langflow.utils.logger import configure, logger
 from langflow.utils.util import update_settings
 
+LANGFLOW_MAIN_PACKAGE_NAME = "ragstack-ai-langflow"
+LANGFLOW_MAIN_PRODUCT_NAME = "Langflow"
+LANGFLOW_BASE_PACKAGE_NAME = "ragstack-ai-langflow-base"
+LANGFLOW_BASE_PRODUCT_NAME = "Langflow base"
+
 console = Console()
 
 app = typer.Typer(no_args_is_help=True)
@@ -333,17 +338,19 @@ def print_banner(host: str, port: int):
     package_names = []  # Track package names for pip install instructions
     is_pre_release = False  # Track if any package is a pre-release
     package_name = ""
+    package_name_style = ""
 
     try:
         from langflow.version import __version__ as langflow_version  # type: ignore
 
         is_pre_release |= is_prerelease(langflow_version)  # Update pre-release status
-        notice = build_version_notice(langflow_version, "langflow")
+        notice = build_version_notice(langflow_version, LANGFLOW_MAIN_PACKAGE_NAME)
         notice = stylize_text(notice, "langflow", is_pre_release)
         if notice:
             notices.append(notice)
-        package_names.append("langflow")
-        package_name = "Langflow"
+        package_names.append(LANGFLOW_MAIN_PACKAGE_NAME)
+        package_name = LANGFLOW_MAIN_PRODUCT_NAME
+        package_name_style = "langflow"
     except ImportError:
         langflow_version = None
 
@@ -352,14 +359,15 @@ def print_banner(host: str, port: int):
         try:
             from importlib import metadata
 
-            langflow_base_version = metadata.version("langflow-base")
+            langflow_base_version = metadata.version(LANGFLOW_BASE_PACKAGE_NAME)
             is_pre_release |= is_prerelease(langflow_base_version)  # Update pre-release status
-            notice = build_version_notice(langflow_base_version, "langflow-base")
+            notice = build_version_notice(langflow_base_version, LANGFLOW_BASE_PACKAGE_NAME)
             notice = stylize_text(notice, "langflow-base", is_pre_release)
             if notice:
                 notices.append(notice)
-            package_names.append("langflow-base")
-            package_name = "Langflow Base"
+            package_names.append(LANGFLOW_BASE_PACKAGE_NAME)
+            package_name = LANGFLOW_BASE_PRODUCT_NAME
+            package_name_style = "langflow-base"
         except ImportError as e:
             logger.exception(e)
             raise e
@@ -372,7 +380,7 @@ def print_banner(host: str, port: int):
         notices.append(f"Run '{pip_command}' to update.")
 
     styled_notices = [f"[bold]{notice}[/bold]" for notice in notices if notice]
-    styled_package_name = stylize_text(package_name, package_name, any("pre-release" in notice for notice in notices))
+    styled_package_name = stylize_text(package_name, package_name_style, any("pre-release" in notice for notice in notices))
 
     title = f"[bold]Welcome to :chains: {styled_package_name}[/bold]\n"
     info_text = "Collaborate, and contribute at our [bold][link=https://github.com/langflow-ai/langflow]GitHub Repo[/link][/bold] :rocket:"
