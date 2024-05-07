@@ -5,7 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlmodel import Session, select
 
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead, FolderUpdate
+from langflow.services.database.models.folder.model import (
+    Folder,
+    FolderCreate,
+    FolderRead,
+    FolderReadWithFlows,
+    FolderUpdate,
+)
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session
 
@@ -43,7 +49,7 @@ def read_folders(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{folder_id}", response_model=FolderRead, status_code=200)
+@router.get("/{folder_id}", response_model=FolderReadWithFlows, status_code=200)
 def read_folder(
     *,
     session: Session = Depends(get_session),
@@ -101,5 +107,4 @@ def delete_folder(
         session.commit()
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
         raise HTTPException(status_code=500, detail=str(e))

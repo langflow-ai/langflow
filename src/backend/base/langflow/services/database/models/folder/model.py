@@ -36,6 +36,11 @@ class FolderCreate(FolderBase):
 class FolderRead(FolderBase):
     id: UUID
     parent_id: Optional[UUID] = Field()
+
+
+class FolderReadWithFlows(FolderBase):
+    id: UUID
+    parent_id: Optional[UUID] = Field()
     flows: List["FlowRead"] = Field(default=[])
 
 
