@@ -730,7 +730,7 @@ export default function ParameterComponent({
                 !data.node!.template[name].value ||
                 data.node!.template[name].value?.toString() === "{}"
                   ? {
-                      yourkey: "value",
+                      // yourkey: "value",
                     }
                   : data.node!.template[name].value
               }

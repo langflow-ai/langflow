@@ -4219,6 +4219,22 @@ openai = ">=1.24.0,<2.0.0"
 tiktoken = ">=0.5.2,<1"
 
 [[package]]
+name = "langchain-pinecone"
+version = "0.1.0"
+description = "An integration package connecting Pinecone and LangChain"
+optional = false
+python-versions = "<3.13,>=3.8.1"
+files = [
+    {file = "langchain_pinecone-0.1.0-py3-none-any.whl", hash = "sha256:d957f27b1cceab425c3e8603c7a32533d4593ce8705242e78f6dc03aa71cf417"},
+    {file = "langchain_pinecone-0.1.0.tar.gz", hash = "sha256:93f81e7c3926027cc6a87b001ee4d2e02a432a916709dbd395162b342bf84586"},
+]
+
+[package.dependencies]
+langchain-core = ">=0.1.40,<0.2.0"
+numpy = ">=1,<2"
+pinecone-client = ">=3.2.2,<4.0.0"
+
+[[package]]
 name = "langchain-text-splitters"
 version = "0.0.1"
 description = "LangChain text splitting utilities"
@@ -10749,7 +10765,11 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
 <<<<<<< HEAD
+<<<<<<< HEAD
 content-hash = "e4a35d744331a3fb2dbf1646b23594fbc0fea4a5bfbe2c2c140a0c99d76c29d1"
 =======
 content-hash = "f3ff2734049f016f662c61e65efb63aee34455df7ee7d89b24ce49ea523db629"
 >>>>>>> 8975bf9ba (Add langchain-google-vertexai dependency to pyproject.toml)
+=======
+content-hash = "136ea07bf3269774c4808a162f8cb5c98162bddf04870e0dd20194a886ade53d"
+>>>>>>> 21be1268a (Update langchain-pinecone dependency and add Pinecone API key (#1854))
