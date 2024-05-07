@@ -11,10 +11,11 @@ from sqlmodel import select
 from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES
 from langflow.interface.types import get_all_components
 from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.services.database.models.folder.model import Folder, FolderCreate
 from langflow.services.deps import get_settings_service, session_scope
 
 STARTER_FOLDER_NAME = "Starter Projects"
-
+STARTER_FOLDER_DESCRIPTION = "Starter projects to help you get started in Langflow."
 
 # In the folder ./starter_projects we have a few JSON files that represent
 # starter projects. We want to load these into the database so that users
@@ -175,24 +176,28 @@ def create_new_project(
 
 
 def get_all_flows_similar_to_project(session, project_name):
-    flows = session.exec(
-        select(Flow).where(
-            Flow.name == project_name,
-            Flow.folder == STARTER_FOLDER_NAME,
-        )
-    ).all()
+    flows = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first().flows
     return flows
 
 
 def delete_start_projects(session):
-    flows = session.exec(
-        select(Flow).where(
-            Flow.folder == STARTER_FOLDER_NAME,
-        )
-    ).all()
+    flows = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first().flows
     for flow in flows:
         session.delete(flow)
     session.commit()
+
+
+def folder_exists(session, folder_name):
+    folder = session.exec(select(Folder).where(Folder.name == folder_name)).first()
+    return folder is not None
+
+
+def create_starter_folder(session):
+    if not folder_exists(session, STARTER_FOLDER_NAME):
+        new_folder = FolderCreate(name=STARTER_FOLDER_NAME, description=STARTER_FOLDER_DESCRIPTION)
+        db_folder = Folder.model_validate(new_folder, from_attributes=True)
+        session.add(db_folder)
+        session.commit()
 
 
 def create_or_update_starter_projects():
@@ -203,6 +208,7 @@ def create_or_update_starter_projects():
         logger.exception(f"Error loading components: {e}")
         raise e
     with session_scope() as session:
+        create_starter_folder(session)
         starter_projects = load_starter_projects()
         delete_start_projects(session)
         for project_path, project in starter_projects:
