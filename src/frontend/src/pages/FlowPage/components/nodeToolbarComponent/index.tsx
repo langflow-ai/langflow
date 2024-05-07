@@ -474,7 +474,7 @@ export default function NodeToolbarComponent({
                   value={"Copy"}
                   icon={"Clipboard"}
                   dataTestId="copy-button-modal"
-                  ctrl={false}
+                  ctrl={true}
                 />
               </SelectItem>
               {isOutdated && (
