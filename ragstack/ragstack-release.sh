@@ -24,6 +24,13 @@ else
     exit 1
 fi
 
+remote_name=$(git remote -v  | grep push | grep datastax/langflow.git | awk '{print $1}' | head -n 1)
+if [ -z "$remote_name" ]; then
+    echo "Remote datastax/langflow.git not found"
+    exit 1
+fi
+echo "Identified remote $remote_name"
+
 cd $directory
 
 git checkout ragstack-main
@@ -32,6 +39,6 @@ echo ":: Bumping version to $version for package $package"
 poetry version $version
 git commit -am "Release $package $version"
 git tag $tag
-git push origin ragstack-main
-git push origin $tag
+git push $remote_name ragstack-main
+git push $remote_name $tag
 echo "done."
