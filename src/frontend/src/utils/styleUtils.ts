@@ -105,6 +105,7 @@ import {
   SaveAll,
   Scissors,
   ScreenShare,
+  ScrollText,
   Search,
   Settings2,
   Share,
@@ -140,7 +141,6 @@ import {
   X,
   XCircle,
   Zap,
-  PlaySquare
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -149,7 +149,7 @@ import { AnthropicIcon } from "../icons/Anthropic";
 import { AstraDBIcon } from "../icons/AstraDB";
 import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
-import { BotMessageSquareIcon} from "../icons/BotMessageSquare";
+import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { CohereIcon } from "../icons/Cohere";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
@@ -383,6 +383,7 @@ export const nodeIconsLucide: iconsType = {
   Keyboard: Keyboard,
   embeddings: Binary,
   saved_components: GradientSave,
+  ScrollText,
   documentloaders: Paperclip,
   vectorstores: Layers,
   vectorsearch: TextSearch,
