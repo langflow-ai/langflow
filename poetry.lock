@@ -7610,7 +7610,7 @@ nvidia = ["langchain-nvidia-ai-endpoints (==0.0.9)"]
 
 [[package]]
 name = "ragstack-ai-langflow-base"
-version = "0.0.1"
+version = "0.0.2"
 description = "RAGStack Langflow base"
 optional = false
 python-versions = ">=3.10,<3.12"
@@ -8671,17 +8671,18 @@ files = [
 
 [[package]]
 name = "tenacity"
-version = "8.2.3"
+version = "8.3.0"
 description = "Retry code until it succeeds"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "tenacity-8.2.3-py3-none-any.whl", hash = "sha256:ce510e327a630c9e1beaf17d42e6ffacc88185044ad85cf74c0a8887c6a0f88c"},
-    {file = "tenacity-8.2.3.tar.gz", hash = "sha256:5398ef0d78e63f40007c1fb4c0bff96e1911394d2fa8d194f77619c05ff6cc8a"},
+    {file = "tenacity-8.3.0-py3-none-any.whl", hash = "sha256:3649f6443dbc0d9b01b9d8020a9c4ec7a1ff5f6f3c6c8a036ef371f573fe9185"},
+    {file = "tenacity-8.3.0.tar.gz", hash = "sha256:953d4e6ad24357bceffbc9707bc74349aca9d245f68eb65419cf0c249a1949a2"},
 ]
 
 [package.extras]
-doc = ["reno", "sphinx", "tornado (>=4.5)"]
+doc = ["reno", "sphinx"]
+test = ["pytest", "tornado (>=4.5)", "typeguard"]
 
 [[package]]
 name = "termcolor"
@@ -10392,4 +10393,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "8bbc55da466de184f215e709d20e3801f48888b38b8491948d9f79ed2d4feeb3"
+content-hash = "e4a35d744331a3fb2dbf1646b23594fbc0fea4a5bfbe2c2c140a0c99d76c29d1"
