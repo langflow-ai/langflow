@@ -83,6 +83,7 @@ langchain-astradb = "^0.1.0"
 langchain-openai = "^0.1.1"
 zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
 langchain-google-vertexai = "^1.0.3"
+langchain-pinecone = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
