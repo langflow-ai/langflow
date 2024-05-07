@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlmodel import Session, select
 
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead, FolderUpdate
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session
@@ -56,24 +55,6 @@ def read_folder(
         if not folder:
             raise HTTPException(status_code=404, detail="Folder not found")
         return folder
-    except Exception as e:
-        if "No result found" in str(e):
-            raise HTTPException(status_code=404, detail="Folder not found")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/{folder_id}/flows", response_model=List[FlowRead], status_code=200)
-def read_folder_flows(
-    *,
-    session: Session = Depends(get_session),
-    folder_id: UUID,
-    current_user: User = Depends(get_current_active_user),
-):
-    try:
-        folder = session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first()
-        if not folder:
-            raise HTTPException(status_code=404, detail="Folder not found")
-        return folder.flows
     except Exception as e:
         if "No result found" in str(e):
             raise HTTPException(status_code=404, detail="Folder not found")
