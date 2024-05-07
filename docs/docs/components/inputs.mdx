@@ -1,42 +1,26 @@
-import Admonition from "@theme/Admonition";
+import Admonition from '@theme/Admonition';
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # Inputs
 
-### Chat Input
+## Chat Input
 
-This component is designed to get user input from the chat.
+This component obtains user input from the chat.
 
-**Params**
+**Parameters**
 
-- **Sender Type:** specifies the sender type. Defaults to _`"User"`_. Options are _`"Machine"`_ and _`"User"`_.
-
-- **Sender Name:** specifies the name of the sender. Defaults to _`"User"`_.
-
-- **Message:** specifies the message text. It is a multiline text input.
-
-- **Session ID:** specifies the session ID of the chat history. If provided, the message will be saved in the Message History.
+- **Sender Type:** Specifies the sender type. Defaults to `User`. Options are `Machine` and `User`.
+- **Sender Name:** Specifies the name of the sender. Defaults to `User`.
+- **Message:** Specifies the message text. It is a multiline text input.
+- **Session ID:** Specifies the session ID of the chat history. If provided, the message will be saved in the Message History.
 
 <Admonition type="note" title="Note">
   <p>
-    If _`As Record`_ is _`true`_ and the _`Message`_ is a _`Record`_, the data
-    of the _`Record`_ will be updated with the _`Sender`_, _`Sender Name`_, and
-    _`Session ID`_.
+    If `As Record` is `true` and the `Message` is a `Record`, the data
+    of the `Record` will be updated with the `Sender`, `Sender Name`, and
+    `Session ID`.
   </p>
 </Admonition>
-
-When you get it from the sidebar, it will look like the image below but that is because some fields are in the advanced section.
-
-<ZoomableImage
-  alt="Docusaurus themed image"
-  sources={{
-    light: "img/chat-input.png",
-    dark: "img/chat-input.png",
-  }}
-  style={{ width: "50%", margin: "20px auto" }}
-/>
-
-If you expose all its fields, it will look like the image below.
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -47,7 +31,7 @@ If you expose all its fields, it will look like the image below.
   style={{ width: "40%", margin: "20px auto" }}
 />
 
-One key capability of the Chat Input component is how it transforms the Playground into a chat window. This feature is particularly useful for scenarios where user input is required to initiate or influence the flow.
+One significant capability of the Chat Input component is its ability to transform the Playground into a chat window. This feature is particularly valuable for scenarios requiring user input to initiate or influence the flow.
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -60,33 +44,13 @@ One key capability of the Chat Input component is how it transforms the Playgrou
 
 ---
 
-### Prompt
+## Prompt
 
-Create a prompt template with dynamic variables. This is a very useful component for structuring prompts and passing dynamic data to a language model.
+This component creates a prompt template with dynamic variables. This is useful for structuring prompts and passing dynamic data to a language model.
 
 **Parameters**
 
-- **Template:** the template for the prompt. This field allows you to create other fields dynamically by using curly brackets `{}`. For example, if you have a template like this: _`"Hello {name}, how are you?"`_, a new field called _`name`_ will be created.
-
-<Admonition type="note" title="Note">
-  <p>
-    Prompt variables can be created with any chosen name inside curly brackets,
-    e.g. `{variable_name}`
-  </p>
-</Admonition>
-
-Here is how it looks when you get it from the sidebar.
-
-<ZoomableImage
-  alt="Docusaurus themed image"
-  sources={{
-    light: "img/prompt.png",
-    dark: "img/prompt.png",
-  }}
-  style={{ width: "50%", margin: "20px auto" }}
-/>
-
-And here when you add a Template with the value _`Hello {name}, how are you?`_.
+- **Template:** The template for the prompt. This field allows you to create other fields dynamically by using curly brackets `{}`. For example, if you have a template like `Hello {name}, how are you?`, a new field called `name` will be created. Prompt variables can be created with any name inside curly brackets, e.g. `{variable_name}`.
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -99,39 +63,18 @@ And here when you add a Template with the value _`Hello {name}, how are you?`_.
 
 ---
 
-### Text Input
+## Text Input
 
-This component is designed for simple text input, allowing users to pass textual data to subsequent components in the workflow. It's particularly useful for scenarios where a brief user input is required to initiate or influence the flow.
+The **Text Input** component adds an **Input** field on the Playground. This enables you to define parameters while running and testing your flow.
 
-**Params**
+**Parameters**
 
-- **Value:** Specifies the text input value. This is where the user can input the text data that will be passed to the next component in the sequence. If no value is provided, it defaults to an empty string.
-- **Record Template:** Specifies how a Record should be converted into Text.
+- **Value:** Specifies the text input value. This is where the user inputs text data that will be passed to the next component in the sequence. If no value is provided, it defaults to an empty string.
+- **Record Template:** Specifies how a `Record` should be converted into `Text`.
 
-<Admonition type="note" title="Note">
-  <p>
-    The `TextInput` component serves as a straightforward means for setting Text
-    input values in the chat window. It ensures that textual data can be
-    seamlessly passed to subsequent components in the flow.
-  </p>
-</Admonition>
+The **Record Template** field is used to specify how a `Record` should be converted into `Text`. This is particularly useful when you want to extract specific information from a `Record` and pass it as text to the next component in the sequence.
 
-It should look like this when dropped directly from the sidebar.
-
-<ZoomableImage
-  alt="Docusaurus themed image"
-  sources={{
-    light: "img/text-input.png",
-    dark: "img/text-input.png",
-  }}
-  style={{ width: "50%", margin: "20px auto", margin: "20px auto" }}
-/>
-
-And when you expose all its fields, it will look like the image below.
-
-The **Record Template** field is used to specify how a Record should be converted into Text. This is particularly useful when you want to extract specific information from a Record and pass it as text to the next component in the sequence.
-
-For example, if you have a Record with the following structure:
+For example, if you have a `Record` with the following structure:
 
 ```json
 {
@@ -141,7 +84,9 @@ For example, if you have a Record with the following structure:
 }
 ```
 
-You can use a template like this: _`"Name: {name}, Age: {age}"`_ to convert the Record into a text string like this: _`"Name: John Doe, Age: 30"`_, and if you pass more than one Record, the text will be concatenated with a new line separator.
+A template with `Name: {name}, Age: {age}` will convert the `Record` into a text string of `Name: John Doe, Age: 30`.
+
+If you pass more than one `Record`, the text will be concatenated with a new line separator.
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -152,13 +97,3 @@ You can use a template like this: _`"Name: {name}, Age: {age}"`_ to convert the 
   style={{ width: "50%", margin: "20px auto" }}
 />
 
-The Text Input component gives you the possibility to add an Input field on the Playground. This is useful because it allows you to define parameters while running and testing your flow.
-
-<ZoomableImage
-  alt="Docusaurus themed image"
-  sources={{
-    light: "img/interaction-panel-text-input.png",
-    dark: "img/interaction-panel-text-input.png",
-  }}
-  style={{ width: "50%", margin: "20px auto" }}
-/>

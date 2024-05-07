@@ -2,49 +2,49 @@ import Admonition from '@theme/Admonition';
 
 # Helpers
 
-### Chat Memory
+### Chat memory
 
-This component retrieves stored chat messages given a specific Session ID.
+This component retrieves stored chat messages based on a specific session ID.
 
-**Params**
+#### Parameters
 
-- **Sender Type:** Choose the sender type from options like "Machine", "User", or "Machine and User".
-- **Sender Name:** (Optional) The name of the sender.
-- **Number of Messages:** Number of messages to retrieve.
-- **Session ID:** The Session ID of the chat history.
-- **Order:** Choose the order of the messages, either "Ascending" or "Descending".
-- **Record Template:** (Optional) Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.
+- **Sender type:** Choose the sender type from options like "Machine", "User", or "Both".
+- **Sender name:** (Optional) The name of the sender.
+- **Number of messages:** Number of messages to retrieve.
+- **Session ID:** The session ID of the chat history.
+- **Order:** Choose the message order, either "Ascending" or "Descending".
+- **Record template:** (Optional) Template to convert a record to text. If left empty, the system dynamically sets it to the record's text key.
 
 ---
 
-### Combine Text
+### Combine text
 
 This component concatenates two text sources into a single text chunk using a specified delimiter.
 
-**Params**
+#### Parameters
 
-- **First Text:** The first text input to concatenate.
-- **Second Text:** The second text input to concatenate.
-- **Delimiter:** A string used to separate the two text inputs. Defaults to a whitespace.
-
----
-
-### Create Record
-
-This component dynamically creates a Record with a specified number of fields.
-
-**Params**
-
-- **Number of Fields:** Number of fields to be added to the record.
-- **Text Key:** Key to be used as text.
+- **First text:** The first text input to concatenate.
+- **Second text:** The second text input to concatenate.
+- **Delimiter:** A string used to separate the two text inputs. Defaults to a space.
 
 ---
 
-### Custom Component
+### Create record
 
-Use this component as a template to create your own custom component.
+This component dynamically creates a record with a specified number of fields.
 
-**Params**
+#### Parameters
+
+- **Number of fields:** Number of fields to be added to the record.
+- **Text key:** Key used as text.
+
+---
+
+### Custom component
+
+Use this component as a template to create your custom component.
+
+#### Parameters
 
 - **Parameter:** Describe the purpose of this parameter.
 
@@ -54,74 +54,74 @@ Use this component as a template to create your own custom component.
     </p>
 </Admonition>
 
-Learn more about [Custom Component](http://docs.langflow.org/components/custom).
+Learn more about creating custom components at [Custom Component](http://docs.langflow.org/components/custom).
 
 ---
 
-### Documents to Records
+### Documents to records
 
-Convert LangChain Documents into Records.
+Convert LangChain documents into records.
 
-**Parameters**
+#### Parameters
 
-- **Documents:** Documents to be converted into Records.
+- **Documents:** Documents to be converted into records.
 
 ---
 
-### ID Generator
+### ID generator
 
 Generates a unique ID.
 
-**Parameters**
+#### Parameters
 
 - **Value:** Unique ID generated.
 
 ---
 
-### Message History
+### Message history
 
-Retrieves stored chat messages given a specific Session ID.
+Retrieves stored chat messages based on a specific session ID.
 
-**Parameters**
+#### Parameters
 
-- **Sender Type:** Options for the sender type.
-- **Sender Name:** Sender name.
-- **Number of Messages:** Number of messages to retrieve.
+- **Sender type:** Options for the sender type.
+- **Sender name:** Sender name.
+- **Number of messages:** Number of messages to retrieve.
 - **Session ID:** Session ID of the chat history.
 - **Order:** Order of the messages.
 
 ---
 
-### Records to Text
+### Records to text
 
-Convert Records into plain text following a specified template.
+Convert records into plain text following a specified template.
 
-**Parameters**
+#### Parameters
 
 - **Records:** The records to convert to text.
-- **Template:** The template to use for formatting the records. It can contain the keys `{text}`, `{data}` or any other key in the Record.
+- **Template:** The template used for formatting the records. It can contain keys like `{text}`, `{data}`, or any other key in the record.
 
 ---
 
-### Split Text
+### Split text
 
 Split text into chunks of a specified length.
 
-**Parameters**
+#### Parameters
 
 - **Texts:** Texts to split.
-- **Separators:** The characters to split on. Defaults to [" "].
-- **Max Chunk Size:** The maximum length (in number of characters) of each chunk.
-- **Chunk Overlap:** The amount of character overlap between chunks.
+- **Separators:** Characters to split on. Defaults to a space.
+- **Max chunk size:** The maximum length (in characters) of each chunk.
+- **Chunk overlap:** The amount of character overlap between chunks.
 - **Recursive:** Whether to split recursively.
 
 ---
 
-### Update Record
+### Update record
 
-Update Record with text-based key/value pairs, similar to updating a Python dictionary.
+Update a record with text-based key/value pairs, similar to updating a Python dictionary.
 
-**Parameters**
+#### Parameters
 
 - **Record:** The record to update.
-- **New Data:** The new data to update the record with.
+- **New data:** The new data to update the record with.
