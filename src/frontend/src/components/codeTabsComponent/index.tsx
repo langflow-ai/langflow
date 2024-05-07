@@ -107,17 +107,6 @@ export default function CodeTabsComponent({
     URL.revokeObjectURL(url);
   };
 
-  function openAccordions() {
-    let accordionsToOpen: string[] = [];
-    tweaks?.tweak!.forEach((el) => {
-      Object.keys(el).forEach((key) => {
-        if (Object.keys(el[key]).length > 0) {
-          accordionsToOpen.push(key);
-        }
-      });
-    });
-    setOpenAccordion(accordionsToOpen);
-  }
   return (
     <Tabs
       value={activeTab}
@@ -128,9 +117,6 @@ export default function CodeTabsComponent({
       }
       onValueChange={(value) => {
         setActiveTab(value);
-        if (value === "4") {
-          openAccordions();
-        }
       }}
     >
       <div className="api-modal-tablist-div">
@@ -217,7 +203,6 @@ export default function CodeTabsComponent({
                               <div>{node["data"]["node"]["display_name"]}</div>
                             </ShadTooltip>
                           }
-                          open={openAccordion}
                           keyValue={node["data"]["id"]}
                         >
                           <div className="api-modal-table-arrangement">

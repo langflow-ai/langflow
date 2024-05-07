@@ -15,17 +15,16 @@ export default function AccordionComponent({
   sideBar,
 }: AccordionComponentType): JSX.Element {
   const [value, setValue] = useState(
-    open.length === 0 ? "" : getOpenAccordion()
+    open.length === 0 ? "" : getOpenAccordion(),
   );
 
   function getOpenAccordion(): string {
     let value = "";
     open.forEach((el) => {
-      if (el == trigger) {
-        value = trigger;
+      if (el == keyValue) {
+        value = keyValue;
       }
     });
-
     return value;
   }
 
@@ -40,9 +39,15 @@ export default function AccordionComponent({
         className="w-full"
         value={value}
         onValueChange={setValue}
+        defaultValue={keyValue}
       >
-        <AccordionItem value={keyValue!} className="border-b">
+        <AccordionItem
+          defaultValue={keyValue}
+          value={keyValue!}
+          className="border-b"
+        >
           <AccordionTrigger
+            defaultValue={keyValue}
             onClick={() => {
               handleClick();
             }}
