@@ -26,7 +26,6 @@ export default function ShortcutsPage() {
       field: "name",
       flex: 1,
       editable: false,
-      resizable: false,
     }, //This column will be twice as wide as the others
     {
       field: "shortcut",
