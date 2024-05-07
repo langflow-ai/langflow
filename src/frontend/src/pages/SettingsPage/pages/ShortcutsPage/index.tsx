@@ -6,14 +6,14 @@ import { Card, CardContent } from "../../../../components/ui/card";
 
 export default function ShortcutsPage() {
   const isMac = navigator.userAgent.toUpperCase().includes("MAC");
-  const advancedShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + A`;
-  const minizmizeShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + Q`;
-  const codeShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + C`;
-  const copyShortcut = `${isMac ? "Cmd" : "Ctrl"} + C`;
-  const duplicateShortcut = `${isMac ? "Cmd" : "Ctrl"} + D`;
-  const shareShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + S`;
-  const docsShortcut = `${isMac ? "Cmd" : "Ctrl"} + Shift + D`;
-  const saveShortcut = `${isMac ? "Cmd" : "Ctrl"} + S`;
+  const advancedShortcut = `A`;
+  const minizmizeShortcut = `Q`;
+  const codeShortcut = `Shift + C`;
+  const copyShortcut = `C`;
+  const duplicateShortcut = `D`;
+  const shareShortcut = `Shift + S`;
+  const docsShortcut = `Shift + D`;
+  const saveShortcut = `S`;
   const deleteShortcut = `Backspace`;
   const interactionShortcut = `${isMac ? "Cmd" : "Ctrl"} + K`;
   const undoShortcut = `${isMac ? "Cmd" : "Ctrl"} + Z`;

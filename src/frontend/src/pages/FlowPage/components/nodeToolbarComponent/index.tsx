@@ -267,28 +267,17 @@ export default function NodeToolbarComponent({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (
-        selected &&
-        (hasApiKey || hasStore) &&
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "u"
-      ) {
+      if (selected && (hasApiKey || hasStore) && event.key === "u") {
         event.preventDefault();
         handleSelectChange("update");
       }
-      if (
-        selected &&
-        isGroup &&
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "g"
-      ) {
+      if (selected && isGroup && event.key === "g") {
         event.preventDefault();
         handleSelectChange("ungroup");
       }
       if (
         selected &&
         (hasApiKey || hasStore) &&
-        (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
         event.key === "S"
       ) {
@@ -296,12 +285,7 @@ export default function NodeToolbarComponent({
         setShowconfirmShare((state) => !state);
       }
 
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key === "Q"
-      ) {
+      if (selected && event.key === "q") {
         event.preventDefault();
         if (isMinimal) {
           setShowState((show) => !show);
@@ -313,26 +297,17 @@ export default function NodeToolbarComponent({
             "Minimization are only available for nodes with one handle or fewer.",
         });
       }
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key === "U"
-      ) {
+      if (selected && event.shiftKey && event.key === "U") {
         event.preventDefault();
         if (hasCode) return setOpenModal((state) => !state);
         setNoticeData({ title: `You can not access ${data.id} code` });
       }
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key === "A"
-      ) {
+      if (selected && event.key === "a") {
+        console.log("oi");
         event.preventDefault();
         setShowModalAdvanced((state) => !state);
       }
-      if (selected && (event.ctrlKey || event.metaKey) && event.key === "s") {
+      if (selected && event.key === "s") {
         if (isSaved) {
           event.preventDefault();
           return setShowOverrideModal((state) => !state);
@@ -343,12 +318,7 @@ export default function NodeToolbarComponent({
           setSuccessData({ title: `${data.id} saved successfully` });
         }
       }
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key === "D"
-      ) {
+      if (selected && event.shiftKey && event.key === "D") {
         event.preventDefault();
         if (data.node?.documentation) {
           return openInNewTab(data.node?.documentation);
@@ -474,9 +444,10 @@ export default function NodeToolbarComponent({
               {nodeLength > 0 && (
                 <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
                   <ToolbarSelectItem
+                    ctrl={false}
                     keyboardKey="A"
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={true}
+                    shift={false}
                     value={"Advanced"}
                     icon={"Settings2"}
                     dataTestId="edit-button-modal"
@@ -501,6 +472,7 @@ export default function NodeToolbarComponent({
                   value={"Copy"}
                   icon={"Clipboard"}
                   dataTestId="copy-button-modal"
+                  ctrl={false}
                 />
               </SelectItem>
               {isOutdated && (
@@ -513,6 +485,7 @@ export default function NodeToolbarComponent({
                     icon={"Code"}
                     dataTestId="update-button-modal"
                     ping={isOutdated}
+                    ctrl={false}
                   />
                 </SelectItem>
               )}
@@ -531,6 +504,7 @@ export default function NodeToolbarComponent({
                       iconClasses: "relative top-0.5 -m-1 mr-[0.25rem] h-6 w-6",
                     }}
                     dataTestId="share-button-modal"
+                    ctrl={false}
                   />
                 </SelectItem>
               )}
@@ -544,6 +518,7 @@ export default function NodeToolbarComponent({
                     styleObj={{ iconClasses: "relative top-0.5 mr-2 h-4 w-4" }}
                     keyboardKey={"J"}
                     dataTestId={"Dowload-button-nodeToolbar"}
+                    ctrl={false}
                   />
                 </SelectItem>
               )}
@@ -558,6 +533,7 @@ export default function NodeToolbarComponent({
                   value={"Docs"}
                   icon={"FileText"}
                   dataTestId="docs-button-modal"
+                  ctrl={false}
                 />
               </SelectItem>
               {isMinimal && (
@@ -566,9 +542,10 @@ export default function NodeToolbarComponent({
                     icon={showNode ? "Minimize2" : "Maximize2"}
                     value={showNode ? "Minimize" : "Expand"}
                     isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={true}
+                    shift={false}
                     keyboardKey={"Q"}
                     dataTestId={"minimize-button-nodeToolbar"}
+                    ctrl={false}
                   />
                 </SelectItem>
               )}
@@ -580,16 +557,6 @@ export default function NodeToolbarComponent({
                       className="relative top-0.5 mr-2 h-4 w-4 "
                     />{" "}
                     <span className="">Ungroup</span>{" "}
-                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                      <IconComponent
-                        name="Command"
-                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                      ></IconComponent>
-                    ) : (
-                      <span className="absolute right-[1.30rem] top-[0.40em] stroke-2">
-                        Ctrl +{" "}
-                      </span>
-                    )}
                     <span className="absolute right-2 top-[0.43em]">G</span>
                   </div>
                 </SelectItem>

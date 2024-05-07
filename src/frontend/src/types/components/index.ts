@@ -511,7 +511,7 @@ export type nodeToolbarPropsType = {
   updateNodeCode?: (
     newNodeClass: APIClassType,
     code: string,
-    name: string
+    name: string,
   ) => void;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
   isOutdated?: boolean;
@@ -561,7 +561,7 @@ export type chatMessagePropsType = {
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) => void;
 };
 
@@ -652,12 +652,12 @@ export type codeTabsPropsType = {
     getValue?: (
       value: string,
       node: NodeType,
-      template: TemplateVariableType
+      template: TemplateVariableType,
     ) => string;
     buildTweakObject?: (
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: TemplateVariableType
+      template: TemplateVariableType,
     ) => string | void;
   };
 };
@@ -741,4 +741,5 @@ export type toolbarSelectItemProps = {
   };
   dataTestId: string;
   ping?: boolean;
+  ctrl: boolean;
 };
