@@ -1,6 +1,7 @@
 from typing import Optional
 
 from langchain_groq import ChatGroq
+from langflow.base.models.groq_constants import MODEL_NAMES
 from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
@@ -14,7 +15,7 @@ class GroqModel(LCModelComponent):
     icon = "Groq"
 
     field_order = [
-        "google_api_key",
+        "groq_api_key",
         "model",
         "max_output_tokens",
         "temperature",
@@ -55,7 +56,7 @@ class GroqModel(LCModelComponent):
             "model_name": {
                 "display_name": "Model",
                 "info": "The name of the model to use. Supported examples: gemini-pro",
-                "options": ["gemini-pro", "gemini-pro-vision"],
+                "options": MODEL_NAMES,
             },
             "input_value": {"display_name": "Input", "info": "The input to the model."},
             "stream": {
