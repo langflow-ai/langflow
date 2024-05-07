@@ -28,11 +28,6 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
                 "password": True,
                 "required": True,
             },
-            "pinecone_env": {
-                "display_name": "Pinecone Environment",
-                "default": "",
-                "required": True,
-            },
             "pool_threads": {
                 "display_name": "Pool Threads",
                 "default": 1,
@@ -49,7 +44,6 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
         self,
         input_value: Text,
         embedding: Embeddings,
-        pinecone_env: str,
         text_key: str = "text",
         number_of_results: int = 4,
         pool_threads: int = 4,
@@ -61,7 +55,6 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
     ) -> List[Record]:  # type: ignore[override]
         vector_store = super().build(
             embedding=embedding,
-            pinecone_env=pinecone_env,
             inputs=[],
             text_key=text_key,
             pool_threads=pool_threads,
