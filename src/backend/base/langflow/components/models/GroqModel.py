@@ -10,7 +10,7 @@ from langflow.field_typing import Text
 
 
 class GroqModel(LCModelComponent):
-    display_name: str = "Groq Model"
+    display_name: str = "Groq"
     description: str = "Generate text using Groq."
     icon = "Groq"
 
