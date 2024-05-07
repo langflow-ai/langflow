@@ -1,4 +1,4 @@
-name: release
+name: Release RAGStack Langflow
 
 on:
   push:
