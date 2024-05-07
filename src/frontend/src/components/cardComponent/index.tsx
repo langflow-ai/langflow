@@ -7,7 +7,9 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
-import cloneFLowWithParent from "../../utils/storeUtils";
+import cloneFLowWithParent, {
+  getInputsAndOutputs,
+} from "../../utils/storeUtils";
 import { cn, convertTestName } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import ShadTooltip from "../shadTooltipComponent";
@@ -20,6 +22,7 @@ import {
   CardTitle,
 } from "../ui/card";
 import Loading from "../ui/loading";
+import { FlowType } from "../../types/flow";
 
 export default function CollectionCardComponent({
   data,
@@ -72,6 +75,15 @@ export default function CollectionCardComponent({
     const res = await getComponent(data.id);
     const newFlow = cloneFLowWithParent(res, res.id, data.is_component, true);
     return newFlow;
+  }
+
+  function hasPlayground(flow?: FlowType) {
+    if (!flow) {
+      return false;
+    }
+    const { inputs, outputs } = getInputsAndOutputs(flow?.data?.nodes ?? []);
+    console.log(inputs, outputs);
+    return inputs.length > 0 || outputs.length > 0;
   }
 
   useEffect(() => {
@@ -296,7 +308,7 @@ export default function CollectionCardComponent({
             <div className="flex w-full flex-wrap items-end justify-end gap-2">
               {playground && data?.metadata !== undefined ? (
                 <Button
-                  disabled={loadingPlayground}
+                  disabled={loadingPlayground || !authorized}
                   key={data.id}
                   tabIndex={-1}
                   variant="outline"
@@ -307,12 +319,29 @@ export default function CollectionCardComponent({
                     e.preventDefault();
                     e.stopPropagation();
                     setLoadingPlayground(true);
-                    if (getFlowById(data.id)) {
+                    const flow = getFlowById(data.id);
+                    if (flow) {
+                      if (!hasPlayground(flow)) {
+                        setErrorData({
+                          title: "Error",
+                          list: ["This flow doesn't have a playground."],
+                        });
+                        setLoadingPlayground(false);
+                        return;
+                      }
                       setCurrentFlowId(data.id);
                       setOpenPlayground(true);
                       setLoadingPlayground(false);
                     } else {
                       getFlowData().then((res) => {
+                        if (!hasPlayground(res)) {
+                          setErrorData({
+                            title: "Error",
+                            list: ["This flow doesn't have a playground."],
+                          });
+                          setLoadingPlayground(false);
+                          return;
+                        }
                         setCurrentFlow(res);
                         setOpenPlayground(true);
                         setLoadingPlayground(false);
@@ -439,7 +468,7 @@ export default function CollectionCardComponent({
               )}
               {playground && data?.metadata === undefined && (
                 <Button
-                  disabled={loadingPlayground}
+                  disabled={loadingPlayground || !authorized}
                   key={data.id}
                   tabIndex={-1}
                   variant="primary"
@@ -450,12 +479,29 @@ export default function CollectionCardComponent({
                     e.preventDefault();
                     e.stopPropagation();
                     setLoadingPlayground(true);
-                    if (getFlowById(data.id)) {
+                    const flow = getFlowById(data.id);
+                    if (flow) {
+                      if (!hasPlayground(flow)) {
+                        setErrorData({
+                          title: "Error",
+                          list: ["This flow doesn't have a playground."],
+                        });
+                        setLoadingPlayground(false);
+                        return;
+                      }
                       setCurrentFlowId(data.id);
                       setOpenPlayground(true);
                       setLoadingPlayground(false);
                     } else {
                       getFlowData().then((res) => {
+                        if (!hasPlayground(res)) {
+                          setErrorData({
+                            title: "Error",
+                            list: ["This flow doesn't have a playground."],
+                          });
+                          setLoadingPlayground(false);
+                          return;
+                        }
                         setCurrentFlow(res);
                         setOpenPlayground(true);
                         setLoadingPlayground(false);
