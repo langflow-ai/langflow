@@ -3,6 +3,8 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from langflow.services.database.models.flow.model import FlowRead
+
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
     from langflow.services.database.models.user.model import User
@@ -34,7 +36,7 @@ class FolderCreate(FolderBase):
 class FolderRead(FolderBase):
     id: UUID
     parent_id: Optional[UUID] = Field()
-    flows: List["Flow"] = Relationship(back_populates="folder")
+    flows: List["FlowRead"] = Field(default=[])
 
 
 class FolderUpdate(SQLModel):

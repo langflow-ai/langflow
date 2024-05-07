@@ -16,8 +16,10 @@ from rich import print as rprint
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from sqlmodel import select
 
 from langflow.main import setup_app
+from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from langflow.services.utils import initialize_services
@@ -431,11 +433,16 @@ def superuser(
             # Verify that the superuser was created
             from langflow.services.database.models.user.model import User
 
-            user: User = session.query(User).filter(User.username == username).first()
+            user: User = session.exec(select(User).where(User.username == username)).first()
             if user is None or not user.is_superuser:
                 typer.echo("Superuser creation failed.")
                 return
-
+            # Now create the first folder for the user
+            result = create_default_folder_if_it_doesnt_exist(session, user)
+            if result:
+                typer.echo("Default folder created successfully.")
+            else:
+                raise RuntimeError("Could not create default folder.")
             typer.echo("Superuser created successfully.")
 
         else:
