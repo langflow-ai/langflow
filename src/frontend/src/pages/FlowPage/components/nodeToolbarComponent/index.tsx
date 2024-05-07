@@ -267,7 +267,10 @@ export default function NodeToolbarComponent({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if ((event.target! as HTMLElement).tagName === "INPUT") {
+      if (
+        (event.target! as HTMLElement).tagName === "INPUT" ||
+        (event.target! as HTMLElement).tagName === "TEXTAREA"
+      ) {
         return;
       }
       if (selected && (hasApiKey || hasStore) && event.key === "u") {

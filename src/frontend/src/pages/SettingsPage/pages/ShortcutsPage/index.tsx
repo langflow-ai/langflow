@@ -8,7 +8,7 @@ export default function ShortcutsPage() {
   const isMac = navigator.userAgent.toUpperCase().includes("MAC");
   const advancedShortcut = `A`;
   const minizmizeShortcut = `Q`;
-  const codeShortcut = `Shift + C`;
+  const codeShortcut = `Shift + U`;
   const copyShortcut = `${isMac ? "Cmd" : "Ctrl"} + C`;
   const duplicateShortcut = `D`;
   const shareShortcut = `Shift + S`;
