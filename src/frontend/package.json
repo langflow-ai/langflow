@@ -75,7 +75,7 @@
     "start": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "format": "npx prettier --write \"./**/*.{js,jsx,ts,tsx,json,md}\" --ignore-path .prettierignore",
+    "format": "npx prettier --write \"{docs,src}/**/*.{js,jsx,ts,tsx,json,md}\" --ignore-path .prettierignore",
     "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite"
   },
   "simple-git-hooks": {
