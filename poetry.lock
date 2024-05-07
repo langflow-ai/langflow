@@ -3898,13 +3898,13 @@ files = [
 
 [[package]]
 name = "joblib"
-version = "1.4.0"
+version = "1.4.2"
 description = "Lightweight pipelining with Python functions"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "joblib-1.4.0-py3-none-any.whl", hash = "sha256:42942470d4062537be4d54c83511186da1fc14ba354961a2114da91efa9a4ed7"},
-    {file = "joblib-1.4.0.tar.gz", hash = "sha256:1eb0dc091919cd384490de890cb5dfd538410a6d4b3b54eef09fb8c50b409b1c"},
+    {file = "joblib-1.4.2-py3-none-any.whl", hash = "sha256:06d478d5674cbc267e7496a410ee875abd68e4340feff4490bcb7afb88060ae6"},
+    {file = "joblib-1.4.2.tar.gz", hash = "sha256:2382c5816b2636fbd20a09e0f4e9dad4736765fdfb7dca582943b9c1366b3f0e"},
 ]
 
 [[package]]
@@ -4409,6 +4409,22 @@ files = [
 
 [package.dependencies]
 langchain-core = ">=0.1.52,<0.3"
+numpy = ">=1,<2"
+pinecone-client = ">=3.2.2,<4.0.0"
+
+[[package]]
+name = "langchain-pinecone"
+version = "0.1.0"
+description = "An integration package connecting Pinecone and LangChain"
+optional = false
+python-versions = "<3.13,>=3.8.1"
+files = [
+    {file = "langchain_pinecone-0.1.0-py3-none-any.whl", hash = "sha256:d957f27b1cceab425c3e8603c7a32533d4593ce8705242e78f6dc03aa71cf417"},
+    {file = "langchain_pinecone-0.1.0.tar.gz", hash = "sha256:93f81e7c3926027cc6a87b001ee4d2e02a432a916709dbd395162b342bf84586"},
+]
+
+[package.dependencies]
+langchain-core = ">=0.1.40,<0.2.0"
 numpy = ">=1,<2"
 pinecone-client = ">=3.2.2,<4.0.0"
 
