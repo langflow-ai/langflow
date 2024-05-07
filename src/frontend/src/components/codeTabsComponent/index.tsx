@@ -113,14 +113,10 @@ export default function CodeTabsComponent({
       Object.keys(el).forEach((key) => {
         if (Object.keys(el[key]).length > 0) {
           accordionsToOpen.push(key);
-          setOpenAccordion(accordionsToOpen);
         }
       });
     });
-
-    if (accordionsToOpen.length == 0) {
-      setOpenAccordion([]);
-    }
+    setOpenAccordion(accordionsToOpen);
   }
   return (
     <Tabs
@@ -132,7 +128,7 @@ export default function CodeTabsComponent({
       }
       onValueChange={(value) => {
         setActiveTab(value);
-        if (value === "3") {
+        if (value === "4") {
           openAccordions();
         }
       }}
