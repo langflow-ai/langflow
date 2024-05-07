@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "0.6.18"
+version = "0.6.19"
 description = "A Python package with a built-in web application"
 authors = ["Logspace <contact@logspace.ai>"]
 maintainers = [
@@ -105,6 +105,7 @@ llama-index = "0.9.48"
 langchain-openai = "^0.0.6"
 urllib3 = "<2"
 langchain-anthropic = "^0.1.4"
+langchain-pinecone = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.1"
