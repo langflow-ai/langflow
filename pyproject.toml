@@ -105,6 +105,7 @@ llama-index = "0.9.48"
 langchain-openai = "^0.0.6"
 urllib3 = "<2"
 langchain-anthropic = "^0.1.4"
+langchain-pinecone = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest-asyncio = "^0.23.1"
