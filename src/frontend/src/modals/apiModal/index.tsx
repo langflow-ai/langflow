@@ -210,10 +210,12 @@ const ApiModal = forwardRef(
         const pythonCode = getPythonCode(flow?.name, tweaksObject);
         const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
 
-        tabs![0].code = curl_code;
-        tabs![1].code = pythonApiCode;
-        tabs![2].code = pythonCode;
-        tabs![3].code = widgetCode;
+        if (tabs && tabs?.length > 0) {
+          tabs![0].code = curl_code;
+          tabs![1].code = pythonApiCode;
+          tabs![2].code = pythonCode;
+          tabs![3].code = widgetCode;
+        }
 
         setTweak(tweak);
       }
