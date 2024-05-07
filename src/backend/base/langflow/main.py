@@ -39,13 +39,14 @@ def get_lifespan(fix_migration=False, socketio_server=None):
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         nest_asyncio.apply()
+
         # Startup message
         if __version__:
             rprint(f"[bold green]Starting Langflow v{__version__}...[/bold green]")
         else:
             rprint("[bold green]Starting Langflow...[/bold green]")
         try:
-            initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
+            await initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
             setup_llm_caching()
             LangfuseInstance.update()
             create_or_update_starter_projects()
@@ -78,6 +79,10 @@ def create_app():
         allow_headers=["*"],
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
+    from langflow.services.deps import get_scheduler_service
+
+    scheduler_service = get_scheduler_service()
+    scheduler_service.add_middleware(app)
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):

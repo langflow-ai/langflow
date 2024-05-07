@@ -153,7 +153,7 @@ def initialize_session_service():
     )
 
 
-def initialize_services(fix_migration: bool = False, socketio_server=None):
+async def initialize_services(fix_migration: bool = False, socketio_server=None):
     """
     Initialize all the services needed.
     """

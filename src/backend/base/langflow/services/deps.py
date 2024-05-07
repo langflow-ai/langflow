@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from langflow.services.store.service import StoreService
     from langflow.services.task.service import TaskService
     from langflow.services.variable.service import VariableService
+    from langflow.services.scheduler.service import SchedulerService
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -39,6 +40,18 @@ def get_service(service_type: ServiceType, default=None):
         #! Not optimal, but it works for now
         service_manager.register_factories()
     return service_manager.get(service_type, default)  # type: ignore
+
+
+def get_scheduler_service() -> "SchedulerService":
+    """
+    Retrieves the SchedulerService instance from the service manager.
+
+    Returns:
+        SchedulerService: The SchedulerService instance.
+    """
+    from langflow.services.scheduler.factory import SchedulerServiceFactory
+
+    return get_service(ServiceType.SCHEDULER_SERVICE, SchedulerServiceFactory())  # type: ignore
 
 
 def get_state_service() -> "StateService":

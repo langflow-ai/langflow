@@ -223,6 +223,34 @@ files = [
 ]
 
 [[package]]
+name = "apscheduler"
+version = "4.0.0a4"
+description = "In-process task scheduler with Cron-like capabilities"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "APScheduler-4.0.0a4-py3-none-any.whl", hash = "sha256:29576119a82a4e91fbd20971d9225c88b073b8e23a7e6bda5f9d555fa8bcccfc"},
+    {file = "APScheduler-4.0.0a4.tar.gz", hash = "sha256:c349f281ec505235e1a748b0954d1ab868acefab69815559d62e025686945e65"},
+]
+
+[package.dependencies]
+anyio = ">=4.0,<5.0"
+attrs = ">=21.3"
+tenacity = ">=8.0,<9.0"
+typing-extensions = {version = ">=4.0", markers = "python_version < \"3.11\""}
+tzlocal = ">=3.0"
+
+[package.extras]
+asyncpg = ["asyncpg (>=0.20)"]
+cbor = ["cbor2 (>=5.0)"]
+doc = ["sphinx", "sphinx-autodoc-typehints", "sphinx-rtd-theme (>=1.3.0)", "sphinx-tabs (>=3.3.1)"]
+mongodb = ["pymongo (>=4)"]
+mqtt = ["paho-mqtt (>=1.5)"]
+redis = ["redis (>=4.4.0)"]
+sqlalchemy = ["sqlalchemy (>=2.0.19)"]
+test = ["APScheduler[cbor,mongodb,mqtt,redis,sqlalchemy]", "PySide6 (>=6.6)", "aiosqlite (>=0.19)", "anyio[trio]", "asyncmy (>=0.2.5)", "asyncpg (>=0.20)", "coverage (>=7)", "freezegun", "paho-mqtt (>=1.5)", "psycopg", "pymongo (>=4)", "pymysql[rsa]", "pytest (>=7.4.0)", "pytest-freezer", "pytest-lazy-fixture", "pytest-mock", "uwsgi"]
+
+[[package]]
 name = "asgiref"
 version = "3.8.1"
 description = "ASGI specs, helper code, and adapters"
@@ -4073,13 +4101,13 @@ extended-testing = ["aiosqlite (>=0.19.0,<0.20.0)", "aleph-alpha-client (>=2.15.
 
 [[package]]
 name = "langchain-core"
-version = "0.1.51"
+version = "0.1.52"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_core-0.1.51-py3-none-any.whl", hash = "sha256:3058bdb04d43a8eaae2e249365fe2e8d0356a09c7b2c1afa1a8100f8888da4fa"},
-    {file = "langchain_core-0.1.51.tar.gz", hash = "sha256:f7ea116f939be9e74c385baf95d6c84cd7a402b59c2c1893fc054bf98abbefc2"},
+    {file = "langchain_core-0.1.52-py3-none-any.whl", hash = "sha256:62566749c92e8a1181c255c788548dc16dbc319d896cd6b9c95dc17af9b2a6db"},
+    {file = "langchain_core-0.1.52.tar.gz", hash = "sha256:084c3fc452f5a6966c28ab3ec5dbc8b8d26fc3f63378073928f4e29d90b6393f"},
 ]
 
 [package.dependencies]
@@ -4223,6 +4251,7 @@ develop = true
 
 [package.dependencies]
 alembic = "^1.13.0"
+apscheduler = "^4.0.0a4"
 asyncer = "^0.0.5"
 bcrypt = "4.0.1"
 cachetools = "^5.3.1"
@@ -4326,13 +4355,13 @@ regex = ["regex"]
 
 [[package]]
 name = "litellm"
-version = "1.35.38"
+version = "1.36.0"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.35.38-py3-none-any.whl", hash = "sha256:79ab3403c945b340a751d889cf49030fee050487dff6294a21fb9586c49e3faf"},
-    {file = "litellm-1.35.38.tar.gz", hash = "sha256:1a0b195c74d45ba0c2391c5be533c211ee1bcdba6be09e6950037432f62f79ea"},
+    {file = "litellm-1.36.0-py3-none-any.whl", hash = "sha256:8f2e78f07883f00a0c8bbb6c83b89f864a81f2eab214c5eecccb452c22f28aa5"},
+    {file = "litellm-1.36.0.tar.gz", hash = "sha256:1939983117ae7a8d2501967d0d2100f3929217d4f1833e3d0f8a16d5d91bf318"},
 ]
 
 [package.dependencies]
@@ -4348,7 +4377,7 @@ tokenizers = "*"
 
 [package.extras]
 extra-proxy = ["azure-identity (>=1.15.0,<2.0.0)", "azure-keyvault-secrets (>=4.8.0,<5.0.0)", "google-cloud-kms (>=2.21.3,<3.0.0)", "prisma (==0.11.0)", "resend (>=0.8.0,<0.9.0)"]
-proxy = ["PyJWT (>=2.8.0,<3.0.0)", "apscheduler (>=3.10.4,<4.0.0)", "backoff", "cryptography (>=42.0.5,<43.0.0)", "fastapi (>=0.109.1,<0.110.0)", "fastapi-sso (>=0.10.0,<0.11.0)", "gunicorn (>=21.2.0,<22.0.0)", "orjson (>=3.9.7,<4.0.0)", "python-multipart (>=0.0.9,<0.0.10)", "pyyaml (>=6.0.1,<7.0.0)", "rq", "uvicorn (>=0.22.0,<0.23.0)"]
+proxy = ["PyJWT (>=2.8.0,<3.0.0)", "apscheduler (>=3.10.4,<4.0.0)", "backoff", "cryptography (>=42.0.5,<43.0.0)", "fastapi (>=0.109.1,<0.110.0)", "fastapi-sso (>=0.10.0,<0.11.0)", "gunicorn (>=22.0.0,<23.0.0)", "orjson (>=3.9.7,<4.0.0)", "python-multipart (>=0.0.9,<0.0.10)", "pyyaml (>=6.0.1,<7.0.0)", "rq", "uvicorn (>=0.22.0,<0.23.0)"]
 
 [[package]]
 name = "llama-cpp-python"

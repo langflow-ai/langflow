@@ -3,8 +3,9 @@ import warnings
 from logging.config import fileConfig
 
 from alembic import context
+from apscheduler.datastores.sqlalchemy import SQLAlchemyDataStore
 from loguru import logger
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import MetaData, engine_from_config, pool
 
 from langflow.services.database.models import *  # noqa
 from langflow.services.database.service import SQLModel
@@ -30,6 +31,21 @@ target_metadata = SQLModel.metadata
 # ... etc.
 
 
+# engine: MetaData._add_table() missing 2 required positional
+def merge_metadata(target_metadata: MetaData, source_metadata: MetaData) -> MetaData:
+    """
+    Merges tables from source_metadata into target_metadata.
+
+    :param target_metadata: The MetaData instance where tables will be merged into.
+    :param source_metadata: The MetaData instance from which tables are sourced.
+    :return: The target MetaData instance with tables added.
+    """
+    for table in source_metadata.tables.values():
+        # This creates a copy of each table associated with the new metadata
+        table.tometadata(target_metadata)
+    return target_metadata
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -44,6 +60,7 @@ def run_migrations_offline() -> None:
     """
     url = os.getenv("LANGFLOW_DATABASE_URL")
     url = url or config.get_main_option("sqlalchemy.url")
+
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -63,7 +80,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-
+    _target_metadata = target_metadata
     try:
         from langflow.services.database.factory import DatabaseServiceFactory
         from langflow.services.deps import get_db_service
@@ -72,6 +89,9 @@ def run_migrations_online() -> None:
         initialize_settings_service()
         service_manager.register_factory(DatabaseServiceFactory())
         connectable = get_db_service().engine
+
+        data_store = SQLAlchemyDataStore(connectable)
+        _target_metadata = merge_metadata(SQLModel.metadata, data_store._metadata)
     except Exception as e:
         logger.error(f"Error getting database engine: {e}")
         url = os.getenv("LANGFLOW_DATABASE_URL")
@@ -86,7 +106,7 @@ def run_migrations_online() -> None:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         with connectable.connect() as connection:
-            context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
+            context.configure(connection=connection, target_metadata=_target_metadata, render_as_batch=True)
             with context.begin_transaction():
                 context.run_migrations()
 

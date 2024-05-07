@@ -61,6 +61,7 @@ nest-asyncio = "^1.6.0"
 emoji = "^2.11.0"
 cryptography = "^42.0.5"
 asyncer = "^0.0.5"
+apscheduler = { version = "^4.0.0a4", allow-prereleases = true }
 
 
 [tool.poetry.extras]
