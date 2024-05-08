@@ -85,6 +85,7 @@ async def retrieve_vertices_order(
             graph = await build_and_cache_graph_from_data(
                 flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
             )
+        graph.validate_stream()
         if stop_component_id or start_component_id:
             try:
                 first_layer = graph.sort_vertices(stop_component_id, start_component_id)
@@ -109,6 +110,8 @@ async def retrieve_vertices_order(
         return VerticesOrderResponse(ids=first_layer, run_id=run_id, vertices_to_run=vertices_to_run)
 
     except Exception as exc:
+        if "stream or streaming set to True" in str(exc):
+            raise HTTPException(status_code=400, detail=str(exc))
         logger.error(f"Error checking build status: {exc}")
         logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc

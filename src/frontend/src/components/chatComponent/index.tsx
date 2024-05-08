@@ -107,10 +107,8 @@ export default function FlowToolbar(): JSX.Element {
                   className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out ease-in-out`}
                 >
                   <ForwardedIconComponent
-                    name="Zap"
-                    className={
-                      "message-button-icon h-5 w-5 fill-muted-foreground stroke-muted-foreground transition-all"
-                    }
+                    name="BotMessageSquareIcon"
+                    className={" h-5 w-5 transition-all"}
                   />
                   Playground
                 </div>
