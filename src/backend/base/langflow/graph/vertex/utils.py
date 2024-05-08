@@ -4,7 +4,6 @@ from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 from loguru import logger
 
-from langflow.graph.edge.utils import build_clean_params
 from langflow.graph.vertex.base import Vertex
 from langflow.services.deps import get_monitor_service
 from langflow.utils.constants import PYTHON_BASIC_TYPES
@@ -66,6 +65,21 @@ async def generate_result(built_object: Any, inputs: dict, has_external_output: 
     else:
         result = built_object
     return result
+
+
+def build_clean_params(target: "Vertex") -> dict:
+    """
+    Cleans the parameters of the target vertex.
+    """
+    # Removes all keys that the values aren't python types like str, int, bool, etc.
+    params = {
+        key: value for key, value in target.params.items() if isinstance(value, (str, int, bool, float, list, dict))
+    }
+    # if it is a list we need to check if the contents are python types
+    for key, value in params.items():
+        if isinstance(value, list):
+            params[key] = [item for item in value if isinstance(item, (str, int, bool, float, list, dict))]
+    return params
 
 
 def log_transaction(source: "Vertex", target: "Vertex", status, error=None):
