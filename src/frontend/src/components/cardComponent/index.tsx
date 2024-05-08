@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Controller } from "react-hook-form";
+import { Control } from "react-hook-form";
 import { getComponent, postLikeComponent } from "../../controllers/API";
 import IOModal from "../../modals/IOModal";
 import DeleteConfirmationModal from "../../modals/deleteConfirmationModal";
@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from "../ui/card";
 import { Checkbox } from "../ui/checkbox";
+import { FormControl, FormField } from "../ui/form";
 import Loading from "../ui/loading";
 
 export default function CollectionCardComponent({
@@ -43,7 +44,7 @@ export default function CollectionCardComponent({
   button?: JSX.Element;
   playground?: boolean;
   onDelete?: () => void;
-  control?: any;
+  control?: Control<any, any>;
 }) {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -257,8 +258,9 @@ export default function CollectionCardComponent({
                   <button
                     className="z-50"
                     onClick={(e) => {
-                      e.stopPropagation();
                       setOpenDelete(true);
+                      e.stopPropagation();
+                      e.preventDefault();
                     }}
                   >
                     <IconComponent
@@ -313,18 +315,19 @@ export default function CollectionCardComponent({
               e.stopPropagation();
             }}
           >
-            <Controller
+            <FormField
               control={control}
               name={`${data.id}`}
-              render={({ field: { onChange, value } }) => {
-                return (
+              defaultValue={false}
+              render={({ field }) => (
+                <FormControl>
                   <Checkbox
-                    checked={value}
-                    onChange={onChange}
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
                     className="relative top-1 h-5 w-5 border-2"
                   />
-                );
-              }}
+                </FormControl>
+              )}
             />
           </div>
 
