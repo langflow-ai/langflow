@@ -12,6 +12,7 @@ import {
   UPLOAD_ALERT_LIST,
   WRONG_FILE_ERROR_ALERT,
 } from "../../../../constants/alerts_constants";
+import ConfirmationModal from "../../../../modals/confirmationModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useUtilityStore } from "../../../../stores/utilityStore";
@@ -252,6 +253,32 @@ export default function ComponentsComponent({
           )}
         </div>
       </CardsWrapComponent>
+
+      <ConfirmationModal
+        title="Delete flows"
+        titleHeader="Delete selected flows"
+        modalContentTitle="Attention!"
+        cancelText="Cancel"
+        confirmationText="Delete"
+        icon={"UserMinus2"}
+        onConfirm={(index, keys) => {
+          console.log("keys");
+        }}
+        size="x-small"
+      >
+        <ConfirmationModal.Content>
+          <span>
+            Are you sure you want to delete this key? This action cannot be
+            undone.
+          </span>
+        </ConfirmationModal.Content>
+        <ConfirmationModal.Trigger>
+          <IconComponent
+            name="Trash2"
+            className="ml-2 h-4 w-4 cursor-pointer"
+          />
+        </ConfirmationModal.Trigger>
+      </ConfirmationModal>
     </>
   );
 }
