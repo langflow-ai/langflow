@@ -1,9 +1,9 @@
 from typing import Optional
 
-from langflow.field_typing import BaseLanguageModel
 from langchain_community.chat_models.openai import ChatOpenAI
 
-from langflow.field_typing import NestedDict
+from langflow.base.models.openai_constants import MODEL_NAMES
+from langflow.field_typing import BaseLanguageModel, NestedDict
 from langflow.interface.custom.custom_component import CustomComponent
 
 
@@ -24,19 +24,7 @@ class ChatOpenAIComponent(CustomComponent):
                 "advanced": True,
                 "required": False,
             },
-            "model_name": {
-                "display_name": "Model Name",
-                "advanced": False,
-                "required": False,
-                "options": [
-                    "gpt-4-turbo-preview",
-                    "gpt-4-0125-preview",
-                    "gpt-4-1106-preview",
-                    "gpt-4-vision-preview",
-                    "gpt-3.5-turbo-0125",
-                    "gpt-3.5-turbo-1106",
-                ],
-            },
+            "model_name": {"display_name": "Model Name", "advanced": False, "options": MODEL_NAMES},
             "openai_api_base": {
                 "display_name": "OpenAI API Base",
                 "advanced": False,
