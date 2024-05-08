@@ -96,6 +96,12 @@ export const EXPORT_DIALOG_SUBTITLE = "Export flow as JSON file.";
 export const SETTINGS_DIALOG_SUBTITLE = "Edit details about your project.";
 
 /**
+ * The base text for subtitle of Flow Logs (Menubar)
+ * @constant
+ */
+export const LOGS_DIALOG_SUBTITLE = "Check out information about your flow.";
+
+/**
  * The base text for subtitle of Code Dialog (Toolbar)
  * @constant
  */

@@ -12,6 +12,7 @@ import { Node } from "reactflow";
 import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import { SAVED_HOVER } from "../../../../constants/constants";
 import ExportModal from "../../../../modals/exportModal";
+import FlowLogsModal from "../../../../modals/flowLogsModal";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -34,6 +35,7 @@ export const MenuBar = ({
   const redo = useFlowsManagerStore((state) => state.redo);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const [openSettings, setOpenSettings] = useState(false);
+  const [openLogs, setOpenLogs] = useState(false);
   const nodes = useFlowStore((state) => state.nodes);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const navigate = useNavigate();
@@ -124,6 +126,18 @@ export const MenuBar = ({
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={() => {
+                setOpenLogs(true);
+              }}
+              className="cursor-pointer"
+            >
+              <IconComponent
+                name="ScrollText"
+                className="header-menu-options "
+              />
+              Logs
+            </DropdownMenuItem>
+            <DropdownMenuItem
               className="cursor-pointer"
               onClick={() => {
                 uploadFlow({ newProject: false, isComponent: false }).catch(
@@ -132,7 +146,7 @@ export const MenuBar = ({
                       title: UPLOAD_ERROR_ALERT,
                       list: [error],
                     });
-                  }
+                  },
                 );
               }}
             >
@@ -194,6 +208,7 @@ export const MenuBar = ({
           open={openSettings}
           setOpen={setOpenSettings}
         ></FlowSettingsModal>
+        <FlowLogsModal open={openLogs} setOpen={setOpenLogs}></FlowLogsModal>
       </div>
       {(currentFlow.updated_at || saveLoading) && (
         <ShadTooltip
@@ -213,7 +228,7 @@ export const MenuBar = ({
               name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
               className={cn(
                 "h-4 w-4",
-                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle"
+                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
               )}
             />
             {printByBuildStatus()}
