@@ -1,14 +1,19 @@
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
-import { AgGridReact } from "ag-grid-react";
+import { AgGridReact, AgGridReactProps } from "ag-grid-react";
 import { ComponentPropsWithoutRef, ElementRef, forwardRef } from "react";
 import { useDarkStore } from "../../stores/darkStore";
 import "../../style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import { cn } from "../../utils/utils";
 
+interface TableComponentProps extends AgGridReactProps {
+  columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
+  rowData: NonNullable<AgGridReactProps["rowData"]>;
+}
+
 const TableComponent = forwardRef<
   ElementRef<typeof AgGridReact>,
-  ComponentPropsWithoutRef<typeof AgGridReact>
+  TableComponentProps
 >(({ ...props }, ref) => {
   const dark = useDarkStore((state) => state.dark);
 

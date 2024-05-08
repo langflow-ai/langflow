@@ -5,6 +5,7 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
 import { FlowType } from "../../types/flow";
 import BaseModal from "../baseModal";
+import TableComponent from "../../components/tableComponent";
 
 export default function FlowLogsModal({
   open,
@@ -61,7 +62,9 @@ export default function FlowLogsModal({
           <div className="flex h-fit w-32 items-center"></div>
         </div>
       </BaseModal.Header>
-      <BaseModal.Content>TABLE</BaseModal.Content>
+      <BaseModal.Content>
+        <TableComponent columnDefs={[]} rowData={[]}></TableComponent>
+      </BaseModal.Content>
     </BaseModal>
   );
 }

@@ -998,7 +998,9 @@ export async function getTransactionTable(
   id: string,
   mode: "intersection" | "union",
 ): Promise<{ rows: Array<any>; columns: Array<any> }> {
-  const rows = await api.get(`${BASE_URL_API}monitor/transactions/${id}`);
+  const config = {};
+  config["params"] = { flow_id: id };
+  const rows = await api.get(`${BASE_URL_API}monitor/transactions`, config);
   const columns = extractColumnsFromRows(rows.data.rows, mode);
   return { rows: rows.data.rows, columns };
 }
