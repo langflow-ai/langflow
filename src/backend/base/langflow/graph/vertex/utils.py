@@ -4,6 +4,9 @@ from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 from loguru import logger
 
+from langflow.graph.edge.utils import build_clean_params
+from langflow.graph.vertex.base import Vertex
+from langflow.services.deps import get_monitor_service
 from langflow.utils.constants import PYTHON_BASIC_TYPES
 
 
@@ -63,3 +66,33 @@ async def generate_result(built_object: Any, inputs: dict, has_external_output: 
     else:
         result = built_object
     return result
+
+
+def log_transaction(source: "Vertex", target: "Vertex", status, error=None):
+    """
+    Logs a transaction between two vertices.
+
+    Args:
+        source (Vertex): The source vertex of the transaction.
+        target (Vertex): The target vertex of the transaction.
+        status: The status of the transaction.
+        error (Optional): Any error associated with the transaction.
+
+    Raises:
+        Exception: If there is an error while logging the transaction.
+
+    """
+    try:
+        monitor_service = get_monitor_service()
+        clean_params = build_clean_params(target)
+        data = {
+            "source": source.vertex_type,
+            "target": target.vertex_type,
+            "target_args": clean_params,
+            "timestamp": monitor_service.get_timestamp(),
+            "status": status,
+            "error": error,
+        }
+        monitor_service.add_row(table_name="transactions", data=data)
+    except Exception as e:
+        logger.error(f"Error logging transaction: {e}")
