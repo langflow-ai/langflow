@@ -112,13 +112,13 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
     def build(
         self,
         session_id: Text,
+        api_base_path: str = "api/v1",
         url: Optional[Text] = None,
         api_key: Optional[Text] = None,
         query: Optional[Text] = None,
         search_scope: SearchScope = SearchScope.messages,
         search_type: SearchType = SearchType.similarity,
         limit: Optional[int] = None,
-        api_base_path: Optional[str] = "api/v1",
     ) -> list[Record]:
         try:
             from zep_python import ZepClient

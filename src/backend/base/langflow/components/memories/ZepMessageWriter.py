@@ -80,19 +80,18 @@ class ZepMessageWriterComponent(BaseMemoryComponent):
         self,
         input_value: Record,
         session_id: Text,
+        api_base_path: str = "api/v1",
         url: Optional[Text] = None,
         api_key: Optional[Text] = None,
-        api_base_path: Optional[str] = "api/v1",
     ) -> Record:
         try:
-            from zep_python import ZepClient
-            from zep_python.langchain import ZepChatMessageHistory
-
             # Monkeypatch API_BASE_PATH to
             # avoid 404
             # This is a workaround for the local Zep instance
             # cloud Zep works with v2
             import zep_python.zep_client
+            from zep_python import ZepClient
+            from zep_python.langchain import ZepChatMessageHistory
 
             zep_python.zep_client.API_BASE_PATH = api_base_path
         except ImportError:
