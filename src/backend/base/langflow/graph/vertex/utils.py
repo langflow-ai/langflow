@@ -1,12 +1,14 @@
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, TYPE_CHECKING
 
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 from loguru import logger
 
-from langflow.graph.vertex.base import Vertex
 from langflow.services.deps import get_monitor_service
 from langflow.utils.constants import PYTHON_BASIC_TYPES
+
+if TYPE_CHECKING:
+    from langflow.graph.vertex.base import Vertex
 
 
 def is_basic_type(obj):
