@@ -8,6 +8,7 @@ import Dropdown from "../../../../components/dropdownComponent";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
 import { Badge } from "../../../../components/ui/badge";
+import { Card, CardContent } from "../../../../components/ui/card";
 import { deleteGlobalVariable } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../../../stores/globalVariables";
@@ -81,7 +82,7 @@ export default function GlobalVariablesPage() {
       showDisabledCheckboxes: true,
       headerName: "Variable Name",
       field: "name",
-      flex: 1,
+      flex: 2,
     }, //This column will be twice as wide as the others
     {
       field: "type",
@@ -104,6 +105,7 @@ export default function GlobalVariablesPage() {
       field: "default_fields",
       flex: 1,
       editable: false,
+      resizable: false,
     },
   ]);
 
@@ -169,16 +171,15 @@ export default function GlobalVariablesPage() {
 
       <div className="flex h-full w-full flex-col justify-between pb-8">
         <TableComponent
+          overlayNoRowsTemplate="No data available"
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
           }}
           rowSelection="multiple"
           suppressRowClickSelection={true}
-          domLayout="autoHeight"
-          pagination={false}
+          pagination={true}
           columnDefs={colDefs}
           rowData={rowData}
-          containerStyle={{ overflow: "auto", maxWidth: "80vh" }}
         />
       </div>
     </div>

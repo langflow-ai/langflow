@@ -1,5 +1,7 @@
 from typing import List, Optional
 
+from langchain_pinecone._utilities import DistanceStrategy
+
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.components.vectorstores.Pinecone import PineconeComponent
 from langflow.field_typing import Embeddings, Text
@@ -11,8 +13,11 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
     display_name = "Pinecone Search"
     description = "Search a Pinecone Vector Store for similar documents."
     icon = "Pinecone"
+    field_order = ["index_name", "namespace", "distance_strategy", "pinecone_api_key", "input_value", "embedding"]
 
     def build_config(self):
+        distance_options = [e.value.title().replace("_", " ") for e in DistanceStrategy]
+        distance_value = distance_options[0]
         return {
             "search_type": {
                 "display_name": "Search Type",
@@ -21,17 +26,19 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
             "input_value": {"display_name": "Input"},
             "embedding": {"display_name": "Embedding"},
             "index_name": {"display_name": "Index Name"},
-            "namespace": {"display_name": "Namespace"},
+            "namespace": {"display_name": "Namespace", "advanced": True},
+            "distance_strategy": {
+                "display_name": "Distance Strategy",
+                # get values from enum
+                # and make them title case for display
+                "options": distance_options,
+                "advanced": True,
+                "value": distance_value,
+            },
             "pinecone_api_key": {
                 "display_name": "Pinecone API Key",
                 "default": "",
                 "password": True,
-                "required": True,
-            },
-            "pinecone_env": {
-                "display_name": "Pinecone Environment",
-                "default": "",
-                "required": True,
             },
             "pool_threads": {
                 "display_name": "Pool Threads",
@@ -43,13 +50,18 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
                 "info": "Number of results to return.",
                 "advanced": True,
             },
+            "text_key": {
+                "display_name": "Text Key",
+                "info": "Key in the record to use as text.",
+                "advanced": True,
+            },
         }
 
     def build(  # type: ignore[override]
         self,
         input_value: Text,
         embedding: Embeddings,
-        pinecone_env: str,
+        distance_strategy: str,
         text_key: str = "text",
         number_of_results: int = 4,
         pool_threads: int = 4,
@@ -61,7 +73,7 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
     ) -> List[Record]:  # type: ignore[override]
         vector_store = super().build(
             embedding=embedding,
-            pinecone_env=pinecone_env,
+            distance_strategy=distance_strategy,
             inputs=[],
             text_key=text_key,
             pool_threads=pool_threads,

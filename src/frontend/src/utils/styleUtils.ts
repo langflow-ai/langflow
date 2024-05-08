@@ -165,6 +165,7 @@ import {
   GradientSave,
   GradientUngroup,
 } from "../icons/GradientSparkles";
+import { GroqIcon } from "../icons/Groq";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
 import { MetaIcon } from "../icons/Meta";
@@ -342,6 +343,7 @@ export const nodeIconsLucide: iconsType = {
   GoogleSearchRun: GoogleIcon,
   Google: GoogleIcon,
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
+  Groq: GroqIcon,
   HNLoader: HackerNewsIcon,
   HuggingFaceHub: HuggingFaceIcon,
   HuggingFace: HuggingFaceIcon,
