@@ -53,7 +53,9 @@ import {
   FileType2,
   FileUp,
   FlaskConical,
+  FolderIcon,
   FolderPlus,
+  FolderPlusIcon,
   FormInput,
   Forward,
   Gift,
@@ -517,4 +519,6 @@ export const nodeIconsLucide: iconsType = {
   Command,
   ArrowBigUp,
   Dot,
+  FolderPlusIcon,
+  FolderIcon,
 };
