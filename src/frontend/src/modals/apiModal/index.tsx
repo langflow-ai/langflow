@@ -108,7 +108,8 @@ const ApiModal = forwardRef(
               element.data.node.template[templateField].show &&
               LANGFLOW_SUPPORTED_TYPES.has(
                 element.data.node.template[templateField].type,
-              );
+              ) &&
+              templateField !== "code";
 
             if (canBuildTweakObject) {
               buildTweakObject(
