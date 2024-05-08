@@ -2,7 +2,6 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-
 from langflow.services.deps import get_monitor_service
 from langflow.services.monitor.schema import TransactionModel, VertexBuildMapModel
 from langflow.services.monitor.service import MonitorService
@@ -65,9 +64,12 @@ async def get_transactions(
     target: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     order_by: Optional[str] = Query("timestamp"),
+    flow_id: Optional[str] = Query(None),
     monitor_service: MonitorService = Depends(get_monitor_service),
 ):
     try:
-        return monitor_service.get_transactions(source=source, target=target, status=status, order_by=order_by)
+        return monitor_service.get_transactions(
+            source=source, target=target, status=status, order_by=order_by, flow_id=flow_id
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

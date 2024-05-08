@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 class TransactionModel(BaseModel):
     id: Optional[int] = Field(default=None, alias="id")
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
+    flow_id: str
     source: str
     target: str
     target_args: dict
