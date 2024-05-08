@@ -40,9 +40,14 @@ class MistralAIModelComponent(LCModelComponent):
                 "display_name": "Model Name",
                 "advanced": False,
                 "options": [
-                    "latest",  # Assuming available model options from MistralAI; adjust as necessary.
+                    "open-mistral-7b",
+                    "open-mixtral-8x7b",
+                    "open-mixtral-8x22b",
+                    "mistral-small-latest",
+                    "mistral-medium-latest",
+                    "mistral-large-latest"
                 ],
-                "value": "latest",
+                "value": "open-mistral-7b",
             },
             "mistral_api_base": {
                 "display_name": "Mistral API Base",
