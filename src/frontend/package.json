@@ -50,6 +50,7 @@
     "react-cookie": "^4.1.1",
     "react-dom": "^18.2.21",
     "react-error-boundary": "^4.0.11",
+    "react-hook-form": "^7.51.4",
     "react-icons": "^5.0.1",
     "react-laag": "^2.0.5",
     "react-markdown": "^8.0.7",
@@ -68,6 +69,7 @@
     "uuid": "^9.0.0",
     "vite-plugin-svgr": "^3.2.0",
     "web-vitals": "^2.1.4",
+    "zod": "^3.23.6",
     "zustand": "^4.4.7"
   },
   "scripts": {

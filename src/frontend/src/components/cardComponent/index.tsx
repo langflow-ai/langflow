@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Controller } from "react-hook-form";
 import { getComponent, postLikeComponent } from "../../controllers/API";
 import IOModal from "../../modals/IOModal";
 import DeleteConfirmationModal from "../../modals/deleteConfirmationModal";
@@ -6,6 +7,7 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
+import { FlowType } from "../../types/flow";
 import { storeComponent } from "../../types/store";
 import cloneFLowWithParent, {
   getInputsAndOutputs,
@@ -21,8 +23,8 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
+import { Checkbox } from "../ui/checkbox";
 import Loading from "../ui/loading";
-import { FlowType } from "../../types/flow";
 
 export default function CollectionCardComponent({
   data,
@@ -32,6 +34,7 @@ export default function CollectionCardComponent({
   onClick,
   onDelete,
   playground,
+  control,
 }: {
   data: storeComponent;
   authorized?: boolean;
@@ -40,6 +43,7 @@ export default function CollectionCardComponent({
   button?: JSX.Element;
   playground?: boolean;
   onDelete?: () => void;
+  control?: any;
 }) {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -304,6 +308,26 @@ export default function CollectionCardComponent({
         </div>
 
         <CardFooter>
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            <Controller
+              control={control}
+              name={`${data.id}`}
+              render={({ field: { onChange, value } }) => {
+                return (
+                  <Checkbox
+                    checked={value}
+                    onChange={onChange}
+                    className="relative top-1 h-5 w-5 border-2"
+                  />
+                );
+              }}
+            />
+          </div>
+
           <div className="z-50 flex w-full items-center justify-between gap-2">
             <div className="flex w-full flex-wrap items-end justify-end gap-2">
               {playground && data?.metadata !== undefined ? (

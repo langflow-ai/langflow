@@ -11,7 +11,7 @@ import DeleteAccountPage from "./pages/DeleteAccountPage";
 import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/MainPage";
-import ComponentsComponent from "./pages/MainPage/components/components";
+import MyCollectionComponent from "./pages/MainPage/components/myCollectionComponent";
 import PlaygroundPage from "./pages/Playground";
 import SettingsPage from "./pages/SettingsPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
@@ -35,11 +35,11 @@ const Router = () => {
         <Route index element={<Navigate replace to={"flows"} />} />
         <Route
           path="flows"
-          element={<ComponentsComponent key="flows" is_component={false} />}
+          element={<MyCollectionComponent key="flows" is_component={false} />}
         />
         <Route
           path="components"
-          element={<ComponentsComponent key="components" />}
+          element={<MyCollectionComponent key="components" is_component />}
         />
       </Route>
       <Route

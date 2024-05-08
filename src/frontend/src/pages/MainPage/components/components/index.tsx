@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import CollectionCardComponent from "../../../../components/cardComponent";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
@@ -13,7 +14,10 @@ import {
 } from "../../../../constants/alerts_constants";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useUtilityStore } from "../../../../stores/utilityStore";
 import { FlowType } from "../../../../types/flow";
+import HeaderComponent from "../headerComponent";
+
 export default function ComponentsComponent({
   is_component = true,
 }: {
@@ -26,6 +30,9 @@ export default function ComponentsComponent({
   const flows = useFlowsManagerStore((state) => state.flows);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const addItem = useUtilityStore((state) => state.setSelectedItems);
+  const [selectedItems, setSelectedItems] = useState([]);
+
   const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
 
@@ -89,119 +96,162 @@ export default function ComponentsComponent({
     setPageIndex(1);
     setPageSize(20);
   }
+
+  const { getValues, control, setValue } = useForm<any>();
+
+  const handleSelectAll = (select) => {
+    if (select) {
+      Object.keys(getValues()).forEach((key) => {
+        setValue(key, true);
+      });
+      return;
+    }
+
+    Object.keys(getValues()).forEach((key) => {
+      setValue(key, false);
+    });
+  };
+
+  const handleSelectOptionsChange = (option) => {
+    switch (option) {
+      case "delete":
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
-    <CardsWrapComponent
-      onFileDrop={onFileDrop}
-      dragMessage={`Drag your ${name} here`}
-    >
-      <div className="flex h-full w-full flex-col justify-between">
-        <div className="flex w-full flex-col gap-4">
-          {!isLoading && data.length === 0 ? (
-            <div className="mt-6 flex w-full items-center justify-center text-center">
-              <div className="flex-max-width h-full flex-col">
-                <div className="flex w-full flex-col gap-4">
-                  <div className="grid w-full gap-4">
-                    Flows and components can be created using Langflow.
-                  </div>
-                  <div className="align-center flex w-full justify-center gap-1">
-                    <span>New?</span>
-                    <span className="transition-colors hover:text-muted-foreground">
-                      <button
-                        onClick={() => {
-                          addFlow(true).then((id) => {
-                            navigate("/flow/" + id);
-                          });
-                        }}
-                        className="underline"
-                      >
-                        Start Here
-                      </button>
-                      .
-                    </span>
-                    <span className="animate-pulse">🚀</span>
+    <>
+      <HeaderComponent
+        handleSelectOptionsChange={handleSelectOptionsChange}
+        handleSelectAll={handleSelectAll}
+      />
+
+      <CardsWrapComponent
+        onFileDrop={onFileDrop}
+        dragMessage={`Drag your ${name} here`}
+      >
+        <div className="flex h-full w-full flex-col justify-between">
+          <div className="flex w-full flex-col gap-4">
+            {!isLoading && data.length === 0 ? (
+              <div className="mt-6 flex w-full items-center justify-center text-center">
+                <div className="flex-max-width h-full flex-col">
+                  <div className="flex w-full flex-col gap-4">
+                    <div className="grid w-full gap-4">
+                      Flows and components can be created using Langflow.
+                    </div>
+                    <div className="align-center flex w-full justify-center gap-1">
+                      <span>New?</span>
+                      <span className="transition-colors hover:text-muted-foreground">
+                        <button
+                          onClick={() => {
+                            addFlow(true).then((id) => {
+                              navigate("/flow/" + id);
+                            });
+                          }}
+                          className="underline"
+                        >
+                          Start Here
+                        </button>
+                        .
+                      </span>
+                      <span className="animate-pulse">🚀</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
-              {isLoading === false && data?.length > 0 ? (
-                data?.map((item, idx) => (
-                  <CollectionCardComponent
-                    onDelete={() => {
-                      removeFlow(item.id);
-                      setSuccessData({
-                        title: `${
-                          item.is_component ? "Component" : "Flow"
-                        } deleted successfully!`,
-                      });
-                      resetFilter();
-                    }}
-                    key={idx}
-                    data={{ is_component: item.is_component ?? false, ...item }}
-                    disabled={isLoading}
-                    data-testid={"edit-flow-button-" + item.id + "-" + idx}
-                    button={
-                      !is_component ? (
-                        <Link to={"/flow/" + item.id}>
-                          <Button
-                            tabIndex={-1}
-                            variant="outline"
-                            size="sm"
-                            className="whitespace-nowrap "
-                            data-testid={
-                              "edit-flow-button-" + item.id + "-" + idx
-                            }
-                          >
-                            <IconComponent
-                              name="ExternalLink"
-                              className="main-page-nav-button select-none"
-                            />
-                            Edit Flow
-                          </Button>
-                        </Link>
-                      ) : (
-                        <></>
-                      )
-                    }
-                    onClick={
-                      !is_component
-                        ? () => {
-                            navigate("/flow/" + item.id);
+            ) : (
+              <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
+                {isLoading === false && data?.length > 0 ? (
+                  <>
+                    {data?.map((item, idx) => (
+                      <form>
+                        <CollectionCardComponent
+                          onDelete={() => {
+                            removeFlow(item.id);
+                            setSuccessData({
+                              title: `${
+                                item.is_component ? "Component" : "Flow"
+                              } deleted successfully!`,
+                            });
+                            resetFilter();
+                          }}
+                          key={idx}
+                          data={{
+                            is_component: item.is_component ?? false,
+                            ...item,
+                          }}
+                          disabled={isLoading}
+                          data-testid={
+                            "edit-flow-button-" + item.id + "-" + idx
                           }
-                        : undefined
-                    }
-                    playground={!is_component}
-                  />
-                ))
-              ) : (
-                <>
-                  <SkeletonCardComponent />
-                  <SkeletonCardComponent />
-                </>
-              )}
+                          button={
+                            !is_component ? (
+                              <Link to={"/flow/" + item.id}>
+                                <Button
+                                  tabIndex={-1}
+                                  variant="outline"
+                                  size="sm"
+                                  className="whitespace-nowrap "
+                                  data-testid={
+                                    "edit-flow-button-" + item.id + "-" + idx
+                                  }
+                                >
+                                  <IconComponent
+                                    name="ExternalLink"
+                                    className="main-page-nav-button select-none"
+                                  />
+                                  Edit Flow
+                                </Button>
+                              </Link>
+                            ) : (
+                              <></>
+                            )
+                          }
+                          onClick={
+                            !is_component
+                              ? () => {
+                                  navigate("/flow/" + item.id);
+                                }
+                              : undefined
+                          }
+                          playground={!is_component}
+                          control={control}
+                        />
+                      </form>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    <SkeletonCardComponent />
+                    <SkeletonCardComponent />
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          {!isLoading && data.length > 0 && (
+            <div className="relative py-6">
+              <PaginatorComponent
+                storeComponent={true}
+                pageIndex={pageIndex}
+                pageSize={pageSize}
+                rowsCount={[10, 20, 50, 100]}
+                totalRowsCount={
+                  flows.filter(
+                    (f) => (f.is_component ?? false) === is_component,
+                  ).length
+                }
+                paginate={(pageSize, pageIndex) => {
+                  setPageIndex(pageIndex);
+                  setPageSize(pageSize);
+                }}
+              ></PaginatorComponent>
             </div>
           )}
         </div>
-        {!isLoading && data.length > 0 && (
-          <div className="relative py-6">
-            <PaginatorComponent
-              storeComponent={true}
-              pageIndex={pageIndex}
-              pageSize={pageSize}
-              rowsCount={[10, 20, 50, 100]}
-              totalRowsCount={
-                flows.filter((f) => (f.is_component ?? false) === is_component)
-                  .length
-              }
-              paginate={(pageSize, pageIndex) => {
-                setPageIndex(pageIndex);
-                setPageSize(pageSize);
-              }}
-            ></PaginatorComponent>
-          </div>
-        )}
-      </div>
-    </CardsWrapComponent>
+      </CardsWrapComponent>
+    </>
   );
 }
