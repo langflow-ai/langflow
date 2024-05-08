@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { FormProvider, useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import CollectionCardComponent from "../../../../components/cardComponent";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
@@ -12,10 +12,9 @@ import {
   UPLOAD_ALERT_LIST,
   WRONG_FILE_ERROR_ALERT,
 } from "../../../../constants/alerts_constants";
-import ConfirmationModal from "../../../../modals/confirmationModal";
+import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { useUtilityStore } from "../../../../stores/utilityStore";
 import { FlowType } from "../../../../types/flow";
 import HeaderComponent from "../headerComponent";
 
@@ -31,8 +30,7 @@ export default function ComponentsComponent({
   const flows = useFlowsManagerStore((state) => state.flows);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const addItem = useUtilityStore((state) => state.setSelectedItems);
-  const [selectedItems, setSelectedItems] = useState([]);
+  const [openDelete, setOpenDelete] = useState(false);
 
   const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
@@ -98,8 +96,8 @@ export default function ComponentsComponent({
     setPageSize(20);
   }
 
-  const { getValues, control, setValue } = useForm<any>();
-
+  const { getValues, control, setValue } = useForm();
+  const methods = useForm();
   const handleSelectAll = (select) => {
     if (select) {
       Object.keys(getValues()).forEach((key) => {
@@ -116,6 +114,17 @@ export default function ComponentsComponent({
   const handleSelectOptionsChange = (option) => {
     switch (option) {
       case "delete":
+        const hasSelected = Object.keys(getValues()).some(
+          (key) => getValues()[key] === true,
+        );
+        if (!hasSelected) {
+          setErrorData({
+            title: "No items selected",
+            list: ["Please select items to delete"],
+          });
+          return;
+        }
+        setOpenDelete(true);
         break;
       default:
         break;
@@ -167,60 +176,62 @@ export default function ComponentsComponent({
                 {isLoading === false && data?.length > 0 ? (
                   <>
                     {data?.map((item, idx) => (
-                      <form>
-                        <CollectionCardComponent
-                          onDelete={() => {
-                            removeFlow(item.id);
-                            setSuccessData({
-                              title: `${
-                                item.is_component ? "Component" : "Flow"
-                              } deleted successfully!`,
-                            });
-                            resetFilter();
-                          }}
-                          key={idx}
-                          data={{
-                            is_component: item.is_component ?? false,
-                            ...item,
-                          }}
-                          disabled={isLoading}
-                          data-testid={
-                            "edit-flow-button-" + item.id + "-" + idx
-                          }
-                          button={
-                            !is_component ? (
-                              <Link to={"/flow/" + item.id}>
-                                <Button
-                                  tabIndex={-1}
-                                  variant="outline"
-                                  size="sm"
-                                  className="whitespace-nowrap "
-                                  data-testid={
-                                    "edit-flow-button-" + item.id + "-" + idx
+                      <FormProvider {...methods}>
+                        <form>
+                          <CollectionCardComponent
+                            onDelete={() => {
+                              removeFlow(item.id);
+                              setSuccessData({
+                                title: `${
+                                  item.is_component ? "Component" : "Flow"
+                                } deleted successfully!`,
+                              });
+                              resetFilter();
+                            }}
+                            key={idx}
+                            data={{
+                              is_component: item.is_component ?? false,
+                              ...item,
+                            }}
+                            disabled={isLoading}
+                            data-testid={
+                              "edit-flow-button-" + item.id + "-" + idx
+                            }
+                            button={
+                              !is_component ? (
+                                <Link to={"/flow/" + item.id}>
+                                  <Button
+                                    tabIndex={-1}
+                                    variant="outline"
+                                    size="sm"
+                                    className="whitespace-nowrap "
+                                    data-testid={
+                                      "edit-flow-button-" + item.id + "-" + idx
+                                    }
+                                  >
+                                    <IconComponent
+                                      name="ExternalLink"
+                                      className="main-page-nav-button select-none"
+                                    />
+                                    Edit Flow
+                                  </Button>
+                                </Link>
+                              ) : (
+                                <></>
+                              )
+                            }
+                            onClick={
+                              !is_component
+                                ? () => {
+                                    navigate("/flow/" + item.id);
                                   }
-                                >
-                                  <IconComponent
-                                    name="ExternalLink"
-                                    className="main-page-nav-button select-none"
-                                  />
-                                  Edit Flow
-                                </Button>
-                              </Link>
-                            ) : (
-                              <></>
-                            )
-                          }
-                          onClick={
-                            !is_component
-                              ? () => {
-                                  navigate("/flow/" + item.id);
-                                }
-                              : undefined
-                          }
-                          playground={!is_component}
-                          control={control}
-                        />
-                      </form>
+                                : undefined
+                            }
+                            playground={!is_component}
+                            control={control}
+                          />
+                        </form>
+                      </FormProvider>
                     ))}
                   </>
                 ) : (
@@ -253,32 +264,18 @@ export default function ComponentsComponent({
           )}
         </div>
       </CardsWrapComponent>
-
-      <ConfirmationModal
-        title="Delete flows"
-        titleHeader="Delete selected flows"
-        modalContentTitle="Attention!"
-        cancelText="Cancel"
-        confirmationText="Delete"
-        icon={"UserMinus2"}
-        onConfirm={(index, keys) => {
-          console.log("keys");
-        }}
-        size="x-small"
-      >
-        <ConfirmationModal.Content>
-          <span>
-            Are you sure you want to delete this key? This action cannot be
-            undone.
-          </span>
-        </ConfirmationModal.Content>
-        <ConfirmationModal.Trigger>
-          <IconComponent
-            name="Trash2"
-            className="ml-2 h-4 w-4 cursor-pointer"
-          />
-        </ConfirmationModal.Trigger>
-      </ConfirmationModal>
+      {openDelete && (
+        <DeleteConfirmationModal
+          open={openDelete}
+          setOpen={setOpenDelete}
+          onConfirm={() => {
+            console.log("delete");
+          }}
+          description={`of selected ${is_component ? "components" : "flows"}`}
+        >
+          <></>
+        </DeleteConfirmationModal>
+      )}
     </>
   );
 }

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import IconComponent from "../../../../components/genericIconComponent";
-import { Button } from "../../../../components/ui/button";
 import {
   Select,
   SelectContent,
@@ -30,22 +29,17 @@ const HeaderComponent = ({
   return (
     <>
       <div className="grid grid-cols-3 pb-5">
-        <div className="col-auto grid-cols-1 justify-self-start">
-          <Button
-            onClick={handleClick}
-            asChild
-            variant="ghost"
-            className="w-[120px]"
-          >
+        <div className="col-auto grid-cols-1 self-center justify-self-start ">
+          <a onClick={handleClick} className="text-sm">
             <div className="header-menu-bar-display ">
               <div
-                className="header-menu-flow-name m-auto flex justify-center"
+                className="header-menu-flow-name"
                 data-testid="select_all_collection"
               >
                 {shouldSelectAll ? "Select All" : "Unselect All"}
               </div>
             </div>
-          </Button>
+          </a>
         </div>
         <div className="col-span-2 grid-cols-1 justify-self-end">
           <div>

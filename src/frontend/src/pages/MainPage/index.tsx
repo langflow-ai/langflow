@@ -1,4 +1,4 @@
-import { Group, ToyBrick } from "lucide-react";
+import { FolderPlusIcon, Group, ToyBrick } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../components/dropdownButtonComponent";
@@ -11,6 +11,7 @@ import {
   MY_COLLECTION_DESC,
   USER_PROJECTS_HEADER,
 } from "../../constants/constants";
+import FoldersModal from "../../modals/foldersModal";
 import NewFlowModal from "../../modals/newFlowModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -18,7 +19,7 @@ import { downloadFlows } from "../../utils/reactflowUtils";
 export default function HomePage(): JSX.Element {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
   const uploadFlows = useFlowsManagerStore((state) => state.uploadFlows);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -26,6 +27,7 @@ export default function HomePage(): JSX.Element {
   const location = useLocation();
   const pathname = location.pathname;
   const [openModal, setOpenModal] = useState(false);
+  const [openFolderModal, setOpenFolderModal] = useState(false);
   const is_component = pathname === "/components";
   const dropdownOptions = [
     {
@@ -62,6 +64,10 @@ export default function HomePage(): JSX.Element {
       title: "Components",
       href: "/components",
       icon: <ToyBrick className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]" />,
+    },
+    {
+      title: "New Folder",
+      icon: <FolderPlusIcon className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]" />,
     },
   ];
 
@@ -109,13 +115,17 @@ export default function HomePage(): JSX.Element {
     >
       <div className="flex h-full w-full space-y-8 lg:flex-row lg:space-x-8 lg:space-y-0">
         <aside className="flex h-full flex-col space-y-6 lg:w-1/5">
-          <SidebarNav items={sidebarNavItems} />
+          <SidebarNav
+            handleOpenNewFolderModal={() => setOpenFolderModal(true)}
+            items={sidebarNavItems}
+          />
         </aside>
         <div className="h-full w-full flex-1">
           <Outlet />
         </div>
       </div>
       <NewFlowModal open={openModal} setOpen={setOpenModal} />
+      <FoldersModal open={openFolderModal} setOpen={setOpenFolderModal} />
     </PageLayout>
   );
 }
