@@ -34,11 +34,11 @@ const Router = () => {
       >
         <Route index element={<Navigate replace to={"flows"} />} />
         <Route
-          path="flows"
+          path="flows/*"
           element={<MyCollectionComponent key="flows" is_component={false} />}
         />
         <Route
-          path="components"
+          path="components/*"
           element={<MyCollectionComponent key="components" is_component />}
         />
       </Route>

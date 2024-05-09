@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { cloneDeep } from "lodash";
+import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import CollectionCardComponent from "../../../../components/cardComponent";
@@ -7,15 +8,13 @@ import IconComponent from "../../../../components/genericIconComponent";
 import PaginatorComponent from "../../../../components/paginatorComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
-import {
-  CONSOLE_ERROR_MSG,
-  UPLOAD_ALERT_LIST,
-  WRONG_FILE_ERROR_ALERT,
-} from "../../../../constants/alerts_constants";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { FlowType } from "../../../../types/flow";
+import useFileDrop from "../../hooks/on-file-drop";
+import { sortFlows } from "../../utils/sort-flows";
+import EmptyComponent from "../emptyComponent";
 import HeaderComponent from "../headerComponent";
 
 export default function ComponentsComponent({
@@ -23,78 +22,55 @@ export default function ComponentsComponent({
 }: {
   is_component?: boolean;
 }) {
-  const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const removeFlow = useFlowsManagerStore((state) => state.removeFlow);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
   const flows = useFlowsManagerStore((state) => state.flows);
+  const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
+  const allFlows = useFlowsManagerStore((state) => state.allFlows);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openDelete, setOpenDelete] = useState(false);
-
+  const searchFlowsComponents = useFlowsManagerStore(
+    (state) => state.searchFlowsComponents,
+  );
+  const [handleFileDrop] = useFileDrop(uploadFlow, is_component);
   const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
-
   const navigate = useNavigate();
-  const all: FlowType[] = flows
-    .filter((f) => (f.is_component ?? false) === is_component)
-    .sort((a, b) => {
-      if (a?.updated_at && b?.updated_at) {
-        return (
-          new Date(b?.updated_at!).getTime() -
-          new Date(a?.updated_at!).getTime()
-        );
-      } else if (a?.updated_at && !b?.updated_at) {
-        return 1;
-      } else if (!a?.updated_at && b?.updated_at) {
-        return -1;
-      } else {
-        return (
-          new Date(b?.date_created!).getTime() -
-          new Date(a?.date_created!).getTime()
-        );
-      }
-    });
+  const all: FlowType[] = sortFlows(allFlows, is_component);
   const start = (pageIndex - 1) * pageSize;
   const end = start + pageSize;
   const data: FlowType[] = all.slice(start, end);
-
   const name = is_component ? "Component" : "Flow";
 
-  const onFileDrop = (e) => {
-    e.preventDefault();
-    if (e.dataTransfer.types.some((types) => types === "Files")) {
-      if (e.dataTransfer.files.item(0).type === "application/json") {
-        uploadFlow({
-          newProject: true,
-          file: e.dataTransfer.files.item(0)!,
-          isComponent: is_component,
-        })
-          .then(() => {
-            setSuccessData({
-              title: `${
-                is_component ? "Component" : "Flow"
-              } uploaded successfully`,
-            });
-          })
-          .catch((error) => {
-            setErrorData({
-              title: CONSOLE_ERROR_MSG,
-              list: [error],
-            });
-          });
-      } else {
-        setErrorData({
-          title: WRONG_FILE_ERROR_ALERT,
-          list: [UPLOAD_ALERT_LIST],
-        });
-      }
+  useEffect(() => {
+    setTimeout(() => {
+      setAllFlows(flows);
+    }, 500);
+  }, [flows]);
+
+  useEffect(() => {
+    const newFlows = cloneDeep(flows);
+    const filteredFlows = newFlows.filter(
+      (f) =>
+        f.name.toLowerCase().includes(searchFlowsComponents.toLowerCase()) ||
+        f.description
+          .toLowerCase()
+          .includes(searchFlowsComponents.toLowerCase()),
+    );
+
+    if (searchFlowsComponents === "") {
+      setAllFlows(flows);
     }
-  };
-  function resetFilter() {
+
+    setAllFlows(filteredFlows);
+  }, [searchFlowsComponents]);
+
+  const resetFilter = () => {
     setPageIndex(1);
     setPageSize(20);
-  }
+  };
 
   const { getValues, control, setValue } = useForm();
   const methods = useForm();
@@ -139,38 +115,13 @@ export default function ComponentsComponent({
       />
 
       <CardsWrapComponent
-        onFileDrop={onFileDrop}
+        onFileDrop={handleFileDrop}
         dragMessage={`Drag your ${name} here`}
       >
         <div className="flex h-full w-full flex-col justify-between">
           <div className="flex w-full flex-col gap-4">
             {!isLoading && data.length === 0 ? (
-              <div className="mt-6 flex w-full items-center justify-center text-center">
-                <div className="flex-max-width h-full flex-col">
-                  <div className="flex w-full flex-col gap-4">
-                    <div className="grid w-full gap-4">
-                      Flows and components can be created using Langflow.
-                    </div>
-                    <div className="align-center flex w-full justify-center gap-1">
-                      <span>New?</span>
-                      <span className="transition-colors hover:text-muted-foreground">
-                        <button
-                          onClick={() => {
-                            addFlow(true).then((id) => {
-                              navigate("/flow/" + id);
-                            });
-                          }}
-                          className="underline"
-                        >
-                          Start Here
-                        </button>
-                        .
-                      </span>
-                      <span className="animate-pulse">🚀</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <EmptyComponent />
             ) : (
               <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
                 {isLoading === false && data?.length > 0 ? (
@@ -251,7 +202,7 @@ export default function ComponentsComponent({
                 pageSize={pageSize}
                 rowsCount={[10, 20, 50, 100]}
                 totalRowsCount={
-                  flows.filter(
+                  allFlows.filter(
                     (f) => (f.is_component ?? false) === is_component,
                   ).length
                 }

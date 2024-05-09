@@ -4,6 +4,8 @@ import { FlowType } from "../../flow";
 export type FlowsManagerStoreType = {
   getFlowById: (id: string) => FlowType | undefined;
   flows: Array<FlowType>;
+  allFlows: Array<FlowType>;
+  setAllFlows: (flows: FlowType[]) => void;
   setFlows: (flows: FlowType[]) => void;
   currentFlow: FlowType | undefined;
   currentFlowId: string;
@@ -15,12 +17,12 @@ export type FlowsManagerStoreType = {
   saveFlow: (flow: FlowType, silent?: boolean) => Promise<void> | undefined;
   saveFlowDebounce: (
     flow: FlowType,
-    silent?: boolean
+    silent?: boolean,
   ) => Promise<void> | undefined;
   autoSaveCurrentFlow: (
     nodes: Node[],
     edges: Edge[],
-    viewport: Viewport
+    viewport: Viewport,
   ) => void;
   uploadFlows: () => Promise<void>;
   uploadFlow: ({
@@ -38,13 +40,13 @@ export type FlowsManagerStoreType = {
     newProject: boolean,
     flow?: FlowType,
     override?: boolean,
-    position?: XYPosition
+    position?: XYPosition,
   ) => Promise<string | undefined>;
   deleteComponent: (key: string) => Promise<void>;
   removeFlow: (id: string) => Promise<void>;
   saveComponent: (
     component: any,
-    override: boolean
+    override: boolean,
   ) => Promise<string | undefined>;
   undo: () => void;
   redo: () => void;
@@ -52,6 +54,8 @@ export type FlowsManagerStoreType = {
   examples: Array<FlowType>;
   setExamples: (examples: FlowType[]) => void;
   setCurrentFlow: (flow: FlowType) => void;
+  setSearchFlowsComponents: (search: string) => void;
+  searchFlowsComponents: string;
 };
 
 export type UseUndoRedoOptions = {

@@ -1,4 +1,4 @@
-import { FolderPlusIcon, Group, ToyBrick } from "lucide-react";
+import { FolderPlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../components/dropdownButtonComponent";
@@ -56,16 +56,6 @@ export default function HomePage(): JSX.Element {
   ];
   const sidebarNavItems = [
     {
-      title: "Flows",
-      href: "/flows",
-      icon: <Group className="w-5 stroke-[1.5]" />,
-    },
-    {
-      title: "Components",
-      href: "/components",
-      icon: <ToyBrick className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]" />,
-    },
-    {
       title: "New Folder",
       icon: <FolderPlusIcon className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]" />,
     },
@@ -118,6 +108,9 @@ export default function HomePage(): JSX.Element {
           <SidebarNav
             handleOpenNewFolderModal={() => setOpenFolderModal(true)}
             items={sidebarNavItems}
+            handleChangeFolder={(id: string) => {
+              navigate("flows/folder/" + id);
+            }}
           />
         </aside>
         <div className="h-full w-full flex-1">

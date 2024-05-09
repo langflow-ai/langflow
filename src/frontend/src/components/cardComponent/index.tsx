@@ -310,26 +310,28 @@ export default function CollectionCardComponent({
         </div>
 
         <CardFooter>
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
-          >
-            <FormField
-              control={control}
-              name={`${data.id}`}
-              defaultValue={false}
-              render={({ field }) => (
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    className="relative top-1 h-5 w-5 border-2"
-                  />
-                </FormControl>
-              )}
-            />
-          </div>
+          {control && (
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              <FormField
+                control={control}
+                name={`${data.id}`}
+                defaultValue={false}
+                render={({ field }) => (
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="relative top-1 h-5 w-5 border-2"
+                    />
+                  </FormControl>
+                )}
+              />
+            </div>
+          )}
 
           <div className="z-50 flex w-full items-center justify-between gap-2">
             <div className="flex w-full flex-wrap items-end justify-end gap-2">

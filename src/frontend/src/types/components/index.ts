@@ -222,6 +222,7 @@ export type AccordionComponentType = {
   keyValue?: string;
   openDisc?: boolean;
   sideBar?: boolean;
+  options?: { title: string; icon: string }[];
 };
 export type Side = "top" | "right" | "bottom" | "left";
 

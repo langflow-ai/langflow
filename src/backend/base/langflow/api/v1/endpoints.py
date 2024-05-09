@@ -4,7 +4,7 @@ from typing import Annotated, List, Optional, Union
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from langflow.api.utils import update_frontend_node_with_template_values
 from langflow.api.v1.schemas import (
@@ -455,3 +455,27 @@ async def custom_component_update(
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.delete ("/flows/multiple_delete", status_code=HTTPStatus.OK)
+async def delete_multiple_flows(flow_ids: List[str], user: User = Depends(get_current_active_user), db: Session = Depends(get_session)):
+    """
+    Delete multiple flows by their IDs.
+
+    Args:
+        flow_ids (List[str]): The list of flow IDs to delete.
+        user (User, optional): The user making the request. Defaults to the current active user.
+
+    Returns:
+        dict: A dictionary containing the number of flows deleted.
+
+    """
+    try:
+        deleted_flows = db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id)).all()
+        for flow in deleted_flows:
+            db.delete(flow)
+        db.commit()
+        return {"deleted": len(deleted_flows)}
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

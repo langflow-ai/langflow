@@ -1,4 +1,5 @@
-import ComponentsComponent from "../components";
+import ComponentsComponent from "../componentsComponent";
+import HeaderTabsSearchComponent from "./components/headerTabsSearchComponent";
 
 type MyCollectionComponentProps = {
   key: string;
@@ -11,7 +12,10 @@ const MyCollectionComponent = ({
 }: MyCollectionComponentProps) => {
   return (
     <>
-      <ComponentsComponent key={key} is_component={is_component} />
+      <HeaderTabsSearchComponent />
+      <div className="mt-5">
+        <ComponentsComponent key={key} is_component={is_component} />
+      </div>
     </>
   );
 };
