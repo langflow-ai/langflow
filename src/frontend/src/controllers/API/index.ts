@@ -27,6 +27,7 @@ import {
   errorsTypeAPI,
 } from "./../../types/api/index";
 import { extractColumnsFromRows } from "../../utils/utils";
+import { ColDef, ColGroupDef } from "ag-grid-community";
 
 /**
  * Fetches all objects from the API endpoint.
@@ -997,10 +998,26 @@ export async function deleteFlowPool(
 export async function getTransactionTable(
   id: string,
   mode: "intersection" | "union",
-): Promise<{ rows: Array<any>; columns: Array<any> }> {
+  params = {},
+): Promise<{ rows: Array<object>; columns: Array<ColDef | ColGroupDef> }> {
   const config = {};
   config["params"] = { flow_id: id };
-  const rows = await api.get(`${BASE_URL_API}monitor/transactions`, config);
-  const columns = extractColumnsFromRows(rows.data.rows, mode);
-  return { rows: rows.data.rows, columns };
+  if (params) {
+    config["params"] = { ...config["params"], ...params };
+  }
+  // const rows = await api.get(`${BASE_URL_API}monitor/transactions`, config);
+  const rows = [
+    {
+      id: 0,
+      timestamp: "2024-05-09T17:42:43.328Z",
+      flow_id: "string",
+      source: "string",
+      target: "string",
+      target_args: {},
+      status: "string",
+      error: "string",
+    },
+  ];
+  const columns = extractColumnsFromRows(rows, mode);
+  return { rows, columns };
 }

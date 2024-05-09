@@ -113,7 +113,7 @@ function BaseModal({
   switch (size) {
     case "x-small":
       minWidth = "min-w-[20vw]";
-      height = " ";
+      height = "h-full";
       break;
     case "smaller":
       minWidth = "min-w-[40vw]";
@@ -129,6 +129,7 @@ function BaseModal({
       break;
     case "small-h-full":
       minWidth = "min-w-[40vw]";
+      height = "h-full";
       break;
     case "medium":
       minWidth = "min-w-[60vw]";
@@ -136,6 +137,8 @@ function BaseModal({
       break;
     case "medium-h-full":
       minWidth = "min-w-[60vw]";
+      height = "h-full";
+
       break;
     case "large":
       minWidth = "min-w-[85vw]";
@@ -162,6 +165,7 @@ function BaseModal({
 
     case "large-h-full":
       minWidth = "min-w-[80vw]";
+      height = "h-full";
       break;
     default:
       minWidth = "min-w-[80vw]";
@@ -186,7 +190,7 @@ function BaseModal({
               {headerChild}
             </div>
             <div
-              className={`flex flex-col ${height!} w-full transition-all duration-300`}
+              className={`flex flex-col ${height} w-full transition-all duration-300`}
             >
               {ContentChild}
             </div>
@@ -203,7 +207,7 @@ function BaseModal({
               {headerChild}
             </div>
             <div
-              className={`flex flex-col ${height!} w-full transition-all duration-300`}
+              className={`flex flex-col ${height} w-full transition-all duration-300`}
             >
               {ContentChild}
             </div>

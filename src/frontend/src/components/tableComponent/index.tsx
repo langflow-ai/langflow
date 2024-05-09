@@ -16,7 +16,6 @@ const TableComponent = forwardRef<
   TableComponentProps
 >(({ ...props }, ref) => {
   const dark = useDarkStore((state) => state.dark);
-
   return (
     <div
       className={cn(

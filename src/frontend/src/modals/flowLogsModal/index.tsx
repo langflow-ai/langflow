@@ -6,6 +6,12 @@ import { FlowSettingsPropsType } from "../../types/components";
 import { FlowType } from "../../types/flow";
 import BaseModal from "../baseModal";
 import TableComponent from "../../components/tableComponent";
+import { getTransactionTable } from "../../controllers/API";
+import {
+  ColDef,
+  ColGroupDef,
+  SizeColumnsToFitGridStrategy,
+} from "ag-grid-community";
 
 export default function FlowLogsModal({
   open,
@@ -13,6 +19,7 @@ export default function FlowLogsModal({
 }: FlowSettingsPropsType): JSX.Element {
   const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const flows = useFlowsManagerStore((state) => state.flows);
   useEffect(() => {
     setName(currentFlow!.name);
@@ -21,6 +28,9 @@ export default function FlowLogsModal({
 
   const [name, setName] = useState(currentFlow!.name);
   const [description, setDescription] = useState(currentFlow!.description);
+  const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
+  const [rows, setRows] = useState<any>([]);
+  const [activeTab, setActiveTab] = useState("logs");
 
   function handleClick(): void {
     currentFlow!.name = name;
@@ -29,9 +39,15 @@ export default function FlowLogsModal({
     setOpen(false);
   }
 
-  const [nameLists, setNameList] = useState<string[]>([]);
+  useEffect(() => {
+    getTransactionTable(currentFlowId, "union").then((data) => {
+      const { columns, rows } = data;
+      setColumns(columns);
+      setRows(rows);
+    });
+  }, [activeTab]);
 
-  const [activeTab, setActiveTab] = useState("logs");
+  const [nameLists, setNameList] = useState<string[]>([]);
 
   useEffect(() => {
     const tempNameList: string[] = [];
@@ -63,7 +79,14 @@ export default function FlowLogsModal({
         </div>
       </BaseModal.Header>
       <BaseModal.Content>
-        <TableComponent columnDefs={[]} rowData={[]}></TableComponent>
+        <TableComponent
+          className="h-full w-full"
+          pagination={false}
+          columnDefs={columns}
+          autoSizeStrategy={{ type: "fitGridWidth" }}
+          domLayout="autoHeight"
+          rowData={rows}
+        ></TableComponent>
       </BaseModal.Content>
     </BaseModal>
   );

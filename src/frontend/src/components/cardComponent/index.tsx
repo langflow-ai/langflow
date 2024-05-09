@@ -82,7 +82,6 @@ export default function CollectionCardComponent({
       return false;
     }
     const { inputs, outputs } = getInputsAndOutputs(flow?.data?.nodes ?? []);
-    console.log(inputs, outputs);
     return inputs.length > 0 || outputs.length > 0;
   }
 
