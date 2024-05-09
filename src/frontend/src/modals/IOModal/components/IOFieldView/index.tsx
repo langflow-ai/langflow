@@ -25,7 +25,6 @@ import {
 import IOFileInput from "./components/FileInput";
 import IoJsonInput from "./components/JSONInput";
 import IOKeyPairInput from "./components/keyPairInput";
-import { cn } from "../../../../utils/utils";
 
 export default function IOFieldView({
   type,
@@ -50,19 +49,6 @@ export default function IOFieldView({
     }
   };
 
-  const [rowData, setRowData] = useState([
-    { make: "Tesla", model: "Model Y", price: 64950, electric: true },
-    { make: "Ford", model: "F-Series", price: 33850, electric: false },
-    { make: "Toyota", model: "Corolla", price: 29600, electric: false },
-  ]);
-
-  // Column Definitions: Defines the columns to be displayed.
-  const [colDefs, setColDefs] = useState([
-    { field: "make", flex: 1 },
-    { field: "model", flex: 1 },
-    { field: "price", flex: 1 },
-    { field: "electric", flex: 1, resizable: false },
-  ]);
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   function handleOutputType() {
@@ -303,8 +289,19 @@ export default function IOFieldView({
                   overlayNoRowsTemplate="No data available"
                   suppressRowClickSelection={true}
                   pagination={!left}
-                  columnDefs={colDefs}
-                  rowData={rowData}
+                  columnDefs={Object.keys(
+                    node.data.node!.template["input_value"]?.value[0],
+                  ).map((col, idx) => ({
+                    field: col,
+                    flex: 1,
+                    resizable:
+                      idx !==
+                      Object.keys(
+                        node.data.node!.template["input_value"]?.value[0],
+                      ).length -
+                        1,
+                  }))}
+                  rowData={node.data.node!.template["input_value"]?.value}
                 />
               </div>
             );
