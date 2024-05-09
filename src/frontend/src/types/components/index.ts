@@ -653,6 +653,7 @@ export type codeTabsPropsType = {
       value: string,
       node: NodeType,
       template: TemplateVariableType,
+      tweak: tweakType,
     ) => string;
     buildTweakObject?: (
       tw: string,
@@ -660,6 +661,8 @@ export type codeTabsPropsType = {
       template: TemplateVariableType,
     ) => Promise<string | void>;
   };
+  activeTweaks?: boolean;
+  setActiveTweaks?: (value: boolean) => void;
 };
 
 export type crashComponentPropsType = {

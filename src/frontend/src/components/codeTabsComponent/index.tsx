@@ -41,6 +41,8 @@ import IconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import KeypairListComponent from "../keypairListComponent";
 import ShadTooltip from "../shadTooltipComponent";
+import { Label } from "../ui/label";
+import { Switch } from "../ui/switch";
 
 export default function CodeTabsComponent({
   flow,
@@ -49,14 +51,13 @@ export default function CodeTabsComponent({
   setActiveTab,
   isMessage,
   tweaks,
+  setActiveTweaks,
+  activeTweaks,
 }: codeTabsPropsType) {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
-  const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const dark = useDarkStore((state) => state.dark);
   const unselectAll = useFlowStore((state) => state.unselectAll);
-  const setNode = useFlowStore((state) => state.setNode);
-
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   useEffect(() => {
@@ -137,27 +138,57 @@ export default function CodeTabsComponent({
         ) : (
           <div></div>
         )}
-        {Number(activeTab) < 4 && (
-          <div className="float-right mx-1 mb-1 mt-2 flex gap-2">
-            <button
-              className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
-              onClick={copyToClipboard}
+
+        <div className="float-right mx-1 mb-1 mt-2 flex gap-2">
+          <div
+            className={
+              Number(activeTab) > 2
+                ? "hidden"
+                : "relative top-[2.5px] flex gap-2"
+            }
+          >
+            <Switch
+              style={{
+                transform: `scaleX(${0.7}) scaleY(${0.7})`,
+              }}
+              id="tweaks-switch"
+              onCheckedChange={setActiveTweaks}
+            />
+            <Label
+              className={
+                "relative right-1 top-[4px] text-xs font-medium text-gray-500 dark:text-gray-300 " +
+                (activeTweaks
+                  ? "font-bold text-black dark:text-white"
+                  : "font-medium")
+              }
+              htmlFor="tweaks-switch"
             >
-              {isCopied ? (
-                <IconComponent name="Check" className="h-4 w-4" />
-              ) : (
-                <IconComponent name="Clipboard" className="h-4 w-4" />
-              )}
-              {isCopied ? "Copied!" : "Copy Code"}
-            </button>
-            <button
-              className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
-              onClick={downloadAsFile}
-            >
-              <IconComponent name="Download" className="h-5 w-5" />
-            </button>
+              Tweaks
+            </Label>
           </div>
-        )}
+
+          {Number(activeTab) < 4 && (
+            <>
+              <button
+                className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
+                onClick={copyToClipboard}
+              >
+                {isCopied ? (
+                  <IconComponent name="Check" className="h-4 w-4" />
+                ) : (
+                  <IconComponent name="Clipboard" className="h-4 w-4" />
+                )}
+                {isCopied ? "Copied!" : "Copy Code"}
+              </button>
+              <button
+                className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
+                onClick={downloadAsFile}
+              >
+                <IconComponent name="Download" className="h-5 w-5" />
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {tabs.map((tab, idx) => (
@@ -277,7 +308,7 @@ export default function CodeTabsComponent({
                                                         ].value = target;
                                                         return newInputList;
                                                       });
-                                                      tweaks.buildTweakObject!(
+                                                      tweaks?.buildTweakObject!(
                                                         node["data"]["id"],
                                                         target,
                                                         node.data.node.template[
@@ -318,7 +349,7 @@ export default function CodeTabsComponent({
                                                           ].value = target;
                                                           return newInputList;
                                                         });
-                                                        tweaks.buildTweakObject!(
+                                                        tweaks?.buildTweakObject!(
                                                           node["data"]["id"],
                                                           target,
                                                           node.data.node
@@ -362,7 +393,7 @@ export default function CodeTabsComponent({
                                                         ].value = target;
                                                         return newInputList;
                                                       });
-                                                      tweaks.buildTweakObject!(
+                                                      tweaks?.buildTweakObject!(
                                                         node["data"]["id"],
                                                         target,
                                                         node.data.node.template[
@@ -395,7 +426,7 @@ export default function CodeTabsComponent({
                                                       ].value = e;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       e,
                                                       node.data.node.template[
@@ -469,7 +500,7 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
@@ -504,7 +535,7 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
@@ -561,7 +592,7 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
@@ -602,7 +633,7 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
@@ -643,7 +674,7 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
@@ -701,7 +732,7 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
@@ -746,7 +777,7 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
