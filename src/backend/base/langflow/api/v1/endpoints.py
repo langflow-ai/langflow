@@ -457,8 +457,10 @@ async def custom_component_update(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.delete ("/flows/multiple_delete", status_code=HTTPStatus.OK)
-async def delete_multiple_flows(flow_ids: List[str], user: User = Depends(get_current_active_user), db: Session = Depends(get_session)):
+@router.delete("/flows/multiple_delete", status_code=HTTPStatus.OK)
+async def delete_multiple_flows(
+    flow_ids: List[str], user: User = Depends(get_current_active_user), db: Session = Depends(get_session)
+):
     """
     Delete multiple flows by their IDs.
 
