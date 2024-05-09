@@ -537,11 +537,11 @@ class Vertex:
             The built result if use_result is True, else the built object.
         """
         if not self._built:
-            log_transaction(source=self, target=requester, status="error")
+            log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="error")
             raise ValueError(f"Component {self.display_name} has not been built yet")
 
         result = self._built_result if self.use_result else self._built_object
-        log_transaction(source=self, target=requester, status="success")
+        log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="success")
         return result
 
     async def _build_vertex_and_update_params(self, key, vertex: "Vertex"):

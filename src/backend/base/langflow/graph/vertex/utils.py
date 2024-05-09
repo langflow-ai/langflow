@@ -84,7 +84,7 @@ def build_clean_params(target: "Vertex") -> dict:
     return params
 
 
-def log_transaction(source: "Vertex", target: "Vertex", status, error=None):
+def log_transaction(source: "Vertex", target: "Vertex", flow_id, status, error=None):
     """
     Logs a transaction between two vertices.
 
@@ -108,6 +108,7 @@ def log_transaction(source: "Vertex", target: "Vertex", status, error=None):
             "timestamp": monitor_service.get_timestamp(),
             "status": status,
             "error": error,
+            "flow_id": flow_id,
         }
         monitor_service.add_row(table_name="transactions", data=data)
     except Exception as e:
