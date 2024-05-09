@@ -23,7 +23,7 @@ class UUIDGeneratorComponent(CustomComponent):
         return {
             "unique_id": {
                 "display_name": "Value",
-                "real_time_refresh": True,
+                "refresh_button": True,
             }
         }
 

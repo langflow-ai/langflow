@@ -5,6 +5,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
+from langflow.base.models.openai_constants import MODEL_NAMES
 from langflow.field_typing import NestedDict, Text
 
 
@@ -39,16 +40,7 @@ class OpenAIModelComponent(LCModelComponent):
             "model_name": {
                 "display_name": "Model Name",
                 "advanced": False,
-                "options": [
-                    "gpt-4-turbo-2024-04-09",
-                    "gpt-4-turbo-preview",
-                    "gpt-3.5-turbo",
-                    "gpt-4-0125-preview",
-                    "gpt-4-1106-preview",
-                    "gpt-4-vision-preview",
-                    "gpt-3.5-turbo-0125",
-                    "gpt-3.5-turbo-1106",
-                ],
+                "options": MODEL_NAMES,
                 "value": "gpt-4-turbo-preview",
             },
             "openai_api_base": {

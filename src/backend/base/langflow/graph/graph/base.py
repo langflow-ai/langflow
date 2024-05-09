@@ -166,6 +166,25 @@ class Graph:
 
         self.state_manager.append_state(name, record, run_id=self._run_id)
 
+    def validate_stream(self):
+        """
+        Validates the stream configuration of the graph.
+
+        If there are two vertices in the same graph (connected by edges)
+        that have `stream=True` or `streaming=True`, raises a `ValueError`.
+
+        Raises:
+            ValueError: If two connected vertices have `stream=True` or `streaming=True`.
+        """
+        for vertex in self.vertices:
+            if vertex.params.get("stream") or vertex.params.get("streaming"):
+                successors = self.get_all_successors(vertex)
+                for successor in successors:
+                    if successor.params.get("stream") or successor.params.get("streaming"):
+                        raise ValueError(
+                            f"Components {vertex.display_name} and {successor.display_name} are connected and both have stream or streaming set to True"
+                        )
+
     @property
     def run_id(self):
         """
@@ -882,7 +901,7 @@ class Graph:
         """Returns the predecessors of a vertex."""
         return [self.get_vertex(source_id) for source_id in self.predecessor_map.get(vertex.id, [])]
 
-    def get_all_successors(self, vertex, recursive=True, flat=True):
+    def get_all_successors(self, vertex: Vertex, recursive=True, flat=True):
         # Recursively get the successors of the current vertex
         # successors = vertex.successors
         # if not successors:
@@ -919,7 +938,7 @@ class Graph:
                 successors_result.append([successor])
         return successors_result
 
-    def get_successors(self, vertex):
+    def get_successors(self, vertex: Vertex) -> List[Vertex]:
         """Returns the successors of a vertex."""
         return [self.get_vertex(target_id) for target_id in self.successor_map.get(vertex.id, [])]
 

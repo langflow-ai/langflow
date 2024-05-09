@@ -2,114 +2,105 @@ import Admonition from "@theme/Admonition";
 
 # Custom Components
 
-Used to create a custom component, a special type of Langflow component that allows users to extend the functionality of the platform by creating their own reusable and configurable components from a Python script.
-
-To use a custom component, follow these steps:
-
-- Create a class that inherits from _`langflow.CustomComponent`_ and contains a _`build`_ method.
-- Use arguments with [Type Annotations (or Type Hints)](https://docs.python.org/3/library/typing.html) of the _`build`_ method to create component fields.
-- If applicable, use the _`build_config`_ method to customize how these fields look and behave.
-
 <Admonition type="info" label="Tip">
-
-For an in-depth explanation of custom components, their rules, and applications, make sure to read [Custom Component guidelines](../administration/custom-component).
-
+  Read the [Custom Component Guidelines](../administration/custom-component) for detailed information on custom components.
 </Admonition>
 
-**Params**
+Custom components let you extend Langflow by creating reusable and configurable components from a Python script.
 
-- **Code:** The Python code to define the component.
+## Usage
 
-## The CustomComponent Class
+To create a custom component:
 
-The CustomComponent class serves as the foundation for creating custom components. By inheriting this class, users can create new, configurable components, tailored to their specific requirements.
+1. Define a class that inherits from `langflow.CustomComponent`.
+2. Implement a `build` method in your class.
+3. Use type annotations in the `build` method to define component fields.
+4. Optionally, use the `build_config` method to customize field appearance and behavior.
 
-**Methods**
+**Parameters**
 
-- **build**: This method is required within a Custom Component class. It defines the component's functionality and specifies how it processes input data to produce output data. This method is called when the component is built (i.e., when you click the _Build_ ⚡ button in the canvas).
+- **Code:** The Python code that defines the component.
 
-  The type annotations of the _`build`_ instance method are used to create the fields of the component.
+## CustomComponent Class
 
-  | Supported Types                                           |
-  | --------------------------------------------------------- |
-  | _`str`_, _`int`_, _`float`_, _`bool`_, _`list`_, _`dict`_ |
-  | _`langflow.field_typing.NestedDict`_                      |
-  | _`langflow.field_typing.Prompt`_                         |
-  | _`langchain.chains.base.Chain`_                           |
-  | _`langchain.PromptTemplate`_                              |
-  | _`from langchain.schema.language_model import BaseLanguageModel`_                           |
-  | _`langchain.Tool`_                                        |
-  | _`langchain.document_loaders.base.BaseLoader`_            |
-  | _`langchain.schema.Document`_                             |
-  | _`langchain.text_splitters.TextSplitter`_                 |
-  | _`langchain.vectorstores.base.VectorStore`_               |
-  | _`langchain.embeddings.base.Embeddings`_                  |
-  | _`langchain.schema.BaseRetriever`_                        |
+This class is the foundation for creating custom components. It allows users to create new, configurable components tailored to their needs.
 
-  The difference between _`dict`_ and _`langflow.field_typing.NestedDict`_ is that one adds a simple key-value pair field, while the other opens a more robust dictionary editor.
+### Methods
 
-  <Admonition type="info">
-      To use the _`Prompt`_ type, you must also add _`**kwargs`_ to the _`build`_ method. This is because the _`Prompt`_ type passes new arbitrary keyword arguments to it.
+**build:** This method is essential in a `CustomComponent` class. It defines the component's functionality and how it processes input data. The build method is invoked when you click the **Build** button on the canvas.
 
-      If you want to add the values of the variables to the template you defined, you must format the PromptTemplate inside the CustomComponent class.
-        </Admonition>
+The following types are supported in the build method:
 
+| Supported Types                                           |
+| --------------------------------------------------------- |
+| _`str`_, _`int`_, _`float`_, _`bool`_, _`list`_, _`dict`_ |
+| _`langflow.field_typing.NestedDict`_                      |
+| _`langflow.field_typing.Prompt`_                          |
+| _`langchain.chains.base.Chain`_                           |
+| _`langchain.PromptTemplate`_                              |
+| _`from langchain.schema.language_model import BaseLanguageModel`_ |
+| _`langchain.Tool`_                                        |
+| _`langchain.document_loaders.base.BaseLoader`_            |
+| _`langchain.schema.Document`_                             |
+| _`langchain.text_splitters.TextSplitter`_                 |
+| _`langchain.vectorstores.base.VectorStore`_               |
+| _`langchain.embeddings.base.Embeddings`_                  |
+| _`langchain.schema.BaseRetriever`_                        |
 
-  <Admonition type="info">
-      Unlike Langchain types, base Python types do not add a
-    [handle](../administration/components) to the field by default. To add handles,
-    use the _`input_types`_ key in the _`build_config`_ method.
-        </Admonition>
+The difference between _`dict`_ and _`langflow.field_typing.NestedDict`_ is that one adds a simple key-value pair field, while the other opens a more robust dictionary editor.
 
-- **build_config**: Used to define the configuration fields of the component (if applicable). It should always return a dictionary with specific keys representing the field names and corresponding configurations. This method is called when the code is processed (i.e., when you click _Check and Save_ in the code editor). It must follow the format described below:
-
-  - Top-level keys are field names.
-  - Their values are can be of type _`langflow.field_typing.TemplateField`_ or _`dict`_. They specify the behavior of the generated fields.
-
-  Below are the available keys used to configure component fields:
-
-  | Key                        | Description                                                                                                                                                                                                                                                                 |
-  | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | _`is_list: bool`_          | If the field can be a list of values, meaning that the user can manually add more inputs to the same field.                                                                                                                                                                 |
-  | _`options: List[str]`_     | When defined, the field becomes a dropdown menu where a list of strings defines the options to be displayed. If the _`value`_ attribute is set to one of the options, that option becomes default. For this parameter to work, _`field_type`_ should invariably be _`str`_. |
-  | _`multiline: bool`_        | Defines if a string field opens a text editor. Useful for longer texts.                                                                                                                                                                                                     |
-  | _`input_types: List[str]`_ | Used when you want a _`str`_ field to have connectable handles.                                                                                                                                                                                                             |
-  | _`display_name: str`_      | Defines the name of the field.                                                                                                                                                                                                                                              |
-  | _`advanced: bool`_         | Hide the field in the canvas view (displayed component settings only). Useful when a field is for advanced users.                                                                                                                                                           |
-  | _`password: bool`_         | To mask the input text. Useful to hide sensitive text (e.g. API keys).                                                                                                                                                                                                      |
-  | _`required: bool`_         | This is determined automatically but can be used to override the default behavior.                                                                                                                                                                                         |
-  | _`info: str`_              | Adds a tooltip to the field.                                                                                                                                                                                                                                                |
-  | _`file_types: List[str]`_  | This is a requirement if the _`field_type`_ is _file_. Defines which file types will be accepted. For example, _json_, _yaml_ or _yml_.                                                                                                                                     |
-  | _`range_spec: langflow.field_typing.RangeSpec`_ | This is a requirement if the _`field_type`_ is _`float`_. Defines the range of values accepted and the step size. If none is defined, the default is _`[-1, 1, 0.1]`_.                                                                                 |
-  | _`title_case: bool`_       | Formats the name of the field when _`display_name`_ is not defined. Set it to False to keep the name as you set it in the _`build`_ method.                                                                                                                                 |
-  | _`refresh_button: bool`_          | If set to True a button will appear to the right of the field, and when clicked, it will call the _`update_build_config`_ method which takes in the _`build_config`_, the name of the field (_`field_name`_) and the latest value of the field (_`field_value`_). This is useful when you want to update the _`build_config`_ based on the value of the field. |
-  | _`real_time_refresh: bool`_ | If set to True, the _`update_build_config`_ method will be called every time the field value changes.                                                                                                                                                                      |
-  | _`field_type: str`_        | You should never define this key. It is automatically set based on the type hint of the _`build`_ method.                                                                                                                                                                  |
-
-<Admonition type="info" label="Tip">
-
-By using the _`update_build_config`_ method, you can update the _`build_config`_ in whatever way you want based on the value of the field or not.
-
+<Admonition type="info">
+  Use the `Prompt` type by adding **kwargs to the build method.
+  If you want to add the values of the variables to the template you defined, format the `PromptTemplate` inside the `CustomComponent` class.
 </Admonition>
 
-- The CustomComponent class also provides helpful methods for specific tasks (e.g., to load and use other flows from the Langflow platform):
+<Admonition type="info">
+  Use base Python types without a handle by default. To add handles, use the `input_types` key in the `build_config` method.
+</Admonition>
 
-  | Method Name    | Description                                                         |
-  | -------------- | ------------------------------------------------------------------- |
-  | _`list_flows`_ | Returns a list of Flow objects with an _`id`_ and a _`name`_.       |
-  | _`get_flow`_   | Returns a Flow object. Parameters are _`flow_name`_ or _`flow_id`_. |
-  | _`load_flow`_  | Loads a flow from a given _`id`_.                                   |
+**build_config:** Defines the configuration fields of the component. This method returns a dictionary where each key represents a field name and each value defines the field's behavior.
 
-- Useful attributes:
+Supported keys for configuring fields:
 
-  | Attribute Name | Description                                                                   |
-  | -------------- | ----------------------------------------------------------------------------- |
-  | _`status`_ | Displays the value it receives in the _`build`_ method. Useful for debugging. |
-  | _`field_order`_ | Defines the order the fields will be displayed in the canvas.                  |
-  | _`icon`_ | Defines the emoji (for example, _`:rocket:`_) that will be displayed in the canvas. |
+| Key                   | Description                                         |
+| --------------------- | --------------------------------------------------- |
+| `is_list`             | Boolean indicating if the field can hold multiple values. |
+| `options`             | Dropdown menu options.                              |
+| `multiline`           | Boolean indicating if a field allows multiline input. |
+| `input_types`         | Allows connection handles for string fields.        |
+| `display_name`        | Field name displayed in the UI.                     |
+| `advanced`            | Hides the field in the default UI view.             |
+| `password`            | Masks input, useful for sensitive data.             |
+| `required`            | Overrides the default behavior to make a field mandatory. |
+| `info`                | Tooltip for the field.                              |
+| `file_types`          | Accepted file types, useful for file fields.        |
+| `range_spec`          | Defines valid ranges for float fields.              |
+| `title_case`          | Boolean that controls field name capitalization.    |
+| `refresh_button`      | Adds a refresh button that updates field values.    |
+| `real_time_refresh`   | Updates the configuration as field values change.   |
+| `field_type`          | Automatically set based on the build method's type hint. |
 
-  <Admonition type="info" label="Tip">
+<Admonition type="info" label="Tip">
+  Use the `update_build_config` method to dynamically update configurations based on field values.
+</Admonition>
 
+## Additional methods and attributes
+
+The `CustomComponent` class also provides helpful methods for specific tasks (e.g., to load and use other flows from the Langflow platform):
+
+### Methods
+
+- `list_flows`: Lists available flows.
+- `get_flow`: Retrieves a specific flow by name or ID.
+- `load_flow`: Loads a flow by ID.
+
+### Attributes
+
+- `status`: Shows values from the `build` method, useful for debugging.
+- `field_order`: Controls the display order of fields.
+- `icon`: Sets the canvas display icon.
+
+<Admonition type="info" label="Tip">
   Check out the [FlowRunner](../examples/flow-runner) example to understand how to call a flow from a custom component.
+</Admonition>
 
-  </Admonition>
