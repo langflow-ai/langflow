@@ -71,6 +71,8 @@ zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
 langchain-google-vertexai = "^1.0.3"
 langchain-groq = "^0.1.3"
 langchain-pinecone = "^0.1.0"
+langchain-mistralai ="^0.1.6"
+
 
 [tool.poetry.group.test.dependencies]
 ragstack-ai-langflow-base = { path = "./src/backend/base", develop = true }
