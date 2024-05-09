@@ -1,3 +1,4 @@
+import { ColDef, ColGroupDef } from "ag-grid-community";
 import { cloneDeep } from "lodash";
 import { useState } from "react";
 import ImageViewer from "../../../../components/ImageViewer";
@@ -289,18 +290,20 @@ export default function IOFieldView({
                   overlayNoRowsTemplate="No data available"
                   suppressRowClickSelection={true}
                   pagination={!left}
-                  columnDefs={Object.keys(
-                    node.data.node!.template["input_value"]?.value[0],
-                  ).map((col, idx) => ({
-                    field: col,
-                    flex: 1,
-                    resizable:
-                      idx !==
-                      Object.keys(
-                        node.data.node!.template["input_value"]?.value[0],
-                      ).length -
-                        1,
-                  }))}
+                  columnDefs={
+                    Object.keys(
+                      node.data.node!.template["input_value"]?.value[0],
+                    ).map((col, idx) => ({
+                      field: col,
+                      flex: 1,
+                      resizable:
+                        idx !==
+                        Object.keys(
+                          node.data.node!.template["input_value"]?.value[0],
+                        ).length -
+                          1,
+                    })) as (ColDef<any> | ColGroupDef<any>)[]
+                  }
                   rowData={node.data.node!.template["input_value"]?.value}
                 />
               </div>
