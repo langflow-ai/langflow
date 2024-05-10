@@ -25,6 +25,7 @@ class FlowBase(SQLModel):
     data: Optional[Dict] = Field(default=None, nullable=True)
     is_component: Optional[bool] = Field(default=False, nullable=True)
     updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow, nullable=True)
+    folder_id: Optional[UUID] = Field(default=None, nullable=True)
 
     @field_validator("icon_bg_color")
     def validate_icon_bg_color(cls, v):

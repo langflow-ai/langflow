@@ -1,4 +1,5 @@
 from datetime import datetime
+from http import HTTPStatus
 from typing import List
 from uuid import UUID
 
@@ -209,3 +210,29 @@ async def download_file(
     """Download all flows as a file."""
     flows = read_flows(current_user=current_user, session=session, settings_service=settings_service)
     return FlowListRead(flows=flows)
+
+
+@router.delete("/flows/multiple_delete", status_code=HTTPStatus.OK)
+async def delete_multiple_flows(
+    flow_ids: List[str], user: User = Depends(get_current_active_user), db: Session = Depends(get_session)
+):
+    """
+    Delete multiple flows by their IDs.
+
+    Args:
+        flow_ids (List[str]): The list of flow IDs to delete.
+        user (User, optional): The user making the request. Defaults to the current active user.
+
+    Returns:
+        dict: A dictionary containing the number of flows deleted.
+
+    """
+    try:
+        deleted_flows = db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id)).all()
+        for flow in deleted_flows:
+            db.delete(flow)
+        db.commit()
+        return {"deleted": len(deleted_flows)}
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

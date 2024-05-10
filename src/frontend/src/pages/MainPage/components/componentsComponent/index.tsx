@@ -1,7 +1,7 @@
 import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import CollectionCardComponent from "../../../../components/cardComponent";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
 import IconComponent from "../../../../components/genericIconComponent";
@@ -11,6 +11,7 @@ import { Button } from "../../../../components/ui/button";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useFolderStore } from "../../../../stores/foldersStore";
 import { FlowType } from "../../../../types/flow";
 import useFileDrop from "../../hooks/on-file-drop";
 import { sortFlows } from "../../utils/sort-flows";
@@ -38,11 +39,23 @@ export default function ComponentsComponent({
   const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
   const navigate = useNavigate();
+  const location = useLocation();
   const all: FlowType[] = sortFlows(allFlows, is_component);
   const start = (pageIndex - 1) * pageSize;
   const end = start + pageSize;
   const data: FlowType[] = all.slice(start, end);
   const name = is_component ? "Component" : "Flow";
+
+  const folders = useFolderStore((state) => state.folders);
+  const folderId = location?.state?.folderId;
+
+  const getFolderById = useFolderStore((state) => state.getFolderById);
+
+  useEffect(() => {
+    console.log(folderId);
+
+    if (folderId) getFolderById(folderId);
+  }, [location]);
 
   useEffect(() => {
     setTimeout(() => {

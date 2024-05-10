@@ -1,7 +1,9 @@
 from typing import List
 from uuid import UUID
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from sqlmodel import Session, select
 
 from langflow.services.auth.utils import get_current_active_user
@@ -47,7 +49,18 @@ def read_folders(
         return folders
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    
+    
+@router.get("/starter-projects", response_model=FolderReadWithFlows, status_code=200)
+def read_starter_folders(
+    *,
+    session: Session = Depends(get_session)
+):
+    try:
+        folders = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+        return folders
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{folder_id}", response_model=FolderReadWithFlows, status_code=200)
 def read_folder(

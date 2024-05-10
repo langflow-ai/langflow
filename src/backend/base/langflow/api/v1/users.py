@@ -37,7 +37,7 @@ def add_user(
         session.add(new_user)
         session.commit()
         session.refresh(new_user)
-        folder = create_default_folder_if_it_doesnt_exist(session, new_user)
+        folder = create_default_folder_if_it_doesnt_exist(session, new_user.id)
         if not folder:
             raise HTTPException(status_code=500, detail="Error creating default folder")
     except IntegrityError as e:

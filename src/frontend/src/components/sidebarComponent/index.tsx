@@ -1,9 +1,9 @@
-import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { getFolders } from "../../pages/MainPage/services";
+import { useFolderStore } from "../../stores/foldersStore";
 import { cn } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { buttonVariants } from "../ui/button";
+
 const folderArray = [
   {
     title: "Getting Started",
@@ -36,17 +36,8 @@ export default function SidebarNav({
 }: SidebarNavProps) {
   const location = useLocation();
   const pathname = location.pathname;
-
-  useEffect(() => {
-    getFolders().then(
-      (data) => {
-        console.log(data);
-      },
-      (error) => {
-        console.log(error);
-      },
-    );
-  }, []);
+  const loadingFolders = useFolderStore((state) => state.loading);
+  const folders = useFolderStore((state) => state.folders);
 
   return (
     <nav
@@ -92,23 +83,27 @@ export default function SidebarNav({
         ),
       )}
 
-      {folderArray.map((item) => (
-        <div
-          key={item.title}
-          data-testid={`sidebar-nav-${item.title}`}
-          className={cn(
-            buttonVariants({ variant: "ghost" }),
-            pathname === item.id
-              ? "border border-border bg-muted hover:bg-muted"
-              : "border border-transparent hover:border-border hover:bg-transparent",
-            "cursor-pointer justify-start gap-2",
-          )}
-          onClick={() => handleChangeFolder(item.id)}
-        >
-          <IconComponent name={item.icon} className="w-4 stroke-[1.5]" />
-          {item.title}
-        </div>
-      ))}
+      {!loadingFolders && folders?.length > 0 && (
+        <>
+          {folders.map((item) => (
+            <div
+              key={item.id}
+              data-testid={`sidebar-nav-${item.name}`}
+              className={cn(
+                buttonVariants({ variant: "ghost" }),
+                pathname === item.id
+                  ? "border border-border bg-muted hover:bg-muted"
+                  : "border border-transparent hover:border-border hover:bg-transparent",
+                "cursor-pointer justify-start gap-2",
+              )}
+              onClick={() => handleChangeFolder(item.id!)}
+            >
+              <IconComponent name={"folder"} className="w-4 stroke-[1.5]" />
+              {item.name}
+            </div>
+          ))}
+        </>
+      )}
     </nav>
   );
 }

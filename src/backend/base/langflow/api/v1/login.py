@@ -57,7 +57,7 @@ async def login_to_get_access_token(
         )
         variable_service.initialize_user_variables(user.id, db)
         # Create default folder for user if it doesn't exist
-        create_default_folder_if_it_doesnt_exist(db, user)
+        create_default_folder_if_it_doesnt_exist(db, user.id)
         return tokens
     else:
         raise HTTPException(
@@ -86,6 +86,7 @@ async def auto_login(
             expires=None,  # Set to None to make it a session cookie
         )
         variable_service.initialize_user_variables(user_id, db)
+        create_default_folder_if_it_doesnt_exist(db, user_id)
         return tokens
 
     raise HTTPException(

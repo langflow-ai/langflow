@@ -438,7 +438,7 @@ def superuser(
                 typer.echo("Superuser creation failed.")
                 return
             # Now create the first folder for the user
-            result = create_default_folder_if_it_doesnt_exist(session, user)
+            result = create_default_folder_if_it_doesnt_exist(session, user.id)
             if result:
                 typer.echo("Default folder created successfully.")
             else:

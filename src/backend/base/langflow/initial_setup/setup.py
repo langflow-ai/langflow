@@ -159,6 +159,7 @@ def create_new_project(
     project_data,
     project_icon,
     project_icon_bg_color,
+    new_folder_id
 ):
     logger.debug(f"Creating starter project {project_name}")
     new_project = FlowCreate(
@@ -169,19 +170,19 @@ def create_new_project(
         data=project_data,
         is_component=project_is_component,
         updated_at=updated_at_datetime,
-        folder=STARTER_FOLDER_NAME,
+        folder_id=new_folder_id,
     )
     db_flow = Flow.model_validate(new_project, from_attributes=True)
     session.add(db_flow)
 
 
-def get_all_flows_similar_to_project(session, project_name):
-    flows = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first().flows
+def get_all_flows_similar_to_project(session, folder_id):
+    flows = session.exec(select(Folder).where(Folder.id == folder_id)).first().flows
     return flows
 
 
-def delete_start_projects(session):
-    flows = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first().flows
+def delete_start_projects(session, folder_id):
+    flows = session.exec(select(Folder).where(Folder.id == folder_id)).first().flows
     for flow in flows:
         session.delete(flow)
     session.commit()
@@ -198,6 +199,10 @@ def create_starter_folder(session):
         db_folder = Folder.model_validate(new_folder, from_attributes=True)
         session.add(db_folder)
         session.commit()
+        session.refresh(db_folder)
+        return db_folder
+    else:
+        return session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
 
 
 def create_or_update_starter_projects():
@@ -208,9 +213,9 @@ def create_or_update_starter_projects():
         logger.exception(f"Error loading components: {e}")
         raise e
     with session_scope() as session:
-        create_starter_folder(session)
+        new_folder = create_starter_folder(session)
         starter_projects = load_starter_projects()
-        delete_start_projects(session)
+        delete_start_projects(session, new_folder.id)
         for project_path, project in starter_projects:
             (
                 project_name,
@@ -230,7 +235,7 @@ def create_or_update_starter_projects():
 
                 update_project_file(project_path, project, updated_project_data)
             if project_name and project_data:
-                for existing_project in get_all_flows_similar_to_project(session, project_name):
+                for existing_project in get_all_flows_similar_to_project(session, new_folder.id):
                     session.delete(existing_project)
 
                 create_new_project(
@@ -242,4 +247,5 @@ def create_or_update_starter_projects():
                     project_data,
                     project_icon,
                     project_icon_bg_color,
+                    new_folder.id
                 )

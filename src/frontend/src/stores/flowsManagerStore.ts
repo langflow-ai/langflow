@@ -2,10 +2,7 @@ import { AxiosError } from "axios";
 import { cloneDeep, debounce } from "lodash";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
-import {
-  SAVE_DEBOUNCE_TIME,
-  STARTER_FOLDER_NAME,
-} from "../constants/constants";
+import { SAVE_DEBOUNCE_TIME } from "../constants/constants";
 import {
   deleteFlowFromDatabase,
   readFlowsFromDatabase,
@@ -13,6 +10,7 @@ import {
   updateFlowInDatabase,
   uploadFlowsToDatabase,
 } from "../controllers/API";
+import { getStarterProjects } from "../pages/MainPage/services";
 import { FlowType, NodeDataType } from "../types/flow";
 import {
   FlowsManagerStoreType,
@@ -80,45 +78,46 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   refreshFlows: () => {
     return new Promise<void>((resolve, reject) => {
       set({ isLoading: true });
-      readFlowsFromDatabase()
-        .then((dbData) => {
-          if (dbData) {
-            const { data, flows } = processFlows(dbData, false);
-            get().setExamples(
-              flows.filter(
-                (f) => f.folder === STARTER_FOLDER_NAME && !f.user_id,
-              ),
-            );
-            get().setFlows(
-              flows.filter(
-                (f) => !(f.folder === STARTER_FOLDER_NAME && !f.user_id),
-              ),
-            );
-            useTypesStore.setState((state) => ({
-              data: { ...state.data, ["saved_components"]: data },
-              ComponentFields: extractFieldsFromComponenents({
-                ...state.data,
-                ["saved_components"]: data,
-              }),
-            }));
+
+      getStarterProjects().then((starterProjects) => {
+        get().setExamples(starterProjects?.flows);
+
+        readFlowsFromDatabase()
+          .then((dbData) => {
+            if (dbData) {
+              const { data, flows } = processFlows(dbData, false);
+              const starterProjectsIds = starterProjects.flows.map(
+                (flow) => flow.id
+              );
+              get().setFlows(
+                flows.filter((f) => !starterProjectsIds.includes(f.id))
+              );
+              useTypesStore.setState((state) => ({
+                data: { ...state.data, ["saved_components"]: data },
+                ComponentFields: extractFieldsFromComponenents({
+                  ...state.data,
+                  ["saved_components"]: data,
+                }),
+              }));
+              set({ isLoading: false });
+              resolve();
+            }
+          })
+          .catch((e) => {
             set({ isLoading: false });
-            resolve();
-          }
-        })
-        .catch((e) => {
-          set({ isLoading: false });
-          useAlertStore.getState().setErrorData({
-            title: "Could not load flows from database",
+            useAlertStore.getState().setErrorData({
+              title: "Could not load flows from database",
+            });
+            reject(e);
           });
-          reject(e);
-        });
+      });
     });
   },
   autoSaveCurrentFlow: (nodes: Node[], edges: Edge[], viewport: Viewport) => {
     if (get().currentFlow) {
       get().saveFlow(
         { ...get().currentFlow!, data: { nodes, edges, viewport } },
-        true,
+        true
       );
     }
   },
@@ -144,7 +143,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
                   return updatedFlow;
                 }
                 return flow;
-              }),
+              })
             );
             //update tabs state
 
@@ -194,7 +193,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     newProject: Boolean,
     flow?: FlowType,
     override?: boolean,
-    position?: XYPosition,
+    position?: XYPosition
   ): Promise<string | undefined> => {
     if (newProject) {
       let flowData = flow
@@ -258,7 +257,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         .getState()
         .paste(
           { nodes: flow!.data!.nodes, edges: flow!.data!.edges },
-          position ?? { x: 10, y: 10 },
+          position ?? { x: 10, y: 10 }
         );
     }
   },
@@ -268,7 +267,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       if (index >= 0) {
         deleteFlowFromDatabase(id).then(() => {
           const { data, flows } = processFlows(
-            get().flows.filter((flow) => flow.id !== id),
+            get().flows.filter((flow) => flow.id !== id)
           );
           get().setFlows(flows);
           set({ isLoading: false });
@@ -288,7 +287,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     return new Promise<void>((resolve) => {
       let componentFlow = get().flows.find(
         (componentFlow) =>
-          componentFlow.is_component && componentFlow.name === key,
+          componentFlow.is_component && componentFlow.name === key
       );
 
       if (componentFlow) {
@@ -370,7 +369,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     return get().addFlow(
       true,
       createFlowComponent(component, useDarkStore.getState().version),
-      override,
+      override
     );
   },
   takeSnapshot: () => {
@@ -391,7 +390,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     if (pastLength > 0) {
       past[currentFlowId] = past[currentFlowId].slice(
         pastLength - defaultOptions.maxHistorySize + 1,
-        pastLength,
+        pastLength
       );
 
       past[currentFlowId].push(newState);

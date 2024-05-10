@@ -10,7 +10,7 @@ export default function NewFlowModal({
 }: newFlowModalPropsType): JSX.Element {
   const examples = useFlowsManagerStore((state) => state.examples);
 
-  examples.forEach((example) => {
+  examples?.forEach((example) => {
     if (example.name === "Blog Writter") {
       example.name = "Blog Writer";
     }

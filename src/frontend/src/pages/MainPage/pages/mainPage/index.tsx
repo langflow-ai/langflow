@@ -15,6 +15,7 @@ import FoldersModal from "../../../../modals/foldersModal";
 import NewFlowModal from "../../../../modals/newFlowModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useFolderStore } from "../../../../stores/foldersStore";
 import { downloadFlows } from "../../../../utils/reactflowUtils";
 
 export default function HomePage(): JSX.Element {
@@ -30,6 +31,12 @@ export default function HomePage(): JSX.Element {
   const [openModal, setOpenModal] = useState(false);
   const [openFolderModal, setOpenFolderModal] = useState(false);
   const is_component = pathname === "/components";
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+
+  useEffect(() => {
+    getFoldersApi();
+  }, []);
+
   const dropdownOptions = [
     {
       name: "Import from JSON",
@@ -62,18 +69,22 @@ export default function HomePage(): JSX.Element {
     },
   ];
 
-  // Set a null id
   useEffect(() => {
     setCurrentFlowId("");
   }, [pathname]);
 
   const navigate = useNavigate();
+  const folders = useFolderStore((state) => state.folders);
+  const folderId = location?.state?.folderId;
+  const folderName = folders.find((folder) => folder.id === folderId)?.name;
+  const folderDescription = folders.find(
+    (folder) => folder.id === folderId,
+  )?.description;
 
-  // Personal flows display
   return (
     <PageLayout
-      title={USER_PROJECTS_HEADER}
-      description={MY_COLLECTION_DESC}
+      title={!folderId ? USER_PROJECTS_HEADER : folderName!}
+      description={!folderId ? MY_COLLECTION_DESC : folderDescription!}
       button={
         <div className="flex gap-2">
           <Button
@@ -110,7 +121,7 @@ export default function HomePage(): JSX.Element {
             handleOpenNewFolderModal={() => setOpenFolderModal(true)}
             items={sidebarNavItems}
             handleChangeFolder={(id: string) => {
-              navigate("flows/folder/" + id);
+              navigate(`flows/folder/${id}`, { state: { folderId: id } });
             }}
           />
         </aside>
