@@ -29,6 +29,9 @@ testpaths = ["tests/integration_tests"]
 filterwarnings = ["ignore::DeprecationWarning"]
 console_output_style = "progress"
 log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.poetry.group.spelling]
 optional = true
