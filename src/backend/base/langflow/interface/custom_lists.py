@@ -1,7 +1,7 @@
 import inspect
 from typing import Any
 
-from langchain import llms, memory, requests, text_splitter
+from langchain import llms, memory, text_splitter
 from langchain_community import agent_toolkits, document_loaders, embeddings
 from langchain_community.chat_models import AzureChatOpenAI, ChatAnthropic, ChatOpenAI, ChatVertexAI
 
