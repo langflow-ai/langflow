@@ -7,7 +7,7 @@ from langchain.agents.agent_toolkits.vectorstore.prompt import ROUTER_PREFIX as 
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
 from langchain.base_language import BaseLanguageModel
 from langchain.chains.llm import LLMChain
-from langchain.sql_database import SQLDatabase
+from langchain_community.utilities import SQLDatabase
 from langchain.tools.sql_database.prompt import QUERY_CHECKER
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_community.agent_toolkits.json.prompt import JSON_PREFIX, JSON_SUFFIX
