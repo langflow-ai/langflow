@@ -156,6 +156,8 @@ class MonitorService(Service):
             conditions.append(f"target = '{target}'")
         if status:
             conditions.append(f"status = '{status}'")
+        if flow_id:
+            conditions.append(f"flow_id = '{flow_id}'")
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)

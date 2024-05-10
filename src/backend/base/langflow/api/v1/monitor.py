@@ -3,7 +3,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from langflow.services.deps import get_monitor_service
-from langflow.services.monitor.schema import TransactionModel, VertexBuildMapModel
+from langflow.services.monitor.schema import TransactionModelResponse, VertexBuildMapModel
 from langflow.services.monitor.service import MonitorService
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
@@ -58,7 +58,7 @@ async def get_messages(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/transactions", response_model=List[TransactionModel])
+@router.get("/transactions", response_model=List[TransactionModelResponse])
 async def get_transactions(
     source: Optional[str] = Query(None),
     target: Optional[str] = Query(None),
@@ -68,8 +68,9 @@ async def get_transactions(
     monitor_service: MonitorService = Depends(get_monitor_service),
 ):
     try:
-        return monitor_service.get_transactions(
+        dicts = monitor_service.get_transactions(
             source=source, target=target, status=status, order_by=order_by, flow_id=flow_id
         )
+        return [TransactionModelResponse(**d) for d in dicts]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
