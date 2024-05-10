@@ -72,7 +72,6 @@ class Settings(BaseSettings):
     TOOLKITS: dict = {}
     TEXTSPLITTERS: dict = {}
     UTILITIES: dict = {}
-    OUTPUT_PARSERS: dict = {}
     CUSTOM_COMPONENTS: dict = {}
 
     # Define the default LANGFLOW_DIR
@@ -241,7 +240,6 @@ class Settings(BaseSettings):
         self.VECTORSTORES = new_settings.VECTORSTORES or {}
         self.DOCUMENTLOADERS = new_settings.DOCUMENTLOADERS or {}
         self.RETRIEVERS = new_settings.RETRIEVERS or {}
-        self.OUTPUT_PARSERS = new_settings.OUTPUT_PARSERS or {}
         self.CUSTOM_COMPONENTS = new_settings.CUSTOM_COMPONENTS or {}
         self.COMPONENTS_PATH = new_settings.COMPONENTS_PATH or []
         self.DEV = dev

@@ -30,7 +30,7 @@ class MistralAIModelComponent(CustomComponent):
                     "open-mixtral-8x22b",
                     "mistral-small-latest",
                     "mistral-medium-latest",
-                    "mistral-large-latest"
+                    "mistral-large-latest",
                 ],
                 "info": "Name of the model to use.",
                 "required": True,
@@ -64,9 +64,9 @@ class MistralAIModelComponent(CustomComponent):
     def build(
         self,
         model: str,
+        temperature: float = 0.1,
         mistral_api_key: Optional[str] = None,
         max_tokens: Optional[int] = None,
-        temperature: Optional[float] = None,
         mistral_api_base: Optional[str] = None,
     ) -> BaseLanguageModel:
         # Set default API endpoint if not provided
@@ -75,11 +75,11 @@ class MistralAIModelComponent(CustomComponent):
 
         try:
             output = ChatMistralAI(
-                model=model,
+                model_name=model,
                 api_key=(SecretStr(mistral_api_key) if mistral_api_key else None),
                 max_tokens=max_tokens,
                 temperature=temperature,
-                base_url=mistral_api_base,
+                endpoint=mistral_api_base,
             )
         except Exception as e:
             raise ValueError("Could not connect to Mistral API.") from e

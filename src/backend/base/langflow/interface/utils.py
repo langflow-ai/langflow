@@ -106,7 +106,7 @@ def set_langchain_cache(settings):
 
     if cache_type := os.getenv("LANGFLOW_LANGCHAIN_CACHE"):
         try:
-            cache_class = import_class(f"langchain.cache.{cache_type or settings.LANGCHAIN_CACHE}")
+            cache_class = import_class(f"langchain_community.cache.{cache_type or settings.LANGCHAIN_CACHE}")
 
             logger.debug(f"Setting up LLM caching with {cache_class.__name__}")
             set_llm_cache(cache_class())
