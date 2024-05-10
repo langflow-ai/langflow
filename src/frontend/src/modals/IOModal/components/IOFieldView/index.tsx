@@ -1,11 +1,10 @@
-import { ColDef, ColGroupDef } from "ag-grid-community";
 import { cloneDeep } from "lodash";
 import { useState } from "react";
 import ImageViewer from "../../../../components/ImageViewer";
 import CsvOutputComponent from "../../../../components/csvOutputComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import PdfViewer from "../../../../components/pdfViewer";
-import TableComponent from "../../../../components/tableComponent";
+import RecordsOutputComponent from "../../../../components/recordsOutputComponent";
 import {
   Select,
   SelectContent,
@@ -283,28 +282,12 @@ export default function IOFieldView({
                 />
               </>
             );
-          case "TableOutput":
+          case "RecordsOutput":
             return (
               <div className={left ? "h-36" : "h-full"}>
-                <TableComponent
-                  overlayNoRowsTemplate="No data available"
-                  suppressRowClickSelection={true}
+                <RecordsOutputComponent
+                  flowPool={flowPoolNode}
                   pagination={!left}
-                  columnDefs={
-                    Object.keys(
-                      node.data.node!.template["input_value"]?.value[0],
-                    ).map((col, idx) => ({
-                      field: col,
-                      flex: 1,
-                      resizable:
-                        idx !==
-                        Object.keys(
-                          node.data.node!.template["input_value"]?.value[0],
-                        ).length -
-                          1,
-                    })) as (ColDef<any> | ColGroupDef<any>)[]
-                  }
-                  rowData={node.data.node!.template["input_value"]?.value}
                 />
               </div>
             );
