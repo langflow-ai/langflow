@@ -29,17 +29,20 @@ class VariableService(Service):
             for var in self.settings_service.settings.variables_to_get_from_environment:
                 if var in os.environ:
                     logger.debug(f"Creating {var} variable from environment.")
-                    try:
-                        self.create_variable(
-                            user_id=user_id,
-                            name=var,
-                            value=os.environ[var],
-                            default_fields=[],
-                            _type="Credential",
-                            session=session,
-                        )
-                    except Exception as e:
-                        logger.error(f"Error creating {var} variable: {e}")
+                    if not session.exec(
+                        select(Variable).where(Variable.user_id == user_id, Variable.name == var)
+                    ).first():
+                        try:
+                            self.create_variable(
+                                user_id=user_id,
+                                name=var,
+                                value=os.environ[var],
+                                default_fields=[],
+                                _type="Credential",
+                                session=session,
+                            )
+                        except Exception as e:
+                            logger.error(f"Error creating {var} variable: {e}")
 
         else:
             logger.info("Skipping environment variable storage.")
