@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { getFolders } from "../../pages/MainPage/services";
 import { cn } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { buttonVariants } from "../ui/button";
@@ -34,6 +36,17 @@ export default function SidebarNav({
 }: SidebarNavProps) {
   const location = useLocation();
   const pathname = location.pathname;
+
+  useEffect(() => {
+    getFolders().then(
+      (data) => {
+        console.log(data);
+      },
+      (error) => {
+        console.log(error);
+      },
+    );
+  }, []);
 
   return (
     <nav

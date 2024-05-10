@@ -1,21 +1,22 @@
 import { FolderPlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import DropdownButton from "../../components/dropdownButtonComponent";
-import IconComponent from "../../components/genericIconComponent";
-import PageLayout from "../../components/pageLayout";
-import SidebarNav from "../../components/sidebarComponent";
-import { Button } from "../../components/ui/button";
-import { CONSOLE_ERROR_MSG } from "../../constants/alerts_constants";
+import DropdownButton from "../../../../components/dropdownButtonComponent";
+import IconComponent from "../../../../components/genericIconComponent";
+import PageLayout from "../../../../components/pageLayout";
+import SidebarNav from "../../../../components/sidebarComponent";
+import { Button } from "../../../../components/ui/button";
+import { CONSOLE_ERROR_MSG } from "../../../../constants/alerts_constants";
 import {
   MY_COLLECTION_DESC,
   USER_PROJECTS_HEADER,
-} from "../../constants/constants";
-import FoldersModal from "../../modals/foldersModal";
-import NewFlowModal from "../../modals/newFlowModal";
-import useAlertStore from "../../stores/alertStore";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { downloadFlows } from "../../utils/reactflowUtils";
+} from "../../../../constants/constants";
+import FoldersModal from "../../../../modals/foldersModal";
+import NewFlowModal from "../../../../modals/newFlowModal";
+import useAlertStore from "../../../../stores/alertStore";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { downloadFlows } from "../../../../utils/reactflowUtils";
+
 export default function HomePage(): JSX.Element {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const setCurrentFlowId = useFlowsManagerStore(
