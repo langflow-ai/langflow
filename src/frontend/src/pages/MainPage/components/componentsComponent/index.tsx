@@ -26,9 +26,15 @@ export default function ComponentsComponent({
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const removeFlow = useFlowsManagerStore((state) => state.removeFlow);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
-  const flows = useFlowsManagerStore((state) => state.flows);
+
+  const myCollectionFlows = useFolderStore((state) => state.myCollectionFlows);
   const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
+
+  const flowsFromFolder = useFolderStore(
+    (state) => state.selectedFolder?.flows,
+  );
+
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openDelete, setOpenDelete] = useState(false);
@@ -43,29 +49,32 @@ export default function ComponentsComponent({
   const all: FlowType[] = sortFlows(allFlows, is_component);
   const start = (pageIndex - 1) * pageSize;
   const end = start + pageSize;
-  const data: FlowType[] = all.slice(start, end);
+  const data: FlowType[] = all?.slice(start, end);
   const name = is_component ? "Component" : "Flow";
 
-  const folders = useFolderStore((state) => state.folders);
   const folderId = location?.state?.folderId;
-
   const getFolderById = useFolderStore((state) => state.getFolderById);
+  const getMyCollectionFolder = useFolderStore(
+    (state) => state.getMyCollectionFolder,
+  );
 
   useEffect(() => {
-    console.log(folderId);
-
-    if (folderId) getFolderById(folderId);
+    if (folderId) {
+      getFolderById(folderId);
+      setAllFlows(flowsFromFolder!);
+    }
   }, [location]);
 
   useEffect(() => {
     setTimeout(() => {
-      setAllFlows(flows);
+      setAllFlows(myCollectionFlows?.flows!);
+      console.log(myCollectionFlows);
     }, 500);
-  }, [flows]);
+  }, []);
 
   useEffect(() => {
-    const newFlows = cloneDeep(flows);
-    const filteredFlows = newFlows.filter(
+    const newFlows = cloneDeep(flowsFromFolder!);
+    const filteredFlows = newFlows?.filter(
       (f) =>
         f.name.toLowerCase().includes(searchFlowsComponents.toLowerCase()) ||
         f.description
@@ -74,7 +83,7 @@ export default function ComponentsComponent({
     );
 
     if (searchFlowsComponents === "") {
-      setAllFlows(flows);
+      setAllFlows(flowsFromFolder!);
     }
 
     setAllFlows(filteredFlows);
@@ -133,7 +142,7 @@ export default function ComponentsComponent({
       >
         <div className="flex h-full w-full flex-col justify-between">
           <div className="flex w-full flex-col gap-4">
-            {!isLoading && data.length === 0 ? (
+            {!isLoading && data?.length === 0 ? (
               <EmptyComponent />
             ) : (
               <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
@@ -207,7 +216,7 @@ export default function ComponentsComponent({
               </div>
             )}
           </div>
-          {!isLoading && data.length > 0 && (
+          {!isLoading && data?.length > 0 && (
             <div className="relative py-6">
               <PaginatorComponent
                 storeComponent={true}
@@ -215,9 +224,9 @@ export default function ComponentsComponent({
                 pageSize={pageSize}
                 rowsCount={[10, 20, 50, 100]}
                 totalRowsCount={
-                  allFlows.filter(
+                  myCollectionFlows!.flows.filter(
                     (f) => (f.is_component ?? false) === is_component,
-                  ).length
+                  )?.length
                 }
                 paginate={(pageSize, pageIndex) => {
                   setPageIndex(pageIndex);

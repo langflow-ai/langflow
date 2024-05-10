@@ -10,6 +10,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
       getFolders().then(
         (res) => {
           set({ folders: res });
+          get().getMyCollectionFolder();
           get().setLoading(false);
         },
         () => {
@@ -36,7 +37,18 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
       );
     }
   },
-  selectedFolder: [],
+  selectedFolder: null,
   loadingById: false,
   setLoadingById: (loading) => set(() => ({ loadingById: loading })),
+  getMyCollectionFolder: () => {
+    const folders = get().folders;
+    const myCollectionId = folders.find((f) => f.name === "My Collection")?.id;
+    if (myCollectionId) {
+      getFolderById(myCollectionId).then((res) => {
+        set({ myCollectionFlows: res });
+      });
+    }
+  },
+  setMyCollectionFlow: (folder) => set(() => ({ myCollectionFlows: folder })),
+  myCollectionFlows: null,
 }));

@@ -1,6 +1,6 @@
 export const sortFlows = (flows, is_component) => {
   return flows
-    .filter((f) => (f.is_component ?? false) === is_component)
+    ?.filter((f) => (f?.is_component ?? false) === is_component)
     .sort((a, b) => {
       if (a?.updated_at && b?.updated_at) {
         return (

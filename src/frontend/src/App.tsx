@@ -19,15 +19,16 @@ import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
+import { useFolderStore } from "./stores/foldersStore";
 import { useGlobalVariablesStore } from "./stores/globalVariables";
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
 export default function App() {
   const removeFromTempNotificationList = useAlertStore(
-    (state) => state.removeFromTempNotificationList
+    (state) => state.removeFromTempNotificationList,
   );
   const tempNotificationList = useAlertStore(
-    (state) => state.tempNotificationList
+    (state) => state.tempNotificationList,
   );
   const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
@@ -45,14 +46,17 @@ export default function App() {
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const setGlobalVariables = useGlobalVariablesStore(
-    (state) => state.setGlobalVariables
+    (state) => state.setGlobalVariables,
   );
   const setUnavailableFields = useGlobalVariablesStore(
-    (state) => state.setUnavaliableFields
+    (state) => state.setUnavaliableFields,
   );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const navigate = useNavigate();
   const dark = useDarkStore((state) => state.dark);
+
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const loadingFolders = useFolderStore((state) => state.loading);
 
   const [isLoadingHealth, setIsLoadingHealth] = useState(false);
 
@@ -92,8 +96,8 @@ export default function App() {
         }
       });
 
-    /* 
-      Abort the request as it isn't needed anymore, the component being 
+    /*
+      Abort the request as it isn't needed anymore, the component being
       unmounted. It helps avoid, among other things, the well-known "can't
       perform a React state update on an unmounted component" warning.
     */
@@ -162,6 +166,10 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    getFoldersApi();
+  }, []);
+
   return (
     //need parent component with width and height
     <div className="flex h-full flex-col">
@@ -184,7 +192,7 @@ export default function App() {
             ></FetchErrorComponent>
           }
 
-          {isLoading ? (
+          {isLoading || loadingFolders ? (
             <div className="loading-page-panel">
               <LoadingComponent remSize={50} />
             </div>
