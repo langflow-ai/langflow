@@ -43,8 +43,6 @@ memory_type_to_cls_dict: dict[str, Any] = {
     memory_name: import_class(f"langchain.memory.{memory_name}") for memory_name in memory.__all__
 }
 
-# Wrappers
-wrapper_type_to_cls_dict: dict[str, Any] = {wrapper.__name__: wrapper for wrapper in [requests.RequestsWrapper]}
 
 # Embeddings
 embedding_type_to_cls_dict: dict[str, Any] = {
