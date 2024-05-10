@@ -282,7 +282,7 @@ export default function IOFieldView({
                 />
               </>
             );
-          case "RecordsOutput":
+          case "RecordOutput":
             return (
               <div className={left ? "h-36" : "h-full"}>
                 <RecordsOutputComponent

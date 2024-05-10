@@ -11,9 +11,19 @@ function RecordsOutputComponent({
   flowPool: FlowPoolObjectType;
   pagination: boolean;
 }) {
-  const tableNodeData = Array.isArray(flowPool?.data?.artifacts)
-    ? flowPool?.data?.artifacts
-    : [flowPool?.data?.artifacts];
+  if (!flowPool?.data?.artifacts) return "No data available";
+  let record = {};
+  if (flowPool?.data?.artifacts.repr) {
+    if (typeof flowPool?.data?.artifacts.repr === "string") {
+      record = JSON.parse(flowPool?.data?.artifacts.repr);
+      for (const key in record) {
+        if (record[key] === null) {
+          record[key] = "null";
+        }
+      }
+    }
+  }
+  const tableNodeData = [record];
   const columns = Object.keys(tableNodeData[0]);
   const columnDefs = columns.map((col, idx) => ({
     field: col,
