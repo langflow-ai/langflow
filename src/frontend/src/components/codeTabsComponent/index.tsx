@@ -41,6 +41,8 @@ import IconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import KeypairListComponent from "../keypairListComponent";
 import ShadTooltip from "../shadTooltipComponent";
+import { Label } from "../ui/label";
+import { Switch } from "../ui/switch";
 
 export default function CodeTabsComponent({
   flow,
@@ -49,14 +51,13 @@ export default function CodeTabsComponent({
   setActiveTab,
   isMessage,
   tweaks,
+  setActiveTweaks,
+  activeTweaks,
 }: codeTabsPropsType) {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
-  const [openAccordion, setOpenAccordion] = useState<string[]>([]);
   const dark = useDarkStore((state) => state.dark);
   const unselectAll = useFlowStore((state) => state.unselectAll);
-  const setNode = useFlowStore((state) => state.setNode);
-
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   useEffect(() => {
@@ -107,21 +108,6 @@ export default function CodeTabsComponent({
     URL.revokeObjectURL(url);
   };
 
-  function openAccordions() {
-    let accordionsToOpen: string[] = [];
-    tweaks?.tweak!.current.forEach((el) => {
-      Object.keys(el).forEach((key) => {
-        if (Object.keys(el[key]).length > 0) {
-          accordionsToOpen.push(key);
-          setOpenAccordion(accordionsToOpen);
-        }
-      });
-    });
-
-    if (accordionsToOpen.length == 0) {
-      setOpenAccordion([]);
-    }
-  }
   return (
     <Tabs
       value={activeTab}
@@ -132,9 +118,6 @@ export default function CodeTabsComponent({
       }
       onValueChange={(value) => {
         setActiveTab(value);
-        if (value === "3") {
-          openAccordions();
-        }
       }}
     >
       <div className="api-modal-tablist-div">
@@ -155,27 +138,58 @@ export default function CodeTabsComponent({
         ) : (
           <div></div>
         )}
-        {Number(activeTab) < 4 && (
-          <div className="float-right mx-1 mb-1 mt-2 flex gap-2">
-            <button
-              className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
-              onClick={copyToClipboard}
+
+        <div className="float-right mx-1 mb-1 mt-2 flex gap-2">
+          <div
+            className={
+              Number(activeTab) > 2
+                ? "hidden"
+                : "relative top-[2.5px] flex gap-2"
+            }
+          >
+            <Switch
+              style={{
+                transform: `scaleX(${0.7}) scaleY(${0.7})`,
+              }}
+              id="tweaks-switch"
+              onCheckedChange={setActiveTweaks}
+              autoFocus={false}
+            />
+            <Label
+              className={
+                "relative right-1 top-[4px] text-xs font-medium text-gray-500 dark:text-gray-300 " +
+                (activeTweaks
+                  ? "font-bold text-black dark:text-white"
+                  : "font-medium")
+              }
+              htmlFor="tweaks-switch"
             >
-              {isCopied ? (
-                <IconComponent name="Check" className="h-4 w-4" />
-              ) : (
-                <IconComponent name="Clipboard" className="h-4 w-4" />
-              )}
-              {isCopied ? "Copied!" : "Copy Code"}
-            </button>
-            <button
-              className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
-              onClick={downloadAsFile}
-            >
-              <IconComponent name="Download" className="h-5 w-5" />
-            </button>
+              Tweaks
+            </Label>
           </div>
-        )}
+
+          {Number(activeTab) < 4 && (
+            <>
+              <button
+                className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
+                onClick={copyToClipboard}
+              >
+                {isCopied ? (
+                  <IconComponent name="Check" className="h-4 w-4" />
+                ) : (
+                  <IconComponent name="Clipboard" className="h-4 w-4" />
+                )}
+                {isCopied ? "Copied!" : "Copy Code"}
+              </button>
+              <button
+                className="flex items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300"
+                onClick={downloadAsFile}
+              >
+                <IconComponent name="Download" className="h-5 w-5" />
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {tabs.map((tab, idx) => (
@@ -205,14 +219,12 @@ export default function CodeTabsComponent({
               <div className="api-modal-according-display">
                 <div
                   className={classNames(
-                    "h-[70vh] w-full overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll"
+                    "h-[70vh] w-full overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll",
                   )}
                 >
                   {data?.map((node: any, i) => (
                     <div className="px-3" key={i}>
-                      {tweaks?.tweaksList!.current.includes(
-                        node["data"]["id"]
-                      ) && (
+                      {tweaks?.tweaksList!.includes(node["data"]["id"]) && (
                         <AccordionComponent
                           trigger={
                             <ShadTooltip
@@ -223,7 +235,6 @@ export default function CodeTabsComponent({
                               <div>{node["data"]["node"]["display_name"]}</div>
                             </ShadTooltip>
                           }
-                          open={openAccordion}
                           keyValue={node["data"]["id"]}
                         >
                           <div className="api-modal-table-arrangement">
@@ -247,8 +258,8 @@ export default function CodeTabsComponent({
                                         .show &&
                                       LANGFLOW_SUPPORTED_TYPES.has(
                                         node.data.node.template[templateField]
-                                          .type
-                                      )
+                                          .type,
+                                      ),
                                   )
                                   .map((templateField, indx) => {
                                     return (
@@ -298,12 +309,12 @@ export default function CodeTabsComponent({
                                                         ].value = target;
                                                         return newInputList;
                                                       });
-                                                      tweaks.buildTweakObject!(
+                                                      tweaks?.buildTweakObject!(
                                                         node["data"]["id"],
                                                         target,
                                                         node.data.node.template[
                                                           templateField
-                                                        ]
+                                                        ],
                                                       );
                                                     }}
                                                   />
@@ -339,13 +350,13 @@ export default function CodeTabsComponent({
                                                           ].value = target;
                                                           return newInputList;
                                                         });
-                                                        tweaks.buildTweakObject!(
+                                                        tweaks?.buildTweakObject!(
                                                           node["data"]["id"],
                                                           target,
                                                           node.data.node
                                                             .template[
                                                             templateField
-                                                          ]
+                                                          ],
                                                         );
                                                       }}
                                                     />
@@ -383,12 +394,12 @@ export default function CodeTabsComponent({
                                                         ].value = target;
                                                         return newInputList;
                                                       });
-                                                      tweaks.buildTweakObject!(
+                                                      tweaks?.buildTweakObject!(
                                                         node["data"]["id"],
                                                         target,
                                                         node.data.node.template[
                                                           templateField
-                                                        ]
+                                                        ],
                                                       );
                                                     }}
                                                   />
@@ -416,12 +427,12 @@ export default function CodeTabsComponent({
                                                       ].value = e;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       e,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                   size="small"
@@ -447,7 +458,7 @@ export default function CodeTabsComponent({
                                                     ].fileTypes
                                                   }
                                                   onFileChange={(
-                                                    value: any
+                                                    value: any,
                                                   ) => {
                                                     node.data.node.template[
                                                       templateField
@@ -490,12 +501,12 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                 />
@@ -525,12 +536,12 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                   value={
@@ -582,12 +593,12 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                 />
@@ -623,12 +634,12 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                 />
@@ -664,12 +675,12 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                 />
@@ -693,7 +704,7 @@ export default function CodeTabsComponent({
                                                           node.data.node!
                                                             .template[
                                                             templateField
-                                                          ].value
+                                                          ].value,
                                                         )
                                                   }
                                                   duplicateKey={
@@ -702,15 +713,15 @@ export default function CodeTabsComponent({
                                                   onChange={(target) => {
                                                     const valueToNumbers =
                                                       convertValuesToNumbers(
-                                                        target
+                                                        target,
                                                       );
                                                     node.data.node!.template[
                                                       templateField
                                                     ].value = valueToNumbers;
                                                     setErrorDuplicateKey(
                                                       hasDuplicateKeys(
-                                                        valueToNumbers
-                                                      )
+                                                        valueToNumbers,
+                                                      ),
                                                     );
                                                     setData((old) => {
                                                       let newInputList =
@@ -722,12 +733,12 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                   isList={
@@ -767,12 +778,12 @@ export default function CodeTabsComponent({
                                                       ].value = target;
                                                       return newInputList;
                                                     });
-                                                    tweaks.buildTweakObject!(
+                                                    tweaks?.buildTweakObject!(
                                                       node["data"]["id"],
                                                       target,
                                                       node.data.node.template[
                                                         templateField
-                                                      ]
+                                                      ],
                                                     );
                                                   }}
                                                 />
@@ -795,7 +806,7 @@ export default function CodeTabsComponent({
                         </AccordionComponent>
                       )}
 
-                      {tweaks?.tweaksList!.current.length === 0 && (
+                      {tweaks?.tweaksList!.length === 0 && (
                         <>
                           <div className="pt-3">
                             No tweaks are available for this flow.

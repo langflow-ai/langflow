@@ -13,9 +13,8 @@ import {
   nodeGroupedObjType,
   tweakType,
 } from "../types/components";
-import { FlowType, NodeType } from "../types/flow";
+import { NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
-import { buildTweaks } from "./reactflowUtils";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -323,17 +322,10 @@ export function getChatInputField(flowState?: FlowState) {
  * @returns {string} - The python code
  */
 export function getPythonApiCode(
-  flow: FlowType,
+  flowId: string,
   isAuth: boolean,
-  tweak?: any[],
+  tweaksBuildedObject,
 ): string {
-  const flowId = flow.id;
-
-  // create a dictionary of node ids and the values is an empty dictionary
-  // flow.data.nodes.forEach((node) => {
-  //   node.data.id
-  // }
-  const tweaks = buildTweaks(flow);
   return `import requests
 from typing import Optional
 
@@ -341,11 +333,7 @@ BASE_API_URL = "${window.location.protocol}//${window.location.host}/api/v1/run"
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
-TWEAKS = ${
-    tweak && tweak.length > 0
-      ? buildTweakObject(tweak)
-      : JSON.stringify(tweaks, null, 2)
-  }
+TWEAKS = ${JSON.stringify(tweaksBuildedObject, null, 2)}
 
 def run_flow(message: str,
   flow_id: str,
@@ -391,13 +379,10 @@ print(run_flow(message=message, flow_id=FLOW_ID, tweaks=TWEAKS${
  * @returns {string} - The curl code
  */
 export function getCurlCode(
-  flow: FlowType,
+  flowId: string,
   isAuth: boolean,
-  tweak?: any[],
+  tweaksBuildedObject,
 ): string {
-  const flowId = flow.id;
-  const tweaks = buildTweaks(flow);
-
   return `curl -X POST \\
   ${window.location.protocol}//${
     window.location.host
@@ -408,11 +393,7 @@ export function getCurlCode(
   -d '{"input_value": "message",
   "output_type": "chat",
   "input_type": "chat",
-  "tweaks": ${
-    tweak && tweak.length > 0
-      ? buildTweakObject(tweak)
-      : JSON.stringify(tweaks, null, 2)
-  }}'
+  "tweaks": ${JSON.stringify(tweaksBuildedObject, null, 2)}'
   `;
 }
 
@@ -439,16 +420,9 @@ export function getOutputIds(flow) {
  * @param {any[]} tweak - The tweaks
  * @returns {string} - The python code
  */
-export function getPythonCode(flow: FlowType, tweak?: any[]): string {
-  const flowName = flow.name;
-  const tweaks = buildTweaks(flow);
-
+export function getPythonCode(flowName: string, tweaksBuildedObject): string {
   return `from langflow.load import run_flow_from_json
-TWEAKS = ${
-    tweak && tweak.length > 0
-      ? buildTweakObject(tweak)
-      : JSON.stringify(tweaks, null, 2)
-  }
+TWEAKS = ${JSON.stringify(tweaksBuildedObject, null, 2)}
 
 result = run_flow_from_json(flow="${flowName}.json",
                             input_value="message",
@@ -461,15 +435,10 @@ result = run_flow_from_json(flow="${flowName}.json",
  * @returns {string} - The widget code
  */
 export function getWidgetCode(
-  flow: FlowType,
+  flowId: string,
+  flowName: string,
   isAuth: boolean,
-  flowState?: FlowState,
 ): string {
-  const flowId = flow.id;
-  const flowName = flow.name;
-  const inputs = buildInputs();
-  let chat_input_field = getChatInputField(flowState);
-
   return `<script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@1.0_alpha/dist/build/static/js/bundle.min.js"></script>
 
 <langflow-chat
