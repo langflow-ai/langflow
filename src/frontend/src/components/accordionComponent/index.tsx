@@ -15,17 +15,16 @@ export default function AccordionComponent({
   sideBar,
 }: AccordionComponentType): JSX.Element {
   const [value, setValue] = useState(
-    open.length === 0 ? "" : getOpenAccordion()
+    open.length === 0 ? "" : getOpenAccordion(),
   );
 
   function getOpenAccordion(): string {
     let value = "";
     open.forEach((el) => {
-      if (el == trigger) {
-        value = trigger;
+      if (el == keyValue) {
+        value = keyValue;
       }
     });
-
     return value;
   }
 
