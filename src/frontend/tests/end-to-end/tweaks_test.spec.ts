@@ -110,6 +110,8 @@ test("check if tweaks are updating when someothing on the flow changes", async (
 
   await page.getByText("API", { exact: true }).first().click();
 
+  await page.getByText("Tweaks").nth(1).click();
+
   await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
   await page.getByText("index_directory_123123123!@#$&*(&%$@").isVisible();
 
