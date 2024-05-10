@@ -5,7 +5,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import NestedDict, Text
+from langflow.field_typing import Text
 
 
 class MistralAIModelComponent(LCModelComponent):
@@ -32,10 +32,6 @@ class MistralAIModelComponent(LCModelComponent):
                 "display_name": "Max Tokens",
                 "advanced": True,
             },
-            "model_kwargs": {
-                "display_name": "Model Kwargs",
-                "advanced": True,
-            },
             "model_name": {
                 "display_name": "Model Name",
                 "advanced": False,
@@ -45,7 +41,7 @@ class MistralAIModelComponent(LCModelComponent):
                     "open-mixtral-8x22b",
                     "mistral-small-latest",
                     "mistral-medium-latest",
-                    "mistral-large-latest"
+                    "mistral-large-latest",
                 ],
                 "value": "open-mistral-7b",
             },
@@ -78,19 +74,48 @@ class MistralAIModelComponent(LCModelComponent):
                 "info": "System message to pass to the model.",
                 "advanced": True,
             },
+            "max_retries": {
+                "display_name": "Max Retries",
+                "advanced": True,
+            },
+            "timeout": {
+                "display_name": "Timeout",
+                "advanced": True,
+            },
+            "max_concurrent_requests": {
+                "display_name": "Max Concurrent Requests",
+                "advanced": True,
+            },
+            "top_p": {
+                "display_name": "Top P",
+                "advanced": True,
+            },
+            "random_seed": {
+                "display_name": "Random Seed",
+                "advanced": True,
+            },
+            "safe_mode": {
+                "display_name": "Safe Mode",
+                "advanced": True,
+            },
         }
 
     def build(
         self,
         input_value: Text,
         mistral_api_key: str,
-        temperature: float,
         model_name: str,
+        temperature: float = 0.1,
         max_tokens: Optional[int] = 256,
-        model_kwargs: NestedDict = {},
         mistral_api_base: Optional[str] = None,
         stream: bool = False,
         system_message: Optional[str] = None,
+        max_retries: int = 5,
+        timeout: int = 120,
+        max_concurrent_requests: int = 64,
+        top_p: float = 1,
+        random_seed: Optional[int] = None,
+        safe_mode: bool = False,
     ) -> Text:
         if not mistral_api_base:
             mistral_api_base = "https://api.mistral.ai"
@@ -101,11 +126,16 @@ class MistralAIModelComponent(LCModelComponent):
 
         chat_model = ChatMistralAI(
             max_tokens=max_tokens,
-            model_kwargs=model_kwargs,
-            model=model_name,
-            base_url=mistral_api_base,
+            model_name=model_name,
+            endpoint=mistral_api_base,
             api_key=api_key,
             temperature=temperature,
+            max_retries=max_retries,
+            timeout=timeout,
+            max_concurrent_requests=max_concurrent_requests,
+            top_p=top_p,
+            random_seed=random_seed,
+            safe_mode=safe_mode,
         )
 
         return self.get_chat_result(chat_model, stream, input_value, system_message)
