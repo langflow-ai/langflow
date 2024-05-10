@@ -20,10 +20,7 @@ export default function SidebarNav({
 
   return (
     <nav
-      className={cn(
-        "flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1",
-        className
-      )}
+      className={cn("flex flex-col space-x-0 space-x-2 space-y-1", className)}
       {...props}
     >
       {items.map((item) => (
@@ -36,7 +33,7 @@ export default function SidebarNav({
             pathname === item.href
               ? "border border-border bg-muted hover:bg-muted"
               : "border border-transparent hover:border-border hover:bg-transparent",
-            "justify-start gap-2"
+            "justify-start gap-2",
           )}
         >
           {item.icon}
