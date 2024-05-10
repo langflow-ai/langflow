@@ -25,7 +25,7 @@ documentation = "https://docs.langflow.org"
 langflow-base = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.10,<3.13"
 fastapi = "^0.110.1"
 httpx = "*"
 uvicorn = "^0.29.0"

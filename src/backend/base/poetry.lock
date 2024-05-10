@@ -517,13 +517,13 @@ test-randomorder = ["pytest-randomly"]
 
 [[package]]
 name = "dataclasses-json"
-version = "0.6.5"
+version = "0.6.6"
 description = "Easily serialize dataclasses to and from JSON."
 optional = false
 python-versions = "<4.0,>=3.7"
 files = [
-    {file = "dataclasses_json-0.6.5-py3-none-any.whl", hash = "sha256:f49c77aa3a85cac5bf5b7f65f4790ca0d2be8ef4d92c75e91ba0103072788a39"},
-    {file = "dataclasses_json-0.6.5.tar.gz", hash = "sha256:1c287594d9fcea72dc42d6d3836cf14848c2dc5ce88f65ed61b36b57f515fe26"},
+    {file = "dataclasses_json-0.6.6-py3-none-any.whl", hash = "sha256:e54c5c87497741ad454070ba0ed411523d46beb5da102e221efb873801b0ba85"},
+    {file = "dataclasses_json-0.6.6.tar.gz", hash = "sha256:0c09827d26fffda27f1be2fed7a7a01a29c5ddcd2eb6393ad5ebf9d77e9deae8"},
 ]
 
 [package.dependencies]
@@ -1023,22 +1023,21 @@ files = [
 
 [[package]]
 name = "langchain"
-version = "0.1.17"
+version = "0.1.19"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain-0.1.17-py3-none-any.whl", hash = "sha256:f6c5b5fdb529545e6cafbb4ba099031508e621ba1ed7985cf078a597ade3458b"},
-    {file = "langchain-0.1.17.tar.gz", hash = "sha256:709b80afa00ae634dfc7042f3e4c20309267b21ffeacc7d7494d58bcae1862f7"},
+    {file = "langchain-0.1.19-py3-none-any.whl", hash = "sha256:a1270b70139344a09f91c8a1b117c4300d9920d6d88aaaaf5ba729625ac68801"},
+    {file = "langchain-0.1.19.tar.gz", hash = "sha256:7d2ffb66944a84dcac99901c4fd33f6d92aa7f794d17b5ba9a29c55a7306e32c"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.8.3,<4.0.0"
 async-timeout = {version = ">=4.0.0,<5.0.0", markers = "python_version < \"3.11\""}
 dataclasses-json = ">=0.5.7,<0.7"
-jsonpatch = ">=1.33,<2.0"
-langchain-community = ">=0.0.36,<0.1"
-langchain-core = ">=0.1.48,<0.2.0"
+langchain-community = ">=0.0.38,<0.1"
+langchain-core = ">=0.1.52,<0.2.0"
 langchain-text-splitters = ">=0.0.1,<0.1"
 langsmith = ">=0.1.17,<0.2.0"
 numpy = ">=1,<2"
@@ -1064,19 +1063,19 @@ text-helpers = ["chardet (>=5.1.0,<6.0.0)"]
 
 [[package]]
 name = "langchain-community"
-version = "0.0.37"
+version = "0.0.38"
 description = "Community contributed LangChain integrations."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_community-0.0.37-py3-none-any.whl", hash = "sha256:52e8557602dc099c2e236ec8a0599a956e2f08cfeb61e501815f5ec2d8545747"},
-    {file = "langchain_community-0.0.37.tar.gz", hash = "sha256:db2b5829bb20bc5b04c126b69143dbc31a880e949e94110c236b2c176906889f"},
+    {file = "langchain_community-0.0.38-py3-none-any.whl", hash = "sha256:ecb48660a70a08c90229be46b0cc5f6bc9f38f2833ee44c57dfab9bf3a2c121a"},
+    {file = "langchain_community-0.0.38.tar.gz", hash = "sha256:127fc4b75bc67b62fe827c66c02e715a730fef8fe69bd2023d466bab06b5810d"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.8.3,<4.0.0"
 dataclasses-json = ">=0.5.7,<0.7"
-langchain-core = ">=0.1.51,<0.2.0"
+langchain-core = ">=0.1.52,<0.2.0"
 langsmith = ">=0.1.0,<0.2.0"
 numpy = ">=1,<2"
 PyYAML = ">=5.3"
@@ -1112,18 +1111,18 @@ extended-testing = ["jinja2 (>=3,<4)"]
 
 [[package]]
 name = "langchain-experimental"
-version = "0.0.57"
+version = "0.0.58"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_experimental-0.0.57-py3-none-any.whl", hash = "sha256:96479a2d45a35722cf2fe49655639e91d3fff5ccaba498cda32b088d5b184325"},
-    {file = "langchain_experimental-0.0.57.tar.gz", hash = "sha256:d1fb452aa1f04f32f0e08b83b083f35552f4ece1077c5bdcf86327f56f1758b5"},
+    {file = "langchain_experimental-0.0.58-py3-none-any.whl", hash = "sha256:106d3bc7df3dd20687378db7534c2fc21e2589201d43de42f832a1e3913dd55b"},
+    {file = "langchain_experimental-0.0.58.tar.gz", hash = "sha256:8ef10ff6b39f44ef468f8f21beb3749957d2262ec64d05db2719934936ca0285"},
 ]
 
 [package.dependencies]
-langchain = ">=0.1.15,<0.2.0"
-langchain-core = ">=0.1.41,<0.2.0"
+langchain = ">=0.1.17,<0.2.0"
+langchain-core = ">=0.1.52,<0.2.0"
 
 [package.extras]
 extended-testing = ["faker (>=19.3.1,<20.0.0)", "jinja2 (>=3,<4)", "pandas (>=2.0.1,<3.0.0)", "presidio-analyzer (>=2.2.352,<3.0.0)", "presidio-anonymizer (>=2.2.352,<3.0.0)", "sentence-transformers (>=2,<3)", "tabulate (>=0.9.0,<0.10.0)", "vowpal-wabbit-next (==0.6.0)"]
@@ -1162,13 +1161,13 @@ types-requests = ">=2.31.0.2,<3.0.0.0"
 
 [[package]]
 name = "langsmith"
-version = "0.1.54"
+version = "0.1.56"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.54-py3-none-any.whl", hash = "sha256:e8ba2758dbdff0fccb35337c28a5ab641dd980b22e178d390b72a15c9ae9caff"},
-    {file = "langsmith-0.1.54.tar.gz", hash = "sha256:86f5a90e48303de897f37a893f8bb635eabdaf23e674099e8bc0f2e9ca2f8faf"},
+    {file = "langsmith-0.1.56-py3-none-any.whl", hash = "sha256:2f930e054ea8eccd8ff99f0f129ae7d2513973b2e706d5483f44ea9951a1dca0"},
+    {file = "langsmith-0.1.56.tar.gz", hash = "sha256:ff645b5bf16e2566740218ed6c048a1f8edbbedb4480a0d305a837ec71303fbf"},
 ]
 
 [package.dependencies]
@@ -1809,6 +1808,7 @@ files = [
 numpy = [
     {version = ">=1.22.4,<2", markers = "python_version < \"3.11\""},
     {version = ">=1.23.2,<2", markers = "python_version == \"3.11\""},
+    {version = ">=1.26.0,<2", markers = "python_version >= \"3.12\""},
 ]
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
@@ -2891,5 +2891,5 @@ local = []
 
 [metadata]
 lock-version = "2.0"
-python-versions = ">=3.10,<3.12"
-content-hash = "cd3479e6f463fcdce1bef948ca71952b0650d1d7f4891ba1bc873368cd4b095d"
+python-versions = ">=3.10,<3.13"
+content-hash = "b3260a1b9eb1bf684beefc5ee1a8196b7fab4005417d095ca6d79038bbeefaf8"
