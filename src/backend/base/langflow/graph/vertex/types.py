@@ -300,11 +300,6 @@ class PromptVertex(Vertex):
             return str(self._built_object)
 
 
-class OutputParserVertex(Vertex):
-    def __init__(self, data: Dict, graph):
-        super().__init__(data, graph=graph, base_type="output_parsers")
-
-
 class CustomComponentVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="custom_components")
