@@ -1,6 +1,6 @@
 from typing import ClassVar, Dict, List, Optional, Type
 
-from langchain import output_parsers
+from langchain_community import output_parsers
 from langflow.interface.base import LangChainTypeCreator
 from langflow.interface.importing.utils import import_class
 from langflow.interface.utils import build_template_from_class
