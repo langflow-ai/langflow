@@ -511,7 +511,7 @@ export type nodeToolbarPropsType = {
   updateNodeCode?: (
     newNodeClass: APIClassType,
     code: string,
-    name: string
+    name: string,
   ) => void;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
   isOutdated?: boolean;
@@ -561,7 +561,7 @@ export type chatMessagePropsType = {
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) => void;
 };
 
@@ -646,20 +646,23 @@ export type codeTabsPropsType = {
   setActiveTab: (value: string) => void;
   isMessage?: boolean;
   tweaks?: {
-    tweak?: { current: tweakType };
-    tweaksList?: { current: Array<string> };
+    tweak?: tweakType;
+    tweaksList?: Array<string>;
     buildContent?: (value: string) => ReactNode;
     getValue?: (
       value: string,
       node: NodeType,
-      template: TemplateVariableType
+      template: TemplateVariableType,
+      tweak: tweakType,
     ) => string;
     buildTweakObject?: (
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: TemplateVariableType
-    ) => string | void;
+      template: TemplateVariableType,
+    ) => Promise<string | void>;
   };
+  activeTweaks?: boolean;
+  setActiveTweaks?: (value: boolean) => void;
 };
 
 export type crashComponentPropsType = {
