@@ -17,6 +17,7 @@ import { FlowType, NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
 import { buildTweaks } from "./reactflowUtils";
 import { ColDef, ColGroupDef } from "ag-grid-community";
+import TableAutoCellRender from "../components/tableAutoCellRender";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -725,6 +726,11 @@ export function sortByName(stringList: string[]): string[] {
   return stringList.sort((a, b) => a.localeCompare(b));
 }
 
+export function isTimeStampString(str: string): boolean {
+  const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/;
+  return timestampRegex.test(str);
+}
+
 export function extractColumnsFromRows(
   rows: object[],
   mode: "intersection" | "union",
@@ -735,7 +741,11 @@ export function extractColumnsFromRows(
   }
   function intersection() {
     for (const key in rows[0]) {
-      columnsKeys[key] = { headerName: key, field: key };
+      columnsKeys[key] = {
+        headerName: key,
+        field: key,
+        cellRenderer: TableAutoCellRender,
+      };
     }
     for (const row of rows) {
       for (const key in columnsKeys) {
@@ -748,7 +758,11 @@ export function extractColumnsFromRows(
   function union() {
     for (const row of rows) {
       for (const key in row) {
-        columnsKeys[key] = { headerName: key, field: key };
+        columnsKeys[key] = {
+          headerName: key,
+          field: key,
+          cellRenderer: TableAutoCellRender,
+        };
       }
     }
   }
