@@ -4,9 +4,7 @@ module.exports = {
       type: "category",
       label: "What's New?",
       collapsed: false,
-      items: [
-        "whats-new/a-new-chapter-langflow"
-      ],
+      items: ["whats-new/a-new-chapter-langflow"],
     },
     {
       type: "category",
@@ -17,7 +15,7 @@ module.exports = {
         "getting-started/install-langflow",
         "getting-started/quickstart",
         "getting-started/huggingface-spaces",
-        "getting-started/new-to-llms"
+        "getting-started/new-to-llms",
       ],
     },
     {
@@ -29,7 +27,7 @@ module.exports = {
         "starter-projects/blog-writer",
         "starter-projects/document-qa",
         "starter-projects/memory-chatbot",
-        "starter-projects/vector-store-rag"
+        "starter-projects/vector-store-rag",
       ],
     },
     {
@@ -43,7 +41,7 @@ module.exports = {
         "administration/components",
         "administration/collection",
         "administration/prompt-customization",
-        "administration/langfuse_integration"
+        "administration/langfuse_integration",
       ],
     },
     {
@@ -58,7 +56,7 @@ module.exports = {
         "components/helpers",
         "components/vector-stores",
         "components/embeddings",
-        "components/custom"
+        "components/custom",
       ],
     },
     {
@@ -74,7 +72,7 @@ module.exports = {
         "components/retrievers",
         "components/text-splitters",
         "components/toolkits",
-        "components/tools"
+        "components/tools",
       ],
     },
     {
@@ -88,7 +86,7 @@ module.exports = {
         "examples/csv-loader",
         "examples/searchapi-tool",
         "examples/serp-api-tool",
-        "examples/python-function"
+        "examples/python-function",
       ],
     },
     {
@@ -101,8 +99,8 @@ module.exports = {
         "migration/inputs-and-outputs",
         "migration/text-and-record",
         "migration/compatibility",
-        "migration/global-variables"
-      ]
+        "migration/global-variables",
+      ],
     },
     {
       type: "category",
@@ -111,16 +109,14 @@ module.exports = {
       items: [
         "tutorials/chatprompttemplate_guide",
         "tutorials/loading_document",
-        "tutorials/rag-with-astradb"
+        "tutorials/rag-with-astradb",
       ],
     },
     {
       type: "category",
       label: "Deployment",
       collapsed: true,
-      items: [
-        "deployment/gcp-deployment"
-      ],
+      items: ["deployment/gcp-deployment"],
     },
     {
       type: "category",
@@ -129,7 +125,8 @@ module.exports = {
       items: [
         "contributing/how-contribute",
         "contributing/github-issues",
-        "contributing/community"
+        "contributing/community",
+        "contributing/contribute-component",
       ],
     },
   ],
