@@ -1,7 +1,7 @@
 import inspect
 import json
+import os
 from typing import TYPE_CHECKING, Any, Callable, Dict, Sequence, Type
-
 
 import orjson
 from langchain.agents import agent as agent_module
@@ -25,6 +25,9 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.utils import load_file_into_dict
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.schema.schema import Record
+from langflow.services.deps import get_settings_service
+from langflow.schema.schema import Record
+from langflow.services.deps import get_settings_service
 from langflow.utils import validate
 from langflow.utils.util import unescape_string
 
@@ -147,11 +150,22 @@ def update_params_with_load_from_db_fields(custom_component: "CustomComponent", 
     # For each field in load_from_db_fields, we will check if it's in the params
     # and if it is, we will get the value from the custom_component.keys(name)
     # and update the params with the value
+    settings_service = get_settings_service()
     for field in load_from_db_fields:
         if field in params:
             try:
                 key = custom_component.variables(params[field])
-                params[field] = key if key else params[field]
+                if settings_service.settings.FALLBACK_TO_ENV_VAR and key is None:
+                    var = os.getenv(params[field])
+                    if var is None:
+                        raise ValueError(f"Environment variable {params[field]} is not set.")
+                    key = var
+                params[field] = key
+                logger.warning(
+                    f"It was not possible to get value for field {field}. Setting value to None."
+                    " If you want to fallback to an environment variable with the same name, "
+                    "set LANGFLOW_FALLBACK_TO_ENV_VAR=True in your environment."
+                )
             except Exception as exc:
                 logger.error(f"Failed to get value for {field} from custom component. Error: {exc}")
                 pass
