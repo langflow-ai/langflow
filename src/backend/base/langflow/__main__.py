@@ -17,7 +17,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from langflow.main import setup_app
+from langflow.main import setup_app, create_discord_app
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from langflow.services.utils import initialize_services
@@ -116,6 +116,12 @@ def run(
         help="Enables the store features.",
         envvar="LANGFLOW_STORE",
     ),
+    discord_active: bool = typer.Option(
+        True,
+        help="Enables the discord features.",
+        envvar="LANGFLOW_DISCORD_ACTIVE",
+    ),
+    discord_port: int = typer.Option(7880, help="Discord port to listen on.", envvar="LANGFLOW_DISCORD_PORT"),
 ):
     """
     Run the Langflow.
@@ -138,11 +144,16 @@ def run(
     )
     # create path object if path is provided
     static_files_dir: Optional[Path] = Path(path) if path else None
+    print("will setup app", flush=True)
     app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
+    discord_app = create_discord_app()
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
 
+    if discord_active:
+        if is_port_in_use(discord_port, host):
+            discord_port = get_free_port(discord_port)
     options = {
         "bind": f"{host}:{port}",
         "workers": get_number_of_workers(workers),
@@ -161,10 +172,14 @@ def run(
         else:
             # Run using gunicorn on Linux
             process = run_on_mac_or_linux(host, port, log_level, options, app)
+            discord_process = run_discord_on_mac_or_linux(host, discord_port, log_level, options, discord_app)
+
         if open_browser:
             click.launch(f"http://{host}:{port}")
         if process:
             process.join()
+        if discord_process:
+            discord_process.join()
     except KeyboardInterrupt:
         pass
 
@@ -179,6 +194,15 @@ def wait_for_server_ready(host, port):
             status_code = httpx.get(f"http://{host}:{port}/health").status_code
         except Exception:
             time.sleep(1)
+
+
+def run_discord_on_mac_or_linux(host, port, log_level, options, app):
+    webapp_process = Process(target=run_discord, args=(host, port, log_level, options, app))
+    webapp_process.start()
+    wait_for_server_ready(host, port)
+
+    print_banner(host, port)
+    return webapp_process
 
 
 def run_on_mac_or_linux(host, port, log_level, options, app):
@@ -386,6 +410,35 @@ def print_banner(host: str, port: int):
 def run_langflow(host, port, log_level, options, app):
     """
     Run Langflow server on localhost
+    """
+    try:
+        if platform.system() in ["Windows"]:
+            # Run using uvicorn on MacOS and Windows
+            # Windows doesn't support gunicorn
+            # MacOS requires an env variable to be set to use gunicorn
+            import uvicorn
+
+            uvicorn.run(
+                app,
+                host=host,
+                port=port,
+                log_level=log_level.lower(),
+                loop="asyncio",
+            )
+        else:
+            from langflow.server import LangflowApplication
+
+            LangflowApplication(app, options).run()
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        logger.exception(e)
+        sys.exit(1)
+
+
+def run_discord(host, port, log_level, options, app):
+    """
+    Run Discord server on localhost
     """
     try:
         if platform.system() in ["Windows"]:

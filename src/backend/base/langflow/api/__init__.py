@@ -1,3 +1,3 @@
-from langflow.api.router import router
+from langflow.api.router import router, discord_router
 
-__all__ = ["router"]
+__all__ = ["router", "discord_router"]

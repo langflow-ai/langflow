@@ -61,6 +61,7 @@ nest-asyncio = "^1.6.0"
 emoji = "^2.11.0"
 cryptography = "^42.0.5"
 asyncer = "^0.0.5"
+discord.py = "^2.3.2"
 
 
 [tool.poetry.extras]
