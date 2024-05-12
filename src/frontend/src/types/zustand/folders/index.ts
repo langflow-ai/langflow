@@ -12,4 +12,6 @@ export type FoldersStoreType = {
   setLoadingById: (loading: boolean) => void;
   getMyCollectionFolder: () => void;
   myCollectionFlows: FolderType | null;
+  myCollectionId: string | null;
+  setMyCollectionId: () => void;
 };

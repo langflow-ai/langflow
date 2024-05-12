@@ -37,6 +37,11 @@ def create_flow(
     db_flow = Flow.model_validate(flow, from_attributes=True)
     db_flow.updated_at = datetime.utcnow()
 
+    if db_flow.folder_id is None:
+        default_folder = session.exec(select(Folder).where(Folder.name == "My Collection")).first()
+        if default_folder:
+            db_flow.folder_id = default_folder.id
+
     session.add(db_flow)
     session.commit()
     session.refresh(db_flow)

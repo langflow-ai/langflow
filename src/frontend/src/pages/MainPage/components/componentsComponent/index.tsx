@@ -27,6 +27,8 @@ export default function ComponentsComponent({
   const removeFlow = useFlowsManagerStore((state) => state.removeFlow);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
+  const isLoadingFolder = useFolderStore((state) => state.loadingById);
+
   const myCollectionFlows = useFolderStore((state) => state.myCollectionFlows);
   const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
@@ -61,16 +63,18 @@ export default function ComponentsComponent({
   useEffect(() => {
     if (folderId) {
       getFolderById(folderId);
-      setAllFlows(flowsFromFolder!);
     }
   }, [location]);
 
   useEffect(() => {
     setTimeout(() => {
       setAllFlows(myCollectionFlows?.flows!);
-      console.log(myCollectionFlows);
     }, 500);
   }, []);
+
+  useEffect(() => {
+    console.log(allFlows);
+  }, [allFlows]);
 
   useEffect(() => {
     const newFlows = cloneDeep(flowsFromFolder!);
@@ -224,7 +228,7 @@ export default function ComponentsComponent({
                 pageSize={pageSize}
                 rowsCount={[10, 20, 50, 100]}
                 totalRowsCount={
-                  myCollectionFlows!.flows.filter(
+                  allFlows?.filter(
                     (f) => (f.is_component ?? false) === is_component,
                   )?.length
                 }
