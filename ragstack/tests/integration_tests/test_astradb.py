@@ -1,4 +1,3 @@
-import os
 import orjson
 import pytest
 from typing import Callable
@@ -8,6 +7,8 @@ from langflow.load import run_flow_from_json
 from langflow.schema import Record
 
 from astrapy.core.db import AstraDB, AstraDBCollection
+
+from tests.integration_tests.conftest import get_env_var
 
 BASIC_COLLECTION = "test"
 EMBEDDING_FLOW_COLLECTION = "test_embedding_flow"
@@ -32,13 +33,13 @@ def test_astra_embedding_flow(embedding_flow: str):
     flow = orjson.loads(embedding_flow)
     TWEAKS = {
         "AstraDB-s9tdG": {
-            "token": os.environ["ASTRA_DB_APPLICATION_TOKEN"],
-            "api_endpoint": os.environ["ASTRA_DB_API_ENDPOINT"],
+            "token": get_env_var("ASTRA_DB_APPLICATION_TOKEN"),
+            "api_endpoint": get_env_var("ASTRA_DB_API_ENDPOINT"),
             "collection_name": EMBEDDING_FLOW_COLLECTION,
         },
         "SplitText-v9ZHX": {},
         "URL-vWSxt": {},
-        "OpenAIEmbeddings-YQwtD": {"openai_api_key": os.environ["OPENAI_API_KEY"]},
+        "OpenAIEmbeddings-YQwtD": {"openai_api_key": get_env_var("OPENAI_API_KEY")},
     }
 
     result = run_flow_from_json(flow=flow, input_value="", tweaks=TWEAKS)
@@ -47,8 +48,8 @@ def test_astra_embedding_flow(embedding_flow: str):
 
     # however, we can check astradb to see if data was inserted
     astra = AstraDB(
-        token=os.environ["ASTRA_DB_APPLICATION_TOKEN"],
-        api_endpoint=os.environ["ASTRA_DB_API_ENDPOINT"],
+        token=get_env_var("ASTRA_DB_APPLICATION_TOKEN"),
+        api_endpoint=get_env_var("ASTRA_DB_API_ENDPOINT"),
     )
     collection: AstraDBCollection = astra.collection(EMBEDDING_FLOW_COLLECTION)
     docs = collection.count_documents()
@@ -64,11 +65,11 @@ def test_astra_search(vector_store_search_flow: str):
 
     TWEAKS = {
         "OpenAIEmbeddings-sSuTz": {
-            "openai_api_key": os.environ["OPENAI_API_KEY"],
+            "openai_api_key": get_env_var("OPENAI_API_KEY"),
         },
         "AstraDBSearch-avH6c": {
-            "token": os.environ["ASTRA_DB_APPLICATION_TOKEN"],
-            "api_endpoint": os.environ["ASTRA_DB_API_ENDPOINT"],
+            "token": get_env_var("ASTRA_DB_APPLICATION_TOKEN"),
+            "api_endpoint": get_env_var("ASTRA_DB_API_ENDPOINT"),
             "collection_name": EMBEDDING_FLOW_COLLECTION,
             "input_value": "Find 3 steps to upload examples",
         },

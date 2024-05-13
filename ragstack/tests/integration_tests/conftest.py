@@ -6,8 +6,6 @@ from pathlib import Path
 
 from langchain_core.embeddings import Embeddings
 
-from astrapy.core.db import AstraDB
-
 
 def pytest_configure():
     data_path = Path(__file__).parent.absolute() / "data"
@@ -46,25 +44,6 @@ def get_env_var(name: str) -> str:
         pytest.skip(f"Missing environment variable: {name}")
 
     return value
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_and_teardown():
-    LOGGER.info("Deleting existing collections")
-    astra = AstraDB(
-        token=get_env_var("ASTRA_DB_APPLICATION_TOKEN"),
-        api_endpoint=get_env_var("ASTRA_DB_API_ENDPOINT"),
-    )
-    collections = astra.get_collections().get("status").get("collections")
-    for c in collections:
-        astra.delete_collection(c)
-
-    yield
-
-    LOGGER.info("Cleaning up collections")
-    collections = astra.get_collections().get("status").get("collections")
-    for c in collections:
-        astra.delete_collection(c)
 
 
 class MockEmbeddings(Embeddings):
