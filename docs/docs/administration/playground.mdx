@@ -1,0 +1,28 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+import Admonition from "@theme/Admonition";
+
+# Playground
+
+In Langflow 1.0 alpha, the **Playground** replaces the **Integration Window**.
+
+The **Playground** offers an interface for interacting with chat flows.
+
+1. To use the **Playground**, from your **Collections** page, click **Playground** in one of your flows.
+The **Playground** window opens.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: useBaseUrl("img/playground-chat.png"),
+    dark: useBaseUrl("img/playground-chat.png"),
+  }}
+  style={{ width: "50%", maxWidth: "600px", margin: "0 auto" }}
+/>
+
+2. Chat with your bot as you normally would.
+
+The Playground allows you to run flows without opening them in the flow editor.
+This applies to the Langflow store, too - as long as you have your global environment variables set, you can run flows by clicking the **Playground** button.
