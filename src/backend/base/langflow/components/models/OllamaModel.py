@@ -1,12 +1,11 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
-# from langchain_community.chat_models import ChatOllama
-from langchain_community.chat_models import ChatOllama
 
+from langchain_community.chat_models.ollama import ChatOllama
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
 from langchain_core.caches import BaseCache
-# from langchain.chat_models import ChatOllama
+
 from langflow.field_typing import Text
 
 
@@ -16,29 +15,26 @@ import json
 import httpx
 
 
-# whe When a callback component is added to Langflow, the comment must be uncommented.
-# from langchain.callbacks.manager import CallbackManager
-
 
 class ChatOllamaComponent(LCModelComponent):
     display_name = "Ollama"
     description = "Generate text using Ollama Local LLMs."
     icon = "Ollama"
-    
 
-    
     field_order = [
-        "base_url",      
+        "base_url",
         "headers",
-        "keep_alive",
+
         "keep_alive_flag",
+        "keep_alive",
+
         "metadata",
         "model",
 
-        
+
         "temperature",
         "cache",
-        "callbacks",
+
 
         "format",
         "metadata",
@@ -72,42 +68,35 @@ class ChatOllamaComponent(LCModelComponent):
 
             },
 
-            "cache": {
-                "display_name": "cache",
-                "info": "If true, will use the global cache. If false, will not use a cache If None, will use the global cache if it’s set, otherwise no cache. If instance of BaseCache, will use the provided cache.",
-                "field_type" :"str",
-                "advanced": False,
-                "options":["Global","OFF","AUTO"],
-                "input_types": ["BaseCache"],
 
-
-            },
             "format": {
                 "display_name": "Format",
                 "info": "Specify the format of the output (e.g., json)",
+                "advanced": True,
             },
-            "headers":{
+            "headers": {
                 "display_name": "Headers",
-                
-                
+                "advanced": True,
+
+
             },
-            
-            "keep_alive_flag":{
-                "display_name": "Unload on..",
-                "options":["Minute","Hour","sec","Keep","Immediately"],
+
+            "keep_alive_flag": {
+                "display_name": "Unload interval",
+                "options": ["Keep", "Immediately","Minute", "Hour", "sec" ],
                 "real_time_refresh": True,
                 "refresh_button": True,
             },
-            "keep_alive":{
-                "display_name": "Keep Alive",
-                "info": "How long the model will stay loaded into memory.",             
+            "keep_alive": {
+                "display_name": "interval",
+                "info": "How long the model will stay loaded into memory.",
             },
-            
- 
-            
+
+
+
             "model": {
                 "display_name": "Model Name",
-                "options":[],
+                "options": [],
                 "info": "Refer to https://ollama.ai/library for more models.",
                 "real_time_refresh": True,
                 "refresh_button": True,
@@ -119,17 +108,12 @@ class ChatOllamaComponent(LCModelComponent):
                 "info": "Controls the creativity of model responses.",
             },
 
-            ### When a callback component is added to Langflow, the comment must be uncommented. ###
-            # "callbacks": {
-            #     "display_name": "Callbacks",
-            #     "info": "Callbacks to execute during model runtime.",
-            #     "advanced": True,
-            # },
-            ########################################################################################
+
             "format": {
                 "display_name": "Format",
                 "field_type": "str",
                 "info": "Specify the format of the output (e.g., json).",
+                "advanced": True,
             },
             "metadata": {
                 "display_name": "Metadata",
@@ -253,8 +237,7 @@ class ChatOllamaComponent(LCModelComponent):
                 "advanced": True,
             },
         }
-        
-        
+
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
         if field_name == "mirostat":
             if field_value == "Disabled":
@@ -262,23 +245,24 @@ class ChatOllamaComponent(LCModelComponent):
                 build_config["mirostat_tau"]["advanced"] = True
                 build_config["mirostat_eta"]["value"] = None
                 build_config["mirostat_tau"]["value"] = None
-               # build_config["mirostat"]["value"] = "Disabled"
+
             else:
                 build_config["mirostat_eta"]["advanced"] = False
                 build_config["mirostat_tau"]["advanced"] = False
-                # Mirostat 2.0이 선택된 경우, 특정 기본값을 설정
+
                 if field_value == "Mirostat 2.0":
                     build_config["mirostat_eta"]["value"] = 0.2
                     build_config["mirostat_tau"]["value"] = 10
                 else:
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
-                    
+
         if field_name == "model":
-            # base_url 값 사용
-            base_url = build_config.get("base_url", {}).get("value", "http://localhost:11434")
-            build_config["model"]["options"] = self.get_model(base_url + "/api/tags")
-            
+            base_url = build_config.get("base_url", {}).get(
+                "value", "http://localhost:11434")
+            build_config["model"]["options"] = self.get_model(
+                base_url + "/api/tags")
+
         if field_name == "keep_alive_flag":
             if field_value == "Keep":
                 build_config["keep_alive"]["value"] = "-1"
@@ -289,38 +273,37 @@ class ChatOllamaComponent(LCModelComponent):
             else:
                 build_config["keep_alive"]["advanced"] = False
 
-                        
-                    
-        return build_config        
+        return build_config
     
+
     
+
     def get_model(self, url: str) -> List[str]:
         try:
             with httpx.Client() as client:
                 response = client.get(url)
-                response.raise_for_status()  # 응답 코드가 200이 아니면 예외 발생
+                response.raise_for_status()
                 data = response.json()
-                # ":latest" 문자열을 제거하고 모델 이름 목록을 생성
-                model_names = [model['name'] for model in data.get("models", [])]
+
+                model_names = [model['name']
+                               for model in data.get("models", [])]
                 return model_names
         except Exception as e:
             raise ValueError("Could not retrieve models") from e
-            return [""]  # API 호출 실패 시 빈 리스트 반환
+            return [""]
 
     def build(
         self,
         base_url: Optional[str],
         model: str,
         input_value: Text,
-        mirostat: Optional[str],
+
+        mirostat: Optional[str],        
         mirostat_eta: Optional[float] = None,
         mirostat_tau: Optional[float] = None,
-        ### When a callback component is added to Langflow, the comment must be uncommented.###
-        # callbacks: Optional[List[Callbacks]] = None,
-        #######################################################################################
+        
         repeat_last_n: Optional[int] = None,
         verbose: Optional[bool] = None,
-        cache: Union[BaseCache,str] = None,
         keep_alive: Optional[int] = None,
         keep_alive_flag: Optional[str] = None,
         num_ctx: Optional[int] = None,
@@ -341,74 +324,39 @@ class ChatOllamaComponent(LCModelComponent):
         stream: bool = False,
         system_message: Optional[str] = None,
     ) -> Text:
-        
 
-            
-            
-        
         if not base_url:
             base_url = "http://localhost:11434"
-            
 
-            
-        # 캐시 설정 처리
-        if isinstance(cache, BaseCache):
-            # BaseCache 인스턴스가 직접 제공된 경우, 추가 처리 없이 사용
-            cache_instance = cache
-            
-        elif isinstance(cache, str):
-            # 문자열 기반의 캐시 설정 처리
-            if cache == "Global":
-                cache_instance = True  # global_cache는 해당 범위에 정의되어 있어야 함
-            elif cache == "OFF":
-                cache_instance = False  # auto_cache는 해당 범위에 정의되어 있어야 함
-            elif cache == "AUTO":
-                cache_instance = None  # 캐시 비활성화
-        else:
-            cache_instance = None  # 캐시 설정이 제공되지 않은 경우
-        
+
 
         if keep_alive_flag == "Minute":
-            keep_alive_instance = f"{keep_alive}m"  # 분 단위로 변환
+            keep_alive_instance = f"{keep_alive}m"
         elif keep_alive_flag == "Hour":
-            keep_alive_instance = f"{keep_alive}h"  # 시간 단위로 변환
+            keep_alive_instance = f"{keep_alive}h"
         elif keep_alive_flag == "sec":
-            keep_alive_instance = f"{keep_alive}s"  # 초 단위로 변환
+            keep_alive_instance = f"{keep_alive}s"
         elif keep_alive_flag == "Keep":
-            keep_alive_instance = "-1"  # 모델을 계속 유지
+            keep_alive_instance = "-1"
         elif keep_alive_flag == "Immediately":
-            keep_alive_instance = "0"  # 모델 즉시 언로드
+            keep_alive_instance = "0"
         else:
-            keep_alive_instance = "Invalid option"  # 유효하지 않은 옵션 처리
-            
+            keep_alive_instance = "Invalid option"
 
-            
-        
         mirostat_instance = 0
-            
-        if mirostat=="disable":
+
+        if mirostat == "disable":
             mirostat_instance = 0
-            
-            
-
-        
-            
-
 
         # Mapping system settings to their corresponding values
         llm_params = {
             "base_url": base_url,
-            "cache": cache_instance,
             "model": model,
             "mirostat": mirostat_instance,
-            #"keep_alive": keep_alive_instance,
+            "keep_alive": keep_alive_instance,
             "format": format,
             "metadata": metadata,
             "tags": tags,
-            ## When a callback component is added to Langflow, the comment must be uncommented.##
-            # "callback_manager": callback_manager,
-            # "callbacks": callbacks,
-            #####################################################################################
             "mirostat_eta": mirostat_eta,
             "mirostat_tau": mirostat_tau,
             "num_ctx": num_ctx,
