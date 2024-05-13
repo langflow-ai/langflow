@@ -34,6 +34,7 @@ jobs:
           make lint
         working-directory: ragstack/
       - uses: nicoloboschi/setup-astradb@v1
+        timeout-minutes: 10
         id: astra
         with:
           token: ${{ secrets.TESTS_ASTRA_DEV_DB_TOKEN }}
@@ -48,7 +49,7 @@ jobs:
           make test
         working-directory: ragstack/
       - uses: nicoloboschi/cleanup-astradb@v1
-        if: ${{ always() }}
+        if: ${{ always() && steps.astra.outputs.name != '' }}
         with:
           token: ${{ secrets.TESTS_ASTRA_DEV_DB_TOKEN }}
           name: ${{ steps.astra.outputs.name }}
