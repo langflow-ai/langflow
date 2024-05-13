@@ -14,12 +14,10 @@ function RecordsOutputComponent({
   if (!flowPool?.data?.artifacts) return "No data available";
   let record = {};
   if (flowPool?.data?.artifacts.repr) {
-    if (typeof flowPool?.data?.artifacts.repr === "string") {
-      record = JSON.parse(flowPool?.data?.artifacts.repr);
-      for (const key in record) {
-        if (record[key] === null) {
-          record[key] = "null";
-        }
+    record = flowPool?.data?.artifacts.repr;
+    for (const key in record) {
+      if (record[key] === null) {
+        record[key] = "null";
       }
     }
   }
