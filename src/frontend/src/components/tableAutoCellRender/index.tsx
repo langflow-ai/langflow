@@ -6,7 +6,7 @@ export default function TableAutoCellRender({
   value,
 }: CustomCellRendererProps) {
   //empty field case
-  if (value === undefined) {
+  if (value === undefined || value === null) {
     return undefined;
   }
   if (typeof value === "string") {
