@@ -52,7 +52,7 @@ class ChatOpenAIComponent(CustomComponent):
         self,
         max_tokens: Optional[int] = 256,
         model_kwargs: NestedDict = {},
-        model_name: str = "gpt-4-1106-preview",
+        model_name: str = "gpt-4o",
         openai_api_base: Optional[str] = None,
         openai_api_key: Optional[str] = None,
         temperature: float = 0.7,

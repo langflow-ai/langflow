@@ -1,5 +1,4 @@
-from datetime import datetime
-from http import HTTPStatus
+from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
 
@@ -35,7 +34,7 @@ def create_flow(
         flow.user_id = current_user.id
 
     db_flow = Flow.model_validate(flow, from_attributes=True)
-    db_flow.updated_at = datetime.utcnow()
+    db_flow.updated_at = datetime.now(timezone.utc)
 
     if db_flow.folder_id is None:
         default_folder = session.exec(select(Folder).where(Folder.name == "My Collection")).first()
@@ -135,7 +134,7 @@ def update_flow(
     for key, value in flow_data.items():
         if value is not None:
             setattr(db_flow, key, value)
-    db_flow.updated_at = datetime.utcnow()
+    db_flow.updated_at = datetime.now(timezone.utc)
     session.add(db_flow)
     session.commit()
     session.refresh(db_flow)
