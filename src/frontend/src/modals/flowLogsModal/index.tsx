@@ -42,7 +42,7 @@ export default function FlowLogsModal({
   useEffect(() => {
     getTransactionTable(currentFlowId, "union").then((data) => {
       const { columns, rows } = data;
-      setColumns(columns);
+      setColumns(columns.map((col) => ({ ...col, editable: true })));
       setRows(rows);
     });
   }, [open]);
@@ -80,6 +80,7 @@ export default function FlowLogsModal({
       </BaseModal.Header>
       <BaseModal.Content>
         <TableComponent
+          readOnlyEdit
           className="h-max-full h-full w-full"
           pagination={true}
           columnDefs={columns}
