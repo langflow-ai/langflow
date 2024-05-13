@@ -3,7 +3,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from langflow.services.deps import get_monitor_service
-from langflow.services.monitor.schema import TransactionModelResponse, VertexBuildMapModel
+from langflow.services.monitor.schema import MessageModel, TransactionModelResponse, VertexBuildMapModel
 from langflow.services.monitor.service import MonitorService
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
@@ -39,7 +39,7 @@ async def delete_vertex_builds(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/messages")
+@router.get("/messages", response_model=MessageModel)
 async def get_messages(
     session_id: Optional[str] = Query(None),
     sender: Optional[str] = Query(None),
@@ -48,12 +48,13 @@ async def get_messages(
     monitor_service: MonitorService = Depends(get_monitor_service),
 ):
     try:
-        return monitor_service.get_messages(
+        df = monitor_service.get_messages(
             sender=sender,
             sender_name=sender_name,
             session_id=session_id,
             order_by=order_by,
         )
+        return df.to_dict(orient="records")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
