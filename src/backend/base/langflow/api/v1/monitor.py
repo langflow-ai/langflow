@@ -39,7 +39,7 @@ async def delete_vertex_builds(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/messages", response_model=MessageModel)
+@router.get("/messages", response_model=List[MessageModel])
 async def get_messages(
     session_id: Optional[str] = Query(None),
     sender: Optional[str] = Query(None),
