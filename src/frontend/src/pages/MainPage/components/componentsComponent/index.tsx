@@ -8,6 +8,7 @@ import IconComponent from "../../../../components/genericIconComponent";
 import PaginatorComponent from "../../../../components/paginatorComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
+import { multipleDeleteFlowsComponents } from "../../../../controllers/API";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -26,20 +27,18 @@ export default function ComponentsComponent({
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const removeFlow = useFlowsManagerStore((state) => state.removeFlow);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
-
-  const myCollectionFlows = useFolderStore((state) => state.myCollectionFlows);
   const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
 
   const flowsFromFolder = useFolderStore(
-    (state) => state.selectedFolder?.flows,
+    (state) => state.selectedFolder?.flows
   );
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openDelete, setOpenDelete] = useState(false);
   const searchFlowsComponents = useFlowsManagerStore(
-    (state) => state.searchFlowsComponents,
+    (state) => state.searchFlowsComponents
   );
   const [handleFileDrop] = useFileDrop(uploadFlow, is_component);
   const [pageSize, setPageSize] = useState(20);
@@ -55,6 +54,7 @@ export default function ComponentsComponent({
   const folderId = location?.state?.folderId;
   const getFolderById = useFolderStore((state) => state.getFolderById);
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
 
   useEffect(() => {
     if (folderId) {
@@ -71,7 +71,7 @@ export default function ComponentsComponent({
         f.name.toLowerCase().includes(searchFlowsComponents.toLowerCase()) ||
         f.description
           .toLowerCase()
-          .includes(searchFlowsComponents.toLowerCase()),
+          .includes(searchFlowsComponents.toLowerCase())
     );
 
     if (searchFlowsComponents === "") {
@@ -105,7 +105,7 @@ export default function ComponentsComponent({
     switch (option) {
       case "delete":
         const hasSelected = Object.keys(getValues()).some(
-          (key) => getValues()[key] === true,
+          (key) => getValues()[key] === true
         );
         if (!hasSelected) {
           setErrorData({
@@ -119,6 +119,42 @@ export default function ComponentsComponent({
       default:
         break;
     }
+  };
+
+  const handleDelete = (item) => {
+    removeFlow(item.id);
+    setSuccessData({
+      title: `${
+        item.is_component ? "Component" : "Flow"
+      } deleted successfully!`,
+    });
+    resetFilter();
+    getFoldersApi(true);
+  };
+
+  const handleDeleteMultiple = () => {
+    const selectedFlows: string[] = Object.keys(getValues()).filter((key) => {
+      if (getValues()[key] === true) {
+        return true;
+      }
+      return false;
+    });
+
+    multipleDeleteFlowsComponents(selectedFlows).then(
+      () => {
+        resetFilter();
+        getFoldersApi(true);
+        setSuccessData({
+          title: "Selected items deleted successfully!",
+        });
+      },
+      () => {
+        setErrorData({
+          title: "Error deleting items",
+          list: ["Please try again"],
+        });
+      }
+    );
   };
 
   return (
@@ -146,15 +182,7 @@ export default function ComponentsComponent({
                       <FormProvider {...methods}>
                         <form>
                           <CollectionCardComponent
-                            onDelete={() => {
-                              removeFlow(item.id);
-                              setSuccessData({
-                                title: `${
-                                  item.is_component ? "Component" : "Flow"
-                                } deleted successfully!`,
-                              });
-                              resetFilter();
-                            }}
+                            onDelete={() => handleDelete(item)}
                             key={idx}
                             data={{
                               is_component: item.is_component ?? false,
@@ -219,7 +247,7 @@ export default function ComponentsComponent({
                 rowsCount={[10, 20, 50, 100]}
                 totalRowsCount={
                   allFlows?.filter(
-                    (f) => (f.is_component ?? false) === is_component,
+                    (f) => (f.is_component ?? false) === is_component
                   )?.length
                 }
                 paginate={(pageSize, pageIndex) => {
@@ -235,9 +263,7 @@ export default function ComponentsComponent({
         <DeleteConfirmationModal
           open={openDelete}
           setOpen={setOpenDelete}
-          onConfirm={() => {
-            console.log("delete");
-          }}
+          onConfirm={handleDeleteMultiple}
           description={`of selected ${is_component ? "components" : "flows"}`}
         >
           <></>

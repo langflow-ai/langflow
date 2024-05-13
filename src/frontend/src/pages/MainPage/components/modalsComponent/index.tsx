@@ -38,6 +38,7 @@ const ModalsComponent = ({
           handleDeleteFolder();
           setOpenDeleteFolderModal(false);
         }}
+        description="folder"
       >
         <Button variant="ghost" size="icon" className={"whitespace-nowrap"}>
           <IconComponent

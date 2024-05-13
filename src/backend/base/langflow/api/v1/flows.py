@@ -7,10 +7,10 @@ import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from langflow.api.utils import remove_api_keys, validate_is_component
-from langflow.api.v1.schemas import FlowListCreate, FlowListRead
+from langflow.api.v1.schemas import FlowListCreate, FlowListIds, FlowListRead
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
@@ -217,9 +217,9 @@ async def download_file(
     return FlowListRead(flows=flows)
 
 
-@router.delete("/flows/multiple_delete", status_code=HTTPStatus.OK)
+@router.post("/multiple_delete/")
 async def delete_multiple_flows(
-    flow_ids: List[str], user: User = Depends(get_current_active_user), db: Session = Depends(get_session)
+    flow_ids: FlowListIds, user: User = Depends(get_current_active_user), db: Session = Depends(get_session)
 ):
     """
     Delete multiple flows by their IDs.
@@ -233,7 +233,7 @@ async def delete_multiple_flows(
 
     """
     try:
-        deleted_flows = db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id)).all()
+        deleted_flows = db.exec(select(Flow).where(col(Flow.id).in_(flow_ids.flow_ids)).where(Flow.user_id == user.id)).all()
         for flow in deleted_flows:
             db.delete(flow)
         db.commit()

@@ -1,5 +1,5 @@
 import { AxiosRequestConfig, AxiosResponse } from "axios";
-import { Edge, ReactFlowJsonObject,Node } from "reactflow";
+import { Edge, Node, ReactFlowJsonObject } from "reactflow";
 import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
@@ -929,25 +929,29 @@ export async function getVerticesOrder(
   flowId: string,
   startNodeId?: string | null,
   stopNodeId?: string | null,
-  nodes?:Node[],
-  Edges?:Edge[]
+  nodes?: Node[],
+  Edges?: Edge[]
 ): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
   // nodeId is optional and is a query parameter
   // if nodeId is not provided, the API will return all vertices
-  const config:AxiosRequestConfig<any> = {};
+  const config: AxiosRequestConfig<any> = {};
   if (stopNodeId) {
     config["params"] = { stop_component_id: stopNodeId };
   } else if (startNodeId) {
     config["params"] = { start_component_id: startNodeId };
   }
   const data = {
-    data:{}
+    data: {},
+  };
+  if (nodes && Edges) {
+    data["data"]["nodes"] = nodes;
+    data["data"]["edges"] = Edges;
   }
-  if(nodes && Edges){
-    data["data"]["nodes"] = nodes
-    data["data"]["edges"] = Edges
-  }
-  return await api.post(`${BASE_URL_API}build/${flowId}/vertices`,data, config);
+  return await api.post(
+    `${BASE_URL_API}build/${flowId}/vertices`,
+    data,
+    config
+  );
 }
 
 export async function postBuildVertex(
@@ -987,4 +991,12 @@ export async function deleteFlowPool(
   const config = {};
   config["params"] = { flow_id: flowId };
   return await api.delete(`${BASE_URL_API}monitor/builds`, config);
+}
+
+export async function multipleDeleteFlowsComponents(
+  flowIds: string[]
+): Promise<AxiosResponse<any>> {
+  return await api.post(`${BASE_URL_API}flows/multiple_delete/`, {
+    flow_ids: flowIds,
+  });
 }

@@ -55,11 +55,11 @@ export default function CollectionCardComponent({
   const [loading, setLoading] = useState(false);
   const [loadingLike, setLoadingLike] = useState(false);
   const [liked_by_user, setLiked_by_user] = useState(
-    data?.liked_by_user ?? false,
+    data?.liked_by_user ?? false
   );
   const [likes_count, setLikes_count] = useState(data?.liked_by_count ?? 0);
   const [downloads_count, setDownloads_count] = useState(
-    data?.downloads_count ?? 0,
+    data?.downloads_count ?? 0
   );
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
@@ -70,7 +70,7 @@ export default function CollectionCardComponent({
   const [openPlayground, setOpenPlayground] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
+    (state) => state.setCurrentFlowId
   );
   const [loadingPlayground, setLoadingPlayground] = useState(false);
 
@@ -190,7 +190,7 @@ export default function CollectionCardComponent({
         className={cn(
           "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#ffffff10]",
           disabled ? "pointer-events-none opacity-50" : "",
-          onClick ? "cursor-pointer" : "",
+          onClick ? "cursor-pointer" : ""
         )}
         onClick={onClick}
       >
@@ -203,7 +203,7 @@ export default function CollectionCardComponent({
                     "flex-shrink-0",
                     data.is_component
                       ? "mx-0.5 h-6 w-6 text-component-icon"
-                      : "h-7 w-7 flex-shrink-0 text-flow-icon",
+                      : "h-7 w-7 flex-shrink-0 text-flow-icon"
                   )}
                   name={data.is_component ? "ToyBrick" : "Group"}
                 />
@@ -397,11 +397,7 @@ export default function CollectionCardComponent({
                         authorized ? "Delete" : "Please review your API key."
                       }
                     >
-                      <DeleteConfirmationModal
-                        onConfirm={() => {
-                          onDelete();
-                        }}
-                      >
+                      <DeleteConfirmationModal onConfirm={onDelete}>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -415,7 +411,7 @@ export default function CollectionCardComponent({
                             name="Trash2"
                             className={cn(
                               "h-5 w-5",
-                              !authorized ? " text-ring" : "",
+                              !authorized ? " text-ring" : ""
                             )}
                           />
                         </Button>
@@ -450,7 +446,7 @@ export default function CollectionCardComponent({
                             liked_by_user
                               ? "fill-destructive stroke-destructive"
                               : "",
-                            !authorized ? " text-ring" : "",
+                            !authorized ? " text-ring" : ""
                           )}
                         />
                       </Button>
@@ -488,7 +484,7 @@ export default function CollectionCardComponent({
                         }
                         className={cn(
                           loading ? "h-5 w-5 animate-spin" : "h-5 w-5",
-                          !authorized ? " text-ring" : "",
+                          !authorized ? " text-ring" : ""
                         )}
                       />
                     </Button>
