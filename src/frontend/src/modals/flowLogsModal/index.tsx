@@ -45,7 +45,7 @@ export default function FlowLogsModal({
       setColumns(columns);
       setRows(rows);
     });
-  }, [activeTab]);
+  }, [open]);
 
   const [nameLists, setNameList] = useState<string[]>([]);
 
@@ -58,7 +58,7 @@ export default function FlowLogsModal({
   }, [flows]);
 
   return (
-    <BaseModal open={open} setOpen={setOpen} size="large-h-full">
+    <BaseModal open={open} setOpen={setOpen} size="large">
       <BaseModal.Header description={null}>
         <div className="flex w-full justify-between">
           <div className="flex h-fit w-32 items-center">
@@ -80,11 +80,10 @@ export default function FlowLogsModal({
       </BaseModal.Header>
       <BaseModal.Content>
         <TableComponent
-          className="h-full w-full"
-          pagination={false}
+          className="h-max-full h-full w-full"
+          pagination={true}
           columnDefs={columns}
           autoSizeStrategy={{ type: "fitGridWidth" }}
-          domLayout="autoHeight"
           rowData={rows}
         ></TableComponent>
       </BaseModal.Content>
