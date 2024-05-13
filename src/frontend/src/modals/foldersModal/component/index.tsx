@@ -1,21 +1,26 @@
 import { useEffect, useState } from "react";
-import { Control, UseFormSetValue } from "react-hook-form";
-import { FolderFormsType } from "..";
 import InputComponent from "../../../components/inputComponent";
-import { FormControl, FormField } from "../../../components/ui/form";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "../../../components/ui/form";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Textarea } from "../../../components/ui/textarea";
 import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 
 type FolderFormsProps = {
-  control: Control<FolderFormsType, any>;
-  setValue: UseFormSetValue<FolderFormsType>;
+  control: any;
+  setValue: any;
+  folderToEdit: any;
 };
 
 export const FolderForms = ({
   control,
   setValue,
+  folderToEdit,
 }: FolderFormsProps): JSX.Element => {
   const flows = useFlowsManagerStore((state) => state.flows);
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
@@ -34,6 +39,20 @@ export const FolderForms = ({
     setValue("flows", selectedFlows);
   }, [selectedComponents, selectedFlows]);
 
+  useEffect(() => {
+    if (folderToEdit) {
+      setValue("name", folderToEdit.name);
+      setValue("description", folderToEdit.description);
+      // setSelectedComponents(folderToEdit.components);
+      // setSelectedFlows(folderToEdit.flows);
+      return;
+    }
+    setValue("name", "");
+    setValue("description", "");
+    setSelectedComponents([]);
+    setSelectedFlows([]);
+  }, [folderToEdit]);
+
   return (
     <>
       <div className="flex h-full w-full flex-col gap-4 align-middle">
@@ -41,16 +60,19 @@ export const FolderForms = ({
 
         <FormField
           control={control}
-          name="folderName"
-          defaultValue={""}
+          name="name"
           render={({ field }) => (
-            <FormControl>
-              <Input
-                value={field.value}
-                onChange={field.onChange}
-                placeholder="Insert a name for the folder..."
-              ></Input>
-            </FormControl>
+            <FormItem>
+              <FormControl>
+                <Input
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Insert a name for the folder..."
+                ></Input>
+              </FormControl>
+
+              <FormMessage />
+            </FormItem>
           )}
         />
 
@@ -58,8 +80,7 @@ export const FolderForms = ({
 
         <FormField
           control={control}
-          defaultValue={""}
-          name="folderDescription"
+          name="description"
           render={({ field }) => (
             <FormControl>
               <Textarea
@@ -74,7 +95,6 @@ export const FolderForms = ({
         <Label>Add Components</Label>
         <FormField
           control={control}
-          defaultValue={[]}
           name="components"
           render={() => (
             <FormControl>
@@ -95,7 +115,6 @@ export const FolderForms = ({
 
         <FormField
           control={control}
-          defaultValue={[]}
           name="flows"
           render={() => (
             <FormControl>

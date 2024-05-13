@@ -27,8 +27,6 @@ export default function ComponentsComponent({
   const removeFlow = useFlowsManagerStore((state) => state.removeFlow);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
 
-  const isLoadingFolder = useFolderStore((state) => state.loadingById);
-
   const myCollectionFlows = useFolderStore((state) => state.myCollectionFlows);
   const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
@@ -56,25 +54,15 @@ export default function ComponentsComponent({
 
   const folderId = location?.state?.folderId;
   const getFolderById = useFolderStore((state) => state.getFolderById);
-  const getMyCollectionFolder = useFolderStore(
-    (state) => state.getMyCollectionFolder,
-  );
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
   useEffect(() => {
     if (folderId) {
       getFolderById(folderId);
+      return;
     }
+    getFolderById(myCollectionId!);
   }, [location]);
-
-  useEffect(() => {
-    setTimeout(() => {
-      setAllFlows(myCollectionFlows?.flows!);
-    }, 500);
-  }, []);
-
-  useEffect(() => {
-    console.log(allFlows);
-  }, [allFlows]);
 
   useEffect(() => {
     const newFlows = cloneDeep(flowsFromFolder!);
@@ -135,10 +123,12 @@ export default function ComponentsComponent({
 
   return (
     <>
-      <HeaderComponent
-        handleSelectOptionsChange={handleSelectOptionsChange}
-        handleSelectAll={handleSelectAll}
-      />
+      {allFlows?.length > 0 && (
+        <HeaderComponent
+          handleSelectOptionsChange={handleSelectOptionsChange}
+          handleSelectAll={handleSelectAll}
+        />
+      )}
 
       <CardsWrapComponent
         onFileDrop={handleFileDrop}

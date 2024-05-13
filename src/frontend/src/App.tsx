@@ -168,7 +168,7 @@ export default function App() {
 
   useEffect(() => {
     getFoldersApi();
-  }, []);
+  }, [autoLogin]);
 
   return (
     //need parent component with width and height

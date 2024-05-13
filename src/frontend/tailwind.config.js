@@ -5,6 +5,11 @@ import plugin from "tailwindcss/plugin";
 
 // ! Check if removing the other module.exports made sense
 module.exports = {
+  variants: {
+    extend: {
+      display: ["group-hover"],
+    },
+  },
   darkMode: ["class"],
   content: [
     "app/**/*.{ts,tsx}",

@@ -5,8 +5,8 @@ import useFlowsManagerStore from "./flowsManagerStore";
 
 export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   folders: [],
-  getFoldersApi: () => {
-    if (get().folders.length === 0) {
+  getFoldersApi: (refetch = false) => {
+    if (get()?.folders.length === 0 || refetch === true) {
       get().setLoading(true);
       getFolders().then(
         (res) => {
@@ -63,4 +63,6 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
     }
   },
   myCollectionId: "",
+  folderToEdit: null,
+  setFolderToEdit: (folder) => set(() => ({ folderToEdit: folder })),
 }));

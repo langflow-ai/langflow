@@ -1,23 +1,11 @@
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { FolderType } from "../../pages/MainPage/entities";
 import { useFolderStore } from "../../stores/foldersStore";
 import { cn } from "../../utils/utils";
-import IconComponent from "../genericIconComponent";
-import { buttonVariants } from "../ui/button";
+import SideBarButtonsComponent from "./components/sideBarButtons";
+import SideBarFoldersButtonsComponent from "./components/sideBarFolderButtons";
 
-const folderArray = [
-  {
-    title: "Getting Started",
-    icon: "folder",
-    id: "77290480-66a0-4562-8550-811d54e8ccf8",
-  },
-  {
-    title: "Folder 1",
-    icon: "folder",
-    id: "d165c958-3a89-4710-b898-a0e2bfe06164",
-  },
-];
-
-interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
+type SidebarNavProps = {
   items: {
     href?: string;
     title: string;
@@ -25,13 +13,18 @@ interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   }[];
   handleOpenNewFolderModal: () => void;
   handleChangeFolder: (id: string) => void;
-}
+  handleEditFolder: (item: FolderType) => void;
+  handleDeleteFolder: (item: FolderType) => void;
+  className?: string;
+};
 
 export default function SidebarNav({
   className,
   items,
   handleOpenNewFolderModal,
   handleChangeFolder,
+  handleEditFolder,
+  handleDeleteFolder,
   ...props
 }: SidebarNavProps) {
   const location = useLocation();
@@ -47,61 +40,21 @@ export default function SidebarNav({
       )}
       {...props}
     >
-      {items.map((item) =>
-        item.href ? (
-          <Link
-            data-testid={`sidebar-nav-${item.title}`}
-            key={item.href}
-            to={item.href}
-            className={cn(
-              buttonVariants({ variant: "ghost" }),
-              "border border-transparent hover:border-border hover:bg-transparent",
-              "justify-start gap-2",
-            )}
-          >
-            {item.icon}
-            {item.title}
-          </Link>
-        ) : (
-          <>
-            <div
-              key={item.title}
-              data-testid={`sidebar-nav-${item.title}`}
-              className={cn(
-                buttonVariants({ variant: "ghost" }),
-                pathname === item.href
-                  ? "border border-border bg-muted hover:bg-muted"
-                  : "border border-transparent hover:border-border hover:bg-transparent",
-                "cursor-pointer justify-start gap-2",
-              )}
-              onClick={handleOpenNewFolderModal}
-            >
-              {item.icon}
-              {item.title}
-            </div>
-          </>
-        ),
-      )}
+      <SideBarButtonsComponent
+        items={items}
+        pathname={pathname}
+        handleOpenNewFolderModal={handleOpenNewFolderModal}
+      />
 
       {!loadingFolders && folders?.length > 0 && (
         <>
-          {folders.map((item) => (
-            <div
-              key={item.id}
-              data-testid={`sidebar-nav-${item.name}`}
-              className={cn(
-                buttonVariants({ variant: "ghost" }),
-                pathname === item.id
-                  ? "border border-border bg-muted hover:bg-muted"
-                  : "border border-transparent hover:border-border hover:bg-transparent",
-                "cursor-pointer justify-start gap-2",
-              )}
-              onClick={() => handleChangeFolder(item.id!)}
-            >
-              <IconComponent name={"folder"} className="w-4 stroke-[1.5]" />
-              {item.name}
-            </div>
-          ))}
+          <SideBarFoldersButtonsComponent
+            folders={folders}
+            pathname={pathname}
+            handleChangeFolder={handleChangeFolder}
+            handleEditFolder={handleEditFolder}
+            handleDeleteFolder={handleDeleteFolder}
+          />
         </>
       )}
     </nav>

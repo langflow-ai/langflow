@@ -2,7 +2,7 @@ import { FolderType } from "../../../pages/MainPage/entities";
 
 export type FoldersStoreType = {
   folders: FolderType[];
-  getFoldersApi: () => void;
+  getFoldersApi: (refetch?: boolean) => void;
   setFolders: (folders: FolderType[]) => void;
   loading: boolean;
   setLoading: (loading: boolean) => void;
@@ -14,4 +14,6 @@ export type FoldersStoreType = {
   myCollectionFlows: FolderType | null;
   myCollectionId: string | null;
   setMyCollectionId: () => void;
+  folderToEdit: FolderType | null;
+  setFolderToEdit: (folder: FolderType | null) => void;
 };
