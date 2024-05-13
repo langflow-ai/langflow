@@ -157,7 +157,12 @@ export function groupByFamily(
     // se existir o flow
     for (const node of flow) {
       // para cada node do flow
-      if (node!.data!.node!.flow || !node!.data!.node!.template) break; // não faz nada se o node for um group
+      if (
+        node.type !== "genericNode" ||
+        node!.data!.node!.flow ||
+        !node!.data!.node!.template
+      )
+        break; // não faz nada se o node for um group
       const nodeData = node.data;
 
       const foundNode = checkedNodes.get(nodeData.type); // verifica se o tipo do node já foi checado

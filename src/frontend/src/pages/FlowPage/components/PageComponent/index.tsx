@@ -1,5 +1,12 @@
 import _, { cloneDeep } from "lodash";
-import { MouseEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  MouseEvent,
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import ReactFlow, {
   Background,
   Connection,
@@ -17,6 +24,7 @@ import {
   UPLOAD_ERROR_ALERT,
   WRONG_FILE_ERROR_ALERT,
 } from "../../../../constants/alerts_constants";
+import AnnotationNode from "../../../../customNodes/annotationNode";
 import GenericNode from "../../../../customNodes/genericNode";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -40,6 +48,7 @@ import SelectionMenu from "../SelectionMenuComponent";
 
 const nodeTypes = {
   genericNode: GenericNode,
+  annotation: memo(AnnotationNode),
 };
 
 export default function Page({
@@ -51,19 +60,19 @@ export default function Page({
 }): JSX.Element {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const autoSaveCurrentFlow = useFlowsManagerStore(
-    (state) => state.autoSaveCurrentFlow
+    (state) => state.autoSaveCurrentFlow,
   );
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [showCanvas, setSHowCanvas] = useState(
-    Object.keys(templates).length > 0 && Object.keys(types).length > 0
+    Object.keys(templates).length > 0 && Object.keys(types).length > 0,
   );
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
-    (state) => state.setReactFlowInstance
+    (state) => state.setReactFlowInstance,
   );
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -80,10 +89,10 @@ export default function Page({
   const paste = useFlowStore((state) => state.paste);
   const resetFlow = useFlowStore((state) => state.resetFlow);
   const lastCopiedSelection = useFlowStore(
-    (state) => state.lastCopiedSelection
+    (state) => state.lastCopiedSelection,
   );
   const setLastCopiedSelection = useFlowStore(
-    (state) => state.setLastCopiedSelection
+    (state) => state.setLastCopiedSelection,
   );
   const onConnect = useFlowStore((state) => state.onConnect);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -94,7 +103,6 @@ export default function Page({
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
-
   function handleGroupNode() {
     takeSnapshot();
     if (validateSelection(lastSelection!, edges).length === 0) {
@@ -106,7 +114,7 @@ export default function Page({
         clonedSelection!,
         clonedNodes,
         clonedEdges,
-        getRandomName()
+        getRandomName(),
       );
       const newGroupNode = generateNodeFromFlow(newFlow, getNodeId);
       const newEdges = reconnectEdges(newGroupNode, removedEdges);
@@ -114,8 +122,8 @@ export default function Page({
         ...clonedNodes.filter(
           (oldNodes) =>
             !clonedSelection?.nodes.some(
-              (selectionNode) => selectionNode.id === oldNodes.id
-            )
+              (selectionNode) => selectionNode.id === oldNodes.id,
+            ),
         ),
         newGroupNode,
       ]);
@@ -125,8 +133,8 @@ export default function Page({
             !clonedSelection!.nodes.some(
               (selectionNode) =>
                 selectionNode.id === oldEdge.target ||
-                selectionNode.id === oldEdge.source
-            )
+                selectionNode.id === oldEdge.source,
+            ),
         ),
         ...newEdges,
       ]);
@@ -178,7 +186,7 @@ export default function Page({
           {
             x: position.current.x,
             y: position.current.y,
-          }
+          },
         );
       }
       if (!isWrappedWithClass(event, "noundo")) {
@@ -274,7 +282,7 @@ export default function Page({
 
   useEffect(() => {
     setSHowCanvas(
-      Object.keys(templates).length > 0 && Object.keys(types).length > 0
+      Object.keys(templates).length > 0 && Object.keys(types).length > 0,
     );
   }, [templates, types]);
 
@@ -283,7 +291,7 @@ export default function Page({
       takeSnapshot();
       onConnect(params);
     },
-    [takeSnapshot, onConnect]
+    [takeSnapshot, onConnect],
   );
 
   const onNodeDragStart: NodeDragHandler = useCallback(() => {
@@ -324,7 +332,7 @@ export default function Page({
 
         // Extract the data from the drag event and parse it as a JSON object
         const data: { type: string; node?: APIClassType } = JSON.parse(
-          event.dataTransfer.getData("nodedata")
+          event.dataTransfer.getData("nodedata"),
         );
 
         const newId = getNodeId(data.type);
@@ -340,7 +348,7 @@ export default function Page({
         };
         paste(
           { nodes: [newNode], edges: [] },
-          { x: event.clientX, y: event.clientY }
+          { x: event.clientX, y: event.clientY },
         );
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
@@ -369,7 +377,7 @@ export default function Page({
       }
     },
     // Specify dependencies for useCallback
-    [getNodeId, setNodes, takeSnapshot, paste]
+    [getNodeId, setNodes, takeSnapshot, paste],
   );
 
   const onEdgeUpdateStart = useCallback(() => {
@@ -385,7 +393,7 @@ export default function Page({
         setEdges((els) => updateEdge(oldEdge, newConnection, els));
       }
     },
-    [setEdges]
+    [setEdges],
   );
 
   const onEdgeUpdateEnd = useCallback((_, edge: Edge): void => {
@@ -418,8 +426,44 @@ export default function Page({
     (flow: OnSelectionChangeParams): void => {
       setLastSelection(flow);
     },
-    []
+    [],
   );
+
+  const onDoubleClick = (event: MouseEvent): void => {
+    console.log(
+      "double click",
+      reactFlowInstance?.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      }) ?? { x: 0, y: 0 },
+      event,
+    );
+    setNodes((nodes) => [
+      {
+        id: "annotation" + event.clientY,
+        type: "annotation",
+        draggable: false,
+        selectable: false,
+        data: {
+          level: 1,
+          label:
+            "Built-in node and edge types. Draggable, deletable and connectable!",
+          arrowStyle: {
+            right: 0,
+            bottom: 0,
+            height: 20,
+            width: 20,
+            transform: "rotate(-90deg)",
+          },
+        },
+        position: reactFlowInstance?.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        }) ?? { x: 0, y: 0 },
+      },
+      ...nodes,
+    ]);
+  };
 
   const onPaneClick = useCallback((flow) => {
     setFilterEdge([]);
@@ -462,6 +506,7 @@ export default function Page({
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
             onMoveEnd={onMoveEnd}
+            onDoubleClick={onDoubleClick}
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}
             deleteKeyCode={[]}
@@ -472,6 +517,7 @@ export default function Page({
             zoomOnPinch={!view}
             panOnDrag={!view}
             proOptions={{ hideAttribution: true }}
+            zoomOnDoubleClick={false}
             onPaneClick={onPaneClick}
           >
             <Background className="" />

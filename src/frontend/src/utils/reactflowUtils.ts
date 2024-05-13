@@ -134,13 +134,15 @@ export function isValidConnection(
 
 export function removeApiKeys(flow: FlowType): FlowType {
   let cleanFLow = cloneDeep(flow);
-  cleanFLow.data!.nodes.forEach((node) => {
-    for (const key in node.data.node.template) {
-      if (node.data.node.template[key].password) {
-        node.data.node.template[key].value = "";
+  cleanFLow
+    .data!.nodes.filter((node) => node.type === "genericNode")
+    .forEach((node) => {
+      for (const key in node.data.node.template) {
+        if (node.data.node.template[key].password) {
+          node.data.node.template[key].value = "";
+        }
       }
-    }
-  });
+    });
   return cleanFLow;
 }
 

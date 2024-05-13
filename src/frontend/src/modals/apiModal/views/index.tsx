@@ -98,7 +98,9 @@ const ApiModal = forwardRef(
 
     useEffect(() => {
       if (canShowTweaks) {
-        const nodes = flow["data"]!["nodes"];
+        const nodes = flow["data"]!["nodes"].filter(
+          (node) => node.type === "genericNode",
+        );
         nodes.forEach((element) => {
           const nodeId = element["id"];
           const template = element["data"]["node"]["template"];
