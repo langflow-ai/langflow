@@ -40,6 +40,7 @@ module.exports = {
         "administration/login",
         "administration/api",
         "administration/cli",
+        "administration/playground",
         "administration/components",
         "administration/collection",
         "administration/prompt-customization",
