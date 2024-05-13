@@ -696,7 +696,7 @@ export function sortByName(stringList: string[]): string[] {
 }
 
 export function isTimeStampString(str: string): boolean {
-  const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/;
+  const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?$/;
   return timestampRegex.test(str);
 }
 
