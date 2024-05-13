@@ -41,7 +41,6 @@ class OpenAIModelComponent(LCModelComponent):
                 "display_name": "Model Name",
                 "advanced": False,
                 "options": MODEL_NAMES,
-                "value": "gpt-4-turbo-preview",
             },
             "openai_api_base": {
                 "display_name": "OpenAI API Base",
@@ -79,7 +78,7 @@ class OpenAIModelComponent(LCModelComponent):
         input_value: Text,
         openai_api_key: str,
         temperature: float,
-        model_name: str,
+        model_name: str = "gpt-4o",
         max_tokens: Optional[int] = 256,
         model_kwargs: NestedDict = {},
         openai_api_base: Optional[str] = None,

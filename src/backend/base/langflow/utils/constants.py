@@ -8,6 +8,7 @@ OPENAI_MODELS = [
     "text-ada-001",
 ]
 CHAT_OPENAI_MODELS = [
+    "gpt-4o",
     "gpt-4-turbo-preview",
     "gpt-4-0125-preview",
     "gpt-4-1106-preview",
