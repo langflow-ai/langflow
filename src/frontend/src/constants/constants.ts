@@ -733,6 +733,8 @@ export const OUTPUT_TYPES = new Set([
   "JsonOutput",
   "KeyPairOutput",
   "StringListOutput",
+  "RecordOutput",
+  "TableOutput",
 ]);
 
 export const CHAT_FIRST_INITIAL_TEXT =

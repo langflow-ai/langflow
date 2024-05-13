@@ -1005,19 +1005,7 @@ export async function getTransactionTable(
   if (params) {
     config["params"] = { ...config["params"], ...params };
   }
-  // const rows = await api.get(`${BASE_URL_API}monitor/transactions`, config);
-  const rows = [
-    {
-      id: 0,
-      timestamp: "2024-05-09T17:42:43.328Z",
-      flow_id: "string",
-      source: "string",
-      target: "string",
-      target_args: {},
-      status: "string",
-      error: "string",
-    },
-  ];
-  const columns = extractColumnsFromRows(rows, mode);
-  return { rows, columns };
+  const rows = await api.get(`${BASE_URL_API}monitor/transactions`, config);
+  const columns = extractColumnsFromRows(rows.data, mode);
+  return { rows: rows.data, columns };
 }
