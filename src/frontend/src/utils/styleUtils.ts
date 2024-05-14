@@ -140,6 +140,10 @@ import {
   X,
   XCircle,
   Zap,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  ArrowDownToLine,
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -292,6 +296,10 @@ export const nodeNames: { [char: string]: string } = {
 };
 
 export const nodeIconsLucide: iconsType = {
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  ArrowDownToLine,
   X: X,
   Notify: Bell,
   ListFlows: Group,
