@@ -4,7 +4,9 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
-from sqlmodel import Session, select
+from langflow.services.database.models.flow.model import Flow
+from sqlalchemy import update
+from sqlmodel import Session, col, select
 
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.folder.model import (
@@ -96,11 +98,32 @@ def update_folder(
             raise HTTPException(status_code=404, detail="Folder not found")
         folder_data = folder.model_dump(exclude_unset=True)
         for key, value in folder_data.items():
-            setattr(existing_folder, key, value)
+            if key != "components" and key != "flows":
+                setattr(existing_folder, key, value)
         session.add(existing_folder)
         session.commit()
         session.refresh(existing_folder)
+
+        if folder.components.__len__() > 0:
+            update_statement_components = (
+                update(Flow)
+                .where(Flow.id.in_(folder.components))
+                .values(folder_id=existing_folder.id)
+            )
+            session.exec(update_statement_components)
+            session.commit()
+
+        if folder.flows.__len__() > 0:
+            update_statement_flows = (
+                update(Flow)
+                .where(Flow.id.in_(folder.flows))
+                .values(folder_id=existing_folder.id)
+            )
+            session.exec(update_statement_flows)
+            session.commit()
+
         return existing_folder
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -16,7 +16,9 @@ test("shoud delete a flow", async ({ page }) => {
       await page.getByTestId("icon-Trash2").first().click();
       await page.waitForTimeout(2000);
     });
-  await page.getByText("Confirm deletion of component?").isVisible();
+  await page
+    .getByText("Are you sure you want to delete the selected component?")
+    .isVisible();
   await page.getByText("Delete").nth(1).click();
   await page.waitForTimeout(1000);
   await page.getByText("Successfully").first().isVisible();
@@ -39,7 +41,9 @@ test("shoud delete a component", async ({ page }) => {
       await page.getByTestId("icon-Trash2").first().click();
       await page.waitForTimeout(2000);
     });
-  await page.getByText("Confirm deletion of component?").isVisible();
+  await page
+    .getByText("Are you sure you want to delete the selected component?")
+    .isVisible();
   await page.getByText("Delete").nth(1).click();
   await page.waitForTimeout(1000);
   await page.getByText("Successfully").first().isVisible();

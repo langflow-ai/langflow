@@ -36,6 +36,7 @@ export default function CollectionCardComponent({
   onDelete,
   playground,
   control,
+  is_component,
 }: {
   data: storeComponent;
   authorized?: boolean;
@@ -45,6 +46,7 @@ export default function CollectionCardComponent({
   playground?: boolean;
   onDelete?: () => void;
   control?: Control<any, any>;
+  is_component?: boolean;
 }) {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -74,6 +76,10 @@ export default function CollectionCardComponent({
   );
   const [loadingPlayground, setLoadingPlayground] = useState(false);
 
+  const selectedFlowsComponentsCards = useFlowsManagerStore(
+    (state) => state.selectedFlowsComponentsCards
+  );
+
   const name = data.is_component ? "Component" : "Flow";
 
   async function getFlowData() {
@@ -87,7 +93,6 @@ export default function CollectionCardComponent({
       return false;
     }
     const { inputs, outputs } = getInputsAndOutputs(flow?.data?.nodes ?? []);
-    console.log(inputs, outputs);
     return inputs.length > 0 || outputs.length > 0;
   }
 
@@ -182,6 +187,9 @@ export default function CollectionCardComponent({
     }
   }
 
+  const isSelectedCard =
+    selectedFlowsComponentsCards?.includes(data?.id) ?? false;
+
   return (
     <>
       <Card
@@ -190,7 +198,8 @@ export default function CollectionCardComponent({
         className={cn(
           "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#ffffff10]",
           disabled ? "pointer-events-none opacity-50" : "",
-          onClick ? "cursor-pointer" : ""
+          onClick ? "cursor-pointer" : "",
+          isSelectedCard ? "border border-medium-indigo" : ""
         )}
         onClick={onClick}
       >
@@ -200,13 +209,39 @@ export default function CollectionCardComponent({
               <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
                 <IconComponent
                   className={cn(
-                    "flex-shrink-0",
+                    "visible flex-shrink-0 group-hover:invisible",
                     data.is_component
                       ? "mx-0.5 h-6 w-6 text-component-icon"
                       : "h-7 w-7 flex-shrink-0 text-flow-icon"
                   )}
                   name={data.is_component ? "ToyBrick" : "Group"}
                 />
+
+                <div className="invisible absolute mb-1 ml-1 group-hover:visible">
+                  {control && (
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <FormField
+                        control={control}
+                        name={`${data.id}`}
+                        defaultValue={false}
+                        render={({ field }) => (
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              className="relative top-1 h-5 w-5 border border-medium-indigo"
+                            />
+                          </FormControl>
+                        )}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <ShadTooltip content={data.name}>
                   <div className="w-full truncate">{data.name}</div>
                 </ShadTooltip>
@@ -310,29 +345,6 @@ export default function CollectionCardComponent({
         </div>
 
         <CardFooter>
-          {control && (
-            <div
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-            >
-              <FormField
-                control={control}
-                name={`${data.id}`}
-                defaultValue={false}
-                render={({ field }) => (
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      className="relative top-1 h-5 w-5 border-2"
-                    />
-                  </FormControl>
-                )}
-              />
-            </div>
-          )}
-
           <div className="z-50 flex w-full items-center justify-between gap-2">
             <div className="flex w-full flex-wrap items-end justify-end gap-2">
               {playground && data?.metadata !== undefined ? (
@@ -565,6 +577,7 @@ export default function CollectionCardComponent({
           onConfirm={() => {
             if (onDelete) onDelete();
           }}
+          description={`selected ${is_component ? "component" : "flow"}`}
         >
           <></>
         </DeleteConfirmationModal>

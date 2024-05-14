@@ -48,3 +48,5 @@ class FolderUpdate(SQLModel):
     name: Optional[str] = None
     description: Optional[str] = None
     parent_id: Optional[UUID] = None
+    components: Optional[List[UUID]] = None
+    flows: Optional[List[UUID]] = None

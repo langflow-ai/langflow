@@ -56,6 +56,8 @@ export type FlowsManagerStoreType = {
   setCurrentFlow: (flow: FlowType) => void;
   setSearchFlowsComponents: (search: string) => void;
   searchFlowsComponents: string;
+  selectedFlowsComponentsCards: string[];
+  setSelectedFlowsComponentsCards: (selected: string[]) => void;
 };
 
 export type UseUndoRedoOptions = {

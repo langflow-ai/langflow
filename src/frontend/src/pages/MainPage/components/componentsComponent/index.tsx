@@ -1,6 +1,6 @@
 import { cloneDeep } from "lodash";
-import { useEffect, useState } from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import { useEffect, useMemo, useState } from "react";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import CollectionCardComponent from "../../../../components/cardComponent";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
@@ -40,6 +40,15 @@ export default function ComponentsComponent({
   const searchFlowsComponents = useFlowsManagerStore(
     (state) => state.searchFlowsComponents
   );
+
+  const setSelectedFlowsComponentsCards = useFlowsManagerStore(
+    (state) => state.setSelectedFlowsComponentsCards
+  );
+
+  const selectedFlowsComponentsCards = useFlowsManagerStore(
+    (state) => state.selectedFlowsComponentsCards
+  );
+
   const [handleFileDrop] = useFileDrop(uploadFlow, is_component);
   const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
@@ -59,6 +68,9 @@ export default function ComponentsComponent({
 
   useEffect(() => {
     setFolderUrl(folderId ?? "");
+    setSelectedFlowsComponentsCards([]);
+    handleSelectAll(false);
+
     if (folderId) {
       getFolderById(folderId);
       return;
@@ -89,10 +101,14 @@ export default function ComponentsComponent({
   };
 
   const { getValues, control, setValue } = useForm();
+  const entireFormValues = useWatch({ control });
+
   const methods = useForm();
   const handleSelectAll = (select) => {
+    const flowsFromFolderIds = flowsFromFolder?.map((f) => f.id);
     if (select) {
       Object.keys(getValues()).forEach((key) => {
+        if (!flowsFromFolderIds?.includes(key)) return;
         setValue(key, true);
       });
       return;
@@ -106,9 +122,7 @@ export default function ComponentsComponent({
   const handleSelectOptionsChange = (option) => {
     switch (option) {
       case "delete":
-        const hasSelected = Object.keys(getValues()).some(
-          (key) => getValues()[key] === true
-        );
+        const hasSelected = selectedFlowsComponentsCards?.length > 0;
         if (!hasSelected) {
           setErrorData({
             title: "No items selected",
@@ -135,14 +149,7 @@ export default function ComponentsComponent({
   };
 
   const handleDeleteMultiple = () => {
-    const selectedFlows: string[] = Object.keys(getValues()).filter((key) => {
-      if (getValues()[key] === true) {
-        return true;
-      }
-      return false;
-    });
-
-    multipleDeleteFlowsComponents(selectedFlows).then(
+    multipleDeleteFlowsComponents(selectedFlowsComponentsCards).then(
       () => {
         resetFilter();
         getFoldersApi(true);
@@ -158,6 +165,27 @@ export default function ComponentsComponent({
       }
     );
   };
+
+  useEffect(() => {
+    if (!entireFormValues || Object.keys(entireFormValues).length === 0) return;
+    const selectedFlows: string[] = Object.keys(entireFormValues).filter(
+      (key) => {
+        if (entireFormValues[key] === true) {
+          return true;
+        }
+        return false;
+      }
+    );
+
+    setSelectedFlowsComponentsCards(selectedFlows);
+  }, [entireFormValues]);
+
+  const getDescriptionModal = useMemo(() => {
+    if (selectedFlowsComponentsCards?.length === 1) {
+      return `selected ${is_component ? "component" : "flow"}`;
+    }
+    return `selected ${is_component ? "components" : "flows"}`;
+  }, [selectedFlowsComponentsCards]);
 
   return (
     <>
@@ -184,6 +212,7 @@ export default function ComponentsComponent({
                       <FormProvider {...methods} key={item.id}>
                         <form>
                           <CollectionCardComponent
+                            is_component={is_component}
                             onDelete={() => handleDelete(item)}
                             data={{
                               is_component: item.is_component ?? false,
@@ -261,7 +290,7 @@ export default function ComponentsComponent({
           open={openDelete}
           setOpen={setOpenDelete}
           onConfirm={handleDeleteMultiple}
-          description={`of selected ${is_component ? "components" : "flows"}`}
+          description={getDescriptionModal}
         >
           <></>
         </DeleteConfirmationModal>

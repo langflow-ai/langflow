@@ -446,6 +446,10 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   setSearchFlowsComponents: (searchFlowsComponents: string) => {
     set({ searchFlowsComponents });
   },
+  selectedFlowsComponentsCards: [],
+  setSelectedFlowsComponentsCards: (selectedFlowsComponentsCards: string[]) => {
+    set({ selectedFlowsComponentsCards });
+  },
 }));
 
 export default useFlowsManagerStore;

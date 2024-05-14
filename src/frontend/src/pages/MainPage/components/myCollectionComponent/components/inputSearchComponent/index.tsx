@@ -15,15 +15,24 @@ const InputSearchComponent = ({
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
 
   const setSearchFlowsComponents = useFlowsManagerStore(
-    (state) => state.setSearchFlowsComponents,
+    (state) => state.setSearchFlowsComponents
   );
+
+  const searchFlowsComponents = useFlowsManagerStore(
+    (state) => state.searchFlowsComponents
+  );
+
+  const disableInputSearch =
+    loading ||
+    !allFlows ||
+    (allFlows?.length === 0 && searchFlowsComponents === "");
 
   return (
     <>
       <div className="relative h-12 w-[40%]">
         <Input
           data-testid="search-store-input"
-          disabled={loading || !allFlows || allFlows?.length === 0}
+          disabled={disableInputSearch}
           placeholder={`Search ${isFlowPage ? "flows" : "components"}`}
           className="absolute h-12 pl-5 pr-7"
           onChange={(e) => {

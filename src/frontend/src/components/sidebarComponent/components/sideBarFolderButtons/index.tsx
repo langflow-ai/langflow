@@ -56,7 +56,7 @@ const SideBarFoldersButtonsComponent = ({
           {index > 0 && (
             <>
               <Button
-                className="invisible p-0 hover:bg-white group-hover:visible hover:dark:bg-[#0c101a00]"
+                className="invisible  p-0 hover:bg-white group-hover:visible hover:dark:bg-[#0c101a00]"
                 onClick={(e) => {
                   handleDeleteFolder(item);
                   e.stopPropagation();
