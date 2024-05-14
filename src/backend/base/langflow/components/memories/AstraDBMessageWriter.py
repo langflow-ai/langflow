@@ -1,13 +1,10 @@
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
 from langflow.schema.schema import Record
 
 from langchain_community.chat_message_histories.astradb import AstraDBChatMessageHistory
-
-if TYPE_CHECKING:
-    import astrapy
 
 
 class AstraDBMessageWriterComponent(BaseMemoryComponent):
@@ -16,9 +13,18 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
 
     def build_config(self):
         return {
+            "input_value": {
+                "display_name": "Input Record",
+                "info": "Record to write to Astra DB.",
+            },
             "session_id": {
                 "display_name": "Session ID",
                 "info": "Session ID of the chat history.",
+                "input_types": ["Text"],
+            },
+            "collection_name": {
+                "display_name": "Collection Name",
+                "info": "Collection name for Astra DB.",
                 "input_types": ["Text"],
             },
             "token": {
@@ -31,25 +37,31 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
                 "info": "API Endpoint for the Astra DB instance.",
                 "password": True,
             },
-            "limit": {
-                "display_name": "Limit",
-                "info": "Limit of search results.",
-                "advanced": True,
-            },
-            "input_value": {
-                "display_name": "Input Record",
-                "info": "Record to write to Astra DB.",
+            "namespace": {
+                "display_name": "Namespace",
+                "info": "Namespace for the Astra DB instance.",
+                "input_types": ["Text"],
             },
         }
 
     def add_message(
-        self, text: Text, **kwargs
+        self,
+        sender: str,
+        sender_name: str,
+        text: Text,
+        session_id: str,
+        metadata: Optional[dict] = None,
+        **kwargs,
     ):
         """
         Adds a message to the AstraDBChatMessageHistory memory.
 
         Args:
+            sender (Text): The type of the message sender. Valid values are "Machine" or "User".
+            sender_name (Text): The name of the message sender.
             text (Text): The content of the message.
+            session_id (Text): The session ID associated with the message.
+            metadata (dict | None, optional): Additional metadata for the message. Defaults to None.
             **kwargs: Additional keyword arguments.
 
         Raises:
@@ -72,10 +84,13 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
         namespace: Optional[str] = None,
     ) -> Record:
         try:
-            import astrapy
+            from langchain_community.chat_message_histories.astradb import (
+                AstraDBChatMessageHistory,
+            )
         except ImportError:
             raise ImportError(
-                "Could not import astrapy package. " "Please install it with `pip install astrapy`."
+                "Could not import langchain Astra DB integration package. "
+                "Please install it with `pip install langchain-astradb`."
             )
 
         memory = AstraDBChatMessageHistory(

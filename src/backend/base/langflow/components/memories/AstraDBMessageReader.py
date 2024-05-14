@@ -18,6 +18,11 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
                 "info": "Session ID of the chat history.",
                 "input_types": ["Text"],
             },
+            "collection_name": {
+                "display_name": "Collection Name",
+                "info": "Collection name for Astra DB.",
+                "input_types": ["Text"],
+            },
             "token": {
                 "display_name": "Astra DB Application Token",
                 "info": "Token for the Astra DB instance.",
@@ -28,19 +33,10 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
                 "info": "API Endpoint for the Astra DB instance.",
                 "password": True,
             },
-            "query": {
-                "display_name": "Query",
-                "info": "Query to search for in the chat history.",
-            },
-            "metadata": {
-                "display_name": "Metadata",
-                "info": "Optional metadata to attach to the message.",
-                "advanced": True,
-            },
-            "limit": {
-                "display_name": "Limit",
-                "info": "Limit of search results.",
-                "advanced": True,
+            "namespace": {
+                "display_name": "Namespace",
+                "info": "Namespace for the Astra DB instance.",
+                "input_types": ["Text"],
             },
         }
 
@@ -48,15 +44,15 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
         """
         Retrieves messages from the AstraDBChatMessageHistory memory.
 
-        If a query is provided, the search method is used to search for messages in the memory, otherwise all messages are returned.
-
         Args:
             memory (AstraDBChatMessageHistory): The AstraDBChatMessageHistory instance to retrieve messages from.
 
         Returns:
             list[Record]: A list of Record objects representing the search results.
         """
-        memory: AstraDBChatMessageHistory = cast(AstraDBChatMessageHistory, kwargs.get("memory"))
+        memory: AstraDBChatMessageHistory = cast(
+            AstraDBChatMessageHistory, kwargs.get("memory")
+        )
         if not memory:
             raise ValueError("AstraDBChatMessageHistory instance is required.")
 
@@ -75,10 +71,13 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
         namespace: Optional[str] = None,
     ) -> list[Record]:
         try:
-            import astrapy
+            from langchain_community.chat_message_histories.astradb import (
+                AstraDBChatMessageHistory,
+            )
         except ImportError:
             raise ImportError(
-                "Could not import astrapy package. " "Please install it with `pip install astrapy`."
+                "Could not import langchain Astra DB integration package. "
+                "Please install it with `pip install langchain-astradb`."
             )
 
         memory = AstraDBChatMessageHistory(
