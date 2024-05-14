@@ -4,6 +4,7 @@ from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
 from langflow.schema.schema import Record
 
+from langchain_core.messages import BaseMessage
 from langchain_community.chat_message_histories.astradb import AstraDBChatMessageHistory
 
 
@@ -72,7 +73,15 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
         if memory is None:
             raise ValueError("AstraDBChatMessageHistory instance is required.")
 
-        memory.add_messages([text])
+        text_list = [BaseMessage(
+            content=text,
+            sender=sender,
+            sender_name=sender_name,
+            metadata=metadata,
+            session_id=session_id,
+        )]
+
+        memory.add_messages(text_list)
 
     def build(
         self,
