@@ -3,6 +3,7 @@ import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the 
 import "ag-grid-community/styles/ag-theme-balham.css"; // Optional Theme applied to the grid
 import { FlowPoolObjectType } from "../../types/chat";
 import TableComponent from "../tableComponent";
+import { extractColumnsFromRows } from "../../utils/utils";
 
 function RecordsOutputComponent({
   flowPool,
@@ -11,21 +12,15 @@ function RecordsOutputComponent({
   flowPool: FlowPoolObjectType;
   pagination: boolean;
 }) {
-  if (!flowPool?.data?.artifacts) return "No data available";
-  let record = {};
-  if (flowPool?.data?.artifacts.repr) {
-    record = flowPool?.data?.artifacts.repr;
-    for (const key in record) {
-      if (record[key] === null) {
-        record[key] = "null";
-      }
-    }
-  }
-  const tableNodeData = [record];
-  const columns = Object.keys(tableNodeData[0]);
+  if (!flowPool?.data?.artifacts.records) return "No data available";
+  console.log(
+    "flowPool.data.artifacts.records",
+    flowPool.data.artifacts.records,
+  );
+  const rows = flowPool.data.artifacts.records;
+  const columns = extractColumnsFromRows(rows, "union");
   const columnDefs = columns.map((col, idx) => ({
-    field: col,
-    flex: 1,
+    ...col,
     resizable: idx !== columns.length - 1,
   })) as (ColDef<any> | ColGroupDef<any>)[];
 
@@ -35,7 +30,7 @@ function RecordsOutputComponent({
       suppressRowClickSelection={true}
       pagination={pagination}
       columnDefs={columnDefs}
-      rowData={tableNodeData}
+      rowData={rows}
     />
   );
 }
