@@ -994,7 +994,6 @@ export function updateEdgesIds(
     if (targetHandle.proxy && idsMap[targetHandle.proxy!.id]) {
       targetHandle.proxy!.id = idsMap[targetHandle.proxy!.id];
     }
-    console.log("edge", edge);
     edge.data.targetHandle = targetHandle;
     edge.targetHandle = scapedJSONStringfy(targetHandle);
   });
