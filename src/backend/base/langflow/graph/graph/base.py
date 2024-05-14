@@ -14,7 +14,7 @@ from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import ChatVertex, FileToolVertex, LLMVertex, StateVertex, ToolkitVertex
+from langflow.graph.vertex.types import FileToolVertex, InterfaceVertex, LLMVertex, StateVertex, ToolkitVertex
 from langflow.interface.tools.constants import FILE_TOOLS
 from langflow.schema import Record
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
@@ -987,8 +987,8 @@ class Graph:
         """Returns the node class based on the node type."""
         # First we check for the node_base_type
         node_name = node_id.split("-")[0]
-        if node_name in ["ChatOutput", "ChatInput"]:
-            return ChatVertex
+        if node_name in InterfaceComponentTypes:
+            return InterfaceVertex
         elif node_name in ["SharedState", "Notify", "Listen"]:
             return StateVertex
         elif node_base_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:

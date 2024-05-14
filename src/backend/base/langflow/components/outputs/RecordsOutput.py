@@ -2,9 +2,9 @@ from langflow.base.io.text import TextComponent
 from langflow.schema import Record
 
 
-class RecordOutput(TextComponent):
-    display_name = "Record Output"
-    description = "Display record"
+class RecordsOutput(TextComponent):
+    display_name = "Records Output"
+    description = "Display Records as a Table"
 
     def build(self, input_value: Record) -> Record:
         return input_value

@@ -115,6 +115,8 @@ class VertexBuildModel(BaseModel):
                 elif isinstance(value, list) and all(isinstance(i, BaseModel) for i in value):
                     v[key] = [i.model_dump() for i in value]
             return json.dumps(v)
+        elif isinstance(v, BaseModel):
+            return v.model_dump_json()
         return v
 
     @field_validator("params", mode="before")
@@ -142,6 +144,8 @@ class VertexBuildModel(BaseModel):
     def validate_artifacts(cls, v):
         if isinstance(v, str):
             return json.loads(v)
+        elif isinstance(v, BaseModel):
+            return v.model_dump()
         return v
 
 

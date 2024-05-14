@@ -432,7 +432,11 @@ class Vertex:
         # to the frontend
         self.set_artifacts()
         artifacts = self.artifacts
-        messages = self.extract_messages_from_artifacts(artifacts)
+        if isinstance(artifacts, dict):
+            messages = self.extract_messages_from_artifacts(artifacts)
+        else:
+            messages = []
+
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,

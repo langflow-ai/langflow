@@ -733,7 +733,7 @@ export const OUTPUT_TYPES = new Set([
   "JsonOutput",
   "KeyPairOutput",
   "StringListOutput",
-  "RecordOutput",
+  "RecordsOutput",
   "TableOutput",
 ]);
 
