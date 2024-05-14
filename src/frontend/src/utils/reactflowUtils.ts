@@ -1075,32 +1075,35 @@ export function expandGroupNode(
   });
   //update template values
   Object.keys(template).forEach((key) => {
-    let { field, id } = template[key].proxy!;
-    let nodeIndex = gNodes.findIndex((n) => n.id === id);
-    if (nodeIndex !== -1) {
-      let proxy: { id: string; field: string } | undefined;
-      let display_name: string | undefined;
-      let show = gNodes[nodeIndex].data.node!.template[field].show;
-      let advanced = gNodes[nodeIndex].data.node!.template[field].advanced;
-      if (gNodes[nodeIndex].data.node!.template[field].display_name) {
-        display_name =
-          gNodes[nodeIndex].data.node!.template[field].display_name;
-      } else {
-        display_name = gNodes[nodeIndex].data.node!.template[field].name;
-      }
-      if (gNodes[nodeIndex].data.node!.template[field].proxy) {
-        proxy = gNodes[nodeIndex].data.node!.template[field].proxy;
-      }
-      gNodes[nodeIndex].data.node!.template[field] = template[key];
-      gNodes[nodeIndex].data.node!.template[field].show = show;
-      gNodes[nodeIndex].data.node!.template[field].advanced = advanced;
-      gNodes[nodeIndex].data.node!.template[field].display_name = display_name;
-      // keep the nodes selected after ungrouping
-      // gNodes[nodeIndex].selected = false;
-      if (proxy) {
-        gNodes[nodeIndex].data.node!.template[field].proxy = proxy;
-      } else {
-        delete gNodes[nodeIndex].data.node!.template[field].proxy;
+    if (template[key].proxy) {
+      let { field, id } = template[key].proxy!;
+      let nodeIndex = gNodes.findIndex((n) => n.id === id);
+      if (nodeIndex !== -1) {
+        let proxy: { id: string; field: string } | undefined;
+        let display_name: string | undefined;
+        let show = gNodes[nodeIndex].data.node!.template[field].show;
+        let advanced = gNodes[nodeIndex].data.node!.template[field].advanced;
+        if (gNodes[nodeIndex].data.node!.template[field].display_name) {
+          display_name =
+            gNodes[nodeIndex].data.node!.template[field].display_name;
+        } else {
+          display_name = gNodes[nodeIndex].data.node!.template[field].name;
+        }
+        if (gNodes[nodeIndex].data.node!.template[field].proxy) {
+          proxy = gNodes[nodeIndex].data.node!.template[field].proxy;
+        }
+        gNodes[nodeIndex].data.node!.template[field] = template[key];
+        gNodes[nodeIndex].data.node!.template[field].show = show;
+        gNodes[nodeIndex].data.node!.template[field].advanced = advanced;
+        gNodes[nodeIndex].data.node!.template[field].display_name =
+          display_name;
+        // keep the nodes selected after ungrouping
+        // gNodes[nodeIndex].selected = false;
+        if (proxy) {
+          gNodes[nodeIndex].data.node!.template[field].proxy = proxy;
+        } else {
+          delete gNodes[nodeIndex].data.node!.template[field].proxy;
+        }
       }
     }
   });
