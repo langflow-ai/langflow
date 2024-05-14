@@ -4,6 +4,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Optional
+import warnings
 
 import click
 import httpx
@@ -476,7 +477,9 @@ def migration(
 
 
 def main():
-    app()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        app()
 
 
 if __name__ == "__main__":

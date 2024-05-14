@@ -28,7 +28,8 @@ module.exports = {
         "starter-projects/basic-prompting",
         "starter-projects/blog-writer",
         "starter-projects/document-qa",
-        "starter-projects/memory-chatbot"
+        "starter-projects/memory-chatbot",
+        "starter-projects/vector-store-rag"
       ],
     },
     {
@@ -128,7 +129,8 @@ module.exports = {
       items: [
         "contributing/how-contribute",
         "contributing/github-issues",
-        "contributing/community"
+        "contributing/community",
+        "contributing/contribute-component"
       ],
     },
   ],

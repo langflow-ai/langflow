@@ -285,7 +285,7 @@ const EditNodeModal = forwardRef(
                                           templateParam
                                         ]?.value?.toString() === "{}"
                                           ? {
-                                              yourkey: "value",
+                                              // yourkey: "value",
                                             }
                                           : myData.node!.template[templateParam]
                                               .value

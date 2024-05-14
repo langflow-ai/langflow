@@ -61,6 +61,8 @@ pyautogen = "^0.2.0"
 langchain-cohere = "^0.1.0rc1"
 elasticsearch = "^8.12.0"
 pytube = "^15.0.0"
+llama-index = "^0.10.13"
+# unstructured = { extras = ["md"], version = "^0.12.4" }
 dspy-ai = "^2.4.0"
 html2text = "^2024.2.26"
 assemblyai = "^0.23.1"
@@ -68,6 +70,10 @@ litellm = "^1.34.22"
 chromadb = "^0.4.24"
 langchain-anthropic = "^0.1.6"
 zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
+langchain-google-vertexai = "^1.0.1"
+langchain-groq = "^0.1.3"
+langchain-pinecone = "^0.1.0"
+
 
 [tool.poetry.group.test.dependencies]
 ragstack-ai-langflow-base = { path = "./src/backend/base", develop = true }
