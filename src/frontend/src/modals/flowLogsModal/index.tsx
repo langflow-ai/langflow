@@ -6,7 +6,7 @@ import { FlowSettingsPropsType } from "../../types/components";
 import { FlowType } from "../../types/flow";
 import BaseModal from "../baseModal";
 import TableComponent from "../../components/tableComponent";
-import { getTransactionTable } from "../../controllers/API";
+import { getMessagesTable, getTransactionTable } from "../../controllers/API";
 import {
   ColDef,
   ColGroupDef,
@@ -40,12 +40,20 @@ export default function FlowLogsModal({
   }
 
   useEffect(() => {
-    getTransactionTable(currentFlowId, "union").then((data) => {
-      const { columns, rows } = data;
-      setColumns(columns.map((col) => ({ ...col, editable: true })));
-      setRows(rows);
-    });
-  }, [open]);
+    if (activeTab === "logs") {
+      getTransactionTable(currentFlowId, "union").then((data) => {
+        const { columns, rows } = data;
+        setColumns(columns.map((col) => ({ ...col, editable: true })));
+        setRows(rows);
+      });
+    } else if (activeTab === "session") {
+      getMessagesTable(currentFlowId, "union").then((data) => {
+        const { columns, rows } = data;
+        setColumns(columns.map((col) => ({ ...col, editable: true })));
+        setRows(rows);
+      });
+    }
+  }, [open, activeTab]);
 
   const [nameLists, setNameList] = useState<string[]>([]);
 
