@@ -27,6 +27,7 @@ import {
 import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowStore from "./flowStore";
+import { useFolderStore } from "./foldersStore";
 import { useTypesStore } from "./typesStore";
 
 let saveTimeoutId: NodeJS.Timeout | null = null;
@@ -205,6 +206,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       if (override) {
         get().deleteComponent(flow!.name);
         const newFlow = createNewFlow(flowData!, flow!);
+        newFlow.folder_id = useFolderStore.getState().folderUrl;
         const { id } = await saveFlowToDatabase(newFlow);
         newFlow.id = id;
         //setTimeout  to prevent update state with wrong state
@@ -229,6 +231,8 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       const newName = addVersionToDuplicates(newFlow, get().flows);
 
       newFlow.name = newName;
+      newFlow.folder_id = useFolderStore.getState().folderUrl;
+
       try {
         const { id } = await saveFlowToDatabase(newFlow);
         // Change the id to the new id.

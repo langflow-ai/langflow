@@ -1,4 +1,5 @@
 import { FolderType } from "../../../../pages/MainPage/entities";
+import { useFolderStore } from "../../../../stores/foldersStore";
 import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import { Button, buttonVariants } from "../../../ui/button";
@@ -17,6 +18,18 @@ const SideBarFoldersButtonsComponent = ({
   handleEditFolder,
   handleDeleteFolder,
 }: SideBarFoldersButtonsComponentProps) => {
+  const currentFolder = pathname.split("/");
+  const urlWithoutPath = pathname.split("/").length < 4;
+
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+
+  const checkPathName = (itemId: string) => {
+    if (urlWithoutPath && itemId === myCollectionId) {
+      return true;
+    }
+    return currentFolder.includes(itemId);
+  };
+
   return (
     <>
       {folders.map((item, index) => (
@@ -25,10 +38,10 @@ const SideBarFoldersButtonsComponent = ({
           data-testid={`sidebar-nav-${item.name}`}
           className={cn(
             buttonVariants({ variant: "ghost" }),
-            pathname === item.id
+            checkPathName(item.id!)
               ? "border border-border bg-muted hover:bg-muted"
               : "border border-transparent hover:border-border hover:bg-transparent",
-            "group flex cursor-pointer gap-2 opacity-100",
+            "group flex cursor-pointer gap-2 opacity-100"
           )}
           onClick={() => handleChangeFolder(item.id!)}
         >

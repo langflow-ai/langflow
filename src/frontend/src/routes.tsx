@@ -90,6 +90,14 @@ const Router = () => {
       </Route>
       <Route path="/flow/:id/">
         <Route
+          path="*"
+          element={
+            <ProtectedRoute>
+              <FlowPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path=""
           element={
             <ProtectedRoute>

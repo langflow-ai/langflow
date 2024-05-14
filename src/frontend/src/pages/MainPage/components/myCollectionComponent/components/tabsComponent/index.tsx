@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useFolderStore } from "../../../../../../stores/foldersStore";
 
 type TabsSearchComponentProps = {
   tabsOptions: string[];
@@ -15,6 +16,7 @@ const TabsSearchComponent = ({
   tabActive,
 }: TabsSearchComponentProps) => {
   const navigate = useNavigate();
+  const folderUrl = useFolderStore((state) => state.folderUrl);
 
   const changeLocation = (tabOption) => {
     const location = window.location.pathname;
@@ -24,7 +26,7 @@ const TabsSearchComponent = ({
     } else {
       newLocation = location.replace("flows", "components");
     }
-    navigate(newLocation);
+    navigate(newLocation, { state: { folderId: folderUrl } });
   };
 
   useEffect(() => {

@@ -119,6 +119,7 @@ export async function saveFlowToDatabase(newFlow: {
   description: string;
   style?: FlowStyleType;
   is_component?: boolean;
+  folder_id?: string;
 }): Promise<FlowType> {
   try {
     const response = await api.post(`${BASE_URL_API}flows/`, {
@@ -126,6 +127,7 @@ export async function saveFlowToDatabase(newFlow: {
       data: newFlow.data,
       description: newFlow.description,
       is_component: newFlow.is_component,
+      folder_id: newFlow.folder_id === "" ? null : newFlow.folder_id,
     });
 
     if (response.status !== 201) {

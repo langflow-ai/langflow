@@ -135,6 +135,10 @@ def update_flow(
         if value is not None:
             setattr(db_flow, key, value)
     db_flow.updated_at = datetime.now(timezone.utc)
+    if db_flow.folder_id is None:
+        default_folder = session.exec(select(Folder).where(Folder.name == "My Collection")).first()
+        if default_folder:
+            db_flow.folder_id = default_folder.id
     session.add(db_flow)
     session.commit()
     session.refresh(db_flow)

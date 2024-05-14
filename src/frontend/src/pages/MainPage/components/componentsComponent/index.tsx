@@ -55,8 +55,10 @@ export default function ComponentsComponent({
   const getFolderById = useFolderStore((state) => state.getFolderById);
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const setFolderUrl = useFolderStore((state) => state.setFolderUrl);
 
   useEffect(() => {
+    setFolderUrl(folderId ?? "");
     if (folderId) {
       getFolderById(folderId);
       return;
@@ -178,20 +180,17 @@ export default function ComponentsComponent({
               <div className="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-2">
                 {isLoading === false && data?.length > 0 ? (
                   <>
-                    {data?.map((item, idx) => (
-                      <FormProvider {...methods}>
+                    {data?.map((item) => (
+                      <FormProvider {...methods} key={item.id}>
                         <form>
                           <CollectionCardComponent
                             onDelete={() => handleDelete(item)}
-                            key={idx}
                             data={{
                               is_component: item.is_component ?? false,
                               ...item,
                             }}
                             disabled={isLoading}
-                            data-testid={
-                              "edit-flow-button-" + item.id + "-" + idx
-                            }
+                            data-testid={"edit-flow-button-" + item.id}
                             button={
                               !is_component ? (
                                 <Link to={"/flow/" + item.id}>
@@ -199,10 +198,8 @@ export default function ComponentsComponent({
                                     tabIndex={-1}
                                     variant="outline"
                                     size="sm"
-                                    className="whitespace-nowrap "
-                                    data-testid={
-                                      "edit-flow-button-" + item.id + "-" + idx
-                                    }
+                                    className="whitespace-nowrap"
+                                    data-testid={"edit-flow-button-" + item.id}
                                   >
                                     <IconComponent
                                       name="ExternalLink"

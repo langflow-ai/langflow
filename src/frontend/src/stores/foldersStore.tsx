@@ -18,7 +18,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
         () => {
           set({ folders: [] });
           get().setLoading(false);
-        },
+        }
       );
     }
   },
@@ -37,7 +37,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
         },
         () => {
           get().setLoadingById(false);
-        },
+        }
       );
     }
   },
@@ -65,4 +65,6 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   myCollectionId: "",
   folderToEdit: null,
   setFolderToEdit: (folder) => set(() => ({ folderToEdit: folder })),
+  folderUrl: "",
+  setFolderUrl: (url) => set(() => ({ folderUrl: url })),
 }));

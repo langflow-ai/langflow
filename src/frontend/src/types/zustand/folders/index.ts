@@ -16,4 +16,6 @@ export type FoldersStoreType = {
   setMyCollectionId: () => void;
   folderToEdit: FolderType | null;
   setFolderToEdit: (folder: FolderType | null) => void;
+  folderUrl: string;
+  setFolderUrl: (folderUrl: string) => void;
 };
