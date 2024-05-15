@@ -43,7 +43,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
         </div>
         {setName ? (
           <Input
-            className="nopan nodelete nodrag noundo nocopy mt-2 font-normal"
+            className="nopan nodouble nodelete nodrag noundo nocopy mt-2 font-normal"
             onChange={handleNameChange}
             type="text"
             name="name"
@@ -84,7 +84,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           <span
             className={cn(
               "font-normal text-muted-foreground word-break-break-word",
-              description === "" ? "font-light italic" : ""
+              description === "" ? "font-light italic" : "",
             )}
           >
             {description === "" ? "No description" : description}

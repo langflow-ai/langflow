@@ -430,31 +430,16 @@ export default function Page({
   );
 
   const onDoubleClick = (event: MouseEvent): void => {
-    console.log(
-      "double click",
-      reactFlowInstance?.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      }) ?? { x: 0, y: 0 },
-      event,
-    );
+    if (isWrappedWithClass(event, "nodouble")) return;
     setNodes((nodes) => [
       {
-        id: "annotation" + event.clientY,
+        id: getNodeId("annotation"),
         type: "annotation",
-        draggable: false,
-        selectable: false,
+        draggable: true,
+        selectable: true,
         data: {
-          level: 1,
           label:
             "Built-in node and edge types. Draggable, deletable and connectable!",
-          arrowStyle: {
-            right: 0,
-            bottom: 0,
-            height: 20,
-            width: 20,
-            transform: "rotate(-90deg)",
-          },
         },
         position: reactFlowInstance?.screenToFlowPosition({
           x: event.clientX,
@@ -468,19 +453,6 @@ export default function Page({
   const onPaneClick = useCallback((flow) => {
     setFilterEdge([]);
   }, []);
-
-  function onMouseAction(edge: Edge, color: string): void {
-    const edges = useFlowStore.getState().edges;
-    const newEdges = _.cloneDeep(edges);
-    const style = { stroke: color, transition: "stroke 0.25s" };
-    const updatedEdges = newEdges.map((obj) => {
-      if (obj.id === edge.id) {
-        return { ...obj, style };
-      }
-      return obj;
-    });
-    setEdges(updatedEdges);
-  }
 
   return (
     <div className="h-full w-full" ref={reactFlowWrapper}>

@@ -166,7 +166,7 @@ export default function InputComponent({
               />
             </PopoverAnchor>
             <PopoverContentWithoutPortal
-              className="nocopy nopan nodelete nodrag noundo p-0"
+              className="nocopy nopan nodouble nodelete nodrag noundo p-0"
               style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
               side="bottom"
               align="center"
