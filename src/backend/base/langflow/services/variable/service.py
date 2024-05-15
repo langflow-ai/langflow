@@ -33,10 +33,13 @@ class VariableService(Service):
                         select(Variable).where(Variable.user_id == user_id, Variable.name == var)
                     ).first():
                         try:
+                            value = os.environ[var]
+                            if isinstance(value, str):
+                                value = value.strip()
                             self.create_variable(
                                 user_id=user_id,
                                 name=var,
-                                value=os.environ[var],
+                                value=value,
                                 default_fields=[],
                                 _type="Credential",
                                 session=session,
