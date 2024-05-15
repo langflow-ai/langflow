@@ -5,6 +5,7 @@ import { ComponentPropsWithoutRef, ElementRef, forwardRef } from "react";
 import { useDarkStore } from "../../stores/darkStore";
 import "../../style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import { cn } from "../../utils/utils";
+import noDataTemplate from "./utils/no-data-template";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
@@ -23,7 +24,11 @@ const TableComponent = forwardRef<
         "ag-theme-shadcn flex h-full flex-col",
       )} // applying the grid theme
     >
-      <AgGridReact ref={ref} {...props} />
+      <AgGridReact
+        ref={ref}
+        {...props}
+        overlayNoRowsTemplate={noDataTemplate()}
+      />
     </div>
   );
 });

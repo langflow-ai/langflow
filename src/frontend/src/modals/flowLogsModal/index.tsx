@@ -90,10 +90,11 @@ export default function FlowLogsModal({
         <TableComponent
           readOnlyEdit
           className="h-max-full h-full w-full"
-          pagination={true}
+          pagination={rows.length === 0 ? false : true}
           columnDefs={columns}
           autoSizeStrategy={{ type: "fitGridWidth" }}
           rowData={rows}
+          headerHeight={rows.length === 0 ? 0 : undefined}
         ></TableComponent>
       </BaseModal.Content>
     </BaseModal>
