@@ -433,7 +433,7 @@ export default function Page({
     if (isWrappedWithClass(event, "nodouble")) return;
     setNodes((nodes) => [
       {
-        id: getNodeId("annotation"),
+        id: getNodeId("genericNode"),
         type: "annotation",
         draggable: true,
         selectable: true,
@@ -444,6 +444,7 @@ export default function Page({
           x: event.clientX,
           y: event.clientY,
         }) ?? { x: 0, y: 0 },
+        selected: true,
       },
       ...nodes,
     ]);
