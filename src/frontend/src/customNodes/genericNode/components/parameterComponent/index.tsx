@@ -5,7 +5,9 @@ import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import DictComponent from "../../../../components/dictComponent";
 import Dropdown from "../../../../components/dropdownComponent";
 import FloatComponent from "../../../../components/floatComponent";
-import { default as IconComponent } from "../../../../components/genericIconComponent";
+import ForwardedIconComponent, {
+  default as IconComponent,
+} from "../../../../components/genericIconComponent";
 import InputFileComponent from "../../../../components/inputFileComponent";
 import InputGlobalComponent from "../../../../components/inputGlobalComponent";
 import InputListComponent from "../../../../components/inputListComponent";
@@ -16,6 +18,12 @@ import ShadTooltip from "../../../../components/shadTooltipComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../../../components/ui/dropdown-menu";
 import { RefreshButton } from "../../../../components/ui/refreshButton";
 import {
   INPUT_HANDLER_HOVER,
@@ -49,7 +57,7 @@ import {
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils/styleUtils";
-import { classNames, groupByFamily } from "../../../../utils/utils";
+import { classNames, cn, groupByFamily } from "../../../../utils/utils";
 
 export default function ParameterComponent({
   left,
@@ -257,6 +265,44 @@ export default function ParameterComponent({
     );
   }, [info]);
 
+  function renderTitle() {
+    const output_types = title.split("|");
+    const displayTitle = data.selected_output_type ?? output_types[0];
+    return !left && output_types.length > 1 ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger>
+          <span
+            className={cn(
+              !left && data.node?.frozen ? " text-ice" : "",
+              "flex items-center gap-1",
+            )}
+          >
+            {displayTitle}
+            <ForwardedIconComponent name="ChevronDown" className="h-4 w-4" />
+          </span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          {output_types.map((type) => (
+            <DropdownMenuItem
+              onSelect={() => {
+                setNode(data.id, (node) => ({
+                  ...node,
+                  data: { ...node.data, selected_output_type: type },
+                }));
+              }}
+            >
+              {type}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : (
+      <span className={cn(!left && data.node?.frozen ? " text-ice" : "")}>
+        {title}
+      </span>
+    );
+  }
+
   function renderTooltips() {
     let groupedObj: any = groupByFamily(myData, tooltipTitle!, left, flow!);
     groupedEdge.current = groupedObj;
@@ -434,14 +480,10 @@ export default function ParameterComponent({
           )}
           {proxy ? (
             <ShadTooltip content={<span>{proxy.id}</span>}>
-              <span className={!left && data.node?.frozen ? " text-ice" : ""}>
-                {title}
-              </span>
+              {renderTitle()}
             </ShadTooltip>
           ) : (
-            <span className={!left && data.node?.frozen ? " text-ice" : ""}>
-              {title}
-            </span>
+            renderTitle()
           )}
           <span className={(required ? "ml-2 " : "") + "text-status-red"}>
             {required ? "*" : ""}

@@ -33,6 +33,7 @@ export type NodeDataType = {
   node?: APIClassType;
   id: string;
   output_types?: string[];
+  selected_output_type?: string;
   buildStatus?: BuildStatus;
 };
 // FlowStyleType is the type of the style object that is used to style the
