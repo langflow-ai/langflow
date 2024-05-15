@@ -18,4 +18,6 @@ export type FoldersStoreType = {
   setFolderToEdit: (folder: FolderType | null) => void;
   folderUrl: string;
   setFolderUrl: (folderUrl: string) => void;
+  folderDragging: string;
+  setFolderDragging: (folderId: string) => void;
 };

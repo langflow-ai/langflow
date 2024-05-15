@@ -194,7 +194,8 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     newProject: Boolean,
     flow?: FlowType,
     override?: boolean,
-    position?: XYPosition
+    position?: XYPosition,
+    fromDragAndDrop?: boolean
   ): Promise<string | undefined> => {
     if (newProject) {
       let flowData = flow
@@ -206,7 +207,9 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       if (override) {
         get().deleteComponent(flow!.name);
         const newFlow = createNewFlow(flowData!, flow!);
-        newFlow.folder_id = useFolderStore.getState().folderUrl;
+        newFlow.folder_id = fromDragAndDrop
+          ? useFolderStore.getState().folderDragging
+          : useFolderStore.getState().folderUrl;
         const { id } = await saveFlowToDatabase(newFlow);
         newFlow.id = id;
         //setTimeout  to prevent update state with wrong state
@@ -333,7 +336,13 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
             });
             resolve("");
           } else {
-            id = await get().addFlow(newProject, fileData, undefined, position);
+            id = await get().addFlow(
+              newProject,
+              fileData,
+              undefined,
+              position,
+              true
+            );
             resolve(id);
           }
         }

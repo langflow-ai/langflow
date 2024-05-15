@@ -14,8 +14,8 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { downloadFlows } from "../../../../utils/reactflowUtils";
 import ModalsComponent from "../../components/modalsComponent";
-import useDeleteFolder from "../../hooks/delete-folder";
-import useDropdownOptions from "../../hooks/dropdown-options";
+import useDeleteFolder from "../../hooks/use-delete-folder";
+import useDropdownOptions from "../../hooks/use-dropdown-options";
 
 const sidebarNavItems = [
   {

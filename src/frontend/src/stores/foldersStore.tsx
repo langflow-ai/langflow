@@ -67,4 +67,6 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   setFolderToEdit: (folder) => set(() => ({ folderToEdit: folder })),
   folderUrl: "",
   setFolderUrl: (url) => set(() => ({ folderUrl: url })),
+  folderDragging: "",
+  setFolderDragging: (folder) => set(() => ({ folderDragging: folder })),
 }));
