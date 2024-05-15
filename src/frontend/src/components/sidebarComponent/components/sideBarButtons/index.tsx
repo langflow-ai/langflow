@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { cn } from "../../../../utils/utils";
 import { buttonVariants } from "../../../ui/button";
 
@@ -18,17 +19,19 @@ const SideBarButtonsComponent = ({
   return (
     <>
       {items.map((item) => (
-        <div
-          key={item.title}
-          data-testid={`sidebar-nav-${item.title}`}
-          className={cn(
-            buttonVariants({ variant: "ghost" }),
-            "!w-[200px] cursor-pointer justify-start gap-2 border border-transparent hover:border-border hover:bg-transparent"
-          )}
-          onClick={handleOpenNewFolderModal}
-        >
-          {item.title}
-        </div>
+        <Link to={item.href!}>
+          <div
+            key={item.title}
+            data-testid={`sidebar-nav-${item.title}`}
+            className={cn(
+              buttonVariants({ variant: "ghost" }),
+              "!w-[200px] cursor-pointer justify-start gap-2 border border-transparent hover:border-border hover:bg-transparent"
+            )}
+            onClick={handleOpenNewFolderModal}
+          >
+            {item.title}
+          </div>
+        </Link>
       ))}
     </>
   );

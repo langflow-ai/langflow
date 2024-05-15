@@ -119,7 +119,7 @@ export default function InputComponent({
               optionsButton={optionsButton}
               showOptions={showOptions}
               onChange={onChange}
-              id={id}
+              id={`popover-anchor-${id}`}
               onInputLostFocus={onInputLostFocus}
               selectedOption={selectedOption}
               setSelectedOption={setSelectedOption}
