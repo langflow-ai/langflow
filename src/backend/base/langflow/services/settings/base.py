@@ -102,9 +102,9 @@ class Settings(BaseSettings):
 
     STORE: Optional[bool] = True
     STORE_URL: Optional[str] = "https://api.langflow.store"
-    DOWNLOAD_WEBHOOK_URL: Optional[
-        str
-    ] = "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
+    DOWNLOAD_WEBHOOK_URL: Optional[str] = (
+        "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
+    )
     LIKE_WEBHOOK_URL: Optional[str] = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
     STORAGE_TYPE: str = "local"
@@ -157,8 +157,10 @@ class Settings(BaseSettings):
 
                 if info.data["SAVE_DB_IN_CONFIG_DIR"]:
                     database_dir = info.data["CONFIG_DIR"]
+                    logger.debug(f"Saving database to CONFIG_DIR: {database_dir}")
                 else:
                     database_dir = Path(__file__).parent.parent.parent.resolve()
+                    logger.debug(f"Saving database to langflow directory: {database_dir}")
 
                 pre_db_file_name = "langflow-pre.db"
                 db_file_name = "langflow.db"
