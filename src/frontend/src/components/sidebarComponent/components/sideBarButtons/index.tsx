@@ -27,7 +27,6 @@ const SideBarButtonsComponent = ({
           )}
           onClick={handleOpenNewFolderModal}
         >
-          {item.icon}
           {item.title}
         </div>
       ))}

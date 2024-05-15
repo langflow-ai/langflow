@@ -64,9 +64,9 @@ test("search flows", async ({ page }) => {
   await page.getByRole("heading", { name: "Document QA" }).click();
   await page.getByTestId("icon-ChevronLeft").first().click();
   await page.getByPlaceholder("Search flows").fill("Memory Chatbot");
-  await page.getByText("Memory Chatbot").isVisible();
-  await page.getByText("Document QA").isHidden();
-  await page.getByText("Basic Prompting").isHidden();
+  await page.getByText("Memory Chatbot", { exact: true }).isVisible();
+  await page.getByText("Document QA", { exact: true }).isHidden();
+  await page.getByText("Basic Prompting", { exact: true }).isHidden();
 });
 
 test("search components", async ({ page }) => {
@@ -119,7 +119,7 @@ test("search components", async ({ page }) => {
     .click();
 
   await page.getByPlaceholder("Search components").fill("Chat Input");
-  await page.getByText("Chat Input").isVisible();
-  await page.getByText("Prompt").isHidden();
-  await page.getByText("OpenAI").isHidden();
+  await page.getByText("Chat Input", { exact: true }).isVisible();
+  await page.getByText("Prompt", { exact: true }).isHidden();
+  await page.getByText("OpenAI", { exact: true }).isHidden();
 });

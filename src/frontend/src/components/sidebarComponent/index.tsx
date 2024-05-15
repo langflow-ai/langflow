@@ -32,6 +32,8 @@ export default function SidebarNav({
   const loadingFolders = useFolderStore((state) => state.loading);
   const folders = useFolderStore((state) => state.folders);
 
+  const isFolderPath = ["/folder/", "/components", "/flows"].includes(pathname);
+
   return (
     <nav
       className={cn(
@@ -46,7 +48,7 @@ export default function SidebarNav({
         handleOpenNewFolderModal={handleOpenNewFolderModal}
       />
 
-      {!loadingFolders && folders?.length > 0 && (
+      {!loadingFolders && folders?.length > 0 && isFolderPath && (
         <>
           <SideBarFoldersButtonsComponent
             folders={folders}

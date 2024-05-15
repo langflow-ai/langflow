@@ -36,16 +36,17 @@ test("CRUD folders", async ({ page }) => {
   await page
     .getByPlaceholder("Insert a description for the folder")
     .fill("test");
-  await page.getByTestId("customInputPopOverObject").first().click();
+  await page.getByTestId("object-input-flow").first().click();
   await page.getByTestId("option-0").first().click();
   await page.keyboard.press("Escape");
   await page.getByText("Save Folder").click();
 
   await page.waitForTimeout(1000);
   await page.getByText("Folder created succefully").isVisible();
-  await page.getByText("test").isVisible();
+  await page.getByText("test").last().isVisible();
   await page
     .getByText("test")
+    .last()
     .hover()
     .then(async () => {
       await page.getByTestId("icon-pencil").last().click();
@@ -56,10 +57,11 @@ test("CRUD folders", async ({ page }) => {
     .getByPlaceholder("Insert a description for the folder")
     .fill("test edit");
   await page.getByText("Edit Folder").click();
-  await page.getByText("test edit").isVisible();
+  await page.getByText("test edit").last().isVisible();
 
   await page
-    .getByText("test")
+    .getByText("test edit")
+    .last()
     .hover()
     .then(async () => {
       await page.getByTestId("icon-trash").last().click();

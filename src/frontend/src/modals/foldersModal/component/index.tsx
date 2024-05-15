@@ -106,7 +106,7 @@ export const FolderForms = ({
                 password={false}
                 objectOptions={flowsList}
                 placeholder="Choose a flow to add..."
-                id={"type-global-variables"}
+                id="input-flow"
                 setSelectedOptions={(value: any) => setSelectedFlows(value)}
                 selectedOptions={selectedFlows}
               ></InputComponent>
@@ -125,7 +125,7 @@ export const FolderForms = ({
                 password={false}
                 objectOptions={componentsList}
                 placeholder="Choose a component to add..."
-                id={"type-global-variables"}
+                id="input-component"
                 setSelectedOptions={(value) => setSelectedComponents(value)}
                 selectedOptions={selectedComponents}
               ></InputComponent>
