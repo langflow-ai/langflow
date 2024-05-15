@@ -438,10 +438,8 @@ export default function Page({
         draggable: true,
         selectable: true,
         data: {
-          label:
-            "Built-in node and edge types. Draggable, deletable and connectable!",
+          label: "This is an annotation about the flow.",
         },
-        width: 200,
         position: reactFlowInstance?.screenToFlowPosition({
           x: event.clientX,
           y: event.clientY,
