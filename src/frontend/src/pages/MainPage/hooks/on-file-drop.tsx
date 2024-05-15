@@ -1,16 +1,18 @@
+import { useLocation } from "react-router-dom";
 import {
   CONSOLE_ERROR_MSG,
   UPLOAD_ALERT_LIST,
   WRONG_FILE_ERROR_ALERT,
 } from "../../../constants/alerts_constants";
 import useAlertStore from "../../../stores/alertStore";
-import useFlowsManagerStore from "../../../stores/flowsManagerStore";
+import { useFolderStore } from "../../../stores/foldersStore";
 
 const useFileDrop = (uploadFlow, is_component) => {
+  const location = useLocation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const flows = useFlowsManagerStore((state) => state.flows);
-  const setAllFlows = useFlowsManagerStore((state) => state.setAllFlows);
+  const getFolderById = useFolderStore((state) => state.getFolderById);
+  const folderId = location?.state?.folderId;
 
   const handleFileDrop = (e) => {
     e.preventDefault();
@@ -27,7 +29,7 @@ const useFileDrop = (uploadFlow, is_component) => {
                 is_component ? "Component" : "Flow"
               } uploaded successfully`,
             });
-            setAllFlows(flows);
+            getFolderById(folderId);
           })
           .catch((error) => {
             setErrorData({
