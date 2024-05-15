@@ -1,11 +1,10 @@
 import { CustomCellRendererProps } from "ag-grid-react";
 import { isTimeStampString } from "../../utils/utils";
-import { isArray } from "lodash";
-import StringReader from "../stringReaderComponent";
-import DateReader from "../dateReaderComponent";
 import ArrayReader from "../arrayReaderComponent";
-import ObjectRender from "../objectRender";
+import DateReader from "../dateReaderComponent";
 import NumberReader from "../numberReader";
+import ObjectRender from "../objectRender";
+import StringReader from "../stringReaderComponent";
 
 export default function TableAutoCellRender({
   value,

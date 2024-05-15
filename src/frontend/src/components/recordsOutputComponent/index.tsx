@@ -22,6 +22,7 @@ function RecordsOutputComponent({
   const columnDefs = columns.map((col, idx) => ({
     ...col,
     resizable: idx !== columns.length - 1,
+    flex: idx !== columns.length - 1 ? 1 : 2,
   })) as (ColDef<any> | ColGroupDef<any>)[];
 
   return (
