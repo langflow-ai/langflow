@@ -10,6 +10,7 @@ class CouchbaseSearchComponent(LCVectorStoreComponent):
     display_name = "Couchbase Search"
     description = "Search a Couchbase Vector Store for similar documents."
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/couchbase"
+    icon = "Couchbase"
     field_order = [
         "couchbase_connection_string",
         "couchbase_username",
@@ -22,10 +23,6 @@ class CouchbaseSearchComponent(LCVectorStoreComponent):
 
     def build_config(self):
         return {
-            "search_type": {
-                "display_name": "Search Type",
-                "options": ["Similarity", "MMR"],
-            },
             "input_value": {"display_name": "Input"},
             "embedding": {"display_name": "Embedding"},
             "couchbase_connection_string": {"display_name": "Couchbase Cluster connection string"},
@@ -49,7 +46,6 @@ class CouchbaseSearchComponent(LCVectorStoreComponent):
     def build(  # type: ignore[override]
         self,
         input_value: Text,
-        search_type: str,
         embedding: Embeddings,
         number_of_results: int = 4,
         bucket_name: str = "",
@@ -75,5 +71,5 @@ class CouchbaseSearchComponent(LCVectorStoreComponent):
         if not vector_store:
             raise ValueError("Failed to create Couchbase Vector Store")
         return self.search_with_vector_store(
-            vector_store=vector_store, input_value=input_value, search_type=search_type, k=number_of_results
+            vector_store=vector_store, input_value=input_value, search_type="similarity", k=number_of_results
         )
