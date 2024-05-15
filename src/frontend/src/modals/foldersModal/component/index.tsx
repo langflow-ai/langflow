@@ -27,11 +27,11 @@ export const FolderForms = ({
   const [selectedFlows, setSelectedFlows] = useState<string[]>([]);
 
   const componentsList = flows
-    .filter((flow) => flow.is_component)
+    .filter((flow) => flow.is_component && flow.folder_id !== null)
     .map((flow) => ({ id: flow.id, name: flow.name }));
 
   const flowsList = flows
-    .filter((flow) => !flow.is_component)
+    .filter((flow) => !flow.is_component && flow.folder_id !== null)
     .map((flow) => ({ id: flow.id, name: flow.name }));
 
   useEffect(() => {
