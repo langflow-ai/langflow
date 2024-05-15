@@ -441,6 +441,7 @@ export default function Page({
           label:
             "Built-in node and edge types. Draggable, deletable and connectable!",
         },
+        size: { width: 200 },
         position: reactFlowInstance?.screenToFlowPosition({
           x: event.clientX,
           y: event.clientY,
