@@ -170,12 +170,12 @@ class Settings(BaseSettings):
                 if is_pre_release:
                     if Path(new_pre_path).exists():
                         final_path = new_pre_path
-                    elif Path(new_path).exists():
+                    elif Path(new_path).exists() and info.data["SAVE_DB_IN_CONFIG_DIR"]:
                         # We need to copy the current db to the new location
                         logger.debug("Copying existing database to new location")
                         copy2(new_path, new_pre_path)
                         logger.debug(f"Copied existing database to {new_pre_path}")
-                    elif Path(f"./{db_file_name}").exists():
+                    elif Path(f"./{db_file_name}").exists() and info.data["SAVE_DB_IN_CONFIG_DIR"]:
                         logger.debug("Copying existing database to new location")
                         copy2(f"./{db_file_name}", new_pre_path)
                         logger.debug(f"Copied existing database to {new_pre_path}")
@@ -320,5 +320,6 @@ def load_settings_from_yaml(file_path: str) -> Settings:
                 raise KeyError(f"Key {key} not found in settings")
             logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
+    return Settings(**settings_dict)
     return Settings(**settings_dict)
     return Settings(**settings_dict)
