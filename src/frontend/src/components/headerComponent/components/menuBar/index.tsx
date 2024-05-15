@@ -17,8 +17,8 @@ import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { cn } from "../../../../utils/utils";
-import ShadTooltip from "../../../ShadTooltipComponent";
 import IconComponent from "../../../genericIconComponent";
+import ShadTooltip from "../../../shadTooltipComponent";
 import { Button } from "../../../ui/button";
 
 export const MenuBar = ({
@@ -83,7 +83,9 @@ export const MenuBar = ({
           <DropdownMenuTrigger asChild>
             <Button asChild variant="primary" size="sm">
               <div className="header-menu-bar-display">
-                <div className="header-menu-flow-name">{currentFlow.name}</div>
+                <div className="header-menu-flow-name" data-testid="flow_name">
+                  {currentFlow.name}
+                </div>
                 <IconComponent name="ChevronDown" className="h-4 w-4" />
               </div>
             </Button>

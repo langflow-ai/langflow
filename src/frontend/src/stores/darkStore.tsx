@@ -8,13 +8,21 @@ export const useDarkStore = create<DarkStoreType>((set, get) => ({
   dark: JSON.parse(window.localStorage.getItem("isDark")!) ?? false,
   stars: startedStars,
   version: "",
-  setDark: (dark) => set(() => ({ dark: dark })),
+  setDark: (dark) => {
+    set(() => ({ dark: dark }));
+    window.localStorage.setItem("isDark", dark.toString());
+  },
   refreshVersion: () => {
     getVersion().then((data) => {
       set(() => ({ version: data.version }));
     });
   },
   refreshStars: () => {
+    if (import.meta.env.CI) {
+      window.localStorage.setItem("githubStars", "0");
+      set(() => ({ stars: 0, lastUpdated: new Date() }));
+      return;
+    }
     let lastUpdated = window.localStorage.getItem("githubStarsLastUpdated");
     let diff = 0;
     // check if lastUpdated actually exists
@@ -24,7 +32,7 @@ export const useDarkStore = create<DarkStoreType>((set, get) => ({
 
     // if lastUpdated is null or the difference is greater than 2 hours
     if (lastUpdated === null || diff > 7200000) {
-      getRepoStars("logspace-ai", "langflow").then((res) => {
+      getRepoStars("langflow-ai", "langflow").then((res) => {
         window.localStorage.setItem("githubStars", res.toString());
         window.localStorage.setItem(
           "githubStarsLastUpdated",

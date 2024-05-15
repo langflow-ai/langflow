@@ -1,19 +1,4 @@
-from typing import Dict, Tuple
-
 from loguru import logger
-
-from langflow.graph import Graph
-
-
-async def build_sorted_vertices(data_graph, flow_id: str) -> Tuple[Graph, Dict]:
-    """
-    Build langchain object from data_graph.
-    """
-
-    logger.debug("Building langchain object")
-    graph = Graph.from_payload(data_graph, flow_id=flow_id)
-
-    return graph, {}
 
 
 def get_memory_key(langchain_object):

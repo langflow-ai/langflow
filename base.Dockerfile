@@ -57,14 +57,16 @@ RUN apt-get update \
 
 # install poetry - respects $POETRY_VERSION & $POETRY_HOME
 # The --mount will mount the buildx cache directory to where
-# Poetry and Pip store their cache so that they can re-use it
+# Poetry and Pip store their cache so that they can reuse it
 RUN --mount=type=cache,target=/root/.cache \
     curl -sSL https://install.python-poetry.org | python3 -
 
 # copy project requirement files here to ensure they will be cached.
 WORKDIR $PYSETUP_PATH
+# Copy just one file to avoid rebuilding the whole image
 COPY poetry.lock pyproject.toml ./
-COPY ./src/backend/langflow/main.py ./src/backend/langflow/main.py
+COPY ./src/backend/langflow ./src/backend/langflow
+COPY ./src/backend/base/pyproject.toml ./src/backend/base/pyproject.toml
 # Copy README.md to the build context
 COPY README.md .
 # install runtime deps - uses $POETRY_VIRTUALENVS_IN_PROJECT internally
@@ -84,7 +86,7 @@ COPY --from=builder-base $POETRY_HOME $POETRY_HOME
 COPY --from=builder-base $PYSETUP_PATH $PYSETUP_PATH
 
 # Copy just one file to avoid rebuilding the whole image
-COPY ./src/backend/langflow/__init__.py ./src/backend/langflow/__init__.py
+COPY ./src/backend/langflow ./src/backend/langflow
 # quicker install as runtime deps are already installed
 RUN --mount=type=cache,target=/root/.cache \
     poetry install --with=dev --extras deploy

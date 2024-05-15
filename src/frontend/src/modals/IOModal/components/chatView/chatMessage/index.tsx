@@ -6,9 +6,9 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import MaleTechnology from "../../../../../assets/male-technologist.png";
 import Robot from "../../../../../assets/robot.png";
-import SanitizedHTMLWrapper from "../../../../../components/SanitizedHTMLWrapper";
 import CodeTabsComponent from "../../../../../components/codeTabsComponent";
 import IconComponent from "../../../../../components/genericIconComponent";
+import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
@@ -135,7 +135,12 @@ export default function ChatMessage({
                 alt={!chat.isSend ? "robot_image" : "male_technology"}
               />
             </div>
-            <span className="max-w-24 truncate text-xs">
+            <span
+              className="max-w-24 truncate text-xs"
+              data-testid={
+                "sender_name_" + chat.sender_name?.toLocaleLowerCase()
+              }
+            >
               {chat.sender_name}
             </span>
           </div>
@@ -164,7 +169,12 @@ export default function ChatMessage({
               {chat.thought && chat.thought !== "" && !hidden && <br></br>}
               <div className="flex w-full flex-col">
                 <div className="flex w-full flex-col dark:text-white">
-                  <div className="flex w-full flex-col">
+                  <div
+                    data-testid={
+                      "chat-message-" + chat.sender_name + "-" + chatMessage
+                    }
+                    className="flex w-full flex-col"
+                  >
                     {useMemo(
                       () =>
                         chatMessage === "" && lockChat ? (
@@ -261,7 +271,7 @@ dark:prose-invert"
             </div>
           </div>
         ) : (
-          <div>
+          <div className="form-modal-chat-text-position min-w-96 flex-grow">
             {template ? (
               <>
                 <button
@@ -313,7 +323,14 @@ dark:prose-invert"
                 </span>
               </>
             ) : (
-              <span>{chatMessage}</span>
+              <span
+              className="prose text-primary word-break-break-word dark:prose-invert"
+                data-testid={
+                  "chat-message-" + chat.sender_name + "-" + chatMessage
+                }
+              >
+                {chatMessage}
+              </span>
             )}
           </div>
         )}

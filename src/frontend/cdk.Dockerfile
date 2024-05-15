@@ -1,5 +1,5 @@
 #baseline
-FROM --platform=linux/amd64 node:19-bullseye-slim AS base
+FROM --platform=linux/amd64 node:21-bookworm-slim AS base
 RUN mkdir -p /home/node/app
 RUN chown -R node:node /home/node && chmod -R 770 /home/node
 RUN apt-get update && apt-get install -y jq curl

@@ -3,7 +3,9 @@ import { registerGlobalVariable } from "../../controllers/API";
 import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../stores/globalVariables";
+import { useTypesStore } from "../../stores/typesStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
+import { sortByName } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import { Button } from "../ui/button";
@@ -16,25 +18,47 @@ import { Textarea } from "../ui/textarea";
 export default function AddNewVariableButton({ children }): JSX.Element {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
-  const [type, setType] = useState("");
+  const [type, setType] = useState("Generic");
+  const [fields, setFields] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const addGlobalVariable = useGlobalVariablesStore(
-    (state) => state.addGlobalVariable
+  const componentFields = useTypesStore((state) => state.ComponentFields);
+  const unavaliableFields = new Set(
+    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields)),
   );
+
+  const availableFields = () => {
+    const fields = Array.from(componentFields).filter(
+      (field) => !unavaliableFields.has(field),
+    );
+
+    return sortByName(fields);
+  };
+
+  const addGlobalVariable = useGlobalVariablesStore(
+    (state) => state.addGlobalVariable,
+  );
+
   function handleSaveVariable() {
-    let data: { name: string; value: string; type?: string } = {
+    let data: {
+      name: string;
+      value: string;
+      type?: string;
+      default_fields?: string[];
+    } = {
       name: key,
       type,
       value,
+      default_fields: fields,
     };
     registerGlobalVariable(data)
       .then((res) => {
         const { name, id, type } = res.data;
-        addGlobalVariable(name, id, type);
+        addGlobalVariable(name, id, type, fields);
         setKey("");
         setValue("");
         setType("");
+        setFields([]);
         setOpen(false);
       })
       .catch((error) => {
@@ -79,16 +103,38 @@ export default function AddNewVariableButton({ children }): JSX.Element {
             password={false}
             options={["Generic", "Credential"]}
             placeholder="Choose a type for the variable..."
+            id={"type-global-variables"}
           ></InputComponent>
           <Label>Value</Label>
-          <Textarea
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-            }}
-            placeholder="Insert a value for the variable..."
-            className="w-full resize-none custom-scroll"
-          />
+          {type === "Credential" ? (
+            <InputComponent
+              password
+              value={value}
+              onChange={(e) => {
+                setValue(e);
+              }}
+              placeholder="Insert a value for the variable..."
+            />
+          ) : (
+            <Textarea
+              value={value}
+              onChange={(e) => {
+                setValue(e.target.value);
+              }}
+              placeholder="Insert a value for the variable..."
+              className="w-full resize-none custom-scroll"
+            />
+          )}
+
+          <Label>Apply To Fields (optional)</Label>
+          <InputComponent
+            setSelectedOptions={(value) => setFields(value)}
+            selectedOptions={fields}
+            password={false}
+            options={availableFields()}
+            placeholder="Choose a field for the variable..."
+            id={"apply-to-fields"}
+          ></InputComponent>
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>

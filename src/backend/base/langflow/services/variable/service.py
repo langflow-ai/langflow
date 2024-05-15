@@ -3,12 +3,13 @@ from typing import TYPE_CHECKING, Optional, Union
 from uuid import UUID
 
 from fastapi import Depends
-from langflow.services.auth import utils as auth_utils
-from langflow.services.base import Service
-from langflow.services.database.models.variable.model import Variable
-from langflow.services.deps import get_session
 from loguru import logger
 from sqlmodel import Session, select
+
+from langflow.services.auth import utils as auth_utils
+from langflow.services.base import Service
+from langflow.services.database.models.variable.model import Variable, VariableCreate
+from langflow.services.deps import get_session
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -28,10 +29,23 @@ class VariableService(Service):
             for var in self.settings_service.settings.variables_to_get_from_environment:
                 if var in os.environ:
                     logger.debug(f"Creating {var} variable from environment.")
-                    try:
-                        self.create_variable(user_id, var, os.environ[var], _type="Credential", session=session)
-                    except Exception as e:
-                        logger.error(f"Error creating {var} variable: {e}")
+                    if not session.exec(
+                        select(Variable).where(Variable.user_id == user_id, Variable.name == var)
+                    ).first():
+                        try:
+                            value = os.environ[var]
+                            if isinstance(value, str):
+                                value = value.strip()
+                            self.create_variable(
+                                user_id=user_id,
+                                name=var,
+                                value=value,
+                                default_fields=[],
+                                _type="Credential",
+                                session=session,
+                            )
+                        except Exception as e:
+                            logger.error(f"Error creating {var} variable: {e}")
 
         else:
             logger.info("Skipping environment variable storage.")
@@ -90,17 +104,18 @@ class VariableService(Service):
         user_id: Union[UUID, str],
         name: str,
         value: str,
+        default_fields: list[str] = [],
         _type: str = "Generic",
         session: Session = Depends(get_session),
     ):
-        variable = Variable(
-            user_id=user_id,
+        variable_base = VariableCreate(
             name=name,
             type=_type,
             value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
+            default_fields=default_fields,
         )
+        variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
         session.add(variable)
         session.commit()
         session.refresh(variable)
-        return variable
         return variable

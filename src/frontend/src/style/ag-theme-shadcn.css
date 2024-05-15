@@ -1,0 +1,21 @@
+/* set the background color of many elements across the grid */
+.ag-theme-shadcn {
+  --ag-foreground-color: hsl(var(--foreground));
+  --ag-background-color: hsl(var(--background)); 
+  --ag-secondary-foreground-color: hsl(var(--secondary-foreground));
+  --ag-data-color: hsl(var(--foreground));
+  --ag-header-foreground-color: hsl(var(--muted-foreground));
+  --ag-header-background-color: hsl(var(--background));
+  --ag-tooltip-background-color: hsl(var(--muted));
+  --ag-disabled-foreground-color: hsl(var(--muted-foreground));
+  --ag-border-color: hsl(var(--border));
+  --ag-selected-row-background-color: hsl(var(--accent));
+  --ag-menu-background-color: hsl(var(--accent));
+  --ag-panel-background-color: hsl(var(--accent));
+  --ag-row-hover-color: hsl(var(--accent));
+  --ag-header-height: 2.5rem;
+}
+
+.ag-theme-shadcn .ag-paging-panel {
+  height: 3rem;
+}

@@ -4,17 +4,12 @@ import sys
 import time
 from pathlib import Path
 from typing import Optional
+import warnings
 
 import click
 import httpx
 import typer
 from dotenv import load_dotenv
-from langflow.main import setup_app
-from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
-from langflow.services.utils import initialize_services
-from langflow.utils.logger import configure, logger
-from langflow.utils.util import update_settings
 from multiprocess import Process, cpu_count  # type: ignore
 from packaging import version as pkg_version
 from rich import box
@@ -22,6 +17,13 @@ from rich import print as rprint
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+from langflow.main import setup_app
+from langflow.services.database.utils import session_getter
+from langflow.services.deps import get_db_service
+from langflow.services.utils import initialize_services
+from langflow.utils.logger import configure, logger
+from langflow.utils.util import update_settings
 
 console = Console()
 
@@ -151,17 +153,21 @@ def run(
     # Define an env variable to know if we are just testing the server
     if "pytest" in sys.modules:
         return
-
-    if platform.system() in ["Windows"]:
-        # Run using uvicorn on MacOS and Windows
-        # Windows doesn't support gunicorn
-        # MacOS requires an env variable to be set to use gunicorn
-        run_on_windows(host, port, log_level, options, app)
-    else:
-        # Run using gunicorn on Linux
-        run_on_mac_or_linux(host, port, log_level, options, app)
-    if open_browser:
-        click.launch(f"http://{host}:{port}")
+    try:
+        if platform.system() in ["Windows"]:
+            # Run using uvicorn on MacOS and Windows
+            # Windows doesn't support gunicorn
+            # MacOS requires an env variable to be set to use gunicorn
+            process = run_on_windows(host, port, log_level, options, app)
+        else:
+            # Run using gunicorn on Linux
+            process = run_on_mac_or_linux(host, port, log_level, options, app)
+        if open_browser:
+            click.launch(f"http://{host}:{port}")
+        if process:
+            process.join()
+    except KeyboardInterrupt:
+        pass
 
 
 def wait_for_server_ready(host, port):
@@ -182,6 +188,7 @@ def run_on_mac_or_linux(host, port, log_level, options, app):
     wait_for_server_ready(host, port)
 
     print_banner(host, port)
+    return webapp_process
 
 
 def run_on_windows(host, port, log_level, options, app):
@@ -190,6 +197,7 @@ def run_on_windows(host, port, log_level, options, app):
     """
     print_banner(host, port)
     run_langflow(host, port, log_level, options, app)
+    return None
 
 
 def is_port_in_use(port, host="localhost"):
@@ -461,7 +469,9 @@ def migration(
 
 
 def main():
-    app()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        app()
 
 
 if __name__ == "__main__":

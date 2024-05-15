@@ -8,13 +8,15 @@ from fastapi.responses import StreamingResponse
 from loguru import logger
 
 from langflow.api.utils import (
-    build_and_cache_graph,
+    build_and_cache_graph_from_data,
+    build_and_cache_graph_from_db,
     format_elapsed_time,
     format_exception_message,
     get_top_level_vertices,
     parse_exception,
 )
 from langflow.api.v1.schemas import (
+    FlowDataRequest,
     InputValueRequest,
     ResultDataResponse,
     StreamData,
@@ -49,9 +51,10 @@ async def try_running_celery_task(vertex, user_id):
     return vertex
 
 
-@router.get("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
-async def get_vertices(
+@router.post("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
+async def retrieve_vertices_order(
     flow_id: str,
+    data: Optional[Annotated[Optional[FlowDataRequest], Body(embed=True)]] = None,
     stop_component_id: Optional[str] = None,
     start_component_id: Optional[str] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
@@ -62,6 +65,7 @@ async def get_vertices(
 
     Args:
         flow_id (str): The ID of the flow.
+        data (Optional[FlowDataRequest], optional): The flow data. Defaults to None.
         stop_component_id (str, optional): The ID of the stop component. Defaults to None.
         start_component_id (str, optional): The ID of the start component. Defaults to None.
         chat_service (ChatService, optional): The chat service dependency. Defaults to Depends(get_chat_service).
@@ -75,10 +79,13 @@ async def get_vertices(
     """
     try:
         # First, we need to check if the flow_id is in the cache
-        graph = None
-        if cache := await chat_service.get_cache(flow_id):
-            graph = cache.get("result")
-        graph = await build_and_cache_graph(flow_id, session, chat_service, graph)
+        if not data:
+            graph = await build_and_cache_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
+        else:
+            graph = await build_and_cache_graph_from_data(
+                flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
+            )
+        graph.validate_stream()
         if stop_component_id or start_component_id:
             try:
                 first_layer = graph.sort_vertices(stop_component_id, start_component_id)
@@ -103,6 +110,8 @@ async def get_vertices(
         return VerticesOrderResponse(ids=first_layer, run_id=run_id, vertices_to_run=vertices_to_run)
 
     except Exception as exc:
+        if "stream or streaming set to True" in str(exc):
+            raise HTTPException(status_code=400, detail=str(exc))
         logger.error(f"Error checking build status: {exc}")
         logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -144,7 +153,9 @@ async def build_vertex(
         if not cache:
             # If there's no cache
             logger.warning(f"No cache found for {flow_id}. Building graph starting at {vertex_id}")
-            graph = await build_and_cache_graph(flow_id=flow_id, session=next(get_session()), chat_service=chat_service)
+            graph = await build_and_cache_graph_from_db(
+                flow_id=flow_id, session=next(get_session()), chat_service=chat_service
+            )
         else:
             graph = cache.get("result")
         result_data_response = ResultDataResponse(results={})

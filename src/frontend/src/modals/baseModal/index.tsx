@@ -63,7 +63,7 @@ interface BaseModalProps {
     React.ReactElement<ContentProps>,
     React.ReactElement<HeaderProps>,
     React.ReactElement<TriggerProps>?,
-    React.ReactElement<FooterProps>?
+    React.ReactElement<FooterProps>?,
   ];
   open?: boolean;
   setOpen?: (open: boolean) => void;
@@ -78,6 +78,8 @@ interface BaseModalProps {
     | "large-h-full"
     | "small-h-full"
     | "medium-h-full"
+    | "md-thin"
+    | "sm-thin"
     | "smaller-h-full";
 
   disable?: boolean;
@@ -93,16 +95,16 @@ function BaseModal({
   type = "dialog",
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Header
+    (child) => (child as React.ReactElement).type === Header,
   );
   const triggerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Trigger
+    (child) => (child as React.ReactElement).type === Trigger,
   );
   const ContentChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Content
+    (child) => (child as React.ReactElement).type === Content,
   );
   const ContentFooter = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Footer
+    (child) => (child as React.ReactElement).type === Footer,
   );
 
   let minWidth: string;
@@ -147,6 +149,17 @@ function BaseModal({
       minWidth = "min-w-[65vw]";
       height = "h-[80vh]";
       break;
+
+    case "md-thin":
+      minWidth = "min-w-[85vw]";
+      height = "h-[70vh]";
+      break;
+
+    case "sm-thin":
+      minWidth = "min-w-[65vw]";
+      height = "h-[70vh]";
+      break;
+
     case "large-h-full":
       minWidth = "min-w-[80vw]";
       break;

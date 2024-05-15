@@ -24,6 +24,9 @@ function ApiInterceptor() {
       async (error: AxiosError) => {
         if (error.response?.status === 403 || error.response?.status === 401) {
           if (!autoLogin) {
+            if (error?.config?.url?.includes("github")) {
+              return Promise.reject(error);
+            }
             const stillRefresh = checkErrorCount();
             if (!stillRefresh) {
               return Promise.reject(error);

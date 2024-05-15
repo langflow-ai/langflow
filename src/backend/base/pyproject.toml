@@ -1,17 +1,16 @@
 [tool.poetry]
 name = "langflow-base"
-version = "0.0.26"
+version = "0.0.44"
 description = "A Python package with a built-in web application"
-authors = ["Logspace <contact@logspace.ai>"]
+authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
-    "Carlos Coelho <carlos@logspace.ai>",
+    "Carlos Coelho <carlos@langflow.org>",
     "Cristhian Zanforlin <cristhian.lousa@gmail.com>",
-    "Gabriel Almeida <gabriel@logspace.ai>",
-    "Gustavo Schaedler <gustavopoa@gmail.com>",
+    "Gabriel Almeida <gabriel@langflow.org>",
     "Igor Carvalho <igorr.ackerman@gmail.com>",
     "Lucas Eduoli <lucaseduoli@gmail.com>",
     "Otávio Anovazzi <otavio2204@gmail.com>",
-    "Rodrigo Nader <rodrigo@logspace.ai>",
+    "Rodrigo Nader <rodrigo@langflow.org>",
 ]
 repository = "https://github.com/langflow-ai/langflow"
 license = "MIT"
@@ -26,12 +25,13 @@ documentation = "https://docs.langflow.org"
 langflow-base = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.10,<3.13"
 fastapi = "^0.110.1"
 httpx = "*"
 uvicorn = "^0.29.0"
-gunicorn = "^21.2.0"
-langchain = "~0.1.14"
+gunicorn = "^22.0.0"
+langchain = "~0.1.16"
+langchainhub = "~0.1.15"
 sqlmodel = "^0.0.16"
 loguru = "^0.7.1"
 rich = "^13.7.0"
@@ -52,7 +52,7 @@ docstring-parser = "^0.15"
 python-jose = "^3.3.0"
 pandas = "2.2.0"
 multiprocess = "^0.70.14"
-duckdb = "^0.9.2"
+duckdb = "^0.10.2"
 python-socketio = "^5.11.0"
 python-docx = "^1.1.0"
 jq = { version = "^1.7.0", markers = "sys_platform != 'win32'" }
@@ -61,30 +61,6 @@ nest-asyncio = "^1.6.0"
 emoji = "^2.11.0"
 cryptography = "^42.0.5"
 asyncer = "^0.0.5"
-
-
-[tool.poetry.group.dev.dependencies]
-pytest-asyncio = "^0.23.1"
-types-redis = "^4.6.0.5"
-ipykernel = "^6.26.0"
-mypy = "^1.7.1"
-ruff = "^0.3.5"
-httpx = "*"
-pytest = "^8.1.1"
-types-requests = "^2.31.0"
-requests = "^2.31.0"
-pytest-cov = "^5.0.0"
-pandas-stubs = "^2.2.1.230412"
-types-pillow = "^10.2.0.0"
-types-pyyaml = "^6.0.12.8"
-types-python-jose = "^3.3.4.8"
-types-passlib = "^1.7.7.13"
-locust = "^2.24.1"
-pytest-mock = "^3.14.0"
-pytest-xdist = "^3.5.0"
-types-pywin32 = "^306.0.0.4"
-types-google-cloud-ndb = "^2.3.0.0"
-pytest-sugar = "^1.0.0"
 
 
 [tool.poetry.extras]

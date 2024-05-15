@@ -4,6 +4,7 @@ import weaviate  # type: ignore
 from langchain.embeddings.base import Embeddings
 from langchain.schema import BaseRetriever
 from langchain_community.vectorstores import VectorStore, Weaviate
+from langchain_core.documents import Document
 
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema.schema import Record
@@ -50,9 +51,9 @@ class WeaviateVectorStoreComponent(CustomComponent):
     def build(
         self,
         url: str,
+        index_name: str,
         search_by_text: bool = False,
         api_key: Optional[str] = None,
-        index_name: Optional[str] = None,
         text_key: str = "text",
         embedding: Optional[Embeddings] = None,
         inputs: Optional[Record] = None,
@@ -78,11 +79,13 @@ class WeaviateVectorStoreComponent(CustomComponent):
             return pascal_case_word
 
         index_name = _to_pascal_case(index_name) if index_name else None
-        documents = []
+        if not index_name:
+            raise ValueError("Index name is required")
+        documents: list[Document] = []
         for _input in inputs or []:
             if isinstance(_input, Record):
                 documents.append(_input.to_lc_document())
-            else:
+            elif isinstance(_input, Document):
                 documents.append(_input)
 
         if documents and embedding is not None:

@@ -1,6 +1,5 @@
 from typing import Optional
 
-from langchain.llms.base import BaseLanguageModel
 from langchain_openai import AzureChatOpenAI
 from pydantic.v1 import SecretStr
 
@@ -105,7 +104,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
         system_message: Optional[str] = None,
         max_tokens: Optional[int] = 1000,
         stream: bool = False,
-    ) -> BaseLanguageModel:
+    ) -> Text:
         if api_key:
             secret_api_key = SecretStr(api_key)
         else:

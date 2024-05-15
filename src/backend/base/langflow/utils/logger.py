@@ -54,22 +54,24 @@ def configure(log_level: Optional[str] = None, log_file: Optional[Path] = None, 
 
     if not log_file:
         cache_dir = Path(user_cache_dir("langflow"))
+        logger.debug(f"Cache directory: {cache_dir}")
         log_file = cache_dir / "langflow.log"
+        logger.debug(f"Log file: {log_file}")
+    try:
+        log_file = Path(log_file)
+        log_file.parent.mkdir(parents=True, exist_ok=True)
 
-    log_file = Path(log_file)
-    log_file.parent.mkdir(parents=True, exist_ok=True)
-
-    logger.add(
-        sink=str(log_file),
-        level=log_level.upper(),
-        format=log_format,
-        rotation="10 MB",  # Log rotation based on file size
-        serialize=True,
-    )
+        logger.add(
+            sink=str(log_file),
+            level=log_level.upper(),
+            format=log_format,
+            rotation="10 MB",  # Log rotation based on file size
+            serialize=True,
+        )
+    except Exception as exc:
+        logger.error(f"Error setting up log file: {exc}")
 
     logger.debug(f"Logger set up with log level: {log_level}")
-    if log_file:
-        logger.debug(f"Log file: {log_file}")
 
     setup_uvicorn_logger()
     setup_gunicorn_logger()
