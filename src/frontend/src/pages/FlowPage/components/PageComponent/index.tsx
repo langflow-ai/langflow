@@ -483,6 +483,7 @@ export default function Page({
               ></Controls>
             )}
             <SelectionMenu
+              lastSelection={lastSelection}
               isVisible={selectionMenuVisible}
               nodes={lastSelection?.nodes}
               onClick={() => {
