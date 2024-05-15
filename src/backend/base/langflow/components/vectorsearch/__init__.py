@@ -9,10 +9,12 @@ from .SupabaseVectorStoreSearch import SupabaseSearchComponent
 from .VectaraSearch import VectaraSearchComponent
 from .WeaviateSearch import WeaviateSearchVectorStore
 from .pgvectorSearch import PGVectorSearchComponent
+from .Couchbase import CouchbaseSearchComponent
 
 __all__ = [
     "AstraDBSearchComponent",
     "ChromaSearchComponent",
+    "CouchbaseSearchComponent",
     "FAISSSearchComponent",
     "MongoDBAtlasSearchComponent",
     "PineconeSearchComponent",
