@@ -15,8 +15,6 @@ const SideBarButtonsComponent = ({
   pathname,
   handleOpenNewFolderModal,
 }: SideBarButtonsComponentProps) => {
-  console.log(items);
-
   return (
     <>
       {items.map((item) => (
@@ -25,7 +23,7 @@ const SideBarButtonsComponent = ({
           data-testid={`sidebar-nav-${item.title}`}
           className={cn(
             buttonVariants({ variant: "ghost" }),
-            "cursor-pointer justify-start gap-2 border border-transparent hover:border-border hover:bg-transparent"
+            "!w-[200px] cursor-pointer justify-start gap-2 border border-transparent hover:border-border hover:bg-transparent"
           )}
           onClick={handleOpenNewFolderModal}
         >

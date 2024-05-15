@@ -27,7 +27,7 @@ const sidebarNavItems = [
 export default function HomePage(): JSX.Element {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
+    (state) => state.setCurrentFlowId
   );
   const uploadFlows = useFlowsManagerStore((state) => state.uploadFlows);
 
@@ -59,7 +59,7 @@ export default function HomePage(): JSX.Element {
   const folderId = location?.state?.folderId;
   const folderName = folders.find((folder) => folder.id === folderId)?.name;
   const folderDescription = folders.find(
-    (folder) => folder.id === folderId,
+    (folder) => folder.id === folderId
   )?.description;
 
   const { handleDeleteFolder } = useDeleteFolder({ getFoldersApi, navigate });
@@ -100,7 +100,7 @@ export default function HomePage(): JSX.Element {
         }
       >
         <div className="flex h-full w-full space-y-8 md:flex-col lg:flex-row lg:space-x-8 lg:space-y-0">
-          <aside className="flex h-fit flex-col space-y-6  lg:w-1/5">
+          <aside className="flex h-fit flex-col space-y-6  lg:w-1/4">
             <SidebarNav
               handleOpenNewFolderModal={() => {
                 setFolderToEdit(null);

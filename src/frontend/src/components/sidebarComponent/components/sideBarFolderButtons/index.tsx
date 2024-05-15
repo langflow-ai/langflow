@@ -50,7 +50,11 @@ const SideBarFoldersButtonsComponent = ({
               name={"folder"}
               className="mr-2 w-4 justify-start stroke-[1.5] opacity-100"
             />
-            <span className="self-center opacity-100">{item.name}</span>
+            <div className="lg:max-w-[120px] xl:max-w-[200px] ">
+              <span className="block max-w-full truncate opacity-100">
+                {item.name}
+              </span>
+            </div>
           </div>
 
           {index > 0 && (
