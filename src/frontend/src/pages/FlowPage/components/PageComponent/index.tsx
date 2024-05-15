@@ -48,7 +48,7 @@ import SelectionMenu from "../SelectionMenuComponent";
 
 const nodeTypes = {
   genericNode: GenericNode,
-  annotation: memo(AnnotationNode),
+  annotation: AnnotationNode,
 };
 
 export default function Page({
@@ -441,7 +441,7 @@ export default function Page({
           label:
             "Built-in node and edge types. Draggable, deletable and connectable!",
         },
-        size: { width: 200 },
+        width: 200,
         position: reactFlowInstance?.screenToFlowPosition({
           x: event.clientX,
           y: event.clientY,
