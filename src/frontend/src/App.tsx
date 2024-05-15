@@ -25,10 +25,10 @@ import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
 export default function App() {
   const removeFromTempNotificationList = useAlertStore(
-    (state) => state.removeFromTempNotificationList,
+    (state) => state.removeFromTempNotificationList
   );
   const tempNotificationList = useAlertStore(
-    (state) => state.tempNotificationList,
+    (state) => state.tempNotificationList
   );
   const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
@@ -46,10 +46,7 @@ export default function App() {
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const setGlobalVariables = useGlobalVariablesStore(
-    (state) => state.setGlobalVariables,
-  );
-  const setUnavailableFields = useGlobalVariablesStore(
-    (state) => state.setUnavaliableFields,
+    (state) => state.setGlobalVariables
   );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const navigate = useNavigate();
@@ -79,6 +76,7 @@ export default function App() {
           login(user["access_token"]);
           setUserData(user);
           setAutoLogin(true);
+          getFoldersApi();
           setLoading(false);
           await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
         }
@@ -93,6 +91,7 @@ export default function App() {
             setLoading(false);
             useFlowsManagerStore.setState({ isLoading: false });
           }
+          getFoldersApi();
         }
       });
 
@@ -165,10 +164,6 @@ export default function App() {
       window.location.reload();
     }
   };
-
-  useEffect(() => {
-    getFoldersApi();
-  }, [autoLogin]);
 
   return (
     //need parent component with width and height

@@ -65,7 +65,7 @@ export default function FoldersModal({
                   type="submit"
                   disabled={!form.formState.isValid}
                 >
-                  Save Folder
+                  {folderToEdit ? "Edit" : "Save"} Folder
                 </Button>
               </form>
             </Form>

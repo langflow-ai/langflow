@@ -94,25 +94,6 @@ export const FolderForms = ({
           )}
         />
 
-        <Label>Add Components</Label>
-        <FormField
-          control={control}
-          name="components"
-          render={() => (
-            <FormControl>
-              <InputComponent
-                isObjectOption
-                password={false}
-                objectOptions={componentsList}
-                placeholder="Choose a type for the variable..."
-                id={"type-global-variables"}
-                setSelectedOptions={(value) => setSelectedComponents(value)}
-                selectedOptions={selectedComponents}
-              ></InputComponent>
-            </FormControl>
-          )}
-        />
-
         <Label>Add Flows</Label>
 
         <FormField
@@ -124,10 +105,29 @@ export const FolderForms = ({
                 isObjectOption
                 password={false}
                 objectOptions={flowsList}
-                placeholder="Choose a type for the variable..."
+                placeholder="Choose a flow to add..."
                 id={"type-global-variables"}
                 setSelectedOptions={(value: any) => setSelectedFlows(value)}
                 selectedOptions={selectedFlows}
+              ></InputComponent>
+            </FormControl>
+          )}
+        />
+
+        <Label>Add Components</Label>
+        <FormField
+          control={control}
+          name="components"
+          render={() => (
+            <FormControl>
+              <InputComponent
+                isObjectOption
+                password={false}
+                objectOptions={componentsList}
+                placeholder="Choose a component to add..."
+                id={"type-global-variables"}
+                setSelectedOptions={(value) => setSelectedComponents(value)}
+                selectedOptions={selectedComponents}
               ></InputComponent>
             </FormControl>
           )}
