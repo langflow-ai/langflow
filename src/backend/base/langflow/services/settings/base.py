@@ -180,7 +180,7 @@ class Settings(BaseSettings):
                         copy2(f"./{db_file_name}", new_pre_path)
                         logger.debug(f"Copied existing database to {new_pre_path}")
                     else:
-                        logger.debug(f"Database already exists at {new_pre_path}, using it")
+                        logger.debug(f"Creating new database at {new_pre_path}")
                         final_path = new_pre_path
                 else:
                     if Path(new_path).exists():
@@ -320,6 +320,7 @@ def load_settings_from_yaml(file_path: str) -> Settings:
                 raise KeyError(f"Key {key} not found in settings")
             logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
+    return Settings(**settings_dict)
     return Settings(**settings_dict)
     return Settings(**settings_dict)
     return Settings(**settings_dict)
