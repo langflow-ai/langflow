@@ -229,8 +229,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
   },
   paste: (selection, position) => {
-    function updateGroup() {}
-
     if (
       selection.nodes.some((node) => node.data.type === "ChatInput") &&
       checkChatInput(get().nodes)
@@ -267,8 +265,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       let newId = getNodeId(node.data.type);
       idsMap[node.id] = newId;
 
-      updateGroupRecursion(node, selection.edges);
-
       // Create a new node object
       const newNode: NodeType = {
         id: newId,
@@ -282,6 +278,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           id: newId,
         },
       };
+      updateGroupRecursion(newNode, selection.edges);
 
       // Add the new node to the list of nodes in state
       newNodes = newNodes
