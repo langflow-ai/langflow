@@ -39,3 +39,9 @@ jobs:
           artifacts: "dist/*"
           token: ${{ secrets.GITHUB_TOKEN }}
           generateReleaseNotes: true
+
+      - name: "Login to GitHub Container Registry"
+        uses: ./.github/actions/ragstack-docker-release
+        with:
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          version: ${{ steps.check-version.outputs.version }}

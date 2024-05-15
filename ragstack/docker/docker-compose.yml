@@ -1,0 +1,38 @@
+version: "3"
+networks:
+  langflow:
+
+services:
+  backend:
+    build:
+      context: ./../..
+      dockerfile: ragstack/docker/backend/Dockerfile
+    ports:
+      - "7860:7860"
+    networks:
+      - langflow
+    command:
+      - langflow
+      - run
+      - --host
+      - 0.0.0.0
+      - --backend-only
+      - --log-level
+      - info
+      - --workers
+      - "1"
+    restart: on-failure
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        RAGSTACK_AI_LANGFLOW_VERSION: 0.0.2
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: http://backend:7860
+    ports:
+      - "80:80"
+    restart: on-failure
+    networks:
+      - langflow

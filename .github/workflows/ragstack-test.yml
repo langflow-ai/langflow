@@ -28,11 +28,11 @@ jobs:
         run: |
           poetry env use 3.11
           poetry install
-        working-directory: ragstack/
+        working-directory: ragstack/libs/core
       - name: Lint check
         run: |
           make lint
-        working-directory: ragstack/
+        working-directory: ragstack/libs/core
       - uses: nicoloboschi/setup-astradb@v1
         timeout-minutes: 10
         id: astra
@@ -47,7 +47,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           make test
-        working-directory: ragstack/
+        working-directory: ragstack/libs/core
       - uses: nicoloboschi/cleanup-astradb@v1
         if: ${{ always() && steps.astra.outputs.name != '' }}
         with:
