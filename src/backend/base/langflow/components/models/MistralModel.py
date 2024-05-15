@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 from typing import Optional
 
 from langchain_mistralai import ChatMistralAI
