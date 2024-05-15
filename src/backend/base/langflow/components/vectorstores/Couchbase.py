@@ -2,7 +2,7 @@ from typing import List, Optional, Union
 
 from langchain.schema import BaseRetriever
 
-from langchain_community.vectorstores import CouchbaseVectorStore
+from langchain_community.vectorstores import CouchbaseVectorStore 
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, VectorStore
@@ -10,9 +10,9 @@ from langflow.schema import Record
 
 from datetime import timedelta
 
-from couchbase.auth import PasswordAuthenticator
-from couchbase.cluster import Cluster
-from couchbase.options import ClusterOptions
+from couchbase.auth import PasswordAuthenticator # type: ignore
+from couchbase.cluster import Cluster # type: ignore
+from couchbase.options import ClusterOptions # type: ignore
 
 
 class CouchbaseComponent(CustomComponent):
