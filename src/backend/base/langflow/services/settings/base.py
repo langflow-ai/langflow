@@ -9,7 +9,7 @@ import orjson
 import yaml
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from loguru import logger
-from pydantic import field_validator, validator
+from pydantic import field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 
@@ -27,9 +27,16 @@ def is_list_of_any(field: FieldInfo) -> bool:
     Returns:
         bool: True if the field is a list or a list of any type, False otherwise.
     """
+    if field.annotation is None:
+        return False
     try:
+        if hasattr(field.annotation, "__args__"):
+            union_args = field.annotation.__args__
+        else:
+            union_args = []
+
         return field.annotation.__origin__ == list or any(
-            arg.__origin__ == list for arg in field.annotation.__args__ if hasattr(arg, "__origin__")
+            arg.__origin__ == list for arg in union_args if hasattr(arg, "__origin__")
         )
     except AttributeError:
         return False
@@ -64,11 +71,14 @@ class Settings(BaseSettings):
     TOOLKITS: dict = {}
     TEXTSPLITTERS: dict = {}
     UTILITIES: dict = {}
-    OUTPUT_PARSERS: dict = {}
     CUSTOM_COMPONENTS: dict = {}
 
     # Define the default LANGFLOW_DIR
     CONFIG_DIR: Optional[str] = None
+    # Define if langflow db should be saved in config dir or
+    # in the langflow directory
+    SAVE_DB_IN_CONFIG_DIR: bool = False
+    """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory (i.e. in the package directory)."""
 
     DEV: bool = False
     DATABASE_URL: Optional[str] = None
@@ -106,14 +116,14 @@ class Settings(BaseSettings):
     variables_to_get_from_environment: list[str] = VARIABLES_TO_GET_FROM_ENVIRONMENT
     """List of environment variables to get from the environment and store in the database."""
 
-    @validator("CONFIG_DIR", pre=True, allow_reuse=True)
+    @field_validator("CONFIG_DIR", mode="before")
     def set_langflow_dir(cls, value):
         if not value:
             from platformdirs import user_cache_dir
 
             # Define the app name and author
             app_name = "langflow"
-            app_author = "logspace"
+            app_author = "langflow"
 
             # Get the cache directory for the application
             cache_dir = user_cache_dir(app_name, app_author)
@@ -129,8 +139,8 @@ class Settings(BaseSettings):
 
         return str(value)
 
-    @validator("DATABASE_URL", pre=True)
-    def set_database_url(cls, value, values):
+    @field_validator("DATABASE_URL", mode="before")
+    def set_database_url(cls, value, info):
         if not value:
             logger.debug("No database_url provided, trying LANGFLOW_DATABASE_URL env variable")
             if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
@@ -141,23 +151,57 @@ class Settings(BaseSettings):
                 # Originally, we used sqlite:///./langflow.db
                 # so we need to migrate to the new format
                 # if there is a database in that location
-                if not values["CONFIG_DIR"]:
+                if not info.data["CONFIG_DIR"]:
                     raise ValueError("CONFIG_DIR not set, please set it or provide a DATABASE_URL")
+                from langflow.version import is_pre_release  # type: ignore
 
-                new_path = f"{values['CONFIG_DIR']}/langflow.db"
-                if Path("./langflow.db").exists():
+                if info.data["SAVE_DB_IN_CONFIG_DIR"]:
+                    database_dir = info.data["CONFIG_DIR"]
+                else:
+                    database_dir = Path(__file__).parent.parent.parent.resolve()
+
+                pre_db_file_name = "langflow-pre.db"
+                db_file_name = "langflow.db"
+                new_pre_path = f"{database_dir}/{pre_db_file_name}"
+                new_path = f"{database_dir}/{db_file_name}"
+                final_path = None
+                if is_pre_release:
+                    if Path(new_pre_path).exists():
+                        final_path = new_pre_path
+                    elif Path(new_path).exists():
+                        # We need to copy the current db to the new location
+                        logger.debug("Copying existing database to new location")
+                        copy2(new_path, new_pre_path)
+                        logger.debug(f"Copied existing database to {new_pre_path}")
+                    elif Path(f"./{db_file_name}").exists():
+                        logger.debug("Copying existing database to new location")
+                        copy2(f"./{db_file_name}", new_pre_path)
+                        logger.debug(f"Copied existing database to {new_pre_path}")
+                    else:
+                        logger.debug(f"Database already exists at {new_pre_path}, using it")
+                        final_path = new_pre_path
+                else:
                     if Path(new_path).exists():
                         logger.debug(f"Database already exists at {new_path}, using it")
-                    else:
+                        final_path = new_path
+                    elif Path("./{db_file_name}").exists():
                         try:
                             logger.debug("Copying existing database to new location")
-                            copy2("./langflow.db", new_path)
+                            copy2("./{db_file_name}", new_path)
                             logger.debug(f"Copied existing database to {new_path}")
                         except Exception:
                             logger.error("Failed to copy database, using default path")
-                            new_path = "./langflow.db"
+                            new_path = "./{db_file_name}"
+                    else:
+                        final_path = new_path
 
-                value = f"sqlite:///{new_path}"
+                if final_path is None:
+                    if is_pre_release:
+                        final_path = new_pre_path
+                    else:
+                        final_path = new_path
+
+                value = f"sqlite:///{final_path}"
 
         return value
 
@@ -204,7 +248,6 @@ class Settings(BaseSettings):
         self.VECTORSTORES = new_settings.VECTORSTORES or {}
         self.DOCUMENTLOADERS = new_settings.DOCUMENTLOADERS or {}
         self.RETRIEVERS = new_settings.RETRIEVERS or {}
-        self.OUTPUT_PARSERS = new_settings.OUTPUT_PARSERS or {}
         self.CUSTOM_COMPONENTS = new_settings.CUSTOM_COMPONENTS or {}
         self.COMPONENTS_PATH = new_settings.COMPONENTS_PATH or []
         self.DEV = dev
@@ -275,4 +318,5 @@ def load_settings_from_yaml(file_path: str) -> Settings:
                 raise KeyError(f"Key {key} not found in settings")
             logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
+    return Settings(**settings_dict)
     return Settings(**settings_dict)
