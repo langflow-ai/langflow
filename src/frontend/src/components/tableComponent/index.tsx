@@ -35,7 +35,7 @@ const TableComponent = forwardRef<
 
     if (props.rowData.length === 0) {
       return (
-        <div className="flex h-full w-full items-center justify-center">
+        <div className="flex h-full w-full items-center justify-center rounded-md border">
           <Alert variant={"default"} className="w-[50%]">
             <ForwardedIconComponent
               name="AlertCircle"
