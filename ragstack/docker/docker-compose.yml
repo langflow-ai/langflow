@@ -4,9 +4,7 @@ networks:
 
 services:
   backend:
-    build:
-      context: ./../..
-      dockerfile: ragstack/docker/backend/Dockerfile
+    image: ghcr.io/datastax/ragstack-ai-langflow-backend:latest
     ports:
       - "7860:7860"
     networks:
@@ -23,6 +21,7 @@ services:
       - "1"
     restart: on-failure
   frontend:
+    image: ghcr.io/datastax/ragstack-ai-langflow-frontend:latest
     build:
       context: ./frontend
       args:
