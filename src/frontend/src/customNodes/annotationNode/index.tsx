@@ -1,11 +1,16 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NodeResizeControl } from "reactflow";
 import { cn } from "../../utils/utils";
 
-function AnnotationNode({ data, selected, id }) {
+function AnnotationNode({ data, selected }) {
   const [value, setValue] = useState(data.label);
+  const [editable, setEditable] = useState(false);
 
-  const editRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selected) {
+      setEditable(false);
+    }
+  }, [selected]);
 
   return (
     <>
@@ -29,31 +34,24 @@ function AnnotationNode({ data, selected, id }) {
           )}
         >
           <div
-            contentEditable={selected}
-            ref={editRef}
+            contentEditable={editable}
             onInput={(e) => setValue(e.currentTarget.textContent)}
             className={cn(
-              selected
+              editable
                 ? "nocopy nopan nodouble nodelete nodrag nound cursor-text outline-none"
                 : "",
               "h-fit w-full text-black",
             )}
             onBlur={() => {
               data.label = value;
+              setEditable(false);
               window!.getSelection()!.removeAllRanges();
             }}
-            onDoubleClick={(event) => {
-              if (!selected) {
+            onClick={(event) => {
+              if (!editable) {
                 event.preventDefault();
                 event.stopPropagation();
-                editRef?.current?.focus();
-                // Place the cursor at the end of the text
-                const range = document.createRange();
-                const selection = window.getSelection();
-                range.selectNodeContents(editRef?.current!);
-                range.collapse(false);
-                selection?.removeAllRanges();
-                selection?.addRange(range);
+                setEditable(true);
               }
             }}
           >
