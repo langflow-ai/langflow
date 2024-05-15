@@ -800,6 +800,6 @@ export const NATIVE_CATEGORIES = [
 
 export const SAVE_DEBOUNCE_TIME = 300;
 
-export const DEFAULT_TABLE_ALERT_MSG = `"Oops! It seems there's no data to display right now. Please check back later."`;
+export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
 
-export const DEFAULT_TABLE_ALERT_TITLE = '"No Data Available"';
+export const DEFAULT_TABLE_ALERT_TITLE = "No Data Available";
