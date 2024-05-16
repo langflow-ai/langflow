@@ -40,9 +40,11 @@ export default function FoldersModal({
   return (
     <>
       <BaseModal size="x-small" open={open} setOpen={setOpen}>
-        <BaseModal.Header description={"Add your new folder"}>
+        <BaseModal.Header
+          description={`${folderToEdit ? "Edit a folder" : "Add a new folder"}`}
+        >
           <span className="pr-2" data-testid="modal-title">
-            New Folder
+            {folderToEdit ? "Edit" : "Add"} Folder
           </span>
           <ForwardedIconComponent
             name="FolderPlusIcon"
