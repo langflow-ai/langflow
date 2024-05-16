@@ -33,7 +33,7 @@ export default function DictAreaModal({
 
   return (
     <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
-      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger className="h-full">{children}</BaseModal.Trigger>
       <BaseModal.Header
         description={onChange ? CODE_DICT_DIALOG_SUBTITLE : null}
       >

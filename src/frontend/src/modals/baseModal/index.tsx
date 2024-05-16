@@ -25,15 +25,21 @@ type TriggerProps = {
   children: ReactNode;
   asChild?: boolean;
   disable?: boolean;
+  className?: string;
 };
 
 const Content: React.FC<ContentProps> = ({ children }) => {
   return <div className="flex h-full w-full flex-col">{children}</div>;
 };
-const Trigger: React.FC<TriggerProps> = ({ children, asChild, disable }) => {
+const Trigger: React.FC<TriggerProps> = ({
+  children,
+  asChild,
+  disable,
+  className,
+}) => {
   return (
     <DialogTrigger
-      className={asChild ? "" : "w-full"}
+      className={asChild ? "" : cn("w-full", className)}
       hidden={children ? false : true}
       disabled={disable}
       asChild={asChild}

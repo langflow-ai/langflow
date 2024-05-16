@@ -714,6 +714,7 @@ export function extractColumnsFromRows(
         headerName: key,
         field: key,
         cellRenderer: TableAutoCellRender,
+        autoHeight: true,
       };
     }
     for (const row of rows) {

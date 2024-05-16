@@ -13,6 +13,7 @@ import { NodeType } from "../../types/flow";
 import ForwardedIconComponent from "../genericIconComponent";
 import Loading from "../ui/loading";
 import { convertCSVToData } from "./helpers/convert-data-function";
+import TableComponent from "../tableComponent";
 
 function CsvOutputComponent({
   csvNode,
@@ -54,8 +55,6 @@ function CsvOutputComponent({
   const [colDefs, setColDefs] = useState([]);
 
   const [status, setStatus] = useState("loading");
-  var currentRowHeight: number;
-  var minRowHeight = 25;
   const defaultColDef = useMemo(() => {
     return {
       width: 200,
@@ -81,48 +80,6 @@ function CsvOutputComponent({
       setStatus("nodata");
     }
   }, [separator]);
-
-  const getRowHeight = useCallback(() => {
-    return currentRowHeight;
-  }, []);
-
-  const onGridReady = useCallback((params: any) => {
-    minRowHeight = params.api.getSizesForCurrentTheme().rowHeight;
-    currentRowHeight = minRowHeight;
-  }, []);
-
-  const updateRowHeight = (params: { api: any }) => {
-    const bodyViewport = document.querySelector(".ag-body-viewport");
-    if (!bodyViewport) {
-      return;
-    }
-    var gridHeight = bodyViewport.clientHeight;
-    var renderedRowCount = params.api.getDisplayedRowCount();
-
-    if (renderedRowCount * minRowHeight >= gridHeight) {
-      if (currentRowHeight !== minRowHeight) {
-        currentRowHeight = minRowHeight;
-        params.api.resetRowHeights();
-      }
-    } else {
-      currentRowHeight = Math.floor(gridHeight / renderedRowCount);
-      params.api.resetRowHeights();
-    }
-  };
-
-  const onFirstDataRendered = useCallback(
-    (params: any) => {
-      updateRowHeight(params);
-    },
-    [updateRowHeight],
-  );
-
-  const onGridSizeChanged = useCallback(
-    (params: any) => {
-      updateRowHeight(params);
-    },
-    [updateRowHeight],
-  );
 
   return (
     <div className=" h-full rounded-md border bg-muted">
@@ -158,14 +115,10 @@ function CsvOutputComponent({
           className={`${dark ? "ag-theme-balham-dark" : "ag-theme-balham"}`}
           style={{ height: "100%", width: "100%" }}
         >
-          <AgGridReact
+          <TableComponent
             rowData={rowData}
             columnDefs={colDefs}
             defaultColDef={defaultColDef}
-            getRowHeight={getRowHeight}
-            onGridReady={onGridReady}
-            onFirstDataRendered={onFirstDataRendered}
-            onGridSizeChanged={onGridSizeChanged}
             scrollbarWidth={8}
             overlayNoRowsTemplate="No data available"
           />

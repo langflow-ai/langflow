@@ -1,7 +1,12 @@
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
-import { ComponentPropsWithoutRef, ElementRef, forwardRef } from "react";
+import {
+  ComponentPropsWithoutRef,
+  ElementRef,
+  forwardRef,
+  useCallback,
+} from "react";
 import { useDarkStore } from "../../stores/darkStore";
 import "../../style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import { cn } from "../../utils/utils";
@@ -47,6 +52,51 @@ const TableComponent = forwardRef<
         </div>
       );
     }
+    var currentRowHeight: number;
+    var minRowHeight = 25;
+
+    const getRowHeight = useCallback(() => {
+      return currentRowHeight;
+    }, []);
+
+    const onGridReady = useCallback((params: any) => {
+      minRowHeight = params.api.getSizesForCurrentTheme().rowHeight;
+      currentRowHeight = minRowHeight;
+    }, []);
+
+    const updateRowHeight = (params: { api: any }) => {
+      const bodyViewport = document.querySelector(".ag-body-viewport");
+      if (!bodyViewport) {
+        return;
+      }
+      var gridHeight = bodyViewport.clientHeight;
+      var renderedRowCount = params.api.getDisplayedRowCount();
+
+      if (renderedRowCount * minRowHeight >= gridHeight) {
+        if (currentRowHeight !== minRowHeight) {
+          currentRowHeight = minRowHeight;
+          params.api.resetRowHeights();
+        }
+      } else {
+        currentRowHeight = Math.floor(gridHeight / renderedRowCount);
+        params.api.resetRowHeights();
+      }
+    };
+
+    const onFirstDataRendered = useCallback(
+      (params: any) => {
+        updateRowHeight(params);
+      },
+      [updateRowHeight],
+    );
+
+    const onGridSizeChanged = useCallback(
+      (params: any) => {
+        updateRowHeight(params);
+      },
+      [updateRowHeight],
+    );
+
     return (
       <div
         className={cn(
@@ -54,7 +104,15 @@ const TableComponent = forwardRef<
           "ag-theme-shadcn flex h-full flex-col",
         )} // applying the grid theme
       >
-        <AgGridReact ref={ref} {...props} />
+        <AgGridReact
+          {...props}
+          className={cn(props.className, "custom-scroll")}
+          getRowHeight={getRowHeight}
+          onGridReady={onGridReady}
+          onFirstDataRendered={onFirstDataRendered}
+          onGridSizeChanged={onGridSizeChanged}
+          ref={ref}
+        />
       </div>
     );
   },
