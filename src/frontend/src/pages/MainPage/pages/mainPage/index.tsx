@@ -12,10 +12,11 @@ import {
 } from "../../../../constants/constants";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
-import { downloadFlows } from "../../../../utils/reactflowUtils";
 import ModalsComponent from "../../components/modalsComponent";
 import useDeleteFolder from "../../hooks/use-delete-folder";
 import useDropdownOptions from "../../hooks/use-dropdown-options";
+
+import { handleDownloadFolderFn } from "../../utils/handle-download-folder";
 
 const sidebarNavItems = [
   {
@@ -27,9 +28,8 @@ const sidebarNavItems = [
 export default function HomePage(): JSX.Element {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
-  const uploadFlows = useFlowsManagerStore((state) => state.uploadFlows);
 
   const location = useLocation();
   const pathname = location.pathname;
@@ -39,6 +39,7 @@ export default function HomePage(): JSX.Element {
   const is_component = pathname === "/components";
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
+  const uploadFolder = useFolderStore((state) => state.uploadFolder);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -56,13 +57,22 @@ export default function HomePage(): JSX.Element {
   });
 
   const folders = useFolderStore((state) => state.folders);
-  const folderId = location?.state?.folderId;
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const folderId = location?.state?.folderId || myCollectionId;
   const folderName = folders.find((folder) => folder.id === folderId)?.name;
   const folderDescription = folders.find(
-    (folder) => folder.id === folderId
+    (folder) => folder.id === folderId,
   )?.description;
 
   const { handleDeleteFolder } = useDeleteFolder({ getFoldersApi, navigate });
+
+  const handleDownloadFolder = () => {
+    handleDownloadFolderFn(folderId);
+  };
+
+  const handleUploadFlowsToFolder = () => {
+    uploadFolder(folderId);
+  };
 
   return (
     <>
@@ -71,21 +81,11 @@ export default function HomePage(): JSX.Element {
         description={!folderId ? MY_COLLECTION_DESC : folderDescription!}
         button={
           <div className="flex gap-2">
-            <Button
-              variant="primary"
-              onClick={() => {
-                downloadFlows();
-              }}
-            >
+            <Button variant="primary" onClick={handleDownloadFolder}>
               <IconComponent name="Download" className="main-page-nav-button" />
-              Download Collection
+              Download Folder
             </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                uploadFlows();
-              }}
-            >
+            <Button variant="primary" onClick={handleUploadFlowsToFolder}>
               <IconComponent name="Upload" className="main-page-nav-button" />
               Upload Collection
             </Button>

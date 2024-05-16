@@ -24,7 +24,7 @@ export async function updateFolder(body: FolderType, folderId: string) {
   try {
     const response = await api.patch(
       `${BASE_URL_API}folders/${folderId}`,
-      body
+      body,
     );
     return response?.data;
   } catch (error) {
@@ -55,6 +55,41 @@ export async function getStarterProjects() {
     const response = await api.get(`${BASE_URL_API}folders/starter-projects`);
     return response?.data;
   } catch (error) {
+    throw error;
+  }
+}
+
+export async function downloadFlowsFromFolders(folderId: string) {
+  try {
+    const response = await api.get(
+      `${BASE_URL_API}folders/download/${folderId}`,
+    );
+    if (response?.status !== 200) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
+    }
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+export async function uploadFlowsFromFolders(
+  flows: FormData,
+  folderId: string,
+) {
+  try {
+    const response = await api.post(
+      `${BASE_URL_API}folders/upload/${folderId}`,
+      flows,
+    );
+
+    if (response?.status !== 201) {
+      throw new Error(`HTTP error! status: ${response?.status}`);
+    }
+    return response.data;
+  } catch (error) {
+    console.error(error);
     throw error;
   }
 }

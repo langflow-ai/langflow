@@ -20,4 +20,5 @@ export type FoldersStoreType = {
   setFolderUrl: (folderUrl: string) => void;
   folderDragging: string;
   setFolderDragging: (folderId: string) => void;
+  uploadFolder: (folderId: string) => void;
 };

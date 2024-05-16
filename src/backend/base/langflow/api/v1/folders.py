@@ -2,9 +2,12 @@ from typing import List
 from uuid import UUID
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from langflow.api.v1.flows import create_flows
+from langflow.api.v1.schemas import FlowListCreate, FlowListRead
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
+import orjson
 from sqlalchemy import update
 from sqlmodel import Session, col, select
 
@@ -17,7 +20,8 @@ from langflow.services.database.models.folder.model import (
     FolderUpdate,
 )
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session
+from langflow.services.deps import get_session, get_settings_service
+from langflow.services.settings.service import SettingsService
 
 router = APIRouter(prefix="/folders", tags=["Folders"])
 
@@ -144,3 +148,45 @@ def delete_folder(
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/download/{folder_id}", response_model=FlowListRead, status_code=200)
+async def download_file(
+    *,
+    session: Session = Depends(get_session),
+    folder_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+):
+    """Download all flows as a file."""
+    try:
+        flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Folder.user_id == current_user.id)).all()
+        if not flows:
+            raise HTTPException(status_code=404, detail="Folder not found")
+        return FlowListRead(flows=flows)
+    except Exception as e:
+        if "No result found" in str(e):
+            raise HTTPException(status_code=404, detail="Folder not found")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+@router.post("/upload/{folder_id}", response_model=List[FlowRead], status_code=201)
+async def upload_file(
+    *,
+    session: Session = Depends(get_session),
+    file: UploadFile = File(...),
+    folder_id: UUID,
+    current_user: User = Depends(get_current_active_user),
+):
+    """Upload flows from a file."""
+    contents = await file.read()
+    data = orjson.loads(contents)
+    if "flows" in data:
+        flow_list = FlowListCreate(**data)
+    else:
+        flow_list = FlowListCreate(flows=[FlowCreate(**flow) for flow in data])
+    # Now we set the user_id for all flows
+    for flow in flow_list.flows:
+        flow.user_id = current_user.id
+        flow.folder_id = folder_id
+
+    return create_flows(session=session, flow_list=flow_list, current_user=current_user)

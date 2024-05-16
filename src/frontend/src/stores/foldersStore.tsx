@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import { getFolderById, getFolders } from "../pages/MainPage/services";
+import {
+  getFolderById,
+  getFolders,
+  uploadFlowsFromFolders,
+} from "../pages/MainPage/services";
 import { FoldersStoreType } from "../types/zustand/folders";
 import useFlowsManagerStore from "./flowsManagerStore";
 
@@ -18,7 +22,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
         () => {
           set({ folders: [] });
           get().setLoading(false);
-        }
+        },
       );
     }
   },
@@ -37,7 +41,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
         },
         () => {
           get().setLoadingById(false);
-        }
+        },
       );
     }
   },
@@ -69,4 +73,24 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   setFolderUrl: (url) => set(() => ({ folderUrl: url })),
   folderDragging: "",
   setFolderDragging: (folder) => set(() => ({ folderDragging: folder })),
+  uploadFolder: (folderId) => {
+    return new Promise<void>(() => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.onchange = (event: Event) => {
+        if (
+          (event.target as HTMLInputElement).files![0].type ===
+          "application/json"
+        ) {
+          const file = (event.target as HTMLInputElement).files![0];
+          const formData = new FormData();
+          formData.append("file", file);
+          uploadFlowsFromFolders(formData, folderId).then(() => {
+            get().getFoldersApi(true);
+          });
+        }
+      };
+      input.click();
+    });
+  },
 }));
