@@ -55,8 +55,8 @@ def read_folders(
         return folders
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-    
+
+
 @router.get("/starter-projects", response_model=FolderReadWithFlows, status_code=200)
 def read_starter_folders(
     *,
@@ -167,7 +167,7 @@ async def download_file(
         if "No result found" in str(e):
             raise HTTPException(status_code=404, detail="Folder not found")
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 
 @router.post("/upload/{folder_id}", response_model=List[FlowRead], status_code=201)
 async def upload_file(
