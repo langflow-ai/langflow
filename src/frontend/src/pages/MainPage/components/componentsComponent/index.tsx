@@ -31,22 +31,22 @@ export default function ComponentsComponent({
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
 
   const flowsFromFolder = useFolderStore(
-    (state) => state.selectedFolder?.flows
+    (state) => state.selectedFolder?.flows,
   );
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openDelete, setOpenDelete] = useState(false);
   const searchFlowsComponents = useFlowsManagerStore(
-    (state) => state.searchFlowsComponents
+    (state) => state.searchFlowsComponents,
   );
 
   const setSelectedFlowsComponentsCards = useFlowsManagerStore(
-    (state) => state.setSelectedFlowsComponentsCards
+    (state) => state.setSelectedFlowsComponentsCards,
   );
 
   const selectedFlowsComponentsCards = useFlowsManagerStore(
-    (state) => state.selectedFlowsComponentsCards
+    (state) => state.selectedFlowsComponentsCards,
   );
 
   const [handleFileDrop] = useFileDrop(uploadFlow, is_component);
@@ -85,7 +85,7 @@ export default function ComponentsComponent({
         f.name.toLowerCase().includes(searchFlowsComponents.toLowerCase()) ||
         f.description
           .toLowerCase()
-          .includes(searchFlowsComponents.toLowerCase())
+          .includes(searchFlowsComponents.toLowerCase()),
     );
 
     if (searchFlowsComponents === "") {
@@ -162,7 +162,7 @@ export default function ComponentsComponent({
           title: "Error deleting items",
           list: ["Please try again"],
         });
-      }
+      },
     );
   };
 
@@ -174,7 +174,7 @@ export default function ComponentsComponent({
           return true;
         }
         return false;
-      }
+      },
     );
 
     setSelectedFlowsComponentsCards(selectedFlows);
@@ -182,9 +182,9 @@ export default function ComponentsComponent({
 
   const getDescriptionModal = useMemo(() => {
     if (selectedFlowsComponentsCards?.length === 1) {
-      return `selected ${is_component ? "component" : "flow"}`;
+      return ` ${is_component ? "component" : "flow"}`;
     }
-    return `selected ${is_component ? "components" : "flows"}`;
+    return ` ${is_component ? "components" : "flows"}`;
   }, [selectedFlowsComponentsCards]);
 
   return (
@@ -273,7 +273,7 @@ export default function ComponentsComponent({
                 rowsCount={[10, 20, 50, 100]}
                 totalRowsCount={
                   allFlows?.filter(
-                    (f) => (f.is_component ?? false) === is_component
+                    (f) => (f.is_component ?? false) === is_component,
                   )?.length
                 }
                 paginate={(pageSize, pageIndex) => {
