@@ -25,17 +25,17 @@ class CouchbaseSearchComponent(LCVectorStoreComponent):
         return {
             "input_value": {"display_name": "Input"},
             "embedding": {"display_name": "Embedding"},
-            "couchbase_connection_string": {"display_name": "Couchbase Cluster connection string"},
-            "couchbase_username": {"display_name": "Couchbase username"},
+            "couchbase_connection_string": {"display_name": "Couchbase Cluster connection string","required": True},
+            "couchbase_username": {"display_name": "Couchbase username","required": True},
             "couchbase_password": {
                 "display_name": "Couchbase password",
                 "password": True,
+                "required": True
             },
-            "bucket_name": {"display_name": "Bucket Name"},
-            "scope_name": {"display_name": "Scope Name"},
-            "collection_name": {"display_name": "Collection Name"},
+            "bucket_name": {"display_name": "Bucket Name","required": True},
+            "scope_name": {"display_name": "Scope Name","required": True},
+            "collection_name": {"display_name": "Collection Name","required": True},
             "index_name": {"display_name": "Index Name"},
-            "search_kwargs": {"display_name": "Search Kwargs", "advanced": True},
             "number_of_results": {
                 "display_name": "Number of Results",
                 "info": "Number of results to return.",
@@ -55,9 +55,7 @@ class CouchbaseSearchComponent(LCVectorStoreComponent):
         couchbase_connection_string: str = "",
         couchbase_username: str = "",
         couchbase_password: str = "",
-        search_kwargs: Optional[NestedDict] = None,
     ) -> List[Record]:
-        search_kwargs = search_kwargs or {}
         vector_store = CouchbaseComponent().build(
             couchbase_connection_string=couchbase_connection_string,
             couchbase_username=couchbase_username,

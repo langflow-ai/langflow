@@ -34,15 +34,16 @@ class CouchbaseComponent(CustomComponent):
         return {
             "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
             "embedding": {"display_name": "Embedding"},
-            "couchbase_connection_string": {"display_name": "Couchbase Cluster connection string"},
-            "couchbase_username": {"display_name": "Couchbase username"},
+            "couchbase_connection_string": {"display_name": "Couchbase Cluster connection string","required": True},
+            "couchbase_username": {"display_name": "Couchbase username","required": True},
             "couchbase_password": {
                 "display_name": "Couchbase password",
                 "password": True,
+                "required": True
             },
-            "bucket_name": {"display_name": "Bucket Name"},
-            "scope_name": {"display_name": "Scope Name"},
-            "collection_name": {"display_name": "Collection Name"},
+            "bucket_name": {"display_name": "Bucket Name","required": True},
+            "scope_name": {"display_name": "Scope Name","required": True},
+            "collection_name": {"display_name": "Collection Name","required": True},
             "index_name": {"display_name": "Index Name"},
         }
 
