@@ -44,7 +44,7 @@ const SideBarFoldersButtonsComponent = ({
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(
     folderId,
     is_component,
-    handleFolderChange
+    handleFolderChange,
   );
 
   return (
@@ -58,7 +58,7 @@ const SideBarFoldersButtonsComponent = ({
             checkPathName(item.id!)
               ? "border border-border bg-muted hover:bg-muted"
               : "border border-transparent hover:border-border hover:bg-transparent",
-            "group flex cursor-pointer gap-2 opacity-100"
+            "group flex cursor-pointer gap-2 opacity-100",
           )}
           onClick={() => handleChangeFolder(item.id!)}
           onDragOver={(e) => dragOver(e, item.id!)}
@@ -66,7 +66,7 @@ const SideBarFoldersButtonsComponent = ({
           onDragLeave={dragLeave}
           onDrop={onDrop}
         >
-          <div className="mr-auto flex">
+          <div className="mr-auto flex w-full">
             {folderDragging !== item?.id && (
               <IconComponent
                 name={"folder"}

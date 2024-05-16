@@ -27,11 +27,11 @@ class Folder(FolderBase, table=True):
     user_id: Optional[UUID] = Field(default=None, foreign_key="user.id")
     user: "User" = Relationship(back_populates="folders")
     flows: List["Flow"] = Relationship(back_populates="folder")
-
+    
 
 class FolderCreate(FolderBase):
-    parent_id: Optional[UUID] = None
-
+    components_list: Optional[List[UUID]] = None
+    flows_list: Optional[List[UUID]] = None
 
 class FolderRead(FolderBase):
     id: UUID

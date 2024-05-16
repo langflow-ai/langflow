@@ -1,6 +1,6 @@
 import { BASE_URL_API } from "../../../constants/constants";
 import { api } from "../../../controllers/API/api";
-import { FolderType } from "../entities";
+import { AddFolderType, FolderType } from "../entities";
 
 export async function getFolders(): Promise<FolderType[]> {
   try {
@@ -11,7 +11,14 @@ export async function getFolders(): Promise<FolderType[]> {
   }
 }
 
-export async function addFolder(body: FolderType) {
+export async function addFolder(data: AddFolderType) {
+  const body = {
+    name: data.name,
+    description: data.description,
+    flows_list: data.flows ?? [],
+    components_list: data.components ?? [],
+  };
+
   try {
     const response = await api.post(`${BASE_URL_API}folders/`, body);
     return response?.data;

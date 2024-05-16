@@ -39,6 +39,25 @@ def create_folder(
         session.add(new_folder)
         session.commit()
         session.refresh(new_folder)
+
+        if folder.components_list.__len__() > 0:
+            update_statement_components = (
+                update(Flow)
+                .where(Flow.id.in_(folder.components_list))
+                .values(folder_id=new_folder.id)
+            )
+            session.exec(update_statement_components)
+            session.commit()
+
+        if folder.flows_list.__len__() > 0:
+            update_statement_flows = (
+                update(Flow)
+                .where(Flow.id.in_(folder.flows_list))
+                .values(folder_id=new_folder.id)
+            )
+            session.exec(update_statement_flows)
+            session.commit()
+
         return new_folder
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

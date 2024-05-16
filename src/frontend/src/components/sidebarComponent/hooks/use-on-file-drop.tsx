@@ -47,6 +47,8 @@ const useFileDrop = (folderId, is_component, folderChangeCallback) => {
   };
 
   const dragOver = (e, folderId) => {
+    console.log("dragOver");
+
     e.preventDefault();
     if (e.dataTransfer.types.some((types) => types === "Files")) {
       setFolderDragging(folderId);
@@ -54,6 +56,8 @@ const useFileDrop = (folderId, is_component, folderChangeCallback) => {
   };
 
   const dragEnter = (e, folderId) => {
+    console.log("dragEnter");
+
     if (e.dataTransfer.types.some((types) => types === "Files")) {
       setFolderDragging(folderId);
     }
@@ -62,10 +66,13 @@ const useFileDrop = (folderId, is_component, folderChangeCallback) => {
 
   const dragLeave = (e) => {
     e.preventDefault();
-    setFolderDragging("");
+    if (e.target === e.currentTarget) {
+      setFolderDragging("");
+    }
   };
 
   const onDrop = (e) => {
+    console.log("onDrop");
     e.preventDefault();
     handleFileDrop(e);
     setFolderDragging("");
