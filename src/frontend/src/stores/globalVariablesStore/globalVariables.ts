@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { GlobalVariablesStore } from "../types/zustand/globalVariables";
-import { getUnavailableFields } from "../utils/utils";
+import { GlobalVariablesStore } from "../../types/zustand/globalVariables";
+import getUnavailableFields from "./utils/get-unavailable-fields";
 
 export const useGlobalVariablesStore = create<GlobalVariablesStore>(
   (set, get) => ({
@@ -45,5 +45,5 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
     getVariableId: (name) => {
       return get().globalVariables[name]?.id;
     },
-  })
+  }),
 );
