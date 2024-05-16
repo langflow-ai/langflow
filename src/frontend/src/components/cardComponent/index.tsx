@@ -190,9 +190,18 @@ export default function CollectionCardComponent({
   const isSelectedCard =
     selectedFlowsComponentsCards?.includes(data?.id) ?? false;
 
+  function onDragStart(event: React.DragEvent<any>) {
+    const flow = getFlowById(data.id);
+    if (flow) {
+      event.dataTransfer.setData("flow", JSON.stringify(data));
+    }
+  }
+
   return (
     <>
       <Card
+        onDragStart={onDragStart}
+        draggable
         data-testid={`card-${convertTestName(data.name)}`}
         //TODO check color schema
         className={cn(
