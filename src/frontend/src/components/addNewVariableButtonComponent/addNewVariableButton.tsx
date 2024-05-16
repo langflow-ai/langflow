@@ -2,7 +2,7 @@ import { useState } from "react";
 import { registerGlobalVariable } from "../../controllers/API";
 import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
-import { useGlobalVariablesStore } from "../../stores/globalVariables";
+import { useGlobalVariablesStore } from "../../stores/globalVariablesStore/globalVariables";
 import { useTypesStore } from "../../stores/typesStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
 import { sortByName } from "../../utils/utils";

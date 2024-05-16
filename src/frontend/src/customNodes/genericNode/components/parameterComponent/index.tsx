@@ -49,7 +49,8 @@ import {
   nodeIconsLucide,
   nodeNames,
 } from "../../../../utils/styleUtils";
-import { classNames, groupByFamily } from "../../../../utils/utils";
+import { classNames } from "../../../../utils/utils";
+import groupByFamily from "./utils/group-by-family";
 
 export default function ParameterComponent({
   left,

@@ -34,9 +34,10 @@ import {
   updateIds,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
-import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
+import { getRandomName } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
+import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
 const nodeTypes = {
   genericNode: GenericNode,
