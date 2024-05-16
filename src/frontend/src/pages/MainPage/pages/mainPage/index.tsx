@@ -1,4 +1,3 @@
-import { FolderPlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../../../components/dropdownButtonComponent";
@@ -18,17 +17,10 @@ import useDropdownOptions from "../../hooks/use-dropdown-options";
 
 import { handleDownloadFolderFn } from "../../utils/handle-download-folder";
 
-const sidebarNavItems = [
-  {
-    title: "New Folder",
-    icon: <FolderPlusIcon className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]" />,
-  },
-];
-
 export default function HomePage(): JSX.Element {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
+    (state) => state.setCurrentFlowId
   );
 
   const location = useLocation();
@@ -61,7 +53,7 @@ export default function HomePage(): JSX.Element {
   const folderId = location?.state?.folderId || myCollectionId;
   const folderName = folders.find((folder) => folder.id === folderId)?.name;
   const folderDescription = folders.find(
-    (folder) => folder.id === folderId,
+    (folder) => folder.id === folderId
   )?.description;
 
   const { handleDeleteFolder } = useDeleteFolder({ getFoldersApi, navigate });
@@ -106,7 +98,7 @@ export default function HomePage(): JSX.Element {
                 setFolderToEdit(null);
                 setOpenFolderModal(true);
               }}
-              items={sidebarNavItems}
+              items={[]}
               handleChangeFolder={(id: string) => {
                 navigate(`flows/folder/${id}`, { state: { folderId: id } });
               }}

@@ -13,7 +13,6 @@ type SideBarButtonsComponentProps = {
 };
 const SideBarButtonsComponent = ({
   items,
-  pathname,
   handleOpenNewFolderModal,
 }: SideBarButtonsComponentProps) => {
   return (

@@ -57,6 +57,7 @@ export default function SidebarNav({
             handleChangeFolder={handleChangeFolder}
             handleEditFolder={handleEditFolder}
             handleDeleteFolder={handleDeleteFolder}
+            handleAddFolder={handleOpenNewFolderModal}
           />
         </>
       )}

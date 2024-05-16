@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { cn } from "../../../../utils/utils";
+import DropdownButton from "../../../dropdownButtonComponent";
 import IconComponent from "../../../genericIconComponent";
 import { Button, buttonVariants } from "../../../ui/button";
 import useFileDrop from "../../hooks/use-on-file-drop";
@@ -12,10 +13,12 @@ type SideBarFoldersButtonsComponentProps = {
   handleChangeFolder: (id: string) => void;
   handleEditFolder: (item: FolderType) => void;
   handleDeleteFolder: (item: FolderType) => void;
+  handleAddFolder: () => void;
 };
 const SideBarFoldersButtonsComponent = ({
   folders,
   pathname,
+  handleAddFolder,
   handleChangeFolder,
   handleEditFolder,
   handleDeleteFolder,
@@ -44,11 +47,21 @@ const SideBarFoldersButtonsComponent = ({
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(
     folderId,
     is_component,
-    handleFolderChange,
+    handleFolderChange
   );
 
   return (
     <>
+      <div className="mb-5">
+        <DropdownButton
+          firstButtonName="New Folder"
+          onFirstBtnClick={handleAddFolder}
+          options={[]}
+          plusButton={true}
+          dropdownOptions={false}
+        />
+      </div>
+
       {folders.map((item, index) => (
         <div
           key={item.id}
@@ -58,7 +71,7 @@ const SideBarFoldersButtonsComponent = ({
             checkPathName(item.id!)
               ? "border border-border bg-muted hover:bg-muted"
               : "border border-transparent hover:border-border hover:bg-transparent",
-            "group flex cursor-pointer gap-2 opacity-100",
+            "group flex cursor-pointer gap-2 opacity-100"
           )}
           onClick={() => handleChangeFolder(item.id!)}
           onDragOver={(e) => dragOver(e, item.id!)}
