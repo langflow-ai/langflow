@@ -12,11 +12,18 @@ function RecordsOutputComponent({
   flowPool: FlowPoolObjectType;
   pagination: boolean;
 }) {
-  if (!flowPool?.data?.artifacts.records) return "No data available";
-  console.log(
-    "flowPool.data.artifacts.records",
-    flowPool.data.artifacts.records,
-  );
+  if (!flowPool?.data?.artifacts.records) {
+    return (
+      <TableComponent
+        overlayNoRowsTemplate="No data available"
+        suppressRowClickSelection={true}
+        pagination={pagination}
+        columnDefs={[]}
+        rowData={[]}
+      />
+    );
+  }
+
   const rows = flowPool.data.artifacts.records;
   const columns = extractColumnsFromRows(rows, "union");
   const columnDefs = columns.map((col, idx) => ({
