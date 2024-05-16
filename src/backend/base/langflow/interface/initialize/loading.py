@@ -2,7 +2,6 @@ import inspect
 import json
 from typing import TYPE_CHECKING, Any, Callable, Dict, Sequence, Type
 
-
 import orjson
 from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
