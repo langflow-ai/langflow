@@ -48,7 +48,7 @@ export default function InputComponent({
   // Clear component state
   useEffect(() => {
     if (disabled && value && onChange && value !== "") {
-      onChange("");
+      onChange("", true);
     }
   }, [disabled]);
 

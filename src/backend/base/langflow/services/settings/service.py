@@ -1,11 +1,10 @@
 import os
 
 import yaml
-from loguru import logger
-
 from langflow.services.base import Service
 from langflow.services.settings.auth import AuthSettings
 from langflow.services.settings.base import Settings
+from loguru import logger
 
 
 class SettingsService(Service):
@@ -31,7 +30,7 @@ class SettingsService(Service):
 
             for key in settings_dict:
                 if key not in Settings.model_fields.keys():
-                    raise KeyError(f"Key {key} not found in settings")
+                    logger.warning(f"Key {key} not found in settings")
                 logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
         settings = Settings(**settings_dict)
