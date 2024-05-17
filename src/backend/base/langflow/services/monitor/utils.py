@@ -91,7 +91,7 @@ def add_row_to_table(
     columns = ", ".join(keys)
 
     values_placeholders = ", ".join(["?" for _ in keys])
-    values = list(validated_dict.values())
+    values = [validated_dict[key] for key in keys]
 
     # Create the insert statement
     insert_sql = f"INSERT INTO {table_name} ({columns}) VALUES ({values_placeholders})"
@@ -104,7 +104,7 @@ def add_row_to_table(
         column_error_message = ""
         for key, value in validated_dict.items():
             logger.error(f"{key}: {type(value)}")
-            if value in str(e):
+            if str(value) in str(e):
                 column_error_message = f"Column: {key} Value: {value} Error: {e}"
 
         if column_error_message:
