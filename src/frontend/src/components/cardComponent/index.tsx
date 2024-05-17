@@ -218,7 +218,8 @@ export default function CollectionCardComponent({
               <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
                 <IconComponent
                   className={cn(
-                    "visible flex-shrink-0 group-hover:invisible",
+                    "visible flex-shrink-0",
+                    isSelectedCard ? "invisible" : "group-hover:invisible",
                     data.is_component
                       ? "mx-0.5 h-6 w-6 text-component-icon"
                       : "h-7 w-7 flex-shrink-0 text-flow-icon",
@@ -226,7 +227,12 @@ export default function CollectionCardComponent({
                   name={data.is_component ? "ToyBrick" : "Group"}
                 />
 
-                <div className="invisible absolute mb-1 ml-1 group-hover:visible">
+                <div
+                  className={cn(
+                    "invisible absolute mb-1 ml-1",
+                    isSelectedCard ? "visible" : "group-hover:visible",
+                  )}
+                >
                   {control && (
                     <div
                       onClick={(e) => {
