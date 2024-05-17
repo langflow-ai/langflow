@@ -10,6 +10,8 @@ import {
 } from "../../../../components/ui/select";
 import { Checkbox } from "../../../../components/ui/checkbox";
 import { Button } from "../../../../components/ui/button";
+import { cn } from "../../../../utils/utils";
+import ShadTooltip from "../../../../components/shadTooltipComponent";
 
 type HeaderComponentProps = {
   handleSelectAll: (select) => void;
@@ -55,12 +57,25 @@ const HeaderComponent = ({
         </div>
         <div className="col-span-2 grid-cols-1 justify-self-end">
           <div>
-            <button onClick={handleDelete} disabled={disableDelete}>
-              <IconComponent
-                name="Trash2"
-                className="h-5 w-5 text-primary transition-all hover:text-destructive"
-              />
-            </button>
+            <ShadTooltip
+              content={
+                disableDelete ? (
+                  <span>Select items to delete</span>
+                ) : (
+                  <span>Delete selected items</span>
+                )
+              }
+            >
+              <button onClick={handleDelete} disabled={disableDelete}>
+                <IconComponent
+                  name="Trash2"
+                  className={cn(
+                    "h-5 w-5 text-primary transition-all",
+                    disableDelete ? "" : "hover:text-destructive",
+                  )}
+                />
+              </button>
+            </ShadTooltip>
           </div>
         </div>
       </div>

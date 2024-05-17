@@ -182,7 +182,7 @@ export default function ComponentsComponent({
         <HeaderComponent
           handleDelete={handleSelectOptionsChange}
           handleSelectAll={handleSelectAll}
-          disableDelete={!selectedFlowsComponentsCards?.length > 0}
+          disableDelete={!(selectedFlowsComponentsCards?.length > 0)}
         />
       )}
 
