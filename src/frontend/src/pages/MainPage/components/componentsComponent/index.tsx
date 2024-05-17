@@ -70,12 +70,7 @@ export default function ComponentsComponent({
     setFolderUrl(folderId ?? "");
     setSelectedFlowsComponentsCards([]);
     handleSelectAll(false);
-
-    if (folderId) {
-      getFolderById(folderId);
-      return;
-    }
-    getFolderById(myCollectionId!);
+    getFolderById(folderId ? folderId : myCollectionId);
   }, [location]);
 
   useEffect(() => {
