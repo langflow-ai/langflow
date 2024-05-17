@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom";
 import { FolderType } from "../../pages/MainPage/entities";
 import { useFolderStore } from "../../stores/foldersStore";
 import { cn } from "../../utils/utils";
+import HorizontalScrollFadeComponent from "../horizontalScrollFadeComponent";
 import SideBarButtonsComponent from "./components/sideBarButtons";
 import SideBarFoldersButtonsComponent from "./components/sideBarFolderButtons";
 
@@ -38,19 +39,18 @@ export default function SidebarNav({
   return (
     <nav
       className={cn(
-        "flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1",
-        className,
+        className
       )}
       {...props}
     >
-      <SideBarButtonsComponent
-        items={items}
-        pathname={pathname}
-        handleOpenNewFolderModal={handleOpenNewFolderModal}
-      />
+      <HorizontalScrollFadeComponent>
+        <SideBarButtonsComponent
+          items={items}
+          pathname={pathname}
+          handleOpenNewFolderModal={handleOpenNewFolderModal}
+        />
 
-      {!loadingFolders && folders?.length > 0 && isFolderPath && (
-        <>
+        {!loadingFolders && folders?.length > 0 && isFolderPath && (
           <SideBarFoldersButtonsComponent
             folders={folders}
             pathname={pathname}
@@ -59,8 +59,8 @@ export default function SidebarNav({
             handleDeleteFolder={handleDeleteFolder}
             handleAddFolder={handleOpenNewFolderModal}
           />
-        </>
-      )}
+        )}
+      </HorizontalScrollFadeComponent>
     </nav>
   );
 }
