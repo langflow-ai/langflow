@@ -22,7 +22,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -102,7 +102,7 @@ test("chat_io_teste", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }

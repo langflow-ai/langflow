@@ -15,7 +15,7 @@ test("select and delete all", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -25,8 +25,7 @@ test("select and delete all", async ({ page }) => {
 
   await page.getByText("Select All").click();
   await page.getByText("Unselect All").isVisible();
-  await page.getByText("Actions").click();
-  await page.getByText("Delete").click();
+  await page.getByTestId("icon-Trash2").click();
   await page.getByText("Delete").last().click();
 
   await page.waitForTimeout(1000);
@@ -48,7 +47,7 @@ test("search flows", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -57,10 +56,10 @@ test("search flows", async ({ page }) => {
   await page.getByTestId("icon-ChevronLeft").first().click();
 
   await page.getByText("Select All").isVisible();
-  await page.locator('//*[@id="new-project-btn"]').click();
+  await page.getByText("New Project", { exact: true }).click();
   await page.getByRole("heading", { name: "Memory Chatbot" }).click();
   await page.getByTestId("icon-ChevronLeft").first().click();
-  await page.locator('//*[@id="new-project-btn"]').click();
+  await page.getByText("New Project", { exact: true }).click();
   await page.getByRole("heading", { name: "Document QA" }).click();
   await page.getByTestId("icon-ChevronLeft").first().click();
   await page.getByPlaceholder("Search flows").fill("Memory Chatbot");
@@ -84,7 +83,7 @@ test("search components", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
