@@ -150,6 +150,7 @@ class FlowListRead(BaseModel):
 class FlowListReadWithFolderName(BaseModel):
     flows: List[FlowRead]
     folder_name: str
+    folder_description: str
 
 
 class InitResponse(BaseModel):

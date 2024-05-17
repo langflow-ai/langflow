@@ -1,7 +1,7 @@
 import { BASE_URL_API } from "../../../constants/constants";
 import { api } from "../../../controllers/API/api";
 import { FlowType } from "../../../types/flow";
-import { AddFolderType, FolderType } from "../entities";
+import { AddFolderType, FolderType, StarterProjectsType } from "../entities";
 
 export async function getFolders(): Promise<FolderType[]> {
   try {
@@ -28,7 +28,10 @@ export async function addFolder(data: AddFolderType) {
   }
 }
 
-export async function updateFolder(body: FolderType, folderId: string) {
+export async function updateFolder(
+  body: FolderType,
+  folderId: string,
+): Promise<FolderType> {
   try {
     const response = await api.patch(
       `${BASE_URL_API}folders/${folderId}`,
@@ -49,7 +52,7 @@ export async function deleteFolder(folderId: string) {
   }
 }
 
-export async function getFolderById(folderId: string) {
+export async function getFolderById(folderId: string): Promise<FolderType> {
   try {
     const response = await api.get(`${BASE_URL_API}folders/${folderId}`);
     return response?.data;
@@ -58,7 +61,7 @@ export async function getFolderById(folderId: string) {
   }
 }
 
-export async function getStarterProjects() {
+export async function getStarterProjects(): Promise<StarterProjectsType> {
   try {
     const response = await api.get(`${BASE_URL_API}folders/starter-projects`);
     return response?.data;
@@ -67,9 +70,11 @@ export async function getStarterProjects() {
   }
 }
 
-export async function downloadFlowsFromFolders(
-  folderId: string,
-): Promise<{ flows: FlowType[]; folder_name: string }> {
+export async function downloadFlowsFromFolders(folderId: string): Promise<{
+  flows: FlowType[];
+  folder_name: string;
+  folder_description: string;
+}> {
   try {
     const response = await api.get(
       `${BASE_URL_API}folders/download/${folderId}`,
@@ -87,13 +92,9 @@ export async function downloadFlowsFromFolders(
 
 export async function uploadFlowsFromFolders(
   flows: FormData,
-  folderId: string,
-) {
+): Promise<FlowType[]> {
   try {
-    const response = await api.post(
-      `${BASE_URL_API}folders/upload/${folderId}`,
-      flows,
-    );
+    const response = await api.post(`${BASE_URL_API}folders/upload/`, flows);
 
     if (response?.status !== 201) {
       throw new Error(`HTTP error! status: ${response?.status}`);

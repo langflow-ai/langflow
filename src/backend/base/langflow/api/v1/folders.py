@@ -13,6 +13,7 @@ from sqlmodel import Session, select
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.folder.model import (
     Folder,
+    FolderBase,
     FolderCreate,
     FolderRead,
     FolderReadWithFlows,
@@ -88,6 +89,7 @@ def read_folder(
         folder = session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first()
         if not folder:
             raise HTTPException(status_code=404, detail="Folder not found")
+        folder.flows = session.exec(select(Flow).where(Flow.folder_id == folder_id)).all()
         return folder
     except Exception as e:
         if "No result found" in str(e):
@@ -148,6 +150,10 @@ def delete_folder(
             raise HTTPException(status_code=404, detail="Folder not found")
         session.delete(folder)
         session.commit()
+        flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Folder.user_id == current_user.id)).all()
+        for flow in flows:
+            session.delete(flow)
+        session.commit()
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -160,39 +166,68 @@ async def download_file(
     folder_id: UUID,
     current_user: User = Depends(get_current_active_user),
 ):
-    """Download all flows as a file."""
+    """Download all flows from folder."""
     try:
-        flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Folder.user_id == current_user.id)).all()
+        flows = session.exec(
+            select(Flow).distinct().join(Folder).where(
+                Flow.folder_id == folder_id,
+                Folder.user_id == current_user.id
+            )
+        ).all()
         folder_name = (
             session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first().name
         )
+        folder_description = (
+            session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first().description
+        )
         if not flows:
             raise HTTPException(status_code=404, detail="Folder not found")
-        return FlowListReadWithFolderName(flows=flows, folder_name=folder_name)
+        return FlowListReadWithFolderName(flows=flows, folder_name=folder_name, folder_description=folder_description)
     except Exception as e:
         if "No result found" in str(e):
             raise HTTPException(status_code=404, detail="Folder not found")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/upload/{folder_id}", response_model=List[FlowRead], status_code=201)
+@router.post("/upload/", response_model=List[FlowRead], status_code=201)
 async def upload_file(
     *,
     session: Session = Depends(get_session),
     file: UploadFile = File(...),
-    folder_id: UUID,
     current_user: User = Depends(get_current_active_user),
 ):
     """Upload flows from a file."""
     contents = await file.read()
     data = orjson.loads(contents)
+
+    if(data.__len__() == 0):
+        raise HTTPException(status_code=400, detail="No flows found in the file")
+    
+    folder_results = session.exec(select(Folder).where(Folder.name.like(f"{data['folder_name']}%"), Folder.user_id == current_user.id))
+    existing_folder_names = [folder.name for folder in folder_results]
+
+    if existing_folder_names.__len__() > 0:
+        data['folder_name'] = f"{data['folder_name']} ({existing_folder_names.__len__() + 1})"
+    
+    folder = FolderCreate(name=data['folder_name'], description=data['folder_description'])
+    
+    new_folder = Folder.model_validate(folder, from_attributes=True)
+    new_folder.id = None
+    new_folder.user_id = current_user.id
+    session.add(new_folder)
+    session.commit()
+    session.refresh(new_folder)
+
+    del data['folder_name']
+    del data['folder_description']
+
     if "flows" in data:
-        flow_list = FlowListCreate(**data)
+        flow_list = FlowListCreate(flows=[FlowCreate(**flow) for flow in data['flows']])
     else:
-        flow_list = FlowListCreate(flows=[FlowCreate(**flow) for flow in data])
+        raise HTTPException(status_code=400, detail="No flows found in the data")
     # Now we set the user_id for all flows
     for flow in flow_list.flows:
         flow.user_id = current_user.id
-        flow.folder_id = folder_id
+        flow.folder_id = new_folder.id
 
     return create_flows(session=session, flow_list=flow_list, current_user=current_user)

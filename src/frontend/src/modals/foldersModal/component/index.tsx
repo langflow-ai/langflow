@@ -25,6 +25,7 @@ export const FolderForms = ({
   const flows = useFlowsManagerStore((state) => state.flows);
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
   const [selectedFlows, setSelectedFlows] = useState<string[]>([]);
+  const allFlows = useFlowsManagerStore((state) => state.allFlows);
 
   const componentsList = flows
     .filter((flow) => flow.is_component && flow.folder_id !== null)
@@ -33,6 +34,14 @@ export const FolderForms = ({
   const flowsList = flows
     .filter((flow) => !flow.is_component && flow.folder_id !== null)
     .map((flow) => ({ id: flow.id, name: flow.name }));
+
+  const componentsOnFolder = allFlows
+    .filter((flow) => flow.is_component && flow.folder_id === folderToEdit?.id)
+    .map((flow) => flow.id);
+
+  const flowsOnFolder = allFlows
+    .filter((flow) => !flow.is_component && flow.folder_id === folderToEdit?.id)
+    .map((flow) => flow.id);
 
   useEffect(() => {
     setValue("components", selectedComponents);
@@ -43,10 +52,9 @@ export const FolderForms = ({
     if (folderToEdit) {
       setValue("name", folderToEdit.name);
       setValue("description", folderToEdit.description);
-      console.log(folderToEdit);
 
-      // setSelectedComponents(folderToEdit.components);
-      // setSelectedFlows(folderToEdit.flows);
+      setSelectedComponents(componentsOnFolder);
+      setSelectedFlows(flowsOnFolder);
       return;
     }
     setValue("name", "");

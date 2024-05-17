@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { addFolder, updateFolder } from "../../../pages/MainPage/services";
 import useAlertStore from "../../../stores/alertStore";
 import { useFolderStore } from "../../../stores/foldersStore";
@@ -6,6 +7,7 @@ const useFolderSubmit = (setOpen, folderToEdit) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const navigate = useNavigate();
 
   const onSubmit = (data) => {
     if (folderToEdit) {
@@ -16,6 +18,9 @@ const useFolderSubmit = (setOpen, folderToEdit) => {
           });
           getFoldersApi(true);
           setOpen(false);
+          navigate(`flows/folder/${folderToEdit.id}`, {
+            state: { folderId: folderToEdit.id },
+          });
         },
         () => {
           setErrorData({
@@ -25,12 +30,13 @@ const useFolderSubmit = (setOpen, folderToEdit) => {
       );
     } else {
       addFolder(data).then(
-        () => {
+        (res) => {
           setSuccessData({
             title: "Folder created successfully.",
           });
           getFoldersApi(true);
           setOpen(false);
+          navigate(`flows/folder/${res.id}`, { state: { folderId: res.id } });
         },
         () => {
           setErrorData({

@@ -11,10 +11,10 @@ type SidebarNavProps = {
     title: string;
     icon: React.ReactNode;
   }[];
-  handleOpenNewFolderModal: () => void;
-  handleChangeFolder: (id: string) => void;
-  handleEditFolder: (item: FolderType) => void;
-  handleDeleteFolder: (item: FolderType) => void;
+  handleOpenNewFolderModal?: () => void;
+  handleChangeFolder?: (id: string) => void;
+  handleEditFolder?: (item: FolderType) => void;
+  handleDeleteFolder?: (item: FolderType) => void;
   className?: string;
 };
 
@@ -39,7 +39,7 @@ export default function SidebarNav({
     <nav
       className={cn(
         "flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1",
-        className
+        className,
       )}
       {...props}
     >

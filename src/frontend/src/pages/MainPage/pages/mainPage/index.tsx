@@ -15,12 +15,13 @@ import ModalsComponent from "../../components/modalsComponent";
 import useDeleteFolder from "../../hooks/use-delete-folder";
 import useDropdownOptions from "../../hooks/use-dropdown-options";
 
+import useAlertStore from "../../../../stores/alertStore";
 import { handleDownloadFolderFn } from "../../utils/handle-download-folder";
 
 export default function HomePage(): JSX.Element {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
 
   const location = useLocation();
@@ -29,10 +30,19 @@ export default function HomePage(): JSX.Element {
   const [openFolderModal, setOpenFolderModal] = useState(false);
   const [openDeleteFolderModal, setOpenDeleteFolderModal] = useState(false);
   const is_component = pathname === "/components";
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const allFlows = useFlowsManagerStore((state) => state.allFlows);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
   const uploadFolder = useFolderStore((state) => state.uploadFolder);
   const navigate = useNavigate();
+  const folders = useFolderStore((state) => state.folders);
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const folderId = location?.state?.folderId || myCollectionId;
+  const folderName = folders.find((folder) => folder.id === folderId)?.name;
+  const folderDescription = folders.find(
+    (folder) => folder.id === folderId,
+  )?.description;
 
   useEffect(() => {
     getFoldersApi();
@@ -48,17 +58,16 @@ export default function HomePage(): JSX.Element {
     is_component,
   });
 
-  const folders = useFolderStore((state) => state.folders);
-  const myCollectionId = useFolderStore((state) => state.myCollectionId);
-  const folderId = location?.state?.folderId || myCollectionId;
-  const folderName = folders.find((folder) => folder.id === folderId)?.name;
-  const folderDescription = folders.find(
-    (folder) => folder.id === folderId
-  )?.description;
-
   const { handleDeleteFolder } = useDeleteFolder({ getFoldersApi, navigate });
 
   const handleDownloadFolder = () => {
+    if (allFlows.length === 0) {
+      setErrorData({
+        title: "Folder is empty",
+        list: [],
+      });
+      return;
+    }
     handleDownloadFolderFn(folderId);
   };
 
@@ -79,7 +88,7 @@ export default function HomePage(): JSX.Element {
             </Button>
             <Button variant="primary" onClick={handleUploadFlowsToFolder}>
               <IconComponent name="Upload" className="main-page-nav-button" />
-              Upload Collection
+              Upload Folder
             </Button>
             <DropdownButton
               firstButtonName="New Project"

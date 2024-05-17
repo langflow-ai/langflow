@@ -71,9 +71,9 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   setFolderToEdit: (folder) => set(() => ({ folderToEdit: folder })),
   folderUrl: "",
   setFolderUrl: (url) => set(() => ({ folderUrl: url })),
-  folderDragging: "",
+  folderDragging: false,
   setFolderDragging: (folder) => set(() => ({ folderDragging: folder })),
-  uploadFolder: (folderId) => {
+  uploadFolder: () => {
     return new Promise<void>(() => {
       const input = document.createElement("input");
       input.type = "file";
@@ -85,9 +85,10 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
           const file = (event.target as HTMLInputElement).files![0];
           const formData = new FormData();
           formData.append("file", file);
-          uploadFlowsFromFolders(formData, folderId).then(() => {
+          uploadFlowsFromFolders(formData).then(() => {
             get().getFoldersApi(true);
           });
+          useFlowsManagerStore.getState().setAllFlows;
         }
       };
       input.click();

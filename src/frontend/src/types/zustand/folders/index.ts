@@ -18,7 +18,7 @@ export type FoldersStoreType = {
   setFolderToEdit: (folder: FolderType | null) => void;
   folderUrl: string;
   setFolderUrl: (folderUrl: string) => void;
-  folderDragging: string;
-  setFolderDragging: (folderId: string) => void;
+  folderDragging: boolean;
+  setFolderDragging: (set: boolean) => void;
   uploadFolder: (folderId: string) => void;
 };

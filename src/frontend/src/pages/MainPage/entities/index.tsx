@@ -16,3 +16,11 @@ export type AddFolderType = {
   flows?: string[];
   components?: string[];
 };
+
+export type StarterProjectsType = {
+  name?: string;
+  description?: string;
+  flows?: FlowType[];
+  id: string;
+  parent_id: string;
+};

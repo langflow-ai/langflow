@@ -10,10 +10,10 @@ import useFileDrop from "../../hooks/use-on-file-drop";
 type SideBarFoldersButtonsComponentProps = {
   folders: FolderType[];
   pathname: string;
-  handleChangeFolder: (id: string) => void;
-  handleEditFolder: (item: FolderType) => void;
-  handleDeleteFolder: (item: FolderType) => void;
-  handleAddFolder: () => void;
+  handleChangeFolder?: (id: string) => void;
+  handleEditFolder?: (item: FolderType) => void;
+  handleDeleteFolder?: (item: FolderType) => void;
+  handleAddFolder?: () => void;
 };
 const SideBarFoldersButtonsComponent = ({
   folders,
@@ -47,7 +47,7 @@ const SideBarFoldersButtonsComponent = ({
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(
     folderId,
     is_component,
-    handleFolderChange
+    handleFolderChange,
   );
 
   return (
@@ -55,87 +55,92 @@ const SideBarFoldersButtonsComponent = ({
       <div className="mb-5">
         <DropdownButton
           firstButtonName="New Folder"
-          onFirstBtnClick={handleAddFolder}
+          onFirstBtnClick={handleAddFolder!}
           options={[]}
           plusButton={true}
           dropdownOptions={false}
         />
       </div>
 
-      {folders.map((item, index) => (
-        <div
-          key={item.id}
-          data-testid={`sidebar-nav-${item.name}`}
-          className={cn(
-            buttonVariants({ variant: "ghost" }),
-            checkPathName(item.id!)
-              ? "border border-border bg-muted hover:bg-muted"
-              : "border border-transparent hover:border-border hover:bg-transparent",
-            "group flex cursor-pointer gap-2 opacity-100"
-          )}
-          onClick={() => handleChangeFolder(item.id!)}
-          onDragOver={(e) => dragOver(e, item.id!)}
-          onDragEnter={(e) => dragEnter(e, item.id!)}
-          onDragLeave={dragLeave}
-          onDrop={onDrop}
-        >
-          <div className="mr-auto flex w-full">
-            {folderDragging !== item?.id && (
-              <IconComponent
-                name={"folder"}
-                className="mr-2 w-4 justify-start stroke-[1.5] opacity-100"
-              />
-            )}
+      <div
+        onDragOver={dragOver}
+        onDragEnter={dragEnter}
+        onDragLeave={dragLeave}
+        onDrop={onDrop}
+        className=" h-[500px] "
+      >
+        {folderDragging ? (
+          <div className="grid">
+            <IconComponent
+              name={"ArrowUpToLine"}
+              className="m-auto w-7 justify-start stroke-[1.5] opacity-100"
+            />
 
-            <div className="lg:max-w-[120px] xl:max-w-[200px] ">
-              <span className="block max-w-full truncate opacity-100">
-                {folderDragging === item?.id ? (
-                  <div className="flex">
-                    <IconComponent
-                      name={"upload"}
-                      className="mr-2 w-4 justify-start stroke-[1.5] opacity-100"
-                    />
-                    <span className="self-center">Drop to upload</span>
-                  </div>
-                ) : (
-                  item.name
-                )}
-              </span>
-            </div>
+            <span className="m-auto mt-3 self-center font-light">
+              Drag your folder here
+            </span>
           </div>
-
-          {index > 0 && (
-            <>
-              <Button
-                className="invisible  p-0 hover:bg-white group-hover:visible hover:dark:bg-[#0c101a00]"
-                onClick={(e) => {
-                  handleDeleteFolder(item);
-                  e.stopPropagation();
-                  e.preventDefault();
-                }}
-                variant={"ghost"}
+        ) : (
+          <>
+            {folders.map((item, index) => (
+              <div
+                key={item.id}
+                data-testid={`sidebar-nav-${item.name}`}
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  checkPathName(item.id!)
+                    ? "border border-border bg-muted hover:bg-muted"
+                    : "border border-transparent hover:border-border hover:bg-transparent",
+                  "group flex cursor-pointer gap-2 opacity-100",
+                )}
+                onClick={() => handleChangeFolder!(item.id!)}
               >
-                <IconComponent name={"trash"} className=" w-4 stroke-[1.5]" />
-              </Button>
+                <div className="mr-auto flex w-full">
+                  <div className="lg:max-w-[120px] xl:max-w-[200px] ">
+                    <span className="block max-w-full truncate opacity-100">
+                      {item.name}
+                    </span>
+                  </div>
+                </div>
 
-              <Button
-                className="invisible p-0 hover:bg-white group-hover:visible hover:dark:bg-[#0c101a00]"
-                onClick={(e) => {
-                  handleEditFolder(item);
-                  e.stopPropagation();
-                  e.preventDefault();
-                }}
-                variant={"ghost"}
-              >
-                <IconComponent
-                  name={"pencil"}
-                  className="  w-4 stroke-[1.5] text-white  "
-                />
-              </Button>
-            </>
-          )}
-        </div>
-      ))}
+                {index > 0 && (
+                  <>
+                    <Button
+                      className="invisible  p-0 hover:bg-white group-hover:visible hover:dark:bg-[#0c101a00]"
+                      onClick={(e) => {
+                        handleDeleteFolder!(item);
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      variant={"ghost"}
+                    >
+                      <IconComponent
+                        name={"trash"}
+                        className=" w-4 stroke-[1.5]"
+                      />
+                    </Button>
+
+                    <Button
+                      className="invisible p-0 hover:bg-white group-hover:visible hover:dark:bg-[#0c101a00]"
+                      onClick={(e) => {
+                        handleEditFolder!(item);
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      variant={"ghost"}
+                    >
+                      <IconComponent
+                        name={"pencil"}
+                        className="  w-4 stroke-[1.5] text-white  "
+                      />
+                    </Button>
+                  </>
+                )}
+              </div>
+            ))}
+          </>
+        )}
+      </div>
     </>
   );
 };

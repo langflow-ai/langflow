@@ -9,7 +9,7 @@ type SideBarButtonsComponentProps = {
     icon: React.ReactNode;
   }[];
   pathname: string;
-  handleOpenNewFolderModal: () => void;
+  handleOpenNewFolderModal?: () => void;
 };
 const SideBarButtonsComponent = ({
   items,
@@ -24,7 +24,7 @@ const SideBarButtonsComponent = ({
             data-testid={`sidebar-nav-${item.title}`}
             className={cn(
               buttonVariants({ variant: "ghost" }),
-              "!w-[200px] cursor-pointer justify-start gap-2 border border-transparent hover:border-border hover:bg-transparent"
+              "!w-[200px] cursor-pointer justify-start gap-2 border border-transparent hover:border-border hover:bg-transparent",
             )}
             onClick={handleOpenNewFolderModal}
           >
