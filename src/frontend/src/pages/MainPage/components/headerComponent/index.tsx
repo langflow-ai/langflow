@@ -9,18 +9,20 @@ import {
   SelectValue,
 } from "../../../../components/ui/select";
 import { Checkbox } from "../../../../components/ui/checkbox";
+import { Button } from "../../../../components/ui/button";
 
 type HeaderComponentProps = {
   handleSelectAll: (select) => void;
-  handleSelectOptionsChange: (option) => void;
+  handleDelete: () => void;
+  disableDelete: boolean;
 };
 
 const HeaderComponent = ({
   handleSelectAll,
-  handleSelectOptionsChange,
+  handleDelete,
+  disableDelete,
 }: HeaderComponentProps) => {
   const [shouldSelectAll, setShouldSelectAll] = useState(true);
-  const [value, setValue] = useState("");
 
   const handleClick = () => {
     handleSelectAll(shouldSelectAll);
@@ -53,33 +55,12 @@ const HeaderComponent = ({
         </div>
         <div className="col-span-2 grid-cols-1 justify-self-end">
           <div>
-            <Select
-              value={value}
-              onValueChange={(e) => {
-                handleSelectOptionsChange(e);
-                setValue("");
-              }}
-            >
-              <SelectTrigger className="w-[140px] flex-shrink-0">
-                <SelectValue placeholder="Actions" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup className="right-6">
-                  <SelectItem
-                    value={"delete"}
-                    className="cursor-pointer focus:bg-red-400/[.20]"
-                  >
-                    <div className="font-red flex text-status-red">
-                      <IconComponent
-                        name="Trash2"
-                        className="relative top-0.5 mr-2 h-4 w-4 "
-                      />{" "}
-                      <span>Delete</span>
-                    </div>
-                  </SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+            <button onClick={handleDelete} disabled={disableDelete}>
+              <IconComponent
+                name="Trash2"
+                className="h-5 w-5 text-primary transition-all hover:text-destructive"
+              />
+            </button>
           </div>
         </div>
       </div>
