@@ -753,8 +753,8 @@ export const EDIT_TEXT_MODAL_TITLE = "Edit Text";
 export const EDIT_TEXT_PLACEHOLDER = "Type message here.";
 export const INPUT_HANDLER_HOVER = "Avaliable input components:";
 export const OUTPUT_HANDLER_HOVER = "Avaliable output components:";
-export const TEXT_INPUT_MODAL_TITLE = "Text Inputs";
-export const OUTPUTS_MODAL_TITLE = "Text Outputs";
+export const TEXT_INPUT_MODAL_TITLE = "Inputs";
+export const OUTPUTS_MODAL_TITLE = "Outputs";
 export const LANGFLOW_CHAT_TITLE = "Langflow Chat";
 export const CHAT_INPUT_PLACEHOLDER =
   "No chat input variables found. Click to run your flow.";
