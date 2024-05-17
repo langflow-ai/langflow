@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class TransactionModel(BaseModel):
-    id: Optional[int] = Field(default=None, alias="id")
+    index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
     flow_id: str
     source: str
@@ -37,7 +37,7 @@ class TransactionModel(BaseModel):
 
 
 class TransactionModelResponse(BaseModel):
-    id: Optional[int] = Field(default=None, alias="id")
+    index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
     flow_id: str
     source: str
@@ -57,9 +57,16 @@ class TransactionModelResponse(BaseModel):
             return json.loads(v)
         return v
 
+    @field_validator("index", mode="before")
+    def validate_id(cls, v):
+        if isinstance(v, float):
+            return int(v)
+        return v
+
 
 class MessageModel(BaseModel):
-    id: Optional[int] = Field(default=None, alias="id")
+    index: Optional[int] = Field(default=None)
+    flow_id: Optional[str] = Field(default=None, alias="flow_id")
     timestamp: datetime = Field(default_factory=datetime.now)
     sender: str
     sender_name: str
@@ -78,7 +85,7 @@ class MessageModel(BaseModel):
         return v
 
     @classmethod
-    def from_record(cls, record: "Record"):
+    def from_record(cls, record: "Record", flow_id: Optional[str] = None):
         # first check if the record has all the required fields
         if not record.data or ("sender" not in record.data and "sender_name" not in record.data):
             raise ValueError("The record does not have the required fields 'sender' and 'sender_name' in the data.")
@@ -88,7 +95,24 @@ class MessageModel(BaseModel):
             message=record.text,
             session_id=record.session_id,
             artifacts=record.artifacts or {},
+            flow_id=flow_id,
         )
+
+
+class MessageModelResponse(MessageModel):
+    index: Optional[int] = Field(default=None)
+
+    @field_validator("artifacts", mode="before")
+    def serialize_artifacts(v):
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
+
+    @field_validator("index", mode="before")
+    def validate_id(cls, v):
+        if isinstance(v, float):
+            return int(v)
+        return v
 
 
 class VertexBuildModel(BaseModel):
