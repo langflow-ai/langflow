@@ -1,15 +1,14 @@
 from typing import List
 from uuid import UUID
-import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from langflow.api.v1.flows import create_flows
-from langflow.api.v1.schemas import FlowListCreate, FlowListRead
+from langflow.api.v1.schemas import FlowListCreate, FlowListReadWithFolderName
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 import orjson
 from sqlalchemy import update
-from sqlmodel import Session, col, select
+from sqlmodel import Session, select
 
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.folder.model import (
@@ -20,8 +19,7 @@ from langflow.services.database.models.folder.model import (
     FolderUpdate,
 )
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session, get_settings_service
-from langflow.services.settings.service import SettingsService
+from langflow.services.deps import get_session
 
 router = APIRouter(prefix="/folders", tags=["Folders"])
 
@@ -42,19 +40,13 @@ def create_folder(
 
         if folder.components_list.__len__() > 0:
             update_statement_components = (
-                update(Flow)
-                .where(Flow.id.in_(folder.components_list))
-                .values(folder_id=new_folder.id)
+                update(Flow).where(Flow.id.in_(folder.components_list)).values(folder_id=new_folder.id)
             )
             session.exec(update_statement_components)
             session.commit()
 
         if folder.flows_list.__len__() > 0:
-            update_statement_flows = (
-                update(Flow)
-                .where(Flow.id.in_(folder.flows_list))
-                .values(folder_id=new_folder.id)
-            )
+            update_statement_flows = update(Flow).where(Flow.id.in_(folder.flows_list)).values(folder_id=new_folder.id)
             session.exec(update_statement_flows)
             session.commit()
 
@@ -77,15 +69,13 @@ def read_folders(
 
 
 @router.get("/starter-projects", response_model=FolderReadWithFlows, status_code=200)
-def read_starter_folders(
-    *,
-    session: Session = Depends(get_session)
-):
+def read_starter_folders(*, session: Session = Depends(get_session)):
     try:
         folders = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
         return folders
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/{folder_id}", response_model=FolderReadWithFlows, status_code=200)
 def read_folder(
@@ -129,19 +119,13 @@ def update_folder(
 
         if folder.components.__len__() > 0:
             update_statement_components = (
-                update(Flow)
-                .where(Flow.id.in_(folder.components))
-                .values(folder_id=existing_folder.id)
+                update(Flow).where(Flow.id.in_(folder.components)).values(folder_id=existing_folder.id)
             )
             session.exec(update_statement_components)
             session.commit()
 
         if folder.flows.__len__() > 0:
-            update_statement_flows = (
-                update(Flow)
-                .where(Flow.id.in_(folder.flows))
-                .values(folder_id=existing_folder.id)
-            )
+            update_statement_flows = update(Flow).where(Flow.id.in_(folder.flows)).values(folder_id=existing_folder.id)
             session.exec(update_statement_flows)
             session.commit()
 
@@ -169,7 +153,7 @@ def delete_folder(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/download/{folder_id}", response_model=FlowListRead, status_code=200)
+@router.get("/download/{folder_id}", response_model=FlowListReadWithFolderName, status_code=200)
 async def download_file(
     *,
     session: Session = Depends(get_session),
@@ -179,9 +163,12 @@ async def download_file(
     """Download all flows as a file."""
     try:
         flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Folder.user_id == current_user.id)).all()
+        folder_name = (
+            session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first().name
+        )
         if not flows:
             raise HTTPException(status_code=404, detail="Folder not found")
-        return FlowListRead(flows=flows)
+        return FlowListReadWithFolderName(flows=flows, folder_name=folder_name)
     except Exception as e:
         if "No result found" in str(e):
             raise HTTPException(status_code=404, detail="Folder not found")

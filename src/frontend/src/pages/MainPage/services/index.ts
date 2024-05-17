@@ -1,5 +1,6 @@
 import { BASE_URL_API } from "../../../constants/constants";
 import { api } from "../../../controllers/API/api";
+import { FlowType } from "../../../types/flow";
 import { AddFolderType, FolderType } from "../entities";
 
 export async function getFolders(): Promise<FolderType[]> {
@@ -66,7 +67,9 @@ export async function getStarterProjects() {
   }
 }
 
-export async function downloadFlowsFromFolders(folderId: string) {
+export async function downloadFlowsFromFolders(
+  folderId: string,
+): Promise<{ flows: FlowType[]; folder_name: string }> {
   try {
     const response = await api.get(
       `${BASE_URL_API}folders/download/${folderId}`,
@@ -74,6 +77,7 @@ export async function downloadFlowsFromFolders(folderId: string) {
     if (response?.status !== 200) {
       throw new Error(`HTTP error! status: ${response?.status}`);
     }
+    console.log(response.data);
     return response.data;
   } catch (error) {
     console.error(error);
