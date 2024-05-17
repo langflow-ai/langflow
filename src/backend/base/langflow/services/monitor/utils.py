@@ -61,7 +61,7 @@ def drop_and_create_table_if_schema_mismatch(db_path: str, table_name: str, mode
         if current_schema != desired_schema:
             # If they don't match, drop the existing table and create a new one
             conn.execute(f"DROP TABLE IF EXISTS {table_name}")
-            if "id" in desired_schema.keys():
+            if INDEX_KEY in desired_schema.keys():
                 # Create a sequence for the id column
                 try:
                     conn.execute(f"CREATE SEQUENCE seq_{table_name} START 1;")
