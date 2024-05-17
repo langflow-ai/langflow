@@ -37,21 +37,6 @@ const TableComponent = forwardRef<
     ref,
   ) => {
     const dark = useDarkStore((state) => state.dark);
-
-    if (props.rowData.length === 0) {
-      return (
-        <div className="flex h-full w-full items-center justify-center rounded-md border">
-          <Alert variant={"default"} className="w-[50%]">
-            <ForwardedIconComponent
-              name="AlertCircle"
-              className="h-5 w-5 text-primary"
-            />
-            <AlertTitle>{alertTitle}</AlertTitle>
-            <AlertDescription>{alertDescription}</AlertDescription>
-          </Alert>
-        </div>
-      );
-    }
     var currentRowHeight: number;
     var minRowHeight = 25;
 
@@ -96,6 +81,21 @@ const TableComponent = forwardRef<
       },
       [updateRowHeight],
     );
+
+    if (props.rowData.length === 0) {
+      return (
+        <div className="flex h-full w-full items-center justify-center rounded-md border">
+          <Alert variant={"default"} className="w-[50%]">
+            <ForwardedIconComponent
+              name="AlertCircle"
+              className="h-5 w-5 text-primary"
+            />
+            <AlertTitle>{alertTitle}</AlertTitle>
+            <AlertDescription>{alertDescription}</AlertDescription>
+          </Alert>
+        </div>
+      );
+    }
 
     return (
       <div
