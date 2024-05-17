@@ -202,15 +202,15 @@ async def upload_file(
 
     if(data.__len__() == 0):
         raise HTTPException(status_code=400, detail="No flows found in the file")
-    
+
     folder_results = session.exec(select(Folder).where(Folder.name.like(f"{data['folder_name']}%"), Folder.user_id == current_user.id))
     existing_folder_names = [folder.name for folder in folder_results]
 
     if existing_folder_names.__len__() > 0:
         data['folder_name'] = f"{data['folder_name']} ({existing_folder_names.__len__() + 1})"
-    
+
     folder = FolderCreate(name=data['folder_name'], description=data['folder_description'])
-    
+
     new_folder = Folder.model_validate(folder, from_attributes=True)
     new_folder.id = None
     new_folder.user_id = current_user.id
