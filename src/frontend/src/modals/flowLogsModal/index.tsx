@@ -30,7 +30,7 @@ export default function FlowLogsModal({
   const [description, setDescription] = useState(currentFlow!.description);
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
-  const [activeTab, setActiveTab] = useState("logs");
+  const [activeTab, setActiveTab] = useState("Transactions");
 
   function handleClick(): void {
     currentFlow!.name = name;
@@ -40,13 +40,13 @@ export default function FlowLogsModal({
   }
 
   useEffect(() => {
-    if (activeTab === "logs") {
+    if (activeTab === "Transactions") {
       getTransactionTable(currentFlowId, "union").then((data) => {
         const { columns, rows } = data;
         setColumns(columns.map((col) => ({ ...col, editable: true })));
         setRows(rows);
       });
-    } else if (activeTab === "session") {
+    } else if (activeTab === "Messages") {
       getMessagesTable(currentFlowId, "union").then((data) => {
         const { columns, rows } = data;
         setColumns(columns.map((col) => ({ ...col, editable: true })));
@@ -79,8 +79,8 @@ export default function FlowLogsModal({
             className={"api-modal-tabs inset-0 m-0 self-center"}
           >
             <TabsList>
-              <TabsTrigger value={"logs"}>Logs View</TabsTrigger>
-              <TabsTrigger value={"session"}>Session View</TabsTrigger>
+              <TabsTrigger value={"Transactions"}>Transactions</TabsTrigger>
+              <TabsTrigger value={"Messages"}>Messages</TabsTrigger>
             </TabsList>
           </Tabs>
           <div className="flex h-fit w-32 items-center"></div>
