@@ -44,7 +44,7 @@ const HeaderComponent = ({
                     htmlFor="terms"
                     className="label cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    {shouldSelectAll ? "Select all" : "Unselect all"}
+                    {shouldSelectAll ? "Select All" : "Unselect All"}
                   </label>
                 </div>
               </div>

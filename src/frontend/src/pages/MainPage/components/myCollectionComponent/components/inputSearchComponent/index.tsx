@@ -15,11 +15,11 @@ const InputSearchComponent = ({
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
 
   const setSearchFlowsComponents = useFlowsManagerStore(
-    (state) => state.setSearchFlowsComponents
+    (state) => state.setSearchFlowsComponents,
   );
 
   const searchFlowsComponents = useFlowsManagerStore(
-    (state) => state.searchFlowsComponents
+    (state) => state.searchFlowsComponents,
   );
 
   const disableInputSearch =
@@ -33,7 +33,7 @@ const InputSearchComponent = ({
         <Input
           data-testid="search-store-input"
           disabled={disableInputSearch}
-          placeholder={`Search ${isFlowPage ? "flows" : "components"}`}
+          placeholder={`Search ${isFlowPage ? "Flows" : "Components"}`}
           className="absolute h-12 pl-5 pr-7"
           onChange={(e) => {
             setSearchFlowsComponents(e.target.value);
