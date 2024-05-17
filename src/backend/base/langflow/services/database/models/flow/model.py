@@ -113,7 +113,7 @@ class Flow(FlowBase, table=True):
     data: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
     user_id: Optional[UUID] = Field(index=True, foreign_key="user.id", nullable=True)
     user: "User" = Relationship(back_populates="flows")
-    folder_id: Optional[UUID] = Field(default=None, foreign_key="folder.id")
+    folder_id: Optional[UUID] = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
 
     def to_record(self):
