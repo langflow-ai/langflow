@@ -65,87 +65,72 @@ const SideBarFoldersButtonsComponent = ({
         />
       </div>
 
-      <div
-        onDragOver={dragOver}
-        onDragEnter={dragEnter}
-        onDragLeave={dragLeave}
-        onDrop={onDrop}
-        className="flex h-[70vh] gap-2 overflow-auto border border-red-500 lg:flex-col"
-      >
-        {folderDragging ? (
-          <div className="grid ">
-            <IconComponent
-              name={"ArrowUpToLine"}
-              className="m-auto w-7 justify-start stroke-[1.5] opacity-100"
-            />
+      <div className="flex h-[70vh] gap-2 overflow-auto lg:flex-col">
+        <>
+          {folders.map((item, index) => (
+            <div
+              onDragOver={dragOver}
+              onDragEnter={dragEnter}
+              onDragLeave={dragLeave}
+              onDrop={onDrop}
+              key={item.id}
+              data-testid={`sidebar-nav-${item.name}`}
+              className={cn(
+                `${folderDragging ? "hover:bg-red-500" : ""}`,
+                buttonVariants({ variant: "ghost" }),
+                checkPathName(item.id!)
+                  ? "border border-border bg-muted hover:bg-muted"
+                  : "border hover:bg-transparent lg:border-transparent lg:hover:border-border",
+                "group flex min-w-48 max-w-48 shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full",
+              )}
+              onClick={() => handleChangeFolder!(item.id!)}
+            >
+              <div className="flex w-full items-center gap-2">
+                <IconComponent
+                  name={"folder"}
+                  className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
+                />
+                <span className="block max-w-full truncate opacity-100">
+                  {item.name}
+                </span>
+                <div className="flex-1" />
+                {index > 0 && (
+                  <>
+                    <Button
+                      className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
+                      onClick={(e) => {
+                        handleDeleteFolder!(item);
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      variant={"ghost"}
+                    >
+                      <IconComponent
+                        name={"trash"}
+                        className=" w-4 stroke-[1.5]"
+                      />
+                    </Button>
 
-            <span className="m-auto mt-3 self-center font-light">
-              Drag your folder here
-            </span>
-          </div>
-        ) : (
-          <>
-            {folders.map((item, index) => (
-              <div
-                key={item.id}
-                data-testid={`sidebar-nav-${item.name}`}
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  checkPathName(item.id!)
-                    ? "border border-border bg-muted hover:bg-muted"
-                    : "border hover:bg-transparent lg:border-transparent lg:hover:border-border",
-                  "group flex min-w-48 max-w-48 shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full",
+                    <Button
+                      className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
+                      onClick={(e) => {
+                        handleEditFolder!(item);
+                        e.stopPropagation();
+                        e.preventDefault();
+                      }}
+                      variant={"ghost"}
+                    >
+                      <IconComponent
+                        name={"pencil"}
+                        className="  w-4 stroke-[1.5] text-white  "
+                      />
+                    </Button>
+                  </>
                 )}
-                onClick={() => handleChangeFolder!(item.id!)}
-              >
-                <div className="flex w-full items-center gap-2">
-                  <IconComponent
-                    name={"folder"}
-                    className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
-                  />
-
-                  <span className="block max-w-full truncate opacity-100">
-                    {item.name}
-                  </span>
-                  <div className="flex-1" />
-                  {index > 0 && (
-                    <>
-                      <Button
-                        className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
-                        onClick={(e) => {
-                          handleDeleteFolder!(item);
-                          e.stopPropagation();
-                          e.preventDefault();
-                        }}
-                        variant={"ghost"}
-                      >
-                        <IconComponent
-                          name={"trash"}
-                          className=" w-4 stroke-[1.5]"
-                        />
-                      </Button>
-
-                      <Button
-                        className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
-                        onClick={(e) => {
-                          handleEditFolder!(item);
-                          e.stopPropagation();
-                          e.preventDefault();
-                        }}
-                        variant={"ghost"}
-                      >
-                        <IconComponent
-                          name={"pencil"}
-                          className="  w-4 stroke-[1.5] text-white  "
-                        />
-                      </Button>
-                    </>
-                  )}
-                </div>
               </div>
-            ))}
-          </>
-        )}
+            </div>
+          ))}
+        </>
       </div>
     </>
   );
