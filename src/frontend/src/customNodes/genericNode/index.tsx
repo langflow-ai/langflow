@@ -303,7 +303,7 @@ export default function GenericNode({
   ) => {
     let isInvalid = validationStatus && !validationStatus.valid;
 
-    if (buildStatus === BuildStatus.INACTIVE && isInvalid) {
+    if (buildStatus === BuildStatus.INACTIVE) {
       // INACTIVE should have its own class
       return "inactive-status";
     }
@@ -329,6 +329,7 @@ export default function GenericNode({
       buildStatus,
       validationStatus
     );
+
     const baseBorderClass = getBaseBorderClass(selected);
     const nodeSizeClass = getNodeSizeClass(showNode);
     return classNames(
@@ -383,7 +384,6 @@ export default function GenericNode({
     isOutdated,
     selected,
   ]);
-
   return (
     <>
       {memoizedNodeToolbarComponent}
