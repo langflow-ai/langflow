@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
 import { useFolderStore } from "../../../../stores/foldersStore";
+import { useStoreStore } from "../../../../stores/storeStore";
 import { cn } from "../../../../utils/utils";
 import DropdownButton from "../../../dropdownButtonComponent";
 import IconComponent from "../../../genericIconComponent";
@@ -25,8 +26,10 @@ const SideBarFoldersButtonsComponent = ({
 }: SideBarFoldersButtonsComponentProps) => {
   const currentFolder = pathname.split("/");
   const urlWithoutPath = pathname.split("/").length < 4;
-
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const hasStore = useStoreStore((state) => state.hasStore);
+  const validApiKey = useStoreStore((state) => state.validApiKey);
+  const hasApiKey = useStoreStore((state) => state.hasApiKey);
 
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId) {

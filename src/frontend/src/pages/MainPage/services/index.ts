@@ -12,7 +12,7 @@ export async function getFolders(): Promise<FolderType[]> {
   }
 }
 
-export async function addFolder(data: AddFolderType) {
+export async function addFolder(data: AddFolderType): Promise<FolderType> {
   const body = {
     name: data.name,
     description: data.description,
