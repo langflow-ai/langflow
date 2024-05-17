@@ -218,7 +218,7 @@ export default function CollectionCardComponent({
               <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
                 <IconComponent
                   className={cn(
-                    "visible flex-shrink-0 group-hover:invisible",
+                    "visible flex-shrink-0",
                     data.is_component
                       ? "mx-0.5 h-6 w-6 text-component-icon"
                       : "h-7 w-7 flex-shrink-0 text-flow-icon",
@@ -226,33 +226,8 @@ export default function CollectionCardComponent({
                   name={data.is_component ? "ToyBrick" : "Group"}
                 />
 
-                <div className="invisible absolute mb-1 ml-1 group-hover:visible">
-                  {control && (
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <FormField
-                        control={control}
-                        name={`${data.id}`}
-                        defaultValue={false}
-                        render={({ field }) => (
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              className="relative top-1 h-5 w-5 border border-medium-indigo"
-                            />
-                          </FormControl>
-                        )}
-                      />
-                    </div>
-                  )}
-                </div>
-
                 <ShadTooltip content={data.name}>
-                  <div className="w-full truncate">{data.name}</div>
+                  <div className="w-full truncate pr-3">{data.name}</div>
                 </ShadTooltip>
                 {data?.metadata !== undefined && (
                   <div className="flex gap-3">
@@ -298,21 +273,30 @@ export default function CollectionCardComponent({
                   </div>
                 )}
 
-                {onDelete && data?.metadata === undefined && (
-                  <button
-                    className="z-50"
-                    onClick={(e) => {
-                      setOpenDelete(true);
-                      e.stopPropagation();
-                      e.preventDefault();
-                    }}
-                  >
-                    <IconComponent
-                      name="Trash2"
-                      className="h-5 w-5 text-primary opacity-0 transition-all hover:text-destructive group-hover:opacity-100"
-                    />
-                  </button>
-                )}
+                <div className="absolute right-2 top-1">
+                  {control && (
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <FormField
+                        control={control}
+                        name={`${data.id}`}
+                        defaultValue={false}
+                        render={({ field }) => (
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              className="relative top-1 h-5 w-5 border border-medium-indigo"
+                            />
+                          </FormControl>
+                        )}
+                      />
+                    </div>
+                  )}
+                </div>
               </CardTitle>
             </div>
             <div className="flex gap-2">

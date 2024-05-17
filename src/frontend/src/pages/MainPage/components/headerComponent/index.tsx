@@ -9,18 +9,22 @@ import {
   SelectValue,
 } from "../../../../components/ui/select";
 import { Checkbox } from "../../../../components/ui/checkbox";
+import { Button } from "../../../../components/ui/button";
+import { cn } from "../../../../utils/utils";
+import ShadTooltip from "../../../../components/shadTooltipComponent";
 
 type HeaderComponentProps = {
   handleSelectAll: (select) => void;
-  handleSelectOptionsChange: (option) => void;
+  handleDelete: () => void;
+  disableDelete: boolean;
 };
 
 const HeaderComponent = ({
   handleSelectAll,
-  handleSelectOptionsChange,
+  handleDelete,
+  disableDelete,
 }: HeaderComponentProps) => {
   const [shouldSelectAll, setShouldSelectAll] = useState(true);
-  const [value, setValue] = useState("");
 
   const handleClick = () => {
     handleSelectAll(shouldSelectAll);
@@ -53,33 +57,25 @@ const HeaderComponent = ({
         </div>
         <div className="col-span-2 grid-cols-1 justify-self-end">
           <div>
-            <Select
-              value={value}
-              onValueChange={(e) => {
-                handleSelectOptionsChange(e);
-                setValue("");
-              }}
+            <ShadTooltip
+              content={
+                disableDelete ? (
+                  <span>Select items to delete</span>
+                ) : (
+                  <span>Delete selected items</span>
+                )
+              }
             >
-              <SelectTrigger className="w-[140px] flex-shrink-0">
-                <SelectValue placeholder="Actions" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup className="right-6">
-                  <SelectItem
-                    value={"delete"}
-                    className="cursor-pointer focus:bg-red-400/[.20]"
-                  >
-                    <div className="font-red flex text-status-red">
-                      <IconComponent
-                        name="Trash2"
-                        className="relative top-0.5 mr-2 h-4 w-4 "
-                      />{" "}
-                      <span>Delete</span>
-                    </div>
-                  </SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+              <button onClick={handleDelete} disabled={disableDelete}>
+                <IconComponent
+                  name="Trash2"
+                  className={cn(
+                    "h-5 w-5 text-primary transition-all",
+                    disableDelete ? "" : "hover:text-destructive",
+                  )}
+                />
+              </button>
+            </ShadTooltip>
           </div>
         </div>
       </div>

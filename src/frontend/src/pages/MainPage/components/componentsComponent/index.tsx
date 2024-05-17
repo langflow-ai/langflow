@@ -114,22 +114,16 @@ export default function ComponentsComponent({
     });
   };
 
-  const handleSelectOptionsChange = (option) => {
-    switch (option) {
-      case "delete":
-        const hasSelected = selectedFlowsComponentsCards?.length > 0;
-        if (!hasSelected) {
-          setErrorData({
-            title: "No items selected",
-            list: ["Please select items to delete"],
-          });
-          return;
-        }
-        setOpenDelete(true);
-        break;
-      default:
-        break;
+  const handleSelectOptionsChange = () => {
+    const hasSelected = selectedFlowsComponentsCards?.length > 0;
+    if (!hasSelected) {
+      setErrorData({
+        title: "No items selected",
+        list: ["Please select items to delete"],
+      });
+      return;
     }
+    setOpenDelete(true);
   };
 
   const handleDelete = (item) => {
@@ -186,8 +180,9 @@ export default function ComponentsComponent({
     <>
       {allFlows?.length > 0 && (
         <HeaderComponent
-          handleSelectOptionsChange={handleSelectOptionsChange}
+          handleDelete={handleSelectOptionsChange}
           handleSelectAll={handleSelectAll}
+          disableDelete={!(selectedFlowsComponentsCards?.length > 0)}
         />
       )}
 
