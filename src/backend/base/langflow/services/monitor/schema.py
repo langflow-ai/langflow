@@ -98,6 +98,7 @@ class MessageModel(BaseModel):
             message=record.text,
             session_id=record.session_id,
             artifacts=record.artifacts or {},
+            timestamp=record.timestamp,
             flow_id=flow_id,
         )
 
