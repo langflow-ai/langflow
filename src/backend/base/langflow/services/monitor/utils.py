@@ -119,6 +119,7 @@ async def log_message(
     message: str,
     session_id: str,
     artifacts: Optional[dict] = None,
+    flow_id: Optional[str] = None,
 ):
     try:
         from langflow.graph.vertex.base import Vertex
@@ -134,6 +135,7 @@ async def log_message(
             "artifacts": artifacts or {},
             "session_id": session_id,
             "timestamp": monitor_service.get_timestamp(),
+            "flow_id": flow_id,
         }
         monitor_service.add_row(table_name="messages", data=row)
     except Exception as e:

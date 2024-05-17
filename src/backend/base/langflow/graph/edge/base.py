@@ -156,6 +156,7 @@ class ContractEdge(Edge):
                 message=target.params.get(INPUT_FIELD_NAME, {}),
                 session_id=target.params.get("session_id", ""),
                 artifacts=target.artifacts,
+                flow_id=target.graph.flow_id,
             )
         return self.result
 
