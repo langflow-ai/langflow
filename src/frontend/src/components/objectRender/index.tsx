@@ -6,9 +6,7 @@ export default function ObjectRender({ object }: { object: any }): JSX.Element {
   return (
     <DictAreaModal value={object}>
       <div className="flex h-full w-full items-center align-middle hover:animate-slow-wiggle">
-        <div className="flex h-full w-full items-center truncate align-middle">
-          {JSON.stringify(object)}
-        </div>
+        <div className="truncate">{JSON.stringify(object)}</div>
       </div>
     </DictAreaModal>
   );
