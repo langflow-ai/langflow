@@ -76,7 +76,7 @@ def add_messages(records: Union[list[Record], Record], flow_id: Optional[str] = 
 
         messages: list[MessageModel] = []
         for record in records:
-            records.timestamp = monitor_service.get_timestamp()
+            record.timestamp = monitor_service.get_timestamp()
             messages.append(MessageModel.from_record(record, flow_id=flow_id))
 
         for message in messages:
