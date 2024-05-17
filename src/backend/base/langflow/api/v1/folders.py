@@ -13,7 +13,6 @@ from sqlmodel import Session, select
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.folder.model import (
     Folder,
-    FolderBase,
     FolderCreate,
     FolderRead,
     FolderReadWithFlows,
@@ -119,16 +118,24 @@ def update_folder(
         session.commit()
         session.refresh(existing_folder)
 
-        if folder.components.__len__() > 0:
+        concat_folder_components = folder.components + folder.flows
+
+        flows_ids = session.exec(select(Flow.id).where(Flow.folder_id == existing_folder.id)).all()
+
+        excluded_flows = list(set(flows_ids) - set(concat_folder_components))
+
+        my_collection_folder = session.exec(select(Folder).where(Folder.name == "My Collection")).first()
+        if my_collection_folder:
+            update_statement_my_collection = update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_folder.id)
+            session.exec(update_statement_my_collection)
+            session.commit()
+        
+
+        if concat_folder_components.__len__() > 0:
             update_statement_components = (
-                update(Flow).where(Flow.id.in_(folder.components)).values(folder_id=existing_folder.id)
+                update(Flow).where(Flow.id.in_(concat_folder_components)).values(folder_id=existing_folder.id)
             )
             session.exec(update_statement_components)
-            session.commit()
-
-        if folder.flows.__len__() > 0:
-            update_statement_flows = update(Flow).where(Flow.id.in_(folder.flows)).values(folder_id=existing_folder.id)
-            session.exec(update_statement_flows)
             session.commit()
 
         return existing_folder
