@@ -60,7 +60,10 @@ class TransactionModelResponse(BaseModel):
     @field_validator("index", mode="before")
     def validate_id(cls, v):
         if isinstance(v, float):
-            return int(v)
+            try:
+                return int(v)
+            except ValueError:
+                return None
         return v
 
 
@@ -111,7 +114,10 @@ class MessageModelResponse(MessageModel):
     @field_validator("index", mode="before")
     def validate_id(cls, v):
         if isinstance(v, float):
-            return int(v)
+            try:
+                return int(v)
+            except ValueError:
+                return None
         return v
 
 
