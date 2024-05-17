@@ -159,11 +159,12 @@ export default function ParameterComponent({
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
+    skipSnapshot: boolean | undefined = false,
   ): Promise<void> => {
     const nodeTemplate = data.node!.template[name];
     const currentValue = nodeTemplate.value;
 
-    if (currentValue !== newValue) {
+    if (currentValue !== newValue && !skipSnapshot) {
       takeSnapshot();
     }
 

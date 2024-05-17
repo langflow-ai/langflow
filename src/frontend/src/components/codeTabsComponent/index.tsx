@@ -43,6 +43,7 @@ import KeypairListComponent from "../keypairListComponent";
 import ShadTooltip from "../shadTooltipComponent";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
+import ExportModal from "../../modals/exportModal";
 
 export default function CodeTabsComponent({
   flow,
@@ -167,6 +168,12 @@ export default function CodeTabsComponent({
               Tweaks
             </Label>
           </div>
+          <ExportModal>
+            <div className="flex cursor-pointer items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300">
+              <IconComponent name="FileDown" className="h-4 w-4" />
+              Export Flow
+            </div>
+          </ExportModal>
 
           {Number(activeTab) < 4 && (
             <>
