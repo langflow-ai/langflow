@@ -15,7 +15,7 @@ test("InputComponent", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -58,69 +58,69 @@ test("InputComponent", async ({ page }) => {
   expect(
     await page
       .locator('//*[@id="showchroma_server_cors_allow_origins"]')
-      .isChecked()
+      .isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showchroma_server_grpc_port"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_grpc_port"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_grpc_port"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showchroma_server_host"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_host"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_host"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showchroma_server_port"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_port"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_port"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showchroma_server_ssl_enabled"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_ssl_enabled"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_ssl_enabled"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showcollection_name"]').click();
   expect(
-    await page.locator('//*[@id="showcollection_name"]').isChecked()
+    await page.locator('//*[@id="showcollection_name"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showindex_directory"]').click();
   expect(
-    await page.locator('//*[@id="showindex_directory"]').isChecked()
+    await page.locator('//*[@id="showindex_directory"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showchroma_server_cors_allow_origins"]').click();
   expect(
     await page
       .locator('//*[@id="showchroma_server_cors_allow_origins"]')
-      .isChecked()
+      .isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showchroma_server_grpc_port"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_grpc_port"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_grpc_port"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showchroma_server_host"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_host"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_host"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showchroma_server_port"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_port"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_port"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showchroma_server_ssl_enabled"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_ssl_enabled"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_ssl_enabled"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showindex_directory"]').click();
   expect(
-    await page.locator('//*[@id="showindex_directory"]').isChecked()
+    await page.locator('//*[@id="showindex_directory"]').isChecked(),
   ).toBeTruthy();
 
   let valueEditNode = await page
@@ -150,7 +150,7 @@ test("InputComponent", async ({ page }) => {
 
     await page.locator('//*[@id="showcollection_name"]').click();
     expect(
-      await page.locator('//*[@id="showcollection_name"]').isChecked()
+      await page.locator('//*[@id="showcollection_name"]').isChecked(),
     ).toBeTruthy();
 
     await page.locator('//*[@id="saveChangesBtn"]').click();

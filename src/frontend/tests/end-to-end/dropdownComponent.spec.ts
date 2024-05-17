@@ -15,7 +15,7 @@ test("dropDownComponent", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -78,32 +78,32 @@ test("dropDownComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showcredentials_profile_name"]').click();
   expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked()
+    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showcredentials_profile_name"]').click();
   expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked()
+    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showendpoint_url"]').click();
   expect(
-    await page.locator('//*[@id="showendpoint_url"]').isChecked()
+    await page.locator('//*[@id="showendpoint_url"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showendpoint_url"]').click();
   expect(
-    await page.locator('//*[@id="showendpoint_url"]').isChecked()
+    await page.locator('//*[@id="showendpoint_url"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showregion_name"]').click();
   expect(
-    await page.locator('//*[@id="showregion_name"]').isChecked()
+    await page.locator('//*[@id="showregion_name"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showregion_name"]').click();
   expect(
-    await page.locator('//*[@id="showregion_name"]').isChecked()
+    await page.locator('//*[@id="showregion_name"]').isChecked(),
   ).toBeTruthy();
 
   // showmodel_id
@@ -113,7 +113,7 @@ test("dropDownComponent", async ({ page }) => {
   // showmodel_id
   await page.locator('//*[@id="showmodel_id"]').click();
   expect(
-    await page.locator('//*[@id="showmodel_id"]').isChecked()
+    await page.locator('//*[@id="showmodel_id"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showcache"]').click();
@@ -124,32 +124,32 @@ test("dropDownComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showcredentials_profile_name"]').click();
   expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked()
+    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showcredentials_profile_name"]').click();
   expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked()
+    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showendpoint_url"]').click();
   expect(
-    await page.locator('//*[@id="showendpoint_url"]').isChecked()
+    await page.locator('//*[@id="showendpoint_url"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showendpoint_url"]').click();
   expect(
-    await page.locator('//*[@id="showendpoint_url"]').isChecked()
+    await page.locator('//*[@id="showendpoint_url"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showregion_name"]').click();
   expect(
-    await page.locator('//*[@id="showregion_name"]').isChecked()
+    await page.locator('//*[@id="showregion_name"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showregion_name"]').click();
   expect(
-    await page.locator('//*[@id="showregion_name"]').isChecked()
+    await page.locator('//*[@id="showregion_name"]').isChecked(),
   ).toBeTruthy();
 
   // showmodel_id
@@ -159,7 +159,7 @@ test("dropDownComponent", async ({ page }) => {
   // showmodel_id
   await page.locator('//*[@id="showmodel_id"]').click();
   expect(
-    await page.locator('//*[@id="showmodel_id"]').isChecked()
+    await page.locator('//*[@id="showmodel_id"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("dropdown-edit-model_id").click();

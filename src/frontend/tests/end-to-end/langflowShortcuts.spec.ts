@@ -23,7 +23,7 @@ test("LangflowShortcuts", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -61,7 +61,7 @@ test("LangflowShortcuts", async ({ page }) => {
 
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div[2]/div/div[1]/div/div[1]/div/div/div[1]'
+      '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div[2]/div/div[1]/div/div[1]/div/div/div[1]',
     )
     .click();
   await page.keyboard.press("Backspace");
@@ -84,7 +84,7 @@ test("LangflowShortcuts", async ({ page }) => {
 
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div[2]/div/div[1]/div/div[1]/div/div/div[1]'
+      '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div[2]/div/div[1]/div/div[1]/div/div/div[1]',
     )
     .click();
   await page.keyboard.press("Backspace");

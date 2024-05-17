@@ -16,7 +16,7 @@ test("CRUD folders", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -31,7 +31,7 @@ test("CRUD folders", async ({ page }) => {
   await page.getByText("Select All").isVisible();
   await page.getByText("Actions").isVisible();
 
-  await page.getByText("New Folder").click();
+  await page.getByText("New Folder", { exact: true }).last().click();
   await page.getByPlaceholder("Insert a name for the folder").fill("test");
   await page
     .getByPlaceholder("Insert a description for the folder")
@@ -56,7 +56,7 @@ test("CRUD folders", async ({ page }) => {
   await page
     .getByPlaceholder("Insert a description for the folder")
     .fill("test edit");
-  await page.getByText("Edit Folder").click();
+  await page.getByText("Edit Folder").last().click();
   await page.getByText("test edit").last().isVisible();
 
   await page
@@ -78,7 +78,7 @@ test("add folder by drag and drop", async ({ page }) => {
 
   const jsonContent = readFileSync(
     "tests/end-to-end/assets/collection.json",
-    "utf-8"
+    "utf-8",
   );
 
   // Create the DataTransfer and File
@@ -94,11 +94,11 @@ test("add folder by drag and drop", async ({ page }) => {
 
   // Now dispatch
   await page.dispatchEvent(
-    '//*[@id="root"]/div/div[1]/div[2]/div[3]/aside/nav/div[2]',
+    '//*[@id="root"]/div/div[1]/div[2]/div[3]/aside/nav/div[2]/div[2]',
     "drop",
     {
       dataTransfer,
-    }
+    },
   );
 
   await page.getByText("Getting Started").first().isVisible();

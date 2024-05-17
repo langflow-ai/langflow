@@ -76,7 +76,6 @@ const SideBarFoldersButtonsComponent = ({
               key={item.id}
               data-testid={`sidebar-nav-${item.name}`}
               className={cn(
-                `${folderDragging ? "hover:bg-red-500" : ""}`,
                 buttonVariants({ variant: "ghost" }),
                 checkPathName(item.id!)
                   ? "border border-border bg-muted hover:bg-muted"
