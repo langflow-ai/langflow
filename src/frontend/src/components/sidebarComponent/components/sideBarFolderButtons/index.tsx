@@ -50,7 +50,7 @@ const SideBarFoldersButtonsComponent = ({
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(
     folderId,
     is_component,
-    handleFolderChange
+    handleFolderChange,
   );
 
   return (
@@ -70,7 +70,7 @@ const SideBarFoldersButtonsComponent = ({
         onDragEnter={dragEnter}
         onDragLeave={dragLeave}
         onDrop={onDrop}
-        className="flex lg:flex-col gap-2"
+        className="flex h-full gap-2 lg:flex-col"
       >
         {folderDragging ? (
           <div className="grid">
@@ -93,54 +93,54 @@ const SideBarFoldersButtonsComponent = ({
                   buttonVariants({ variant: "ghost" }),
                   checkPathName(item.id!)
                     ? "border border-border bg-muted hover:bg-muted"
-                    : "border lg:border-transparent lg:hover:border-border hover:bg-transparent",
-                  "group flex min-w-48 lg:min-w-full max-w-48 shrink-0 cursor-pointer gap-2 opacity-100"
+                    : "border hover:bg-transparent lg:border-transparent lg:hover:border-border",
+                  "group flex min-w-48 max-w-48 shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full",
                 )}
                 onClick={() => handleChangeFolder!(item.id!)}
               >
                 <div className="flex w-full items-center gap-2">
-                    <IconComponent
-                      name={"folder"}
-                      className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
-                    />
+                  <IconComponent
+                    name={"folder"}
+                    className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
+                  />
 
-                    <span className="block max-w-full truncate opacity-100">
-                      {item.name}
-                    </span>
-                    <div className="flex-1"/>
-                    {index > 0 && (
-                      <>
-                        <Button
-                          className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
-                          onClick={(e) => {
-                            handleDeleteFolder!(item);
-                            e.stopPropagation();
-                            e.preventDefault();
-                          }}
-                          variant={"ghost"}
-                        >
-                          <IconComponent
-                            name={"trash"}
-                            className=" w-4 stroke-[1.5]"
-                          />
-                        </Button>
+                  <span className="block max-w-full truncate opacity-100">
+                    {item.name}
+                  </span>
+                  <div className="flex-1" />
+                  {index > 0 && (
+                    <>
+                      <Button
+                        className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
+                        onClick={(e) => {
+                          handleDeleteFolder!(item);
+                          e.stopPropagation();
+                          e.preventDefault();
+                        }}
+                        variant={"ghost"}
+                      >
+                        <IconComponent
+                          name={"trash"}
+                          className=" w-4 stroke-[1.5]"
+                        />
+                      </Button>
 
-                        <Button
-                          className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
-                          onClick={(e) => {
-                            handleEditFolder!(item);
-                            e.stopPropagation();
-                            e.preventDefault();
-                          }}
-                          variant={"ghost"}
-                        >
-                          <IconComponent
-                            name={"pencil"}
-                            className="  w-4 stroke-[1.5] text-white  "
-                          />
-                        </Button>
-                      </>
-                    )}
+                      <Button
+                        className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
+                        onClick={(e) => {
+                          handleEditFolder!(item);
+                          e.stopPropagation();
+                          e.preventDefault();
+                        }}
+                        variant={"ghost"}
+                      >
+                        <IconComponent
+                          name={"pencil"}
+                          className="  w-4 stroke-[1.5] text-white  "
+                        />
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
