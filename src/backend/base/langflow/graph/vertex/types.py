@@ -428,13 +428,13 @@ class InterfaceVertex(Vertex):
                 `ignore_errors` is set to `False`.
         """
         if isinstance(self._built_object, Record):
-            artifacts = [self._built_object.model_dump()]
+            artifacts = [self._built_object.data]
         elif isinstance(self._built_object, list):
             artifacts = []
             ignore_errors = self.params.get("ignore_errors", False)
             for record in self._built_object:
                 if isinstance(record, Record):
-                    artifacts.append(record.model_dump())
+                    artifacts.append(record.data)
                 elif ignore_errors:
                     logger.error(f"Record expected, but got {record} of type {type(record)}")
                 else:
