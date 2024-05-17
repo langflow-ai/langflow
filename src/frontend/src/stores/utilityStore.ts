@@ -11,6 +11,4 @@ export const useUtilityStore = create<any>((set, get) => ({
       set({ selectedItems: get().selectedItems.concat(itemId) });
     }
   },
-  lastUrlCalled: "",
-  setLastUrlCalled: (url) => set({ lastUrlCalled: url }),
 }));

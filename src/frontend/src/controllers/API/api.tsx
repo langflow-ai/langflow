@@ -6,7 +6,6 @@ import { BuildStatus } from "../../constants/enums";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
-import { useUtilityStore } from "../../stores/utilityStore";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -18,8 +17,6 @@ function ApiInterceptor() {
   let { accessToken, login, logout, authenticationErrorCount, autoLogin } =
     useContext(AuthContext);
   const cookies = new Cookies();
-  const lastUrlCalled = useUtilityStore((state) => state.lastUrlCalled);
-  const setLastUrlCalled = useUtilityStore((state) => state.setLastUrlCalled);
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
@@ -82,7 +79,7 @@ function ApiInterceptor() {
       (config) => {
         const lastUrl = localStorage.getItem("lastUrlCalled");
 
-        if (config.url === lastUrl) {
+        if (config.url === lastUrl && config.url !== "/health") {
           return Promise.reject(new Error("Duplicate request detected"));
         }
 
