@@ -6,6 +6,7 @@ import { BuildStatus } from "../../constants/enums";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
+import { useUtilityStore } from "../../stores/utilityStore";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -17,6 +18,8 @@ function ApiInterceptor() {
   let { accessToken, login, logout, authenticationErrorCount, autoLogin } =
     useContext(AuthContext);
   const cookies = new Cookies();
+  const lastUrlCalled = useUtilityStore((state) => state.lastUrlCalled);
+  const setLastUrlCalled = useUtilityStore((state) => state.setLastUrlCalled);
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
@@ -77,6 +80,14 @@ function ApiInterceptor() {
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
+        const lastUrl = localStorage.getItem("lastUrlCalled");
+
+        if (config.url === lastUrl) {
+          return Promise.reject(new Error("Duplicate request detected"));
+        }
+
+        localStorage.setItem("lastUrlCalled", config.url ?? "");
+
         const accessToken = cookies.get("access_token_lf");
         if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
