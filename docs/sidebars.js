@@ -41,6 +41,7 @@ module.exports = {
         "administration/api",
         "administration/cli",
         "administration/playground",
+        "administration/global-env",
         "administration/components",
         "administration/collection",
         "administration/prompt-customization",
