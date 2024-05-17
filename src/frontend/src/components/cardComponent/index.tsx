@@ -227,7 +227,7 @@ export default function CollectionCardComponent({
                 />
 
                 <ShadTooltip content={data.name}>
-                  <div className="w-full truncate">{data.name}</div>
+                  <div className="w-full truncate pr-3">{data.name}</div>
                 </ShadTooltip>
                 {data?.metadata !== undefined && (
                   <div className="flex gap-3">
