@@ -129,7 +129,7 @@ def update_folder(
             update_statement_my_collection = update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_folder.id)
             session.exec(update_statement_my_collection)
             session.commit()
-        
+
 
         if concat_folder_components.__len__() > 0:
             update_statement_components = (
