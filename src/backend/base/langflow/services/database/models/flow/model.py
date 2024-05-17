@@ -131,17 +131,17 @@ class Flow(FlowBase, table=True):
 
 class FlowCreate(FlowBase):
     user_id: Optional[UUID] = None
-    flow_id: Optional[UUID] = None
+    folder_id: Optional[UUID] = None
 
 
 class FlowRead(FlowBase):
     id: UUID
     user_id: Optional[UUID] = Field()
-    flow_id: Optional[UUID] = Field()
+    folder_id: Optional[UUID] = Field()
 
 
 class FlowUpdate(SQLModel):
     name: Optional[str] = None
     description: Optional[str] = None
     data: Optional[Dict] = None
-    flow_id: Optional[UUID] = None
+    folder_id: Optional[UUID] = None
