@@ -13,18 +13,22 @@ For more information on the starter flow, see [Basic prompting](../starter-proje
 
 1. From the Langflow dashboard, click **New Project**.
 2. Select **Basic Prompting**.
+
 The **Basic Prompting** flow is created.
-3. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
+
+3. To create an environment variable for the **OpenAI** component:
+   1. In the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
+   2. In the **Variable Name** field, enter `openai_api_key`.
+   3. In the **Value** field, paste your OpenAI API Key (`sk-...`).
+   4. For the variable **Type**, select **Credential**.
+   5. In the **Apply to Fields** field, select **OpenAI API Key** to apply this variable to all fields named **OpenAI API Key**.
+   6. Click **Save Variable**.
+
+You now have a `openai_api_key` global environment variable for your Langflow project.
 
 <Admonition type="tip">
   You can also create global variables in **Settings** > **Variables and Secrets**.
 </Admonition>
-
-    1. In the **Variable Name** field, enter `openai_api_key`.
-    2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
-    3. For the variable **Type**, select **Credential**.
-    4. In the **Apply to Fields** field, select **OpenAI API Key** to apply this variable to all fields named **OpenAI API Key**.
-    5. Click **Save Variable**.
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -34,8 +38,6 @@ The **Basic Prompting** flow is created.
   }}
   style={{ width: "40%", margin: "20px auto" }}
 />
-
-You now have a `openai_api_key` global environment variable for your Langflow project.
 
 4. To view and manage your project's global environment variables, visit **Settings** > **Variables and Secrets**.
 
