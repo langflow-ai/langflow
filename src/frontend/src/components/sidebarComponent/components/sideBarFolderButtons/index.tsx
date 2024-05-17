@@ -6,6 +6,8 @@ import DropdownButton from "../../../dropdownButtonComponent";
 import IconComponent from "../../../genericIconComponent";
 import { Button, buttonVariants } from "../../../ui/button";
 import useFileDrop from "../../hooks/use-on-file-drop";
+import { useStoreStore } from "../../../../stores/storeStore";
+import ShadTooltip from "../../../shadTooltipComponent";
 
 type SideBarFoldersButtonsComponentProps = {
   folders: FolderType[];
@@ -25,8 +27,10 @@ const SideBarFoldersButtonsComponent = ({
 }: SideBarFoldersButtonsComponentProps) => {
   const currentFolder = pathname.split("/");
   const urlWithoutPath = pathname.split("/").length < 4;
-
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const hasStore = useStoreStore((state) => state.hasStore);
+  const validApiKey = useStoreStore((state) => state.validApiKey);
+  const hasApiKey = useStoreStore((state) => state.hasApiKey);
 
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId) {
@@ -47,7 +51,7 @@ const SideBarFoldersButtonsComponent = ({
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(
     folderId,
     is_component,
-    handleFolderChange
+    handleFolderChange,
   );
 
   return (
@@ -71,7 +75,7 @@ const SideBarFoldersButtonsComponent = ({
             checkPathName(item.id!)
               ? "border border-border bg-muted hover:bg-muted"
               : "border border-transparent hover:border-border hover:bg-transparent",
-            "group flex cursor-pointer gap-2 opacity-100"
+            "group flex cursor-pointer gap-2 opacity-100",
           )}
           onClick={() => handleChangeFolder(item.id!)}
           onDragOver={(e) => dragOver(e, item.id!)}
@@ -120,11 +124,6 @@ const SideBarFoldersButtonsComponent = ({
 
               <Button
                 className="invisible p-0 hover:bg-white group-hover:visible hover:dark:bg-[#0c101a00]"
-                onClick={(e) => {
-                  handleEditFolder(item);
-                  e.stopPropagation();
-                  e.preventDefault();
-                }}
                 variant={"ghost"}
               >
                 <IconComponent
@@ -132,6 +131,31 @@ const SideBarFoldersButtonsComponent = ({
                   className="  w-4 stroke-[1.5] text-white  "
                 />
               </Button>
+              <ShadTooltip
+                content={
+                  !hasApiKey || !validApiKey || !hasStore
+                    ? "Please review your API key"
+                    : "Share as Bundle"
+                }
+              >
+                <div className="hidden">
+                  <Button
+                    disabled={!hasApiKey || !validApiKey || !hasStore}
+                    className="invisible p-0 hover:bg-white group-hover:visible hover:dark:bg-[#0c101a00]"
+                    variant={"ghost"}
+                  >
+                    <IconComponent
+                      name={"Share3"}
+                      className={cn(
+                        "-m-0.5 -ml-1 h-6 w-6 ",
+                        !hasApiKey || !validApiKey || !hasStore
+                          ? "extra-side-bar-save-disable"
+                          : "",
+                      )}
+                    />
+                  </Button>
+                </div>
+              </ShadTooltip>
             </>
           )}
         </div>
