@@ -54,6 +54,7 @@ export default function CodeTabsComponent({
   tweaks,
   setActiveTweaks,
   activeTweaks,
+  allowExport = false,
 }: codeTabsPropsType) {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [data, setData] = useState(flow ? flow["data"]!["nodes"] : null);
@@ -141,39 +142,43 @@ export default function CodeTabsComponent({
         )}
 
         <div className="float-right mx-1 mb-1 mt-2 flex gap-2">
-          <div
-            className={
-              Number(activeTab) > 2
-                ? "hidden"
-                : "relative top-[2.5px] flex gap-2"
-            }
-          >
-            <Switch
-              style={{
-                transform: `scaleX(${0.7}) scaleY(${0.7})`,
-              }}
-              id="tweaks-switch"
-              onCheckedChange={setActiveTweaks}
-              autoFocus={false}
-            />
-            <Label
+          {tweaks && (
+            <div
               className={
-                "relative right-1 top-[4px] text-xs font-medium text-gray-500 dark:text-gray-300 " +
-                (activeTweaks
-                  ? "font-bold text-black dark:text-white"
-                  : "font-medium")
+                Number(activeTab) > 2
+                  ? "hidden"
+                  : "relative top-[2.5px] flex gap-2"
               }
-              htmlFor="tweaks-switch"
             >
-              Tweaks
-            </Label>
-          </div>
-          <ExportModal>
-            <div className="flex cursor-pointer items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300">
-              <IconComponent name="FileDown" className="h-4 w-4" />
-              Export Flow
+              <Switch
+                style={{
+                  transform: `scaleX(${0.7}) scaleY(${0.7})`,
+                }}
+                id="tweaks-switch"
+                onCheckedChange={setActiveTweaks}
+                autoFocus={false}
+              />
+              <Label
+                className={
+                  "relative right-1 top-[4px] text-xs font-medium text-gray-500 dark:text-gray-300 " +
+                  (activeTweaks
+                    ? "font-bold text-black dark:text-white"
+                    : "font-medium")
+                }
+                htmlFor="tweaks-switch"
+              >
+                Tweaks
+              </Label>
             </div>
-          </ExportModal>
+          )}
+          {allowExport && (
+            <ExportModal>
+              <div className="flex cursor-pointer items-center gap-1.5 rounded bg-none p-1 text-xs text-gray-500 dark:text-gray-300">
+                <IconComponent name="FileDown" className="h-4 w-4" />
+                Export Flow
+              </div>
+            </ExportModal>
+          )}
 
           {Number(activeTab) < 4 && (
             <>
