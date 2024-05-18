@@ -1,10 +1,12 @@
 import { CustomCellRendererProps } from "ag-grid-react";
-import { isTimeStampString } from "../../utils/utils";
+import { cn, isTimeStampString } from "../../utils/utils";
 import ArrayReader from "../arrayReaderComponent";
 import DateReader from "../dateReaderComponent";
 import NumberReader from "../numberReader";
 import ObjectRender from "../objectRender";
 import StringReader from "../stringReaderComponent";
+import { Label } from "../ui/label";
+import { Badge } from "../ui/badge";
 
 export default function TableAutoCellRender({
   value,
@@ -25,6 +27,20 @@ export default function TableAutoCellRender({
       case "string":
         if (isTimeStampString(value)) {
           return <DateReader date={value} />;
+        }
+        //TODO: REFACTOR FOR ANY LABEL NOT HARDCODED
+        else if (value === "success") {
+          return (
+            <Badge
+              variant="outline"
+              size="sq"
+              className={cn(
+                "min-w-min bg-success-background text-success-foreground hover:bg-success-background",
+              )}
+            >
+              {value}
+            </Badge>
+          );
         } else {
           return <StringReader string={value} />;
         }
