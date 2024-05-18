@@ -283,9 +283,7 @@ export default function IOFieldView({
               </>
             );
           case "RecordsOutput":
-            return left ? (
-              <span>"Expand the output to see the records"</span>
-            ) : (
+            return (
               <div className={left ? "h-36" : "h-full"}>
                 <RecordsOutputComponent
                   flowPool={flowPoolNode}
