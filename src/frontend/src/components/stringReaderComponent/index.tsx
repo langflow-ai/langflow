@@ -3,5 +3,5 @@ export default function StringReader({
 }: {
   string: string;
 }): JSX.Element {
-  return <span>{string}</span>;
+  return <span className="truncate">{string}</span>;
 }
