@@ -71,7 +71,7 @@ export default function FlowLogsModal({
         <div className="flex w-full justify-between">
           <div className="flex h-fit w-32 items-center">
             <span className="pr-2">Logs</span>
-            <IconComponent name="Settings2" className="mr-2 h-4 w-4 " />
+            <IconComponent name="ScrollText" className="mr-2 h-4 w-4 " />
           </div>
           <Tabs
             value={activeTab}
