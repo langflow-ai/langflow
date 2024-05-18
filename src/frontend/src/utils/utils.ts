@@ -714,6 +714,7 @@ export function extractColumnsFromRows(
         headerName: key,
         field: key,
         cellRenderer: TableAutoCellRender,
+        filter: true,
         autoHeight: true,
       };
     }
@@ -731,6 +732,7 @@ export function extractColumnsFromRows(
         columnsKeys[key] = {
           headerName: key,
           field: key,
+          filter: true,
           cellRenderer: TableAutoCellRender,
         };
       }
