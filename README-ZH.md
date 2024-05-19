@@ -2,14 +2,14 @@
 
 # [![Langflow](https://github.com/langflow-ai/langflow/blob/dev/docs/static/img/hero.png)](https://www.langflow.org)
 
-[English](./README.md) | 中文
+[English](./README.md) | 中文 | [日本語](./README-JA.md)
 
 ### [Langflow](https://www.langflow.org) 这是一种全新的、可视化的方法，用于构建、迭代和部署人工智能应用程序。
 
 # ⚡️ 文档和社区
 
 - [文档](https://docs.langflow.org)
-- [Discord 聊天平台](https://discord.com/invite/EqksyE2EX9)
+- [Discord](https://discord.com/invite/EqksyE2EX9)
 
 # 📦 安装
 
@@ -98,11 +98,11 @@ langflow run [OPTIONS]
 
 或者，点击下方的 **“在 Cloud Shell 中打开”** 按钮，启动 Google Cloud Shell，克隆 Langflow 仓库，并开始一个 **交互式教程**，该教程将引导您完成设置必要资源并在您的 GCP 项目上部署 Langflow 的过程。
 
-[![在 Cloud Shell 中打开](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/langflow-ai/langflow&working_dir=scripts/gcp&shellonly=true&tutorial=walkthroughtutorial_spot.md)
+[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/langflow-ai/langflow&working_dir=scripts/gcp&shellonly=true&tutorial=walkthroughtutorial_spot.md)
 
 ## 部署在 Railway 平台上
 
-[![部署在 Railway 平台上](https://railway.app/button.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
 
 ## 部署在 Render 平台上
 
@@ -116,7 +116,7 @@ langflow run [OPTIONS]
 
 ---
 
-[![星历史图表](https://api.star-history.com/svg?repos=langflow-ai/langflow&type=Timeline)](https://star-history.com/#langflow-ai/langflow&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=langflow-ai/langflow&type=Timeline)](https://star-history.com/#langflow-ai/langflow&Date)
 
 # 🌟 贡献者
 
