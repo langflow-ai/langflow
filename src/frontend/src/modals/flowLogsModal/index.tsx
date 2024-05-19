@@ -67,7 +67,13 @@ export default function FlowLogsModal({
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="large">
-      <BaseModal.Header description={null}>
+      <BaseModal.Header
+        description={
+          activeTab === "Transactions"
+            ? "this is going to be a description"
+            : "this is going to be a description"
+        }
+      >
         <div className="flex w-full justify-between">
           <div className="flex h-fit w-32 items-center">
             <span className="pr-2">Logs</span>
