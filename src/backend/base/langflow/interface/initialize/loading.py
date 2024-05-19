@@ -58,7 +58,7 @@ async def instantiate_class(
     if not base_type:
         raise ValueError("No base type provided for vertex")
     if base_type == "custom_components":
-        return await instantiate_custom_component(params, user_id, vertex)
+        return await instantiate_custom_component(params, user_id, vertex, fallback_to_env_vars=fallback_to_env_vars)
     class_object = import_by_type(_type=base_type, name=vertex_type)
     return await instantiate_based_on_type(
         class_object=class_object,
@@ -67,6 +67,7 @@ async def instantiate_class(
         params=params,
         user_id=user_id,
         vertex=vertex,
+        fallback_to_env_vars=fallback_to_env_vars,
     )
 
 
@@ -94,14 +95,7 @@ def convert_kwargs(params):
     return params
 
 
-async def instantiate_based_on_type(
-    class_object,
-    base_type,
-    node_type,
-    params,
-    user_id,
-    vertex,
-):
+async def instantiate_based_on_type(class_object, base_type, node_type, params, user_id, vertex, fallback_to_env_vars):
     if base_type == "agents":
         return instantiate_agent(node_type, class_object, params)
     elif base_type == "prompts":
@@ -133,11 +127,7 @@ async def instantiate_based_on_type(
     elif base_type == "memory":
         return instantiate_memory(node_type, class_object, params)
     elif base_type == "custom_components":
-        return await instantiate_custom_component(
-            params,
-            user_id,
-            vertex,
-        )
+        return await instantiate_custom_component(params, user_id, vertex, fallback_to_env_vars=fallback_to_env_vars)
     elif base_type == "wrappers":
         return instantiate_wrapper(node_type, class_object, params)
     else:
@@ -153,25 +143,33 @@ def update_params_with_load_from_db_fields(
     for field in load_from_db_fields:
         if field in params:
             try:
-                key = custom_component.variables(params[field])
+                key = None
+                try:
+                    key = custom_component.variables(params[field])
+                except ValueError as e:
+                    # check if "User id is not set" is in the error message
+                    if "User id is not set" in str(e) and not fallback_to_env_vars:
+                        raise e
+                    logger.debug(str(e))
                 if fallback_to_env_vars and key is None:
                     var = os.getenv(params[field])
                     if var is None:
                         raise ValueError(f"Environment variable {params[field]} is not set.")
                     key = var
+                    logger.info(f"Using environment variable {params[field]} for {field}")
+                if key is None:
+                    logger.warning(f"Could not get value for {field}. Setting it to None.")
                 params[field] = key
-                logger.warning(
-                    f"It was not possible to get value for field {field}. Setting value to None."
-                    " If you want to fallback to an environment variable with the same name, "
-                    "set LANGFLOW_FALLBACK_TO_ENV_VAR=True in your environment."
-                )
+
             except Exception as exc:
-                logger.error(f"Failed to get value for {field} from custom component. Error: {exc}")
-                pass
+                logger.error(f"Failed to get value for {field} from custom component. Setting it to None. Error: {exc}")
+
+                params[field] = None
+
     return params
 
 
-async def instantiate_custom_component(params, user_id, vertex, fallback_to_env_vars):
+async def instantiate_custom_component(params, user_id, vertex, fallback_to_env_vars: bool = False):
     params_copy = params.copy()
     class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
     custom_component: "CustomComponent" = class_object(
