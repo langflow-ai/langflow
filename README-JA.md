@@ -122,6 +122,6 @@ GitHub 上の当社のオープンソースプロジェクトへのすべての�
 
 [![langflow contributors](https://contrib.rocks/image?repo=langflow-ai/langflow)](https://github.com/langflow-ai/langflow/graphs/contributors)
 
-# 📄 License
+# 📄 ライセンス
 
 Langflow は MIT ライセンスのもとでリリースされています。詳細については、[LICENSE](LICENSE) ファイルをご覧ください。
