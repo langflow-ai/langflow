@@ -473,9 +473,9 @@ class Graph:
         """Marks a branch of the graph."""
         if visited is None:
             visited = set()
-        visited.add(vertex_id)
         if vertex_id in visited:
             return
+        visited.add(vertex_id)
 
         self.mark_vertex(vertex_id, state)
 
