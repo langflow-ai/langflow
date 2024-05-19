@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { NodeToolbar } from "reactflow";
 import { GradientGroup } from "../../../../icons/GradientSparkles";
-import { validateSelection } from "../../../../utils/reactflowUtils";
 import useFlowStore from "../../../../stores/flowStore";
+import { validateSelection } from "../../../../utils/reactflowUtils";
 export default function SelectionMenu({
   onClick,
   nodes,
@@ -13,7 +13,7 @@ export default function SelectionMenu({
   const [disable, setDisable] = useState<boolean>(
     lastSelection && edges.length > 0
       ? validateSelection(lastSelection!, edges).length > 0
-      : false,
+      : false
   );
   const [isOpen, setIsOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -62,7 +62,11 @@ export default function SelectionMenu({
           }
         >
           <button
-            className={`${disable ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground" : "flex h-full w-full items-center justify-between text-sm hover:text-indigo-500"}`}
+            className={`${
+              disable
+                ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
+                : "flex h-full w-full items-center justify-between text-sm hover:text-indigo-500"
+            }`}
             onClick={onClick}
             disabled={disable}
           >
