@@ -1,7 +1,7 @@
 import inspect
 import json
+import os
 from typing import TYPE_CHECKING, Any, Callable, Dict, Sequence, Type
-
 
 import orjson
 from langchain.agents import agent as agent_module
@@ -35,6 +35,7 @@ if TYPE_CHECKING:
 
 async def instantiate_class(
     vertex: "Vertex",
+    fallback_to_env_vars,
     user_id=None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
@@ -143,7 +144,9 @@ async def instantiate_based_on_type(
         return class_object(**params)
 
 
-def update_params_with_load_from_db_fields(custom_component: "CustomComponent", params, load_from_db_fields):
+def update_params_with_load_from_db_fields(
+    custom_component: "CustomComponent", params, load_from_db_fields, fallback_to_env_vars=False
+):
     # For each field in load_from_db_fields, we will check if it's in the params
     # and if it is, we will get the value from the custom_component.keys(name)
     # and update the params with the value
@@ -151,14 +154,24 @@ def update_params_with_load_from_db_fields(custom_component: "CustomComponent", 
         if field in params:
             try:
                 key = custom_component.variables(params[field])
-                params[field] = key if key else params[field]
+                if fallback_to_env_vars and key is None:
+                    var = os.getenv(params[field])
+                    if var is None:
+                        raise ValueError(f"Environment variable {params[field]} is not set.")
+                    key = var
+                params[field] = key
+                logger.warning(
+                    f"It was not possible to get value for field {field}. Setting value to None."
+                    " If you want to fallback to an environment variable with the same name, "
+                    "set LANGFLOW_FALLBACK_TO_ENV_VAR=True in your environment."
+                )
             except Exception as exc:
                 logger.error(f"Failed to get value for {field} from custom component. Error: {exc}")
                 pass
     return params
 
 
-async def instantiate_custom_component(params, user_id, vertex):
+async def instantiate_custom_component(params, user_id, vertex, fallback_to_env_vars):
     params_copy = params.copy()
     class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
     custom_component: "CustomComponent" = class_object(
@@ -167,7 +180,9 @@ async def instantiate_custom_component(params, user_id, vertex):
         vertex=vertex,
         selected_output_type=vertex.selected_output_type,
     )
-    params_copy = update_params_with_load_from_db_fields(custom_component, params_copy, vertex.load_from_db_fields)
+    params_copy = update_params_with_load_from_db_fields(
+        custom_component, params_copy, vertex.load_from_db_fields, fallback_to_env_vars
+    )
 
     if "retriever" in params_copy and hasattr(params_copy["retriever"], "as_retriever"):
         params_copy["retriever"] = params_copy["retriever"].as_retriever()

@@ -82,6 +82,7 @@ def run_flow_from_json(
     env_file: Optional[str] = None,
     cache: Optional[str] = None,
     disable_logs: Optional[bool] = True,
+    fallback_to_env_vars: Optional[bool] = False,
 ) -> List[RunOutputs]:
     """
     Run a flow from a JSON file or dictionary.
@@ -127,5 +128,6 @@ def run_flow_from_json(
         input_type=input_type,
         output_type=output_type,
         output_component=output_component,
+        fallback_to_env_vars=fallback_to_env_vars,
     )
     return result
