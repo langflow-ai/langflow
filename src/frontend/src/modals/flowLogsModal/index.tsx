@@ -67,13 +67,7 @@ export default function FlowLogsModal({
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="large">
-      <BaseModal.Header
-        description={
-          activeTab === "Transactions"
-            ? "this is going to be a description"
-            : "this is going to be a description"
-        }
-      >
+      <BaseModal.Header description="Inspect component executions and monitor sent messages in the playground.">
         <div className="flex w-full justify-between">
           <div className="flex h-fit w-32 items-center">
             <span className="pr-2">Logs</span>
