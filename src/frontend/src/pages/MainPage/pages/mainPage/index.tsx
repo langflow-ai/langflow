@@ -119,7 +119,7 @@ export default function HomePage(): JSX.Element {
                 setFolderToEdit(item);
                 setOpenDeleteFolderModal(true);
               }}
-              className="w-48"
+              className="w-[20vw]"
             />
           </aside>
           <div className="h-full w-full flex-1">
