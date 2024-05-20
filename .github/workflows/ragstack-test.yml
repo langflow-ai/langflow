@@ -54,3 +54,17 @@ jobs:
           token: ${{ secrets.TESTS_ASTRA_DEV_DB_TOKEN }}
           name: ${{ steps.astra.outputs.name }}
           wait: false
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker
+        run: ./ragstack/docker/build-backend.sh
+      - name: Scan Docker image
+        uses: snyk/actions/docker@master
+        with:
+          image: ragstack-ai-langflow-backend:latest
+          args: --severity-threshold=high
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
