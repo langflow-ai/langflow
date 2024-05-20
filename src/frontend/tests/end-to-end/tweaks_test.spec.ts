@@ -13,7 +13,7 @@ test("curl_api_generation", async ({ page, context }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -24,7 +24,7 @@ test("curl_api_generation", async ({ page, context }) => {
   await page.getByRole("tab", { name: "cURL" }).click();
   await page.getByRole("button", { name: "Copy Code" }).click();
   const handle = await page.evaluateHandle(() =>
-    navigator.clipboard.readText(),
+    navigator.clipboard.readText()
   );
   const clipboardContent = await handle.jsonValue();
   const oldValue = clipboardContent;
@@ -50,7 +50,7 @@ test("curl_api_generation", async ({ page, context }) => {
   await page.getByRole("tab", { name: "cURL" }).click();
   await page.getByRole("button", { name: "Copy Code" }).click();
   const handle2 = await page.evaluateHandle(() =>
-    navigator.clipboard.readText(),
+    navigator.clipboard.readText()
   );
   const clipboardContent2 = await handle2.jsonValue();
   const newValue = clipboardContent2;
@@ -75,7 +75,7 @@ test("check if tweaks are updating when someothing on the flow changes", async (
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
