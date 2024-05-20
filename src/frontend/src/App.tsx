@@ -25,10 +25,10 @@ import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
 export default function App() {
   const removeFromTempNotificationList = useAlertStore(
-    (state) => state.removeFromTempNotificationList
+    (state) => state.removeFromTempNotificationList,
   );
   const tempNotificationList = useAlertStore(
-    (state) => state.tempNotificationList
+    (state) => state.tempNotificationList,
   );
   const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
@@ -46,7 +46,7 @@ export default function App() {
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const setGlobalVariables = useGlobalVariablesStore(
-    (state) => state.setGlobalVariables
+    (state) => state.setGlobalVariables,
   );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const navigate = useNavigate();
@@ -76,9 +76,9 @@ export default function App() {
           login(user["access_token"]);
           setUserData(user);
           setAutoLogin(true);
-          getFoldersApi();
           setLoading(false);
           await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+          getFoldersApi();
         }
       })
       .catch(async (error) => {
@@ -160,7 +160,7 @@ export default function App() {
     setFetchError(false);
     //This condition is necessary to avoid infinite loop on starter page when the application is not healthy
     if (isLoading === true && window.location.pathname === "/") {
-      navigate("/flows");
+      navigate("/all");
       window.location.reload();
     }
   };
