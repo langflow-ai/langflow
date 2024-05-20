@@ -28,6 +28,7 @@
     --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
     --round-btn-shadow: #00000063;
     --ice: #31a3cc;
+    --selected: #2196f3;
 
     --error-background: #fef2f2;
     --error-foreground: #991b1b;
@@ -50,9 +51,8 @@
 
     --component-icon: #d8598a;
     --flow-icon: #2f67d0;
-    --hover: #F2F4F5;
+    --hover: #f2f4f5;
     --disabled-run: #6366f1;
-    
 
     /* Colors that are shared in dark and light mode */
     --blur-shared: #151923de;
@@ -71,9 +71,10 @@
   .dark {
     --background: 224 35% 7.5%; /* hsl(224 40% 10%) */
     --foreground: 213 31% 80%; /* hsl(213 31% 91%) */
-    --ice: #60A5FA;
-    --hover: #1A202E;
+    --ice: #60a5fa;
+    --hover: #1a202e;
     --disabled-run: #6366f1;
+    --selected: #2196f3;
 
     --muted: 223 27% 11%; /* hsl(223 27% 11%) */
     --muted-foreground: 215.4 16.3% 56.9%; /* hsl(215 16% 56%) */

@@ -208,7 +208,7 @@ export default function CollectionCardComponent({
           "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#ffffff10]",
           disabled ? "pointer-events-none opacity-50" : "",
           onClick ? "cursor-pointer" : "",
-          isSelectedCard ? "border border-medium-indigo" : "",
+          isSelectedCard ? "border border-selected" : "",
         )}
         onClick={onClick}
       >
@@ -289,7 +289,7 @@ export default function CollectionCardComponent({
                           <Checkbox
                             checked={field.value}
                             onCheckedChange={field.onChange}
-                            className="h-5 w-5 border border-medium-indigo"
+                            className="h-5 w-5 border border-ring data-[state=checked]:border-selected data-[state=checked]:bg-selected"
                           />
                         </FormControl>
                       )}
