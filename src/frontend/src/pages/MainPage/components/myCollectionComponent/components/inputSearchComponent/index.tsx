@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Input } from "../../../../../../components/ui/input";
 import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
+import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
 
 type InputSearchComponentProps = {
   loading: boolean;
@@ -54,6 +55,16 @@ const InputSearchComponent = ({ loading }: InputSearchComponentProps) => {
           }}
           value={inputValue}
         />
+        <button
+          disabled={loading}
+          className="absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground"
+          data-testid="search-store-button"
+        >
+          <ForwardedIconComponent
+            name={loading ? "Loader2" : "Search"}
+            className={loading ? " animate-spin cursor-not-allowed" : ""}
+          />
+        </button>
       </div>
     </>
   );

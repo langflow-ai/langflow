@@ -123,7 +123,7 @@ export default function HomePage(): JSX.Element {
                   name="Download"
                   className="main-page-nav-button"
                 />
-                Download Folder
+                Download
               </Button>
             </div>
             <Outlet />
