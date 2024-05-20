@@ -37,17 +37,12 @@ const ApiModal = forwardRef(
       flow: FlowType;
       children: ReactNode;
     },
-    ref
+    ref,
   ) => {
-    let tweak = useTweaksStore((state) => state.tweak);
+    const tweak = useTweaksStore((state) => state.tweak);
     const addTweaks = useTweaksStore((state) => state.setTweak);
     const setTweaksList = useTweaksStore((state) => state.setTweaksList);
     const tweaksList = useTweaksStore((state) => state.tweaksList);
-    // ! Workdaround to fix the issue with the tweak object being an array
-    // TODO: Fix the issue with the tweak object being an array
-    if (Array.isArray(tweak) && tweak.length === 1) {
-      tweak = tweak[0];
-    }
 
     const [activeTweaks, setActiveTweaks] = useState(false);
     const { autoLogin } = useContext(AuthContext);
@@ -113,7 +108,7 @@ const ApiModal = forwardRef(
               buildTweakObject(
                 nodeId,
                 element.data.node.template[templateField].value,
-                element.data.node.template[templateField]
+                element.data.node.template[templateField],
               );
             }
           });
@@ -130,7 +125,7 @@ const ApiModal = forwardRef(
     async function buildTweakObject(
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: TemplateVariableType
+      template: TemplateVariableType,
     ) {
       changes = getChangesType(changes, template);
 
@@ -167,12 +162,6 @@ const ApiModal = forwardRef(
     }
 
     const addCodes = (cloneTweak) => {
-      // if cloneTweak is an array and it's lenght is 1, then it's a single tweak
-      // so just get the first element
-      if (Array.isArray(cloneTweak) && cloneTweak.length === 1) {
-        cloneTweak = cloneTweak[0];
-      }
-
       const pythonApiCode = getPythonApiCode(flow?.id, autoLogin, cloneTweak);
       const curl_code = getCurlCode(flow?.id, autoLogin, cloneTweak);
       const pythonCode = getPythonCode(flow?.name, cloneTweak);
@@ -217,7 +206,7 @@ const ApiModal = forwardRef(
         </BaseModal.Content>
       </BaseModal>
     );
-  }
+  },
 );
 
 export default ApiModal;
