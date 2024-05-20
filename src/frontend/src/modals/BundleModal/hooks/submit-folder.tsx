@@ -23,6 +23,9 @@ const useFolderSubmit = (setOpen, folderToEdit) => {
               title: `Error updating folder.`,
             });
             console.error(reason);
+          } else {
+            getFoldersApi(true);
+            setOpen(false);
           }
         },
       );
