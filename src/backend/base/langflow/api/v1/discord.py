@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, model_validator
 from fastapi import APIRouter, Response
 from asyncio import get_running_loop, Future, wait_for
@@ -7,6 +7,8 @@ from discord import Intents, File, Sticker
 from json import dumps
 import base64
 import io
+import random
+import soundfile as sf
 
 
 router = APIRouter(tags=["Discord"])
@@ -21,6 +23,17 @@ class ChannelMessagesModel(TokenModel):
     timeout: int = 5 * 60
     ignore_file_content: bool = True
     ignore_attachments: bool = True
+
+
+class ChannelLastFileMessageModel(TokenModel):
+    limit: int = 20
+    timeout: int = 5 * 60
+
+
+class ChannelByContentTypeMessageModel(TokenModel):
+    content_type: List[str]
+    limit: int = 20
+    timeout: int = 5 * 60
 
 
 class GetGuildUsersModel(TokenModel):
@@ -43,12 +56,45 @@ class Listener(TokenModel):
     timeout: int = 5 * 60
 
 
+class MentionListener(TokenModel):
+    guild_id: Optional[int] = None
+    channel_id: Optional[int] = None
+    timeout: int = 5 * 60
+
+
 class SendMessageModel(TokenModel):
     message: Optional[str] = None
     sticker_id: Optional[str] = None
     filename: Optional[str] = None
     type: Optional[str] = None
     data: Optional[Dict[str, Any]] = None
+    is_audio: bool = False
+    reference: Optional[int] = None
+
+
+class ReactionModel(TokenModel):
+    emoji: str
+
+
+@router.post("/bot_name")
+async def get_bot_name(model: TokenModel):
+    loop = get_running_loop()
+    future = Future(loop=loop)
+    bot = commands.Bot(command_prefix="!", intents=Intents.all())
+
+    @bot.event
+    async def on_ready():
+        future.set_result(True)
+
+    loop.create_task(bot.start(model.token))
+    try:
+        await wait_for(future, 5 * 60)
+        name = bot.user.name
+        await bot.close()
+        return name
+    except TimeoutError as err:
+        await bot.close()
+        raise err
 
 
 @router.post("/listen_message")
@@ -62,6 +108,105 @@ async def listen_message(listener: Listener):
         if not msg.author.bot:
             if msg.channel.id == listener.channel_id:
                 future.set_result(msg.content)
+
+    loop.create_task(bot.start(listener.token))
+    try:
+        result = await wait_for(future, 5 * 60)
+        await bot.close()
+        return result
+    except TimeoutError as err:
+        await bot.close()
+        raise err
+
+
+@router.post("/channels/{channel_id}/react/{message_id}")
+async def add_react_message(channel_id: int, message_id: str, model: ReactionModel):
+    loop = get_running_loop()
+    future = Future(loop=loop)
+    bot = commands.Bot(command_prefix="!", intents=Intents.all())
+
+    @bot.event
+    async def on_ready():
+        future.set_result(True)
+
+    loop.create_task(bot.start(model.token))
+    try:
+        result = await wait_for(future, 5 * 60)
+        await bot.get_channel(channel_id).get_partial_message(message_id).add_reaction(model.emoji)
+        await bot.close()
+        return result
+    except TimeoutError as err:
+        await bot.close()
+        raise err
+
+
+@router.delete("/channels/{channel_id}/react/{message_id}")
+async def delete_react_message(channel_id: int, message_id: str, model: ReactionModel):
+    loop = get_running_loop()
+    future = Future(loop=loop)
+    bot = commands.Bot(command_prefix="!", intents=Intents.all())
+
+    @bot.event
+    async def on_ready():
+        future.set_result(True)
+
+    loop.create_task(bot.start(model.token))
+    try:
+        result = await wait_for(future, 5 * 60)
+        await bot.get_channel(channel_id).get_partial_message(message_id).remove_reaction(model.emoji, bot.user)
+        await bot.close()
+        return result
+    except TimeoutError as err:
+        await bot.close()
+        raise err
+
+
+@router.post("/channels/{channel_id}/mentions/last")
+async def get_last_mention(channel_id: int, model: ChannelLastFileMessageModel):
+    loop = get_running_loop()
+    future = Future(loop=loop)
+    bot = commands.Bot(command_prefix="!", intents=Intents.all())
+
+    @bot.event
+    async def on_ready():
+        future.set_result(True)
+
+    loop.create_task(bot.start(model.token))
+    try:
+        result = await wait_for(future, 5 * 60)
+        channel = bot.get_channel(channel_id)
+        if channel:
+            async for msg in channel.history(limit=model.limit):
+                if not msg.author.bot:
+                    if msg.content.find(f"<@{bot.user.id}>") != -1:
+                        return Response(
+                            dumps({"id": msg.id, "content": msg.content}), headers={"Content-Type": "application/json"}
+                        )
+        await bot.close()
+        return result
+    except TimeoutError as err:
+        await bot.close()
+        raise err
+
+
+@router.post("/listen_mention")
+async def listen_mention(listener: MentionListener):
+    loop = get_running_loop()
+    future = Future(loop=loop)
+    bot = commands.Bot(command_prefix="!", intents=Intents.all())
+
+    @bot.event
+    async def on_message(msg):
+        if not msg.author.bot:
+            pos = msg.content.find(f"<@{bot.user.id}>")
+            if pos != -1:
+                msg.content = msg.content[:pos] + msg.content[pos + len(f"<@{bot.user.id}>") :]
+                if not listener.channel_id and not listener.guild_id:
+                    return future.set_result({"id": msg.id, "content": msg.content})
+                if listener.channel_id and msg.channel.id == listener.channel_id:
+                    return future.set_result({"id": msg.id, "content": msg.content})
+                if listener.guild_id and msg.author.guild.id == listener.guild_id:
+                    return future.set_result({"id": msg.id, "content": msg.content})
 
     loop.create_task(bot.start(listener.token))
     try:
@@ -93,6 +238,95 @@ async def get_message(channel_id: int, model: SendMessageModel):
         raise err"""
 
 
+def SendAudio(file_path: str, channel_id: int, token: str):
+    import os
+    import json
+    import requests
+    import sys
+    import aiohttp
+
+    with open(file_path, "rb") as file:
+        audio_data, sample_rate = sf.read(file.name)
+        duration = round(len(audio_data) / sample_rate, 1)
+        characters = (
+            " !#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~Çüéâäàå"
+        )
+        random_string = "".join(random.choice(characters) for _ in range(64))
+        waveform = base64.b64encode(random_string.encode("utf-8")).decode("utf-8")
+    url = f"https://discord.com/api/v9/channels/{channel_id}/attachments"
+    with open(file_path, "rb") as file:
+        file.seek(0, os.SEEK_END)
+        payload = json.dumps(
+            {"files": [{"filename": os.path.basename(file.name), "file_size": file.tell(), "id": "261"}]}
+        )
+        headers = {
+            "accept": "*/*",
+            "authorization": "Bot " + token,
+            "content-type": "application/json",
+            "user-agent": "DiscordBot (https://github.com/Rapptz/discord.py 2.3.2) Python/{0[0]}.{0[1]} aiohttp/{1}".format(
+                sys.version_info, aiohttp.__version__
+            ),
+        }
+
+        response = requests.request("POST", url, headers=headers, data=payload)
+        response_data = response.json()
+        if "attachments" in response_data:
+            attachments = response_data["attachments"]
+            attachments[0]["upload_url"]
+            file.seek(0)
+            payload = file.read()
+            headers = {
+                "authority": "discord-attachments-uploads-prd.storage.googleapis.com",
+                "accept": "*/*",
+                "content-type": "audio/ogg",
+                "user-agent": "DiscordBot (https://github.com/Rapptz/discord.py 2.3.2) Python/{0[0]}.{0[1]} aiohttp/{1}".format(
+                    sys.version_info, aiohttp.__version__
+                ),
+            }
+            file.seek(0)
+
+            response = requests.request("PUT", attachments[0]["upload_url"], headers=headers, data=payload)
+
+            content = {
+                "content": "",
+                "channel_id": channel_id,
+                "type": 0,
+                "sticker_ids": [],
+                "attachments": [
+                    {
+                        "content_type": "audio/ogg",
+                        "duration_secs": duration,
+                        "filename": "voice-message.ogg",
+                        "id": channel_id,
+                        "size": 4096,
+                        "uploaded_filename": attachments[0]["upload_filename"],
+                        "waveform": waveform,
+                        "spoiler": False,
+                        "sensitive": False,
+                    }
+                ],
+                "flags": 8192,
+            }
+
+            headers = {
+                "accept": "*/*",
+                "authorization": "Bot " + token,
+                "content-type": "application/json",
+                "referer": f"https://discord.com/channels/^@me/{channel_id}",
+                "user-agent": "DiscordBot (https://github.com/Rapptz/discord.py 2.3.2) Python/{0[0]}.{0[1]} aiohttp/{1}".format(
+                    sys.version_info, aiohttp.__version__
+                ),
+            }
+            response = requests.request(
+                "POST",
+                f"https://discord.com/api/v9/channels/{channel_id}/messages",
+                headers=headers,
+                data=dumps(content),
+            )
+        else:
+            raise ValueError(f"Attachment URL returned {response_data}")
+
+
 @router.post("/channels/{channel_id}/send_message")
 async def send_message(channel_id: int, model: SendMessageModel):
     loop = get_running_loop()
@@ -109,14 +343,22 @@ async def send_message(channel_id: int, model: SendMessageModel):
         channel = bot.get_channel(channel_id)
         stickers = []
         file = None
+        sent = False
+        reference = None
         if model.filename:
             if model.filename.endswith(".txt"):
                 file = File(io.StringIO(model.data["text"], filename=model.filename))
+            elif model.is_audio:
+                SendAudio(model.data["file_path"], channel_id, model.token)
+                sent = True
             else:
                 file = File(model.data["file_path"], filename=model.filename)
-        if model.sticker_id:
-            stickers = [Sticker(id=model.sticker_id)]
-        await channel.send(model.message, file=file, stickers=stickers)
+        if not sent:
+            if model.sticker_id:
+                stickers = [Sticker(id=model.sticker_id)]
+            if model.reference:
+                reference = channel.get_partial_message(model.reference)
+            await channel.send(model.message, file=file, stickers=stickers, reference=reference)
         await bot.close()
         return ready
     except TimeoutError as err:
@@ -158,6 +400,42 @@ async def get_stickers(guild_id: int, model: TokenModel):
         raise err
 
 
+@router.post("/channels/{channel_id}/get_messages/last")
+async def get_channel_messages_by_type(channel_id: int, model: ChannelByContentTypeMessageModel):
+    loop = get_running_loop()
+    ready_future = Future(loop=loop)
+    bot = commands.Bot(command_prefix="!", intents=Intents.all())
+
+    @bot.event
+    async def on_ready():
+        ready_future.set_result(True)
+
+    loop.create_task(bot.start(model.token))
+    try:
+        await wait_for(ready_future, 30)
+        channel = bot.get_channel(channel_id)
+        # Coleta as mensagens usando um loop assíncrono
+        async for msg in channel.history(
+            limit=model.limit if model.limit else None
+        ):  # limit=None para obter todas as mensagens
+            if msg.attachments:
+                for attachment in msg.attachments:
+                    if attachment.content_type and any(
+                        [attachment.content_type.find(i) != -1 for i in model.content_type]
+                    ):
+                        file = {
+                            "content_type": attachment.content_type,
+                            "filename": attachment.filename,
+                        }
+                        file["content"] = base64.b64encode(await attachment.read()).decode("utf-8")
+                        return Response(dumps(file), headers={"Content-Type": "application/json"})
+        await bot.close()
+        return Response(None, status_code=404, headers={"Content-Type": "application/json"})
+    except TimeoutError as err:
+        await bot.close()
+        raise err
+
+
 @router.post("/channels/{channel_id}/get_messages")
 async def get_channel_messages(channel_id: int, model: ChannelMessagesModel):
     loop = get_running_loop()
@@ -187,10 +465,15 @@ async def get_channel_messages(channel_id: int, model: ChannelMessagesModel):
                         "filename": attachment.filename,
                     }
                     if not model.ignore_file_content:
-                        file["content"] = (base64.b64encode((await attachment.read())).decode("utf-8"),)
+                        file["content"] = base64.b64encode(await attachment.read()).decode("utf-8")
+                    with open(attachment.filename, "wb") as f:
+                        decoded = base64.b64encode(await attachment.read()).decode("utf-8")
+                        encoded = base64.b64decode(decoded)
+                        f.write(encoded)
                     attachments.append(file)
             messages.append(
                 {
+                    "id": msg.id,
                     "author": {"id": msg.author.id, "name": name, "nick": nick},
                     "message": msg.content,
                     "attachments": attachments,
