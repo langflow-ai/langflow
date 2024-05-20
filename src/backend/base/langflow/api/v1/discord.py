@@ -3,7 +3,7 @@ from pydantic import BaseModel, model_validator
 from fastapi import APIRouter, Response
 from asyncio import get_running_loop, Future, wait_for
 from discord.ext import commands
-from discord import Intents, File, Sticker
+from discord import Intents, File, Sticker, Message
 from json import dumps
 import base64
 import io
@@ -196,11 +196,19 @@ async def listen_mention(listener: MentionListener):
     bot = commands.Bot(command_prefix="!", intents=Intents.all())
 
     @bot.event
-    async def on_message(msg):
+    async def on_message(msg: Message):
+        import re
+
         if not msg.author.bot:
-            pos = msg.content.find(f"<@{bot.user.id}>")
-            if pos != -1:
-                msg.content = msg.content[:pos] + msg.content[pos + len(f"<@{bot.user.id}>") :]
+            mentioned = False
+            for role in msg.role_mentions:
+                if role.name == bot.user.name:
+                    mentioned = True
+            for user in msg.mentions:
+                if user.id == bot.user.id:
+                    mentioned = True
+            if mentioned:
+                msg.content = re.sub(r"<@&?[0-9]{17,20}>", "", msg.content)
                 if not listener.channel_id and not listener.guild_id:
                     return future.set_result({"id": msg.id, "content": msg.content})
                 if listener.channel_id and msg.channel.id == listener.channel_id:
@@ -216,26 +224,6 @@ async def listen_mention(listener: MentionListener):
     except TimeoutError as err:
         await bot.close()
         raise err
-
-
-"""@router.post("/channels/{channel_id}/send_message")
-async def get_message(channel_id: int, model: SendMessageModel):
-    loop = get_running_loop()
-    ready_future = Future(loop=loop)
-    bot = commands.Bot(command_prefix="!", intents=Intents.all())
-    @bot.event
-    async def on_ready():
-        ready_future.set_result(True)
-    loop.create_task(bot.start(model.token))
-    try:
-        ready = await wait_for(ready_future, 30)
-        channel = bot.get_channel(channel_id)
-        await channel.send(model.message)
-        await bot.close()
-        return ready
-    except TimeoutError as err:
-        await bot.close()
-        raise err"""
 
 
 def SendAudio(file_path: str, channel_id: int, token: str):
