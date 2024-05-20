@@ -43,7 +43,7 @@ const InputSearchComponent = ({ loading }: InputSearchComponentProps) => {
           data-testid="search-store-input"
           disabled={disableInputSearch}
           placeholder={getSearchPlaceholder()}
-          className="absolute h-12 pl-5 pr-7"
+          className="absolute h-12 pl-5 pr-12"
           onChange={(e) => {
             setSearchFlowsComponents(e.target.value);
             setInputValue(e.target.value);
