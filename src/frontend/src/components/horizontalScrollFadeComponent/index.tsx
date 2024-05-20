@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
-export default function HorizontalScrollFadeComponent({ children }) {
+export default function HorizontalScrollFadeComponent({
+  children,
+  isFolder = true,
+}) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fadeContainerRef = useRef<HTMLDivElement>(null);
   const [divWidth, setDivWidth] = useState<number>(0);
@@ -46,14 +49,13 @@ export default function HorizontalScrollFadeComponent({ children }) {
     }
   }, [divWidth, children]); // Depend on divWidth
 
-  return (
-    <>
-      <div ref={fadeContainerRef} className="fade-container flex lg:hidden">
-        <div ref={scrollContainerRef} className="scroll-container flex gap-2">
-          {children}
-        </div>
+  return isFolder ? (
+    <div className="hidden w-full flex-col gap-2 lg:flex">{children}</div>
+  ) : (
+    <div ref={fadeContainerRef} className="fade-container flex">
+      <div ref={scrollContainerRef} className="scroll-container flex gap-2">
+        {children}
       </div>
-      <div className="hidden w-full flex-col gap-2 lg:flex">{children}</div>
-    </>
+    </div>
   );
 }

@@ -25,7 +25,7 @@ export function TagsSelector({
   };
 
   return (
-    <HorizontalScrollFadeComponent>
+    <HorizontalScrollFadeComponent isFolder={false}>
       {!loadingTags &&
         tags.map((tag, idx) => (
           <button
