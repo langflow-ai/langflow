@@ -242,7 +242,7 @@ export default function ComponentsComponent({
                             disabled={isLoading}
                             data-testid={"edit-flow-button-" + item.id}
                             button={
-                              type === "flow" ? (
+                              !item.is_component ? (
                                 <Link to={"/flow/" + item.id}>
                                   <Button
                                     tabIndex={-1}
@@ -263,13 +263,13 @@ export default function ComponentsComponent({
                               )
                             }
                             onClick={
-                              type === "flow"
+                              !item.is_component
                                 ? () => {
                                     navigate("/flow/" + item.id);
                                   }
                                 : undefined
                             }
-                            playground={type === "flow"}
+                            playground={!item.is_component}
                             control={control}
                           />
                         </form>
