@@ -16,7 +16,7 @@ test.describe("save component tests", () => {
     }
 
     while (modalCount === 0) {
-      await page.locator('//*[@id="new-project-btn"]').click();
+      await page.getByText("New Project", { exact: true }).click();
       await page.waitForTimeout(5000);
       modalCount = await page.getByTestId("modal-title")?.count();
     }
@@ -61,9 +61,6 @@ test.describe("save component tests", () => {
       .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[3]')
       .click();
 
-    await page.getByTestId("title-PythonFunctionTool").click({
-      modifiers: ["Control"],
-    });
     await page.getByTestId("title-ChatOpenAI").click({
       modifiers: ["Control"],
     });
