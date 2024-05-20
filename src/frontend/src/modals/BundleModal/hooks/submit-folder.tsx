@@ -18,10 +18,12 @@ const useFolderSubmit = (setOpen, folderToEdit) => {
           setOpen(false);
         },
         (reason) => {
-          setErrorData({
-            title: `Error updating folder.`,
-          });
-          console.error(reason);
+          if (reason) {
+            setErrorData({
+              title: `Error updating folder.`,
+            });
+            console.error(reason);
+          }
         },
       );
     } else {
