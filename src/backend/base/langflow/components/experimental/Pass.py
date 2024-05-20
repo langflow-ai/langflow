@@ -3,11 +3,12 @@ from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
 from langflow.field_typing import Text
 
+
 class PassComponent(CustomComponent):
     display_name = "Pass"
     description = "A pass-through component that forwards the second input while ignoring the first, used for controlling workflow direction."
     field_order = ["ignored_input", "forwarded_input"]
-    
+
     def build_config(self) -> dict:
         return {
             "ignored_input": {
@@ -19,7 +20,7 @@ class PassComponent(CustomComponent):
                 "display_name": "Input",
                 "info": "This input is forwarded by the component.",
                 "input_types": ["Text", "Record"],
-            }
+            },
         }
 
     def build(self, ignored_input: Text, forwarded_input: Text) -> Union[Text, Record]:
