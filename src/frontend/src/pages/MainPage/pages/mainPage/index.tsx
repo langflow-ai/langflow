@@ -101,7 +101,7 @@ export default function HomePage(): JSX.Element {
         }
       >
         <div className="flex h-full w-full space-y-8 md:flex-col lg:flex-row lg:space-x-8 lg:space-y-0">
-          <aside className="flex h-fit flex-col space-y-6  lg:w-1/4">
+          <aside className="flex h-fit w-fit flex-col space-y-6">
             <SidebarNav
               handleOpenNewFolderModal={() => {
                 setFolderToEdit(null);
@@ -119,6 +119,7 @@ export default function HomePage(): JSX.Element {
                 setFolderToEdit(item);
                 setOpenDeleteFolderModal(true);
               }}
+              className="w-48"
             />
           </aside>
           <div className="h-full w-full flex-1">

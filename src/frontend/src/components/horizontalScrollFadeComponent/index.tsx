@@ -29,11 +29,11 @@ export default function HorizontalScrollFadeComponent({ children }) {
 
       fadeContainerRef.current.classList.toggle(
         "fade-left",
-        isScrollable && !atStart
+        isScrollable && !atStart,
       );
       fadeContainerRef.current.classList.toggle(
         "fade-right",
-        isScrollable && !atEnd
+        isScrollable && !atEnd,
       );
     };
 
@@ -53,7 +53,7 @@ export default function HorizontalScrollFadeComponent({ children }) {
           {children}
         </div>
       </div>
-      <div className="lg:flex flex-col gap-2 hidden">{children}</div>
+      <div className="hidden w-full flex-col gap-2 lg:flex">{children}</div>
     </>
   );
 }
