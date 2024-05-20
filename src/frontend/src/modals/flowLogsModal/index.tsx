@@ -73,20 +73,22 @@ export default function FlowLogsModal({
             <span className="pr-2">Logs</span>
             <IconComponent name="ScrollText" className="mr-2 h-4 w-4 " />
           </div>
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className={"api-modal-tabs inset-0 m-0 self-center"}
-          >
-            <TabsList>
-              <TabsTrigger value={"Executions"}>Executions</TabsTrigger>
-              <TabsTrigger value={"Messages"}>Messages</TabsTrigger>
-            </TabsList>
-          </Tabs>
           <div className="flex h-fit w-32 items-center"></div>
         </div>
       </BaseModal.Header>
       <BaseModal.Content>
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className={
+            "text-center; inset-0 m-0 mb-2 flex flex-col self-center overflow-hidden rounded-md border bg-muted pb-1"
+          }
+        >
+          <TabsList>
+            <TabsTrigger value={"Executions"}>Executions</TabsTrigger>
+            <TabsTrigger value={"Messages"}>Messages</TabsTrigger>
+          </TabsList>
+        </Tabs>
         <TableComponent
           readOnlyEdit
           className="h-max-full h-full w-full"
