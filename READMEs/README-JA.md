@@ -2,7 +2,7 @@
 
 # [![Langflow](https://github.com/langflow-ai/langflow/blob/dev/docs/static/img/hero.png)](https://www.langflow.org)
 
-[English](./README.md) | [中文](./README-ZH.md) | 日本語 | [한국어](./README-KR.md) | [Русский](./README-RUS.md)
+[English](./README.md) | [中文](READMEs/README-ZH.md) | 日本語 | [한국어](READMEs/README-KR.md) | [Русский](READMEs/README-RUS.md)
 
 ### [Langflow](https://www.langflow.org) 新しい、視覚的な方法でAIアプリを構築し、繰り返し改良し、展開する方法です。
 

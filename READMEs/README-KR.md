@@ -2,7 +2,7 @@
 
 # [![Langflow](https://github.com/langflow-ai/langflow/blob/dev/docs/static/img/hero.png)](https://www.langflow.org)
 
-[English](./README.md) | [中文](./README-ZH.md) | [日本語](./README-JA.md) | 한국어 | [Русский](./README-RUS.md)
+[English](./README.md) | [中文](READMEs/README-ZH.md) | [日本語](READMEs/README-JA.md) | 한국어 | [Русский](READMEs/README-RUS.md)
 
 ### [Langflow](https://www.langflow.org) 인공지능 앱을 만들고, 반복하고, 배포하는 새로운 시각적인 방법입니다.
 
