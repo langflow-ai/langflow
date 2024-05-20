@@ -16,18 +16,11 @@ const useFileDrop = (folderId, is_component, folderChangeCallback) => {
     }
   };
   const handleFileDrop = async (e) => {
-    e.preventDefault();
     if (e.dataTransfer.types.some((type) => type === "Files")) {
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         const firstFile = e.dataTransfer.files[0];
         if (firstFile.type === "application/json") {
-          const formData = new FormData();
-          formData.append("file", firstFile);
-          uploadFlowsFromFolders(formData).then(() => {
-            getFoldersApi(true);
-          });
-
-          triggerFolderChange(folderId);
+          uploadFormData(firstFile);
         } else {
           setErrorData({
             title: WRONG_FILE_ERROR_ALERT,
@@ -38,32 +31,71 @@ const useFileDrop = (folderId, is_component, folderChangeCallback) => {
     }
   };
 
-  const dragOver = (e) => {
+  const dragOver = (
+    e:
+      | React.DragEvent<HTMLDivElement>
+      | React.DragEvent<HTMLButtonElement>
+      | React.DragEvent<HTMLAnchorElement>
+  ) => {
     e.preventDefault();
     if (e.dataTransfer.types.some((types) => types === "Files")) {
       setFolderDragging(true);
     }
   };
 
-  const dragEnter = (e) => {
+  const dragEnter = (
+    e:
+      | React.DragEvent<HTMLDivElement>
+      | React.DragEvent<HTMLButtonElement>
+      | React.DragEvent<HTMLAnchorElement>
+  ) => {
     if (e.dataTransfer.types.some((types) => types === "Files")) {
       setFolderDragging(true);
     }
     e.preventDefault();
   };
 
-  const dragLeave = (e) => {
+  const dragLeave = (
+    e:
+      | React.DragEvent<HTMLDivElement>
+      | React.DragEvent<HTMLButtonElement>
+      | React.DragEvent<HTMLAnchorElement>
+  ) => {
     e.preventDefault();
     if (e.target === e.currentTarget) {
       setFolderDragging(false);
     }
   };
 
-  const onDrop = (e) => {
+  const onDrop = (
+    e:
+      | React.DragEvent<HTMLDivElement>
+      | React.DragEvent<HTMLButtonElement>
+      | React.DragEvent<HTMLAnchorElement>
+  ) => {
+    const data = JSON.parse(e.dataTransfer.getData("flow"));
+
+    if (data) {
+      uploadFormData(data);
+      return;
+    }
+
     e.preventDefault();
     handleFileDrop(e);
     setFolderDragging(false);
   };
+
+  const uploadFormData = (data) => {
+    const formData = new FormData();
+    formData.append("file", data);
+
+    uploadFlowsFromFolders(formData).then(() => {
+      getFoldersApi(true);
+    });
+
+    triggerFolderChange(folderId);
+  };
+
   return {
     dragOver,
     dragEnter,

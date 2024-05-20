@@ -17,10 +17,16 @@ const useFolderSubmit = (setOpen, folderToEdit) => {
           getFoldersApi(true);
           setOpen(false);
         },
-        () => {
-          setErrorData({
-            title: `Error updating folder.`,
-          });
+        (reason) => {
+          if (reason) {
+            setErrorData({
+              title: `Error updating folder.`,
+            });
+            console.error(reason);
+          } else {
+            getFoldersApi(true);
+            setOpen(false);
+          }
         },
       );
     } else {
