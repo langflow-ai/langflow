@@ -143,6 +143,7 @@ import {
 } from "lucide-react";
 import { FaApple, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
+import { FaDiscord } from "react-icons/fa";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
 import { AstraDBIcon } from "../icons/AstraDB";
@@ -517,4 +518,5 @@ export const nodeIconsLucide: iconsType = {
   Command,
   ArrowBigUp,
   Dot,
+  Discord: FaDiscord,
 };
