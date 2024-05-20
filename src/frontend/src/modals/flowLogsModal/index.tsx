@@ -30,7 +30,7 @@ export default function FlowLogsModal({
   const [description, setDescription] = useState(currentFlow!.description);
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
-  const [activeTab, setActiveTab] = useState("Transactions");
+  const [activeTab, setActiveTab] = useState("Executions");
 
   function handleClick(): void {
     currentFlow!.name = name;
@@ -40,7 +40,7 @@ export default function FlowLogsModal({
   }
 
   useEffect(() => {
-    if (activeTab === "Transactions") {
+    if (activeTab === "Executions") {
       getTransactionTable(currentFlowId, "union").then((data) => {
         const { columns, rows } = data;
         setColumns(columns.map((col) => ({ ...col, editable: true })));
@@ -79,7 +79,7 @@ export default function FlowLogsModal({
             className={"api-modal-tabs inset-0 m-0 self-center"}
           >
             <TabsList>
-              <TabsTrigger value={"Transactions"}>Transactions</TabsTrigger>
+              <TabsTrigger value={"Executions"}>Executions</TabsTrigger>
               <TabsTrigger value={"Messages"}>Messages</TabsTrigger>
             </TabsList>
           </Tabs>
