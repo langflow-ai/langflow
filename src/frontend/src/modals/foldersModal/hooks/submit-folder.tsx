@@ -22,10 +22,11 @@ const useFolderSubmit = (setOpen, folderToEdit) => {
             state: { folderId: folderToEdit.id },
           });
         },
-        () => {
+        (reason) => {
           setErrorData({
             title: `Error updating folder.`,
           });
+          console.error(reason);
         },
       );
     } else {
