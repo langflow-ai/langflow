@@ -1,7 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
 import { useFolderStore } from "../../../../stores/foldersStore";
-import { useStoreStore } from "../../../../stores/storeStore";
 import { cn } from "../../../../utils/utils";
 import DropdownButton from "../../../dropdownButtonComponent";
 import IconComponent from "../../../genericIconComponent";
@@ -61,7 +60,7 @@ const SideBarFoldersButtonsComponent = ({
         />
       </div>
 
-      <div className="flex h-[70vh] gap-2 overflow-auto lg:flex-col">
+      <div className="flex gap-2 overflow-auto lg:h-[70vh] lg:flex-col">
         <>
           {folders.map((item, index) => (
             <div

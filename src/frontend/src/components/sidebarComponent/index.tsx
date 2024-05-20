@@ -33,16 +33,11 @@ export default function SidebarNav({
   const loadingFolders = useFolderStore((state) => state.loading);
   const folders = useFolderStore((state) => state.folders);
 
-  const pathValues = ["folder", "components", "flows"];
+  const pathValues = ["folder", "components", "flows", "all"];
   const isFolderPath = pathValues.some((value) => pathname.includes(value));
 
   return (
-    <nav
-      className={cn(
-        className
-      )}
-      {...props}
-    >
+    <nav className={cn(className)} {...props}>
       <HorizontalScrollFadeComponent>
         <SideBarButtonsComponent
           items={items}
