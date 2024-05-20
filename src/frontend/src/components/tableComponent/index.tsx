@@ -111,6 +111,9 @@ const TableComponent = forwardRef<
           onGridReady={onGridReady}
           onFirstDataRendered={onFirstDataRendered}
           onGridSizeChanged={onGridSizeChanged}
+          defaultColDef={{
+            minWidth: 100,
+          }}
           ref={ref}
         />
       </div>
