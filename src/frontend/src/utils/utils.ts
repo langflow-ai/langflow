@@ -60,7 +60,7 @@ export function normalCaseToSnakeCase(str: string): string {
 
 export function toTitleCase(
   str: string | undefined,
-  isNodeField?: boolean,
+  isNodeField?: boolean
 ): string {
   if (!str) return "";
   let result = str
@@ -69,7 +69,7 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+          word[0].toUpperCase() + word.slice(1).toLowerCase()
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -82,7 +82,7 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+          word[0].toUpperCase() + word.slice(1).toLowerCase()
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -122,7 +122,7 @@ export function groupByFamily(
   data: APIDataType,
   baseClasses: string,
   left: boolean,
-  flow?: NodeType[],
+  flow?: NodeType[]
 ): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
   let arrOfPossibleInputs: Array<{
@@ -148,7 +148,7 @@ export function groupByFamily(
         baseClassesSet.has(template.type)) ||
         (template.input_types &&
           template.input_types.some((inputType) =>
-            baseClassesSet.has(inputType),
+            baseClassesSet.has(inputType)
           )))
     );
   };
@@ -168,7 +168,7 @@ export function groupByFamily(
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
           nodeData.node!.base_classes.some((baseClass) =>
-            baseClassesSet.has(baseClass),
+            baseClassesSet.has(baseClass)
           ), //seta como anterior ou verifica se o node tem base class
         displayName: nodeData.node?.display_name,
       });
@@ -185,10 +185,10 @@ export function groupByFamily(
       if (!foundNode) {
         foundNode = {
           hasBaseClassInTemplate: Object.values(node!.template).some(
-            checkBaseClass,
+            checkBaseClass
           ),
           hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
-            baseClassesSet.has(baseClass),
+            baseClassesSet.has(baseClass)
           ),
           displayName: node?.display_name,
         };
@@ -245,7 +245,7 @@ export function getRandomDescription(): string {
 export function getRandomName(
   retry: number = 0,
   noSpace: boolean = false,
-  maxRetries: number = 3,
+  maxRetries: number = 3
 ): string {
   const left: string[] = ADJECTIVES;
   const right: string[] = NOUNS;
@@ -324,7 +324,7 @@ export function getChatInputField(flowState?: FlowState) {
 export function getPythonApiCode(
   flowId: string,
   isAuth: boolean,
-  tweaksBuildedObject,
+  tweaksBuildedObject
 ): string {
   return `import requests
 from typing import Optional
@@ -381,7 +381,7 @@ print(run_flow(message=message, flow_id=FLOW_ID, tweaks=TWEAKS${
 export function getCurlCode(
   flowId: string,
   isAuth: boolean,
-  tweaksBuildedObject,
+  tweaksBuildedObject
 ): string {
   return `curl -X POST \\
   ${window.location.protocol}//${
@@ -426,6 +426,7 @@ TWEAKS = ${JSON.stringify(tweaksBuildedObject, null, 2)}
 
 result = run_flow_from_json(flow="${flowName}.json",
                             input_value="message",
+                            fallback_to_env_vars=True, # False by default
                             tweaks=TWEAKS)`;
 }
 
@@ -437,7 +438,7 @@ result = run_flow_from_json(flow="${flowName}.json",
 export function getWidgetCode(
   flowId: string,
   flowName: string,
-  isAuth: boolean,
+  isAuth: boolean
 ): string {
   return `<script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@1.0_alpha/dist/build/static/js/bundle.min.js"></script>
 
@@ -562,7 +563,7 @@ export function checkLocalStorageKey(key: string): boolean {
 
 export function IncrementObjectKey(
   object: object,
-  key: string,
+  key: string
 ): { newKey: string; increment: number } {
   let count = 1;
   const type = removeCountFromString(key);
@@ -634,7 +635,7 @@ export function getSetFromObject(obj: object, key?: string): Set<string> {
 
 export function getFieldTitle(
   template: APITemplateType,
-  templateField: string,
+  templateField: string
 ): string {
   return template[templateField].display_name
     ? template[templateField].display_name!

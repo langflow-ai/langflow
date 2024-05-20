@@ -44,12 +44,11 @@ import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
-import FlowPage from "../pages/FlowPage";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
   onFlowPage: false,
-  setOnFlowPage:(FlowPage=>set({onFlowPage:FlowPage})),
+  setOnFlowPage: (FlowPage) => set({ onFlowPage: FlowPage }),
   flowState: undefined,
   flowBuildStatus: {},
   nodes: [],
@@ -152,7 +151,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: applyEdgeChanges(changes, get().edges),
     });
   },
-  setNodes: (change,skipSave=false) => {
+  setNodes: (change, skipSave = false) => {
     let newChange = typeof change === "function" ? change(get().nodes) : change;
     let newEdges = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
@@ -175,7 +174,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
     }
   },
-  setEdges: (change,skipSave=false) => {
+  setEdges: (change, skipSave = false) => {
     let newChange = typeof change === "function" ? change(get().edges) : change;
     set({
       edges: newChange,
@@ -230,8 +229,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
   },
   paste: (selection, position) => {
-    function updateGroup() {}
-
     if (
       selection.nodes.some((node) => node.data.type === "ChatInput") &&
       checkChatInput(get().nodes)
@@ -268,8 +265,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       let newId = getNodeId(node.data.type);
       idsMap[node.id] = newId;
 
-      updateGroupRecursion(node, selection.edges);
-
       // Create a new node object
       const newNode: NodeType = {
         id: newId,
@@ -283,6 +278,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           id: newId,
         },
       };
+      updateGroupRecursion(newNode, selection.edges);
 
       // Add the new node to the list of nodes in state
       newNodes = newNodes
@@ -468,8 +464,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       status: BuildStatus,
       runId: string
     ) {
+      console.log("handleBuildUpdate", vertexBuildData, status, runId);
       if (vertexBuildData && vertexBuildData.inactivated_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
+        get().updateBuildStatus(
+          vertexBuildData.inactivated_vertices,
+          BuildStatus.INACTIVE
+        );
       }
 
       if (vertexBuildData.next_vertices_ids) {
@@ -486,9 +487,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         const next_vertices_ids = vertexBuildData.next_vertices_ids.filter(
           (id) => !vertexBuildData.inactivated_vertices?.includes(id)
         );
+        const top_level_vertices = vertexBuildData.top_level_vertices.filter(
+          (vertex) => !vertexBuildData.inactivated_vertices?.includes(vertex.id)
+        );
         const nextVertices: VertexLayerElementType[] = zip(
           next_vertices_ids,
-          vertexBuildData.top_level_vertices
+          top_level_vertices
         ).map(([id, reference]) => ({ id: id!, reference }));
 
         const newLayers = [
@@ -505,10 +509,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           runId: runId,
           verticesToRun: get().verticesBuild!.verticesToRun,
         });
-        get().updateBuildStatus(
-          vertexBuildData.top_level_vertices,
-          BuildStatus.TO_BUILD
-        );
+        get().updateBuildStatus(top_level_vertices, BuildStatus.TO_BUILD);
       }
 
       get().addDataToFlowPool(
