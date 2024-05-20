@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../../../components/dropdownButtonComponent";
-import IconComponent from "../../../../components/genericIconComponent";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../../components/genericIconComponent";
 import PageLayout from "../../../../components/pageLayout";
 import SidebarNav from "../../../../components/sidebarComponent";
 import { Button } from "../../../../components/ui/button";
@@ -82,14 +84,6 @@ export default function HomePage(): JSX.Element {
         description={MY_COLLECTION_DESC}
         button={
           <div className="flex gap-2">
-            <Button variant="primary" onClick={handleDownloadFolder}>
-              <IconComponent name="Download" className="main-page-nav-button" />
-              Download Folder
-            </Button>
-            <Button variant="primary" onClick={handleUploadFlowsToFolder}>
-              <IconComponent name="Upload" className="main-page-nav-button" />
-              Upload Folder
-            </Button>
             <DropdownButton
               firstButtonName="New Project"
               onFirstBtnClick={() => setOpenModal(true)}
@@ -122,6 +116,15 @@ export default function HomePage(): JSX.Element {
             />
           </aside>
           <div className="h-full w-full flex-1">
+            <div className="items-right absolute right-16 flex justify-center">
+              <Button variant="primary" onClick={handleDownloadFolder}>
+                <ForwardedIconComponent
+                  name="Download"
+                  className="main-page-nav-button"
+                />
+                Download Folder
+              </Button>
+            </div>
             <Outlet />
           </div>
         </div>
