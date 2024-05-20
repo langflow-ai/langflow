@@ -1,5 +1,6 @@
 import { useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
+import { cn } from "../../utils/utils";
 
 export default function CardsWrapComponent({
   onFileDrop,
@@ -43,12 +44,12 @@ export default function CardsWrapComponent({
       onDragEnter={dragEnter}
       onDragLeave={dragLeave}
       onDrop={onDrop}
-      className={
-        "h-full w-full " +
-        (isDragging
-          ? "mb-24 flex flex-col items-center justify-center gap-4 text-2xl font-light"
-          : "")
-      }
+      className={cn(
+        "h-full w-full",
+        isDragging
+          ? "mb-36 flex flex-col items-center justify-center gap-4 text-2xl font-light"
+          : "",
+      )}
     >
       {isDragging ? (
         <>

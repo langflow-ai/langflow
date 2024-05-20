@@ -307,12 +307,12 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   uploadFlow: async ({
     newProject,
     file,
-    isComponent = false,
+    isComponent,
     position = { x: 10, y: 10 },
   }: {
     newProject: boolean;
     file?: File;
-    isComponent?: boolean;
+    isComponent: boolean | null;
     position?: XYPosition;
   }): Promise<string | never> => {
     return new Promise(async (resolve, reject) => {
@@ -322,6 +322,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         let fileData = JSON.parse(text);
         if (
           newProject &&
+          isComponent !== null &&
           ((!fileData.is_component && isComponent === true) ||
             (fileData.is_component !== undefined &&
               fileData.is_component !== isComponent))

@@ -10,7 +10,7 @@ const MyCollectionComponent = ({ key, type }: MyCollectionComponentProps) => {
   return (
     <>
       <HeaderTabsSearchComponent />
-      <div className="mt-5">
+      <div className="mt-5 flex h-full flex-col">
         <ComponentsComponent key={key} type={type} />
       </div>
     </>

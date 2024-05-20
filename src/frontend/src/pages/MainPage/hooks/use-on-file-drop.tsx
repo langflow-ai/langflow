@@ -26,11 +26,11 @@ const useFileDrop = (uploadFlow, type) => {
         reader.onload = (event) => {
           const fileContent = event.target!.result;
           const fileContentJson = JSON.parse(fileContent as string);
-          const is_component = !fileContentJson?.flows;
+          const is_component = fileContentJson.is_component;
           uploadFlow({
             newProject: true,
             file: file,
-            isComponent: is_component,
+            isComponent: type === "all" ? null : type === "component",
           })
             .then(() => {
               setSuccessData({
