@@ -8,7 +8,6 @@ import IconComponent from "../../../../components/genericIconComponent";
 import PaginatorComponent from "../../../../components/paginatorComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
-import { multipleDeleteFlowsComponents } from "../../../../controllers/API";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -140,8 +139,8 @@ export default function ComponentsComponent({
   };
 
   const handleDeleteMultiple = () => {
-    multipleDeleteFlowsComponents(selectedFlowsComponentsCards).then(
-      () => {
+    removeFlow(selectedFlowsComponentsCards)
+      .then(() => {
         resetFilter();
         getFoldersApi(true);
         if (!folderId || folderId === myCollectionId) {
@@ -150,14 +149,13 @@ export default function ComponentsComponent({
         setSuccessData({
           title: "Selected items deleted successfully!",
         });
-      },
-      () => {
+      })
+      .catch(() => {
         setErrorData({
           title: "Error deleting items",
           list: ["Please try again"],
         });
-      },
-    );
+      });
   };
 
   useEffect(() => {

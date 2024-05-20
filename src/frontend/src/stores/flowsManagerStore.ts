@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { SAVE_DEBOUNCE_TIME } from "../constants/constants";
 import {
   deleteFlowFromDatabase,
+  multipleDeleteFlowsComponents,
   readFlowsFromDatabase,
   saveFlowToDatabase,
   updateFlowInDatabase,
@@ -266,25 +267,47 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         );
     }
   },
-  removeFlow: async (id: string) => {
-    return new Promise<void>((resolve) => {
-      const index = get().flows.findIndex((flow) => flow.id === id);
-      if (index >= 0) {
-        deleteFlowFromDatabase(id).then(() => {
-          const { data, flows } = processFlows(
-            get().flows.filter((flow) => flow.id !== id),
-          );
-          get().setFlows(flows);
-          set({ isLoading: false });
-          useTypesStore.setState((state) => ({
-            data: { ...state.data, ["saved_components"]: data },
-            ComponentFields: extractFieldsFromComponenents({
-              ...state.data,
-              ["saved_components"]: data,
-            }),
-          }));
-          resolve();
-        });
+  removeFlow: async (id: string | string[]) => {
+    return new Promise<void>((resolve, reject) => {
+      if (Array.isArray(id)) {
+        multipleDeleteFlowsComponents(id)
+          .then(() => {
+            const { data, flows } = processFlows(
+              get().flows.filter((flow) => !id.includes(flow.id)),
+            );
+            get().setFlows(flows);
+            set({ isLoading: false });
+            useTypesStore.setState((state) => ({
+              data: { ...state.data, ["saved_components"]: data },
+              ComponentFields: extractFieldsFromComponenents({
+                ...state.data,
+                ["saved_components"]: data,
+              }),
+            }));
+            resolve();
+          })
+          .catch((e) => reject(e));
+      } else {
+        const index = get().flows.findIndex((flow) => flow.id === id);
+        if (index >= 0) {
+          deleteFlowFromDatabase(id)
+            .then(() => {
+              const { data, flows } = processFlows(
+                get().flows.filter((flow) => flow.id !== id),
+              );
+              get().setFlows(flows);
+              set({ isLoading: false });
+              useTypesStore.setState((state) => ({
+                data: { ...state.data, ["saved_components"]: data },
+                ComponentFields: extractFieldsFromComponenents({
+                  ...state.data,
+                  ["saved_components"]: data,
+                }),
+              }));
+              resolve();
+            })
+            .catch((e) => reject(e));
+        }
       }
     });
   },

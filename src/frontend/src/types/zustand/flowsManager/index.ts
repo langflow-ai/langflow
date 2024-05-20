@@ -44,7 +44,7 @@ export type FlowsManagerStoreType = {
     fromDragAndDrop?: boolean,
   ) => Promise<string | undefined>;
   deleteComponent: (key: string) => Promise<void>;
-  removeFlow: (id: string) => Promise<void>;
+  removeFlow: (id: string | string[]) => Promise<void>;
   saveComponent: (
     component: any,
     override: boolean,
