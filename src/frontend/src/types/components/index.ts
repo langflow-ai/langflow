@@ -663,6 +663,7 @@ export type codeTabsPropsType = {
   };
   activeTweaks?: boolean;
   setActiveTweaks?: (value: boolean) => void;
+  allowExport?: boolean;
 };
 
 export type crashComponentPropsType = {
