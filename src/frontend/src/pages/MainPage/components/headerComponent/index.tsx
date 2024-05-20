@@ -34,7 +34,7 @@ const HeaderComponent = ({
   return (
     <>
       <div className="grid grid-cols-3 pb-5">
-        <div className="col-auto grid-cols-1 self-center justify-self-start ">
+        <div className="col-auto grid-cols-1 self-center justify-self-start">
           <a onClick={handleClick} className="text-sm">
             <div className="header-menu-bar-display ">
               <div

@@ -4,13 +4,11 @@ import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
 
 type InputSearchComponentProps = {
   loading: boolean;
-  isFlowPage: boolean;
 };
 
-const InputSearchComponent = ({
-  loading,
-  isFlowPage,
-}: InputSearchComponentProps) => {
+const InputSearchComponent = ({ loading }: InputSearchComponentProps) => {
+  const pagePath = window.location.pathname;
+
   const [inputValue, setInputValue] = useState("");
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
 
@@ -27,13 +25,23 @@ const InputSearchComponent = ({
     !allFlows ||
     (allFlows?.length === 0 && searchFlowsComponents === "");
 
+  const getSearchPlaceholder = () => {
+    if (pagePath.includes("flows")) {
+      return "Search Flows";
+    } else if (pagePath.includes("components")) {
+      return "Search Components";
+    } else {
+      return "Search Flows and Components";
+    }
+  };
+
   return (
     <>
       <div className="relative h-12 w-[40%]">
         <Input
           data-testid="search-store-input"
           disabled={disableInputSearch}
-          placeholder={`Search ${isFlowPage ? "Flows" : "Components"}`}
+          placeholder={getSearchPlaceholder()}
           className="absolute h-12 pl-5 pr-7"
           onChange={(e) => {
             setSearchFlowsComponents(e.target.value);

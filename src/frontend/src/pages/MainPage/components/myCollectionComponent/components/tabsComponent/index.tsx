@@ -21,19 +21,29 @@ const TabsSearchComponent = ({
   const changeLocation = (tabOption) => {
     const location = window.location.pathname;
     let newLocation = "";
-    if (tabOption === "Flows") {
-      newLocation = location.replace("components", "flows");
-    } else {
-      newLocation = location.replace("flows", "components");
+    switch (tabOption) {
+      case "Flows":
+        newLocation = location.replace(/components|all/, "flows");
+        break;
+      case "Components":
+        newLocation = location.replace(/flows|all/, "components");
+        break;
+      default:
+        newLocation = location.replace(/flows|components/, "all");
+        break;
     }
+
     navigate(newLocation, { state: { folderId: folderUrl } });
   };
 
   useEffect(() => {
-    if (window.location.pathname.includes("components")) {
+    const path = window.location.pathname;
+    if (path.includes("components")) {
       setActiveTab("Components");
-    } else {
+    } else if (path.includes("flows")) {
       setActiveTab("Flows");
+    } else {
+      setActiveTab("All");
     }
   }, [window.location.pathname]);
 

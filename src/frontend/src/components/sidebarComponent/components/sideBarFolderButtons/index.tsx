@@ -1,10 +1,11 @@
 import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
 import { useFolderStore } from "../../../../stores/foldersStore";
-import { useStoreStore } from "../../../../stores/storeStore";
 import { cn } from "../../../../utils/utils";
 import DropdownButton from "../../../dropdownButtonComponent";
-import IconComponent from "../../../genericIconComponent";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../genericIconComponent";
 import { Button, buttonVariants } from "../../../ui/button";
 import useFileDrop from "../../hooks/use-on-file-drop";
 
@@ -24,6 +25,7 @@ const SideBarFoldersButtonsComponent = ({
   handleEditFolder,
   handleDeleteFolder,
 }: SideBarFoldersButtonsComponentProps) => {
+  const uploadFolder = useFolderStore((state) => state.uploadFolder);
   const currentFolder = pathname.split("/");
   const urlWithoutPath = pathname.split("/").length < 4;
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
@@ -46,12 +48,16 @@ const SideBarFoldersButtonsComponent = ({
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(
     folderId,
     is_component,
-    handleFolderChange,
+    handleFolderChange
   );
+
+  const handleUploadFlowsToFolder = () => {
+    uploadFolder(folderId);
+  };
 
   return (
     <>
-      <div className="shrink-0">
+      <div className="flex shrink-0 items-center gap-2">
         <DropdownButton
           firstButtonName="New Folder"
           onFirstBtnClick={handleAddFolder!}
@@ -59,9 +65,20 @@ const SideBarFoldersButtonsComponent = ({
           plusButton={true}
           dropdownOptions={false}
         />
+        <Button
+          variant="primary"
+          onClick={handleUploadFlowsToFolder}
+          className=""
+        >
+          <ForwardedIconComponent
+            name="Upload"
+            className="main-page-nav-button"
+          />
+          Upload Folder
+        </Button>
       </div>
 
-      <div className="flex h-[70vh] w-full gap-2 overflow-auto lg:flex-col">
+      <div className="flex gap-2 overflow-auto lg:h-[70vh] lg:flex-col">
         <>
           {folders.map((item, index) => (
             <div
@@ -76,7 +93,7 @@ const SideBarFoldersButtonsComponent = ({
                 checkPathName(item.id!)
                   ? "border border-border bg-muted hover:bg-muted"
                   : "border hover:bg-transparent lg:border-transparent lg:hover:border-border",
-                "group flex w-full shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full",
+                "group flex w-full shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full"
               )}
               onClick={() => handleChangeFolder!(item.id!)}
             >

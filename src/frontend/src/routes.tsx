@@ -32,14 +32,18 @@ const Router = () => {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate replace to={"flows"} />} />
+        <Route index element={<Navigate replace to={"all"} />} />
         <Route
           path="flows/*"
-          element={<MyCollectionComponent key="flows" is_component={false} />}
+          element={<MyCollectionComponent key="flows" type="flow" />}
         />
         <Route
           path="components/*"
-          element={<MyCollectionComponent key="components" is_component />}
+          element={<MyCollectionComponent key="components" type="component" />}
+        />
+        <Route
+          path="all/*"
+          element={<MyCollectionComponent key="all" type="all" />}
         />
       </Route>
       <Route
