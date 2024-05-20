@@ -14,7 +14,7 @@ const useDeleteFolder = ({ navigate, getFoldersApi }) => {
           title: "Folder deleted successfully.",
         });
         getFoldersApi(true);
-        navigate("/flows");
+        navigate("/all");
       })
       .catch(() => {
         setErrorData({

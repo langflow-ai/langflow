@@ -15,14 +15,15 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { FlowType } from "../../../../types/flow";
 import useFileDrop from "../../hooks/use-on-file-drop";
+import { getNameByType } from "../../utils/get-name-by-type";
 import { sortFlows } from "../../utils/sort-flows";
 import EmptyComponent from "../emptyComponent";
 import HeaderComponent from "../headerComponent";
 
 export default function ComponentsComponent({
-  is_component = true,
+  type = "all",
 }: {
-  is_component?: boolean;
+  type?: string;
 }) {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const removeFlow = useFlowsManagerStore((state) => state.removeFlow);
@@ -31,34 +32,35 @@ export default function ComponentsComponent({
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
 
   const flowsFromFolder = useFolderStore(
-    (state) => state.selectedFolder?.flows
+    (state) => state.selectedFolder?.flows,
   );
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openDelete, setOpenDelete] = useState(false);
   const searchFlowsComponents = useFlowsManagerStore(
-    (state) => state.searchFlowsComponents
+    (state) => state.searchFlowsComponents,
   );
 
   const setSelectedFlowsComponentsCards = useFlowsManagerStore(
-    (state) => state.setSelectedFlowsComponentsCards
+    (state) => state.setSelectedFlowsComponentsCards,
   );
 
   const selectedFlowsComponentsCards = useFlowsManagerStore(
-    (state) => state.selectedFlowsComponentsCards
+    (state) => state.selectedFlowsComponentsCards,
   );
 
-  const [handleFileDrop] = useFileDrop(uploadFlow, is_component);
+  const [handleFileDrop] = useFileDrop(uploadFlow, type)!;
   const [pageSize, setPageSize] = useState(20);
   const [pageIndex, setPageIndex] = useState(1);
   const navigate = useNavigate();
   const location = useLocation();
-  const all: FlowType[] = sortFlows(allFlows, is_component);
+  const all: FlowType[] = sortFlows(allFlows, type);
   const start = (pageIndex - 1) * pageSize;
   const end = start + pageSize;
   const data: FlowType[] = all?.slice(start, end);
-  const name = is_component ? "Component" : "Flow";
+
+  const name = getNameByType(type);
 
   const folderId = location?.state?.folderId;
   const getFolderById = useFolderStore((state) => state.getFolderById);
@@ -80,7 +82,7 @@ export default function ComponentsComponent({
         f.name.toLowerCase().includes(searchFlowsComponents.toLowerCase()) ||
         f.description
           .toLowerCase()
-          .includes(searchFlowsComponents.toLowerCase())
+          .includes(searchFlowsComponents.toLowerCase()),
     );
 
     if (searchFlowsComponents === "") {
@@ -154,7 +156,7 @@ export default function ComponentsComponent({
           title: "Error deleting items",
           list: ["Please try again"],
         });
-      }
+      },
     );
   };
 
@@ -166,18 +168,44 @@ export default function ComponentsComponent({
           return true;
         }
         return false;
-      }
+      },
     );
 
     setSelectedFlowsComponentsCards(selectedFlows);
   }, [entireFormValues]);
 
   const getDescriptionModal = useMemo(() => {
+    const getTypeLabel = (type) => {
+      const labels = {
+        all: "item",
+        component: "component",
+        flow: "flow",
+      };
+      return labels[type] || "";
+    };
+
+    const getPluralizedLabel = (type) => {
+      const labels = {
+        all: "items",
+        component: "components",
+        flow: "flows",
+      };
+      return labels[type] || "";
+    };
+
     if (selectedFlowsComponentsCards?.length === 1) {
-      return ` ${is_component ? "component" : "flow"}`;
+      return getTypeLabel(type);
     }
-    return ` ${is_component ? "components" : "flows"}`;
-  }, [selectedFlowsComponentsCards]);
+    return getPluralizedLabel(type);
+  }, [selectedFlowsComponentsCards, type]);
+
+  const getTotalRowsCount = () => {
+    if (type === "all") return allFlows?.length;
+
+    return allFlows?.filter(
+      (f) => (f.is_component ?? false) === (type === "component"),
+    )?.length;
+  };
 
   return (
     <>
@@ -205,7 +233,7 @@ export default function ComponentsComponent({
                       <FormProvider {...methods} key={item.id}>
                         <form>
                           <CollectionCardComponent
-                            is_component={is_component}
+                            is_component={type === "component"}
                             onDelete={() => handleDelete(item)}
                             data={{
                               is_component: item.is_component ?? false,
@@ -214,7 +242,7 @@ export default function ComponentsComponent({
                             disabled={isLoading}
                             data-testid={"edit-flow-button-" + item.id}
                             button={
-                              !is_component ? (
+                              type === "flow" ? (
                                 <Link to={"/flow/" + item.id}>
                                   <Button
                                     tabIndex={-1}
@@ -235,13 +263,13 @@ export default function ComponentsComponent({
                               )
                             }
                             onClick={
-                              !is_component
+                              type === "flow"
                                 ? () => {
                                     navigate("/flow/" + item.id);
                                   }
                                 : undefined
                             }
-                            playground={!is_component}
+                            playground={type === "flow"}
                             control={control}
                           />
                         </form>
@@ -264,11 +292,7 @@ export default function ComponentsComponent({
                 pageIndex={pageIndex}
                 pageSize={pageSize}
                 rowsCount={[10, 20, 50, 100]}
-                totalRowsCount={
-                  allFlows?.filter(
-                    (f) => (f.is_component ?? false) === is_component
-                  )?.length
-                }
+                totalRowsCount={getTotalRowsCount()}
                 paginate={(pageSize, pageIndex) => {
                   setPageIndex(pageIndex);
                   setPageSize(pageSize);

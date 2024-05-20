@@ -77,8 +77,7 @@ export default function App() {
           setUserData(user);
           setAutoLogin(true);
           setLoading(false);
-          await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
-          getFoldersApi();
+          fetchAllData();
         }
       })
       .catch(async (error) => {
@@ -86,12 +85,11 @@ export default function App() {
           setAutoLogin(false);
           if (isAuthenticated && !isLoginPage) {
             getUser();
-            await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+            fetchAllData();
           } else {
             setLoading(false);
             useFlowsManagerStore.setState({ isLoading: false });
           }
-          getFoldersApi();
         }
       });
 
@@ -102,6 +100,13 @@ export default function App() {
     */
     return () => abortController.abort();
   }, []);
+
+  const fetchAllData = async () => {
+    setTimeout(async () => {
+      await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+      getFoldersApi();
+    }, 1000);
+  };
 
   const fetchData = async () => {
     return new Promise<void>(async (resolve, reject) => {

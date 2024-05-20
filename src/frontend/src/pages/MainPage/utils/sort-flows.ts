@@ -1,21 +1,25 @@
-export const sortFlows = (flows, is_component) => {
-  return flows
-    ?.filter((f) => (f?.is_component ?? false) === is_component)
-    .sort((a, b) => {
-      if (a?.updated_at && b?.updated_at) {
-        return (
-          new Date(b?.updated_at!).getTime() -
-          new Date(a?.updated_at!).getTime()
-        );
-      } else if (a?.updated_at && !b?.updated_at) {
-        return 1;
-      } else if (!a?.updated_at && b?.updated_at) {
-        return -1;
-      } else {
-        return (
-          new Date(b?.date_created!).getTime() -
-          new Date(a?.date_created!).getTime()
-        );
-      }
-    });
+export const sortFlows = (flows, type) => {
+  const isComponent = type === "component";
+
+  const sortByDate = (a, b) => {
+    const dateA = a?.updated_at || a?.date_created;
+    const dateB = b?.updated_at || b?.date_created;
+
+    if (dateA && dateB) {
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    } else if (dateA) {
+      return 1;
+    } else if (dateB) {
+      return -1;
+    } else {
+      return 0;
+    }
+  };
+
+  const filteredFlows =
+    type === "all"
+      ? flows
+      : flows?.filter((f) => (f?.is_component ?? false) === isComponent);
+
+  return filteredFlows?.sort(sortByDate) ?? [];
 };
