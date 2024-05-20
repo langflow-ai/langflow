@@ -57,11 +57,11 @@ export default function CollectionCardComponent({
   const [loading, setLoading] = useState(false);
   const [loadingLike, setLoadingLike] = useState(false);
   const [liked_by_user, setLiked_by_user] = useState(
-    data?.liked_by_user ?? false
+    data?.liked_by_user ?? false,
   );
   const [likes_count, setLikes_count] = useState(data?.liked_by_count ?? 0);
   const [downloads_count, setDownloads_count] = useState(
-    data?.downloads_count ?? 0
+    data?.downloads_count ?? 0,
   );
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
@@ -72,12 +72,12 @@ export default function CollectionCardComponent({
   const [openPlayground, setOpenPlayground] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
   const [loadingPlayground, setLoadingPlayground] = useState(false);
 
   const selectedFlowsComponentsCards = useFlowsManagerStore(
-    (state) => state.selectedFlowsComponentsCards
+    (state) => state.selectedFlowsComponentsCards,
   );
 
   const name = data.is_component ? "Component" : "Flow";
@@ -208,20 +208,20 @@ export default function CollectionCardComponent({
           "group relative flex min-h-[11rem] flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#ffffff10]",
           disabled ? "pointer-events-none opacity-50" : "",
           onClick ? "cursor-pointer" : "",
-          isSelectedCard ? "border border-medium-indigo" : ""
+          isSelectedCard ? "border border-medium-indigo" : "",
         )}
         onClick={onClick}
       >
         <div>
           <CardHeader>
             <div>
-              <CardTitle className="flex w-full items-center justify-between gap-3 text-xl">
+              <CardTitle className="flex w-full items-start justify-between gap-3 text-xl">
                 <IconComponent
                   className={cn(
                     "visible flex-shrink-0",
                     data.is_component
                       ? "mx-0.5 h-6 w-6 text-component-icon"
-                      : "h-7 w-7 flex-shrink-0 text-flow-icon"
+                      : "h-7 w-7 flex-shrink-0 text-flow-icon",
                   )}
                   name={data.is_component ? "ToyBrick" : "Group"}
                 />
@@ -230,7 +230,7 @@ export default function CollectionCardComponent({
                   <div className="w-full truncate pr-3">{data.name}</div>
                 </ShadTooltip>
                 {data?.metadata !== undefined && (
-                  <div className="flex gap-3">
+                  <div className="flex items-center gap-3">
                     {data.private && (
                       <ShadTooltip content="Private">
                         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -273,30 +273,29 @@ export default function CollectionCardComponent({
                   </div>
                 )}
 
-                <div className="absolute right-2 top-1">
-                  {control && (
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <FormField
-                        control={control}
-                        name={`${data.id}`}
-                        defaultValue={false}
-                        render={({ field }) => (
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              className="relative top-1 h-5 w-5 border border-medium-indigo"
-                            />
-                          </FormControl>
-                        )}
-                      />
-                    </div>
-                  )}
-                </div>
+                {control && (
+                  <div
+                    className="flex"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    <FormField
+                      control={control}
+                      name={`${data.id}`}
+                      defaultValue={false}
+                      render={({ field }) => (
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="h-5 w-5 border border-medium-indigo"
+                          />
+                        </FormControl>
+                      )}
+                    />
+                  </div>
+                )}
               </CardTitle>
             </div>
             <div className="flex gap-2">
@@ -416,7 +415,7 @@ export default function CollectionCardComponent({
                             name="Trash2"
                             className={cn(
                               "h-5 w-5",
-                              !authorized ? " text-ring" : ""
+                              !authorized ? " text-ring" : "",
                             )}
                           />
                         </Button>
@@ -451,7 +450,7 @@ export default function CollectionCardComponent({
                             liked_by_user
                               ? "fill-destructive stroke-destructive"
                               : "",
-                            !authorized ? " text-ring" : ""
+                            !authorized ? " text-ring" : "",
                           )}
                         />
                       </Button>
@@ -489,7 +488,7 @@ export default function CollectionCardComponent({
                         }
                         className={cn(
                           loading ? "h-5 w-5 animate-spin" : "h-5 w-5",
-                          !authorized ? " text-ring" : ""
+                          !authorized ? " text-ring" : "",
                         )}
                       />
                     </Button>
