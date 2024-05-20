@@ -78,6 +78,8 @@ export default function Dropdown({
               </PopoverTrigger>
             )}
             <PopoverContentDropdown
+              side="bottom"
+              avoidCollisions={!!children}
               className="nocopy nowheel nopan nodelete nodrag noundo p-0"
               style={
                 children

@@ -7,15 +7,14 @@ export default function cloneFLowWithParent(
   flow: FlowType,
   parent: string,
   is_component: boolean,
-  keepId=false
+  keepId = false
 ) {
   let childFLow = cloneDeep(flow);
   childFLow.parent = parent;
-  if(!keepId){
+  if (!keepId) {
     childFLow.id = "";
-  }
-  else{
-    childFLow.id = uniqueId()+"-"+childFLow.id;
+  } else {
+    childFLow.id = uniqueId() + "-" + childFLow.id;
   }
   childFLow.is_component = is_component;
   return childFLow;

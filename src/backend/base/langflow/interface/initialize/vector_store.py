@@ -5,7 +5,6 @@ import orjson
 from langchain_community.vectorstores import (
     FAISS,
     Chroma,
-    ElasticsearchStore,
     MongoDBAtlasVectorSearch,
     Pinecone,
     Qdrant,

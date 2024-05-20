@@ -52,7 +52,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       currentFlow: flow,
       currentFlowId: flow.id,
     }));
-  
   },
   getFlowById: (id: string) => {
     return get().flows.find((flow) => flow.id === id);
