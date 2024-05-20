@@ -33,7 +33,6 @@ google-api-python-client = "^2.118.0"
 huggingface-hub = { version = "^0.20.0", extras = ["inference"] }
 llama-cpp-python = { version = "~0.2.0", optional = true }
 networkx = "^3.1"
-pysrt = "^1.1.2"
 fake-useragent = "^1.4.0"
 psycopg2-binary = "^2.9.6"
 pyarrow = "^14.0.0"
