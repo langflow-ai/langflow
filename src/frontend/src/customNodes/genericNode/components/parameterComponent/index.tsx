@@ -86,7 +86,7 @@ export default function ParameterComponent({
   let disabled =
     edges.some(
       (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
+        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
     ) ?? false;
 
   const myData = useTypesStore((state) => state.data);
@@ -159,7 +159,7 @@ export default function ParameterComponent({
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
-    skipSnapshot: boolean | undefined = false,
+    skipSnapshot: boolean | undefined = false
   ): Promise<void> => {
     const nodeTemplate = data.node!.template[name];
     const currentValue = nodeTemplate.value;
@@ -280,7 +280,7 @@ export default function ParameterComponent({
             <span
               key={index}
               className={classNames(
-                index > 0 ? "mt-2 flex items-center" : "mt-3 flex items-center",
+                index > 0 ? "mt-2 flex items-center" : "mt-3 flex items-center"
               )}
             >
               <div
@@ -396,7 +396,7 @@ export default function ParameterComponent({
               className={classNames(
                 left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
                 "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : "",
+                !showNode ? "mt-0" : ""
               )}
               style={{
                 borderColor: color ?? nodeColors.unknown,
@@ -492,7 +492,7 @@ export default function ParameterComponent({
                   }
                   className={classNames(
                     left ? "-ml-0.5 " : "-mr-0.5 ",
-                    "h-3 w-3 rounded-full border-2 bg-background",
+                    "h-3 w-3 rounded-full border-2 bg-background"
                   )}
                   style={{
                     borderColor: color ?? nodeColors.unknown,

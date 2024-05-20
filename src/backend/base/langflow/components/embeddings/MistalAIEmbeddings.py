@@ -1,9 +1,9 @@
-from typing import List, Optional
 from pydantic.v1 import SecretStr
 
 from langchain_mistralai.embeddings import MistralAIEmbeddings
 from langflow.interface.custom.custom_component import CustomComponent
-from langflow.field_typing import Embeddings, NestedDict
+from langflow.field_typing import Embeddings
+
 
 class MistralAIEmbeddingsComponent(CustomComponent):
     display_name = "MistralAI Embeddings"
@@ -37,11 +37,7 @@ class MistralAIEmbeddingsComponent(CustomComponent):
                 "advanced": True,
                 "value": 120,
             },
-            "endpoint": {
-                "display_name": "API Endpoint",
-                "advanced": True,
-                "value": "https://api.mistral.ai/v1/"
-            }
+            "endpoint": {"display_name": "API Endpoint", "advanced": True, "value": "https://api.mistral.ai/v1/"},
         }
 
     def build(
@@ -51,7 +47,7 @@ class MistralAIEmbeddingsComponent(CustomComponent):
         max_concurrent_requests: int = 64,
         max_retries: int = 5,
         timeout: int = 120,
-        endpoint: str = "https://api.mistral.ai/v1/"
+        endpoint: str = "https://api.mistral.ai/v1/",
     ) -> Embeddings:
         if mistral_api_key:
             api_key = SecretStr(mistral_api_key)
@@ -64,6 +60,5 @@ class MistralAIEmbeddingsComponent(CustomComponent):
             endpoint=endpoint,
             max_concurrent_requests=max_concurrent_requests,
             max_retries=max_retries,
-            timeout=timeout
+            timeout=timeout,
         )
-

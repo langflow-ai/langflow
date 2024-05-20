@@ -76,7 +76,7 @@ export default function InputComponent({
               editNode ? " input-edit-node " : "",
               password && editNode ? "pr-8" : "",
               password && !editNode ? "pr-10" : "",
-              className!,
+              className!
             )}
             placeholder={password && editNode ? "Key" : placeholder}
             onChange={(e) => {
@@ -104,9 +104,9 @@ export default function InputComponent({
                   (selectedOption !== "" || !onChange) && setSelectedOption
                     ? selectedOption
                     : (selectedOptions?.length !== 0 || !onChange) &&
-                        setSelectedOptions
-                      ? selectedOptions?.join(", ")
-                      : value
+                      setSelectedOptions
+                    ? selectedOptions?.join(", ")
+                    : value
                 }
                 autoFocus={autoFocus}
                 disabled={disabled}
@@ -134,7 +134,7 @@ export default function InputComponent({
                     ? "pr-8"
                     : "",
 
-                  className!,
+                  className!
                 )}
                 placeholder={password && editNode ? "Key" : placeholder}
                 onChange={(e) => {
@@ -195,15 +195,15 @@ export default function InputComponent({
                             setSelectedOption(
                               currentValue === selectedOption
                                 ? ""
-                                : currentValue,
+                                : currentValue
                             );
                           setSelectedOptions &&
                             setSelectedOptions(
                               selectedOptions?.includes(currentValue)
                                 ? selectedOptions.filter(
-                                    (item) => item !== currentValue,
+                                    (item) => item !== currentValue
                                   )
-                                : [...selectedOptions, currentValue],
+                                : [...selectedOptions, currentValue]
                             );
                           !setSelectedOptions && setShowOptions(false);
                         }}
@@ -216,7 +216,7 @@ export default function InputComponent({
                                 selectedOption === option ||
                                   selectedOptions?.includes(option)
                                   ? "opacity-100"
-                                  : "opacity-0",
+                                  : "opacity-0"
                               )}
                             >
                               <div className="absolute opacity-100 transition-all group-hover:opacity-0">
@@ -255,7 +255,7 @@ export default function InputComponent({
                 ((selectedOptions?.length !== 0 || !onChange) &&
                   setSelectedOptions)
                 ? ""
-                : "hidden",
+                : "hidden"
             )}
             onClick={
               ((selectedOption !== "" || !onChange) && setSelectedOption) ||
@@ -276,7 +276,7 @@ export default function InputComponent({
         <span
           className={cn(
             password && selectedOption === "" ? "right-8" : "right-0",
-            "absolute inset-y-0 flex items-center pr-2.5",
+            "absolute inset-y-0 flex items-center pr-2.5"
           )}
         >
           <button
@@ -287,7 +287,7 @@ export default function InputComponent({
               selectedOption !== ""
                 ? "text-medium-indigo"
                 : "text-muted-foreground",
-              "hover:text-accent-foreground",
+              "hover:text-accent-foreground"
             )}
           >
             <ForwardedIconComponent
@@ -307,7 +307,7 @@ export default function InputComponent({
             "mb-px",
             editNode
               ? "input-component-true-button"
-              : "input-component-false-button",
+              : "input-component-false-button"
           )}
           onClick={(event) => {
             event.preventDefault();
@@ -324,7 +324,7 @@ export default function InputComponent({
               className={classNames(
                 editNode
                   ? "input-component-true-svg"
-                  : "input-component-false-svg",
+                  : "input-component-false-svg"
               )}
             >
               <path
@@ -343,7 +343,7 @@ export default function InputComponent({
               className={classNames(
                 editNode
                   ? "input-component-true-svg"
-                  : "input-component-false-svg",
+                  : "input-component-false-svg"
               )}
             >
               <path

@@ -108,7 +108,6 @@ def store_message(
     sender: Optional[str] = None,
     sender_name: Optional[str] = None,
 ) -> list[Record]:
-
     if not message:
         warnings.warn("No message provided.")
         return []

@@ -16,13 +16,13 @@ import { cn } from "../../../../utils/utils";
 
 export default function GlobalVariablesPage() {
   const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries,
+    (state) => state.globalVariablesEntries
   );
   const removeGlobalVariable = useGlobalVariablesStore(
-    (state) => state.removeGlobalVariable,
+    (state) => state.removeGlobalVariable
   );
   const globalVariables = useGlobalVariablesStore(
-    (state) => state.globalVariables,
+    (state) => state.globalVariables
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
@@ -156,7 +156,7 @@ export default function GlobalVariablesPage() {
             <IconComponent
               name="Trash2"
               className={cn(
-                "h-5 w-5 text-destructive group-disabled:text-primary",
+                "h-5 w-5 text-destructive group-disabled:text-primary"
               )}
             />
           </Button>
@@ -176,7 +176,7 @@ export default function GlobalVariablesPage() {
               overlayNoRowsTemplate="No data available"
               onSelectionChanged={(event: SelectionChangedEvent) => {
                 setSelectedRows(
-                  event.api.getSelectedRows().map((row) => row.name),
+                  event.api.getSelectedRows().map((row) => row.name)
                 );
               }}
               rowSelection="multiple"

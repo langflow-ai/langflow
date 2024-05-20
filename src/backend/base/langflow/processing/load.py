@@ -82,7 +82,7 @@ def run_flow_from_json(
     env_file: Optional[str] = None,
     cache: Optional[str] = None,
     disable_logs: Optional[bool] = True,
-    fallback_to_env_vars: Optional[bool] = False,
+    fallback_to_env_vars: bool = False,
 ) -> List[RunOutputs]:
     """
     Run a flow from a JSON file or dictionary.
@@ -99,6 +99,7 @@ def run_flow_from_json(
         env_file (Optional[str], optional): The environment file to load. Defaults to None.
         cache (Optional[str], optional): The cache directory to use. Defaults to None.
         disable_logs (Optional[bool], optional): Whether to disable logs. Defaults to True.
+        fallback_to_env_vars (bool, optional): Whether Global Variables should fallback to environment variables if not found. Defaults to False.
 
     Returns:
         List[RunOutputs]: A list of RunOutputs objects representing the results of running the flow.

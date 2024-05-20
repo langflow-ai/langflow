@@ -315,7 +315,11 @@ class Vertex:
                     params[field_name] = full_path
                 elif field.get("required"):
                     field_display_name = field.get("display_name")
-                    raise ValueError(f"File path not found for {field_display_name} in component {self.display_name}")
+                    logger.warning(
+                        f"File path not found for {field_display_name} in component {self.display_name}. Setting to None."
+                    )
+                    params[field_name] = None
+
             elif field.get("type") in DIRECT_TYPES and params.get(field_name) is None:
                 val = field.get("value")
                 if field.get("type") == "code":

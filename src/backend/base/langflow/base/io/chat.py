@@ -49,7 +49,6 @@ class ChatComponent(CustomComponent):
         sender: Optional[str] = None,
         sender_name: Optional[str] = None,
     ) -> list[Record]:
-
         records = store_message(
             message,
             session_id=session_id,

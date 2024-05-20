@@ -715,9 +715,9 @@ class Graph:
         lock: asyncio.Lock,
         set_cache_coro: Callable[["Graph", asyncio.Lock], Coroutine],
         vertex_id: str,
-        fallback_to_env_vars: bool,
         inputs_dict: Optional[Dict[str, str]] = None,
         user_id: Optional[str] = None,
+        fallback_to_env_vars: bool = False,
     ):
         """
         Builds a vertex in the graph.
