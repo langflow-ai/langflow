@@ -45,7 +45,7 @@ const SideBarFoldersButtonsComponent = ({
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(
     folderId,
     is_component,
-    handleFolderChange,
+    handleFolderChange
   );
 
   return (
@@ -75,7 +75,7 @@ const SideBarFoldersButtonsComponent = ({
                 checkPathName(item.id!)
                   ? "border border-border bg-muted hover:bg-muted"
                   : "border hover:bg-transparent lg:border-transparent lg:hover:border-border",
-                "group flex min-w-48 max-w-48 shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full",
+                "group flex w-full shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full"
               )}
               onClick={() => handleChangeFolder!(item.id!)}
             >
