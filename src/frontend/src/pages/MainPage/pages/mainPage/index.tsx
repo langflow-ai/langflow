@@ -78,8 +78,8 @@ export default function HomePage(): JSX.Element {
   return (
     <>
       <PageLayout
-        title={!folderId ? USER_PROJECTS_HEADER : folderName!}
-        description={!folderId ? MY_COLLECTION_DESC : folderDescription!}
+        title={USER_PROJECTS_HEADER}
+        description={MY_COLLECTION_DESC}
         button={
           <div className="flex gap-2">
             <Button variant="primary" onClick={handleDownloadFolder}>

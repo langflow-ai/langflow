@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
 
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
@@ -37,7 +38,7 @@ def create_flow(
     db_flow.updated_at = datetime.now(timezone.utc)
 
     if db_flow.folder_id is None:
-        default_folder = session.exec(select(Folder).where(Folder.name == "My Collection")).first()
+        default_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
         if default_folder:
             db_flow.folder_id = default_folder.id
 
@@ -136,7 +137,7 @@ def update_flow(
             setattr(db_flow, key, value)
     db_flow.updated_at = datetime.now(timezone.utc)
     if db_flow.folder_id is None:
-        default_folder = session.exec(select(Folder).where(Folder.name == "My Collection")).first()
+        default_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
         if default_folder:
             db_flow.folder_id = default_folder.id
     session.add(db_flow)
@@ -236,7 +237,9 @@ async def delete_multiple_flows(
 
     """
     try:
-        deleted_flows = db.exec(select(Flow).where(col(Flow.id).in_(flow_ids.flow_ids)).where(Flow.user_id == user.id)).all()
+        deleted_flows = db.exec(
+            select(Flow).where(col(Flow.id).in_(flow_ids.flow_ids)).where(Flow.user_id == user.id)
+        ).all()
         for flow in deleted_flows:
             db.delete(flow)
         db.commit()
