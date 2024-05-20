@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
 import { Control } from "react-hook-form";
 import { getComponent, postLikeComponent } from "../../controllers/API";
 import IOModal from "../../modals/IOModal";
@@ -26,6 +27,7 @@ import {
 import { Checkbox } from "../ui/checkbox";
 import { FormControl, FormField } from "../ui/form";
 import Loading from "../ui/loading";
+import DragCardComponent from "./components/dragCardComponent";
 
 export default function CollectionCardComponent({
   data,
@@ -191,6 +193,15 @@ export default function CollectionCardComponent({
     selectedFlowsComponentsCards?.includes(data?.id) ?? false;
 
   function onDragStart(event: React.DragEvent<any>) {
+    let image: JSX.Element = <DragCardComponent data={data} />; // <== whatever you want here
+
+    var ghost = document.createElement("div");
+    ghost.style.transform = "translate(-10000px, -10000px)";
+    ghost.style.position = "absolute";
+    document.body.appendChild(ghost);
+    event.dataTransfer.setDragImage(ghost, 0, 0);
+    const root = createRoot(ghost);
+    root.render(image);
     const flow = getFlowById(data.id);
     if (flow) {
       event.dataTransfer.setData("flow", JSON.stringify(data));
