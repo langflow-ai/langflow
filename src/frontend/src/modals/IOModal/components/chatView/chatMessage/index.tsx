@@ -324,7 +324,7 @@ dark:prose-invert"
               </>
             ) : (
               <span
-              className="prose text-primary word-break-break-word dark:prose-invert"
+                className="prose text-primary word-break-break-word dark:prose-invert"
                 data-testid={
                   "chat-message-" + chat.sender_name + "-" + chatMessage
                 }
