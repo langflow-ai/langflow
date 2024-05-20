@@ -1,6 +1,7 @@
 import hashlib
 from http import HTTPStatus
 from io import BytesIO
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
@@ -20,10 +21,11 @@ router = APIRouter(tags=["Files"], prefix="/files")
 # then finds it in the database and returns it while
 # using the current user as the owner
 def get_flow_id(
-    flow_id: str,
+    flow_id: UUID,
     current_user=Depends(get_current_active_user),
     session=Depends(get_session),
 ):
+    flow_id = str(flow_id)
     # AttributeError: 'SelectOfScalar' object has no attribute 'first'
     flow = session.get(Flow, flow_id)
     if not flow:
@@ -36,10 +38,11 @@ def get_flow_id(
 @router.post("/upload/{flow_id}", status_code=HTTPStatus.CREATED)
 async def upload_file(
     file: UploadFile,
-    flow_id: str = Depends(get_flow_id),
+    flow_id: UUID = Depends(get_flow_id),
     storage_service: StorageService = Depends(get_storage_service),
 ):
     try:
+        flow_id = str(flow_id)
         file_content = await file.read()
         file_name = file.filename or hashlib.sha256(file_content).hexdigest()
         folder = flow_id
@@ -50,8 +53,9 @@ async def upload_file(
 
 
 @router.get("/download/{flow_id}/{file_name}")
-async def download_file(file_name: str, flow_id: str, storage_service: StorageService = Depends(get_storage_service)):
+async def download_file(file_name: str, flow_id: UUID, storage_service: StorageService = Depends(get_storage_service)):
     try:
+        flow_id = str(flow_id)
         extension = file_name.split(".")[-1]
 
         if not extension:
@@ -74,9 +78,10 @@ async def download_file(file_name: str, flow_id: str, storage_service: StorageSe
 
 
 @router.get("/images/{flow_id}/{file_name}")
-async def download_image(file_name: str, flow_id: str, storage_service: StorageService = Depends(get_storage_service)):
+async def download_image(file_name: str, flow_id: UUID, storage_service: StorageService = Depends(get_storage_service)):
     try:
         extension = file_name.split(".")[-1]
+        flow_id = str(flow_id)
 
         if not extension:
             raise HTTPException(status_code=500, detail=f"Extension not found for file {file_name}")
@@ -96,9 +101,10 @@ async def download_image(file_name: str, flow_id: str, storage_service: StorageS
 
 @router.get("/list/{flow_id}")
 async def list_files(
-    flow_id: str = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
+    flow_id: UUID = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
 ):
     try:
+        flow_id = str(flow_id)
         files = await storage_service.list_files(flow_id=flow_id)
         return {"files": files}
     except Exception as e:
@@ -107,9 +113,10 @@ async def list_files(
 
 @router.delete("/delete/{flow_id}/{file_name}")
 async def delete_file(
-    file_name: str, flow_id: str = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
+    file_name: str, flow_id: UUID = Depends(get_flow_id), storage_service: StorageService = Depends(get_storage_service)
 ):
     try:
+        flow_id = str(flow_id)
         await storage_service.delete_file(flow_id=flow_id, file_name=file_name)
         return {"message": f"File {file_name} deleted successfully"}
     except Exception as e:
