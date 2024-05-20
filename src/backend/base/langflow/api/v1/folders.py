@@ -6,6 +6,7 @@ from langflow.api.v1.flows import create_flows
 from langflow.api.v1.schemas import FlowListCreate, FlowListReadWithFolderName
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 import orjson
 from sqlalchemy import update
 from sqlmodel import Session, select
@@ -124,7 +125,7 @@ def update_folder(
 
         excluded_flows = list(set(flows_ids) - set(concat_folder_components))
 
-        my_collection_folder = session.exec(select(Folder).where(Folder.name == "My Collection")).first()
+        my_collection_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
         if my_collection_folder:
             update_statement_my_collection = update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_folder.id)
             session.exec(update_statement_my_collection)

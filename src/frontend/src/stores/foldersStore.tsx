@@ -6,6 +6,7 @@ import {
 } from "../pages/MainPage/services";
 import { FoldersStoreType } from "../types/zustand/folders";
 import useFlowsManagerStore from "./flowsManagerStore";
+import { DEFAULT_FOLDER } from "../constants/constants";
 
 export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   folders: [],
@@ -22,7 +23,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
         () => {
           set({ folders: [] });
           get().setLoading(false);
-        }
+        },
       );
     }
   },
@@ -41,7 +42,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
         },
         () => {
           get().setLoadingById(false);
-        }
+        },
       );
     }
   },
@@ -50,7 +51,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   setLoadingById: (loading) => set(() => ({ loadingById: loading })),
   getMyCollectionFolder: () => {
     const folders = get().folders;
-    const myCollectionId = folders?.find((f) => f.name === "My Collection")?.id;
+    const myCollectionId = folders?.find((f) => f.name === DEFAULT_FOLDER)?.id;
     if (myCollectionId) {
       getFolderById(myCollectionId).then((res) => {
         set({ myCollectionFlows: res });
@@ -61,7 +62,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   myCollectionFlows: null,
   setMyCollectionId: () => {
     const folders = get().folders;
-    const myCollectionId = folders?.find((f) => f.name === "My Collection")?.id;
+    const myCollectionId = folders?.find((f) => f.name === DEFAULT_FOLDER)?.id;
     if (myCollectionId) {
       set({ myCollectionId });
     }
