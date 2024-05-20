@@ -22,7 +22,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
         () => {
           set({ folders: [] });
           get().setLoading(false);
-        },
+        }
       );
     }
   },
@@ -41,7 +41,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
         },
         () => {
           get().setLoadingById(false);
-        },
+        }
       );
     }
   },

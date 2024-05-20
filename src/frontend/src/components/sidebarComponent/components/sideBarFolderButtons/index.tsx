@@ -27,9 +27,6 @@ const SideBarFoldersButtonsComponent = ({
   const currentFolder = pathname.split("/");
   const urlWithoutPath = pathname.split("/").length < 4;
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
-  const hasStore = useStoreStore((state) => state.hasStore);
-  const validApiKey = useStoreStore((state) => state.validApiKey);
-  const hasApiKey = useStoreStore((state) => state.hasApiKey);
 
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId) {
@@ -40,7 +37,6 @@ const SideBarFoldersButtonsComponent = ({
   const location = useLocation();
   const folderId = location?.state?.folderId ?? myCollectionId;
   const is_component = location?.pathname.includes("components");
-  const folderDragging = useFolderStore((state) => state.folderDragging);
   const getFolderById = useFolderStore((state) => state.getFolderById);
 
   const handleFolderChange = (folderId: string) => {
