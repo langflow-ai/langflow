@@ -237,7 +237,9 @@ async def delete_multiple_flows(
 
     """
     try:
-        deleted_flows = db.exec(select(Flow).where(col(Flow.id).in_(flow_ids.flow_ids)).where(Flow.user_id == user.id)).all()
+        deleted_flows = db.exec(
+            select(Flow).where(col(Flow.id).in_(flow_ids.flow_ids)).where(Flow.user_id == user.id)
+        ).all()
         for flow in deleted_flows:
             db.delete(flow)
         db.commit()

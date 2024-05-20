@@ -127,10 +127,11 @@ def update_folder(
 
         my_collection_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
         if my_collection_folder:
-            update_statement_my_collection = update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_folder.id)
+            update_statement_my_collection = (
+                update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_folder.id)
+            )
             session.exec(update_statement_my_collection)
             session.commit()
-
 
         if concat_folder_components.__len__() > 0:
             update_statement_components = (
@@ -177,16 +178,15 @@ async def download_file(
     """Download all flows from folder."""
     try:
         flows = session.exec(
-            select(Flow).distinct().join(Folder).where(
-                Flow.folder_id == folder_id,
-                Folder.user_id == current_user.id
-            )
+            select(Flow).distinct().join(Folder).where(Flow.folder_id == folder_id, Folder.user_id == current_user.id)
         ).all()
         folder_name = (
             session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first().name
         )
         folder_description = (
-            session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first().description
+            session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id))
+            .first()
+            .description
         )
         if not flows:
             raise HTTPException(status_code=404, detail="Folder not found")
@@ -208,16 +208,18 @@ async def upload_file(
     contents = await file.read()
     data = orjson.loads(contents)
 
-    if(data.__len__() == 0):
+    if data.__len__() == 0:
         raise HTTPException(status_code=400, detail="No flows found in the file")
 
-    folder_results = session.exec(select(Folder).where(Folder.name.like(f"{data['folder_name']}%"), Folder.user_id == current_user.id))
+    folder_results = session.exec(
+        select(Folder).where(Folder.name.like(f"{data['folder_name']}%"), Folder.user_id == current_user.id)
+    )
     existing_folder_names = [folder.name for folder in folder_results]
 
     if existing_folder_names.__len__() > 0:
-        data['folder_name'] = f"{data['folder_name']} ({existing_folder_names.__len__() + 1})"
+        data["folder_name"] = f"{data['folder_name']} ({existing_folder_names.__len__() + 1})"
 
-    folder = FolderCreate(name=data['folder_name'], description=data['folder_description'])
+    folder = FolderCreate(name=data["folder_name"], description=data["folder_description"])
 
     new_folder = Folder.model_validate(folder, from_attributes=True)
     new_folder.id = None
@@ -226,11 +228,11 @@ async def upload_file(
     session.commit()
     session.refresh(new_folder)
 
-    del data['folder_name']
-    del data['folder_description']
+    del data["folder_name"]
+    del data["folder_description"]
 
     if "flows" in data:
-        flow_list = FlowListCreate(flows=[FlowCreate(**flow) for flow in data['flows']])
+        flow_list = FlowListCreate(flows=[FlowCreate(**flow) for flow in data["flows"]])
     else:
         raise HTTPException(status_code=400, detail="No flows found in the data")
     # Now we set the user_id for all flows
