@@ -740,28 +740,30 @@ export function validateSelection(
   selection: OnSelectionChangeParams,
   edges: Edge[]
 ): Array<string> {
+  const clonedSelection = cloneDeep(selection);
+  const clonedEdges = cloneDeep(edges);
   //add edges to selection if selection mode selected only nodes
-  if (selection.edges.length === 0) {
-    selection.edges = edges;
+  if (clonedSelection.edges.length === 0) {
+    clonedSelection.edges = clonedEdges;
   }
 
   // get only edges that are connected to the nodes in the selection
   // first creates a set of all the nodes ids
-  let nodesSet = new Set(selection.nodes.map((n) => n.id));
+  let nodesSet = new Set(clonedSelection.nodes.map((n) => n.id));
   // then filter the edges that are connected to the nodes in the set
-  let connectedEdges = selection.edges.filter(
+  let connectedEdges = clonedSelection.edges.filter(
     (e) => nodesSet.has(e.source) && nodesSet.has(e.target)
   );
   // add the edges to the selection
-  selection.edges = connectedEdges;
+  clonedSelection.edges = connectedEdges;
 
   let errorsArray: Array<string> = [];
   // check if there is more than one node
-  if (selection.nodes.length < 2) {
+  if (clonedSelection.nodes.length < 2) {
     errorsArray.push("Please select more than one node");
   }
   if (
-    selection.nodes.some(
+    clonedSelection.nodes.some(
       (node) =>
         isInputNode(node.data as NodeDataType) ||
         isOutputNode(node.data as NodeDataType)
@@ -773,8 +775,8 @@ export function validateSelection(
   }
   //check if there are two or more nodes with free outputs
   if (
-    selection.nodes.filter(
-      (n) => !selection.edges.some((e) => e.source === n.id)
+    clonedSelection.nodes.filter(
+      (n) => !clonedSelection.edges.some((e) => e.source === n.id)
     ).length > 1
   ) {
     errorsArray.push("Please select only one node with free outputs");
@@ -782,10 +784,10 @@ export function validateSelection(
 
   // check if there is any node that does not have any connection
   if (
-    selection.nodes.some(
+    clonedSelection.nodes.some(
       (node) =>
-        !selection.edges.some((edge) => edge.target === node.id) &&
-        !selection.edges.some((edge) => edge.source === node.id)
+        !clonedSelection.edges.some((edge) => edge.target === node.id) &&
+        !clonedSelection.edges.some((edge) => edge.source === node.id)
     )
   ) {
     errorsArray.push("Please select only nodes that are connected");
