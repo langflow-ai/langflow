@@ -11,6 +11,7 @@ import useFileDrop from "../../hooks/use-on-file-drop";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { handleDownloadFolderFn } from "../../../../pages/MainPage/utils/handle-download-folder";
 import useAlertStore from "../../../../stores/alertStore";
+import { addFolder } from "../../../../pages/MainPage/services";
 
 type SideBarFoldersButtonsComponentProps = {
   folders: FolderType[];
@@ -18,12 +19,10 @@ type SideBarFoldersButtonsComponentProps = {
   handleChangeFolder?: (id: string) => void;
   handleEditFolder?: (item: FolderType) => void;
   handleDeleteFolder?: (item: FolderType) => void;
-  handleAddFolder?: () => void;
 };
 const SideBarFoldersButtonsComponent = ({
   folders,
   pathname,
-  handleAddFolder,
   handleChangeFolder,
   handleEditFolder,
   handleDeleteFolder,
@@ -34,6 +33,7 @@ const SideBarFoldersButtonsComponent = ({
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
 
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId) {
@@ -62,10 +62,19 @@ const SideBarFoldersButtonsComponent = ({
     handleDownloadFolderFn(id);
   };
 
+  function addNewFolder() {
+    addFolder({ name: "New Folder", parent_id: null, description: "" }).then(
+      (res) => {
+        debugger;
+        getFoldersApi(true);
+      },
+    );
+  }
+
   return (
     <>
       <div className="flex shrink-0 items-center justify-between">
-        <Button variant="primary" onClick={handleAddFolder!}>
+        <Button variant="primary" onClick={addNewFolder}>
           <ForwardedIconComponent
             name="Plus"
             className="main-page-nav-button"
