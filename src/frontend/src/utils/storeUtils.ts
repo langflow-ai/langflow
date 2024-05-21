@@ -20,15 +20,6 @@ export default function cloneFLowWithParent(
   return childFLow;
 }
 
-export function getTagsIds(
-  tags: string[],
-  tagListId: { name: string; id: string }[],
-) {
-  return tags
-    .map((tag) => tagListId.find((tagObj) => tagObj.name === tag))!
-    .map((tag) => tag!.id);
-}
-
 export function getInputsAndOutputs(nodes: Node[]) {
   let inputs: { type: string; id: string; displayName: string }[] = [];
   let outputs: { type: string; id: string; displayName: string }[] = [];
