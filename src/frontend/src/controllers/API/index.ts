@@ -156,6 +156,7 @@ export async function updateFlowInDatabase(
       name: updatedFlow.name,
       data: updatedFlow.data,
       description: updatedFlow.description,
+      folder_id: updatedFlow.folder_id === "" ? null : updatedFlow.folder_id,
     });
 
     if (response?.status !== 200) {

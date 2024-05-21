@@ -2,19 +2,19 @@ import {
   UPLOAD_ALERT_LIST,
   WRONG_FILE_ERROR_ALERT,
 } from "../../../constants/alerts_constants";
-import {
-  moveFlowToFolder,
-  uploadFlowsFromFolders,
-} from "../../../pages/MainPage/services";
+import { updateFlowInDatabase } from "../../../controllers/API";
+import { uploadFlowsFromFolders } from "../../../pages/MainPage/services";
 import useAlertStore from "../../../stores/alertStore";
 import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../stores/foldersStore";
+import { FlowType } from "../../../types/flow";
 
 const useFileDrop = (folderId, folderChangeCallback) => {
   const setFolderDragging = useFolderStore((state) => state.setFolderDragging);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
+  const flows = useFlowsManagerStore((state) => state.flows);
 
   const triggerFolderChange = (folderId) => {
     if (folderChangeCallback) {
@@ -96,7 +96,17 @@ const useFileDrop = (folderId, folderChangeCallback) => {
   };
 
   const uploadFromDragCard = (flowId, folderId) => {
-    moveFlowToFolder(flowId, folderId).then(() => {
+    const selectedFlow = flows.find((flow) => flow.id === flowId);
+
+    if (!selectedFlow) {
+      throw new Error("Flow not found");
+    }
+
+    const updatedFlow: FlowType = {
+      ...selectedFlow,
+      folder_id: folderId,
+    };
+    updateFlowInDatabase(updatedFlow).then(() => {
       getFoldersApi(true);
       triggerFolderChange(folderId);
     });
