@@ -220,7 +220,7 @@ async def download_file(
             .description
         )
         if not flows:
-            raise HTTPException(status_code=404, detail="Folder not found")
+            flows = []
         return FlowListReadWithFolderName(flows=flows, folder_name=folder_name, folder_description=folder_description)
     except Exception as e:
         if "No result found" in str(e):
