@@ -166,7 +166,7 @@ def delete_folder(
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 
 @router.patch("/move_to_folder/{flow_id}/{folder_id}", status_code=200)
 def update_folder(
@@ -180,18 +180,18 @@ def update_folder(
         update_flow = session.exec(select(Flow).where(Flow.id == flow_id, Flow.user_id == current_user.id)).first()
         if not update_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
-        
+
         existing_folder = session.exec(
             select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)
         ).first()
         if not existing_folder:
             raise HTTPException(status_code=404, detail="Folder not found")
-        
+
         setattr(update_flow, "folder_id", folder_id)
         session.add(update_flow)
         session.commit()
         session.refresh(update_flow)
-        
+
         return update_flow
 
     except Exception as e:
