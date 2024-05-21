@@ -7,12 +7,14 @@ import {
   uploadFlowsFromFolders,
 } from "../../../pages/MainPage/services";
 import useAlertStore from "../../../stores/alertStore";
+import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../stores/foldersStore";
 
 const useFileDrop = (folderId, folderChangeCallback) => {
   const setFolderDragging = useFolderStore((state) => state.setFolderDragging);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
   const triggerFolderChange = (folderId) => {
     if (folderChangeCallback) {
       folderChangeCallback(folderId);
@@ -106,6 +108,7 @@ const useFileDrop = (folderId, folderChangeCallback) => {
     uploadFlowsFromFolders(formData).then(() => {
       getFoldersApi(true);
       triggerFolderChange(folderId);
+      refreshFlows();
     });
   };
 

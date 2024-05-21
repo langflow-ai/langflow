@@ -92,6 +92,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
           formData.append("file", file);
           uploadFlowsFromFolders(formData).then(() => {
             get().getFoldersApi(true);
+            useFlowsManagerStore.getState().refreshFlows();
           });
           useFlowsManagerStore.getState().setAllFlows;
         }
