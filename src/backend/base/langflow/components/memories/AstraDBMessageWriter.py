@@ -42,6 +42,7 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
                 "display_name": "Namespace",
                 "info": "Namespace for the Astra DB instance.",
                 "input_types": ["Text"],
+                "advanced": True,
             },
         }
 

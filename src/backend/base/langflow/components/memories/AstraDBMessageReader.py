@@ -1,6 +1,6 @@
 from typing import Optional, cast
 
-from langchain_community.chat_message_histories.astradb import AstraDBChatMessageHistory
+from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
 
 from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
@@ -37,6 +37,7 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
                 "display_name": "Namespace",
                 "info": "Namespace for the Astra DB instance.",
                 "input_types": ["Text"],
+                "advanced": True,
             },
         }
 
