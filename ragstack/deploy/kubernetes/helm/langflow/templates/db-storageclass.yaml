@@ -1,0 +1,44 @@
+{{- if and .Values.langflow.database .Values.langflow.database.type }}
+{{- if not .Values.default_storage.existingStorageClassName }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: "{{ template "langflow.fullname" . }}-{{ .Values.langflow.database.type }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "langflow.name" . }}
+    chart: {{ template "langflow.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    component: {{ .Values.langflow.database.type }}
+    cluster: {{ template "langflow.fullname" . }}
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+{{- if .Values.langflow.database.volumes.storageClass }}
+provisioner: {{ .Values.langflow.database.volumes.storageClass.provisioner }}
+parameters:
+  {{- if .Values.langflow.database.volumes.storageClass.type }}
+  type: {{ .Values.langflow.database.volumes.storageClass.type }}
+  {{- end }}
+  {{- if .Values.langflow.database.volumes.storageClass.fsType }}
+  fsType: {{ .Values.langflow.database.volumes.storageClass.fsType }}
+  {{- end }}
+  {{- if .Values.langflow.database.volumes.storageClass.extraParams }}
+{{ toYaml .Values.langflow.database.volumes.storageClass.extraParams | indent 2 }}
+  {{- end }}
+{{- else if .Values.default_storage }}
+provisioner: {{ .Values.default_storage.provisioner }}
+parameters:
+  {{- if .Values.default_storage.type }}
+  type: {{ .Values.default_storage.type }}
+  {{- end }}
+  {{- if .Values.default_storage.fsType }}
+  fsType: {{ .Values.default_storage.fsType }}
+  {{- end }}
+  {{- if .Values.default_storage.extraParams }}
+{{ toYaml .Values.default_storage.extraParams | indent 2 }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
