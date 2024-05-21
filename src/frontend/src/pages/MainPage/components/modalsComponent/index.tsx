@@ -39,6 +39,9 @@ const ModalsComponent = ({
           setOpenDeleteFolderModal(false);
         }}
         description="folder"
+        note={
+          "Deleting the selected folder will remove all associated flows and components."
+        }
       >
         <Button variant="ghost" size="icon" className={"whitespace-nowrap"}>
           <IconComponent
