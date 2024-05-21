@@ -130,8 +130,8 @@ export default function AddNewVariableButton({ children }): JSX.Element {
           <InputComponent
             setSelectedOptions={(value) => setFields(value)}
             selectedOptions={fields}
-            password={false}
             options={availableFields()}
+            password={false}
             placeholder="Choose a field for the variable..."
             id={"apply-to-fields"}
           ></InputComponent>

@@ -1,3 +1,4 @@
+from langflow.graph.schema import CHAT_COMPONENTS
 from langflow.graph.vertex import types
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.custom.base import custom_component_creator
@@ -12,8 +13,6 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils.lazy_load import LazyLoadDictBase
-
-CHAT_COMPONENTS = ["ChatInput", "ChatOutput", "TextInput", "SessionID"]
 
 
 class VertexTypesDict(LazyLoadDictBase):
@@ -47,7 +46,7 @@ class VertexTypesDict(LazyLoadDictBase):
             **{t: types.TextSplitterVertex for t in textsplitter_creator.to_list()},
             **{t: types.CustomComponentVertex for t in custom_component_creator.to_list()},
             **{t: types.RetrieverVertex for t in retriever_creator.to_list()},
-            **{t: types.ChatVertex for t in CHAT_COMPONENTS},
+            **{t: types.InterfaceVertex for t in CHAT_COMPONENTS},
         }
 
     def get_custom_component_vertex_type(self):

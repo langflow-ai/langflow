@@ -24,7 +24,7 @@ test("curl_api_generation", async ({ page, context }) => {
   await page.getByRole("tab", { name: "cURL" }).click();
   await page.getByRole("button", { name: "Copy Code" }).click();
   const handle = await page.evaluateHandle(() =>
-    navigator.clipboard.readText()
+    navigator.clipboard.readText(),
   );
   const clipboardContent = await handle.jsonValue();
   const oldValue = clipboardContent;
@@ -50,7 +50,7 @@ test("curl_api_generation", async ({ page, context }) => {
   await page.getByRole("tab", { name: "cURL" }).click();
   await page.getByRole("button", { name: "Copy Code" }).click();
   const handle2 = await page.evaluateHandle(() =>
-    navigator.clipboard.readText()
+    navigator.clipboard.readText(),
   );
   const clipboardContent2 = await handle2.jsonValue();
   const newValue = clipboardContent2;
@@ -98,14 +98,14 @@ test("check if tweaks are updating when someothing on the flow changes", async (
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
-  await page.getByTestId("input-collection_name").click();
+  await page.getByTestId("popover-anchor-input-collection_name").click();
   await page
-    .getByTestId("input-collection_name")
+    .getByTestId("popover-anchor-input-collection_name")
     .fill("collection_name_test_123123123!@#$&*(&%$@");
 
-  await page.getByTestId("input-index_directory").click();
+  await page.getByTestId("popover-anchor-input-index_directory").click();
   await page
-    .getByTestId("input-index_directory")
+    .getByTestId("popover-anchor-input-index_directory")
     .fill("index_directory_123123123!@#$&*(&%$@");
 
   await page.getByText("API", { exact: true }).first().click();

@@ -19,6 +19,7 @@ import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
+import { useFolderStore } from "./stores/foldersStore";
 import { useGlobalVariablesStore } from "./stores/globalVariables";
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
@@ -47,12 +48,12 @@ export default function App() {
   const setGlobalVariables = useGlobalVariablesStore(
     (state) => state.setGlobalVariables
   );
-  const setUnavailableFields = useGlobalVariablesStore(
-    (state) => state.setUnavaliableFields
-  );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const navigate = useNavigate();
   const dark = useDarkStore((state) => state.dark);
+
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const loadingFolders = useFolderStore((state) => state.loading);
 
   const [isLoadingHealth, setIsLoadingHealth] = useState(false);
 
@@ -76,7 +77,7 @@ export default function App() {
           setUserData(user);
           setAutoLogin(true);
           setLoading(false);
-          await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+          fetchAllData();
         }
       })
       .catch(async (error) => {
@@ -84,7 +85,7 @@ export default function App() {
           setAutoLogin(false);
           if (isAuthenticated && !isLoginPage) {
             getUser();
-            await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+            fetchAllData();
           } else {
             setLoading(false);
             useFlowsManagerStore.setState({ isLoading: false });
@@ -92,13 +93,20 @@ export default function App() {
         }
       });
 
-    /* 
-      Abort the request as it isn't needed anymore, the component being 
+    /*
+      Abort the request as it isn't needed anymore, the component being
       unmounted. It helps avoid, among other things, the well-known "can't
       perform a React state update on an unmounted component" warning.
     */
     return () => abortController.abort();
   }, []);
+
+  const fetchAllData = async () => {
+    setTimeout(async () => {
+      await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+      getFoldersApi();
+    }, 1000);
+  };
 
   const fetchData = async () => {
     return new Promise<void>(async (resolve, reject) => {
@@ -157,7 +165,7 @@ export default function App() {
     setFetchError(false);
     //This condition is necessary to avoid infinite loop on starter page when the application is not healthy
     if (isLoading === true && window.location.pathname === "/") {
-      navigate("/flows");
+      navigate("/all");
       window.location.reload();
     }
   };
@@ -184,7 +192,7 @@ export default function App() {
             ></FetchErrorComponent>
           }
 
-          {isLoading ? (
+          {isLoading || loadingFolders ? (
             <div className="loading-page-panel">
               <LoadingComponent remSize={50} />
             </div>

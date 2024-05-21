@@ -32,11 +32,11 @@ import { gradients } from "../../../../utils/styleUtils";
 
 export default function GeneralPage() {
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
-    CONTROL_PATCH_USER_STATE
+    CONTROL_PATCH_USER_STATE,
   );
 
   const { autoLogin } = useContext(AuthContext);

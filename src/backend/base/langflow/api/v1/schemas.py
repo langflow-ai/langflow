@@ -139,8 +139,18 @@ class FlowListCreate(BaseModel):
     flows: List[FlowCreate]
 
 
+class FlowListIds(BaseModel):
+    flow_ids: List[str]
+
+
 class FlowListRead(BaseModel):
     flows: List[FlowRead]
+
+
+class FlowListReadWithFolderName(BaseModel):
+    flows: List[FlowRead]
+    folder_name: str
+    folder_description: str
 
 
 class InitResponse(BaseModel):
