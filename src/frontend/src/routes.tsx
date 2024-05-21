@@ -10,8 +10,8 @@ import ApiKeysPage from "./pages/ApiKeysPage";
 import DeleteAccountPage from "./pages/DeleteAccountPage";
 import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
-import HomePage from "./pages/MainPage";
-import ComponentsComponent from "./pages/MainPage/components/components";
+import MyCollectionComponent from "./pages/MainPage/components/myCollectionComponent";
+import HomePage from "./pages/MainPage/pages/mainPage";
 import PlaygroundPage from "./pages/Playground";
 import SettingsPage from "./pages/SettingsPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
@@ -32,14 +32,18 @@ const Router = () => {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate replace to={"flows"} />} />
+        <Route index element={<Navigate replace to={"all"} />} />
         <Route
-          path="flows"
-          element={<ComponentsComponent key="flows" is_component={false} />}
+          path="flows/*"
+          element={<MyCollectionComponent key="flows" type="flow" />}
         />
         <Route
-          path="components"
-          element={<ComponentsComponent key="components" />}
+          path="components/*"
+          element={<MyCollectionComponent key="components" type="component" />}
+        />
+        <Route
+          path="all/*"
+          element={<MyCollectionComponent key="all" type="all" />}
         />
       </Route>
       <Route
@@ -89,6 +93,14 @@ const Router = () => {
         }
       </Route>
       <Route path="/flow/:id/">
+        <Route
+          path="*"
+          element={
+            <ProtectedRoute>
+              <FlowPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path=""
           element={

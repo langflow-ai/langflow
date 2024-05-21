@@ -1,5 +1,7 @@
+import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import TableAutoCellRender from "../components/tableAutoCellRender";
 import { priorityFields } from "../constants/constants";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
 import {
@@ -697,4 +699,56 @@ export function convertTestName(name: string): string {
 
 export function sortByName(stringList: string[]): string[] {
   return stringList.sort((a, b) => a.localeCompare(b));
+}
+
+export function isTimeStampString(str: string): boolean {
+  const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?$/;
+  return timestampRegex.test(str);
+}
+
+export function extractColumnsFromRows(
+  rows: object[],
+  mode: "intersection" | "union",
+): (ColDef<any> | ColGroupDef<any>)[] {
+  const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
+  if (rows.length === 0) {
+    return [];
+  }
+  function intersection() {
+    for (const key in rows[0]) {
+      columnsKeys[key] = {
+        headerName: key,
+        field: key,
+        cellRenderer: TableAutoCellRender,
+        filter: true,
+        autoHeight: true,
+      };
+    }
+    for (const row of rows) {
+      for (const key in columnsKeys) {
+        if (!row[key]) {
+          delete columnsKeys[key];
+        }
+      }
+    }
+  }
+  function union() {
+    for (const row of rows) {
+      for (const key in row) {
+        columnsKeys[key] = {
+          headerName: key,
+          field: key,
+          filter: true,
+          cellRenderer: TableAutoCellRender,
+        };
+      }
+    }
+  }
+  if (mode === "intersection") {
+    intersection();
+  } else {
+    union();
+  }
+
+  return Object.values(columnsKeys);
 }

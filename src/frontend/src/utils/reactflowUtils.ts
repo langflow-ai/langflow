@@ -1299,6 +1299,7 @@ export const createNewFlow = (
     data: flowData,
     id: "",
     is_component: flow?.is_component ?? false,
+    folder_id: "",
   };
 };
 
