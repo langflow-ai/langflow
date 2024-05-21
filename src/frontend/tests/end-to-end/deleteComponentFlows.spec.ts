@@ -4,6 +4,14 @@ test("shoud delete a flow", async ({ page }) => {
   await page.goto("/");
   await page.waitForTimeout(2000);
   await page.getByText("Store").nth(0).click();
+
+  await page.getByText("API Key", { exact: true }).click();
+  await page
+    .getByPlaceholder("Insert your API Key", { exact: true })
+    .fill(process.env.STORE_API_KEY ?? "");
+  await page.getByText("Save").last().click();
+  await page.waitForTimeout(8000);
+
   await page.getByTestId("install-Website Content QA").click();
   await page.waitForTimeout(5000);
   await page.getByText("My Collection").nth(0).click();
@@ -16,7 +24,9 @@ test("shoud delete a flow", async ({ page }) => {
       await page.getByTestId("icon-Trash2").first().click();
       await page.waitForTimeout(2000);
     });
-  await page.getByText("Confirm deletion of component?").isVisible();
+  await page
+    .getByText("Are you sure you want to delete the selected component?")
+    .isVisible();
   await page.getByText("Delete").nth(1).click();
   await page.waitForTimeout(1000);
   await page.getByText("Successfully").first().isVisible();
@@ -39,7 +49,9 @@ test("shoud delete a component", async ({ page }) => {
       await page.getByTestId("icon-Trash2").first().click();
       await page.waitForTimeout(2000);
     });
-  await page.getByText("Confirm deletion of component?").isVisible();
+  await page
+    .getByText("Are you sure you want to delete the selected component?")
+    .isVisible();
   await page.getByText("Delete").nth(1).click();
   await page.waitForTimeout(1000);
   await page.getByText("Successfully").first().isVisible();

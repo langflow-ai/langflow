@@ -169,6 +169,7 @@ export default function InputComponent({
               className="nocopy nopan nodelete nodrag noundo p-0"
               style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
               side="bottom"
+              avoidCollisions={false}
               align="center"
             >
               <Command

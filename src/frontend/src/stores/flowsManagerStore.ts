@@ -52,7 +52,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       currentFlow: flow,
       currentFlowId: flow.id,
     }));
-  
   },
   getFlowById: (id: string) => {
     return get().flows.find((flow) => flow.id === id);
@@ -83,13 +82,13 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
             const { data, flows } = processFlows(dbData, false);
             get().setExamples(
               flows.filter(
-                (f) => f.folder === STARTER_FOLDER_NAME && !f.user_id
-              )
+                (f) => f.folder === STARTER_FOLDER_NAME && !f.user_id,
+              ),
             );
             get().setFlows(
               flows.filter(
-                (f) => !(f.folder === STARTER_FOLDER_NAME && !f.user_id)
-              )
+                (f) => !(f.folder === STARTER_FOLDER_NAME && !f.user_id),
+              ),
             );
             useTypesStore.setState((state) => ({
               data: { ...state.data, ["saved_components"]: data },
@@ -115,7 +114,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     if (get().currentFlow) {
       get().saveFlow(
         { ...get().currentFlow!, data: { nodes, edges, viewport } },
-        true
+        true,
       );
     }
   },
@@ -141,7 +140,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
                   return updatedFlow;
                 }
                 return flow;
-              })
+              }),
             );
             //update tabs state
 
@@ -191,7 +190,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     newProject: Boolean,
     flow?: FlowType,
     override?: boolean,
-    position?: XYPosition
+    position?: XYPosition,
   ): Promise<string | undefined> => {
     if (newProject) {
       let flowData = flow
@@ -255,7 +254,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         .getState()
         .paste(
           { nodes: flow!.data!.nodes, edges: flow!.data!.edges },
-          position ?? { x: 10, y: 10 }
+          position ?? { x: 10, y: 10 },
         );
     }
   },
@@ -265,7 +264,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       if (index >= 0) {
         deleteFlowFromDatabase(id).then(() => {
           const { data, flows } = processFlows(
-            get().flows.filter((flow) => flow.id !== id)
+            get().flows.filter((flow) => flow.id !== id),
           );
           get().setFlows(flows);
           set({ isLoading: false });
@@ -285,7 +284,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     return new Promise<void>((resolve) => {
       let componentFlow = get().flows.find(
         (componentFlow) =>
-          componentFlow.is_component && componentFlow.name === key
+          componentFlow.is_component && componentFlow.name === key,
       );
 
       if (componentFlow) {
@@ -367,7 +366,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     return get().addFlow(
       true,
       createFlowComponent(component, useDarkStore.getState().version),
-      override
+      override,
     );
   },
   takeSnapshot: () => {
@@ -388,7 +387,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     if (pastLength > 0) {
       past[currentFlowId] = past[currentFlowId].slice(
         pastLength - defaultOptions.maxHistorySize + 1,
-        pastLength
+        pastLength,
       );
 
       past[currentFlowId].push(newState);

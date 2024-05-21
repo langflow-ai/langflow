@@ -315,7 +315,11 @@ class Vertex:
                     params[field_name] = full_path
                 elif field.get("required"):
                     field_display_name = field.get("display_name")
-                    raise ValueError(f"File path not found for {field_display_name} in component {self.display_name}")
+                    logger.warning(
+                        f"File path not found for {field_display_name} in component {self.display_name}. Setting to None."
+                    )
+                    params[field_name] = None
+
             elif field.get("type") in DIRECT_TYPES and params.get(field_name) is None:
                 val = field.get("value")
                 if field.get("type") == "code":
@@ -390,13 +394,17 @@ class Vertex:
         self.params = self._raw_params.copy()
         self.updated_raw_params = True
 
-    async def _build(self, user_id=None):
+    async def _build(
+        self,
+        fallback_to_env_vars,
+        user_id=None,
+    ):
         """
         Initiate the build process.
         """
         logger.debug(f"Building {self.display_name}")
         await self._build_each_vertex_in_params_dict(user_id)
-        await self._get_and_instantiate_class(user_id)
+        await self._get_and_instantiate_class(user_id, fallback_to_env_vars)
         self._validate_built_object()
 
         self._built = True
@@ -606,7 +614,7 @@ class Vertex:
         if isinstance(self.params[key], list):
             self.params[key].extend(result)
 
-    async def _get_and_instantiate_class(self, user_id=None):
+    async def _get_and_instantiate_class(self, user_id=None, fallback_to_env_vars=False):
         """
         Gets the class from a dictionary and instantiates it with the params.
         """
@@ -615,6 +623,7 @@ class Vertex:
         try:
             result = await loading.instantiate_class(
                 user_id=user_id,
+                fallback_to_env_vars=fallback_to_env_vars,
                 vertex=self,
             )
             self._update_built_object_and_artifacts(result)
