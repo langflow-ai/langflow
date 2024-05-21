@@ -14,7 +14,6 @@ import { TemplateVariableType } from "../../../types/api";
 import { uniqueTweakType } from "../../../types/components";
 import { FlowType } from "../../../types/flow/index";
 import {
-  getWidgetCode,
   tabsArray,
 } from "../../../utils/utils";
 import BaseModal from "../../baseModal";
@@ -27,6 +26,7 @@ import { getValue } from "../utils/get-value";
 import getPythonApiCode from "../utils/get-python-api-code";
 import getCurlCode from "../utils/get-curl-code";
 import getPythonCode from "../utils/get-python-code";
+import getWidgetCode from "../utils/get-widget-code";
 
 const ApiModal = forwardRef(
   (
