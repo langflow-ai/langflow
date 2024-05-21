@@ -2,7 +2,7 @@
 
 # [![Langflow](https://github.com/langflow-ai/langflow/blob/dev/docs/static/img/hero.png)](https://www.langflow.org)
 
-[English](./README.md) | 中文 | [日本語](READMEs/README-JA.md) | [한국어](READMEs/README-KR.md) | [Русский](READMEs/README-RUS.md)
+[English](./README.md) | 中文 | [日本語](./README-JA.md) | [한국어](./README-KR.md) | [Русский](./README-RUS.md)
 
 ### [Langflow](https://www.langflow.org) 这是一种全新的、可视化的方法，用于构建、迭代和部署人工智能应用程序。
 

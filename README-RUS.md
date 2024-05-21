@@ -2,7 +2,7 @@
 
 # [![Langflow](https://github.com/langflow-ai/langflow/blob/dev/docs/static/img/hero.png)](https://www.langflow.org)
 
-English | [中文](READMEs/README-ZH.md) | [日本語](READMEs/README-JA.md) | [한국어](READMEs/README-KR.md) | Русский
+[English](./README.md) | [中文](./README-ZH.md) | [日本語](./README-JA.md) | [한국어](./README-KR.md) | Русский
 
 ### [Langflow](https://www.langflow.org) - это новый визуальный способ создания, итерации и развертывания приложений искусственного интеллекта.
 
