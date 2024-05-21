@@ -15,7 +15,6 @@ import { uniqueTweakType } from "../../../types/components";
 import { FlowType } from "../../../types/flow/index";
 import {
   getCurlCode,
-  getPythonApiCode,
   getPythonCode,
   getWidgetCode,
   tabsArray,
@@ -27,6 +26,7 @@ import { checkCanBuildTweakObject } from "../utils/check-can-build-tweak-object"
 import { getChangesType } from "../utils/get-changes-types";
 import { getNodesWithDefaultValue } from "../utils/get-nodes-with-default-value";
 import { getValue } from "../utils/get-value";
+import getPythonApiCode from "../utils/get-python-api-code";
 
 const ApiModal = forwardRef(
   (
