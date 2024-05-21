@@ -68,7 +68,7 @@ const SideBarFoldersButtonsComponent = ({
         <Button
           variant="primary"
           onClick={handleUploadFlowsToFolder}
-          className=""
+          className="px-7"
         >
           <ForwardedIconComponent
             name="Upload"
