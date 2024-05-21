@@ -13,7 +13,7 @@ from loguru import logger
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from langflow.api import router, discord_router
+from langflow.api import router
 from langflow.initial_setup.setup import create_or_update_starter_projects
 from langflow.interface.utils import setup_llm_caching
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
@@ -100,34 +100,6 @@ def create_app():
     return app
 
 
-def create_discord_app():
-    """Create the FastAPI app and include the router."""
-
-    # socketio_server = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*", logger=True)
-    # lifespan = get_lifespan(socketio_server=socketio_server)
-    app = FastAPI()  # lifespan=lifespan)
-    origins = ["*"]
-
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    # app.add_middleware(JavaScriptMIMETypeMiddleware)
-
-    @app.get("/health")
-    def health():
-        return {"status": "ok"}
-
-    app.include_router(discord_router)
-
-    # app = mount_socketio(app, socketio_server)
-
-    return app
-
-
 def mount_socketio(app: FastAPI, socketio_server: socketio.AsyncServer):
     app.mount("/sio", socketio.ASGIApp(socketio_server, socketio_path=""))
     return app
@@ -203,22 +175,8 @@ if __name__ == "__main__":
 
             uvicorn.run(
                 "langflow.main:create_app",
-                host="127.0.0.1",
+                host="0.0.0.0",
                 port=7860,
-                workers=get_number_of_workers(),
-                log_level="error",
-                reload=True,
-                loop="asyncio",
-            )
-
-        def discord_run():
-            configure()
-            import uvicorn
-
-            uvicorn.run(
-                "langflow.main:create_discord_app",
-                host="127.0.0.1",
-                port=7880,
                 workers=get_number_of_workers(),
                 log_level="error",
                 reload=True,
@@ -227,7 +185,4 @@ if __name__ == "__main__":
 
         langflow_process = Process(target=langflow_run)
         langflow_process.start()
-        discord_process = Process(target=discord_run)
-        discord_process.start()
         langflow_process.join()
-        discord_process.kill()
