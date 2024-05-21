@@ -41,6 +41,7 @@ module.exports = {
       },
       animation: {
         wiggle: "wiggle 150ms ease-in-out 1",
+        "slow-wiggle": "wiggle 500ms ease-in-out 1",
       },
       colors: {
         "component-icon": "var(--component-icon)",

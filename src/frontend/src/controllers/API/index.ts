@@ -1,3 +1,4 @@
+import { ColDef, ColGroupDef } from "ag-grid-community";
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { Edge, Node, ReactFlowJsonObject } from "reactflow";
 import { BASE_URL_API } from "../../constants/constants";
@@ -18,6 +19,7 @@ import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
 import { StoreComponentResponse } from "../../types/store";
 import { FlowPoolType } from "../../types/zustand/flow";
+import { extractColumnsFromRows } from "../../utils/utils";
 import {
   APIClassType,
   BuildStatusTypeAPI,
@@ -1001,4 +1003,34 @@ export async function multipleDeleteFlowsComponents(
   return await api.post(`${BASE_URL_API}flows/multiple_delete/`, {
     flow_ids: flowIds,
   });
+}
+
+export async function getTransactionTable(
+  id: string,
+  mode: "intersection" | "union",
+  params = {}
+): Promise<{ rows: Array<object>; columns: Array<ColDef | ColGroupDef> }> {
+  const config = {};
+  config["params"] = { flow_id: id };
+  if (params) {
+    config["params"] = { ...config["params"], ...params };
+  }
+  const rows = await api.get(`${BASE_URL_API}monitor/transactions`, config);
+  const columns = extractColumnsFromRows(rows.data, mode);
+  return { rows: rows.data, columns };
+}
+
+export async function getMessagesTable(
+  id: string,
+  mode: "intersection" | "union",
+  params = {}
+): Promise<{ rows: Array<object>; columns: Array<ColDef | ColGroupDef> }> {
+  const config = {};
+  config["params"] = { flow_id: id };
+  if (params) {
+    config["params"] = { ...config["params"], ...params };
+  }
+  const rows = await api.get(`${BASE_URL_API}monitor/messages`, config);
+  const columns = extractColumnsFromRows(rows.data, mode);
+  return { rows: rows.data, columns };
 }
