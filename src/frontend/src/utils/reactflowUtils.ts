@@ -36,8 +36,9 @@ import {
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
-import { createRandomKey, getFieldTitle, toTitleCase } from "./utils";
+import { createRandomKey, toTitleCase } from "./utils";
 import { DESCRIPTIONS } from "../flow_constants";
+import getFieldTitle from "../customNodes/utils/get-field-title";
 const uid = new ShortUniqueId({ length: 5 });
 
 export function checkChatInput(nodes: Node[]) {

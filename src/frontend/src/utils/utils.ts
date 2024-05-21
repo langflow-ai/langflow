@@ -346,54 +346,6 @@ export function getSetFromObject(obj: object, key?: string): Set<string> {
   return set;
 }
 
-export function getFieldTitle(
-  template: APITemplateType,
-  templateField: string,
-): string {
-  return template[templateField].display_name
-    ? template[templateField].display_name!
-    : template[templateField].name ?? templateField;
-}
-
-export function sortFields(a, b, fieldOrder) {
-  // Early return for empty fields
-  if (!a && !b) return 0;
-  if (!a) return 1;
-  if (!b) return -1;
-
-  // Normalize the case to ensure case-insensitive comparison
-  const normalizedFieldA = a.toLowerCase();
-  const normalizedFieldB = b.toLowerCase();
-
-  const aIsPriority = priorityFields.has(normalizedFieldA);
-  const bIsPriority = priorityFields.has(normalizedFieldB);
-
-  // Sort by priority
-  if (aIsPriority && !bIsPriority) return -1;
-  if (!aIsPriority && bIsPriority) return 1;
-
-  // Check if either field is in the fieldOrder array
-  const indexOfA = fieldOrder.indexOf(normalizedFieldA);
-  const indexOfB = fieldOrder.indexOf(normalizedFieldB);
-
-  // If both fields are in fieldOrder, sort by their order in the array
-  if (indexOfA !== -1 && indexOfB !== -1) {
-    return indexOfA - indexOfB;
-  }
-
-  // If only one of the fields is in fieldOrder, that field comes first
-  if (indexOfA !== -1) {
-    return -1;
-  }
-  if (indexOfB !== -1) {
-    return 1;
-  }
-
-  // Default case for fields not in priorityFields and not found in fieldOrder
-  // You might want to sort them alphabetically or in another specific manner
-  return a.localeCompare(b);
-}
-
 export function freezeObject(obj: any) {
   if (!obj) return obj;
   return JSON.parse(JSON.stringify(obj));
