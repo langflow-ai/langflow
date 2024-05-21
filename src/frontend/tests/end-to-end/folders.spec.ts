@@ -28,8 +28,8 @@ test("CRUD folders", async ({ page }) => {
   await page.getByPlaceholder("Search flows").isVisible();
   await page.getByText("Flows").isVisible();
   await page.getByText("Components").isVisible();
+  await page.getByText("All").first().isVisible();
   await page.getByText("Select All").isVisible();
-  await page.getByText("Actions").isVisible();
 
   await page.getByText("New Folder", { exact: true }).last().click();
   await page.getByPlaceholder("Insert a name for the folder").fill("test");
@@ -94,7 +94,7 @@ test("add folder by drag and drop", async ({ page }) => {
 
   // Now dispatch
   await page.dispatchEvent(
-    '//*[@id="root"]/div/div[1]/div[2]/div[3]/aside/nav/div[2]/div[2]',
+    '//*[@id="root"]/div/div[1]/div[2]/div[3]/aside/nav/div/div[2]',
     "drop",
     {
       dataTransfer,

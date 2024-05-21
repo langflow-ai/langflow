@@ -30,7 +30,7 @@ test("should able to see and interact with logs", async ({ page }) => {
   await page.keyboard.press("Escape");
 
   await page
-    .getByTestId("input-openai_api_key")
+    .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
   await page.getByTestId("button_run_chat output").first().click();
 

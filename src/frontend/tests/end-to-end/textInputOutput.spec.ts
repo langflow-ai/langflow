@@ -112,10 +112,13 @@ test("TextInputOutputComponent", async ({ page }) => {
     expect(false).toBe(true);
   }
 
-  await page.getByTestId("input-input_value").nth(0).fill("This is a test!");
+  await page
+    .getByTestId("popover-anchor-input-input_value")
+    .nth(0)
+    .fill("This is a test!");
 
   await page
-    .getByTestId("input-openai_api_key")
+    .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
   await page.getByText("Playground", { exact: true }).click();
   await page.getByText("Run Flow", { exact: true }).click();
@@ -135,7 +138,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.keyboard.press("Escape");
 
   await page
-    .getByTestId("input-input_value")
+    .getByTestId("popover-anchor-input-input_value")
     .nth(0)
     .fill("This is a test, again just to be sure!");
   await page.getByText("Playground", { exact: true }).click();

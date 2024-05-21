@@ -38,12 +38,14 @@ test("InputComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
-  await page.getByTestId("input-collection_name").click();
+  await page.getByTestId("popover-anchor-input-collection_name").click();
   await page
-    .getByTestId("input-collection_name")
+    .getByTestId("popover-anchor-input-collection_name")
     .fill("collection_name_test_123123123!@#$&*(&%$@");
 
-  let value = await page.getByTestId("input-collection_name").inputValue();
+  let value = await page
+    .getByTestId("popover-anchor-input-collection_name")
+    .inputValue();
 
   if (value != "collection_name_test_123123123!@#$&*(&%$@") {
     expect(false).toBeTruthy();
@@ -124,16 +126,16 @@ test("InputComponent", async ({ page }) => {
   ).toBeTruthy();
 
   let valueEditNode = await page
-    .getByTestId("input-collection_name-edit")
+    .getByTestId("popover-anchor-input-collection_name-edit")
     .inputValue();
 
   if (valueEditNode != "collection_name_test_123123123!@#$&*(&%$@") {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("input-collection_name-edit").click();
+  await page.getByTestId("popover-anchor-input-collection_name-edit").click();
   await page
-    .getByTestId("input-collection_name-edit")
+    .getByTestId("popover-anchor-input-collection_name-edit")
     .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
@@ -155,7 +157,9 @@ test("InputComponent", async ({ page }) => {
 
     await page.locator('//*[@id="saveChangesBtn"]').click();
 
-    let value = await page.getByTestId("input-collection_name").inputValue();
+    let value = await page
+      .getByTestId("popover-anchor-input-collection_name")
+      .inputValue();
 
     if (value != "NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe") {
       expect(false).toBeTruthy();

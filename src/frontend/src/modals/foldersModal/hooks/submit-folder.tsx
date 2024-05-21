@@ -18,7 +18,7 @@ const useFolderSubmit = (setOpen, folderToEdit) => {
           });
           getFoldersApi(true);
           setOpen(false);
-          navigate(`flows/folder/${folderToEdit.id}`, {
+          navigate(`all/folder/${folderToEdit.id}`, {
             state: { folderId: folderToEdit.id },
           });
         },
@@ -43,7 +43,7 @@ const useFolderSubmit = (setOpen, folderToEdit) => {
           });
           getFoldersApi(true);
           setOpen(false);
-          navigate(`flows/folder/${res.id}`, { state: { folderId: res.id } });
+          navigate(`all/folder/${res.id}`, { state: { folderId: res.id } });
         },
         () => {
           setErrorData({
