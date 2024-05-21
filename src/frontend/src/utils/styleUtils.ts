@@ -143,7 +143,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { FaApple, FaGithub } from "react-icons/fa";
+import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
@@ -521,4 +521,5 @@ export const nodeIconsLucide: iconsType = {
   Dot,
   FolderPlusIcon,
   FolderIcon,
+  Discord: FaDiscord,
 };

@@ -326,6 +326,7 @@ export function getPythonApiCode(
   isAuth: boolean,
   tweaksBuildedObject,
 ): string {
+  const tweaksObject = tweaksBuildedObject[0];
   return `import requests
 from typing import Optional
 
@@ -333,7 +334,7 @@ BASE_API_URL = "${window.location.protocol}//${window.location.host}/api/v1/run"
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
-TWEAKS = ${JSON.stringify(tweaksBuildedObject, null, 2)}
+TWEAKS = ${JSON.stringify(tweaksObject, null, 2)}
 
 def run_flow(message: str,
   flow_id: str,
@@ -383,6 +384,8 @@ export function getCurlCode(
   isAuth: boolean,
   tweaksBuildedObject,
 ): string {
+  const tweaksObject = tweaksBuildedObject[0];
+
   return `curl -X POST \\
   ${window.location.protocol}//${
     window.location.host
@@ -393,7 +396,7 @@ export function getCurlCode(
   -d '{"input_value": "message",
   "output_type": "chat",
   "input_type": "chat",
-  "tweaks": ${JSON.stringify(tweaksBuildedObject, null, 2)}'
+  "tweaks": ${JSON.stringify(tweaksObject, null, 2)}'
   `;
 }
 
@@ -421,11 +424,14 @@ export function getOutputIds(flow) {
  * @returns {string} - The python code
  */
 export function getPythonCode(flowName: string, tweaksBuildedObject): string {
+  const tweaksObject = tweaksBuildedObject[0];
+
   return `from langflow.load import run_flow_from_json
-TWEAKS = ${JSON.stringify(tweaksBuildedObject, null, 2)}
+TWEAKS = ${JSON.stringify(tweaksObject, null, 2)}
 
 result = run_flow_from_json(flow="${flowName}.json",
                             input_value="message",
+                            fallback_to_env_vars=True, # False by default
                             tweaks=TWEAKS)`;
 }
 

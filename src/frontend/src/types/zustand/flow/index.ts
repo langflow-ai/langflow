@@ -76,8 +76,14 @@ export type FlowStoreType = {
   edges: Edge[];
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
-  setNodes: (update: Node[] | ((oldState: Node[]) => Node[]),skipSave?:boolean) => void;
-  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[]),skipSave?:boolean) => void;
+  setNodes: (
+    update: Node[] | ((oldState: Node[]) => Node[]),
+    skipSave?: boolean
+  ) => void;
+  setEdges: (
+    update: Edge[] | ((oldState: Edge[]) => Edge[]),
+    skipSave?: boolean
+  ) => void;
   setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void;
   getNode: (id: string) => Node | undefined;
   deleteNode: (nodeId: string | Array<string>) => void;

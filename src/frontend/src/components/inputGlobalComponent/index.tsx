@@ -38,7 +38,7 @@ export default function InputGlobalComponent({
         data.node?.template[name].load_from_db
       ) {
         setTimeout(() => {
-          onChange("");
+          onChange("", true);
           setDb(false);
         }, 100);
       }
@@ -146,8 +146,8 @@ export default function InputGlobalComponent({
         onChange(value);
         setDb(value !== "" ? true : false);
       }}
-      onChange={(value) => {
-        onChange(value);
+      onChange={(value, skipSnapshot) => {
+        onChange(value, skipSnapshot);
         setDb(false);
       }}
     />
