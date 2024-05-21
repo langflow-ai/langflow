@@ -140,5 +140,3 @@ async def logout(response: Response):
     response.delete_cookie("refresh_token_lf")
     response.delete_cookie("access_token_lf")
     return {"message": "Logout successful"}
-    return {"message": "Logout successful"}
-    return {"message": "Logout successful"}
