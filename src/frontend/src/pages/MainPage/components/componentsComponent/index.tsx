@@ -127,17 +127,6 @@ export default function ComponentsComponent({
     setOpenDelete(true);
   };
 
-  const handleDelete = (item) => {
-    removeFlow(item.id);
-    setSuccessData({
-      title: `${
-        item.is_component ? "Component" : "Flow"
-      } deleted successfully!`,
-    });
-    resetFilter();
-    getFoldersApi(true);
-  };
-
   const handleDeleteMultiple = () => {
     removeFlow(selectedFlowsComponentsCards)
       .then(() => {
@@ -232,7 +221,6 @@ export default function ComponentsComponent({
                         <form>
                           <CollectionCardComponent
                             is_component={type === "component"}
-                            onDelete={() => handleDelete(item)}
                             data={{
                               is_component: item.is_component ?? false,
                               ...item,
