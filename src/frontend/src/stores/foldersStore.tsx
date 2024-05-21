@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { DEFAULT_FOLDER } from "../constants/constants";
 import {
   getFolderById,
   getFolders,
@@ -6,7 +7,6 @@ import {
 } from "../pages/MainPage/services";
 import { FoldersStoreType } from "../types/zustand/folders";
 import useFlowsManagerStore from "./flowsManagerStore";
-import { DEFAULT_FOLDER } from "../constants/constants";
 
 export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   folders: [],
@@ -16,8 +16,10 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
       getFolders().then(
         (res) => {
           set({ folders: res });
-          get().getMyCollectionFolder();
-          get().setMyCollectionId();
+          const myCollectionId = res?.find(
+            (f) => f.name === DEFAULT_FOLDER,
+          )?.id;
+          set({ myCollectionId });
           get().setLoading(false);
         },
         () => {
@@ -74,6 +76,8 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   setFolderUrl: (url) => set(() => ({ folderUrl: url })),
   folderDragging: false,
   setFolderDragging: (folder) => set(() => ({ folderDragging: folder })),
+  folderIdDragging: "",
+  setFolderIdDragging: (id) => set(() => ({ folderIdDragging: id })),
   uploadFolder: () => {
     return new Promise<void>(() => {
       const input = document.createElement("input");

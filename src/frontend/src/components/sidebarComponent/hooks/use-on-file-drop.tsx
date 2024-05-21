@@ -2,11 +2,14 @@ import {
   UPLOAD_ALERT_LIST,
   WRONG_FILE_ERROR_ALERT,
 } from "../../../constants/alerts_constants";
-import { uploadFlowsFromFolders } from "../../../pages/MainPage/services";
+import {
+  moveFlowToFolder,
+  uploadFlowsFromFolders,
+} from "../../../pages/MainPage/services";
 import useAlertStore from "../../../stores/alertStore";
 import { useFolderStore } from "../../../stores/foldersStore";
 
-const useFileDrop = (folderId, is_component, folderChangeCallback) => {
+const useFileDrop = (folderId, folderChangeCallback) => {
   const setFolderDragging = useFolderStore((state) => state.setFolderDragging);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
@@ -35,9 +38,10 @@ const useFileDrop = (folderId, is_component, folderChangeCallback) => {
     e:
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
-      | React.DragEvent<HTMLAnchorElement>
+      | React.DragEvent<HTMLAnchorElement>,
   ) => {
     e.preventDefault();
+
     if (e.dataTransfer.types.some((types) => types === "Files")) {
       setFolderDragging(true);
     }
@@ -47,7 +51,7 @@ const useFileDrop = (folderId, is_component, folderChangeCallback) => {
     e:
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
-      | React.DragEvent<HTMLAnchorElement>
+      | React.DragEvent<HTMLAnchorElement>,
   ) => {
     if (e.dataTransfer.types.some((types) => types === "Files")) {
       setFolderDragging(true);
@@ -59,7 +63,7 @@ const useFileDrop = (folderId, is_component, folderChangeCallback) => {
     e:
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
-      | React.DragEvent<HTMLAnchorElement>
+      | React.DragEvent<HTMLAnchorElement>,
   ) => {
     e.preventDefault();
     if (e.target === e.currentTarget) {
@@ -71,18 +75,28 @@ const useFileDrop = (folderId, is_component, folderChangeCallback) => {
     e:
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
-      | React.DragEvent<HTMLAnchorElement>
+      | React.DragEvent<HTMLAnchorElement>,
+    folderId: string,
   ) => {
-    const data = JSON.parse(e.dataTransfer.getData("flow"));
+    if (e?.dataTransfer?.getData("flow")) {
+      const data = JSON.parse(e?.dataTransfer?.getData("flow"));
 
-    if (data) {
-      uploadFormData(data);
-      return;
+      if (data) {
+        uploadFromDragCard(data.id, folderId);
+        return;
+      }
     }
 
     e.preventDefault();
     handleFileDrop(e);
     setFolderDragging(false);
+  };
+
+  const uploadFromDragCard = (flowId, folderId) => {
+    moveFlowToFolder(flowId, folderId).then(() => {
+      getFoldersApi(true);
+      triggerFolderChange(folderId);
+    });
   };
 
   const uploadFormData = (data) => {
@@ -91,9 +105,8 @@ const useFileDrop = (folderId, is_component, folderChangeCallback) => {
 
     uploadFlowsFromFolders(formData).then(() => {
       getFoldersApi(true);
+      triggerFolderChange(folderId);
     });
-
-    triggerFolderChange(folderId);
   };
 
   return {

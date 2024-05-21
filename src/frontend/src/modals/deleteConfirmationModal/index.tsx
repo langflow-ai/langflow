@@ -17,6 +17,7 @@ export default function DeleteConfirmationModal({
   asChild,
   open,
   setOpen,
+  note = "",
 }: {
   children: JSX.Element;
   onConfirm: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
@@ -24,6 +25,7 @@ export default function DeleteConfirmationModal({
   asChild?: boolean;
   open?: boolean;
   setOpen?: (open: boolean) => void;
+  note?: string;
 }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -45,6 +47,12 @@ export default function DeleteConfirmationModal({
         <span>
           Are you sure you want to delete the selected{" "}
           {description ?? "component"}?<br></br>
+          {note && (
+            <>
+              {note}
+              <br></br>
+            </>
+          )}
           Note: This action is irreversible.
         </span>
         <DialogFooter>

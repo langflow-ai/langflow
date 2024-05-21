@@ -21,4 +21,6 @@ export type FoldersStoreType = {
   folderDragging: boolean;
   setFolderDragging: (set: boolean) => void;
   uploadFolder: (folderId: string) => void;
+  folderIdDragging: string;
+  setFolderIdDragging: (id: string) => void;
 };

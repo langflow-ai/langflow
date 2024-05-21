@@ -43,7 +43,7 @@ export default function HomePage(): JSX.Element {
     is_component,
   });
 
-  const { handleDeleteFolder } = useDeleteFolder({ getFoldersApi, navigate });
+  const { handleDeleteFolder } = useDeleteFolder({ navigate, getFoldersApi });
 
   return (
     <>
@@ -71,7 +71,7 @@ export default function HomePage(): JSX.Element {
               }}
               items={[]}
               handleChangeFolder={(id: string) => {
-                navigate(`flows/folder/${id}`, { state: { folderId: id } });
+                navigate(`all/folder/${id}`, { state: { folderId: id } });
               }}
               handleEditFolder={(item) => {
                 setFolderToEdit(item);
