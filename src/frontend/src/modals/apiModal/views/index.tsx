@@ -13,9 +13,6 @@ import { useTweaksStore } from "../../../stores/tweaksStore";
 import { TemplateVariableType } from "../../../types/api";
 import { uniqueTweakType } from "../../../types/components";
 import { FlowType } from "../../../types/flow/index";
-import {
-  tabsArray,
-} from "../../../utils/utils";
 import BaseModal from "../../baseModal";
 import { buildContent } from "../utils/build-content";
 import { buildTweaks } from "../utils/build-tweaks";
@@ -27,6 +24,7 @@ import getPythonApiCode from "../utils/get-python-api-code";
 import getCurlCode from "../utils/get-curl-code";
 import getPythonCode from "../utils/get-python-code";
 import getWidgetCode from "../utils/get-widget-code";
+import tabsArray from "../utils/tabs-array";
 
 const ApiModal = forwardRef(
   (
