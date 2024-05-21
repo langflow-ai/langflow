@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../../../components/dropdownButtonComponent";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../../../components/genericIconComponent";
+import { ForwardedIconComponent } from "../../../../components/genericIconComponent";
 import PageLayout from "../../../../components/pageLayout";
 import SidebarNav from "../../../../components/sidebarComponent";
 import { Button } from "../../../../components/ui/button";
@@ -38,13 +36,8 @@ export default function HomePage(): JSX.Element {
   const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
   const uploadFolder = useFolderStore((state) => state.uploadFolder);
   const navigate = useNavigate();
-  const folders = useFolderStore((state) => state.folders);
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folderId = location?.state?.folderId || myCollectionId;
-  const folderName = folders.find((folder) => folder.id === folderId)?.name;
-  const folderDescription = folders.find(
-    (folder) => folder.id === folderId,
-  )?.description;
 
   useEffect(() => {
     getFoldersApi();
@@ -60,7 +53,7 @@ export default function HomePage(): JSX.Element {
     is_component,
   });
 
-  const { handleDeleteFolder } = useDeleteFolder({ getFoldersApi, navigate });
+  const { handleDeleteFolder } = useDeleteFolder({ navigate, getFoldersApi });
 
   const handleDownloadFolder = () => {
     if (allFlows.length === 0) {
@@ -103,7 +96,7 @@ export default function HomePage(): JSX.Element {
               }}
               items={[]}
               handleChangeFolder={(id: string) => {
-                navigate(`flows/folder/${id}`, { state: { folderId: id } });
+                navigate(`all/folder/${id}`, { state: { folderId: id } });
               }}
               handleEditFolder={(item) => {
                 setFolderToEdit(item);

@@ -105,3 +105,17 @@ export async function uploadFlowsFromFolders(
     throw error;
   }
 }
+
+export async function moveFlowToFolder(
+  flowId: string,
+  folderId: string,
+): Promise<FlowType> {
+  try {
+    const response = await api.patch(
+      `${BASE_URL_API}folders/move_to_folder/${flowId}/${folderId}`,
+    );
+    return response?.data;
+  } catch (error) {
+    throw error;
+  }
+}
