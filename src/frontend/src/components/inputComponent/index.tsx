@@ -151,8 +151,10 @@ export default function InputComponent({
           )}
         >
           <button
-            onClick={() => {
+            onClick={(e) => {
               setShowOptions(!showOptions);
+              e.preventDefault();
+              e.stopPropagation();
             }}
             className={cn(
               selectedOption !== ""
