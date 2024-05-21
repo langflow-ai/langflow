@@ -400,6 +400,7 @@ export type StoreApiKeyType = {
 export type groupedObjType = {
   family: string;
   type: string;
+  display_name?: string;
 };
 
 export type nodeGroupedObjType = {
@@ -663,6 +664,7 @@ export type codeTabsPropsType = {
   };
   activeTweaks?: boolean;
   setActiveTweaks?: (value: boolean) => void;
+  allowExport?: boolean;
 };
 
 export type crashComponentPropsType = {

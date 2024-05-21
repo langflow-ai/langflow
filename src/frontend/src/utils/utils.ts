@@ -190,6 +190,7 @@ export function getPythonApiCode(
   isAuth: boolean,
   tweaksBuildedObject,
 ): string {
+  const tweaksObject = tweaksBuildedObject[0];
   return `import requests
 from typing import Optional
 
@@ -197,7 +198,7 @@ BASE_API_URL = "${window.location.protocol}//${window.location.host}/api/v1/run"
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
-TWEAKS = ${JSON.stringify(tweaksBuildedObject, null, 2)}
+TWEAKS = ${JSON.stringify(tweaksObject, null, 2)}
 
 def run_flow(message: str,
   flow_id: str,
@@ -247,6 +248,8 @@ export function getCurlCode(
   isAuth: boolean,
   tweaksBuildedObject,
 ): string {
+  const tweaksObject = tweaksBuildedObject[0];
+
   return `curl -X POST \\
   ${window.location.protocol}//${
     window.location.host
@@ -257,7 +260,7 @@ export function getCurlCode(
   -d '{"input_value": "message",
   "output_type": "chat",
   "input_type": "chat",
-  "tweaks": ${JSON.stringify(tweaksBuildedObject, null, 2)}'
+  "tweaks": ${JSON.stringify(tweaksObject, null, 2)}'
   `;
 }
 
@@ -285,11 +288,14 @@ export function getOutputIds(flow) {
  * @returns {string} - The python code
  */
 export function getPythonCode(flowName: string, tweaksBuildedObject): string {
+  const tweaksObject = tweaksBuildedObject[0];
+
   return `from langflow.load import run_flow_from_json
-TWEAKS = ${JSON.stringify(tweaksBuildedObject, null, 2)}
+TWEAKS = ${JSON.stringify(tweaksObject, null, 2)}
 
 result = run_flow_from_json(flow="${flowName}.json",
                             input_value="message",
+                            fallback_to_env_vars=True, # False by default
                             tweaks=TWEAKS)`;
 }
 
@@ -481,6 +487,120 @@ export function sensitiveSort(a: string, b: string): number {
     return a.localeCompare(b);
   }
 }
+
+export function groupByFamily(
+  data: APIDataType,
+  baseClasses: string,
+  left: boolean,
+  flow?: NodeType[],
+): groupedObjType[] {
+  const baseClassesSet = new Set(baseClasses.split("\n"));
+  let arrOfPossibleInputs: Array<{
+    category: string;
+    nodes: nodeGroupedObjType[];
+    full: boolean;
+    display_name?: string;
+  }> = [];
+  let arrOfPossibleOutputs: Array<{
+    category: string;
+    nodes: nodeGroupedObjType[];
+    full: boolean;
+    display_name?: string;
+  }> = [];
+  let checkedNodes = new Map();
+  const excludeTypes = new Set(["bool", "float", "code", "file", "int"]);
+
+  const checkBaseClass = (template: TemplateVariableType) => {
+    return (
+      template.type &&
+      template.show &&
+      ((!excludeTypes.has(template.type) &&
+        baseClassesSet.has(template.type)) ||
+        (template.input_types &&
+          template.input_types.some((inputType) =>
+            baseClassesSet.has(inputType),
+          )))
+    );
+  };
+
+  if (flow) {
+    // se existir o flow
+    for (const node of flow) {
+      // para cada node do flow
+      if (node!.data!.node!.flow || !node!.data!.node!.template) break; // não faz nada se o node for um group
+      const nodeData = node.data;
+
+      const foundNode = checkedNodes.get(nodeData.type); // verifica se o tipo do node já foi checado
+      checkedNodes.set(nodeData.type, {
+        hasBaseClassInTemplate:
+          foundNode?.hasBaseClassInTemplate ||
+          Object.values(nodeData.node!.template).some(checkBaseClass),
+        hasBaseClassInBaseClasses:
+          foundNode?.hasBaseClassInBaseClasses ||
+          nodeData.node!.base_classes.some((baseClass) =>
+            baseClassesSet.has(baseClass),
+          ), //seta como anterior ou verifica se o node tem base class
+        displayName: nodeData.node?.display_name,
+      });
+    }
+  }
+
+  for (const [d, nodes] of Object.entries(data)) {
+    let tempInputs: nodeGroupedObjType[] = [],
+      tempOutputs: nodeGroupedObjType[] = [];
+
+    for (const [n, node] of Object.entries(nodes!)) {
+      let foundNode = checkedNodes.get(n);
+
+      if (!foundNode) {
+        foundNode = {
+          hasBaseClassInTemplate: Object.values(node!.template).some(
+            checkBaseClass,
+          ),
+          hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
+            baseClassesSet.has(baseClass),
+          ),
+          displayName: node?.display_name,
+        };
+      }
+
+      if (foundNode.hasBaseClassInTemplate)
+        tempInputs.push({ node: n, displayName: foundNode.displayName });
+      if (foundNode.hasBaseClassInBaseClasses)
+        tempOutputs.push({ node: n, displayName: foundNode.displayName });
+    }
+
+    const totalNodes = Object.keys(nodes!).length;
+
+    if (tempInputs.length)
+      arrOfPossibleInputs.push({
+        category: d,
+        nodes: tempInputs,
+        full: tempInputs.length === totalNodes,
+      });
+    if (tempOutputs.length)
+      arrOfPossibleOutputs.push({
+        category: d,
+        nodes: tempOutputs,
+        full: tempOutputs.length === totalNodes,
+      });
+  }
+
+  return left
+    ? arrOfPossibleOutputs.map((output) => ({
+        family: output.category,
+        type: output.full
+          ? ""
+          : output.nodes.map((item) => item.node).join(", "),
+        display_name: "",
+      }))
+    : arrOfPossibleInputs.map((input) => ({
+        family: input.category,
+        type: input.full ? "" : input.nodes.map((item) => item.node).join(", "),
+        display_name: input.nodes.map((item) => item.displayName).join(", "),
+      }));
+}
+
 // this function is used to get the set of keys from an object
 export function getSetFromObject(obj: object, key?: string): Set<string> {
   const set = new Set<string>();

@@ -175,6 +175,7 @@ def run_graph(
     input_value: str,
     input_type: str,
     output_type: str,
+    fallback_to_env_vars: bool = False,
     output_component: Optional[str] = None,
 ) -> List[RunOutputs]:
     """
@@ -218,6 +219,7 @@ def run_graph(
         outputs or [],
         stream=False,
         session_id="",
+        fallback_to_env_vars=fallback_to_env_vars,
     )
     return run_outputs
 
