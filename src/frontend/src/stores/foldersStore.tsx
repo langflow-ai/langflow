@@ -17,7 +17,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
         (res) => {
           set({ folders: res });
           const myCollectionId = res?.find(
-            (f) => f.name === DEFAULT_FOLDER,
+            (f) => f.name === DEFAULT_FOLDER
           )?.id;
           set({ myCollectionId });
           get().setLoading(false);
@@ -25,7 +25,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
         () => {
           set({ folders: [] });
           get().setLoading(false);
-        },
+        }
       );
     }
   },
@@ -44,7 +44,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
         },
         () => {
           get().setLoadingById(false);
-        },
+        }
       );
     }
   },
@@ -92,6 +92,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
           formData.append("file", file);
           uploadFlowsFromFolders(formData).then(() => {
             get().getFoldersApi(true);
+            useFlowsManagerStore.getState().refreshFlows();
           });
           useFlowsManagerStore.getState().setAllFlows;
         }

@@ -7,12 +7,15 @@ import {
   uploadFlowsFromFolders,
 } from "../../../pages/MainPage/services";
 import useAlertStore from "../../../stores/alertStore";
+import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../stores/foldersStore";
 
 const useFileDrop = (folderId, folderChangeCallback) => {
   const setFolderDragging = useFolderStore((state) => state.setFolderDragging);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
+
   const triggerFolderChange = (folderId) => {
     if (folderChangeCallback) {
       folderChangeCallback(folderId);
@@ -38,7 +41,7 @@ const useFileDrop = (folderId, folderChangeCallback) => {
     e:
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
-      | React.DragEvent<HTMLAnchorElement>,
+      | React.DragEvent<HTMLAnchorElement>
   ) => {
     e.preventDefault();
 
@@ -51,7 +54,7 @@ const useFileDrop = (folderId, folderChangeCallback) => {
     e:
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
-      | React.DragEvent<HTMLAnchorElement>,
+      | React.DragEvent<HTMLAnchorElement>
   ) => {
     if (e.dataTransfer.types.some((types) => types === "Files")) {
       setFolderDragging(true);
@@ -63,7 +66,7 @@ const useFileDrop = (folderId, folderChangeCallback) => {
     e:
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
-      | React.DragEvent<HTMLAnchorElement>,
+      | React.DragEvent<HTMLAnchorElement>
   ) => {
     e.preventDefault();
     if (e.target === e.currentTarget) {
@@ -76,7 +79,7 @@ const useFileDrop = (folderId, folderChangeCallback) => {
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
       | React.DragEvent<HTMLAnchorElement>,
-    folderId: string,
+    folderId: string
   ) => {
     if (e?.dataTransfer?.getData("flow")) {
       const data = JSON.parse(e?.dataTransfer?.getData("flow"));
@@ -106,6 +109,7 @@ const useFileDrop = (folderId, folderChangeCallback) => {
     uploadFlowsFromFolders(formData).then(() => {
       getFoldersApi(true);
       triggerFolderChange(folderId);
+      refreshFlows();
     });
   };
 
