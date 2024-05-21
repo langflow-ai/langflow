@@ -30,7 +30,12 @@ export default function HomePage(): JSX.Element {
   const navigate = useNavigate();
 
   useEffect(() => {
-    getFoldersApi();
+    setTimeout(() => {
+      getFoldersApi();
+    }, 500);
+  }, []);
+
+  useEffect(() => {
     setCurrentFlowId("");
   }, [pathname]);
 

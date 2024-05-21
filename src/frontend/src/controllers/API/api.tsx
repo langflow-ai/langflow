@@ -83,9 +83,9 @@ function ApiInterceptor() {
         const lastUrl = localStorage.getItem("lastUrlCalled");
 
         if (
-          config.url === lastUrl &&
-          config.url !== "/health" &&
-          config.method === "get"
+          config?.url === lastUrl &&
+          config?.url !== "/health" &&
+          config?.method === "get"
         ) {
           return Promise.reject("Duplicate request");
         }
