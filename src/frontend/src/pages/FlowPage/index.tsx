@@ -3,14 +3,14 @@ import { useParams } from "react-router-dom";
 import FlowToolbar from "../../components/chatComponent";
 import Header from "../../components/headerComponent";
 import { useDarkStore } from "../../stores/darkStore";
+import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "./components/PageComponent";
 import ExtraSidebar from "./components/extraSidebarComponent";
-import useFlowStore from "../../stores/flowStore";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
   const version = useDarkStore((state) => state.version);
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
@@ -21,7 +21,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   useEffect(() => {
     setCurrentFlowId(id!);
     setOnFlowPage(true);
-    
+
     return () => {
       setOnFlowPage(false);
     };

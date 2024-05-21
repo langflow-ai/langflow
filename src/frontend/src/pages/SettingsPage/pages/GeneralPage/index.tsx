@@ -32,11 +32,11 @@ import { gradients } from "../../../../utils/styleUtils";
 
 export default function GeneralPage() {
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
-    CONTROL_PATCH_USER_STATE
+    CONTROL_PATCH_USER_STATE,
   );
 
   const { autoLogin } = useContext(AuthContext);
@@ -113,110 +113,109 @@ export default function GeneralPage() {
       </div>
 
       <div className="grid gap-6">
-        
-            <Form.Root
-              onSubmit={(event) => {
-                handlePatchGradient();
-                event.preventDefault();
-              }}
-            >
-              <Card x-chunk="dashboard-04-chunk-1">
-                <CardHeader>
-                  <CardTitle>Profile Gradient</CardTitle>
-                  <CardDescription>
-                    Choose the gradient that appears as your profile picture.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="py-2">
-                    <GradientChooserComponent
-                      value={
-                        gradient == ""
-                          ? userData?.profile_image ??
-                            gradients[
-                              parseInt(userData?.id ?? "", 30) %
-                                gradients.length
-                            ]
-                          : gradient
-                      }
+        <Form.Root
+          onSubmit={(event) => {
+            handlePatchGradient();
+            event.preventDefault();
+          }}
+        >
+          <Card x-chunk="dashboard-04-chunk-1">
+            <CardHeader>
+              <CardTitle>Profile Gradient</CardTitle>
+              <CardDescription>
+                Choose the gradient that appears as your profile picture.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="py-2">
+                <GradientChooserComponent
+                  value={
+                    gradient == ""
+                      ? userData?.profile_image ??
+                        gradients[
+                          parseInt(userData?.id ?? "", 30) % gradients.length
+                        ]
+                      : gradient
+                  }
+                  onChange={(value) => {
+                    handleInput({ target: { name: "gradient", value } });
+                  }}
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="border-t px-6 py-4">
+              <Form.Submit asChild>
+                <Button type="submit">Save</Button>
+              </Form.Submit>
+            </CardFooter>
+          </Card>
+        </Form.Root>
+        {!autoLogin && (
+          <Form.Root
+            onSubmit={(event) => {
+              handlePatchPassword();
+              event.preventDefault();
+            }}
+          >
+            <Card x-chunk="dashboard-04-chunk-2">
+              <CardHeader>
+                <CardTitle>Password</CardTitle>
+                <CardDescription>
+                  Type your new password and confirm it.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex w-full gap-4">
+                  <Form.Field name="password" className="w-full">
+                    <InputComponent
+                      id="pasword"
                       onChange={(value) => {
-                        handleInput({ target: { name: "gradient", value } });
+                        handleInput({ target: { name: "password", value } });
                       }}
+                      value={password}
+                      isForm
+                      password={true}
+                      placeholder="Password"
+                      className="w-full"
                     />
-                  </div>
-                </CardContent>
-                <CardFooter className="border-t px-6 py-4">
-                  <Form.Submit asChild>
-                    <Button type="submit">Save</Button>
-                  </Form.Submit>
-                </CardFooter>
-              </Card>
-            </Form.Root>{!autoLogin && (
-            <Form.Root
-              onSubmit={(event) => {
-                handlePatchPassword();
-                event.preventDefault();
-              }}
-            >
-              <Card x-chunk="dashboard-04-chunk-2">
-                <CardHeader>
-                  <CardTitle>Password</CardTitle>
-                  <CardDescription>
-                    Type your new password and confirm it.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex w-full gap-4">
-                    <Form.Field name="password" className="w-full">
-                      <InputComponent
-                        id="pasword"
-                        onChange={(value) => {
-                          handleInput({ target: { name: "password", value } });
-                        }}
-                        value={password}
-                        isForm
-                        password={true}
-                        placeholder="Password"
-                        className="w-full"
-                      />
-                      <Form.Message
-                        match="valueMissing"
-                        className="field-invalid"
-                      >
-                        Please enter your password
-                      </Form.Message>
-                    </Form.Field>
-                    <Form.Field name="cnfPassword" className="w-full">
-                      <InputComponent
-                        id="cnfPassword"
-                        onChange={(value) => {
-                          handleInput({
-                            target: { name: "cnfPassword", value },
-                          });
-                        }}
-                        value={cnfPassword}
-                        isForm
-                        password={true}
-                        placeholder="Confirm Password"
-                        className="w-full"
-                      />
+                    <Form.Message
+                      match="valueMissing"
+                      className="field-invalid"
+                    >
+                      Please enter your password
+                    </Form.Message>
+                  </Form.Field>
+                  <Form.Field name="cnfPassword" className="w-full">
+                    <InputComponent
+                      id="cnfPassword"
+                      onChange={(value) => {
+                        handleInput({
+                          target: { name: "cnfPassword", value },
+                        });
+                      }}
+                      value={cnfPassword}
+                      isForm
+                      password={true}
+                      placeholder="Confirm Password"
+                      className="w-full"
+                    />
 
-                      <Form.Message
-                        className="field-invalid"
-                        match="valueMissing"
-                      >
-                        Please confirm your password
-                      </Form.Message>
-                    </Form.Field>
-                  </div>
-                </CardContent>
-                <CardFooter className="border-t px-6 py-4">
-                  <Form.Submit asChild>
-                    <Button type="submit">Save</Button>
-                  </Form.Submit>
-                </CardFooter>
-              </Card>
-            </Form.Root>
+                    <Form.Message
+                      className="field-invalid"
+                      match="valueMissing"
+                    >
+                      Please confirm your password
+                    </Form.Message>
+                  </Form.Field>
+                </div>
+              </CardContent>
+              <CardFooter className="border-t px-6 py-4">
+                <Form.Submit asChild>
+                  <Button type="submit">Save</Button>
+                </Form.Submit>
+              </CardFooter>
+            </Card>
+          </Form.Root>
         )}
       </div>
     </div>

@@ -32,7 +32,6 @@ class StoreMessageComponent(CustomComponent):
         session_id: Optional[str] = None,
         message: str = "",
     ) -> List[Record]:
-
         store_message(
             sender=sender,
             sender_name=sender_name,

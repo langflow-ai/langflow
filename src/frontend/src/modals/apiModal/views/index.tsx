@@ -201,6 +201,7 @@ const ApiModal = forwardRef(
             }}
             activeTweaks={activeTweaks}
             setActiveTweaks={setActiveTweaks}
+            allowExport
           />
         </BaseModal.Content>
       </BaseModal>

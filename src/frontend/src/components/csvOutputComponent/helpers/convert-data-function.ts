@@ -1,7 +1,6 @@
 export const convertCSVToData = (csvFile, csvSeparator: string) => {
   const lines = csvFile.data.trim().split("\n");
   const headers = lines[0].trim().split(csvSeparator);
-  
 
   const initialRowData: any = [];
   const initialColDefs = headers.map((header) => ({

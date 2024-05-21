@@ -6,6 +6,7 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
+import { FlowType } from "../../types/flow";
 import { storeComponent } from "../../types/store";
 import cloneFLowWithParent, {
   getInputsAndOutputs,
@@ -22,7 +23,6 @@ import {
   CardTitle,
 } from "../ui/card";
 import Loading from "../ui/loading";
-import { FlowType } from "../../types/flow";
 
 export default function CollectionCardComponent({
   data,
