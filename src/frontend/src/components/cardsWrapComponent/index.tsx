@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { cn } from "../../utils/utils";
 
@@ -65,7 +65,7 @@ export default function CardsWrapComponent({
         "h-full w-full",
         isDragging
           ? "mb-36 flex flex-col items-center justify-center gap-4 text-2xl font-light"
-          : "",
+          : ""
       )}
     >
       {isDragging ? (
@@ -78,7 +78,4 @@ export default function CardsWrapComponent({
       )}
     </div>
   );
-}
-function useEffect(arg0: () => () => void, arg1: never[]) {
-  throw new Error("Function not implemented.");
 }
