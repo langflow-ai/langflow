@@ -8,6 +8,9 @@ import IconComponent, {
 } from "../../../genericIconComponent";
 import { Button, buttonVariants } from "../../../ui/button";
 import useFileDrop from "../../hooks/use-on-file-drop";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { handleDownloadFolderFn } from "../../../../pages/MainPage/utils/handle-download-folder";
+import useAlertStore from "../../../../stores/alertStore";
 
 type SideBarFoldersButtonsComponentProps = {
   folders: FolderType[];
@@ -29,6 +32,8 @@ const SideBarFoldersButtonsComponent = ({
   const currentFolder = pathname.split("/");
   const urlWithoutPath = pathname.split("/").length < 4;
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const allFlows = useFlowsManagerStore((state) => state.allFlows);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId) {
@@ -55,9 +60,20 @@ const SideBarFoldersButtonsComponent = ({
     uploadFolder(folderId);
   };
 
+  const handleDownloadFolder = (id: string) => {
+    if (allFlows.length === 0) {
+      setErrorData({
+        title: "Folder is empty",
+        list: [],
+      });
+      return;
+    }
+    handleDownloadFolderFn(id);
+  };
+
   return (
     <>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center justify-between">
         <DropdownButton
           firstButtonName="New Folder"
           onFirstBtnClick={handleAddFolder!}
@@ -107,38 +123,51 @@ const SideBarFoldersButtonsComponent = ({
                 </span>
                 <div className="flex-1" />
                 {index > 0 && (
-                  <>
-                    <Button
-                      className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
-                      onClick={(e) => {
-                        handleDeleteFolder!(item);
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      variant={"ghost"}
-                    >
-                      <IconComponent
-                        name={"trash"}
-                        className=" w-4 stroke-[1.5]"
-                      />
-                    </Button>
-
-                    <Button
-                      className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
-                      onClick={(e) => {
-                        handleEditFolder!(item);
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      variant={"ghost"}
-                    >
-                      <IconComponent
-                        name={"pencil"}
-                        className="  w-4 stroke-[1.5] text-white  "
-                      />
-                    </Button>
-                  </>
+                  <Button
+                    className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
+                    onClick={(e) => {
+                      handleDeleteFolder!(item);
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
+                    variant={"ghost"}
+                  >
+                    <IconComponent
+                      name={"trash"}
+                      className=" w-4 stroke-[1.5]"
+                    />
+                  </Button>
                 )}
+                {index > 0 && (
+                  <Button
+                    className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
+                    onClick={(e) => {
+                      handleEditFolder!(item);
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
+                    variant={"ghost"}
+                  >
+                    <IconComponent
+                      name={"pencil"}
+                      className="  w-4 stroke-[1.5] text-white  "
+                    />
+                  </Button>
+                )}
+                <Button
+                  className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
+                  onClick={(e) => {
+                    handleDownloadFolder(item.id!);
+                    e.stopPropagation();
+                    e.preventDefault();
+                  }}
+                  variant={"ghost"}
+                >
+                  <IconComponent
+                    name={"Download"}
+                    className="  w-4 stroke-[1.5] text-white  "
+                  />
+                </Button>
               </div>
             </div>
           ))}

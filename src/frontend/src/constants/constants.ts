@@ -533,7 +533,7 @@ export const NOUNS: string[] = [
  */
 export const USER_PROJECTS_HEADER = "My Collection";
 
-export const DEFAULT_FOLDER = "All";
+export const DEFAULT_FOLDER = "My Projects";
 
 /**
  * Header text for admin page

@@ -38,7 +38,7 @@ const InputSearchComponent = ({ loading }: InputSearchComponentProps) => {
 
   return (
     <>
-      <div className="relative h-12 w-[40%]">
+      <div className="relative h-12 w-[60%]">
         <Input
           data-testid="search-store-input"
           disabled={disableInputSearch}

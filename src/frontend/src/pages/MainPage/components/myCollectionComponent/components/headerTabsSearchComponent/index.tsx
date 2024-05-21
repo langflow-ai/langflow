@@ -42,15 +42,6 @@ const HeaderTabsSearchComponent = ({}: HeaderTabsSearchComponentProps) => {
           loading={isLoading}
           tabActive={tabActive}
         />
-        <div className="absolute bottom-3 right-0  flex justify-center border-b border-border">
-          <Button variant="primary" onClick={handleDownloadFolder}>
-            <ForwardedIconComponent
-              name="Download"
-              className="main-page-nav-button"
-            />
-            Download
-          </Button>
-        </div>
       </div>
     </>
   );
