@@ -44,10 +44,10 @@ export default function FoldersModal({
           description={`${folderToEdit ? "Edit a folder" : "Add a new folder"}`}
         >
           <span className="pr-2" data-testid="modal-title">
-            {folderToEdit ? "Edit" : "Add"} Folder
+            {folderToEdit ? "Edit" : "New"} Folder
           </span>
           <ForwardedIconComponent
-            name="FolderPlusIcon"
+            name={folderToEdit ? "Pencil" : "Plus"}
             className="h-6 w-6 pl-1 text-primary "
             aria-hidden="true"
           />
