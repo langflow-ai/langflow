@@ -12,6 +12,23 @@ export default function CardsWrapComponent({
   dragMessage?: string;
 }) {
   const [isDragging, setIsDragging] = useState(false);
+  useEffect(() => {
+    // Function to handle visibility change
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        // Reset hover state or perform any necessary actions when the tab becomes visible again
+        setIsDragging(false);
+      }
+    };
+
+    // Add event listener for visibility change
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Cleanup event listener on component unmount
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   const dragOver = (e) => {
     e.preventDefault();
@@ -61,4 +78,7 @@ export default function CardsWrapComponent({
       )}
     </div>
   );
+}
+function useEffect(arg0: () => () => void, arg1: never[]) {
+  throw new Error("Function not implemented.");
 }
