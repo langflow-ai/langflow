@@ -1,12 +1,8 @@
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import DropdownButton from "../../../../components/dropdownButtonComponent";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../../../components/genericIconComponent";
 import PageLayout from "../../../../components/pageLayout";
 import SidebarNav from "../../../../components/sidebarComponent";
-import { Button } from "../../../../components/ui/button";
 import {
   MY_COLLECTION_DESC,
   USER_PROJECTS_HEADER,
@@ -16,9 +12,6 @@ import { useFolderStore } from "../../../../stores/foldersStore";
 import ModalsComponent from "../../components/modalsComponent";
 import useDeleteFolder from "../../hooks/use-delete-folder";
 import useDropdownOptions from "../../hooks/use-dropdown-options";
-
-import useAlertStore from "../../../../stores/alertStore";
-import { handleDownloadFolderFn } from "../../utils/handle-download-folder";
 
 export default function HomePage(): JSX.Element {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
@@ -32,19 +25,9 @@ export default function HomePage(): JSX.Element {
   const [openFolderModal, setOpenFolderModal] = useState(false);
   const [openDeleteFolderModal, setOpenDeleteFolderModal] = useState(false);
   const is_component = pathname === "/components";
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-  const allFlows = useFlowsManagerStore((state) => state.allFlows);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const setFolderToEdit = useFolderStore((state) => state.setFolderToEdit);
-  const uploadFolder = useFolderStore((state) => state.uploadFolder);
   const navigate = useNavigate();
-  const folders = useFolderStore((state) => state.folders);
-  const myCollectionId = useFolderStore((state) => state.myCollectionId);
-  const folderId = location?.state?.folderId || myCollectionId;
-  const folderName = folders.find((folder) => folder.id === folderId)?.name;
-  const folderDescription = folders.find(
-    (folder) => folder.id === folderId,
-  )?.description;
 
   useEffect(() => {
     getFoldersApi();
@@ -61,21 +44,6 @@ export default function HomePage(): JSX.Element {
   });
 
   const { handleDeleteFolder } = useDeleteFolder({ getFoldersApi, navigate });
-
-  const handleDownloadFolder = () => {
-    if (allFlows.length === 0) {
-      setErrorData({
-        title: "Folder is empty",
-        list: [],
-      });
-      return;
-    }
-    handleDownloadFolderFn(folderId);
-  };
-
-  const handleUploadFlowsToFolder = () => {
-    uploadFolder(folderId);
-  };
 
   return (
     <>
@@ -116,16 +84,7 @@ export default function HomePage(): JSX.Element {
               className="w-[20vw]"
             />
           </aside>
-          <div className="h-full w-full flex-1">
-            <div className="items-right absolute right-16 flex justify-center">
-              <Button variant="primary" onClick={handleDownloadFolder}>
-                <ForwardedIconComponent
-                  name="Download"
-                  className="main-page-nav-button"
-                />
-                Download
-              </Button>
-            </div>
+          <div className="relative h-full w-full flex-1">
             <Outlet />
           </div>
         </div>
