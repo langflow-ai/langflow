@@ -34,10 +34,10 @@ import {
   updateIds,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
-import { getRandomName } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
+import getRandomName from "./utils/get-random-name";
 
 const nodeTypes = {
   genericNode: GenericNode,

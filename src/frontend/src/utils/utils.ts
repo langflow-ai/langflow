@@ -106,38 +106,6 @@ export function buildInputs(): string {
   return '{"input_value": "message"}';
 }
 
-export function getRandomName(
-  retry: number = 0,
-  noSpace: boolean = false,
-  maxRetries: number = 3,
-): string {
-  const left: string[] = ADJECTIVES;
-  const right: string[] = NOUNS;
-
-  const lv = getRandomElement(left);
-  const rv = getRandomElement(right);
-
-  // Condition to avoid "boring wozniak"
-  if (lv === "boring" && rv === "wozniak") {
-    if (retry < maxRetries) {
-      return getRandomName(retry + 1, noSpace, maxRetries);
-    } else {
-      console.warn("Max retries reached, returning as is");
-    }
-  }
-
-  // Append a suffix if retrying and noSpace is true
-  if (retry > 0 && noSpace) {
-    const retrySuffix = Math.floor(Math.random() * 10);
-    return `${lv}_${rv}${retrySuffix}`;
-  }
-
-  // Construct the final name
-  let final_name = noSpace ? `${lv}_${rv}` : `${lv} ${rv}`;
-  // Return title case final name
-  return toTitleCase(final_name);
-}
-
 export function getRandomKeyByssmm(): string {
   const now = new Date();
   const seconds = String(now.getSeconds()).padStart(2, "0");
@@ -461,31 +429,6 @@ export function extractTypeFromLongId(id: string): string {
 
 export function createRandomKey(key: string, uid: string): string {
   return removeCountFromString(key) + ` (${uid})`;
-}
-
-export function sensitiveSort(a: string, b: string): number {
-  // Extract the name and number from each string using regular expressions
-  const regex = /(.+) \((\w+)\)/;
-  const matchA = a.match(regex);
-  const matchB = b.match(regex);
-
-  if (matchA && matchB) {
-    // Compare the names alphabetically
-    const nameA = matchA[1];
-    const nameB = matchB[1];
-    if (nameA !== nameB) {
-      return nameA.localeCompare(nameB);
-    }
-
-    // If the names are the same, compare the numbers numerically
-    const numberA = parseInt(matchA[2]);
-    const numberB = parseInt(matchB[2]);
-    return numberA - numberB;
-  } else {
-    // Handle cases where one or both strings do not match the expected pattern
-    // Simple strings are treated as pure alphabetical comparisons
-    return a.localeCompare(b);
-  }
 }
 
 export function groupByFamily(
