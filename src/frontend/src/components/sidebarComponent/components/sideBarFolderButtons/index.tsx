@@ -38,7 +38,6 @@ const SideBarFoldersButtonsComponent = ({
   };
   const location = useLocation();
   const folderId = location?.state?.folderId ?? myCollectionId;
-  const is_component = location?.pathname.includes("components");
   const getFolderById = useFolderStore((state) => state.getFolderById);
 
   const handleFolderChange = (folderId: string) => {
@@ -47,7 +46,6 @@ const SideBarFoldersButtonsComponent = ({
 
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(
     folderId,
-    is_component,
     handleFolderChange,
   );
 
@@ -85,7 +83,7 @@ const SideBarFoldersButtonsComponent = ({
               onDragOver={dragOver}
               onDragEnter={dragEnter}
               onDragLeave={dragLeave}
-              onDrop={onDrop}
+              onDrop={(e) => onDrop(e, item.id!)}
               key={item.id}
               data-testid={`sidebar-nav-${item.name}`}
               className={cn(
@@ -134,7 +132,7 @@ const SideBarFoldersButtonsComponent = ({
                     >
                       <IconComponent
                         name={"pencil"}
-                        className="  w-4 stroke-[1.5] text-white  "
+                        className="w-4 stroke-[1.5] text-white"
                       />
                     </Button>
                   </>
