@@ -21,6 +21,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
           )?.id;
           set({ myCollectionId });
           get().setLoading(false);
+          useFlowsManagerStore.getState().refreshFlows();
         },
         () => {
           set({ folders: [] });
