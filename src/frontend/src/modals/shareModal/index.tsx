@@ -22,10 +22,10 @@ import {
   removeFileNameFromComponents,
   removeGlobalVariableFromComponents,
 } from "../../utils/reactflowUtils";
-import { getTagsIds } from "../../utils/storeUtils";
 import BaseModal from "../baseModal";
 import ConfirmationModal from "../confirmationModal";
 import ExportModal from "../exportModal";
+import getTagsIds from "./utils/get-tags-ids";
 
 export default function ShareModal({
   component,
