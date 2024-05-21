@@ -169,7 +169,7 @@ def delete_folder(
 
 
 @router.patch("/move_to_folder/{flow_id}/{folder_id}", status_code=200)
-def update_folder(
+def move_to_folder(
     *,
     session: Session = Depends(get_session),
     folder_id: UUID,
