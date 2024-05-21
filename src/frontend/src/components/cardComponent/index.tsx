@@ -11,7 +11,7 @@ import { storeComponent } from "../../types/store";
 import cloneFLowWithParent, {
   getInputsAndOutputs,
 } from "../../utils/storeUtils";
-import { cn, convertTestName } from "../../utils/utils";
+import { cn } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import ShadTooltip from "../shadTooltipComponent";
 import { Button } from "../ui/button";
@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from "../ui/card";
 import Loading from "../ui/loading";
+import { convertTestName } from "./utils/convert-test-name";
 
 export default function CollectionCardComponent({
   data,
