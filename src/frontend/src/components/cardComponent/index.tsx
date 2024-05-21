@@ -298,6 +298,7 @@ export default function CollectionCardComponent({
                       render={({ field }) => (
                         <FormControl>
                           <Checkbox
+                            aria-label="checkbox-component"
                             checked={field.value}
                             onCheckedChange={field.onChange}
                             className="h-5 w-5 border border-ring data-[state=checked]:border-selected data-[state=checked]:bg-selected"

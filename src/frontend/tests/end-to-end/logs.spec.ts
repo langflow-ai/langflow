@@ -15,7 +15,8 @@ test("should able to see and interact with logs", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
+
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -48,7 +49,7 @@ test("should able to see and interact with logs", async ({ page }) => {
   await page.getByText("target_args", { exact: true }).isVisible();
   await page.getByRole("gridcell").first().isVisible();
 
-  await page.getByText("Session View", { exact: true }).click();
+  await page.getByText("Messages", { exact: true }).click();
   await page.getByText("timestamp").isVisible();
   await page.getByText("sender", { exact: true }).isVisible();
   await page.getByText("sender_name").isVisible();
