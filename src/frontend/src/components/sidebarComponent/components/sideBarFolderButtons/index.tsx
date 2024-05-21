@@ -59,13 +59,6 @@ const SideBarFoldersButtonsComponent = ({
   };
 
   const handleDownloadFolder = (id: string) => {
-    if (allFlows.length === 0) {
-      setErrorData({
-        title: "Folder is empty",
-        list: [],
-      });
-      return;
-    }
     handleDownloadFolderFn(id);
   };
 
