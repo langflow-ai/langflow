@@ -1,21 +1,16 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { priorityFields } from "../constants/constants";
-import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
 import {
   APIDataType,
-  APITemplateType,
   TemplateVariableType,
 } from "../types/api";
 import {
-  IVarHighlightType,
   groupedObjType,
   nodeGroupedObjType,
   tweakType,
 } from "../types/components";
 import { NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
-import { getRandomElement } from "./reactflowUtils";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -349,8 +344,4 @@ export function getSetFromObject(obj: object, key?: string): Set<string> {
 export function freezeObject(obj: any) {
   if (!obj) return obj;
   return JSON.parse(JSON.stringify(obj));
-}
-
-export function sortByName(stringList: string[]): string[] {
-  return stringList.sort((a, b) => a.localeCompare(b));
 }
