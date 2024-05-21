@@ -12,7 +12,7 @@ export type AddFolderType = {
   name: string;
   description: string;
   id?: string | null;
-  parent_id: string;
+  parent_id: string | null;
   flows?: string[];
   components?: string[];
 };

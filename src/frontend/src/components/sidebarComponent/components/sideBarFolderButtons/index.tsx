@@ -65,17 +65,17 @@ const SideBarFoldersButtonsComponent = ({
   return (
     <>
       <div className="flex shrink-0 items-center justify-between">
-        <DropdownButton
-          firstButtonName="New Folder"
-          onFirstBtnClick={handleAddFolder!}
-          options={[]}
-          plusButton={true}
-          dropdownOptions={false}
-        />
+        <Button variant="primary" onClick={handleAddFolder!}>
+          <ForwardedIconComponent
+            name="Plus"
+            className="main-page-nav-button"
+          />
+          New Folder
+        </Button>
         <Button
           variant="primary"
-          onClick={handleUploadFlowsToFolder}
           className="px-7"
+          onClick={handleUploadFlowsToFolder}
         >
           <ForwardedIconComponent
             name="Upload"

@@ -5,6 +5,10 @@ import { cn } from "../../utils/utils";
 import HorizontalScrollFadeComponent from "../horizontalScrollFadeComponent";
 import SideBarButtonsComponent from "./components/sideBarButtons";
 import SideBarFoldersButtonsComponent from "./components/sideBarFolderButtons";
+import { addFolder } from "../../pages/MainPage/services";
+import { useNavigate } from "react-router-dom";
+
+const navigate = useNavigate();
 
 type SidebarNavProps = {
   items: {
@@ -22,7 +26,6 @@ type SidebarNavProps = {
 export default function SidebarNav({
   className,
   items,
-  handleOpenNewFolderModal,
   handleChangeFolder,
   handleEditFolder,
   handleDeleteFolder,
@@ -32,18 +35,24 @@ export default function SidebarNav({
   const pathname = location.pathname;
   const loadingFolders = useFolderStore((state) => state.loading);
   const folders = useFolderStore((state) => state.folders);
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
 
   const pathValues = ["folder", "components", "flows", "all"];
   const isFolderPath = pathValues.some((value) => pathname.includes(value));
 
+  function addNewFolder() {
+    addFolder({ name: "New Folder", parent_id: null, description: "" }).then(
+      (res) => {
+        getFoldersApi(true);
+        navigate(`all/folder/${res.id}`, { state: { folderId: res.id } });
+      },
+    );
+  }
+
   return (
     <nav className={cn(className)} {...props}>
       <HorizontalScrollFadeComponent>
-        <SideBarButtonsComponent
-          items={items}
-          pathname={pathname}
-          handleOpenNewFolderModal={handleOpenNewFolderModal}
-        />
+        <SideBarButtonsComponent items={items} pathname={pathname} />
 
         {!loadingFolders && folders?.length > 0 && isFolderPath && (
           <SideBarFoldersButtonsComponent
@@ -52,7 +61,7 @@ export default function SidebarNav({
             handleChangeFolder={handleChangeFolder}
             handleEditFolder={handleEditFolder}
             handleDeleteFolder={handleDeleteFolder}
-            handleAddFolder={handleOpenNewFolderModal}
+            handleAddFolder={addNewFolder}
           />
         )}
       </HorizontalScrollFadeComponent>

@@ -88,11 +88,13 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           .then((dbData) => {
             if (dbData) {
               const { data, flows } = processFlows(dbData, false);
+              console.log("flows", flows);
+              console.log(dbData);
               const starterProjectsIds = starterProjects.flows!.map(
-                (flow) => flow.id
+                (flow) => flow.id,
               );
               get().setFlows(
-                flows.filter((f) => !starterProjectsIds.includes(f.id))
+                flows.filter((f) => !starterProjectsIds.includes(f.id)),
               );
               useTypesStore.setState((state) => ({
                 data: { ...state.data, ["saved_components"]: data },
@@ -119,7 +121,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     if (get().currentFlow) {
       get().saveFlow(
         { ...get().currentFlow!, data: { nodes, edges, viewport } },
-        true
+        true,
       );
     }
   },
@@ -145,7 +147,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
                   return updatedFlow;
                 }
                 return flow;
-              })
+              }),
             );
             //update tabs state
 
@@ -196,7 +198,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     flow?: FlowType,
     override?: boolean,
     position?: XYPosition,
-    fromDragAndDrop?: boolean
+    fromDragAndDrop?: boolean,
   ): Promise<string | undefined> => {
     if (newProject) {
       let flowData = flow
@@ -263,7 +265,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         .getState()
         .paste(
           { nodes: flow!.data!.nodes, edges: flow!.data!.edges },
-          position ?? { x: 10, y: 10 }
+          position ?? { x: 10, y: 10 },
         );
     }
   },
@@ -273,7 +275,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         multipleDeleteFlowsComponents(id)
           .then(() => {
             const { data, flows } = processFlows(
-              get().flows.filter((flow) => !id.includes(flow.id))
+              get().flows.filter((flow) => !id.includes(flow.id)),
             );
             get().setFlows(flows);
             set({ isLoading: false });
@@ -293,7 +295,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           deleteFlowFromDatabase(id)
             .then(() => {
               const { data, flows } = processFlows(
-                get().flows.filter((flow) => flow.id !== id)
+                get().flows.filter((flow) => flow.id !== id),
               );
               get().setFlows(flows);
               set({ isLoading: false });
@@ -315,7 +317,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     return new Promise<void>((resolve) => {
       let componentFlow = get().flows.find(
         (componentFlow) =>
-          componentFlow.is_component && componentFlow.name === key
+          componentFlow.is_component && componentFlow.name === key,
       );
 
       if (componentFlow) {
@@ -363,7 +365,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
               fileData,
               undefined,
               position,
-              true
+              true,
             );
             resolve(id);
           }
@@ -404,7 +406,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     return get().addFlow(
       true,
       createFlowComponent(component, useDarkStore.getState().version),
-      override
+      override,
     );
   },
   takeSnapshot: () => {
@@ -425,7 +427,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     if (pastLength > 0) {
       past[currentFlowId] = past[currentFlowId].slice(
         pastLength - defaultOptions.maxHistorySize + 1,
-        pastLength
+        pastLength,
       );
 
       past[currentFlowId].push(newState);
