@@ -2,7 +2,20 @@
 
 # [![Langflow](./docs/static/img/hero.png)](https://www.langflow.org)
 
-### [Langflow](https://www.langflow.org) is a new, visual way to build, iterate and deploy AI apps.
+<p align="center"><strong>
+    Visually build, iterate, and deploy Gen-AI apps in minutes
+</strong></p>
+<p align="center" style="font-size: 12px;">
+    Open-source, 100% Python, fully customizable, LLM and vector store agnostic
+</p>
+<p align="center">
+    <img src="https://img.shields.io/github/stars/langflow-ai/langflow">
+    <img src="https://img.shields.io/discord/1116803230643527710?label=Discord">
+</p>
+
+<p align="center">
+  <img src="./docs/static/img/langflow_basic_howto.gif" alt="Your GIF" style="border: 3px solid #211C43;">
+</p>
 
 # ⚡️ Documentation and Community
 
