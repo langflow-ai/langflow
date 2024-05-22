@@ -1,14 +1,15 @@
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from langflow.services.database.models.flow.model import Flow
 from sqlmodel import Session, select, update
+
+from langflow.services.database.models.flow.model import Flow
 
 from .constants import DEFAULT_FOLDER_DESCRIPTION, DEFAULT_FOLDER_NAME
 from .model import Folder
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.user.model import User
+    pass
 
 
 def create_default_folder_if_it_doesnt_exist(session: Session, user_id: UUID):
@@ -19,7 +20,10 @@ def create_default_folder_if_it_doesnt_exist(session: Session, user_id: UUID):
         session.refresh(folder)
         session.exec(
             update(Flow)
-            .where((Flow.folder_id == None) & (Flow.user_id == user_id))
+            .where(
+                (Flow.folder_id == None)  # noqa
+                & (Flow.user_id == user_id)
+            )
             .values(folder_id=folder.id)
         )
         session.commit()

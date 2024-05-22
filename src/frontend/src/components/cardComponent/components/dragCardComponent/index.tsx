@@ -1,7 +1,6 @@
 import { storeComponent } from "../../../../types/store";
 import { cn } from "../../../../utils/utils";
 import ForwardedIconComponent from "../../../genericIconComponent";
-import ShadTooltip from "../../../shadTooltipComponent";
 import { Card, CardHeader, CardTitle } from "../../../ui/card";
 
 export default function DragCardComponent({ data }: { data: storeComponent }) {
@@ -11,7 +10,7 @@ export default function DragCardComponent({ data }: { data: storeComponent }) {
         draggable
         //TODO check color schema
         className={cn(
-          "group relative flex flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#ffffff10]",
+          "group relative flex flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#ffffff10]"
         )}
       >
         <div>
@@ -23,7 +22,7 @@ export default function DragCardComponent({ data }: { data: storeComponent }) {
                     "visible flex-shrink-0",
                     data.is_component
                       ? "mx-0.5 h-6 w-6 text-component-icon"
-                      : "h-7 w-7 flex-shrink-0 text-flow-icon",
+                      : "h-7 w-7 flex-shrink-0 text-flow-icon"
                   )}
                   name={data.is_component ? "ToyBrick" : "Group"}
                 />

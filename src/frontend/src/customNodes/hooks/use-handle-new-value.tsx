@@ -11,7 +11,7 @@ const useHandleOnNewValue = (
   setNode,
   renderTooltips,
   isLoading,
-  setIsLoading,
+  setIsLoading
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
