@@ -15,7 +15,7 @@ test("InputListComponent", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -41,19 +41,19 @@ test("InputListComponent", async ({ page }) => {
   await page.getByTestId("edit-button-modal").click();
 
   expect(
-    await page.getByTestId("showmetadata_indexing_exclude").isChecked()
+    await page.getByTestId("showmetadata_indexing_exclude").isChecked(),
   ).toBeFalsy();
   await page.getByTestId("showmetadata_indexing_exclude").click();
   expect(
-    await page.getByTestId("showmetadata_indexing_exclude").isChecked()
+    await page.getByTestId("showmetadata_indexing_exclude").isChecked(),
   ).toBeTruthy();
 
   expect(
-    await page.getByTestId("showmetadata_indexing_include").isChecked()
+    await page.getByTestId("showmetadata_indexing_include").isChecked(),
   ).toBeFalsy();
   await page.getByTestId("showmetadata_indexing_include").click();
   expect(
-    await page.getByTestId("showmetadata_indexing_include").isChecked()
+    await page.getByTestId("showmetadata_indexing_include").isChecked(),
   ).toBeTruthy();
 
   await page
@@ -93,7 +93,7 @@ test("InputListComponent", async ({ page }) => {
     .click();
 
   const plusButtonLocator = page.getByTestId(
-    "input-list-plus-btn_metadata_indexing_include-1"
+    "input-list-plus-btn_metadata_indexing_include-1",
   );
   const elementCount = await plusButtonLocator?.count();
 
@@ -164,12 +164,12 @@ test("InputListComponent", async ({ page }) => {
     .click();
 
   const plusButtonLocatorEdit0 = await page.getByTestId(
-    "input-list-plus-btn-edit_metadata_indexing_include-0"
+    "input-list-plus-btn-edit_metadata_indexing_include-0",
   );
   const elementCountEdit0 = await plusButtonLocatorEdit0?.count();
 
   const plusButtonLocatorEdit2 = await page.getByTestId(
-    "input-list-plus-btn-edit_metadata_indexing_include-2"
+    "input-list-plus-btn-edit_metadata_indexing_include-2",
   );
   const elementCountEdit2 = await plusButtonLocatorEdit2?.count();
 
@@ -178,13 +178,13 @@ test("InputListComponent", async ({ page }) => {
   }
 
   const minusButtonLocatorEdit1 = await page.getByTestId(
-    "input-list-minus-btn-edit_metadata_indexing_include-1"
+    "input-list-minus-btn-edit_metadata_indexing_include-1",
   );
 
   const elementCountMinusEdit1 = await minusButtonLocatorEdit1?.count();
 
   const minusButtonLocatorEdit2 = await page.getByTestId(
-    "input-list-minus-btn-edit_metadata_indexing_include-2"
+    "input-list-minus-btn-edit_metadata_indexing_include-2",
   );
 
   const elementCountMinusEdit2 = await minusButtonLocatorEdit2?.count();

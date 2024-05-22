@@ -15,7 +15,7 @@ test("InputComponent", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -38,12 +38,14 @@ test("InputComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
-  await page.getByTestId("input-collection_name").click();
+  await page.getByTestId("popover-anchor-input-collection_name").click();
   await page
-    .getByTestId("input-collection_name")
+    .getByTestId("popover-anchor-input-collection_name")
     .fill("collection_name_test_123123123!@#$&*(&%$@");
 
-  let value = await page.getByTestId("input-collection_name").inputValue();
+  let value = await page
+    .getByTestId("popover-anchor-input-collection_name")
+    .inputValue();
 
   if (value != "collection_name_test_123123123!@#$&*(&%$@") {
     expect(false).toBeTruthy();
@@ -58,82 +60,82 @@ test("InputComponent", async ({ page }) => {
   expect(
     await page
       .locator('//*[@id="showchroma_server_cors_allow_origins"]')
-      .isChecked()
+      .isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showchroma_server_grpc_port"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_grpc_port"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_grpc_port"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showchroma_server_host"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_host"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_host"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showchroma_server_port"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_port"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_port"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showchroma_server_ssl_enabled"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_ssl_enabled"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_ssl_enabled"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showcollection_name"]').click();
   expect(
-    await page.locator('//*[@id="showcollection_name"]').isChecked()
+    await page.locator('//*[@id="showcollection_name"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showindex_directory"]').click();
   expect(
-    await page.locator('//*[@id="showindex_directory"]').isChecked()
+    await page.locator('//*[@id="showindex_directory"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showchroma_server_cors_allow_origins"]').click();
   expect(
     await page
       .locator('//*[@id="showchroma_server_cors_allow_origins"]')
-      .isChecked()
+      .isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showchroma_server_grpc_port"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_grpc_port"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_grpc_port"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showchroma_server_host"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_host"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_host"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showchroma_server_port"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_port"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_port"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showchroma_server_ssl_enabled"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_ssl_enabled"]').isChecked()
+    await page.locator('//*[@id="showchroma_server_ssl_enabled"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showindex_directory"]').click();
   expect(
-    await page.locator('//*[@id="showindex_directory"]').isChecked()
+    await page.locator('//*[@id="showindex_directory"]').isChecked(),
   ).toBeTruthy();
 
   let valueEditNode = await page
-    .getByTestId("input-collection_name-edit")
+    .getByTestId("popover-anchor-input-collection_name-edit")
     .inputValue();
 
   if (valueEditNode != "collection_name_test_123123123!@#$&*(&%$@") {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("input-collection_name-edit").click();
+  await page.getByTestId("popover-anchor-input-collection_name-edit").click();
   await page
-    .getByTestId("input-collection_name-edit")
+    .getByTestId("popover-anchor-input-collection_name-edit")
     .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
@@ -150,12 +152,14 @@ test("InputComponent", async ({ page }) => {
 
     await page.locator('//*[@id="showcollection_name"]').click();
     expect(
-      await page.locator('//*[@id="showcollection_name"]').isChecked()
+      await page.locator('//*[@id="showcollection_name"]').isChecked(),
     ).toBeTruthy();
 
     await page.locator('//*[@id="saveChangesBtn"]').click();
 
-    let value = await page.getByTestId("input-collection_name").inputValue();
+    let value = await page
+      .getByTestId("popover-anchor-input-collection_name")
+      .inputValue();
 
     if (value != "NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe") {
       expect(false).toBeTruthy();

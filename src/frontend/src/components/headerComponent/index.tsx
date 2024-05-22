@@ -59,7 +59,7 @@ export default function Header(): JSX.Element {
           <Button
             className="gap-2"
             variant={
-              location.pathname === "/flows" ||
+              location.pathname === "/all" ||
               location.pathname === "/components"
                 ? "primary"
                 : "secondary"
@@ -73,18 +73,7 @@ export default function Header(): JSX.Element {
             <div className="hidden flex-1 md:block">{USER_PROJECTS_HEADER}</div>
           </Button>
         </Link>
-        {/* <Link to="/community">
-          <Button
-            className="gap-2"
-            variant={
-              location.pathname === "/community" ? "primary" : "secondary"
-            }
-            size="sm"
-          >
-            <IconComponent name="Users2" className="h-4 w-4" />
-            <div className="flex-1">Community Examples</div>
-          </Button>
-        </Link> */}
+
         {hasStore && (
           <Link to="/store">
             <Button

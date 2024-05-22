@@ -46,7 +46,7 @@ export default function GlobalVariablesPage() {
       name: string;
       default_fields: string | undefined;
     }[]
-  >();
+  >([]);
 
   useEffect(() => {
     const rows: Array<{

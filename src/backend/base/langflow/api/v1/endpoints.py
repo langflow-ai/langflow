@@ -4,7 +4,7 @@ from typing import Annotated, List, Optional, Union
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from langflow.api.utils import update_frontend_node_with_template_values
 from langflow.api.v1.schemas import (

@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 /// <reference types="vite-plugin-svgr/client" />
 //@ts-ignore
 import { ReactComponent as TransferFiles } from "../../../../assets/undraw_transfer_files_re_a2a9.svg";
@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from "../../../../components/ui/card";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useFolderStore } from "../../../../stores/foldersStore";
 import { UndrawCardComponentProps } from "../../../../types/components";
 import { updateIds } from "../../../../utils/reactflowUtils";
 
@@ -30,6 +31,9 @@ export default function UndrawCardComponent({
 }: UndrawCardComponentProps): JSX.Element {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const navigate = useNavigate();
+  const location = useLocation();
+  const folderId = location?.state?.folderId;
+  const setFolderUrl = useFolderStore((state) => state.setFolderUrl);
 
   function selectImage() {
     switch (flow.name) {
@@ -111,7 +115,8 @@ export default function UndrawCardComponent({
       onClick={() => {
         updateIds(flow.data!);
         addFlow(true, flow).then((id) => {
-          navigate("/flow/" + id);
+          setFolderUrl(folderId ?? "");
+          navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
         });
       }}
       className="h-64 w-80 cursor-pointer bg-background pt-4"
