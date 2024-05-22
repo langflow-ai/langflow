@@ -59,7 +59,7 @@ def import_by_type(_type: str, name: str) -> Any:
 
 def import_output_parser(output_parser: str) -> Any:
     """Import output parser from output parser name"""
-    return import_module(f"from langchain_community.output_parsers import {output_parser}")
+    return import_module(f"from langchain.output_parsers import {output_parser}")
 
 
 def import_chat_llm(llm: str) -> BaseChatModel:

@@ -25,7 +25,7 @@ class OutputParserCreator(LangChainTypeCreator):
         if self.type_dict is None:
             settings_service = get_settings_service()
             self.type_dict = {
-                output_parser_name: import_class(f"langchain_community.output_parsers.{output_parser_name}")
+                output_parser_name: import_class(f"langchain.output_parsers.{output_parser_name}")
                 # if output_parser_name is not lower case it is a class
                 for output_parser_name in output_parsers.__all__
             }
