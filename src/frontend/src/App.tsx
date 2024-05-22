@@ -104,7 +104,6 @@ export default function App() {
   const fetchAllData = async () => {
     setTimeout(async () => {
       await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
-      getFoldersApi();
     }, 1000);
   };
 
@@ -112,6 +111,7 @@ export default function App() {
     return new Promise<void>(async (resolve, reject) => {
       if (isAuthenticated) {
         try {
+          await getFoldersApi();
           await getTypes();
           await refreshFlows();
           const res = await getGlobalVariables();

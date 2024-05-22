@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { DEFAULT_FOLDER } from "../constants/constants";
+import { DEFAULT_FOLDER, STARTER_FOLDER_NAME } from "../constants/constants";
 import {
   getFolderById,
   getFolders,
@@ -11,24 +11,40 @@ import useFlowsManagerStore from "./flowsManagerStore";
 export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   folders: [],
   getFoldersApi: (refetch = false) => {
-    if (get()?.folders.length === 0 || refetch === true) {
-      get().setLoading(true);
-      getFolders().then(
-        (res) => {
-          set({ folders: res });
-          const myCollectionId = res?.find(
-            (f) => f.name === DEFAULT_FOLDER
-          )?.id;
-          set({ myCollectionId });
-          get().setLoading(false);
-          useFlowsManagerStore.getState().refreshFlows();
-        },
-        () => {
-          set({ folders: [] });
-          get().setLoading(false);
-        }
-      );
-    }
+    return new Promise<void>((resolve, reject) => {
+      if (get()?.folders.length === 0 || refetch === true) {
+        get().setLoading(true);
+        getFolders().then(
+          (res) => {
+            const foldersWithoutStarterProjects = res.filter(
+              (folder) => folder.name !== STARTER_FOLDER_NAME
+            );
+
+            const starterProjects = res.find(
+              (folder) => folder.name === STARTER_FOLDER_NAME
+            );
+
+            set({ starterProjectId: starterProjects!.id ?? "" });
+            set({ folders: foldersWithoutStarterProjects });
+
+            const myCollectionId = res?.find(
+              (f) => f.name === DEFAULT_FOLDER
+            )?.id;
+            set({ myCollectionId });
+            if (refetch === true) {
+              useFlowsManagerStore.getState().refreshFlows();
+            }
+            get().setLoading(false);
+            resolve();
+          },
+          () => {
+            set({ folders: [] });
+            get().setLoading(false);
+            reject();
+          }
+        );
+      }
+    });
   },
   setFolders: (folders) => set(() => ({ folders: folders })),
   loading: false,
@@ -101,4 +117,6 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
       input.click();
     });
   },
+  starterProjectId: "",
+  setStarterProjectId: (id) => set(() => ({ starterProjectId: id })),
 }));

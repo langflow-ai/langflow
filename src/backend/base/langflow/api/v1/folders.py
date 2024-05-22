@@ -8,7 +8,7 @@ from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 import orjson
-from sqlalchemy import update
+from sqlalchemy import or_, update
 from sqlmodel import Session, select
 
 from langflow.services.auth.utils import get_current_active_user
@@ -72,20 +72,12 @@ def read_folders(
     current_user: User = Depends(get_current_active_user),
 ):
     try:
-        folders = session.exec(select(Folder).where(Folder.user_id == current_user.id)).all()
+        folders = session.exec(
+            select(Folder).where(or_(Folder.user_id == current_user.id, Folder.user_id == None))
+        ).all()        
         return folders
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/starter-projects", response_model=FolderReadWithFlows, status_code=200)
-def read_starter_folders(*, session: Session = Depends(get_session)):
-    try:
-        folders = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
-        return folders
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.get("/{folder_id}", response_model=FolderReadWithFlows, status_code=200)
 def read_folder(
