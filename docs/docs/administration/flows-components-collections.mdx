@@ -3,7 +3,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 import ZoomableImage from '/src/theme/ZoomableImage.js';
 import ReactPlayer from 'react-player';
 
-# Flows, collections, and components
+# Flows, components, and collections
 
 ## TL;DR
 
@@ -15,20 +15,31 @@ A [collection](#collection) is a snapshot of the flows available in your databas
 
 For example, the **OpenAI** LLM is a **component** of the **Basic prompting** flow, and the **flow** is stored in a **collection**.
 
-
 ## Flow
+
+A **flow** is a pipeline of components connected together in the Langflow canvas.
+
+For example, the [Basic prompting](../starter-projects/basic-prompting.mdx) flow is a pipeline of four components:
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/basic-prompting.png",
+    dark: "img/basic-prompting.png",
+  }}
+  style={{ width: "80%", margin: "20px auto" }}
+/>
+
+For example, the **OpenAI LLM component** receives input (left side) and produces output (right side) - in this case, receiving input from the **Chat Input** and **Prompt** components and producing output to the **Chat Output** component.
 
 ## Component
 
-Components are the building blocks of the flows. They are made of inputs, outputs, and parameters that define their functionality, providing a convenient and straightforward way to compose LLM-based applications. Learn more about components and how they work in the LangChain [documentation](https://python.langchain.com/docs/integrations/components) section.
-
-### Component's Features
+Components are the building blocks of flows. They consist of inputs, outputs, and parameters that define their functionality. These elements provide a convenient and straightforward way to compose LLM-based applications. Learn more about components and how they work in the LangChain [documentation](https://python.langchain.com/docs/integrations/components).
 
 <div style={{ marginBottom: "20px" }}>
   During the flow creation process, you will notice handles (colored circles)
   attached to one or both sides of a component. These handles represent the
-  availability to connect to other components, while their colors are type hints
-  (hover over a handle to see connection details).
+  availability to connect to other components. Hover over a handle to see connection details.
 </div>
 
 <div style={{ marginBottom: "20px" }}>
@@ -45,24 +56,23 @@ Components are the building blocks of the flows. They are made of inputs, output
 <ZoomableImage
   alt="Docusaurus themed image"
   sources={{
-    light: useBaseUrl("img/single-compenent.png"),
-    dark: useBaseUrl("img/single-compenent.png"),
+    light: useBaseUrl("img/single-component.png"),
+    dark: useBaseUrl("img/single-component.png"),
   }}
-  style={{ width: "100%", maxWidth: "800px", margin: "20px auto" }}
+  style={{ width: "50%", maxWidth: "800px", margin: "20px auto" }}
 />
 
 <div style={{ marginBottom: "20px" }}>
-  On the top right corner, you will find the component status icon 🔴. Make the
-  necessary connections, build the flow (⚡ zap icon on the bottom right of the
-  canvas) and once the validation is completed, the status of each validated
-  component should light green 🟢. Hover over the component status to reveal the
-  outputs going through it in case of success, or the detected error in case of
-  failure.
+In the top right corner of the component, you'll find the component status icon (![Status icon](/logos/playbutton.svg)).
+Build the flow by clicking the **Playground** button (![Playground icon](/logos/botmessage.svg)) at the bottom right of the canvas.
+
+Once the validation is complete, the status of each validated component should turn green (![Status icon](/logos/greencheck.svg)).
+To debug, hover over the component status to see the outputs.
 </div>
 
 ---
 
-### Component's Parameters
+### Component Parameters
 
 Langflow components can be edited in the component settings button. Hide parameters to reduce complexity and keep the canvas clean and intuitive for experimentation.
 
