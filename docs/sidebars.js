@@ -131,5 +131,20 @@ module.exports = {
         "contributing/contribute-component",
       ],
     },
+    {
+      type: "integrations",
+      label: "Integrations",
+      collapsed: false,
+      items: [
+        "integrations/notion/notion-setup",
+        "integrations/notion/notion-add-content-to-page.md",
+        "integrations/notion/notion-list-database-properties.md",
+        "integrations/notion/notion-list-pages",
+        "integrations/notion/notion-list-users",
+        "integrations/notion/notion-page-content-viewer",
+        "integrations/notion/notion-page-create",
+        "integrations/notion/notion-page-update",
+      ],
+    },
   ],
 };
