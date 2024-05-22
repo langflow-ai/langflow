@@ -80,17 +80,19 @@ function ApiInterceptor() {
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
-        // const lastUrl = localStorage.getItem("lastUrlCalled");
+        const lastUrl = localStorage.getItem("lastUrlCalled");
+        const lastMethodCalled = localStorage.getItem("lastMethodCalled");
 
-        // if (
-        //   config?.url === lastUrl &&
-        //   config?.url !== "/health" &&
-        //   config?.method === "get"
-        // ) {
-        //   return Promise.reject("Duplicate request");
-        // }
+        if (
+          config?.url === lastUrl &&
+          config?.url !== "/health" &&
+          lastMethodCalled === config.method
+        ) {
+          return Promise.reject("Duplicate request");
+        }
 
-        // localStorage.setItem("lastUrlCalled", config.url ?? "");
+        localStorage.setItem("lastUrlCalled", config.url ?? "");
+        localStorage.setItem("lastMethodCalled", config.method ?? "");
 
         const accessToken = cookies.get("access_token_lf");
         if (accessToken && !isAuthorizedURL(config?.url)) {
