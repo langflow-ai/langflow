@@ -1,4 +1,7 @@
 import Admonition from "@theme/Admonition";
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # NotionDatabaseProperties Component in Langflow
 
@@ -75,8 +78,8 @@ Here's an example of how you can use the `NotionDatabaseProperties` component in
 <ZoomableImage
 alt="NotionDatabaseProperties Flow Example"
 sources={{
-light: "img/NotionDatabaseProperties_flow_example.png",
-dark: "img/NotionDatabaseProperties_flow_example.png",
+light: "img/notion/NotionDatabaseProperties_flow_example.png",
+dark: "img/notion/NotionDatabaseProperties_flow_example_dark.png",
 }}
 style={{ width: "100%", margin: "20px 0" }}
 />

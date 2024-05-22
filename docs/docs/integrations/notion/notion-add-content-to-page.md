@@ -1,4 +1,7 @@
 import Admonition from "@theme/Admonition";
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # AddContentToPage Component in Langflow
 
@@ -270,15 +273,15 @@ class AddContentToPage(CustomComponent):
 
 ## Example Usage
 
-Example of using the `AddContentToPage` component in a Langflow flow:
+Example of using the `AddContentToPage` component in a Langflow flow using a Markdown as input:
 
 <ZoomableImage
-alt="NotionDatabaseProperties Flow Example"
-sources={{
-light: "img/AddContentToPage_flow_example.png",
-dark: "img/AddContentToPage_flow_example.png",
-}}
-style={{ width: "100%", margin: "20px 0" }}
+  alt="NotionDatabaseProperties Flow Example"
+  sources={{
+  light: "img/notion/AddContentToPage_flow_example.png",
+  dark: "img/notion/AddContentToPage_flow_example.png",
+  }}
+  style={{ width: "100%", margin: "20px 0" }}
 />
 
 In this example, the `AddContentToPage` component connects to a `MarkdownLoader` component to provide the markdown text input. The converted Notion blocks are appended to the specified Notion page using the provided `block_id` and `notion_secret`.

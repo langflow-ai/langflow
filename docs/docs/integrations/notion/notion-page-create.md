@@ -1,4 +1,7 @@
 import Admonition from "@theme/Admonition";
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # NotionPageCreator Component in Langflow
 
@@ -96,7 +99,7 @@ Here's an example of how to use the `NotionPageCreator` component in a Langflow 
   alt="NotionPageCreator Flow Example"
   sources={{
     light: "img/NotionPageCreator_flow_example.png",
-    dark: "img/NotionPageCreator_flow_example.png",
+    dark: "img/NotionPageCreator_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />
@@ -109,6 +112,8 @@ When using the `NotionPageCreator` component, consider the following best practi
 - Ensure that you have a valid Notion integration token with the necessary permissions to create pages in the specified database.
 - Properly format the `properties` input as a JSON string, matching the structure and field types of your Notion database.
 - Handle any errors or exceptions that may occur during the page creation process and provide appropriate error messages.
+- To avoid the hassle of messing with JSON, we recommend using the LLM to create the JSON for you as input.
+
 </Admonition>
 
 ## Troubleshooting

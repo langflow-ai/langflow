@@ -1,4 +1,7 @@
 import Admonition from "@theme/Admonition";
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # NotionPageContent Component in Langflow
 
@@ -94,21 +97,15 @@ class NotionPageContent(CustomComponent):
 > **Example Usage**
 >
 > Here's an example of how you can use the `NotionPageContent` component in a Langflow flow:
->
-> ```jsx
-> import ThemedImage from "@theme/ThemedImage";
-> import useBaseUrl from "@docusaurus/useBaseUrl";
-> import ZoomableImage from "/src/theme/ZoomableImage.js";
-> 
-> <ZoomableImage
->     alt="NotionPageContent Flow Example"
->     sources={{
->         light: "img/NotionPageContent_flow_example.png",
->         dark: "img/NotionPageContent_flow_example.png",
->     }}
->     style={{ width: "100%", margin: "20px 0" }}
-> />
-> ```
+
+<ZoomableImage
+    alt="NotionPageContent Flow Example"
+    sources={{
+        light: "img/notion/NotionPageContent_flow_example.png",
+        dark: "img/notion/NotionPageContent_flow_example_dark.png",
+    }}
+    style={{ width: "100%", margin: "20px 0" }}
+/>
 
 ## Best Practices
 

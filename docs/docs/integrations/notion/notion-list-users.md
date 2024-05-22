@@ -1,4 +1,7 @@
 import Admonition from "@theme/Admonition";
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # NotionUserList Component in Langflow
 
@@ -78,18 +81,16 @@ class NotionUserList(CustomComponent):
 
 > **Example Usage**
 >
-> Here's an example of how you can use the `NotionUserList` component in a Langflow flow:
->
-> ```jsx
-> <ZoomableImage
->     alt="NotionUserList Flow Example"
->     sources={{
->         light: "img/NotionUserList_flow_example.png",
->         dark: "img/NotionUserList_flow_example.png",
->     }}
->     style={{ width: "100%", margin: "20px 0" }}
-> />
-> ```
+> Here's an example of how you can use the `NotionUserList` component in a Langflow flow and passing the outputs to the Prompt component:
+
+<ZoomableImage
+    alt="NotionUserList Flow Example"
+    sources={{
+      light: "img/NotionUserList_flow_example.png",
+      dark: "img/NotionUserList_flow_example_dark.png",
+  }}
+  style={{ width: "100%", margin: "20px 0" }}
+/>
 
 ## Best Practices
 

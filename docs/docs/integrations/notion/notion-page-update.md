@@ -1,4 +1,7 @@
 import Admonition from "@theme/Admonition";
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # NotionPageUpdate Component in Langflow
 
@@ -99,13 +102,26 @@ Let's break down the key parts of this component:
 
 - The component also stores the updated page properties in the `status` attribute for logging and debugging purposes.
 
+<Admonition type="info" title="Example Usage">
+Here's an example of how to use the `NotionPageUpdate` component in a Langflow flow using:
+
+<ZoomableImage
+  alt="NotionPageUpdate Flow Example"
+  sources={{
+    light: "img/notion/NotionPageUpdate_flow_example.png",
+    dark: "img/notion/NotionPageUpdate_flow_example_dark.png",
+  }}
+  style={{ width: "100%", margin: "20px 0" }}
+/>
+</Admonition>
+
 ## Best Practices
 
 When using the `NotionPageUpdate` component, consider the following best practices:
 
 - Ensure that you have a valid Notion integration token with the necessary permissions to update page properties.
 - Handle edge cases and error scenarios gracefully, such as invalid JSON format for properties or API request failures.
-- Secure the Notion integration token by marking it as a password field in the component configuration.
+- We recommend using an LLM to generate the inputs for this component, to allow flexibilty
 
 ## Troubleshooting
 
