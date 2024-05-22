@@ -35,6 +35,15 @@ def create_folder(
     try:
         new_folder = Folder.model_validate(folder, from_attributes=True)
         new_folder.user_id = current_user.id
+
+        folder_results = session.exec(
+            select(Folder).where(Folder.name.like(f"{new_folder.name}%"), Folder.user_id == current_user.id)
+        )
+        existing_folder_names = [folder.name for folder in folder_results]
+
+        if existing_folder_names:
+            new_folder.name = f"{new_folder.name} ({len(existing_folder_names) + 1})"
+
         session.add(new_folder)
         session.commit()
         session.refresh(new_folder)
