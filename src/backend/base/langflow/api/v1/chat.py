@@ -143,8 +143,6 @@ async def build_vertex(
         HTTPException: If there is an error building the vertex.
 
     """
-
-    start_time = time.perf_counter()
     next_runnable_vertices = []
     top_level_vertices = []
     try:
@@ -158,8 +156,6 @@ async def build_vertex(
             )
         else:
             graph = cache.get("result")
-        result_data_response = ResultDataResponse(results={})
-        duration = ""
         vertex = graph.get_vertex(vertex_id)
         try:
             lock = chat_service._cache_locks[flow_id]
