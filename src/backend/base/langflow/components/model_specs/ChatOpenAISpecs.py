@@ -1,6 +1,6 @@
 from typing import Optional
 
-from langchain_community.chat_models.openai import ChatOpenAI
+from langchain_openai import ChatOpenAI
 
 from langflow.base.models.openai_constants import MODEL_NAMES
 from langflow.field_typing import BaseLanguageModel, NestedDict
