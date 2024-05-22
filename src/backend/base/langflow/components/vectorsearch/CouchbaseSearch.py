@@ -35,7 +35,7 @@ class CouchbaseSearchComponent(LCVectorStoreComponent):
             "bucket_name": {"display_name": "Bucket Name","required": True},
             "scope_name": {"display_name": "Scope Name","required": True},
             "collection_name": {"display_name": "Collection Name","required": True},
-            "index_name": {"display_name": "Index Name"},
+            "index_name": {"display_name": "Index Name","required": True},
             "number_of_results": {
                 "display_name": "Number of Results",
                 "info": "Number of results to return.",
