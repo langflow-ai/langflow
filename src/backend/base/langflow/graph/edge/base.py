@@ -3,9 +3,8 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from langflow.graph.edge.utils import build_clean_params
+from langflow.graph.vertex.utils import log_transaction
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.deps import get_monitor_service
 from langflow.services.monitor.utils import log_message
 
 if TYPE_CHECKING:
@@ -157,26 +156,9 @@ class ContractEdge(Edge):
                 message=target.params.get(INPUT_FIELD_NAME, {}),
                 session_id=target.params.get("session_id", ""),
                 artifacts=target.artifacts,
+                flow_id=target.graph.flow_id,
             )
         return self.result
 
     def __repr__(self) -> str:
         return f"{self.source_id} -[{self.target_param}]-> {self.target_id}"
-
-
-def log_transaction(edge: ContractEdge, source: "Vertex", target: "Vertex", status, error=None):
-    try:
-        monitor_service = get_monitor_service()
-        clean_params = build_clean_params(target)
-        data = {
-            "source": source.vertex_type,
-            "target": target.vertex_type,
-            "target_args": clean_params,
-            "timestamp": monitor_service.get_timestamp(),
-            "status": status,
-            "error": error,
-        }
-        monitor_service.add_row(table_name="transactions", data=data)
-    except Exception as e:
-        logger.error(f"Error logging transaction: {e}")
-        logger.error(f"Error logging transaction: {e}")

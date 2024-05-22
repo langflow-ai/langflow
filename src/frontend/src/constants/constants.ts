@@ -96,6 +96,12 @@ export const EXPORT_DIALOG_SUBTITLE = "Export flow as JSON file.";
 export const SETTINGS_DIALOG_SUBTITLE = "Edit details about your project.";
 
 /**
+ * The base text for subtitle of Flow Logs (Menubar)
+ * @constant
+ */
+export const LOGS_DIALOG_SUBTITLE = "Check out information about your flow.";
+
+/**
  * The base text for subtitle of Code Dialog (Toolbar)
  * @constant
  */
@@ -125,7 +131,6 @@ export const CODE_PROMPT_DIALOG_SUBTITLE =
 
 export const CODE_DICT_DIALOG_SUBTITLE =
   "Edit your dictionary. This dialog allows you to create your own customized dictionary. You can add as many key-value pairs as you want. While in edit mode, you can enter ({}) or ([]), and this will result in adding a new object or array.";
-
 /**
  * The base text for subtitle of Prompt Dialog
  * @constant
@@ -533,6 +538,8 @@ export const NOUNS: string[] = [
  */
 export const USER_PROJECTS_HEADER = "My Collection";
 
+export const DEFAULT_FOLDER = "My Projects";
+
 /**
  * Header text for admin page
  * @constant
@@ -727,6 +734,8 @@ export const OUTPUT_TYPES = new Set([
   "JsonOutput",
   "KeyPairOutput",
   "StringListOutput",
+  "RecordsOutput",
+  "TableOutput",
 ]);
 
 export const CHAT_FIRST_INITIAL_TEXT =
@@ -746,8 +755,8 @@ export const EDIT_TEXT_MODAL_TITLE = "Edit Text";
 export const EDIT_TEXT_PLACEHOLDER = "Type message here.";
 export const INPUT_HANDLER_HOVER = "Avaliable input components:";
 export const OUTPUT_HANDLER_HOVER = "Avaliable output components:";
-export const TEXT_INPUT_MODAL_TITLE = "Text Inputs";
-export const OUTPUTS_MODAL_TITLE = "Text Outputs";
+export const TEXT_INPUT_MODAL_TITLE = "Inputs";
+export const OUTPUTS_MODAL_TITLE = "Outputs";
 export const LANGFLOW_CHAT_TITLE = "Langflow Chat";
 export const CHAT_INPUT_PLACEHOLDER =
   "No chat input variables found. Click to run your flow.";
@@ -792,3 +801,7 @@ export const NATIVE_CATEGORIES = [
 ];
 
 export const SAVE_DEBOUNCE_TIME = 300;
+
+export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
+
+export const DEFAULT_TABLE_ALERT_TITLE = "No Data Available";

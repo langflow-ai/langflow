@@ -2,15 +2,16 @@ import json
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
-from pydantic import BaseModel, Field, field_serializer, validator
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 if TYPE_CHECKING:
     from langflow.schema import Record
 
 
 class TransactionModel(BaseModel):
-    id: Optional[int] = Field(default=None, alias="id")
+    index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
+    flow_id: str
     source: str
     target: str
     target_args: dict
@@ -22,15 +23,53 @@ class TransactionModel(BaseModel):
         populate_by_name = True
 
     # validate target_args in case it is a JSON
-    @validator("target_args", pre=True)
+    @field_validator("target_args", mode="before")
     def validate_target_args(cls, v):
         if isinstance(v, str):
             return json.loads(v)
         return v
 
+    @field_serializer("target_args")
+    def serialize_target_args(v):
+        if isinstance(v, dict):
+            return json.dumps(v)
+        return v
+
+
+class TransactionModelResponse(BaseModel):
+    index: Optional[int] = Field(default=None)
+    timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
+    flow_id: str
+    source: str
+    target: str
+    target_args: dict
+    status: str
+    error: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+
+    # validate target_args in case it is a JSON
+    @field_validator("target_args", mode="before")
+    def validate_target_args(cls, v):
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
+
+    @field_validator("index", mode="before")
+    def validate_id(cls, v):
+        if isinstance(v, float):
+            try:
+                return int(v)
+            except ValueError:
+                return None
+        return v
+
 
 class MessageModel(BaseModel):
-    id: Optional[int] = Field(default=None, alias="id")
+    index: Optional[int] = Field(default=None)
+    flow_id: Optional[str] = Field(default=None, alias="flow_id")
     timestamp: datetime = Field(default_factory=datetime.now)
     sender: str
     sender_name: str
@@ -42,14 +81,14 @@ class MessageModel(BaseModel):
         from_attributes = True
         populate_by_name = True
 
-    @validator("artifacts", pre=True)
+    @field_validator("artifacts", mode="before")
     def validate_target_args(cls, v):
         if isinstance(v, str):
             return json.loads(v)
         return v
 
     @classmethod
-    def from_record(cls, record: "Record"):
+    def from_record(cls, record: "Record", flow_id: Optional[str] = None):
         # first check if the record has all the required fields
         if not record.data or ("sender" not in record.data and "sender_name" not in record.data):
             raise ValueError("The record does not have the required fields 'sender' and 'sender_name' in the data.")
@@ -59,7 +98,28 @@ class MessageModel(BaseModel):
             message=record.text,
             session_id=record.session_id,
             artifacts=record.artifacts or {},
+            timestamp=record.timestamp,
+            flow_id=flow_id,
         )
+
+
+class MessageModelResponse(MessageModel):
+    index: Optional[int] = Field(default=None)
+
+    @field_validator("artifacts", mode="before")
+    def serialize_artifacts(v):
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
+
+    @field_validator("index", mode="before")
+    def validate_id(cls, v):
+        if isinstance(v, float):
+            try:
+                return int(v)
+            except ValueError:
+                return None
+        return v
 
 
 class VertexBuildModel(BaseModel):
@@ -86,9 +146,11 @@ class VertexBuildModel(BaseModel):
                 elif isinstance(value, list) and all(isinstance(i, BaseModel) for i in value):
                     v[key] = [i.model_dump() for i in value]
             return json.dumps(v)
+        elif isinstance(v, BaseModel):
+            return v.model_dump_json()
         return v
 
-    @validator("params", pre=True)
+    @field_validator("params", mode="before")
     def validate_params(cls, v):
         if isinstance(v, str):
             try:
@@ -103,16 +165,18 @@ class VertexBuildModel(BaseModel):
             return json.dumps([i.model_dump() for i in v])
         return v
 
-    @validator("data", pre=True)
+    @field_validator("data", mode="before")
     def validate_data(cls, v):
         if isinstance(v, str):
             return json.loads(v)
         return v
 
-    @validator("artifacts", pre=True)
+    @field_validator("artifacts", mode="before")
     def validate_artifacts(cls, v):
         if isinstance(v, str):
             return json.loads(v)
+        elif isinstance(v, BaseModel):
+            return v.model_dump()
         return v
 
 

@@ -5,6 +5,11 @@ import plugin from "tailwindcss/plugin";
 
 // ! Check if removing the other module.exports made sense
 module.exports = {
+  variants: {
+    extend: {
+      display: ["group-hover"],
+    },
+  },
   darkMode: ["class"],
   content: [
     "app/**/*.{ts,tsx}",
@@ -36,6 +41,7 @@ module.exports = {
       },
       animation: {
         wiggle: "wiggle 150ms ease-in-out 1",
+        "slow-wiggle": "wiggle 500ms ease-in-out 1",
       },
       colors: {
         "component-icon": "var(--component-icon)",
@@ -88,6 +94,7 @@ module.exports = {
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
         ice: "var(--ice)",
+        selected: "var(--selected)",
         hover: "var(--hover)",
         white: "var(--white)",
         border: "hsl(var(--border))",

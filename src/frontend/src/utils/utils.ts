@@ -1,9 +1,10 @@
+import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import {
-  APIDataType,
-  TemplateVariableType,
-} from "../types/api";
+import TableAutoCellRender from "../components/tableAutoCellRender";
+import { priorityFields } from "../constants/constants";
+import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
+import { APIDataType, TemplateVariableType } from "../types/api";
 import {
   groupedObjType,
   nodeGroupedObjType,
@@ -344,4 +345,55 @@ export function getSetFromObject(obj: object, key?: string): Set<string> {
 export function freezeObject(obj: any) {
   if (!obj) return obj;
   return JSON.parse(JSON.stringify(obj));
+}
+export function isTimeStampString(str: string): boolean {
+  const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?$/;
+  return timestampRegex.test(str);
+}
+
+export function extractColumnsFromRows(
+  rows: object[],
+  mode: "intersection" | "union",
+): (ColDef<any> | ColGroupDef<any>)[] {
+  const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
+  if (rows.length === 0) {
+    return [];
+  }
+  function intersection() {
+    for (const key in rows[0]) {
+      columnsKeys[key] = {
+        headerName: key,
+        field: key,
+        cellRenderer: TableAutoCellRender,
+        filter: true,
+        autoHeight: true,
+      };
+    }
+    for (const row of rows) {
+      for (const key in columnsKeys) {
+        if (!row[key]) {
+          delete columnsKeys[key];
+        }
+      }
+    }
+  }
+  function union() {
+    for (const row of rows) {
+      for (const key in row) {
+        columnsKeys[key] = {
+          headerName: key,
+          field: key,
+          filter: true,
+          cellRenderer: TableAutoCellRender,
+        };
+      }
+    }
+  }
+  if (mode === "intersection") {
+    intersection();
+  } else {
+    union();
+  }
+
+  return Object.values(columnsKeys);
 }

@@ -61,7 +61,7 @@ def drop_and_create_table_if_schema_mismatch(db_path: str, table_name: str, mode
         if current_schema != desired_schema:
             # If they don't match, drop the existing table and create a new one
             conn.execute(f"DROP TABLE IF EXISTS {table_name}")
-            if "id" in desired_schema.keys():
+            if INDEX_KEY in desired_schema.keys():
                 # Create a sequence for the id column
                 try:
                     conn.execute(f"CREATE SEQUENCE seq_{table_name} START 1;")
@@ -91,7 +91,7 @@ def add_row_to_table(
     columns = ", ".join(keys)
 
     values_placeholders = ", ".join(["?" for _ in keys])
-    values = list(validated_dict.values())
+    values = [validated_dict[key] for key in keys]
 
     # Create the insert statement
     insert_sql = f"INSERT INTO {table_name} ({columns}) VALUES ({values_placeholders})"
@@ -104,7 +104,7 @@ def add_row_to_table(
         column_error_message = ""
         for key, value in validated_dict.items():
             logger.error(f"{key}: {type(value)}")
-            if value in str(e):
+            if str(value) in str(e):
                 column_error_message = f"Column: {key} Value: {value} Error: {e}"
 
         if column_error_message:
@@ -119,6 +119,7 @@ async def log_message(
     message: str,
     session_id: str,
     artifacts: Optional[dict] = None,
+    flow_id: Optional[str] = None,
 ):
     try:
         from langflow.graph.vertex.base import Vertex
@@ -134,6 +135,7 @@ async def log_message(
             "artifacts": artifacts or {},
             "session_id": session_id,
             "timestamp": monitor_service.get_timestamp(),
+            "flow_id": flow_id,
         }
         monitor_service.add_row(table_name="messages", data=row)
     except Exception as e:

@@ -15,7 +15,7 @@ test("PromptTemplateComponent", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -138,7 +138,7 @@ test("PromptTemplateComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showtemplate"]').click();
   expect(
-    await page.locator('//*[@id="showtemplate"]').isChecked()
+    await page.locator('//*[@id="showtemplate"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showprompt"]').click();
@@ -158,7 +158,7 @@ test("PromptTemplateComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showtemplate"]').click();
   expect(
-    await page.locator('//*[@id="showtemplate"]').isChecked()
+    await page.locator('//*[@id="showtemplate"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showprompt"]').click();
