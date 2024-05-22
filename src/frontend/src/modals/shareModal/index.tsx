@@ -1,6 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import EditFlowSettings from "../../components/EditFlowSettingsComponent";
+import EditFlowSettings from "../../components/editFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
 import { Button } from "../../components/ui/button";
@@ -23,8 +23,9 @@ import {
   removeGlobalVariableFromComponents,
 } from "../../utils/reactflowUtils";
 import { getTagsIds } from "../../utils/storeUtils";
-import ConfirmationModal from "../ConfirmationModal";
 import BaseModal from "../baseModal";
+import ConfirmationModal from "../confirmationModal";
+import ExportModal from "../exportModal";
 
 export default function ShareModal({
   component,
@@ -251,18 +252,35 @@ export default function ShareModal({
 
         <BaseModal.Footer>
           <div className="flex w-full justify-between gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="gap-2"
-              onClick={() => {
-                handleExportComponent();
-                (setOpen || internalSetOpen)(false);
-              }}
-            >
-              <IconComponent name="Download" className="h-4 w-4" />
-              Export
-            </Button>
+            {!is_component && (
+              <ExportModal>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    // (setOpen || internalSetOpen)(false);
+                  }}
+                >
+                  <IconComponent name="Download" className="h-4 w-4" />
+                  Export
+                </Button>
+              </ExportModal>
+            )}
+            {is_component && (
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                onClick={() => {
+                  (setOpen || internalSetOpen)(false);
+                  handleExportComponent();
+                }}
+              >
+                <IconComponent name="Download" className="h-4 w-4" />
+                Export
+              </Button>
+            )}
             <Button
               disabled={loadingNames}
               type="button"

@@ -1,10 +1,10 @@
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useRef, useState } from "react";
-import PaginatorComponent from "../../components/PaginatorComponent";
-import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
 import LoadingComponent from "../../components/loadingComponent";
+import PaginatorComponent from "../../components/paginatorComponent";
+import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import { CheckBoxDiv } from "../../components/ui/checkbox";
 import { Input } from "../../components/ui/input";
@@ -35,8 +35,8 @@ import {
   getUsersPage,
   updateUser,
 } from "../../controllers/API";
-import ConfirmationModal from "../../modals/ConfirmationModal";
-import UserManagementModal from "../../modals/UserManagementModal";
+import ConfirmationModal from "../../modals/confirmationModal";
+import UserManagementModal from "../../modals/userManagementModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { Users } from "../../types/api";

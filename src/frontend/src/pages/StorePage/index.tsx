@@ -1,15 +1,15 @@
 import { uniqueId } from "lodash";
 import { useContext, useEffect, useState } from "react";
-import PaginatorComponent from "../../components/PaginatorComponent";
-import ShadTooltip from "../../components/ShadTooltipComponent";
 import CollectionCardComponent from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
+import ShadTooltip from "../../components/shadTooltipComponent";
 import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import PaginatorComponent from "../../components/paginatorComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
 import { Badge } from "../../components/ui/badge";
 import {
@@ -29,7 +29,7 @@ import {
 import { STORE_DESC, STORE_TITLE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { getStoreComponents, getStoreTags } from "../../controllers/API";
-import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
+import StoreApiKeyModal from "../../modals/storeApiKeyModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
@@ -64,6 +64,8 @@ export default function StorePage(): JSX.Element {
   const [tabActive, setTabActive] = useState("All");
   const [searchNow, setSearchNow] = useState("");
   const [selectFilter, setSelectFilter] = useState("all");
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!loadingApiKey) {
@@ -371,6 +373,10 @@ export default function StorePage(): JSX.Element {
                       data={item}
                       authorized={validApiKey}
                       disabled={loading}
+                      playground={
+                        item.last_tested_version?.includes("1.0.0") &&
+                        !item.is_component
+                      }
                     />
                   </>
                 );

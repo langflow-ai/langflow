@@ -13,7 +13,7 @@ services:
       - "7860:7860"
     volumes:
       - ./:/app
-    command: bash -c "uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --loop asyncio",
+    command: bash -c "uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --loop asyncio"
     networks:
       - langflow
   frontend:

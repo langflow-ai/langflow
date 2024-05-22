@@ -6,7 +6,7 @@ import "./App.css";
 import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
-import CrashErrorComponent from "./components/CrashErrorComponent";
+import CrashErrorComponent from "./components/crashErrorComponent";
 import FetchErrorComponent from "./components/fetchErrorComponent";
 import LoadingComponent from "./components/loadingComponent";
 import {
@@ -19,10 +19,10 @@ import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
+import { useFolderStore } from "./stores/foldersStore";
 import { useGlobalVariablesStore } from "./stores/globalVariables";
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
-
 export default function App() {
   const removeFromTempNotificationList = useAlertStore(
     (state) => state.removeFromTempNotificationList
@@ -52,6 +52,9 @@ export default function App() {
   const navigate = useNavigate();
   const dark = useDarkStore((state) => state.dark);
 
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const loadingFolders = useFolderStore((state) => state.loading);
+
   const [isLoadingHealth, setIsLoadingHealth] = useState(false);
 
   useEffect(() => {
@@ -63,9 +66,10 @@ export default function App() {
   }, [dark]);
 
   useEffect(() => {
+    const abortController = new AbortController();
     const isLoginPage = location.pathname.includes("login");
 
-    autoLogin()
+    autoLogin(abortController.signal)
       .then(async (user) => {
         if (user && user["access_token"]) {
           user["refresh_token"] = "auto";
@@ -73,34 +77,54 @@ export default function App() {
           setUserData(user);
           setAutoLogin(true);
           setLoading(false);
-          await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+          fetchAllData();
         }
       })
-      .catch(async () => {
-        setAutoLogin(false);
-        if (isAuthenticated && !isLoginPage) {
-          getUser();
-          await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
-        } else {
-          setLoading(false);
-          useFlowsManagerStore.setState({ isLoading: false });
+      .catch(async (error) => {
+        if (error.name !== "CanceledError") {
+          setAutoLogin(false);
+          if (isAuthenticated && !isLoginPage) {
+            getUser();
+            fetchAllData();
+          } else {
+            setLoading(false);
+            useFlowsManagerStore.setState({ isLoading: false });
+          }
         }
       });
-  }, [isAuthenticated]);
+
+    /*
+      Abort the request as it isn't needed anymore, the component being
+      unmounted. It helps avoid, among other things, the well-known "can't
+      perform a React state update on an unmounted component" warning.
+    */
+    return () => abortController.abort();
+  }, []);
+
+  const fetchAllData = async () => {
+    setTimeout(async () => {
+      await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+      getFoldersApi();
+    }, 1000);
+  };
 
   const fetchData = async () => {
-    if (isAuthenticated) {
-      try {
-        await getTypes();
-        refreshFlows();
-        const res = await getGlobalVariables();
-        setGlobalVariables(res);
-        checkHasStore();
-        fetchApiData();
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
+    return new Promise<void>(async (resolve, reject) => {
+      if (isAuthenticated) {
+        try {
+          await getTypes();
+          await refreshFlows();
+          const res = await getGlobalVariables();
+          setGlobalVariables(res);
+          checkHasStore();
+          fetchApiData();
+          resolve();
+        } catch (error) {
+          console.error("Failed to fetch data:", error);
+          reject();
+        }
       }
-    }
+    });
   };
 
   useEffect(() => {
@@ -141,7 +165,7 @@ export default function App() {
     setFetchError(false);
     //This condition is necessary to avoid infinite loop on starter page when the application is not healthy
     if (isLoading === true && window.location.pathname === "/") {
-      navigate("/flows");
+      navigate("/all");
       window.location.reload();
     }
   };
@@ -168,7 +192,7 @@ export default function App() {
             ></FetchErrorComponent>
           }
 
-          {isLoading ? (
+          {isLoading || loadingFolders ? (
             <div className="loading-page-panel">
               <LoadingComponent remSize={50} />
             </div>

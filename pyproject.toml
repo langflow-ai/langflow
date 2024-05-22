@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.0a24"
+version = "1.0.0a35"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -25,7 +25,7 @@ langflow = "langflow.__main__:main"
 
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.10,<3.13"
 langflow-base = { path = "./src/backend/base", develop = true }
 beautifulsoup4 = "^4.12.2"
 google-search-results = "^2.4.1"
@@ -72,7 +72,7 @@ langchain-cohere = "^0.1.0rc1"
 elasticsearch = "^8.12.0"
 pytube = "^15.0.0"
 llama-index = "^0.10.13"
-unstructured = { extras = ["md"], version = "^0.12.4" }
+# unstructured = { extras = ["md"], version = "^0.12.4" }
 dspy-ai = "^2.4.0"
 html2text = "^2024.2.26"
 assemblyai = "^0.23.1"
@@ -81,6 +81,12 @@ chromadb = "^0.4.24"
 langchain-anthropic = "^0.1.6"
 langchain-astradb = "^0.1.0"
 langchain-openai = "^0.1.1"
+zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
+langchain-google-vertexai = "^1.0.3"
+langchain-groq = "^0.1.3"
+langchain-pinecone = "^0.1.0"
+langchain-mistralai = "^0.1.6"
+
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
@@ -107,6 +113,7 @@ respx = "^0.21.1"
 pytest-instafail = "^0.5.0"
 pytest-asyncio = "^0.23.0"
 pytest-profiling = "^1.7.0"
+pre-commit = "^3.7.0"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]

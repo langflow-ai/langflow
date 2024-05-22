@@ -11,13 +11,13 @@ import ReactFlow, {
   SelectionDragHandler,
   updateEdge,
 } from "reactflow";
-import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
   INVALID_SELECTION_ERROR_ALERT,
   UPLOAD_ALERT_LIST,
   UPLOAD_ERROR_ALERT,
   WRONG_FILE_ERROR_ALERT,
 } from "../../../../constants/alerts_constants";
+import GenericNode from "../../../../customNodes/genericNode";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -141,7 +141,8 @@ export default function Page({
   const setNode = useFlowStore((state) => state.setNode);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      const selectedNode = nodes.filter((obj) => obj.selected);
+      const selectedNode = lastSelection?.nodes ?? [];
+      const selectedEdges = lastSelection?.edges ?? [];
       if (
         selectionMenuVisible &&
         (event.ctrlKey || event.metaKey) &&
@@ -174,7 +175,7 @@ export default function Page({
       ) {
         event.preventDefault();
         paste(
-          { nodes: selectedNode, edges: [] },
+          { nodes: selectedNode, edges: selectedEdges },
           {
             x: position.current.x,
             y: position.current.y,
@@ -482,6 +483,7 @@ export default function Page({
               ></Controls>
             )}
             <SelectionMenu
+              lastSelection={lastSelection}
               isVisible={selectionMenuVisible}
               nodes={lastSelection?.nodes}
               onClick={() => {

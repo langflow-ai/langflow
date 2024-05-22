@@ -1,0 +1,38 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
+
+# 🤗 HuggingFace Spaces
+
+HuggingFace provides a great alternative for running Langflow in their Spaces environment. This means you can run Langflow without any local installation required.
+
+In a Chromium-based browser, go to the [Langflow Space](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) or [Langflow v1.0 alpha Preview Space](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true).
+
+You'll be presented with the following screen:
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/duplicate-space.png",
+    dark: "img/duplicate-space.png",
+  }}
+  style={{ width: "100%", margin: "20px auto" }}
+/>
+
+Name your Space, define the visibility (Public or Private), and click on **Duplicate Space** to start the installation process. When installation is finished, you'll be redirected to the Space's main page to start using Langflow right away!
+
+## Run a starter project
+
+Langflow provides a range of example flows to help you get started.
+
+Once you get Langflow running in your Space, click on **New Project** in the top right corner of the screen.
+
+Select a starter project from the list, set up your API keys, and click ⚡ Run. This will open up Langflow's Interaction Panel with the chat console, text inputs, and outputs ready to go.
+
+For more information on the starter projects, see the guides below:
+
+* [Basic prompting](/starter-projects/basic-prompting.mdx)
+* [Memory chatbot](/starter-projects/memory-chatbot.mdx)
+* [Blog writer](/starter-projects/blog-writer.mdx)
+* [Document QA](/starter-projects/document-qa.mdx)

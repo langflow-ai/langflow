@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
-import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
+import SanitizedHTMLWrapper from "../../components/sanitizedHTMLWrapper";
+import ShadTooltip from "../../components/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";

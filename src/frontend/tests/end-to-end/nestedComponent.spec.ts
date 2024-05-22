@@ -15,7 +15,7 @@ test("NestedComponent", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -70,13 +70,6 @@ test("NestedComponent", async ({ page }) => {
     await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
   ).toBeFalsy();
 
-  // showpinecone_env
-  await page.locator('//*[@id="showpinecone_env"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_env"]').isChecked()
-  ).toBeFalsy();
-
   // showindex_name
   await page.locator('//*[@id="showindex_name"]').click();
 
@@ -96,13 +89,6 @@ test("NestedComponent", async ({ page }) => {
 
   expect(
     await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
-  ).toBeTruthy();
-
-  // showpinecone_env
-  await page.locator('//*[@id="showpinecone_env"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_env"]').isChecked()
   ).toBeTruthy();
 
   // showindex_name
@@ -126,13 +112,6 @@ test("NestedComponent", async ({ page }) => {
     await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
   ).toBeFalsy();
 
-  // showpinecone_env
-  await page.locator('//*[@id="showpinecone_env"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_env"]').isChecked()
-  ).toBeFalsy();
-
   // showindex_name
   await page.locator('//*[@id="showindex_name"]').click();
 
@@ -152,13 +131,6 @@ test("NestedComponent", async ({ page }) => {
 
   expect(
     await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
-  ).toBeTruthy();
-
-  // showpinecone_env
-  await page.locator('//*[@id="showpinecone_env"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_env"]').isChecked()
   ).toBeTruthy();
 
   // showindex_name
@@ -182,13 +154,6 @@ test("NestedComponent", async ({ page }) => {
     await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
   ).toBeFalsy();
 
-  // showpinecone_env
-  await page.locator('//*[@id="showpinecone_env"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_env"]').isChecked()
-  ).toBeFalsy();
-
   // showindex_name
   await page.locator('//*[@id="showindex_name"]').click();
 
@@ -208,13 +173,6 @@ test("NestedComponent", async ({ page }) => {
 
   expect(
     await page.locator('//*[@id="showpinecone_api_key"]').isChecked()
-  ).toBeTruthy();
-
-  // showpinecone_env
-  await page.locator('//*[@id="showpinecone_env"]').click();
-
-  expect(
-    await page.locator('//*[@id="showpinecone_env"]').isChecked()
   ).toBeTruthy();
 
   //showpool_threads

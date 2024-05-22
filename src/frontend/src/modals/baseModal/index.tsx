@@ -25,15 +25,21 @@ type TriggerProps = {
   children: ReactNode;
   asChild?: boolean;
   disable?: boolean;
+  className?: string;
 };
 
 const Content: React.FC<ContentProps> = ({ children }) => {
   return <div className="flex h-full w-full flex-col">{children}</div>;
 };
-const Trigger: React.FC<TriggerProps> = ({ children, asChild, disable }) => {
+const Trigger: React.FC<TriggerProps> = ({
+  children,
+  asChild,
+  disable,
+  className,
+}) => {
   return (
     <DialogTrigger
-      className={asChild ? "" : "w-full"}
+      className={asChild ? "" : cn("w-full", className)}
       hidden={children ? false : true}
       disabled={disable}
       asChild={asChild}
@@ -78,6 +84,8 @@ interface BaseModalProps {
     | "large-h-full"
     | "small-h-full"
     | "medium-h-full"
+    | "md-thin"
+    | "sm-thin"
     | "smaller-h-full";
 
   disable?: boolean;
@@ -111,7 +119,7 @@ function BaseModal({
   switch (size) {
     case "x-small":
       minWidth = "min-w-[20vw]";
-      height = " ";
+      height = "h-full";
       break;
     case "smaller":
       minWidth = "min-w-[40vw]";
@@ -127,6 +135,7 @@ function BaseModal({
       break;
     case "small-h-full":
       minWidth = "min-w-[40vw]";
+      height = "h-full";
       break;
     case "medium":
       minWidth = "min-w-[60vw]";
@@ -134,6 +143,8 @@ function BaseModal({
       break;
     case "medium-h-full":
       minWidth = "min-w-[60vw]";
+      height = "h-full";
+
       break;
     case "large":
       minWidth = "min-w-[85vw]";
@@ -147,8 +158,20 @@ function BaseModal({
       minWidth = "min-w-[65vw]";
       height = "h-[80vh]";
       break;
+
+    case "md-thin":
+      minWidth = "min-w-[85vw]";
+      height = "h-[70vh]";
+      break;
+
+    case "sm-thin":
+      minWidth = "min-w-[65vw]";
+      height = "h-[70vh]";
+      break;
+
     case "large-h-full":
       minWidth = "min-w-[80vw]";
+      height = "h-full";
       break;
     default:
       minWidth = "min-w-[80vw]";
@@ -173,7 +196,7 @@ function BaseModal({
               {headerChild}
             </div>
             <div
-              className={`flex flex-col ${height!} w-full transition-all duration-300`}
+              className={`flex flex-col ${height} w-full transition-all duration-300`}
             >
               {ContentChild}
             </div>
@@ -190,7 +213,7 @@ function BaseModal({
               {headerChild}
             </div>
             <div
-              className={`flex flex-col ${height!} w-full transition-all duration-300`}
+              className={`flex flex-col ${height} w-full transition-all duration-300`}
             >
               {ContentChild}
             </div>

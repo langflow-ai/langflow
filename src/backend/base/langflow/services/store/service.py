@@ -49,6 +49,27 @@ async def user_data_context(store_service: "StoreService", api_key: Optional[str
         user_data_var.set(None)
 
 
+def get_id_from_search_string(search_string: str) -> Optional[str]:
+    """
+    Extracts the ID from a search string.
+
+    Args:
+        search_string (str): The search string to extract the ID from.
+
+    Returns:
+        Optional[str]: The extracted ID, or None if no ID is found.
+    """
+    possible_id: Optional[str] = search_string
+    if "www.langflow.store/store/" in search_string:
+        possible_id = search_string.split("/")[-1]
+
+    try:
+        possible_id = str(UUID(search_string))
+    except ValueError:
+        possible_id = None
+    return possible_id
+
+
 class StoreService(Service):
     """This is a service that integrates langflow with the store which
     is a Directus instance. It allows to search, get and post components to
@@ -183,7 +204,10 @@ class StoreService(Service):
     ):
         filter_conditions = []
 
-        if search is not None:
+        if component_id is None:
+            component_id = get_id_from_search_string(search) if search else None
+
+        if search is not None and component_id is None:
             search_conditions = self.build_search_filter_conditions(search)
             filter_conditions.append(search_conditions)
 

@@ -1,7 +1,5 @@
 import { expect, test } from "@playwright/test";
-import * as dotenv from "dotenv";
 import { readFileSync } from "fs";
-import path from "path";
 
 test("user must interact with chat with Input/Output", async ({ page }) => {
   if (!process.env.CI) {
@@ -24,7 +22,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -43,9 +41,9 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   }
 
   await page
-    .getByTestId("input-openai_api_key")
+    .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
-  await page.getByText("Run", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).click();
   await page.getByPlaceholder("Send a message...").fill("Hello, how are you?");
   await page.getByTestId("icon-LucideSend").click();
   let valueUser = await page.getByTestId("sender_name_user").textContent();
@@ -60,12 +58,18 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
     .getByTestId("textarea-input_value")
     .nth(1)
     .fill(
-      "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!"
+      "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",
     );
-  await page.getByTestId("input-sender_name").nth(1).fill("TestSenderNameUser");
-  await page.getByTestId("input-sender_name").nth(0).fill("TestSenderNameAI");
+  await page
+    .getByTestId("popover-anchor-input-sender_name")
+    .nth(1)
+    .fill("TestSenderNameUser");
+  await page
+    .getByTestId("popover-anchor-input-sender_name")
+    .nth(0)
+    .fill("TestSenderNameAI");
 
-  await page.getByText("Run", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).click();
   await page.getByTestId("icon-LucideSend").click();
 
   valueUser = await page
@@ -82,21 +86,15 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
     await page
       .getByText(
         "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",
-        { exact: true }
+        { exact: true },
       )
-      .isVisible()
+      .isVisible(),
   );
 });
 
 test("chat_io_teste", async ({ page }) => {
   await page.goto("/");
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-  // Read your file into a buffer.
-  const jsonContent = readFileSync(
-    "tests/end-to-end/assets/ChatTest.json",
-    "utf-8"
-  );
-
   await page.waitForTimeout(3000);
 
   let modalCount = 0;
@@ -110,10 +108,15 @@ test("chat_io_teste", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
+
+  const jsonContent = readFileSync(
+    "tests/end-to-end/assets/ChatTest.json",
+    "utf-8",
+  );
 
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(2000);
@@ -135,10 +138,10 @@ test("chat_io_teste", async ({ page }) => {
     "drop",
     {
       dataTransfer,
-    }
+    },
   );
   await page.getByLabel("fit view").click();
-  await page.getByText("Run", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).click();
   await page.getByPlaceholder("Send a message...").click();
   await page.getByPlaceholder("Send a message...").fill("teste");
   await page.getByRole("button").nth(1).click();
