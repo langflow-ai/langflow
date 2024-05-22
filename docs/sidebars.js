@@ -41,8 +41,6 @@ module.exports = {
         "administration/playground",
         "administration/global-env",
         "administration/flows-components-collections",
-        "administration/components",
-        "administration/collection",
         "administration/prompt-customization",
       ],
     },
