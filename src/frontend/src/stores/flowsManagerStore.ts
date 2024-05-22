@@ -88,8 +88,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           .then((dbData) => {
             if (dbData) {
               const { data, flows } = processFlows(dbData, false);
-              console.log("flows", flows);
-              console.log(dbData);
               const starterProjectsIds = starterProjects.flows!.map(
                 (flow) => flow.id,
               );

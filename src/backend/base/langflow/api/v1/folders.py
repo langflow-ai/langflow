@@ -48,14 +48,14 @@ def create_folder(
         session.commit()
         session.refresh(new_folder)
 
-        if folder.components_list:
+        if folder.components_list.__len__() > 0:
             update_statement_components = (
                 update(Flow).where(Flow.id.in_(folder.components_list)).values(folder_id=new_folder.id)
             )
             session.exec(update_statement_components)
             session.commit()
 
-        if folder.flows_list:
+        if folder.flows_list.__len__() > 0:
             update_statement_flows = update(Flow).where(Flow.id.in_(folder.flows_list)).values(folder_id=new_folder.id)
             session.exec(update_statement_flows)
             session.commit()
@@ -142,7 +142,7 @@ def update_folder(
             session.exec(update_statement_my_collection)
             session.commit()
 
-        if concat_folder_components:
+        if concat_folder_components.__len__() > 0:
             update_statement_components = (
                 update(Flow).where(Flow.id.in_(concat_folder_components)).values(folder_id=existing_folder.id)
             )
@@ -217,7 +217,7 @@ async def upload_file(
     contents = await file.read()
     data = orjson.loads(contents)
 
-    if not data:
+    if data.__len__() == 0:
         raise HTTPException(status_code=400, detail="No flows found in the file")
 
     folder_results = session.exec(
@@ -225,8 +225,8 @@ async def upload_file(
     )
     existing_folder_names = [folder.name for folder in folder_results]
 
-    if existing_folder_names:
-        data["folder_name"] = f"{data['folder_name']} ({len(existing_folder_names) + 1})"
+    if existing_folder_names.__len__() > 0:
+        data["folder_name"] = f"{data['folder_name']} ({existing_folder_names.__len__() + 1})"
 
     folder = FolderCreate(name=data["folder_name"], description=data["folder_description"])
 
