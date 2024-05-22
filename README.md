@@ -17,8 +17,16 @@
 </p>
 
 <p align="center">
-    <img src="https://img.shields.io/github/stars/langflow-ai/langflow">
-    <img src="https://img.shields.io/discord/1116803230643527710?label=Discord">
+    <a href="https://github.com/langflow-ai/langflow">
+        <img src="https://img.shields.io/github/stars/langflow-ai/langflow">
+    </a>
+    <a href="https://discord.com/invite/EqksyE2EX9">
+        <img src="https://img.shields.io/discord/1116803230643527710?label=Discord">
+    </a>
+    <a href="https://pypi.org/project/langflow/">
+        <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/langflow">
+    </a>
+
 </p>
 
 <p align="center">
