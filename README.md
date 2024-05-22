@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD030 -->
 
-# [![Langflow](https://github.com/langflow-ai/langflow/blob/dev/docs/static/img/hero.png)](https://www.langflow.org)
+# [![Langflow](./docs/static/img/hero.png)](https://www.langflow.org)
 
 ### [Langflow](https://www.langflow.org) is a new, visual way to build, iterate and deploy AI apps.
 
