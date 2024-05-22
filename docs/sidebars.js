@@ -40,10 +40,10 @@ module.exports = {
         "administration/cli",
         "administration/playground",
         "administration/global-env",
+        "administration/flows-components-collections",
         "administration/components",
         "administration/collection",
         "administration/prompt-customization",
-        "administration/langfuse_integration",
       ],
     },
     {
