@@ -1,5 +1,6 @@
 from http import HTTPStatus
 from typing import Annotated, List, Optional, Union
+from uuid import UUID
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
@@ -54,7 +55,7 @@ def get_all(
 @router.post("/run/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
 async def simplified_run_flow(
     db: Annotated[Session, Depends(get_session)],
-    flow_id: str,
+    flow_id: UUID,
     input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
     stream: bool = False,
     api_key_user: User = Depends(api_key_security),
@@ -111,6 +112,7 @@ async def simplified_run_flow(
     session_id = input_request.session_id
 
     try:
+        flow_id = str(flow_id)
         task_result: List[RunOutputs] = []
         artifacts = {}
         if input_request.session_id:
@@ -187,7 +189,7 @@ async def simplified_run_flow(
 @router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
 async def experimental_run_flow(
     session: Annotated[Session, Depends(get_session)],
-    flow_id: str,
+    flow_id: UUID,
     inputs: Optional[List[InputValueRequest]] = [InputValueRequest(components=[], input_value="")],
     outputs: Optional[List[str]] = [],
     tweaks: Annotated[Optional[Tweaks], Body(embed=True)] = None,  # noqa: F821
@@ -235,6 +237,7 @@ async def experimental_run_flow(
     This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations, catering to diverse application requirements.
     """
     try:
+        flow_id = str(flow_id)
         if outputs is None:
             outputs = []
 
@@ -357,9 +360,10 @@ async def get_task_status(task_id: str):
 )
 async def create_upload_file(
     file: UploadFile,
-    flow_id: str,
+    flow_id: UUID,
 ):
     try:
+        flow_id = str(flow_id)
         file_path = save_uploaded_file(file, folder_name=flow_id)
 
         return UploadFileResponse(
