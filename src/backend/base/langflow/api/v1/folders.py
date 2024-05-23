@@ -76,10 +76,7 @@ def read_folders(
     try:
         folders = session.exec(
             select(Folder).where(
-                or_(
-                    Folder.user_id == current_user.id,  # type: ignore
-                    Folder.user_id == None,  # noqa # type: ignore
-                )
+                or_(Folder.user_id == current_user.id, Folder.user_id == None)  # type: ignore # noqa: E711
             )
         ).all()
         return folders
