@@ -211,7 +211,7 @@ export default function App() {
         <div className="flex flex-col-reverse" style={{ zIndex: 999 }}>
           {tempNotificationList.map((alert) => (
             <div key={alert.id}>
-              {alert.type === "error" && (
+              {alert.type === "error" ? (
                 <ErrorAlert
                   key={alert.id}
                   title={alert.title}
@@ -219,6 +219,16 @@ export default function App() {
                   id={alert.id}
                   removeAlert={removeAlert}
                 />
+              ) : (
+                alert.type === "notice" && (
+                  <NoticeAlert
+                    key={alert.id}
+                    title={alert.title}
+                    link={alert.link}
+                    id={alert.id}
+                    removeAlert={removeAlert}
+                  />
+                )
               )}
             </div>
           ))}
@@ -226,23 +236,13 @@ export default function App() {
         <div className="z-40 flex flex-col-reverse">
           {tempNotificationList.map((alert) => (
             <div key={alert.id}>
-              {alert.type === "notice" ? (
-                <NoticeAlert
+              {alert.type === "success" && (
+                <SuccessAlert
                   key={alert.id}
                   title={alert.title}
-                  link={alert.link}
                   id={alert.id}
                   removeAlert={removeAlert}
                 />
-              ) : (
-                alert.type === "success" && (
-                  <SuccessAlert
-                    key={alert.id}
-                    title={alert.title}
-                    id={alert.id}
-                    removeAlert={removeAlert}
-                  />
-                )
               )}
             </div>
           ))}
