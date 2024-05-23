@@ -7,6 +7,8 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 Langflow allows you to extend its functionality with custom components. The `NotionPageUpdate` component is designed to update the properties of a Notion page. It provides a convenient way to integrate updating Notion page properties into your Langflow workflows.
 
+[Notion Reference](https://developers.notion.com/reference/patch-page)
+
 ## Component Usage
 
 To use the `NotionPageUpdate` component in your Langflow flow:
@@ -22,16 +24,15 @@ Here's the code for the `NotionPageUpdate` component:
 import json
 import requests
 from typing import Dict, Any
-from loguru import logger
 
-from langflow.custom import CustomComponent
+from langflow import CustomComponent
 from langflow.schema import Record
 
 
 class NotionPageUpdate(CustomComponent):
     display_name = "Update Page Property [Notion]"
     description = "Update the properties of a Notion page."
-    documentation: str = "https://developers.notion.com/reference/patch-page"
+    documentation: str = "https://docs.langflow.org/integrations/notion/page-update"
     icon = "NotionDirectoryLoader"
 
     def build_config(self):
@@ -76,7 +77,7 @@ class NotionPageUpdate(CustomComponent):
         data = {
             "properties": parsed_properties
         }
-        
+
         response = requests.patch(url, headers=headers, json=data)
         response.raise_for_status()
 

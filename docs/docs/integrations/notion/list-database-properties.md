@@ -7,6 +7,8 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 Langflow allows you to extend its functionality with custom components. The `NotionDatabaseProperties` component is designed to retrieve properties of a Notion database. It provides a convenient way to integrate Notion database information into your Langflow workflows.
 
+[Notion Reference](https://developers.notion.com/reference/post-database-query)
+
 <Admonition type="tip" title="Component Functionality">
 The `NotionDatabaseProperties` component enables you to:
 - Retrieve properties of a Notion database
@@ -29,15 +31,17 @@ Here's the code block for the `NotionDatabaseProperties` component:
 ```python
 import requests
 from typing import Dict
+
 from langflow import CustomComponent
 from langflow.schema import Record
+
 
 class NotionDatabaseProperties(CustomComponent):
     display_name = "List Database Properties [Notion]"
     description = "Retrieve properties of a Notion database."
-    documentation: str = "https://developers.notion.com/reference/post-database-query"
+    documentation: str = "https://docs.langflow.org/integrations/notion/list-database-properties"
     icon = "NotionDirectoryLoader"
-
+    
     def build_config(self):
         return {
             "database_id": {
@@ -61,14 +65,17 @@ class NotionDatabaseProperties(CustomComponent):
         url = f"https://api.notion.com/v1/databases/{database_id}"
         headers = {
             "Authorization": f"Bearer {notion_secret}",
-            "Notion-Version": "2022-06-28", # Use the latest supported version
+            "Notion-Version": "2022-06-28",  # Use the latest supported version
         }
+
         response = requests.get(url, headers=headers)
         response.raise_for_status()
+
         data = response.json()
         properties = data.get("properties", {})
+
         record = Record(text=str(response.json()), data=properties)
-        self.status = f"Retrieved {len(properties)} properties from the Notion database.\n{record.text}"
+        self.status = f"Retrieved {len(properties)} properties from the Notion database.\n {record.text}"
         return record
 ```
 

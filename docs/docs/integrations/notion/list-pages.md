@@ -3,10 +3,12 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# Database Query
+# List Pages
 
 Langflow allows you to extend its functionality with custom components. The `NotionListPages
 ` component is designed to query a Notion database with filtering and sorting. It provides a convenient way to integrate Notion database querying capabilities into your Langflow workflows.
+
+[Notion Reference](https://developers.notion.com/reference/post-database-query)
 
 > **Tip**:
 >
@@ -50,7 +52,7 @@ class NotionListPages(CustomComponent):
         "Example input:\n"
         '{"filter": {"property": "Status", "select": {"equals": "Done"}}, "sorts": [{"timestamp": "created_time", "direction": "descending"}]}'
     )
-    documentation: str = "https://developers.notion.com/reference/post-database-query"
+    documentation: str = "https://docs.langflow.org/integrations/notion/list-pages"
     icon = "NotionDirectoryLoader"
 
     field_order = [

@@ -7,6 +7,8 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 Langflow allows you to extend its functionality with custom components. The `NotionSearch` component is designed to search all pages and databases that have been shared with an integration in Notion. It provides a convenient way to integrate Notion search capabilities into your Langflow workflows.
 
+[Notion Reference](https://developers.notion.com/reference/search)
+
 > **Tip**:
 >
 > ### Component Functionality
@@ -42,7 +44,7 @@ class NotionSearch(CustomComponent):
     description = (
         "Searches all pages and databases that have been shared with an integration."
     )
-    documentation: str = "https://developers.notion.com/reference/search"
+    documentation: str = "https://docs.langflow.org/integrations/notion/search"
     icon = "NotionDirectoryLoader"
 
     field_order = [
