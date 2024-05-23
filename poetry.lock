@@ -7415,19 +7415,6 @@ files = [
 ]
 
 [[package]]
-name = "pysrt"
-version = "1.1.2"
-description = "SubRip (.srt) subtitle parser and writer"
-optional = false
-python-versions = "*"
-files = [
-    {file = "pysrt-1.1.2.tar.gz", hash = "sha256:b4f844ba33e4e7743e9db746492f3a193dc0bc112b153914698e7c1cdeb9b0b9"},
-]
-
-[package.dependencies]
-chardet = "*"
-
-[[package]]
 name = "pytest"
 version = "8.2.1"
 description = "pytest: simple powerful testing with Python"
@@ -10446,3 +10433,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
 content-hash = "93314b0e661d91956d71273c46f43a2cbb358c0e5f98514f3260e70ead792648"
+
