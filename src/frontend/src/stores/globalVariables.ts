@@ -13,7 +13,7 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
       delete newFields[field];
       set({ unavaliableFields: newFields });
     },
-    globalVariablesEntries: [],
+    globalVariablesEntries: undefined,
     globalVariables: {},
     setGlobalVariables: (variables) => {
       set({
@@ -45,5 +45,5 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
     getVariableId: (name) => {
       return get().globalVariables[name]?.id;
     },
-  })
+  }),
 );
