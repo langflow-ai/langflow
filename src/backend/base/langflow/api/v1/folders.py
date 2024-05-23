@@ -2,12 +2,12 @@ from typing import List
 from uuid import UUID
 
 import orjson
-from sqlalchemy import or_, update
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from sqlalchemy import or_, update
 from sqlmodel import Session, select
+
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.schemas import FlowListCreate, FlowListReadWithFolderName
-from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
@@ -36,7 +36,10 @@ def create_folder(
         new_folder.user_id = current_user.id
 
         folder_results = session.exec(
-            select(Folder).where(Folder.name.like(f"{new_folder.name}%"), Folder.user_id == current_user.id)
+            select(Folder).where(
+                Folder.name.like(f"{new_folder.name}%"),  # type: ignore
+                Folder.user_id == current_user.id,
+            )
         )
         existing_folder_names = [folder.name for folder in folder_results]
 
@@ -72,11 +75,17 @@ def read_folders(
 ):
     try:
         folders = session.exec(
-            select(Folder).where(or_(Folder.user_id == current_user.id, Folder.user_id == None))
+            select(Folder).where(
+                or_(
+                    Folder.user_id == current_user.id,  # type: ignore
+                    Folder.user_id == None,  # noqa # type: ignore
+                )
+            )
         ).all()
         return folders
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/{folder_id}", response_model=FolderReadWithFlows, status_code=200)
 def read_folder(
