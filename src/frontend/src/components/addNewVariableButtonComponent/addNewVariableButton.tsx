@@ -2,16 +2,16 @@ import { useState } from "react";
 import { registerGlobalVariable } from "../../controllers/API";
 import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
-import { useGlobalVariablesStore } from "../../stores/globalVariables";
+import { useGlobalVariablesStore } from "../../stores/globalVariablesStore/globalVariables";
 import { useTypesStore } from "../../stores/typesStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
-import { sortByName } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
+import sortByName from "./utils/sort-by-name";
 
 //TODO IMPLEMENT FORM LOGIC
 
@@ -24,19 +24,19 @@ export default function AddNewVariableButton({ children }): JSX.Element {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
   const unavaliableFields = new Set(
-    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields))
+    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields)),
   );
 
   const availableFields = () => {
     const fields = Array.from(componentFields).filter(
-      (field) => !unavaliableFields.has(field)
+      (field) => !unavaliableFields.has(field),
     );
 
     return sortByName(fields);
   };
 
   const addGlobalVariable = useGlobalVariablesStore(
-    (state) => state.addGlobalVariable
+    (state) => state.addGlobalVariable,
   );
 
   function handleSaveVariable() {

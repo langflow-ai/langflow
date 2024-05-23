@@ -22,12 +22,12 @@ import {
 import {
   classNames,
   removeCountFromString,
-  sensitiveSort,
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
 import { sortKeys } from "./utils";
+import sensitiveSort from "./utils/sensitive-sort";
 
 export default function ExtraSidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);
