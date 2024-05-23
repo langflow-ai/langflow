@@ -13,7 +13,7 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
       delete newFields[field];
       set({ unavaliableFields: newFields });
     },
-    globalVariablesEntries: [],
+    globalVariablesEntries: undefined,
     globalVariables: {},
     setGlobalVariables: (variables) => {
       set({

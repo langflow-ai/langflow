@@ -1194,17 +1194,6 @@ files = [
 ]
 
 [[package]]
-name = "colorclass"
-version = "2.2.2"
-description = "Colorful worry-free console applications for Linux, Mac OS X, and Windows."
-optional = false
-python-versions = ">=2.6"
-files = [
-    {file = "colorclass-2.2.2-py2.py3-none-any.whl", hash = "sha256:6f10c273a0ef7a1150b1120b6095cbdd68e5cf36dfd5d0fc957a2500bbf99a55"},
-    {file = "colorclass-2.2.2.tar.gz", hash = "sha256:6d4fe287766166a98ca7bc6f6312daf04a0481b1eda43e7173484051c0ab4366"},
-]
-
-[[package]]
 name = "coloredlogs"
 version = "15.0.1"
 description = "Colored terminal output for Python's logging module"
@@ -1256,16 +1245,6 @@ traitlets = ">=4"
 test = ["pytest"]
 
 [[package]]
-name = "compressed-rtf"
-version = "1.0.6"
-description = "Compressed Rich Text Format (RTF) compression and decompression package"
-optional = false
-python-versions = "*"
-files = [
-    {file = "compressed_rtf-1.0.6.tar.gz", hash = "sha256:c1c827f1d124d24608981a56e8b8691eb1f2a69a78ccad6440e7d92fde1781dd"},
-]
-
-[[package]]
 name = "configargparse"
 version = "1.7"
 description = "A drop-in replacement for argparse that allows options to also be set via config files and/or environment variables."
@@ -1279,6 +1258,40 @@ files = [
 [package.extras]
 test = ["PyYAML", "mock", "pytest"]
 yaml = ["PyYAML"]
+
+[[package]]
+name = "couchbase"
+version = "4.2.1"
+description = "Python Client for Couchbase"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "couchbase-4.2.1-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:7ad4c4462879f456a9067ac1788e62d852509439bac3538b9bc459a754666481"},
+    {file = "couchbase-4.2.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:06d91891c599ba0f5052e594ac025a2ca6ab7885e528b854ac9c125df7c74146"},
+    {file = "couchbase-4.2.1-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:0191d4a631ead533551cb9a214704ad5f3dfff2029e21a23b57725a0b5666b25"},
+    {file = "couchbase-4.2.1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:b206790d6834a18c5e457f9a70f44774f476f3acccf9f22e8c1b5283a5bd03fa"},
+    {file = "couchbase-4.2.1-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:c5ca571b9ce017ecbd447de12cd46e213f93e0664bec6fca0a06e1768db1a4f8"},
+    {file = "couchbase-4.2.1-cp310-cp310-win_amd64.whl", hash = "sha256:675c615cfd4b04e73e94cf03c786da5105d94527f5c3a087813dba477a1379e9"},
+    {file = "couchbase-4.2.1-cp311-cp311-macosx_10_15_x86_64.whl", hash = "sha256:4cd09eedf162dc28386d9c6490e832c25068406c0f5d70a0417c0b1445394651"},
+    {file = "couchbase-4.2.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:dfebb11551c6d947ce6297ab02b5006b1ac8739dda3e10d41896db0dc8672915"},
+    {file = "couchbase-4.2.1-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:39e742ccfe90a0e59e6e1b0e12f0fe224a736c0207b218ef48048052f926e1c6"},
+    {file = "couchbase-4.2.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:f9ba24efddf47f30603275f5433434d8759a55233c78b3e4bc613c502ac429e9"},
+    {file = "couchbase-4.2.1-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:adfca3929f07fb4385dc52f08d3a60634012f364b176f95ab023cdd1bb7fe9c0"},
+    {file = "couchbase-4.2.1-cp311-cp311-win_amd64.whl", hash = "sha256:e1c68b28c6f0475961afb9fe626ad2bac8a5643b53f719675386f060db4b6e19"},
+    {file = "couchbase-4.2.1-cp38-cp38-macosx_10_15_x86_64.whl", hash = "sha256:137512462426cd495954c1815d78115d109308a4d9f8843b638285104388a359"},
+    {file = "couchbase-4.2.1-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:5987e5edcce7696e5f75b35be91f44fa69fb5eb95dba0957ad66f789affcdb36"},
+    {file = "couchbase-4.2.1-cp38-cp38-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:080cb0fc333bd4a641ede4ee14ff0c7dbe95067fbb280826ea546681e0b9f9e3"},
+    {file = "couchbase-4.2.1-cp38-cp38-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:e317c2628a4a917083e8e7ce8e2662432b6a12ebac65fc00de6da2b37ab5975c"},
+    {file = "couchbase-4.2.1-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:de7f8699ae344e2e96706ee0eac67e96bfdd3412fb18dcfb81d8ba5837dd3dfb"},
+    {file = "couchbase-4.2.1-cp38-cp38-win_amd64.whl", hash = "sha256:82b9deb8b1fe8e8d7dde9c232ac5f4c11ff0f067930837af0e7769706e6a9453"},
+    {file = "couchbase-4.2.1-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:44502d069ea17a8d692b7c88d84bc0df2cf4e944cde337c8eb3175bc0b835bb9"},
+    {file = "couchbase-4.2.1-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:c0f131b816a7d91b755232872ba10f6d6ca5a715e595ee9534478bc97a518ae8"},
+    {file = "couchbase-4.2.1-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:e9b9deb312bbe5f9a8e63828f9de877714c4b09b7d88f7dc87b60e5ffb2a13e6"},
+    {file = "couchbase-4.2.1-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:71e8da251850d795975c3569c01d35ba1a556825dc7d9549ff9918d148255804"},
+    {file = "couchbase-4.2.1-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:d04492144ce520c612a2f8f265278c9f0cdf62fdd6f703e7a3210a7476b228f6"},
+    {file = "couchbase-4.2.1-cp39-cp39-win_amd64.whl", hash = "sha256:3f91b7699ea7b8253cf34c9fb6e191de9b2edfd7aa4d6f97b29c10b9a1670444"},
+    {file = "couchbase-4.2.1.tar.gz", hash = "sha256:dc1c60d3f2fc179db8225aac4cc30d601d73cf2535aaf023d607e86be2d7dd78"},
+]
 
 [[package]]
 name = "coverage"
@@ -1770,27 +1783,6 @@ files = [
 ]
 
 [[package]]
-name = "easygui"
-version = "0.98.3"
-description = "EasyGUI is a module for very simple, very easy GUI programming in Python.  EasyGUI is different from other GUI generators in that EasyGUI is NOT event-driven.  Instead, all GUI interactions are invoked by simple function calls."
-optional = false
-python-versions = "*"
-files = [
-    {file = "easygui-0.98.3-py2.py3-none-any.whl", hash = "sha256:33498710c68b5376b459cd3fc48d1d1f33822139eb3ed01defbc0528326da3ba"},
-    {file = "easygui-0.98.3.tar.gz", hash = "sha256:d653ff79ee1f42f63b5a090f2f98ce02335d86ad8963b3ce2661805cafe99a04"},
-]
-
-[[package]]
-name = "ebcdic"
-version = "1.1.1"
-description = "Additional EBCDIC codecs"
-optional = false
-python-versions = "*"
-files = [
-    {file = "ebcdic-1.1.1-py2.py3-none-any.whl", hash = "sha256:33b4cb729bc2d0bf46cc1847b0e5946897cb8d3f53520c5b9aa5fa98d7e735f1"},
-]
-
-[[package]]
 name = "ecdsa"
 version = "0.19.0"
 description = "ECDSA cryptographic signature library (pure python)"
@@ -1904,33 +1896,6 @@ files = [
 
 [package.extras]
 tests = ["asttokens (>=2.1.0)", "coverage", "coverage-enable-subprocess", "ipython", "littleutils", "pytest", "rich"]
-
-[[package]]
-name = "extract-msg"
-version = "0.47.0"
-description = "Extracts emails and attachments saved in Microsoft Outlook's .msg files"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "extract_msg-0.47.0-py2.py3-none-any.whl", hash = "sha256:ab177546d6ebbea7818e9acb352f6f8cce3821e39319405e6a873808238564a5"},
-    {file = "extract_msg-0.47.0.tar.gz", hash = "sha256:d3ed5fdc8cdff3567421d7e4183511905eb3c83d2605e6c9335c653efa6cfb41"},
-]
-
-[package.dependencies]
-beautifulsoup4 = ">=4.11.1,<4.13"
-compressed-rtf = ">=1.0.6,<2"
-ebcdic = ">=1.1.1,<2"
-olefile = "0.47"
-red-black-tree-mod = "1.20"
-RTFDE = ">=0.1.1,<0.2"
-tzlocal = ">=4.2,<6"
-
-[package.extras]
-all = ["extract-msg[encoding]", "extract-msg[image]", "extract-msg[mime]"]
-encoding = ["chardet (>=3.0.0,<6)"]
-image = ["Pillow (>=9.5.0,<10)"]
-mime = ["python-magic (>=0.4.27,<0.5)"]
-readthedocs = ["sphinx-rtd-theme"]
 
 [[package]]
 name = "faiss-cpu"
@@ -3219,16 +3184,6 @@ files = [
 ]
 
 [[package]]
-name = "html2text"
-version = "2024.2.26"
-description = "Turn HTML into equivalent Markdown-structured text."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "html2text-2024.2.26.tar.gz", hash = "sha256:05f8e367d15aaabc96415376776cdd11afd5127a77fce6e36afc60c563ca2c32"},
-]
-
-[[package]]
 name = "httpcore"
 version = "1.0.5"
 description = "A minimal low-level HTTP client."
@@ -4401,23 +4356,6 @@ pydantic = ">=1,<3"
 requests = ">=2,<3"
 
 [[package]]
-name = "lark"
-version = "1.1.8"
-description = "a modern parsing library"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "lark-1.1.8-py3-none-any.whl", hash = "sha256:7d2c221a66a8165f3f81aacb958d26033d40d972fdb70213ab0a2e0627e29c86"},
-    {file = "lark-1.1.8.tar.gz", hash = "sha256:7ef424db57f59c1ffd6f0d4c2b705119927f566b68c0fe1942dddcc0e44391a5"},
-]
-
-[package.extras]
-atomic-cache = ["atomicwrites"]
-interegular = ["interegular (>=0.3.1,<0.4.0)"]
-nearley = ["js2py"]
-regex = ["regex"]
-
-[[package]]
 name = "litellm"
 version = "1.37.19"
 description = "Library to easily interface with LLM API providers"
@@ -4884,13 +4822,9 @@ files = [
     {file = "lxml-5.2.2-cp36-cp36m-win_amd64.whl", hash = "sha256:edcfa83e03370032a489430215c1e7783128808fd3e2e0a3225deee278585196"},
     {file = "lxml-5.2.2-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:28bf95177400066596cdbcfc933312493799382879da504633d16cf60bba735b"},
     {file = "lxml-5.2.2-cp37-cp37m-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:3a745cc98d504d5bd2c19b10c79c61c7c3df9222629f1b6210c0368177589fb8"},
-    {file = "lxml-5.2.2-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1b590b39ef90c6b22ec0be925b211298e810b4856909c8ca60d27ffbca6c12e6"},
     {file = "lxml-5.2.2-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b336b0416828022bfd5a2e3083e7f5ba54b96242159f83c7e3eebaec752f1716"},
-    {file = "lxml-5.2.2-cp37-cp37m-manylinux_2_28_aarch64.whl", hash = "sha256:c2faf60c583af0d135e853c86ac2735ce178f0e338a3c7f9ae8f622fd2eb788c"},
     {file = "lxml-5.2.2-cp37-cp37m-manylinux_2_28_x86_64.whl", hash = "sha256:4bc6cb140a7a0ad1f7bc37e018d0ed690b7b6520ade518285dc3171f7a117905"},
-    {file = "lxml-5.2.2-cp37-cp37m-musllinux_1_1_aarch64.whl", hash = "sha256:7ff762670cada8e05b32bf1e4dc50b140790909caa8303cfddc4d702b71ea184"},
     {file = "lxml-5.2.2-cp37-cp37m-musllinux_1_1_x86_64.whl", hash = "sha256:57f0a0bbc9868e10ebe874e9f129d2917750adf008fe7b9c1598c0fbbfdde6a6"},
-    {file = "lxml-5.2.2-cp37-cp37m-musllinux_1_2_aarch64.whl", hash = "sha256:a6d2092797b388342c1bc932077ad232f914351932353e2e8706851c870bca1f"},
     {file = "lxml-5.2.2-cp37-cp37m-musllinux_1_2_x86_64.whl", hash = "sha256:60499fe961b21264e17a471ec296dcbf4365fbea611bf9e303ab69db7159ce61"},
     {file = "lxml-5.2.2-cp37-cp37m-win32.whl", hash = "sha256:d9b342c76003c6b9336a80efcc766748a333573abf9350f4094ee46b006ec18f"},
     {file = "lxml-5.2.2-cp37-cp37m-win_amd64.whl", hash = "sha256:b16db2770517b8799c79aa80f4053cd6f8b716f21f8aca962725a9565ce3ee40"},
@@ -5348,21 +5282,6 @@ files = [
     {file = "msgpack-1.0.8-cp39-cp39-win_amd64.whl", hash = "sha256:ed59dd52075f8fc91da6053b12e8c89e37aa043f8986efd89e61fae69dc1b011"},
     {file = "msgpack-1.0.8.tar.gz", hash = "sha256:95c02b0e27e706e48d0e5426d1710ca78e0f0628d6e89d5b5a5b91a5f12274f3"},
 ]
-
-[[package]]
-name = "msoffcrypto-tool"
-version = "5.4.0"
-description = "Python tool and library for decrypting and encrypting MS Office files using a password or other keys"
-optional = false
-python-versions = "<4.0,>=3.8"
-files = [
-    {file = "msoffcrypto_tool-5.4.0-py3-none-any.whl", hash = "sha256:0e39319f982c22a449505e5ab7da18a8ae76376a0008e180e1528a0875525da7"},
-    {file = "msoffcrypto_tool-5.4.0.tar.gz", hash = "sha256:0f5f45d91d1eaa2ca0b3adefb5aac4932afb50c678dfa8d7da390d187f1dac39"},
-]
-
-[package.dependencies]
-cryptography = ">=35.0"
-olefile = ">=0.46"
 
 [[package]]
 name = "multidict"
@@ -5862,42 +5781,6 @@ signals = ["blinker (>=1.4.0)"]
 signedtoken = ["cryptography (>=3.0.0)", "pyjwt (>=2.0.0,<3)"]
 
 [[package]]
-name = "olefile"
-version = "0.47"
-description = "Python package to parse, read and write Microsoft OLE2 files (Structured Storage or Compound Document, Microsoft Office)"
-optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-files = [
-    {file = "olefile-0.47-py2.py3-none-any.whl", hash = "sha256:543c7da2a7adadf21214938bb79c83ea12b473a4b6ee4ad4bf854e7715e13d1f"},
-    {file = "olefile-0.47.zip", hash = "sha256:599383381a0bf3dfbd932ca0ca6515acd174ed48870cbf7fee123d698c192c1c"},
-]
-
-[package.extras]
-tests = ["pytest", "pytest-cov"]
-
-[[package]]
-name = "oletools"
-version = "0.60.1"
-description = "Python tools to analyze security characteristics of MS Office and OLE files (also called Structured Storage, Compound File Binary Format or Compound Document File Format), for Malware Analysis and Incident Response #DFIR"
-optional = false
-python-versions = "*"
-files = [
-    {file = "oletools-0.60.1-py2.py3-none-any.whl", hash = "sha256:edef92374e688989a39269eb9a11142fb20a023629c23538c849c14d1d1144ea"},
-    {file = "oletools-0.60.1.zip", hash = "sha256:67a796da4c4b8e2feb9a6b2495bef8798a3323a75512de4e5669d9dc9d1fae31"},
-]
-
-[package.dependencies]
-colorclass = "*"
-easygui = "*"
-msoffcrypto-tool = {version = "*", markers = "platform_python_implementation != \"PyPy\" or python_version >= \"3\" and (platform_system != \"Windows\" and platform_system != \"Darwin\")"}
-olefile = ">=0.46"
-pcodedmp = ">=1.2.5"
-pyparsing = ">=2.1.0,<3"
-
-[package.extras]
-full = ["XLMMacroDeobfuscator"]
-
-[[package]]
 name = "onnxruntime"
 version = "1.18.0"
 description = "ONNX Runtime is a runtime accelerator for Machine Learning models"
@@ -6351,21 +6234,6 @@ argon2 = ["argon2-cffi (>=18.2.0)"]
 bcrypt = ["bcrypt (>=3.1.0)"]
 build-docs = ["cloud-sptheme (>=1.10.1)", "sphinx (>=1.6)", "sphinxcontrib-fulltoc (>=1.2.0)"]
 totp = ["cryptography"]
-
-[[package]]
-name = "pcodedmp"
-version = "1.2.6"
-description = "A VBA p-code disassembler"
-optional = false
-python-versions = "*"
-files = [
-    {file = "pcodedmp-1.2.6-py2.py3-none-any.whl", hash = "sha256:4441f7c0ab4cbda27bd4668db3b14f36261d86e5059ce06c0828602cbe1c4278"},
-    {file = "pcodedmp-1.2.6.tar.gz", hash = "sha256:025f8c809a126f45a082ffa820893e6a8d990d9d7ddb68694b5a9f0a6dbcd955"},
-]
-
-[package.dependencies]
-oletools = ">=0.54"
-win-unicode-console = {version = "*", markers = "platform_system == \"Windows\" and platform_python_implementation != \"PyPy\""}
 
 [[package]]
 name = "pexpect"
@@ -7429,19 +7297,6 @@ files = [
 ]
 
 [[package]]
-name = "pysrt"
-version = "1.1.2"
-description = "SubRip (.srt) subtitle parser and writer"
-optional = false
-python-versions = "*"
-files = [
-    {file = "pysrt-1.1.2.tar.gz", hash = "sha256:b4f844ba33e4e7743e9db746492f3a193dc0bc112b153914698e7c1cdeb9b0b9"},
-]
-
-[package.dependencies]
-chardet = "*"
-
-[[package]]
 name = "pytest"
 version = "8.2.1"
 description = "pytest: simple powerful testing with Python"
@@ -7989,16 +7844,6 @@ typing-extensions = ">=4.11.0,<5.0.0"
 websockets = ">=11,<13"
 
 [[package]]
-name = "red-black-tree-mod"
-version = "1.20"
-description = "Flexible python implementation of red black trees"
-optional = false
-python-versions = "*"
-files = [
-    {file = "red-black-tree-mod-1.20.tar.gz", hash = "sha256:2448e6fc9cbf1be204c753f352c6ee49aa8156dbf1faa57dfc26bd7705077e0a"},
-]
-
-[[package]]
 name = "redis"
 version = "5.0.4"
 description = "Python client for Redis database and key-value store"
@@ -8188,25 +8033,6 @@ files = [
 
 [package.dependencies]
 pyasn1 = ">=0.1.3"
-
-[[package]]
-name = "rtfde"
-version = "0.1.1"
-description = "A library for extracting HTML content from RTF encapsulated HTML as commonly found in the exchange MSG email format."
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "RTFDE-0.1.1-py3-none-any.whl", hash = "sha256:ea7ab0e0b9d4af08415f5017ecff91d74e24216a5e4e4682155cedc478035e99"},
-    {file = "RTFDE-0.1.1.tar.gz", hash = "sha256:9e43485e79b2dd1018127735d8134f65d2a9d73af314d2a101f10346333b241e"},
-]
-
-[package.dependencies]
-lark = "1.1.8"
-oletools = ">=0.56"
-
-[package.extras]
-dev = ["coverage (>=7.2.2)", "lxml (>=4.6)", "mypy (>=1.1.1)", "pdoc3 (>=0.10.0)"]
-msg-parse = ["extract-msg (>=0.27)"]
 
 [[package]]
 name = "ruff"
@@ -9532,23 +9358,6 @@ files = [
 ]
 
 [[package]]
-name = "tzlocal"
-version = "5.2"
-description = "tzinfo object for the local timezone"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "tzlocal-5.2-py3-none-any.whl", hash = "sha256:49816ef2fe65ea8ac19d19aa7a1ae0551c834303d5014c6d5a62e4cbda8047b8"},
-    {file = "tzlocal-5.2.tar.gz", hash = "sha256:8d399205578f1a9342816409cc1e46a93ebd5755e39ea2d85334bea911bf0e6e"},
-]
-
-[package.dependencies]
-tzdata = {version = "*", markers = "platform_system == \"Windows\""}
-
-[package.extras]
-devenv = ["check-manifest", "pytest (>=4.3)", "pytest-cov", "pytest-mock (>=3.3)", "zest.releaser"]
-
-[[package]]
 name = "ujson"
 version = "5.10.0"
 description = "Ultra fast JSON encoder and decoder for Python"
@@ -10023,16 +9832,6 @@ beautifulsoup4 = "*"
 requests = ">=2.0.0,<3.0.0"
 
 [[package]]
-name = "win-unicode-console"
-version = "0.5"
-description = "Enable Unicode input and display when running Python from Windows console."
-optional = false
-python-versions = "*"
-files = [
-    {file = "win_unicode_console-0.5.zip", hash = "sha256:d4142d4d56d46f449d6f00536a73625a871cba040f0bc1a2e305a04578f07d1e"},
-]
-
-[[package]]
 name = "win32-setctime"
 version = "1.1.0"
 description = "A small Python utility to set file creation time on Windows"
@@ -10459,4 +10258,5 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "1e59b887d9cef40cd980e2cb698c48e135911400176d8bef1012ddc8853e420a"
+content-hash = "c68a14e273363466c1cea2bacec1798a6894d2bb18cf79ba443dc65c9344c57d"
+

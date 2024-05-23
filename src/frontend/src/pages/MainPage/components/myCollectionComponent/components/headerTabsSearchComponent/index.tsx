@@ -19,6 +19,11 @@ const HeaderTabsSearchComponent = ({}: HeaderTabsSearchComponentProps) => {
   const [tabActive, setTabActive] = useState("Flows");
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
+  const [inputValue, setInputValue] = useState("");
+
+  const setSearchFlowsComponents = useFlowsManagerStore(
+    (state) => state.setSearchFlowsComponents,
+  );
 
   const handleDownloadFolder = () => {
     if (allFlows.length === 0) {
@@ -34,8 +39,19 @@ const HeaderTabsSearchComponent = ({}: HeaderTabsSearchComponentProps) => {
   return (
     <>
       <div className="relative flex items-end gap-4">
-        <InputSearchComponent loading={isLoading} />
-
+        <InputSearchComponent
+          loading={isLoading}
+          value={inputValue}
+          onChange={(e) => {
+            setSearchFlowsComponents(e.target.value);
+            setInputValue(e.target.value);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              setSearchFlowsComponents(inputValue);
+            }
+          }}
+        />
         <TabsSearchComponent
           tabsOptions={["All", "Flows", "Components"]}
           setActiveTab={setTabActive}
