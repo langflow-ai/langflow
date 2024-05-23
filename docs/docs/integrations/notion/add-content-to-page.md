@@ -9,13 +9,14 @@ Langflow allows extending its functionality with custom components like `AddCont
 
 [Notion Reference](https://developers.notion.com/reference/patch-block-children)
 
-## Component Functionality
+<Admonition type="tip" title="Component Functionality">
 
 The `AddContentToPage` component enables you to:
 
 - Convert markdown text to Notion blocks.
 - Append the converted blocks to a specified Notion page.
 - Seamlessly integrate Notion content creation into Langflow workflows.
+</Admonition>
 
 ## Component Usage
 
@@ -114,7 +115,7 @@ In this example, the `AddContentToPage` component connects to a `MarkdownLoader`
 
 </Admonition>
 
-## Best Practices
+<Admonition type="tip" title="Best Practices">
 
 When using the `AddContentToPage` component:
 
@@ -122,8 +123,9 @@ When using the `AddContentToPage` component:
 - Verify the `block_id` corresponds to the right Notion page/block.
 - Keep your Notion integration token secure.
 - Test with sample markdown text before production use.
+</Admonition>
 
-## Troubleshooting
+<Admonition type="warning" title="Troubleshooting">
 
 If issues arise:
 
@@ -131,5 +133,7 @@ If issues arise:
 - Check the Notion API documentation for updates.
 - Ensure markdown text is properly formatted.
 - Double-check the `block_id` for correctness.
+
+</Admonition>
 
 The `AddContentToPage` component is a powerful tool for integrating Notion content creation into Langflow workflows, facilitating easy conversion of markdown text to Notion blocks and appending them to specific pages.

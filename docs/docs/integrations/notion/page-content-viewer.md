@@ -9,13 +9,15 @@ Langflow allows you to extend its functionality with custom components. The `Not
 
 [Notion Reference](https://developers.notion.com/reference/get-page)
 
-> **Component Functionality**
->
-> The `NotionPageContent` component enables you to:
->
-> - Retrieve the content of a Notion page as plain text
-> - Extract text from various block types, including paragraphs, headings, lists, and more
-> - Integrate Notion page content seamlessly into your Langflow workflows
+<Admonition type="tip" title="Component Functionality">
+
+ The `NotionPageContent` component enables you to:
+
+- Retrieve the content of a Notion page as plain text
+- Extract text from various block types, including paragraphs, headings, lists, and more
+- Integrate Notion page content seamlessly into your Langflow workflows
+
+</Admonition>
 
 ## Component Usage
 
@@ -119,24 +121,20 @@ Here's an example of how you can use the `NotionPageContent` component in a Lang
 />
 </Admonition>
 
-## Best Practices
+<Admonition type="tip" title="Best Practices">
+ When using the `NotionPageContent` component, consider the following best practices:
 
-> **Best Practices**
->
-> When using the `NotionPageContent` component, consider the following best practices:
->
-> - Ensure that you have the necessary permissions to access the Notion page you want to retrieve.
-> - Keep your Notion integration token secure and avoid sharing it publicly.
-> - Be mindful of the content you retrieve and ensure that it aligns with your intended use case.
+- Ensure that you have the necessary permissions to access the Notion page you want to retrieve.
+- Keep your Notion integration token secure and avoid sharing it publicly.
+- Be mindful of the content you retrieve and ensure that it aligns with your intended use case.
+</Admonition>
 
-## Troubleshooting
+<Admonition type="tip" title="Troubleshooting">
+ If you encounter any issues while using the `NotionPageContent` component, consider the following:
 
-> **Troubleshooting**
->
-> If you encounter any issues while using the `NotionPageContent` component, consider the following:
->
-> - Double-check that you have provided the correct Notion page ID.
-> - Verify that your Notion integration token is valid and has the necessary permissions.
-> - Check the Notion API documentation for any updates or changes that may affect the component's functionality.
+- Double-check that you have provided the correct Notion page ID.
+- Verify that your Notion integration token is valid and has the necessary permissions.
+- Check the Notion API documentation for any updates or changes that may affect the component's functionality.
+</Admonition>
 
 The `NotionPageContent` component provides a seamless way to integrate Notion page content into your Langflow workflows. By leveraging this component, you can easily retrieve and process the content of Notion pages, enabling you to build powerful and dynamic applications. Explore the capabilities of the `NotionPageContent` component and unlock new possibilities in your Langflow projects!
