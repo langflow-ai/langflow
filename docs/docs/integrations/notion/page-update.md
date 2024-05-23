@@ -116,13 +116,13 @@ Here's an example of how to use the `NotionPageUpdate` component in a Langflow f
 />
 </Admonition>
 
-<Admonition type="tip" title="Best Practices">
+## Best Pratices
+
 When using the `NotionPageUpdate` component, consider the following best practices:
 
 - Ensure that you have a valid Notion integration token with the necessary permissions to update page properties.
 - Handle edge cases and error scenarios gracefully, such as invalid JSON format for properties or API request failures.
 - We recommend using an LLM to generate the inputs for this component, to allow flexibilty
-</Admonition>
 
 <Admonition type="warning" title="Troubleshooting">
 If you encounter any issues while using the `NotionPageUpdate` component, consider the following:

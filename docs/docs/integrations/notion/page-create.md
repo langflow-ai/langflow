@@ -111,16 +111,12 @@ Here's an example of how to use the `NotionPageCreator` component in a Langflow 
 
 ## Best Practices
 
-<Admonition type="tip" title="Best Practices">
 When using the `NotionPageCreator` component, consider the following best practices:
+
 - Ensure that you have a valid Notion integration token with the necessary permissions to create pages in the specified database.
 - Properly format the `properties` input as a JSON string, matching the structure and field types of your Notion database.
 - Handle any errors or exceptions that may occur during the page creation process and provide appropriate error messages.
 - To avoid the hassle of messing with JSON, we recommend using the LLM to create the JSON for you as input.
-
-</Admonition>
-
-## Troubleshooting
 
 <Admonition type="warning" title="Troubleshooting">
 If you encounter any issues while using the `NotionPageCreator` component, consider the following:

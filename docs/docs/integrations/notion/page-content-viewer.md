@@ -121,13 +121,13 @@ Here's an example of how you can use the `NotionPageContent` component in a Lang
 />
 </Admonition>
 
-<Admonition type="tip" title="Best Practices">
+## Best Pratices
+
  When using the `NotionPageContent` component, consider the following best practices:
 
 - Ensure that you have the necessary permissions to access the Notion page you want to retrieve.
 - Keep your Notion integration token secure and avoid sharing it publicly.
 - Be mindful of the content you retrieve and ensure that it aligns with your intended use case.
-</Admonition>
 
 <Admonition type="tip" title="Troubleshooting">
  If you encounter any issues while using the `NotionPageContent` component, consider the following:

@@ -107,12 +107,12 @@ Here's an example of how you can use the `NotionUserList` component in a Langflo
 
 </Admonition>
 
-<Admonition type="tip" title="Best Practices">
+## Best Pratices
+
  When using the `NotionUserList` component, consider the following best practices:
 
 - Ensure that you have a valid Notion integration token with the necessary permissions to retrieve user data.
 - Handle the retrieved user data securely and in compliance with Notion's API usage guidelines.
-</Admonition>
 
 <Admonition type="warning" title="Troubleshooting">
 

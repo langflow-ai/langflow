@@ -94,16 +94,13 @@ style={{ width: "100%", margin: "20px 0" }}
 In this example, the `NotionDatabaseProperties` component retrieves the properties of a Notion database, and the retrieved properties are then used as input for subsequent components in the flow.
 </Admonition>
 
-## Best Practices
+## Best Pratices
 
-<Admonition type="tip" title="Best Practices">
 When using the `NotionDatabaseProperties` component, consider the following best practices:
+
 - Ensure that you have a valid Notion integration token with the necessary permissions to access the desired database.
 - Double-check the database ID to avoid retrieving properties from the wrong database.
 - Handle potential errors gracefully by checking the response status and providing appropriate error messages.
-</Admonition>
-
-## Troubleshooting
 
 <Admonition type="warning" title="Troubleshooting">
 If you encounter any issues while using the `NotionDatabaseProperties` component, consider the following:

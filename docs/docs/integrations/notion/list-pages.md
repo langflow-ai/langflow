@@ -157,14 +157,13 @@ In this example, the `NotionListPages
 ` component is used to retrieve specific pages from a Notion database based on the provided filters and sorting options. The retrieved data can then be processed further in the subsequent components of the flow.
 </Admonition>
 
-<Admonition type="tip" title="Best Practices">
+## Best Pratices
 
  When using the `NotionListPages
 ` component, consider the following best practices:
 
 - Ensure that you have a valid Notion integration token with the necessary permissions to query the desired database.
 - Construct the `query_payload` JSON string carefully, following the Notion API documentation for filtering and sorting options.
-</Admonition>
 
 <Admonition type="warning" title="Troubleshooting">
  If you encounter any issues while using the `NotionListPages` component, consider the following:
