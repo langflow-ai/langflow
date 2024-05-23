@@ -102,8 +102,8 @@ Here's an example of how to use the `NotionPageCreator` component in a Langflow 
 <ZoomableImage
   alt="NotionPageCreator Flow Example"
   sources={{
-    light: "img/NotionPageCreator_flow_example.png",
-    dark: "img/NotionPageCreator_flow_example_dark.png",
+    light: "img/notion/NotionPageCreator_flow_example.png",
+    dark: "img/notion/NotionPageCreator_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />

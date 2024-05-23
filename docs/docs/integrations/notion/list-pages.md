@@ -140,7 +140,7 @@ class NotionListPages(CustomComponent):
             return [Record(text=self.status, data=[])]
 ```
 
-## Example Usage
+<Admonition type="info" title="Example Usage">
 
 Here's an example of how you can use the `NotionListPages
 ` component in a Langflow flow and passing to the Prompt component:
@@ -157,6 +157,7 @@ Here's an example of how you can use the `NotionListPages
 
 In this example, the `NotionListPages
 ` component is used to retrieve specific pages from a Notion database based on the provided filters and sorting options. The retrieved data can then be processed further in the subsequent components of the flow.
+</Admonition>
 
 ## Best Practices
 

@@ -97,7 +97,7 @@ class NotionPageCreator(CustomComponent):
             raise Exception(error_message)
 ```
 
-## Example Usage
+<Admonition type="info" title="Example Usage">
 
 Example of using the `AddContentToPage` component in a Langflow flow using a Markdown as input:
 
@@ -111,6 +111,8 @@ Example of using the `AddContentToPage` component in a Langflow flow using a Mar
 />
 
 In this example, the `AddContentToPage` component connects to a `MarkdownLoader` component to provide the markdown text input. The converted Notion blocks are appended to the specified Notion page using the provided `block_id` and `notion_secret`.
+
+</Admonition>
 
 ## Best Practices
 
