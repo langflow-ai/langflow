@@ -7,6 +7,8 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 Langflow allows you to extend its functionality with custom components. The `NotionUserList` component is designed to retrieve users from Notion. It provides a convenient way to integrate Notion user data into your Langflow workflows.
 
+[Notion Reference](https://developers.notion.com/reference/get-users)
+
 > **Component Functionality**
 >
 > The `NotionUserList` component enables you to:
@@ -28,15 +30,17 @@ Here's the code for the `NotionUserList` component:
 ```python
 import requests
 from typing import List
+
 from langflow import CustomComponent
 from langflow.schema import Record
+
 
 class NotionUserList(CustomComponent):
     display_name = "List Users [Notion]"
     description = "Retrieve users from Notion."
-    documentation: str = "https://developers.notion.com/reference/get-users"
+    documentation: str = "https://docs.langflow.org/integrations/notion/list-users"
     icon = "NotionDirectoryLoader"
-
+    
     def build_config(self):
         return {
             "notion_secret": {
@@ -47,34 +51,44 @@ class NotionUserList(CustomComponent):
             },
         }
 
-    def build(self, notion_secret: str) -> List[Record]:
+    def build(
+        self,
+        notion_secret: str,
+    ) -> List[Record]:
         url = "https://api.notion.com/v1/users"
         headers = {
             "Authorization": f"Bearer {notion_secret}",
             "Notion-Version": "2022-06-28",
         }
+
         response = requests.get(url, headers=headers)
         response.raise_for_status()
+
         data = response.json()
         results = data['results']
+
         records = []
         for user in results:
             id = user['id']
             type = user['type']
             name = user.get('name', '')
             avatar_url = user.get('avatar_url', '')
+
             record_data = {
                 "id": id,
                 "type": type,
                 "name": name,
                 "avatar_url": avatar_url,
             }
+
             output = "User:\n"
             for key, value in record_data.items():
                 output += f"{key.replace('_', ' ').title()}: {value}\n"
             output += "________________________\n"
+
             record = Record(text=output, data=record_data)
             records.append(record)
+
         self.status = "\n".join(record.text for record in records)
         return records
 ```

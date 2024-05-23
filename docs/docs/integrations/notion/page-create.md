@@ -7,6 +7,8 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 Langflow allows you to extend its functionality with custom components. The `NotionPageCreator` component is designed to create pages in a Notion database. It provides a convenient way to integrate Notion page creation into your Langflow workflows.
 
+[Notion Reference](https://developers.notion.com/reference/patch-block-children)
+
 <Admonition type="tip" title="Component Functionality">
 The `NotionPageCreator` component enables you to:
 - Create new pages in a specified Notion database
@@ -29,10 +31,17 @@ To use the `NotionPageCreator` component in a Langflow flow, follow these steps:
 Here's the code block for the `NotionPageCreator` component:
 
 ```python
+import json
+from typing import Optional
+
+import requests
+from langflow.custom import CustomComponent
+
+
 class NotionPageCreator(CustomComponent):
     display_name = "Create Page [Notion]"
     description = "A component for creating Notion pages."
-    documentation: str = "https://developers.notion.com/reference/post-database-query"
+    documentation: str = "https://docs.langflow.org/integrations/notion/page-create"
     icon = "NotionDirectoryLoader"
 
     def build_config(self):
@@ -60,7 +69,7 @@ class NotionPageCreator(CustomComponent):
         database_id: str,
         notion_secret: str,
         properties: str = '{"Task name": {"id": "title", "type": "title", "title": [{"type": "text", "text": {"content": "Send Notion Components to LF", "link": null}}]}}',
-    ) -> Record:
+    ) -> str:
         if not database_id or not properties:
             raise ValueError("Invalid input. Please provide 'database_id' and 'properties'.")
 
@@ -74,22 +83,17 @@ class NotionPageCreator(CustomComponent):
             "parent": {"database_id": database_id},
             "properties": json.loads(properties),
         }
-        
+
         response = requests.post("https://api.notion.com/v1/pages", headers=headers, json=data)
 
         if response.status_code == 200:
-            response = response.json()
-            page_id = response["id"]
-            page_url = response["url"]
-            return_message = f"Successfully created Notion page with ID: {page_id}\n Page URL: {page_url}"
-            self.status=return_message
-            
-            return Record(text=return_message, page_id=page_id, url=page_url)
+            page_id = response.json()["id"]
+            self.status = f"Successfully created Notion page with ID: {page_id}\n {str(response.json())}"
+            return response.json()
         else:
             error_message = f"Failed to create Notion page. Status code: {response.status_code}, Error: {response.text}"
             self.status = error_message
             raise Exception(error_message)
-        return Record(text="Not able to connect to notion")
 ```
 
 <Admonition type="info" title="Example Usage">

@@ -7,6 +7,8 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 Langflow allows you to extend its functionality with custom components. The `NotionPageContent` component is designed to retrieve the content of a Notion page as plain text. It provides a convenient way to integrate Notion page content into your Langflow workflows.
 
+[Notion Reference](https://developers.notion.com/reference/get-page)
+
 > **Component Functionality**
 >
 > The `NotionPageContent` component enables you to:
@@ -30,13 +32,15 @@ Here's the code block for the `NotionPageContent` component:
 ```python
 import requests
 from typing import Dict, Any
+
 from langflow import CustomComponent
 from langflow.schema import Record
+
 
 class NotionPageContent(CustomComponent):
     display_name = "Page Content Viewer [Notion]"
     description = "Retrieve the content of a Notion page as plain text."
-    documentation: str = "https://developers.notion.com/reference/get-page"
+    documentation: str = "https://docs.langflow.org/integrations/notion/page-content-viewer"
     icon = "NotionDirectoryLoader"
 
     def build_config(self):
@@ -54,18 +58,25 @@ class NotionPageContent(CustomComponent):
             },
         }
 
-    def build(self, page_id: str, notion_secret: str) -> Record:
+    def build(
+        self,
+        page_id: str,
+        notion_secret: str,
+    ) -> Record:
         blocks_url = f"https://api.notion.com/v1/blocks/{page_id}/children?page_size=100"
         headers = {
             "Authorization": f"Bearer {notion_secret}",
-            "Notion-Version": "2022-06-28", # Use the latest supported version
+            "Notion-Version": "2022-06-28",  # Use the latest supported version
         }
+
         # Retrieve the child blocks
         blocks_response = requests.get(blocks_url, headers=headers)
         blocks_response.raise_for_status()
         blocks_data = blocks_response.json()
+
         # Parse the blocks and extract the content as plain text
         content = self.parse_blocks(blocks_data["results"])
+
         self.status = content
         return Record(data={"content": content}, text=content)
 
