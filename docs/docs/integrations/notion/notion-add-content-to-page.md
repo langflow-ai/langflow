@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# AddContentToPage Component in Langflow
+# Add Content To Page
 
 Langflow allows extending its functionality with custom components like `AddContentToPage`, which converts markdown text to Notion blocks and appends them to a Notion page.
 

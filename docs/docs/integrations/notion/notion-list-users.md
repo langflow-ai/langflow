@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# NotionUserList Component in Langflow
+# User List
 
 Langflow allows you to extend its functionality with custom components. The `NotionUserList` component is designed to retrieve users from Notion. It provides a convenient way to integrate Notion user data into your Langflow workflows.
 

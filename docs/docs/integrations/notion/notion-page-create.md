@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# NotionPageCreator Component in Langflow
+# Page Create
 
 Langflow allows you to extend its functionality with custom components. The `NotionPageCreator` component is designed to create pages in a Notion database. It provides a convenient way to integrate Notion page creation into your Langflow workflows.
 

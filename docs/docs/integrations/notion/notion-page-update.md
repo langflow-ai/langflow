@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# NotionPageUpdate Component in Langflow
+# Page Update
 
 Langflow allows you to extend its functionality with custom components. The `NotionPageUpdate` component is designed to update the properties of a Notion page. It provides a convenient way to integrate updating Notion page properties into your Langflow workflows.
 

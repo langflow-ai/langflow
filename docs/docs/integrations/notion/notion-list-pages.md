@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# NotionDatabaseQuery Component in Langflow
+# Database Query
 
 Langflow allows you to extend its functionality with custom components. The `NotionDatabaseQuery` component is designed to query a Notion database with filtering and sorting. It provides a convenient way to integrate Notion database querying capabilities into your Langflow workflows.
 

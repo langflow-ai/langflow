@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# NotionDatabaseProperties Component in Langflow
+# Database Properties
 
 Langflow allows you to extend its functionality with custom components. The `NotionDatabaseProperties` component is designed to retrieve properties of a Notion database. It provides a convenient way to integrate Notion database information into your Langflow workflows.
 
