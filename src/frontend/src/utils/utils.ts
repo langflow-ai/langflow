@@ -62,7 +62,7 @@ export function normalCaseToSnakeCase(str: string): string {
 
 export function toTitleCase(
   str: string | undefined,
-  isNodeField?: boolean,
+  isNodeField?: boolean
 ): string {
   if (!str) return "";
   let result = str
@@ -71,7 +71,7 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+          word[0].toUpperCase() + word.slice(1).toLowerCase()
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -84,7 +84,7 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+          word[0].toUpperCase() + word.slice(1).toLowerCase()
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -124,7 +124,7 @@ export function groupByFamily(
   data: APIDataType,
   baseClasses: string,
   left: boolean,
-  flow?: NodeType[],
+  flow?: NodeType[]
 ): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
   let arrOfPossibleInputs: Array<{
@@ -150,7 +150,7 @@ export function groupByFamily(
         baseClassesSet.has(template.type)) ||
         (template.input_types &&
           template.input_types.some((inputType) =>
-            baseClassesSet.has(inputType),
+            baseClassesSet.has(inputType)
           )))
     );
   };
@@ -170,7 +170,7 @@ export function groupByFamily(
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
           nodeData.node!.base_classes.some((baseClass) =>
-            baseClassesSet.has(baseClass),
+            baseClassesSet.has(baseClass)
           ), //seta como anterior ou verifica se o node tem base class
         displayName: nodeData.node?.display_name,
       });
@@ -187,10 +187,10 @@ export function groupByFamily(
       if (!foundNode) {
         foundNode = {
           hasBaseClassInTemplate: Object.values(node!.template).some(
-            checkBaseClass,
+            checkBaseClass
           ),
           hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
-            baseClassesSet.has(baseClass),
+            baseClassesSet.has(baseClass)
           ),
           displayName: node?.display_name,
         };
@@ -247,7 +247,7 @@ export function getRandomDescription(): string {
 export function getRandomName(
   retry: number = 0,
   noSpace: boolean = false,
-  maxRetries: number = 3,
+  maxRetries: number = 3
 ): string {
   const left: string[] = ADJECTIVES;
   const right: string[] = NOUNS;
@@ -326,7 +326,7 @@ export function getChatInputField(flowState?: FlowState) {
 export function getPythonApiCode(
   flowId: string,
   isAuth: boolean,
-  tweaksBuildedObject,
+  tweaksBuildedObject
 ): string {
   const tweaksObject = tweaksBuildedObject[0];
   return `import requests
@@ -381,10 +381,10 @@ print(run_flow(message=message, flow_id=FLOW_ID, tweaks=TWEAKS${
  * @param {boolean} isAuth - If the API is authenticated
  * @returns {string} - The curl code
  */
-export function getCurlCode(
+export function getCurlRunCode(
   flowId: string,
   isAuth: boolean,
-  tweaksBuildedObject,
+  tweaksBuildedObject
 ): string {
   const tweaksObject = tweaksBuildedObject[0];
 
@@ -399,6 +399,18 @@ export function getCurlCode(
   "output_type": "chat",
   "input_type": "chat",
   "tweaks": ${JSON.stringify(tweaksObject, null, 2)}}'
+  `;
+}
+
+export function getCurlWebhookCode(flowId: string, isAuth: boolean): string {
+  return `curl -X POST \\
+  ${window.location.protocol}//${
+    window.location.host
+  }/api/v1/webhook/${flowId} \\
+  -H 'Content-Type: application/json'\\${
+    !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
+  }
+  -d '{"any": "data"}'
   `;
 }
 
@@ -445,7 +457,7 @@ result = run_flow_from_json(flow="${flowName}.json",
 export function getWidgetCode(
   flowId: string,
   flowName: string,
-  isAuth: boolean,
+  isAuth: boolean
 ): string {
   return `<script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@1.0_alpha/dist/build/static/js/bundle.min.js"></script>
 
@@ -485,46 +497,14 @@ export function truncateDisplayName(name: string): string {
   return name;
 }
 
-export function tabsArray(codes: string[], method: number) {
-  if (!method) return;
-  if (method === 0) {
-    return [
-      {
-        name: "cURL",
-        mode: "bash",
-        image: "https://curl.se/logo/curl-symbol-transparent.png",
-        language: "sh",
-        code: codes[0],
-      },
-      {
-        name: "Python API",
-        mode: "python",
-        image:
-          "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
-        language: "py",
-        code: codes[1],
-      },
-      {
-        name: "Python Code",
-        mode: "python",
-        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-        language: "py",
-        code: codes[2],
-      },
-      {
-        name: "Chat Widget HTML",
-        description:
-          "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
-        mode: "html",
-        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-        language: "py",
-        code: codes[3],
-      },
-    ];
-  }
-  return [
+export function createTabsArray(
+  codes,
+  includeWebhookCurl = false,
+  includeTweaks = false
+) {
+  const tabs = [
     {
-      name: "cURL",
+      name: "Run cURL",
       mode: "bash",
       image: "https://curl.se/logo/curl-symbol-transparent.png",
       language: "sh",
@@ -536,14 +516,14 @@ export function tabsArray(codes: string[], method: number) {
       image:
         "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
       language: "py",
-      code: codes[1],
+      code: codes[2],
     },
     {
       name: "Python Code",
       mode: "python",
-      language: "py",
       image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-      code: codes[2],
+      language: "py",
+      code: codes[3],
     },
     {
       name: "Chat Widget HTML",
@@ -551,17 +531,32 @@ export function tabsArray(codes: string[], method: number) {
         "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
       mode: "html",
       image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-      language: "py",
-      code: codes[3],
+      language: "html",
+      code: codes[4],
     },
-    {
+  ];
+
+  if (includeWebhookCurl) {
+    tabs.splice(1, 0, {
+      name: "Webhook cURL",
+      mode: "bash",
+      image: "https://curl.se/logo/curl-symbol-transparent.png",
+      language: "sh",
+      code: codes[1],
+    });
+  }
+
+  if (includeTweaks) {
+    tabs.push({
       name: "Tweaks",
       mode: "python",
       image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
       language: "py",
-      code: codes[4],
-    },
-  ];
+      code: codes[5],
+    });
+  }
+
+  return tabs;
 }
 
 export function checkLocalStorageKey(key: string): boolean {
@@ -570,7 +565,7 @@ export function checkLocalStorageKey(key: string): boolean {
 
 export function IncrementObjectKey(
   object: object,
-  key: string,
+  key: string
 ): { newKey: string; increment: number } {
   let count = 1;
   const type = removeCountFromString(key);
@@ -642,7 +637,7 @@ export function getSetFromObject(obj: object, key?: string): Set<string> {
 
 export function getFieldTitle(
   template: APITemplateType,
-  templateField: string,
+  templateField: string
 ): string {
   return template[templateField].display_name
     ? template[templateField].display_name!
@@ -708,7 +703,7 @@ export function isTimeStampString(str: string): boolean {
 
 export function extractColumnsFromRows(
   rows: object[],
-  mode: "intersection" | "union",
+  mode: "intersection" | "union"
 ): (ColDef<any> | ColGroupDef<any>)[] {
   const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
   if (rows.length === 0) {
