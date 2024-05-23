@@ -20,15 +20,15 @@ import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
-import { useGlobalVariablesStore } from "./stores/globalVariables";
+import { useGlobalVariablesStore } from "./stores/globalVariablesStore/globalVariables";
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
 export default function App() {
   const removeFromTempNotificationList = useAlertStore(
-    (state) => state.removeFromTempNotificationList
+    (state) => state.removeFromTempNotificationList,
   );
   const tempNotificationList = useAlertStore(
-    (state) => state.tempNotificationList
+    (state) => state.tempNotificationList,
   );
   const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
@@ -46,7 +46,7 @@ export default function App() {
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const setGlobalVariables = useGlobalVariablesStore(
-    (state) => state.setGlobalVariables
+    (state) => state.setGlobalVariables,
   );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const navigate = useNavigate();
