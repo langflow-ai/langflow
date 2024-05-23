@@ -69,7 +69,7 @@ class MonitorService(Service):
         valid: Optional[bool] = None,
         order_by: Optional[str] = "timestamp",
     ):
-        query = "SELECT id, flow_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
+        query = "SELECT index,flow_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
         conditions = []
         if flow_id:
             conditions.append(f"flow_id = '{flow_id}'")
@@ -109,6 +109,7 @@ class MonitorService(Service):
 
     def get_messages(
         self,
+        flow_id: Optional[str] = None,
         sender: Optional[str] = None,
         sender_name: Optional[str] = None,
         session_id: Optional[str] = None,
@@ -116,7 +117,7 @@ class MonitorService(Service):
         order: Optional[str] = "DESC",
         limit: Optional[int] = None,
     ):
-        query = "SELECT sender_name, sender, session_id, message, artifacts, timestamp FROM messages"
+        query = "SELECT index, flow_id, sender_name, sender, session_id, message, artifacts, timestamp FROM messages"
         conditions = []
         if sender:
             conditions.append(f"sender = '{sender}'")
@@ -124,6 +125,8 @@ class MonitorService(Service):
             conditions.append(f"sender_name = '{sender_name}'")
         if session_id:
             conditions.append(f"session_id = '{session_id}'")
+        if flow_id:
+            conditions.append(f"flow_id = '{flow_id}'")
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
@@ -146,8 +149,9 @@ class MonitorService(Service):
         target: Optional[str] = None,
         status: Optional[str] = None,
         order_by: Optional[str] = "timestamp",
+        flow_id: Optional[str] = None,
     ):
-        query = "SELECT source, target, target_args, status, error, timestamp FROM transactions"
+        query = "SELECT index,flow_id, source, target, target_args, status, error, timestamp FROM transactions"
         conditions = []
         if source:
             conditions.append(f"source = '{source}'")
@@ -155,6 +159,8 @@ class MonitorService(Service):
             conditions.append(f"target = '{target}'")
         if status:
             conditions.append(f"status = '{status}'")
+        if flow_id:
+            conditions.append(f"flow_id = '{flow_id}'")
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)

@@ -11,6 +11,13 @@ body {
   text-align: center;
 }
 
+.label {
+  user-select: none;
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none;
+}
+
 .react-flow__node {
   width: auto;
   height: auto;
@@ -76,6 +83,25 @@ body {
   height: 8px !important;
   border-radius: 10px;
 }
+*::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #f1f1f1 !important;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #ccc !important;
+  border-radius: 999px !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #bbb !important;
+}
 
 .jv-indent::-webkit-scrollbar-track {
   background-color: #f1f1f1 !important;
@@ -110,4 +136,31 @@ body {
 
 .json-view-flow .json-view {
   background-color: #bbb !important;
+}
+
+.ag-body-horizontal-scroll-viewport,
+.ag-body-vertical-scroll-viewport {
+  cursor: auto;
+}
+
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-track,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar-track {
+  background-color: #f1f1f1;
+}
+
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+  border-radius: 999px;
+}
+
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb:hover,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb:hover {
+  background-color: #bbb;
 }

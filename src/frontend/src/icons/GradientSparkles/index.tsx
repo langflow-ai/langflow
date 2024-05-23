@@ -56,7 +56,11 @@ export const GradientGroup = (props) => {
           </linearGradient>
         </defs>
       </svg>
-      <ForwardedIconComponent name="Combine" stroke="url(#grad3)" {...props} />
+      <ForwardedIconComponent
+        name="Combine"
+        stroke={`${props.disabled ? "#64748B" : "url(#grad3)"}`}
+        {...props}
+      />
     </>
   );
 };

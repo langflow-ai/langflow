@@ -18,12 +18,12 @@ export default function CodeAreaComponent({
   setOpen,
 }: CodeAreaComponentType) {
   const [myValue, setMyValue] = useState(
-    typeof value == "string" ? value : JSON.stringify(value)
+    typeof value == "string" ? value : JSON.stringify(value),
   );
   useEffect(() => {
     if (disabled && myValue !== "") {
       setMyValue("");
-      onChange("");
+      onChange("", true);
     }
   }, [disabled]);
 

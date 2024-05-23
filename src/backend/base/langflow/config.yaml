@@ -224,11 +224,6 @@ wrappers:
     documentation: ""
   SQLDatabase:
     documentation: ""
-output_parsers:
-  StructuredOutputParser:
-    documentation: "https://python.langchain.com/docs/modules/model_io/output_parsers/structured"
-  ResponseSchema:
-    documentation: "https://python.langchain.com/docs/modules/model_io/output_parsers/structured"
 custom_components:
   CustomComponent:
     documentation: "https://docs.langflow.org/guidelines/custom-component"

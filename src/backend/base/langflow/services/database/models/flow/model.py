@@ -1,7 +1,7 @@
 # Path: src/backend/langflow/services/database/models/flow/model.py
 
 import warnings
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Dict, Optional
 from uuid import UUID, uuid4
 
@@ -13,6 +13,7 @@ from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 from langflow.schema.schema import Record
 
 if TYPE_CHECKING:
+    from langflow.services.database.models.folder import Folder
     from langflow.services.database.models.user import User
 
 
@@ -23,8 +24,8 @@ class FlowBase(SQLModel):
     icon_bg_color: Optional[str] = Field(default=None, nullable=True)
     data: Optional[Dict] = Field(default=None, nullable=True)
     is_component: Optional[bool] = Field(default=False, nullable=True)
-    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow, nullable=True)
-    folder: Optional[str] = Field(default=None, nullable=True)
+    updated_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
+    folder_id: Optional[UUID] = Field(default=None, nullable=True)
 
     @field_validator("icon_bg_color")
     def validate_icon_bg_color(cls, v):
@@ -112,6 +113,8 @@ class Flow(FlowBase, table=True):
     data: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
     user_id: Optional[UUID] = Field(index=True, foreign_key="user.id", nullable=True)
     user: "User" = Relationship(back_populates="flows")
+    folder_id: Optional[UUID] = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
+    folder: Optional["Folder"] = Relationship(back_populates="flows")
 
     def to_record(self):
         serialized = self.model_dump()
@@ -128,14 +131,17 @@ class Flow(FlowBase, table=True):
 
 class FlowCreate(FlowBase):
     user_id: Optional[UUID] = None
+    folder_id: Optional[UUID] = None
 
 
 class FlowRead(FlowBase):
     id: UUID
     user_id: Optional[UUID] = Field()
+    folder_id: Optional[UUID] = Field()
 
 
 class FlowUpdate(SQLModel):
     name: Optional[str] = None
     description: Optional[str] = None
     data: Optional[Dict] = None
+    folder_id: Optional[UUID] = None

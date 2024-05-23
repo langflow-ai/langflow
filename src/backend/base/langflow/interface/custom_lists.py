@@ -1,7 +1,7 @@
 import inspect
 from typing import Any
 
-from langchain import llms, memory, requests, text_splitter
+from langchain import llms, memory, text_splitter
 from langchain_community import agent_toolkits, document_loaders, embeddings
 from langchain_community.chat_models import AzureChatOpenAI, ChatAnthropic, ChatOpenAI, ChatVertexAI
 
@@ -43,8 +43,6 @@ memory_type_to_cls_dict: dict[str, Any] = {
     memory_name: import_class(f"langchain.memory.{memory_name}") for memory_name in memory.__all__
 }
 
-# Wrappers
-wrapper_type_to_cls_dict: dict[str, Any] = {wrapper.__name__: wrapper for wrapper in [requests.RequestsWrapper]}
 
 # Embeddings
 embedding_type_to_cls_dict: dict[str, Any] = {

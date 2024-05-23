@@ -14,7 +14,6 @@ from langflow.field_typing import (
     BaseLLM,
     BaseLoader,
     BaseMemory,
-    BaseOutputParser,
     BasePromptTemplate,
     BaseRetriever,
     Callable,

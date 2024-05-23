@@ -29,7 +29,7 @@ from langflow.services.deps import get_chat_service, get_session, get_session_se
 from langflow.services.monitor.utils import log_vertex_build
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.types import ChatVertex
+    from langflow.graph.vertex.types import InterfaceVertex
     from langflow.services.session.service import SessionService
 
 router = APIRouter(tags=["Chat"])
@@ -288,7 +288,7 @@ async def build_vertex_stream(
                     if not graph:
                         raise ValueError(f"No graph found for {flow_id}.")
 
-                vertex: "ChatVertex" = graph.get_vertex(vertex_id)
+                vertex: "InterfaceVertex" = graph.get_vertex(vertex_id)
                 if not hasattr(vertex, "stream"):
                     raise ValueError(f"Vertex {vertex_id} does not support streaming")
                 if isinstance(vertex._built_result, str) and vertex._built_result:

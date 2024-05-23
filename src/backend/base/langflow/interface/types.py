@@ -8,7 +8,6 @@ from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.llms.base import llm_creator
 from langflow.interface.memories.base import memory_creator
-from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.retrievers.base import retriever_creator
 from langflow.interface.text_splitters.base import textsplitter_creator
 from langflow.interface.toolkits.base import toolkits_creator
@@ -48,7 +47,6 @@ def build_langchain_types_dict():  # sourcery skip: dict-assign-update-to-union
         documentloader_creator,
         textsplitter_creator,
         # utility_creator,
-        output_parser_creator,
         retriever_creator,
     ]
 

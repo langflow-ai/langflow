@@ -16,7 +16,7 @@ export default function TextAreaComponent({
   // Clear text area
   useEffect(() => {
     if (disabled && value !== "") {
-      onChange("");
+      onChange("", true);
     }
   }, [disabled]);
 

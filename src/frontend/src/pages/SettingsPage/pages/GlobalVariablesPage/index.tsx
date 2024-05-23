@@ -46,7 +46,7 @@ export default function GlobalVariablesPage() {
       name: string;
       default_fields: string | undefined;
     }[]
-  >();
+  >([]);
 
   useEffect(() => {
     const rows: Array<{
@@ -170,17 +170,23 @@ export default function GlobalVariablesPage() {
       </div>
 
       <div className="flex h-full w-full flex-col justify-between pb-8">
-        <TableComponent
-          overlayNoRowsTemplate="No data available"
-          onSelectionChanged={(event: SelectionChangedEvent) => {
-            setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
-          }}
-          rowSelection="multiple"
-          suppressRowClickSelection={true}
-          pagination={true}
-          columnDefs={colDefs}
-          rowData={rowData}
-        />
+        <Card x-chunk="dashboard-04-chunk-2" className="h-full pt-4">
+          <CardContent className="h-full">
+            <TableComponent
+              overlayNoRowsTemplate="No data available"
+              onSelectionChanged={(event: SelectionChangedEvent) => {
+                setSelectedRows(
+                  event.api.getSelectedRows().map((row) => row.name),
+                );
+              }}
+              rowSelection="multiple"
+              suppressRowClickSelection={true}
+              pagination={true}
+              columnDefs={colDefs}
+              rowData={rowData}
+            />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

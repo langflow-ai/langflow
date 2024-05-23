@@ -2,7 +2,7 @@ import { Transition } from "@headlessui/react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useEffect, useMemo, useRef, useState } from "react";
 import IOModal from "../../modals/IOModal";
-import ApiModal from "../../modals/apiModal";
+import ApiModal from "../../modals/apiModal/views";
 import ShareModal from "../../modals/shareModal";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -36,8 +36,8 @@ export default function FlowToolbar(): JSX.Element {
   const hasIO = useFlowStore((state) => state.hasIO);
   const hasStore = useStoreStore((state) => state.hasStore);
   const validApiKey = useStoreStore((state) => state.validApiKey);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
 
   const prevNodesRef = useRef<any[] | undefined>();
 

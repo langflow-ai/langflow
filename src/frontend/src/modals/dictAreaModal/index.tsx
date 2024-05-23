@@ -18,6 +18,10 @@ export default function DictAreaModal({
   children,
   onChange,
   value,
+}: {
+  children: JSX.Element;
+  onChange?: (value: Object) => void;
+  value: Object;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const isDark = useDarkStore((state) => state.dark);
@@ -29,9 +33,13 @@ export default function DictAreaModal({
 
   return (
     <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
-      <BaseModal.Trigger>{children}</BaseModal.Trigger>
-      <BaseModal.Header description={CODE_DICT_DIALOG_SUBTITLE}>
-        <span className="pr-2">Edit Dictionary</span>
+      <BaseModal.Trigger className="h-full">{children}</BaseModal.Trigger>
+      <BaseModal.Header
+        description={onChange ? CODE_DICT_DIALOG_SUBTITLE : null}
+      >
+        <span className="pr-2">
+          {onChange ? "Edit Dictionary" : "View Dictionary"}
+        </span>
         <IconComponent
           name="BookMarked"
           className="h-6 w-6 pl-1 text-primary "
@@ -44,7 +52,7 @@ export default function DictAreaModal({
             theme="vscode"
             dark={isDark}
             className={!isDark ? "json-view-white" : "json-view-dark"}
-            editable
+            editable={!!onChange}
             enableClipboard
             onEdit={(edit) => {
               ref.current = edit["src"];
@@ -54,19 +62,21 @@ export default function DictAreaModal({
             }}
             src={ref.current}
           />
-          <div className="flex h-fit w-full justify-end">
-            <Button
-              data-testid="save-dict-button"
-              className="mt-3"
-              type="submit"
-              onClick={() => {
-                onChange(ref.current);
-                setOpen(false);
-              }}
-            >
-              Save
-            </Button>
-          </div>
+          {onChange && (
+            <div className="flex h-fit w-full justify-end">
+              <Button
+                data-testid="save-dict-button"
+                className="mt-3"
+                type="submit"
+                onClick={() => {
+                  onChange(ref.current);
+                  setOpen(false);
+                }}
+              >
+                Save
+              </Button>
+            </div>
+          )}
         </div>
       </BaseModal.Content>
     </BaseModal>
