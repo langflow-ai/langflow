@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
 
@@ -6,13 +6,15 @@ import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from langflow.api.utils import remove_api_keys, validate_is_component
-from langflow.api.v1.schemas import FlowListCreate, FlowListRead
+from langflow.api.v1.schemas import FlowListCreate, FlowListIds, FlowListRead
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
+from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
 from langflow.services.settings.service import SettingsService
@@ -33,7 +35,12 @@ def create_flow(
         flow.user_id = current_user.id
 
     db_flow = Flow.model_validate(flow, from_attributes=True)
-    db_flow.updated_at = datetime.utcnow()
+    db_flow.updated_at = datetime.now(timezone.utc)
+
+    if db_flow.folder_id is None:
+        default_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
+        if default_folder:
+            db_flow.folder_id = default_folder.id
 
     session.add(db_flow)
     session.commit()
@@ -64,12 +71,9 @@ def read_flows(
         flow_ids = [flow.id for flow in flows]
         # with the session get the flows that DO NOT have a user_id
         try:
-            example_flows = session.exec(
-                select(Flow).where(
-                    Flow.user_id == None,  # noqa
-                    Flow.folder == STARTER_FOLDER_NAME,
-                )
-            ).all()
+            folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+
+            example_flows = folder.flows if folder else []
             for example_flow in example_flows:
                 if example_flow.id not in flow_ids:
                     flows.append(example_flow)  # type: ignore
@@ -128,7 +132,11 @@ def update_flow(
     for key, value in flow_data.items():
         if value is not None:
             setattr(db_flow, key, value)
-    db_flow.updated_at = datetime.utcnow()
+    db_flow.updated_at = datetime.now(timezone.utc)
+    if db_flow.folder_id is None:
+        default_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
+        if default_folder:
+            db_flow.folder_id = default_folder.id
     session.add(db_flow)
     session.commit()
     session.refresh(db_flow)
@@ -208,3 +216,31 @@ async def download_file(
     """Download all flows as a file."""
     flows = read_flows(current_user=current_user, session=session, settings_service=settings_service)
     return FlowListRead(flows=flows)
+
+
+@router.post("/multiple_delete/")
+async def delete_multiple_flows(
+    flow_ids: FlowListIds, user: User = Depends(get_current_active_user), db: Session = Depends(get_session)
+):
+    """
+    Delete multiple flows by their IDs.
+
+    Args:
+        flow_ids (List[str]): The list of flow IDs to delete.
+        user (User, optional): The user making the request. Defaults to the current active user.
+
+    Returns:
+        dict: A dictionary containing the number of flows deleted.
+
+    """
+    try:
+        deleted_flows = db.exec(
+            select(Flow).where(col(Flow.id).in_(flow_ids.flow_ids)).where(Flow.user_id == user.id)
+        ).all()
+        for flow in deleted_flows:
+            db.delete(flow)
+        db.commit()
+        return {"deleted": len(deleted_flows)}
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

@@ -22,7 +22,7 @@ class ApiKeyBase(SQLModel):
 
 class ApiKey(ApiKeyBase, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
-    created_at: datetime = Field(
+    created_at: Optional[datetime] = Field(
         default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     )
     api_key: str = Field(index=True, unique=True)

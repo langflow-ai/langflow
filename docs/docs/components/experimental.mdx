@@ -2,23 +2,23 @@ import Admonition from '@theme/Admonition';
 
 # Experimental
 
-Experimental are components that are currently in a beta phase. This means they have undergone initial development and testing but have not yet reached a stable or fully supported status. Users are encouraged to explore these components, provide feedback, and report any issues encountered during their usage. 
+Components in the experimental phase are currently in beta. They have been initially developed and tested but haven't yet achieved a stable or fully supported status. We encourage users to explore these components, provide feedback, and report any issues encountered.
 
 ### Clear Message History Component
 
-This component is designed to clear the message history associated with a specific session ID.
+This component clears the message history for a specified session ID.
 
-**Beta:** This component is currently in beta.
+**Beta:** This component is in beta.
 
 **Parameters**
 
 - **Session ID:**
   - **Display Name:** Session ID
-  - **Info:** The session ID to clear the message history.
+  - **Info:** Clears the message history for this ID.
 
 **Usage**
 
-To use this component, provide the session ID for which you want to clear the message history.
+Provide the session ID to clear its message history.
 
 ---
 
@@ -30,68 +30,68 @@ This component extracts specified keys from a record.
 
 - **Record:**
   - **Display Name:** Record
-  - **Info:** The record from which to extract the keys.
+  - **Info:** The record from which to extract keys.
 
 - **Keys:**
   - **Display Name:** Keys
-  - **Info:** The keys to extract from the record.
+  - **Info:** The keys to be extracted.
 
 - **Silent Errors:**
   - **Display Name:** Silent Errors
-  - **Info:** If True, errors will not be raised.
+  - **Info:** Set to true to suppress errors.
   - **Advanced:** True
 
 **Usage**
 
-To use this component, provide the record from which you want to extract keys, specify the keys to extract, and optionally set whether to raise errors for missing keys.
+Provide the record and specify the keys you want to extract. Optionally, enable silent errors for missing keys.
 
 ---
 
 ### Flow as Tool
 
-This component constructs a Tool from a function that runs the loaded Flow.
+This component turns a function running a flow into a Tool.
 
 **Parameters**
 
 - **Flow Name:**
   - **Display Name:** Flow Name
-  - **Info:** The name of the flow to run.
-  - **Options:** List of available flow names.
+  - **Info:** Select the flow to run.
+  - **Options:** List of available flows.
   - **Real-time Refresh:** True
   - **Refresh Button:** True
 
 - **Name:**
   - **Display Name:** Name
-  - **Description:** The name of the tool.
+  - **Description:** The tool's name.
 
 - **Description:**
   - **Display Name:** Description
-  - **Description:** The description of the tool.
+  - **Description:** Describes the tool.
 
 - **Return Direct:**
   - **Display Name:** Return Direct
-  - **Description:** Return the result directly from the Tool.
+  - **Description:** Returns the result directly.
   - **Advanced:** True
 
 **Usage**
 
-To use this component, select the desired flow from the available options, provide a name and description for the tool, and specify whether to return the result directly from the tool.
+Select a flow, name and describe the tool, and decide if you want to return the result directly.
 
 ---
 
 ### Listen
 
-This component listens for a notification.
+This component listens for a specified notification.
 
 **Parameters**
 
 - **Name:**
   - **Display Name:** Name
-  - **Info:** The name of the notification to listen for.
+  - **Info:** The notification to listen for.
 
 **Usage**
 
-To use this component, specify the name of the notification to listen for.
+Specify the notification to listen for.
 
 ---
 
@@ -101,11 +101,13 @@ This component lists all available flows.
 
 **Usage**
 
-To use this component, simply call it without any parameters.
+Call this component without parameters to list all flows.
 
 ---
 
 ### Merge Records
+
+This component merges a list of records.
 
 **Parameters**
 
@@ -114,37 +116,37 @@ To use this component, simply call it without any parameters.
 
 **Usage**
 
-To use this component, provide a list of records to merge.
+Provide the records you want to merge.
 
 ---
 
 ### Notify
 
-This component generates a notification to the Get Notified component.
+This component generates a notification.
 
 **Parameters**
 
 - **Name:**
   - **Display Name:** Name
-  - **Info:** The name of the notification.
+  - **Info:** The notification's name.
 
 - **Record:**
   - **Display Name:** Record
-  - **Info:** The record to store.
+  - **Info:** Optionally, a record to store in the notification.
 
 - **Append:**
   - **Display Name:** Append
-  - **Info:** If True, the record will be appended to the notification.
+  - **Info:** Set to true to append the record to the notification.
 
 **Usage**
 
-To use this component, specify the name of the notification, provide an optional record to store, and indicate whether to append the record to the notification.
+Specify the notification name, provide a record if necessary, and indicate whether to append it.
 
 ---
 
 ### Run Flow
 
-This component runs a flow.
+This component runs a specified flow.
 
 **Parameters**
 
@@ -154,33 +156,33 @@ This component runs a flow.
 
 - **Flow Name:**
   - **Display Name:** Flow Name
-  - **Info:** The name of the flow to run.
-  - **Options:** List of available flow names.
+  - **Info:** Select the flow to run.
+  - **Options:** List of available flows.
   - **Refresh Button:** True
 
 - **Tweaks:**
   - **Display Name:** Tweaks
-  - **Info:** Tweaks to apply to the flow.
+  - **Info:** Modifications to apply to the flow.
 
 **Usage**
 
-To use this component, provide the input value, specify the flow name to run, and optionally provide tweaks to apply to the flow.
+Provide the input value, select the flow, and apply any tweaks.
 
 ---
 
 ### Runnable Executor
 
-This component executes a runnable.
+This component executes a specified runnable.
 
 **Parameters**
 
 - **Input Key:**
   - **Display Name:** Input Key
-  - **Info:** The key to use for the input.
+  - **Info:** The input key.
 
 - **Inputs:**
   - **Display Name:** Inputs
-  - **Info:** The inputs to pass to the runnable.
+  - **Info:** Inputs for the runnable.
 
 - **Runnable:**
   - **Display Name:** Runnable
@@ -188,45 +190,45 @@ This component executes a runnable.
 
 - **Output Key:**
   - **Display Name:** Output Key
-  - **Info:** The key to use for the output.
+  - **Info:** The output key.
 
 **Usage**
 
-To use this component, specify the input key, provide the inputs to pass to the runnable, select the runnable to execute, and optionally specify the output key.
+Specify the input key, provide inputs, select the runnable, and optionally define the output key.
 
 ---
 
 ### SQL Executor
 
- This component executes an SQL query.
+This component executes an SQL query.
 
 **Parameters**
 
 - **Database URL:**
   - **Display Name:** Database URL
-  - **Info:** The URL of the database.
+  - **Info:** The database's URL.
 
 - **Include Columns:**
   - **Display Name:** Include Columns
-  - **Info:** Include columns in the result.
+  - **Info:** Whether to include columns in the result.
 
 - **Passthrough:**
   - **Display Name:** Passthrough
-  - **Info:** If an error occurs, return the query instead of raising an exception.
+  - **Info:** Returns the query instead of raising an exception if an error occurs.
 
 - **Add Error:**
   - **Display Name:** Add Error
-  - **Info:** Add the error to the result.
+  - **Info:** Includes the error in the result.
 
 **Usage**
 
-To use this component, provide the SQL query, specify the database URL, and optionally configure include columns, passthrough, and add error settings.
+Provide the SQL query, specify the database URL, and configure settings for columns, error handling, and passthrough.
 
 ---
 
 ### SubFlow
 
-This component dynamically generates a component from a flow. The output is a list of records with keys 'result' and 'message'.
+This component dynamically generates a tool from a flow.
 
 **Parameters**
 
@@ -236,15 +238,15 @@ This component dynamically generates a component from a flow. The output is a li
 
 - **Flow Name:**
   - **Display Name:** Flow Name
-  - **Info:** The name of the flow to run.
-  - **Options:** List of available flow names.
+  - **Info:** Select the flow to run.
+  - **Options:** List of available flows.
   - **Real Time Refresh:** True
   - **Refresh Button:** True
 
 - **Tweaks:**
   - **Display Name:** Tweaks
-  - **Info:** Tweaks to apply to the flow.
+  - **Info:** Modifications to apply to the flow.
 
 **Usage**
 
-To use this component, specify the flow name and provide any necessary tweaks to apply to the flow.
+Select a flow, apply any necessary tweaks, and generate a tool.

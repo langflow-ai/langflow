@@ -1,4 +1,5 @@
-from typing import Optional, Union
+import warnings
+from typing import List, Optional, Union
 
 from loguru import logger
 
@@ -51,6 +52,7 @@ def get_messages(
                 "sender": row.sender,
                 "sender_name": row.sender_name,
                 "session_id": row.session_id,
+                "timestamp": row.timestamp,
             },
         )
         records.append(record)
@@ -58,7 +60,7 @@ def get_messages(
     return records
 
 
-def add_messages(records: Union[list[Record], Record]):
+def add_messages(records: Union[list[Record], Record], flow_id: Optional[str] = None):
     """
     Add a message to the monitor service.
     """
@@ -74,7 +76,8 @@ def add_messages(records: Union[list[Record], Record]):
 
         messages: list[MessageModel] = []
         for record in records:
-            messages.append(MessageModel.from_record(record))
+            record.timestamp = monitor_service.get_timestamp()
+            messages.append(MessageModel.from_record(record, flow_id=flow_id))
 
         for message in messages:
             try:
@@ -98,3 +101,55 @@ def delete_messages(session_id: str):
     """
     monitor_service = get_monitor_service()
     monitor_service.delete_messages(session_id)
+
+
+def store_message(
+    message: Union[str, Record],
+    session_id: Optional[str] = None,
+    sender: Optional[str] = None,
+    sender_name: Optional[str] = None,
+    flow_id: Optional[str] = None,
+) -> List[Record]:
+    """
+    Stores a message in the memory.
+
+    Args:
+        message (Union[str, Record]): The message to be stored. It can be either a string or a Record object.
+        session_id (Optional[str]): The session ID associated with the message.
+        sender (Optional[str]): The sender ID associated with the message.
+        sender_name (Optional[str]): The name of the sender associated with the message.
+        flow_id (Optional[str]): The flow ID associated with the message. When running from the CustomComponent you can access this using `self.graph.flow_id`.
+
+    Returns:
+        List[Record]: A list of records containing the stored message.
+
+    Raises:
+        ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
+    """
+    if not message:
+        warnings.warn("No message provided.")
+        return []
+
+    if not session_id or not sender or not sender_name:
+        raise ValueError("All of session_id, sender, and sender_name must be provided.")
+
+    if isinstance(message, Record):
+        record = message
+        record.data.update(
+            {
+                "session_id": session_id,
+                "sender": sender,
+                "sender_name": sender_name,
+            }
+        )
+    elif isinstance(message, str):
+        record = Record(
+            data={
+                "text": message,
+                "session_id": session_id,
+                "sender": sender,
+                "sender_name": sender_name,
+            },
+        )
+
+    return add_messages([record], flow_id=flow_id)

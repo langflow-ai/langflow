@@ -1,9 +1,11 @@
 from typing import Optional
 
-from langflow.field_typing import BaseLanguageModel
-from langchain_community.chat_models.openai import ChatOpenAI
+from langchain_openai import ChatOpenAI
+from pydantic.v1 import SecretStr
 
-from langflow.field_typing import NestedDict
+
+from langflow.base.models.openai_constants import MODEL_NAMES
+from langflow.field_typing import BaseLanguageModel, NestedDict
 from langflow.interface.custom.custom_component import CustomComponent
 
 
@@ -24,19 +26,7 @@ class ChatOpenAIComponent(CustomComponent):
                 "advanced": True,
                 "required": False,
             },
-            "model_name": {
-                "display_name": "Model Name",
-                "advanced": False,
-                "required": False,
-                "options": [
-                    "gpt-4-turbo-preview",
-                    "gpt-4-0125-preview",
-                    "gpt-4-1106-preview",
-                    "gpt-4-vision-preview",
-                    "gpt-3.5-turbo-0125",
-                    "gpt-3.5-turbo-1106",
-                ],
-            },
+            "model_name": {"display_name": "Model Name", "advanced": False, "options": MODEL_NAMES},
             "openai_api_base": {
                 "display_name": "OpenAI API Base",
                 "advanced": False,
@@ -64,18 +54,22 @@ class ChatOpenAIComponent(CustomComponent):
         self,
         max_tokens: Optional[int] = 256,
         model_kwargs: NestedDict = {},
-        model_name: str = "gpt-4-1106-preview",
+        model_name: str = "gpt-4o",
         openai_api_base: Optional[str] = None,
         openai_api_key: Optional[str] = None,
         temperature: float = 0.7,
     ) -> BaseLanguageModel:
         if not openai_api_base:
             openai_api_base = "https://api.openai.com/v1"
+        if openai_api_key:
+            api_key = SecretStr(openai_api_key)
+        else:
+            api_key = None
         return ChatOpenAI(
             max_tokens=max_tokens,
             model_kwargs=model_kwargs,
             model=model_name,
             base_url=openai_api_base,
-            api_key=openai_api_key,
+            api_key=api_key,
             temperature=temperature,
         )

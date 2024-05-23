@@ -15,7 +15,7 @@ test("TextAreaModalComponent", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -51,7 +51,7 @@ test("TextAreaModalComponent", async ({ page }) => {
   await page
     .getByTestId("textarea-text")
     .fill(
-      "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!"
+      "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
     );
 
   await page.getByTestId("textarea-text-ExternalLink").click();

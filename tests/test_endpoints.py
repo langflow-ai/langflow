@@ -1,5 +1,5 @@
 import time
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
@@ -393,13 +393,14 @@ def test_various_prompts(client, prompt, expected_input_variables):
 
 
 def test_get_vertices_flow_not_found(client, logged_in_headers):
-    response = client.get("/api/v1/build/nonexistent_id/vertices", headers=logged_in_headers)
-    assert response.status_code == 500  # Or whatever status code you've set for invalid ID
+    uuid = uuid4()
+    response = client.post(f"/api/v1/build/{uuid}/vertices", headers=logged_in_headers)
+    assert response.status_code == 500
 
 
 def test_get_vertices(client, added_flow_with_prompt_and_history, logged_in_headers):
     flow_id = added_flow_with_prompt_and_history["id"]
-    response = client.get(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    response = client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
     assert response.status_code == 200
     assert "ids" in response.json()
     # The response should contain the list in this order
@@ -414,7 +415,8 @@ def test_get_vertices(client, added_flow_with_prompt_and_history, logged_in_head
 
 
 def test_build_vertex_invalid_flow_id(client, logged_in_headers):
-    response = client.post("/api/v1/build/nonexistent_id/vertices/vertex_id", headers=logged_in_headers)
+    uuid = uuid4()
+    response = client.post(f"/api/v1/build/{uuid}/vertices/vertex_id", headers=logged_in_headers)
     assert response.status_code == 500
 
 
@@ -652,7 +654,11 @@ def test_invalid_flow_id(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = "invalid-flow-id"
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = UUID(int=0)
+    response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
     # Check if the error detail is as expected
 
 

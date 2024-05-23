@@ -22,7 +22,10 @@ function ApiInterceptor() {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (error.response?.status === 403 || error.response?.status === 401) {
+        if (
+          error?.response?.status === 403 ||
+          error?.response?.status === 401
+        ) {
           if (!autoLogin) {
             if (error?.config?.url?.includes("github")) {
               return Promise.reject(error);
@@ -44,7 +47,7 @@ function ApiInterceptor() {
         }
         await clearBuildVerticesState(error);
         return Promise.reject(error);
-      }
+      },
     );
 
     const isAuthorizedURL = (url) => {
@@ -61,10 +64,10 @@ function ApiInterceptor() {
         const parsedURL = new URL(url);
 
         const isDomainAllowed = authorizedDomains.some(
-          (domain) => parsedURL.origin === new URL(domain).origin
+          (domain) => parsedURL.origin === new URL(domain).origin,
         );
         const isEndpointAllowed = authorizedEndpoints.some((endpoint) =>
-          parsedURL.pathname.includes(endpoint)
+          parsedURL.pathname.includes(endpoint),
         );
 
         return isDomainAllowed || isEndpointAllowed;
@@ -77,6 +80,18 @@ function ApiInterceptor() {
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
+        const lastUrl = localStorage.getItem("lastUrlCalled");
+
+        if (
+          config?.url === lastUrl &&
+          config?.url !== "/health" &&
+          config?.method === "get"
+        ) {
+          return Promise.reject("Duplicate request");
+        }
+
+        localStorage.setItem("lastUrlCalled", config.url ?? "");
+
         const accessToken = cookies.get("access_token_lf");
         if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
@@ -86,7 +101,7 @@ function ApiInterceptor() {
       },
       (error) => {
         return Promise.reject(error);
-      }
+      },
     );
 
     return () => {
@@ -118,7 +133,7 @@ function ApiInterceptor() {
       if (error?.config?.headers) {
         delete error.config.headers["Authorization"];
         error.config.headers["Authorization"] = `Bearer ${cookies.get(
-          "access_token_lf"
+          "access_token_lf",
         )}`;
         const response = await axios.request(error.config);
         return response;
