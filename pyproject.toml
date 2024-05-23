@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.0a34"
+version = "1.0.0a36"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -73,7 +73,6 @@ pytube = "^15.0.0"
 llama-index = "^0.10.13"
 # unstructured = { extras = ["md"], version = "^0.12.4" }
 dspy-ai = "^2.4.0"
-html2text = "^2024.2.26"
 assemblyai = "^0.23.1"
 litellm = "^1.34.22"
 chromadb = "^0.4.24"

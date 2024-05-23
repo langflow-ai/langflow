@@ -461,7 +461,8 @@ export function getConnectedNodes(
   return nodes.filter((node) => node.id === targetId || node.id === sourceId);
 }
 
-export function convertObjToArray(singleObject: object | string) {
+export function convertObjToArray(singleObject: object | string, type: string) {
+  if (type !== "dict") return [{ "": "" }];
   if (typeof singleObject === "string") {
     singleObject = JSON.parse(singleObject);
   }
@@ -1298,6 +1299,7 @@ export const createNewFlow = (
     data: flowData,
     id: "",
     is_component: flow?.is_component ?? false,
+    folder_id: "",
   };
 };
 
