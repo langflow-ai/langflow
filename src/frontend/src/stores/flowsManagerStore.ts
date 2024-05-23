@@ -205,11 +205,16 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
 
       // Create a new flow with a default name if no flow is provided.
+      const folder_id = useFolderStore.getState().folderUrl;
+      const my_collection_id = useFolderStore.getState().myCollectionId;
 
       if (override) {
         get().deleteComponent(flow!.name);
-        const newFlow = createNewFlow(flowData!, flow!);
-        newFlow.folder_id = useFolderStore.getState().folderUrl;
+        const newFlow = createNewFlow(
+          flowData!,
+          flow!,
+          folder_id || my_collection_id!,
+        );
         const { id } = await saveFlowToDatabase(newFlow);
         newFlow.id = id;
         //setTimeout  to prevent update state with wrong state
@@ -228,8 +233,12 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         // addFlowToLocalState(newFlow);
         return;
       }
-
-      const newFlow = createNewFlow(flowData!, flow!);
+      console.log("folder id", folder_id);
+      const newFlow = createNewFlow(
+        flowData!,
+        flow!,
+        folder_id || my_collection_id!,
+      );
 
       const newName = addVersionToDuplicates(newFlow, get().flows);
 
