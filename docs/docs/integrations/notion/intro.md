@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# Introduction to Notion Integrations in Langflow
+# Introduction to Notion in Langflow
 
 Get ready to revolutionize your workflows with the game-changing Notion integration in Langflow! 🎉 This incredible integration empowers you to seamlessly connect with Notion databases, pages, and users, opening up a world of possibilities for automating tasks and skyrocketing your productivity.
 

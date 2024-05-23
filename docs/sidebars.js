@@ -140,6 +140,7 @@ module.exports = {
           type: "category",
           label: "Notion",
           items: [
+            "integrations/notion/intro",
             "integrations/notion/setup",
             "integrations/notion/search",
             "integrations/notion/list-database-properties",
