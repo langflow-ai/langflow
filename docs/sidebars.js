@@ -132,7 +132,7 @@ module.exports = {
       ],
     },
     {
-      type: "integrations",
+      type: "category",
       label: "Integrations",
       collapsed: false,
       items: [
