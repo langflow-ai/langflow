@@ -1,3 +1,4 @@
+import os
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
@@ -140,7 +141,10 @@ def get_file_path_value(file_path):
     # If the path is not in the cache dir, return empty string
     # This is to prevent access to files outside the cache dir
     # If the path is not a file, return empty string
-    if not path.exists() or not str(path).startswith(user_cache_dir("langflow", "langflow")):
+    if not str(path).startswith(user_cache_dir("langflow", "langflow")):
+        return ""
+
+    if not path.exists():
         return ""
     return file_path
 
