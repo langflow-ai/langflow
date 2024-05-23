@@ -20,7 +20,6 @@ packages = [{ include = "src" }]
 include = ["pyproject.toml", "README.md", "langflow/**/*"]
 documentation = "https://docs.langflow.org"
 
-
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 fastapi = "^0.110.1"
@@ -35,12 +34,10 @@ cachetools = "^5.3.1"
 platformdirs = "^4.2.0"
 python-multipart = "^0.0.7"
 orjson = "3.10.0"
-alembic = "^1.13.0"
 passlib = "^1.7.4"
 discord-py = "^2.3.2"
 soundfile = "^0.12.1"
 ffmpeg = "^1.4"
-
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -55,7 +52,6 @@ markers = ["async_test"]
 namespace_packages = true
 mypy_path = "langflow"
 ignore_missing_imports = true
-
 
 [tool.ruff]
 exclude = ["src/discord/src/alembic/*"]
