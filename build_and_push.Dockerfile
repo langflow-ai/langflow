@@ -78,9 +78,9 @@ RUN $POETRY_HOME/bin/poetry build
 
 # Copy virtual environment and built .tar.gz from builder base
 RUN useradd -m -u 1000 user
+USER user
 # Install the package from the .tar.gz
-RUN python -m pip install /app/dist/*.tar.gz --user
-
+RUN python -m pip install /app/dist/*.tar.gz
 
 ENTRYPOINT ["python", "-m", "langflow", "run"]
 CMD ["--host", "0.0.0.0", "--port", "7860"]
