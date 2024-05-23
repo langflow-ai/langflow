@@ -9,13 +9,13 @@ Langflow allows you to extend its functionality with custom components. The `Not
 
 [Notion Reference](https://developers.notion.com/reference/get-users)
 
-> **Component Functionality**
->
-> The `NotionUserList` component enables you to:
->
-> - Retrieve user data from Notion
-> - Access user information such as ID, type, name, and avatar URL
-> - Integrate Notion user data seamlessly into your Langflow workflows
+<Admonition type="tip" title="Component Functionality">
+ The `NotionUserList` component enables you to:
+
+- Retrieve user data from Notion
+- Access user information such as ID, type, name, and avatar URL
+- Integrate Notion user data seamlessly into your Langflow workflows
+</Admonition>
 
 ## Component Usage
 
@@ -107,23 +107,21 @@ Here's an example of how you can use the `NotionUserList` component in a Langflo
 
 </Admonition>
 
-## Best Practices
+<Admonition type="tip" title="Best Practices">
+ When using the `NotionUserList` component, consider the following best practices:
 
-> **Best Practices**
->
-> When using the `NotionUserList` component, consider the following best practices:
->
-> - Ensure that you have a valid Notion integration token with the necessary permissions to retrieve user data.
-> - Handle the retrieved user data securely and in compliance with Notion's API usage guidelines.
+- Ensure that you have a valid Notion integration token with the necessary permissions to retrieve user data.
+- Handle the retrieved user data securely and in compliance with Notion's API usage guidelines.
+</Admonition>
 
-## Troubleshooting
+<Admonition type="warning" title="Troubleshooting">
 
-> **Troubleshooting**
+ If you encounter any issues while using the `NotionUserList` component, consider the following:
+
+>- Double-check that your Notion integration token is valid and has the required permissions.
 >
-> If you encounter any issues while using the `NotionUserList` component, consider the following:
->
-> - Double-check that your Notion integration token is valid and has the required permissions.
-> - Verify that you have installed the necessary dependencies (`requests`) for the component to function properly.
-> - Check the Notion API documentation for any updates or changes that may affect the component's functionality.
+- Verify that you have installed the necessary dependencies (`requests`) for the component to function properly.
+- Check the Notion API documentation for any updates or changes that may affect the component's functionality.
+</Admonition>
 
 The `NotionUserList` component provides a seamless way to integrate Notion user data into your Langflow workflows. By leveraging this component, you can easily retrieve and utilize user information from Notion, enhancing the capabilities of your Langflow applications. Feel free to explore and experiment with the `NotionUserList` component to unlock new possibilities in your Langflow projects!

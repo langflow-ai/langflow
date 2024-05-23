@@ -10,16 +10,14 @@ Langflow allows you to extend its functionality with custom components. The `Not
 
 [Notion Reference](https://developers.notion.com/reference/post-database-query)
 
-> **Tip**:
->
-> ### Component Functionality
->
-> The `NotionListPages
-` component enables you to:
->
-> - Query a Notion database with custom filters and sorting options
-> - Retrieve specific pages from a Notion database based on the provided criteria
-> - Integrate Notion database data seamlessly into your Langflow workflows
+<Admonition type="tip" title="Component Functionality">
+ The `NotionListPages` component enables you to:
+
+- Query a Notion database with custom filters and sorting options
+- Retrieve specific pages from a Notion database based on the provided criteria
+- Integrate Notion database data seamlessly into your Langflow workflows
+
+</Admonition>
 
 ## Component Usage
 
@@ -159,30 +157,22 @@ In this example, the `NotionListPages
 ` component is used to retrieve specific pages from a Notion database based on the provided filters and sorting options. The retrieved data can then be processed further in the subsequent components of the flow.
 </Admonition>
 
-## Best Practices
+<Admonition type="tip" title="Best Practices">
 
-> **Tip**:
->
-> ### Best Practices
->
-> When using the `NotionListPages
+ When using the `NotionListPages
 ` component, consider the following best practices:
->
-> - Ensure that you have a valid Notion integration token with the necessary permissions to query the desired database.
-> - Construct the `query_payload` JSON string carefully, following the Notion API documentation for filtering and sorting options.
 
-## Troubleshooting
+- Ensure that you have a valid Notion integration token with the necessary permissions to query the desired database.
+- Construct the `query_payload` JSON string carefully, following the Notion API documentation for filtering and sorting options.
+</Admonition>
 
-> **Warning**:
->
-> ### Troubleshooting
->
-> If you encounter any issues while using the `NotionListPages
-` component, consider the following:
->
-> - Double-check that the `notion_secret` and `database_id` are correct and valid.
-> - Verify that the `query_payload` JSON string is properly formatted and contains valid filtering and sorting options.
-> - Check the Notion API documentation for any updates or changes that may affect the component's functionality.
+<Admonition type="warning" title="Troubleshooting">
+ If you encounter any issues while using the `NotionListPages` component, consider the following:
+
+- Double-check that the `notion_secret` and `database_id` are correct and valid.
+- Verify that the `query_payload` JSON string is properly formatted and contains valid filtering and sorting options.
+- Check the Notion API documentation for any updates or changes that may affect the component's functionality.
+</Admonition>
 
 The `NotionListPages
 ` component provides a powerful way to integrate Notion database querying capabilities into your Langflow workflows. By leveraging this component, you can easily retrieve specific pages from a Notion database based on custom filters and sorting options, enabling you to build more dynamic and data-driven flows.

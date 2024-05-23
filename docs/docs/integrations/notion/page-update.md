@@ -116,21 +116,22 @@ Here's an example of how to use the `NotionPageUpdate` component in a Langflow f
 />
 </Admonition>
 
-## Best Practices
-
+<Admonition type="tip" title="Best Practices">
 When using the `NotionPageUpdate` component, consider the following best practices:
 
 - Ensure that you have a valid Notion integration token with the necessary permissions to update page properties.
 - Handle edge cases and error scenarios gracefully, such as invalid JSON format for properties or API request failures.
 - We recommend using an LLM to generate the inputs for this component, to allow flexibilty
+</Admonition>
 
-## Troubleshooting
-
+<Admonition type="warning" title="Troubleshooting">
 If you encounter any issues while using the `NotionPageUpdate` component, consider the following:
 
 - Double-check that you have correctly configured the component with the required parameters, including the page ID, properties JSON, and Notion integration token.
 - Verify that your Notion integration token has the necessary permissions to update page properties.
 - Check the Langflow logs for any error messages or exceptions related to the component, such as invalid JSON format or API request failures.
 - Consult the [Notion API Documentation](https://developers.notion.com/reference/patch-page) for specific troubleshooting steps or common issues related to updating page properties.
+
+</Admonition>
 
 By leveraging the `NotionPageUpdate` component in Langflow, you can easily integrate updating Notion page properties into your language model workflows and build powerful applications that extend Langflow's capabilities.
