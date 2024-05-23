@@ -60,14 +60,14 @@ export default function GenericNode({
   const [nodeName, setNodeName] = useState(data.node!.display_name);
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(
-    data.node?.description!
+    data.node?.description!,
   );
   const [isOutdated, setIsOutdated] = useState(false);
   const buildStatus = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.status
+    (state) => state.flowBuildStatus[data.id]?.status,
   );
   const lastRunTime = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.timestamp
+    (state) => state.flowBuildStatus[data.id]?.timestamp,
   );
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
@@ -124,7 +124,7 @@ export default function GenericNode({
 
       updateNodeInternals(data.id);
     },
-    [data.id, data.node, setNode, setIsOutdated]
+    [data.id, data.node, setNode, setIsOutdated],
   );
 
   if (!data.node!.template) {
@@ -264,7 +264,7 @@ export default function GenericNode({
   const isDark = useDarkStore((state) => state.dark);
   const renderIconStatus = (
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null
+    validationStatus: validationStatusType | null,
   ) => {
     if (buildStatus === BuildStatus.BUILDING) {
       return <Loading className="text-medium-indigo" />;
@@ -305,11 +305,11 @@ export default function GenericNode({
   };
   const getSpecificClassFromBuildStatus = (
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null
+    validationStatus: validationStatusType | null,
   ) => {
     let isInvalid = validationStatus && !validationStatus.valid;
 
-    if (buildStatus === BuildStatus.INACTIVE && isInvalid) {
+    if (buildStatus === BuildStatus.INACTIVE) {
       // INACTIVE should have its own class
       return "inactive-status";
     }
@@ -329,19 +329,20 @@ export default function GenericNode({
     selected: boolean,
     showNode: boolean,
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null
+    validationStatus: validationStatusType | null,
   ) => {
     const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
       buildStatus,
-      validationStatus
+      validationStatus,
     );
+
     const baseBorderClass = getBaseBorderClass(selected);
     const nodeSizeClass = getNodeSizeClass(showNode);
     return classNames(
       baseBorderClass,
       nodeSizeClass,
       "generic-node-div",
-      specificClassFromBuildStatus
+      specificClassFromBuildStatus,
     );
   };
 
@@ -395,7 +396,6 @@ export default function GenericNode({
     openWDoubleCLick,
     setOpenWDoubleCLick,
   ]);
-
   return (
     <>
       {memoizedNodeToolbarComponent}
@@ -408,7 +408,7 @@ export default function GenericNode({
           selected,
           showNode,
           buildStatus,
-          validationStatus
+          validationStatus,
         )}
       >
         {data.node?.beta && showNode && (
@@ -553,7 +553,7 @@ export default function GenericNode({
                             }
                             title={getFieldTitle(
                               data.node?.template!,
-                              templateField
+                              templateField,
                             )}
                             info={data.node?.template[templateField].info}
                             name={templateField}
@@ -581,7 +581,7 @@ export default function GenericNode({
                             proxy={data.node?.template[templateField].proxy}
                             showNode={showNode}
                           />
-                        )
+                        ),
                     )}
                   <ParameterComponent
                     key={scapedJSONStringfy({
@@ -738,7 +738,7 @@ export default function GenericNode({
                       !data.node?.description) &&
                       nameEditable
                       ? "font-light italic"
-                      : ""
+                      : "",
                   )}
                   onDoubleClick={(e) => {
                     setInputDescription(true);
@@ -800,13 +800,13 @@ export default function GenericNode({
                         }
                         title={getFieldTitle(
                           data.node?.template!,
-                          templateField
+                          templateField,
                         )}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={
                           data.node?.template[templateField].input_types?.join(
-                            "\n"
+                            "\n",
                           ) ?? data.node?.template[templateField].type
                         }
                         required={data.node!.template[templateField].required}
@@ -833,7 +833,7 @@ export default function GenericNode({
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
-                  "flex-max-width justify-center"
+                  "flex-max-width justify-center",
                 )}
               >
                 {" "}

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from langchain_community.chat_models.openai import ChatOpenAI
+from langchain_openai import ChatOpenAI
 
 from langflow.base.models.openai_constants import MODEL_NAMES
 from langflow.field_typing import BaseLanguageModel, NestedDict
@@ -52,7 +52,7 @@ class ChatOpenAIComponent(CustomComponent):
         self,
         max_tokens: Optional[int] = 256,
         model_kwargs: NestedDict = {},
-        model_name: str = "gpt-4-1106-preview",
+        model_name: str = "gpt-4o",
         openai_api_base: Optional[str] = None,
         openai_api_key: Optional[str] = None,
         temperature: float = 0.7,

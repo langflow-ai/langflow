@@ -1,5 +1,7 @@
+import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import TableAutoCellRender from "../components/tableAutoCellRender";
 import { priorityFields } from "../constants/constants";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
 import {
@@ -13,9 +15,8 @@ import {
   nodeGroupedObjType,
   tweakType,
 } from "../types/components";
-import { FlowType, NodeType } from "../types/flow";
+import { NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
-import { buildTweaks } from "./reactflowUtils";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -323,17 +324,11 @@ export function getChatInputField(flowState?: FlowState) {
  * @returns {string} - The python code
  */
 export function getPythonApiCode(
-  flow: FlowType,
+  flowId: string,
   isAuth: boolean,
-  tweak?: any[],
+  tweaksBuildedObject,
 ): string {
-  const flowId = flow.id;
-
-  // create a dictionary of node ids and the values is an empty dictionary
-  // flow.data.nodes.forEach((node) => {
-  //   node.data.id
-  // }
-  const tweaks = buildTweaks(flow);
+  const tweaksObject = tweaksBuildedObject[0];
   return `import requests
 from typing import Optional
 
@@ -341,11 +336,7 @@ BASE_API_URL = "${window.location.protocol}//${window.location.host}/api/v1/run"
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
-TWEAKS = ${
-    tweak && tweak.length > 0
-      ? buildTweakObject(tweak)
-      : JSON.stringify(tweaks, null, 2)
-  }
+TWEAKS = ${JSON.stringify(tweaksObject, null, 2)}
 
 def run_flow(message: str,
   flow_id: str,
@@ -391,12 +382,11 @@ print(run_flow(message=message, flow_id=FLOW_ID, tweaks=TWEAKS${
  * @returns {string} - The curl code
  */
 export function getCurlCode(
-  flow: FlowType,
+  flowId: string,
   isAuth: boolean,
-  tweak?: any[],
+  tweaksBuildedObject,
 ): string {
-  const flowId = flow.id;
-  const tweaks = buildTweaks(flow);
+  const tweaksObject = tweaksBuildedObject[0];
 
   return `curl -X POST \\
   ${window.location.protocol}//${
@@ -408,11 +398,7 @@ export function getCurlCode(
   -d '{"input_value": "message",
   "output_type": "chat",
   "input_type": "chat",
-  "tweaks": ${
-    tweak && tweak.length > 0
-      ? buildTweakObject(tweak)
-      : JSON.stringify(tweaks, null, 2)
-  }}'
+  "tweaks": ${JSON.stringify(tweaksObject, null, 2)}}'
   `;
 }
 
@@ -439,19 +425,15 @@ export function getOutputIds(flow) {
  * @param {any[]} tweak - The tweaks
  * @returns {string} - The python code
  */
-export function getPythonCode(flow: FlowType, tweak?: any[]): string {
-  const flowName = flow.name;
-  const tweaks = buildTweaks(flow);
+export function getPythonCode(flowName: string, tweaksBuildedObject): string {
+  const tweaksObject = tweaksBuildedObject[0];
 
   return `from langflow.load import run_flow_from_json
-TWEAKS = ${
-    tweak && tweak.length > 0
-      ? buildTweakObject(tweak)
-      : JSON.stringify(tweaks, null, 2)
-  }
+TWEAKS = ${JSON.stringify(tweaksObject, null, 2)}
 
 result = run_flow_from_json(flow="${flowName}.json",
                             input_value="message",
+                            fallback_to_env_vars=True, # False by default
                             tweaks=TWEAKS)`;
 }
 
@@ -461,15 +443,10 @@ result = run_flow_from_json(flow="${flowName}.json",
  * @returns {string} - The widget code
  */
 export function getWidgetCode(
-  flow: FlowType,
+  flowId: string,
+  flowName: string,
   isAuth: boolean,
-  flowState?: FlowState,
 ): string {
-  const flowId = flow.id;
-  const flowName = flow.name;
-  const inputs = buildInputs();
-  let chat_input_field = getChatInputField(flowState);
-
   return `<script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@1.0_alpha/dist/build/static/js/bundle.min.js"></script>
 
 <langflow-chat
@@ -722,4 +699,56 @@ export function convertTestName(name: string): string {
 
 export function sortByName(stringList: string[]): string[] {
   return stringList.sort((a, b) => a.localeCompare(b));
+}
+
+export function isTimeStampString(str: string): boolean {
+  const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?$/;
+  return timestampRegex.test(str);
+}
+
+export function extractColumnsFromRows(
+  rows: object[],
+  mode: "intersection" | "union",
+): (ColDef<any> | ColGroupDef<any>)[] {
+  const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
+  if (rows.length === 0) {
+    return [];
+  }
+  function intersection() {
+    for (const key in rows[0]) {
+      columnsKeys[key] = {
+        headerName: key,
+        field: key,
+        cellRenderer: TableAutoCellRender,
+        filter: true,
+        autoHeight: true,
+      };
+    }
+    for (const row of rows) {
+      for (const key in columnsKeys) {
+        if (!row[key]) {
+          delete columnsKeys[key];
+        }
+      }
+    }
+  }
+  function union() {
+    for (const row of rows) {
+      for (const key in row) {
+        columnsKeys[key] = {
+          headerName: key,
+          field: key,
+          filter: true,
+          cellRenderer: TableAutoCellRender,
+        };
+      }
+    }
+  }
+  if (mode === "intersection") {
+    intersection();
+  } else {
+    union();
+  }
+
+  return Object.values(columnsKeys);
 }

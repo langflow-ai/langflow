@@ -10,7 +10,7 @@ export type InputComponentType = {
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
   value?: string;
   disabled?: boolean;
-  onChange?: (value: string) => void;
+  onChange?: (value: string, snapshot?: boolean) => void;
   password: boolean;
   required?: boolean;
   isForm?: boolean;
@@ -30,6 +30,8 @@ export type InputComponentType = {
   setSelectedOption?: (value: string) => void;
   selectedOptions?: string[];
   setSelectedOptions?: (value: string[]) => void;
+  objectOptions?: Array<{ name: string; id: string }>;
+  isObjectOption?: boolean;
 };
 export type ToggleComponentType = {
   enabled: boolean;
@@ -100,7 +102,7 @@ export type TextAreaComponentType = {
   nodeClass?: APIClassType;
   setNodeClass?: (value: APIClassType) => void;
   disabled: boolean;
-  onChange: (value: string[] | string) => void;
+  onChange: (value: string[] | string, skipSnapshot?: boolean) => void;
   value: string;
   editNode?: boolean;
   id?: string;
@@ -112,7 +114,7 @@ export type PromptAreaComponentType = {
   nodeClass?: APIClassType;
   setNodeClass?: (value: APIClassType, code?: string) => void;
   disabled: boolean;
-  onChange: (value: string[] | string) => void;
+  onChange: (value: string[] | string, skipSnapshot?: boolean) => void;
   value: string;
   readonly?: boolean;
   editNode?: boolean;
@@ -122,7 +124,7 @@ export type PromptAreaComponentType = {
 export type CodeAreaComponentType = {
   setOpenModal?: (bool: boolean) => void;
   disabled: boolean;
-  onChange: (value: string[] | string) => void;
+  onChange: (value: string[] | string, skipSnapshot?: boolean) => void;
   value: string;
   editNode?: boolean;
   nodeClass?: APIClassType;
@@ -137,7 +139,7 @@ export type CodeAreaComponentType = {
 export type FileComponentType = {
   IOInputProps?;
   disabled: boolean;
-  onChange: (value: string[] | string) => void;
+  onChange: (value: string[] | string, skipSnapshot?: boolean) => void;
   value: string;
   fileTypes: Array<string>;
   onFileChange: (value: string) => void;
@@ -170,7 +172,7 @@ export type IntComponentType = {
   value: string;
   disabled?: boolean;
   rangeSpec: RangeSpecType;
-  onChange: (value: string) => void;
+  onChange: (value: string, skipSnapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
 };
@@ -178,7 +180,7 @@ export type IntComponentType = {
 export type FloatComponentType = {
   value: string;
   disabled?: boolean;
-  onChange: (value: string) => void;
+  onChange: (value: string, skipSnapshot?: boolean) => void;
   rangeSpec: RangeSpecType;
   editNode?: boolean;
   id?: string;
@@ -220,6 +222,7 @@ export type AccordionComponentType = {
   keyValue?: string;
   openDisc?: boolean;
   sideBar?: boolean;
+  options?: { title: string; icon: string }[];
 };
 export type Side = "top" | "right" | "bottom" | "left";
 
@@ -400,6 +403,7 @@ export type StoreApiKeyType = {
 export type groupedObjType = {
   family: string;
   type: string;
+  display_name?: string;
 };
 
 export type nodeGroupedObjType = {
@@ -648,20 +652,24 @@ export type codeTabsPropsType = {
   setActiveTab: (value: string) => void;
   isMessage?: boolean;
   tweaks?: {
-    tweak?: { current: tweakType };
-    tweaksList?: { current: Array<string> };
+    tweak?: tweakType;
+    tweaksList?: Array<string>;
     buildContent?: (value: string) => ReactNode;
     getValue?: (
       value: string,
       node: NodeType,
       template: TemplateVariableType,
+      tweak: tweakType,
     ) => string;
     buildTweakObject?: (
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
       template: TemplateVariableType,
-    ) => string | void;
+    ) => Promise<string | void>;
   };
+  activeTweaks?: boolean;
+  setActiveTweaks?: (value: boolean) => void;
+  allowExport?: boolean;
 };
 
 export type crashComponentPropsType = {
