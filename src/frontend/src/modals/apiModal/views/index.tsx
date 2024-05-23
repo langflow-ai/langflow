@@ -13,21 +13,18 @@ import { useTweaksStore } from "../../../stores/tweaksStore";
 import { TemplateVariableType } from "../../../types/api";
 import { uniqueTweakType } from "../../../types/components";
 import { FlowType } from "../../../types/flow/index";
-import {
-  createTabsArray,
-  getCurlRunCode,
-  getCurlWebhookCode,
-  getPythonApiCode,
-  getPythonCode,
-  getWidgetCode,
-} from "../../../utils/utils";
 import BaseModal from "../../baseModal";
 import { buildContent } from "../utils/build-content";
 import { buildTweaks } from "../utils/build-tweaks";
 import { checkCanBuildTweakObject } from "../utils/check-can-build-tweak-object";
 import { getChangesType } from "../utils/get-changes-types";
+import getCurlRunCode, { getCurlWebhookCode } from "../utils/get-curl-code";
 import { getNodesWithDefaultValue } from "../utils/get-nodes-with-default-value";
+import getPythonApiCode from "../utils/get-python-api-code";
+import getPythonCode from "../utils/get-python-code";
 import { getValue } from "../utils/get-value";
+import getWidgetCode from "../utils/get-widget-code";
+import { createTabsArray } from "../utils/tabs-array";
 
 const ApiModal = forwardRef(
   (

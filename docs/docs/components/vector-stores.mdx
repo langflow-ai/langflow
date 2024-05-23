@@ -26,7 +26,8 @@ The `Astra DB` initializes a vector store using Astra DB from records. It create
 - **Collection Indexing Policy:** Indexing policy for the collection.
 
 <Admonition type="note" title="Note">
-    Ensure you configure the necessary Astra DB token and API endpoint before starting.
+  Ensure you configure the necessary Astra DB token and API endpoint before
+  starting.
 </Admonition>
 
 ---
@@ -93,6 +94,44 @@ For detailed documentation and integration guides, please refer to the [Chroma C
 - **Server Port (Optional):** Port for the Chroma server.
 - **Server gRPC Port (Optional):** gRPC port for the Chroma server.
 - **Server SSL Enabled (Optional):** SSL configuration for the Chroma server.
+
+---
+
+### Couchbase
+
+`Couchbase` builds a Couchbase vector store from records, streamlining the storage and retrieval of documents.
+
+**Parameters:**
+
+- **Embedding:** Model used by Couchbase.
+- **Input:** Documents or records.
+- **Couchbase Cluster Connection String:** Cluster Connection string.
+- **Couchbase Cluster Username:** Cluster Username.
+- **Couchbase Cluster Password:** Cluster Password.
+- **Bucket Name:** Bucket identifier in Couchbase.
+- **Scope Name:** Scope identifier in Couchbase.
+- **Collection Name:** Collection identifier in Couchbase.
+- **Index Name:** Index identifier.
+
+For detailed documentation and integration guides, please refer to the [Couchbase Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/couchbase).
+
+---
+
+### Couchbase Search
+
+`CouchbaseSearch` leverages the Couchbase component to search for documents based on similarity metric.
+
+**Parameters:**
+
+- **Input:** Search query.
+- **Embedding:** Model used in the Vector Store.
+- **Couchbase Cluster Connection String:** Cluster Connection string.
+- **Couchbase Cluster Username:** Cluster Username.
+- **Couchbase Cluster Password:** Cluster Password.
+- **Bucket Name:** Bucket identifier.
+- **Scope Name:** Scope identifier.
+- **Collection Name:** Collection identifier in Couchbase.
+- **Index Name:** Index identifier.
 
 ---
 
@@ -278,7 +317,8 @@ For more details, see the [PGVector Component Documentation](https://python.lang
 For detailed documentation, refer to the [Redis Documentation](https://python.langchain.com/docs/integrations/vectorstores/redis).
 
 <Admonition type="note" title="Note">
-  Ensure the Redis server URL and index name are configured correctly. Provide a schema if no documents are available.
+  Ensure the Redis server URL and index name are configured correctly. Provide a
+  schema if no documents are available.
 </Admonition>
 
 ---
@@ -389,7 +429,8 @@ For more information, consult the [Vectara Component Documentation](https://pyth
 For more details, see the [Weaviate Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/weaviate).
 
 <Admonition type="note" title="Note">
-  Ensure Weaviate instance is running and accessible. Verify API key, index name, text key, and attributes are set correctly.
+  Ensure Weaviate instance is running and accessible. Verify API key, index
+  name, text key, and attributes are set correctly.
 </Admonition>
 
 ---

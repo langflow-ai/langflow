@@ -176,11 +176,11 @@ async def simplified_run_flow(
     This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency, supporting a wide range of applications by allowing for dynamic input and output configuration along with performance optimizations through session management and caching.
     """
     session_id = input_request.session_id
-
+    flow_id_str = str(flow_id)
     try:
         return await simple_run_flow(
             db=db,
-            flow_id=flow_id,
+            flow_id=flow_id_str,
             input_request=input_request,
             session_service=session_service,
             stream=stream,
@@ -189,12 +189,12 @@ async def simplified_run_flow(
     except sa.exc.StatementError as exc:
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
         if "badly formed hexadecimal UUID string" in str(exc):
-            logger.error(f"Flow ID {flow_id} is not a valid UUID")
+            logger.error(f"Flow ID {flow_id_str} is not a valid UUID")
             # This means the Flow ID is not a valid UUID which means it can't find the flow
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
-        if f"Flow {flow_id} not found" in str(exc):
-            logger.error(f"Flow {flow_id} not found")
+        if f"Flow {flow_id_str} not found" in str(exc):
+            logger.error(f"Flow {flow_id_str} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         elif f"Session {session_id} not found" in str(exc):
             logger.error(f"Session {session_id} not found")
@@ -322,32 +322,33 @@ async def experimental_run_flow(
     This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations, catering to diverse application requirements.
     """
     try:
-        flow_id = str(flow_id)
+        flow_id_str = str(flow_id)
         if outputs is None:
             outputs = []
 
-        task_result: List[RunOutputs] = []
         artifacts = {}
         if session_id:
-            session_data = await session_service.load_session(session_id, flow_id=flow_id)
+            session_data = await session_service.load_session(session_id, flow_id=flow_id_str)
             graph, artifacts = session_data if session_data else (None, None)
             if graph is None:
                 raise ValueError(f"Session {session_id} not found")
         else:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            flow = session.exec(select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)).first()
+            flow = session.exec(
+                select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
+            ).first()
             if flow is None:
-                raise ValueError(f"Flow {flow_id} not found")
+                raise ValueError(f"Flow {flow_id_str} not found")
 
             if flow.data is None:
-                raise ValueError(f"Flow {flow_id} has no data")
+                raise ValueError(f"Flow {flow_id_str} has no data")
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
-            graph = Graph.from_payload(graph_data, flow_id=flow_id)
+            graph = Graph.from_payload(graph_data, flow_id=flow_id_str)
         task_result, session_id = await run_graph_internal(
             graph=graph,
-            flow_id=flow_id,
+            flow_id=flow_id_str,
             session_id=session_id,
             inputs=inputs,
             outputs=outputs,
@@ -360,12 +361,12 @@ async def experimental_run_flow(
     except sa.exc.StatementError as exc:
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
         if "badly formed hexadecimal UUID string" in str(exc):
-            logger.error(f"Flow ID {flow_id} is not a valid UUID")
+            logger.error(f"Flow ID {flow_id_str} is not a valid UUID")
             # This means the Flow ID is not a valid UUID which means it can't find the flow
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
-        if f"Flow {flow_id} not found" in str(exc):
-            logger.error(f"Flow {flow_id} not found")
+        if f"Flow {flow_id_str} not found" in str(exc):
+            logger.error(f"Flow {flow_id_str} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         elif f"Session {session_id} not found" in str(exc):
             logger.error(f"Session {session_id} not found")
@@ -448,11 +449,11 @@ async def create_upload_file(
     flow_id: UUID,
 ):
     try:
-        flow_id = str(flow_id)
-        file_path = save_uploaded_file(file, folder_name=flow_id)
+        flow_id_str = str(flow_id)
+        file_path = save_uploaded_file(file, folder_name=flow_id_str)
 
         return UploadFileResponse(
-            flowId=flow_id,
+            flowId=flow_id_str,
             file_path=file_path,
         )
     except Exception as exc:

@@ -72,12 +72,9 @@ def read_flows(
         flow_ids = [flow.id for flow in flows]
         # with the session get the flows that DO NOT have a user_id
         try:
-            example_flows = session.exec(
-                select(Flow).where(
-                    Flow.user_id == None,  # noqa
-                    Flow.folder.has(Folder.name == STARTER_FOLDER_NAME),
-                )
-            ).all()
+            folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+
+            example_flows = folder.flows if folder else []
             for example_flow in example_flows:
                 if example_flow.id not in flow_ids:
                     flows.append(example_flow)  # type: ignore
