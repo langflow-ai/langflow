@@ -12,8 +12,6 @@ import IconComponent, {
 import { Button, buttonVariants } from "../../../ui/button";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import { useEffect, useRef, useState } from "react";
-import InputComponent from "../../../inputComponent";
-import { updateFlowInDatabase } from "../../../../controllers/API";
 import { Input } from "../../../ui/input";
 import { handleKeyDown } from "../../../../utils/reactflowUtils";
 
@@ -42,8 +40,6 @@ const SideBarFoldersButtonsComponent = ({
   const currentFolder = pathname.split("/");
   const urlWithoutPath = pathname.split("/").length < 4;
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
-  const allFlows = useFlowsManagerStore((state) => state.allFlows);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
 
   const checkPathName = (itemId: string) => {
@@ -91,12 +87,9 @@ const SideBarFoldersButtonsComponent = ({
     }));
   }
 
-  useEffect(() => {}, [folders, setFolders]);
-
   useEffect(() => {
     folders.map((obj) => ({ name: obj.name, edit: false }));
   }, [folders]);
-  const setLoading = useAlertStore((state) => state.setLoading);
 
   return (
     <>
@@ -193,6 +186,12 @@ const SideBarFoldersButtonsComponent = ({
                             );
                             setFolders([...updateFolders, updatedFolder]);
                             setFoldersNames({});
+                            setEditFolderName(
+                              folders.map((obj) => ({
+                                name: obj.name,
+                                edit: false,
+                              })),
+                            );
                           } else {
                             setFoldersNames((old) => ({
                               ...old,
@@ -215,7 +214,10 @@ const SideBarFoldersButtonsComponent = ({
                           setFoldersNames({ [item.name]: item.name });
                         }
 
-                        if (Object.values(editFolderName).includes(item.name)) {
+                        if (
+                          editFolders.find((obj) => obj.name === item.name)
+                            ?.name
+                        ) {
                           const newEditFolders = editFolders.map((obj) => {
                             if (obj.name === item.name) {
                               return { name: item.name, edit: true };
