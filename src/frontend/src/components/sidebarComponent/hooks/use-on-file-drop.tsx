@@ -8,6 +8,7 @@ import useAlertStore from "../../../stores/alertStore";
 import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../stores/foldersStore";
 import { FlowType } from "../../../types/flow";
+import { addVersionToDuplicates } from "../../../utils/reactflowUtils";
 
 const useFileDrop = (folderId, folderChangeCallback) => {
   const setFolderDragging = useFolderStore((state) => state.setFolderDragging);
@@ -41,7 +42,7 @@ const useFileDrop = (folderId, folderChangeCallback) => {
     e:
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
-      | React.DragEvent<HTMLAnchorElement>
+      | React.DragEvent<HTMLAnchorElement>,
   ) => {
     e.preventDefault();
 
@@ -54,7 +55,7 @@ const useFileDrop = (folderId, folderChangeCallback) => {
     e:
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
-      | React.DragEvent<HTMLAnchorElement>
+      | React.DragEvent<HTMLAnchorElement>,
   ) => {
     if (e.dataTransfer.types.some((types) => types === "Files")) {
       setFolderDragging(true);
@@ -66,7 +67,7 @@ const useFileDrop = (folderId, folderChangeCallback) => {
     e:
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
-      | React.DragEvent<HTMLAnchorElement>
+      | React.DragEvent<HTMLAnchorElement>,
   ) => {
     e.preventDefault();
     if (e.target === e.currentTarget) {
@@ -79,7 +80,7 @@ const useFileDrop = (folderId, folderChangeCallback) => {
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
       | React.DragEvent<HTMLAnchorElement>,
-    folderId: string
+    folderId: string,
   ) => {
     if (e?.dataTransfer?.getData("flow")) {
       const data = JSON.parse(e?.dataTransfer?.getData("flow"));
@@ -101,11 +102,12 @@ const useFileDrop = (folderId, folderChangeCallback) => {
     if (!selectedFlow) {
       throw new Error("Flow not found");
     }
+    const updatedFlow = { ...selectedFlow, folder_id: folderId };
 
-    const updatedFlow: FlowType = {
-      ...selectedFlow,
-      folder_id: folderId,
-    };
+    const newName = addVersionToDuplicates(updatedFlow, flows);
+
+    updatedFlow.name = newName;
+
     updateFlowInDatabase(updatedFlow).then(() => {
       getFoldersApi(true);
       triggerFolderChange(folderId);
