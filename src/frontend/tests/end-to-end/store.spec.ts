@@ -144,7 +144,7 @@ test("should add API-KEY", async ({ page }) => {
   await page.getByTestId("api-key-button-store").click();
   await page
     .getByPlaceholder("Insert your API Key")
-    .fill("x1fOKU0v2e5zL5d-BZW6CxZBZvoyuFgF");
+    .fill(process.env.STORE_API_KEY ?? "");
   await page.getByTestId("api-key-save-button-store").click();
 
   await page.waitForTimeout(2000);
@@ -165,7 +165,7 @@ test("should like and add components and flows", async ({ page }) => {
 
   await page
     .getByPlaceholder("Insert your API Key")
-    .fill("x1fOKU0v2e5zL5d-BZW6CxZBZvoyuFgF");
+    .fill(process.env.STORE_API_KEY ?? "");
   await page.getByTestId("api-key-save-button-store").click();
 
   await page.waitForTimeout(2000);
@@ -173,6 +173,8 @@ test("should like and add components and flows", async ({ page }) => {
 
   await page.waitForTimeout(2000);
   await page.getByText("API Key Error").isHidden();
+
+  await page.waitForTimeout(5000);
 
   const likedValue = await page
     .getByTestId("likes-Website Content QA")
@@ -214,7 +216,7 @@ test("should like and add components and flows", async ({ page }) => {
   await page.getByText("My Collection").click();
   await page.getByText("Website Content QA").first().isVisible();
 
-  await page.getByTestId("sidebar-nav-Components").click();
+  await page.getByText("Components").first().click();
   await page.getByText("Basic RAG").first().isVisible();
 });
 
@@ -233,7 +235,7 @@ test("should share component with share button", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -255,7 +257,7 @@ test("should share component with share button", async ({ page }) => {
   await page.getByText("Set workflow status to public").isVisible();
   await page
     .getByText(
-      "Attention: API keys in specified fields are automatically removed upon sharing."
+      "Attention: API keys in specified fields are automatically removed upon sharing.",
     )
     .isVisible();
   await page.getByText("Export").first().isVisible();

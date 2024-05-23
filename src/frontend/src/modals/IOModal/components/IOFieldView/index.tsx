@@ -4,6 +4,7 @@ import ImageViewer from "../../../../components/ImageViewer";
 import CsvOutputComponent from "../../../../components/csvOutputComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import PdfViewer from "../../../../components/pdfViewer";
+import RecordsOutputComponent from "../../../../components/recordsOutputComponent";
 import {
   Select,
   SelectContent,
@@ -47,6 +48,7 @@ export default function IOFieldView({
       }
     }
   };
+
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
   function handleOutputType() {
@@ -204,7 +206,7 @@ export default function IOFieldView({
                             <SelectItem key={separator} value={separator}>
                               {separator}
                             </SelectItem>
-                          )
+                          ),
                         )}
                       </SelectGroup>
                     </SelectContent>
@@ -279,6 +281,15 @@ export default function IOFieldView({
                   disabled={false}
                 />
               </>
+            );
+          case "RecordsOutput":
+            return (
+              <div className={left ? "h-56" : "h-full"}>
+                <RecordsOutputComponent
+                  flowPool={flowPoolNode}
+                  pagination={!left}
+                />
+              </div>
             );
 
           default:

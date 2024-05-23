@@ -16,7 +16,7 @@ test.describe("save component tests", () => {
     }
 
     while (modalCount === 0) {
-      await page.locator('//*[@id="new-project-btn"]').click();
+      await page.getByText("New Project", { exact: true }).click();
       await page.waitForTimeout(5000);
       modalCount = await page.getByTestId("modal-title")?.count();
     }
@@ -27,7 +27,7 @@ test.describe("save component tests", () => {
     // Read your file into a buffer.
     const jsonContent = readFileSync(
       "tests/end-to-end/assets/flow_group_test.json",
-      "utf-8"
+      "utf-8",
     );
 
     // Create the DataTransfer and File
@@ -49,7 +49,7 @@ test.describe("save component tests", () => {
       "drop",
       {
         dataTransfer,
-      }
+      },
     );
 
     const genericNoda = page.getByTestId("div-generic-node");
@@ -61,9 +61,6 @@ test.describe("save component tests", () => {
       .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[3]')
       .click();
 
-    await page.getByTestId("title-PythonFunctionTool").click({
-      modifiers: ["Control"],
-    });
     await page.getByTestId("title-ChatOpenAI").click({
       modifiers: ["Control"],
     });

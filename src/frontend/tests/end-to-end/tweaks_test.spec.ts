@@ -13,7 +13,7 @@ test("curl_api_generation", async ({ page, context }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -75,7 +75,7 @@ test("check if tweaks are updating when someothing on the flow changes", async (
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -98,14 +98,14 @@ test("check if tweaks are updating when someothing on the flow changes", async (
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
-  await page.getByTestId("input-collection_name").click();
+  await page.getByTestId("popover-anchor-input-collection_name").click();
   await page
-    .getByTestId("input-collection_name")
+    .getByTestId("popover-anchor-input-collection_name")
     .fill("collection_name_test_123123123!@#$&*(&%$@");
 
-  await page.getByTestId("input-index_directory").click();
+  await page.getByTestId("popover-anchor-input-index_directory").click();
   await page
-    .getByTestId("input-index_directory")
+    .getByTestId("popover-anchor-input-index_directory")
     .fill("index_directory_123123123!@#$&*(&%$@");
 
   await page.getByText("API", { exact: true }).first().click();

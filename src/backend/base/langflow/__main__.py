@@ -2,9 +2,9 @@ import platform
 import socket
 import sys
 import time
+import warnings
 from pathlib import Path
 from typing import Optional
-import warnings
 
 import click
 import httpx
@@ -17,8 +17,10 @@ from rich import print as rprint
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from sqlmodel import select
 
 from langflow.main import setup_app
+from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from langflow.services.utils import initialize_services
@@ -432,15 +434,55 @@ def superuser(
             # Verify that the superuser was created
             from langflow.services.database.models.user.model import User
 
-            user: User = session.query(User).filter(User.username == username).first()
+            user: User = session.exec(select(User).where(User.username == username)).first()
             if user is None or not user.is_superuser:
                 typer.echo("Superuser creation failed.")
                 return
-
+            # Now create the first folder for the user
+            result = create_default_folder_if_it_doesnt_exist(session, user.id)
+            if result:
+                typer.echo("Default folder created successfully.")
+            else:
+                raise RuntimeError("Could not create default folder.")
             typer.echo("Superuser created successfully.")
 
         else:
             typer.echo("Superuser creation failed.")
+
+
+# command to copy the langflow database from the cache to the current directory
+# because now the database is stored per installation
+@app.command()
+def copy_db():
+    """
+    Copy the database files to the current directory.
+
+    This function copies the 'langflow.db' and 'langflow-pre.db' files from the cache directory to the current directory.
+    If the files exist in the cache directory, they will be copied to the same directory as this script (__main__.py).
+
+    Returns:
+        None
+    """
+    import shutil
+
+    from platformdirs import user_cache_dir
+
+    cache_dir = Path(user_cache_dir("langflow"))
+    db_path = cache_dir / "langflow.db"
+    pre_db_path = cache_dir / "langflow-pre.db"
+    # It should be copied to the current directory
+    # this file is __main__.py and it should be in the same directory as the database
+    destination_folder = Path(__file__).parent
+    if db_path.exists():
+        shutil.copy(db_path, destination_folder)
+        typer.echo(f"Database copied to {destination_folder}")
+    else:
+        typer.echo("Database not found in the cache directory.")
+    if pre_db_path.exists():
+        shutil.copy(pre_db_path, destination_folder)
+        typer.echo(f"Pre-release database copied to {destination_folder}")
+    else:
+        typer.echo("Pre-release database not found in the cache directory.")
 
 
 @app.command()

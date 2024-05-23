@@ -54,6 +54,7 @@ class ChatComponent(CustomComponent):
             session_id=session_id,
             sender=sender,
             sender_name=sender_name,
+            flow_id=self.graph.flow_id,
         )
 
         self.status = records

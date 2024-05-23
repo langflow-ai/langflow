@@ -1,5 +1,7 @@
+import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import TableAutoCellRender from "../components/tableAutoCellRender";
 import { priorityFields } from "../constants/constants";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
 import {
@@ -60,7 +62,7 @@ export function normalCaseToSnakeCase(str: string): string {
 
 export function toTitleCase(
   str: string | undefined,
-  isNodeField?: boolean
+  isNodeField?: boolean,
 ): string {
   if (!str) return "";
   let result = str
@@ -69,7 +71,7 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase()
+          word[0].toUpperCase() + word.slice(1).toLowerCase(),
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -82,7 +84,7 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase()
+          word[0].toUpperCase() + word.slice(1).toLowerCase(),
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -122,7 +124,7 @@ export function groupByFamily(
   data: APIDataType,
   baseClasses: string,
   left: boolean,
-  flow?: NodeType[]
+  flow?: NodeType[],
 ): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
   let arrOfPossibleInputs: Array<{
@@ -148,7 +150,7 @@ export function groupByFamily(
         baseClassesSet.has(template.type)) ||
         (template.input_types &&
           template.input_types.some((inputType) =>
-            baseClassesSet.has(inputType)
+            baseClassesSet.has(inputType),
           )))
     );
   };
@@ -168,7 +170,7 @@ export function groupByFamily(
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
           nodeData.node!.base_classes.some((baseClass) =>
-            baseClassesSet.has(baseClass)
+            baseClassesSet.has(baseClass),
           ), //seta como anterior ou verifica se o node tem base class
         displayName: nodeData.node?.display_name,
       });
@@ -185,10 +187,10 @@ export function groupByFamily(
       if (!foundNode) {
         foundNode = {
           hasBaseClassInTemplate: Object.values(node!.template).some(
-            checkBaseClass
+            checkBaseClass,
           ),
           hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
-            baseClassesSet.has(baseClass)
+            baseClassesSet.has(baseClass),
           ),
           displayName: node?.display_name,
         };
@@ -245,7 +247,7 @@ export function getRandomDescription(): string {
 export function getRandomName(
   retry: number = 0,
   noSpace: boolean = false,
-  maxRetries: number = 3
+  maxRetries: number = 3,
 ): string {
   const left: string[] = ADJECTIVES;
   const right: string[] = NOUNS;
@@ -324,8 +326,9 @@ export function getChatInputField(flowState?: FlowState) {
 export function getPythonApiCode(
   flowId: string,
   isAuth: boolean,
-  tweaksBuildedObject
+  tweaksBuildedObject,
 ): string {
+  const tweaksObject = tweaksBuildedObject[0];
   return `import requests
 from typing import Optional
 
@@ -333,7 +336,7 @@ BASE_API_URL = "${window.location.protocol}//${window.location.host}/api/v1/run"
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
-TWEAKS = ${JSON.stringify(tweaksBuildedObject, null, 2)}
+TWEAKS = ${JSON.stringify(tweaksObject, null, 2)}
 
 def run_flow(message: str,
   flow_id: str,
@@ -381,8 +384,10 @@ print(run_flow(message=message, flow_id=FLOW_ID, tweaks=TWEAKS${
 export function getCurlCode(
   flowId: string,
   isAuth: boolean,
-  tweaksBuildedObject
+  tweaksBuildedObject,
 ): string {
+  const tweaksObject = tweaksBuildedObject[0];
+
   return `curl -X POST \\
   ${window.location.protocol}//${
     window.location.host
@@ -393,7 +398,7 @@ export function getCurlCode(
   -d '{"input_value": "message",
   "output_type": "chat",
   "input_type": "chat",
-  "tweaks": ${JSON.stringify(tweaksBuildedObject, null, 2)}'
+  "tweaks": ${JSON.stringify(tweaksObject, null, 2)}}'
   `;
 }
 
@@ -421,8 +426,10 @@ export function getOutputIds(flow) {
  * @returns {string} - The python code
  */
 export function getPythonCode(flowName: string, tweaksBuildedObject): string {
+  const tweaksObject = tweaksBuildedObject[0];
+
   return `from langflow.load import run_flow_from_json
-TWEAKS = ${JSON.stringify(tweaksBuildedObject, null, 2)}
+TWEAKS = ${JSON.stringify(tweaksObject, null, 2)}
 
 result = run_flow_from_json(flow="${flowName}.json",
                             input_value="message",
@@ -438,7 +445,7 @@ result = run_flow_from_json(flow="${flowName}.json",
 export function getWidgetCode(
   flowId: string,
   flowName: string,
-  isAuth: boolean
+  isAuth: boolean,
 ): string {
   return `<script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@1.0_alpha/dist/build/static/js/bundle.min.js"></script>
 
@@ -563,7 +570,7 @@ export function checkLocalStorageKey(key: string): boolean {
 
 export function IncrementObjectKey(
   object: object,
-  key: string
+  key: string,
 ): { newKey: string; increment: number } {
   let count = 1;
   const type = removeCountFromString(key);
@@ -635,7 +642,7 @@ export function getSetFromObject(obj: object, key?: string): Set<string> {
 
 export function getFieldTitle(
   template: APITemplateType,
-  templateField: string
+  templateField: string,
 ): string {
   return template[templateField].display_name
     ? template[templateField].display_name!
@@ -692,4 +699,56 @@ export function convertTestName(name: string): string {
 
 export function sortByName(stringList: string[]): string[] {
   return stringList.sort((a, b) => a.localeCompare(b));
+}
+
+export function isTimeStampString(str: string): boolean {
+  const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?$/;
+  return timestampRegex.test(str);
+}
+
+export function extractColumnsFromRows(
+  rows: object[],
+  mode: "intersection" | "union",
+): (ColDef<any> | ColGroupDef<any>)[] {
+  const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
+  if (rows.length === 0) {
+    return [];
+  }
+  function intersection() {
+    for (const key in rows[0]) {
+      columnsKeys[key] = {
+        headerName: key,
+        field: key,
+        cellRenderer: TableAutoCellRender,
+        filter: true,
+        autoHeight: true,
+      };
+    }
+    for (const row of rows) {
+      for (const key in columnsKeys) {
+        if (!row[key]) {
+          delete columnsKeys[key];
+        }
+      }
+    }
+  }
+  function union() {
+    for (const row of rows) {
+      for (const key in row) {
+        columnsKeys[key] = {
+          headerName: key,
+          field: key,
+          filter: true,
+          cellRenderer: TableAutoCellRender,
+        };
+      }
+    }
+  }
+  if (mode === "intersection") {
+    intersection();
+  } else {
+    union();
+  }
+
+  return Object.values(columnsKeys);
 }
