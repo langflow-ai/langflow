@@ -140,7 +140,46 @@ const SideBarFoldersButtonsComponent = ({
                 )}
                 onClick={() => handleChangeFolder!(item.id!)}
               >
-                <div className="flex w-full items-center gap-2">
+                <div
+                  onDoubleClick={(event) => {
+                    if (item.name === "My Projects") {
+                      return;
+                    }
+
+                    if (!foldersNames[item.name]) {
+                      setFoldersNames({ [item.name]: item.name });
+                    }
+
+                    if (
+                      editFolders.find((obj) => obj.name === item.name)?.name
+                    ) {
+                      const newEditFolders = editFolders.map((obj) => {
+                        if (obj.name === item.name) {
+                          return { name: item.name, edit: true };
+                        }
+                        return { name: obj.name, edit: false };
+                      });
+                      setEditFolderName(newEditFolders);
+                      takeSnapshot();
+                      event.stopPropagation();
+                      event.preventDefault();
+                      return;
+                    }
+
+                    setEditFolderName((old) => [
+                      ...old,
+                      { name: item.name, edit: true },
+                    ]);
+                    setFoldersNames((oldFolder) => ({
+                      ...oldFolder,
+                      [item.name]: item.name,
+                    }));
+                    takeSnapshot();
+                    event.stopPropagation();
+                    event.preventDefault();
+                  }}
+                  className="flex w-full items-center gap-2"
+                >
                   <IconComponent
                     name={"folder"}
                     className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
@@ -148,7 +187,7 @@ const SideBarFoldersButtonsComponent = ({
                   {editFolderName?.edit ? (
                     <div>
                       <Input
-                        className=""
+                        className="w-36"
                         onChange={(e) => {
                           handleEditFolderName(e, item.name);
                         }}
@@ -207,47 +246,7 @@ const SideBarFoldersButtonsComponent = ({
                       />
                     </div>
                   ) : (
-                    <span
-                      onDoubleClick={(event) => {
-                        if (item.name === "My Projects") {
-                          return;
-                        }
-
-                        if (!foldersNames[item.name]) {
-                          setFoldersNames({ [item.name]: item.name });
-                        }
-
-                        if (
-                          editFolders.find((obj) => obj.name === item.name)
-                            ?.name
-                        ) {
-                          const newEditFolders = editFolders.map((obj) => {
-                            if (obj.name === item.name) {
-                              return { name: item.name, edit: true };
-                            }
-                            return { name: obj.name, edit: false };
-                          });
-                          setEditFolderName(newEditFolders);
-                          takeSnapshot();
-                          event.stopPropagation();
-                          event.preventDefault();
-                          return;
-                        }
-
-                        setEditFolderName((old) => [
-                          ...old,
-                          { name: item.name, edit: true },
-                        ]);
-                        setFoldersNames((oldFolder) => ({
-                          ...oldFolder,
-                          [item.name]: item.name,
-                        }));
-                        takeSnapshot();
-                        event.stopPropagation();
-                        event.preventDefault();
-                      }}
-                      className="block max-w-full truncate opacity-100"
-                    >
+                    <span className="block max-w-full truncate opacity-100">
                       {item.name}
                     </span>
                   )}
@@ -268,11 +267,10 @@ const SideBarFoldersButtonsComponent = ({
                       />
                     </Button>
                   )}
-                  {index > 0 && (
+                  {/* {index > 0 && (
                     <Button
                       className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
                       onClick={(e) => {
-                        handleEditFolder!(item);
                         e.stopPropagation();
                         e.preventDefault();
                       }}
@@ -283,7 +281,7 @@ const SideBarFoldersButtonsComponent = ({
                         className="  w-4 stroke-[1.5] text-white  "
                       />
                     </Button>
-                  )}
+                  )} */}
                   <Button
                     className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
                     onClick={(e) => {
