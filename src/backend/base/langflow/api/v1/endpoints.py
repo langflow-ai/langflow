@@ -1,5 +1,6 @@
 from http import HTTPStatus
 from typing import Annotated, List, Optional, Union
+from uuid import UUID
 
 import sqlalchemy as sa
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
@@ -20,7 +21,6 @@ from langflow.api.v1.schemas import (
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.interface.custom.custom_component import CustomComponent
-from langflow.interface.custom.directory_reader import DirectoryReader
 from langflow.interface.custom.utils import build_custom_component_template
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
@@ -54,7 +54,7 @@ def get_all(
 @router.post("/run/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
 async def simplified_run_flow(
     db: Annotated[Session, Depends(get_session)],
-    flow_id: str,
+    flow_id: UUID,
     input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
     stream: bool = False,
     api_key_user: User = Depends(api_key_security),
@@ -111,26 +111,26 @@ async def simplified_run_flow(
     session_id = input_request.session_id
 
     try:
-        task_result: List[RunOutputs] = []
+        flow_id_str = str(flow_id)
         artifacts = {}
         if input_request.session_id:
-            session_data = await session_service.load_session(input_request.session_id, flow_id=flow_id)
+            session_data = await session_service.load_session(input_request.session_id, flow_id=flow_id_str)
             graph, artifacts = session_data if session_data else (None, None)
             if graph is None:
                 raise ValueError(f"Session {input_request.session_id} not found")
         else:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            flow = db.exec(select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)).first()
+            flow = db.exec(select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)).first()
             if flow is None:
-                raise ValueError(f"Flow {flow_id} not found")
+                raise ValueError(f"Flow {flow_id_str} not found")
 
             if flow.data is None:
-                raise ValueError(f"Flow {flow_id} has no data")
+                raise ValueError(f"Flow {flow_id_str} has no data")
             graph_data = flow.data
 
             graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
-            graph = Graph.from_payload(graph_data, flow_id=flow_id, user_id=api_key_user.id)
+            graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(api_key_user.id))
         inputs = [
             InputValueRequest(components=[], input_value=input_request.input_value, type=input_request.input_type)
         ]
@@ -153,7 +153,7 @@ async def simplified_run_flow(
             ]
         task_result, session_id = await run_graph_internal(
             graph=graph,
-            flow_id=flow_id,
+            flow_id=flow_id_str,
             session_id=input_request.session_id,
             inputs=inputs,
             outputs=outputs,
@@ -166,12 +166,12 @@ async def simplified_run_flow(
     except sa.exc.StatementError as exc:
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
         if "badly formed hexadecimal UUID string" in str(exc):
-            logger.error(f"Flow ID {flow_id} is not a valid UUID")
+            logger.error(f"Flow ID {flow_id_str} is not a valid UUID")
             # This means the Flow ID is not a valid UUID which means it can't find the flow
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
-        if f"Flow {flow_id} not found" in str(exc):
-            logger.error(f"Flow {flow_id} not found")
+        if f"Flow {flow_id_str} not found" in str(exc):
+            logger.error(f"Flow {flow_id_str} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         elif f"Session {session_id} not found" in str(exc):
             logger.error(f"Session {session_id} not found")
@@ -187,7 +187,7 @@ async def simplified_run_flow(
 @router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
 async def experimental_run_flow(
     session: Annotated[Session, Depends(get_session)],
-    flow_id: str,
+    flow_id: UUID,
     inputs: Optional[List[InputValueRequest]] = [InputValueRequest(components=[], input_value="")],
     outputs: Optional[List[str]] = [],
     tweaks: Annotated[Optional[Tweaks], Body(embed=True)] = None,  # noqa: F821
@@ -235,31 +235,33 @@ async def experimental_run_flow(
     This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations, catering to diverse application requirements.
     """
     try:
+        flow_id_str = str(flow_id)
         if outputs is None:
             outputs = []
 
-        task_result: List[RunOutputs] = []
         artifacts = {}
         if session_id:
-            session_data = await session_service.load_session(session_id, flow_id=flow_id)
+            session_data = await session_service.load_session(session_id, flow_id=flow_id_str)
             graph, artifacts = session_data if session_data else (None, None)
             if graph is None:
                 raise ValueError(f"Session {session_id} not found")
         else:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            flow = session.exec(select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)).first()
+            flow = session.exec(
+                select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
+            ).first()
             if flow is None:
-                raise ValueError(f"Flow {flow_id} not found")
+                raise ValueError(f"Flow {flow_id_str} not found")
 
             if flow.data is None:
-                raise ValueError(f"Flow {flow_id} has no data")
+                raise ValueError(f"Flow {flow_id_str} has no data")
             graph_data = flow.data
             graph_data = process_tweaks(graph_data, tweaks or {})
-            graph = Graph.from_payload(graph_data, flow_id=flow_id)
+            graph = Graph.from_payload(graph_data, flow_id=flow_id_str)
         task_result, session_id = await run_graph_internal(
             graph=graph,
-            flow_id=flow_id,
+            flow_id=flow_id_str,
             session_id=session_id,
             inputs=inputs,
             outputs=outputs,
@@ -272,12 +274,12 @@ async def experimental_run_flow(
     except sa.exc.StatementError as exc:
         # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
         if "badly formed hexadecimal UUID string" in str(exc):
-            logger.error(f"Flow ID {flow_id} is not a valid UUID")
+            logger.error(f"Flow ID {flow_id_str} is not a valid UUID")
             # This means the Flow ID is not a valid UUID which means it can't find the flow
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
-        if f"Flow {flow_id} not found" in str(exc):
-            logger.error(f"Flow {flow_id} not found")
+        if f"Flow {flow_id_str} not found" in str(exc):
+            logger.error(f"Flow {flow_id_str} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         elif f"Session {session_id} not found" in str(exc):
             logger.error(f"Session {session_id} not found")
@@ -357,13 +359,14 @@ async def get_task_status(task_id: str):
 )
 async def create_upload_file(
     file: UploadFile,
-    flow_id: str,
+    flow_id: UUID,
 ):
     try:
-        file_path = save_uploaded_file(file, folder_name=flow_id)
+        flow_id_str = str(flow_id)
+        file_path = save_uploaded_file(file, folder_name=flow_id_str)
 
         return UploadFileResponse(
-            flowId=flow_id,
+            flowId=flow_id_str,
             file_path=file_path,
         )
     except Exception as exc:
@@ -398,23 +401,6 @@ async def custom_component(
 
     built_frontend_node = update_frontend_node_with_template_values(built_frontend_node, raw_code.frontend_node)
     return built_frontend_node
-
-
-@router.post("/custom_component/reload", status_code=HTTPStatus.OK)
-async def reload_custom_component(path: str, user: User = Depends(get_current_active_user)):
-    from langflow.interface.custom.utils import build_custom_component_template
-
-    try:
-        reader = DirectoryReader("")
-        valid, content = reader.process_file(path)
-        if not valid:
-            raise ValueError(content)
-
-        extractor = CustomComponent(code=content)
-        frontend_node, _ = build_custom_component_template(extractor, user_id=user.id)
-        return frontend_node
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)

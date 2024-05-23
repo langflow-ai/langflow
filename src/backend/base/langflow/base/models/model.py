@@ -57,7 +57,7 @@ class LCModelComponent(CustomComponent):
                 prompt_tokens = token_usage["prompt_tokens"]
                 total_tokens = token_usage["total_tokens"]
                 finish_reason = response_metadata["finish_reason"]
-                status_message = f"Tokens:\n- Input: {prompt_tokens}\nOutput: {completion_tokens}\nTotal Tokens: {total_tokens}\nStop Reason: {finish_reason}\nResponse: {content}"
+                status_message = f"Tokens:\nInput: {prompt_tokens}\nOutput: {completion_tokens}\nTotal Tokens: {total_tokens}\nStop Reason: {finish_reason}\nResponse: {content}"
             elif all(key in response_metadata for key in anthropic_keys) and all(
                 key in response_metadata["usage"] for key in inner_anthropic_keys
             ):
@@ -65,7 +65,7 @@ class LCModelComponent(CustomComponent):
                 input_tokens = usage["input_tokens"]
                 output_tokens = usage["output_tokens"]
                 stop_reason = response_metadata["stop_reason"]
-                status_message = f"Tokens:\n- Input: {input_tokens}\n- Output: {output_tokens}\nStop Reason: {stop_reason}\nResponse: {content}"
+                status_message = f"Tokens:\nInput: {input_tokens}\nOutput: {output_tokens}\nStop Reason: {stop_reason}\nResponse: {content}"
             else:
                 status_message = f"Response: {content}"
         else:

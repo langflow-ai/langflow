@@ -1,0 +1,136 @@
+import Admonition from "@theme/Admonition";
+
+# Migrating to Langflow 1.0: A Guide
+
+<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
+  <p>
+    We are currently working on updating this guide to provide the most accurate
+    and up-to-date information on migrating to Langflow 1.0. We will be adding
+    more content and examples to help you navigate the changes and improvements
+    in the new version.
+  </p>
+</Admonition>
+
+Langflow 1.0 is a significant update that brings many exciting changes and improvements to the platform.
+This guide will walk you through the key improvements and help you migrate your existing projects to the new version.
+
+If you have any questions or need assistance during the migration process, please don't hesitate to reach out to in our [Discord](https://discord.gg/wZSWQaukgJ) or [GitHub](https://github.com/langflow-ai/langflow/issues) community.
+
+We have a special channel in our Discord server dedicated to Langflow 1.0 migration, where you can ask questions, share your experiences, and get help from the community.
+
+## TLDR;
+
+- Inputs and Outputs of Components have changed
+- We've surfaced steps that were previously run in the background
+- Continued support for LangChain and new support for multiple frameworks
+- Redesigned sidebar and customizable interaction panel
+- New Native Categories and Components
+- Improved user experience with Text and Record modes
+- CustomComponent for all components
+- Compatibility with previous versions using Runnable Executor
+- Multiple flows in the canvas
+- Improved component status
+- Ability to connect Output components to any other Component
+- Rename and edit component descriptions
+- Pass tweaks and inputs in the API using Display Name
+- Global Variables for Text Fields
+- Experimental components like SubFlow and Flow as Tool
+- Experimental State Management system with Notify and Listen components
+
+## Inputs and Outputs of Components
+
+Langflow 1.0 introduces adds the concept of Inputs and Outputs to flows, allowing a clear definition of the data flow between components. Discover how to use Inputs and Outputs to pass data between components and create more dynamic flows.
+
+[Learn more about Inputs and Outputs of Components](../migration/inputs-and-outputs)
+
+## To Compose or Not to Compose: the choice is yours
+
+Even though composition is still possible in Langflow 1.0, the new standard is getting data moving through the flow. This allows for more flexibility and control over the data flow in your projects.
+
+We will create guides on how to interweave LangChain components with our Core components soon.
+
+## Continued Support for LangChain and Multiple Frameworks
+
+Langflow 1.0 continues to support LangChain while also introducing support for multiple frameworks. This is another important boon that adding the paradigm of data flow brings to the table. Find out how to leverage the power of different frameworks in your projects.
+
+**Guide coming soon**
+
+## Sidebar Redesign and Customizable Playground
+
+We've expanded on the chat experience by creating a customizable interaction panel that allows you to design a panel that fits your needs and interact with it. The sidebar has also been redesigned to provide a more intuitive and user-friendly experience. Explore the new sidebar and interaction panel features to enhance your workflow.
+
+**Guide coming soon**
+
+## New Native Categories and Components
+
+Langflow 1.0 introduces many new native categories, including Inputs, Outputs, Helpers, Experimental, Models, and more. Discover the new components available, such as Chat Input, Prompt, Files, API Request, and others.
+
+**Guide coming soon**
+
+## New Way of Using Langflow: Text and Record (and more to come)
+
+With the introduction of Text and Record types connections between Components are more intuitive and easier to understand. This is the first step in a series of improvements to the way you interact with Langflow. Learn how to use Text, and Record and how they help you build better flows.
+
+[Learn more about Text and Record](../migration/text-and-record)
+
+## CustomComponent for All Components
+
+Almost all components in Langflow 1.0 are now CustomComponents, allowing you to check and modify the code of each component. Discover how to leverage this feature to customize your components to your specific needs.
+
+**Guide coming soon**
+
+## Compatibility with Previous Versions
+
+To use flows built in previous versions of Langflow, you can utilize the experimental component Runnable Executor along with an Input and Output. **We'd love your feedback on this**. Learn how to adapt your existing flows to work seamlessly in the new version of Langflow.
+
+[Learn more about Compatibility with Previous Versions](../migration/compatibility)
+
+## Multiple Flows in the Canvas
+
+Langflow 1.0 allows you to have more than one flow in the canvas and run them separately. Discover how to create and manage multiple flows within a single project.
+
+**Guide coming soon**
+
+## Improved Component Status
+
+Each component now displays its status more clearly, allowing you to quickly identify any issues or errors. Explore how to use the new component status feature to troubleshoot and optimize your flows.
+
+**Guide coming soon**
+
+## Connecting Output Components
+
+You can now connect Output components to any other component (that has a Text output), providing a better understanding of the data flow. Explore the possibilities of connecting Output components and how it enhances your flow's functionality.
+
+**Guide coming soon**
+
+## Renaming and Editing Component Descriptions
+
+Langflow 1.0 allows you to rename and edit the description of each component, making it easier to understand and interact with the flow. Learn how to customize your component names and descriptions for improved clarity.
+
+**Guide coming soon**
+
+## Passing Tweaks and Inputs in the API
+
+Things got a whole lot easier. You can now pass tweaks and inputs in the API by referencing the Display Name of the component. Discover how to leverage this feature to dynamically control your flow's behavior.
+
+**Guide coming soon**
+
+## Global Variables for Text Fields
+
+Global Variables can be used in any Text Field across your projects. Learn how to define and utilize Global Variables to streamline your workflow.
+
+[Learn more about Global Variables](../migration/global-variables)
+
+## Experimental Components
+
+Explore the experimental components available in Langflow 1.0, such as SubFlow, which allows you to load a flow as a component dynamically, and Flow as Tool, which enables you to use a flow as a tool for an Agent.
+
+**Guide coming soon**
+
+## Experimental State Management System
+
+We are experimenting with a State Management system for flows that allows components to trigger other components and pass messages between them using the Notify and Listen components. Discover how to leverage this system to create more dynamic and interactive flows.
+
+**Guide coming soon**
+
+We hope this guide helps you navigate the changes and improvements in Langflow 1.0. If you have any questions or need further assistance, please don't hesitate to reach out to us in our [Discord](https://discord.gg/wZSWQaukgJ).

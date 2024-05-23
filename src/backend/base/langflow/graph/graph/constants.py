@@ -1,3 +1,4 @@
+from langflow.graph.schema import CHAT_COMPONENTS
 from langflow.graph.vertex import types
 from langflow.interface.agents.base import agent_creator
 from langflow.interface.custom.base import custom_component_creator
@@ -5,7 +6,6 @@ from langflow.interface.document_loaders.base import documentloader_creator
 from langflow.interface.embeddings.base import embedding_creator
 from langflow.interface.llms.base import llm_creator
 from langflow.interface.memories.base import memory_creator
-from langflow.interface.output_parsers.base import output_parser_creator
 from langflow.interface.prompts.base import prompt_creator
 from langflow.interface.retrievers.base import retriever_creator
 from langflow.interface.text_splitters.base import textsplitter_creator
@@ -13,9 +13,6 @@ from langflow.interface.toolkits.base import toolkits_creator
 from langflow.interface.tools.base import tool_creator
 from langflow.interface.wrappers.base import wrapper_creator
 from langflow.utils.lazy_load import LazyLoadDictBase
-
-CHAT_COMPONENTS = ["ChatInput", "ChatOutput", "TextInput", "SessionID"]
-ROUTING_COMPONENTS = ["ShouldRunNext"]
 
 
 class VertexTypesDict(LazyLoadDictBase):
@@ -47,11 +44,9 @@ class VertexTypesDict(LazyLoadDictBase):
             # **{t: types.VectorStoreVertex for t in vectorstore_creator.to_list()},
             **{t: types.DocumentLoaderVertex for t in documentloader_creator.to_list()},
             **{t: types.TextSplitterVertex for t in textsplitter_creator.to_list()},
-            **{t: types.OutputParserVertex for t in output_parser_creator.to_list()},
             **{t: types.CustomComponentVertex for t in custom_component_creator.to_list()},
             **{t: types.RetrieverVertex for t in retriever_creator.to_list()},
-            **{t: types.ChatVertex for t in CHAT_COMPONENTS},
-            **{t: types.RoutingVertex for t in ROUTING_COMPONENTS},
+            **{t: types.InterfaceVertex for t in CHAT_COMPONENTS},
         }
 
     def get_custom_component_vertex_type(self):

@@ -17,7 +17,7 @@ test.describe("drag and drop test", () => {
     }
 
     while (modalCount === 0) {
-      await page.locator('//*[@id="new-project-btn"]').click();
+      await page.getByText("New Project", { exact: true }).click();
       await page.waitForTimeout(5000);
       modalCount = await page.getByTestId("modal-title")?.count();
     }
@@ -27,7 +27,7 @@ test.describe("drag and drop test", () => {
     // Read your file into a buffer.
     const jsonContent = readFileSync(
       "tests/end-to-end/assets/collection.json",
-      "utf-8"
+      "utf-8",
     );
 
     // Create the DataTransfer and File
@@ -47,11 +47,8 @@ test.describe("drag and drop test", () => {
       "drop",
       {
         dataTransfer,
-      }
+      },
     );
-
-    await page.getByText("Edit Flow").first().click();
-    await page.waitForTimeout(1000);
 
     const genericNoda = page.getByTestId("div-generic-node");
     const elementCount = await genericNoda?.count();

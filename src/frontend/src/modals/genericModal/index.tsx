@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import SanitizedHTMLWrapper from "../../components/SanitizedHTMLWrapper";
-import ShadTooltip from "../../components/ShadTooltipComponent";
 import IconComponent from "../../components/genericIconComponent";
+import SanitizedHTMLWrapper from "../../components/sanitizedHTMLWrapper";
+import ShadTooltip from "../../components/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
@@ -24,8 +24,9 @@ import { postValidatePrompt } from "../../controllers/API";
 import useAlertStore from "../../stores/alertStore";
 import { genericModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
-import { classNames, varHighlightHTML } from "../../utils/utils";
+import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import varHighlightHTML from "./utils/var-highlight-html";
 
 export default function GenericModal({
   field_name = "",
@@ -82,7 +83,7 @@ export default function GenericModal({
     }
 
     const filteredWordsHighlight = matches.filter(
-      (word) => !invalid_chars.includes(word)
+      (word) => !invalid_chars.includes(word),
     );
 
     setWordsHighlight(filteredWordsHighlight);
@@ -133,7 +134,7 @@ export default function GenericModal({
         // to the first key of the custom_fields object
         if (field_name === "") {
           field_name = Array.isArray(
-            apiReturn.data?.frontend_node?.custom_fields?.[""]
+            apiReturn.data?.frontend_node?.custom_fields?.[""],
           )
             ? apiReturn.data?.frontend_node?.custom_fields?.[""][0] ?? ""
             : apiReturn.data?.frontend_node?.custom_fields?.[""] ?? "";
@@ -209,7 +210,7 @@ export default function GenericModal({
           <div
             className={classNames(
               !isEdit ? "rounded-lg border" : "",
-              "flex h-full w-full"
+              "flex h-full w-full",
             )}
           >
             {type === TypeModal.PROMPT && isEdit && !readonly ? (

@@ -2,7 +2,7 @@ import { gradients } from "../../utils/styleUtils";
 
 export default function GradientChooserComponent({ value, onChange }) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-4">
+    <div className="flex flex-wrap items-center justify-start gap-2">
       {gradients.map((gradient, idx) => (
         <div
           onClick={() => {

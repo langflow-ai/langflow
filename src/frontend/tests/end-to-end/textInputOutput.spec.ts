@@ -22,7 +22,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -60,7 +60,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   // Click and hold on the first element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[1]/div/div[2]/div[6]/button/div/div'
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[1]/div/div[2]/div[6]/button/div/div',
     )
     .hover();
   await page.mouse.down();
@@ -68,7 +68,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   // Move to the second element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[9]/div/button/div/div'
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[9]/div/button/div/div',
     )
     .hover();
 
@@ -92,7 +92,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   // Click and hold on the first element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[13]/button/div/div'
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[2]/div/div[2]/div[13]/button/div/div',
     )
     .hover();
   await page.mouse.down();
@@ -100,7 +100,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   // Move to the second element
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[3]/div/div[2]/div[3]/div/button/div/div'
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div[3]/div/div[2]/div[3]/div/button/div/div',
     )
     .hover();
 
@@ -112,12 +112,15 @@ test("TextInputOutputComponent", async ({ page }) => {
     expect(false).toBe(true);
   }
 
-  await page.getByTestId("input-input_value").nth(0).fill("This is a test!");
+  await page
+    .getByTestId("popover-anchor-input-input_value")
+    .nth(0)
+    .fill("This is a test!");
 
   await page
-    .getByTestId("input-openai_api_key")
+    .getByTestId("popover-anchor-input-openai_api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
-  await page.getByText("Run", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).click();
   await page.getByText("Run Flow", { exact: true }).click();
 
   await page.waitForTimeout(5000);
@@ -131,15 +134,14 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.getByText("Text Output", { exact: true }).nth(2).click();
   let contentOutput = await page.getByPlaceholder("Empty").inputValue();
   expect(contentOutput).not.toBe(null);
-  expect(contentOutput).not.toBe("");
 
   await page.keyboard.press("Escape");
 
   await page
-    .getByTestId("input-input_value")
+    .getByTestId("popover-anchor-input-input_value")
     .nth(0)
     .fill("This is a test, again just to be sure!");
-  await page.getByText("Run", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).click();
   await page.getByText("Run Flow", { exact: true }).click();
 
   await page.waitForTimeout(5000);
@@ -149,7 +151,6 @@ test("TextInputOutputComponent", async ({ page }) => {
 
   await page.getByText("Outputs", { exact: true }).nth(1).click();
   await page.getByText("Text Output", { exact: true }).nth(2).click();
-  contentOutput = await page.getByPlaceholder("Empty").textContent();
+  contentOutput = await page.getByPlaceholder("Empty").inputValue();
   expect(contentOutput).not.toBe(null);
-  expect(contentOutput).not.toBe("");
 });

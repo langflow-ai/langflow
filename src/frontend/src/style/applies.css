@@ -9,7 +9,9 @@
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
   }
 }
 
@@ -323,7 +325,7 @@
     muted-foreground is too strong, maybe use a lighter shade of it?
 
      */
-    @apply border-none ring ring-muted-foreground;
+    @apply border-none ring grayscale;
   }
   .built-invalid-status {
     @apply border-none ring ring-[#FF9090];
@@ -1017,6 +1019,9 @@
   }
   .langflow-chat-span {
     @apply text-lg text-foreground;
+  }
+  .card-filter {
+    @apply bg-background bg-fixed opacity-20;
   }
   .langflow-chat-desc {
     @apply w-2/4 rounded-md border border-border bg-muted px-6 py-8;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import AccordionComponent from "../../components/AccordionComponent";
-import ShadTooltip from "../../components/ShadTooltipComponent";
+import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
+import ShadTooltip from "../../components/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
@@ -34,25 +34,25 @@ export default function IOModal({
 }: IOModalPropsType): JSX.Element {
   const allNodes = useFlowStore((state) => state.nodes);
   const inputs = useFlowStore((state) => state.inputs).filter(
-    (input) => input.type !== "ChatInput"
+    (input) => input.type !== "ChatInput",
   );
   const chatInput = useFlowStore((state) => state.inputs).find(
-    (input) => input.type === "ChatInput"
+    (input) => input.type === "ChatInput",
   );
   const outputs = useFlowStore((state) => state.outputs).filter(
-    (output) => output.type !== "ChatOutput"
+    (output) => output.type !== "ChatOutput",
   );
   const chatOutput = useFlowStore((state) => state.outputs).find(
-    (output) => output.type === "ChatOutput"
+    (output) => output.type === "ChatOutput",
   );
   const nodes = useFlowStore((state) => state.nodes).filter(
     (node) =>
       inputs.some((input) => input.id === node.id) ||
-      outputs.some((output) => output.id === node.id)
+      outputs.some((output) => output.id === node.id),
   );
   const haveChat = chatInput || chatOutput;
   const [selectedTab, setSelectedTab] = useState(
-    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0
+    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0,
   );
 
   function startView() {
@@ -83,11 +83,11 @@ export default function IOModal({
     return updateVerticesOrder(currentFlow!.id, null);
   }
 
-  useEffect(() => {
-    if (open) {
-      updateVertices();
-    }
-  }, [open, currentFlow]);
+  // useEffect(() => {
+  //   if (open) {
+  //     updateVertices();
+  //   }
+  // }, [open, currentFlow]);
 
   async function sendMessage({repeat=1,files}:{repeat:number,files?:string[]}): Promise<void> {
     if (isBuilding) return;
@@ -124,7 +124,7 @@ export default function IOModal({
 
   return (
     <BaseModal
-      size={selectedTab === 0 ? "large-thin" : "large"}
+      size={selectedTab === 0 ? "sm-thin" : "md-thin"}
       open={open}
       setOpen={setOpen}
       disable={disable}
@@ -133,9 +133,9 @@ export default function IOModal({
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
       <BaseModal.Header description={CHAT_FORM_DIALOG_SUBTITLE}>
         <div className="flex items-center">
-          <span className="pr-2">Interaction Panel</span>
+          <span className="pr-2">Playground</span>
           <IconComponent
-            name="prompts"
+            name="BotMessageSquareIcon"
             className="h-6 w-6 pl-1 text-foreground"
             aria-hidden="true"
           />
@@ -147,7 +147,7 @@ export default function IOModal({
             {selectedTab !== 0 && (
               <div
                 className={cn(
-                  "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start transition-all duration-300"
+                  "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start transition-all duration-300",
                 )}
               >
                 <Tabs
@@ -180,11 +180,11 @@ export default function IOModal({
                     </div>
                     {nodes
                       .filter((node) =>
-                        inputs.some((input) => input.id === node.id)
+                        inputs.some((input) => input.id === node.id),
                       )
                       .map((node, index) => {
                         const input = inputs.find(
-                          (input) => input.id === node.id
+                          (input) => input.id === node.id,
                         )!;
                         return (
                           <div
@@ -248,11 +248,11 @@ export default function IOModal({
                     </div>
                     {nodes
                       .filter((node) =>
-                        outputs.some((output) => output.id === node.id)
+                        outputs.some((output) => output.id === node.id),
                       )
                       .map((node, index) => {
                         const output = outputs.find(
-                          (output) => output.id === node.id
+                          (output) => output.id === node.id,
                         )!;
                         return (
                           <div
@@ -315,7 +315,7 @@ export default function IOModal({
                 <div
                   className={cn(
                     "flex h-full w-full flex-col items-start gap-4 pt-4",
-                    !selectedViewField ? "hidden" : ""
+                    !selectedViewField ? "hidden" : "",
                   )}
                 >
                   <div className="font-xl flex items-center justify-center gap-3 font-semibold">
@@ -334,7 +334,7 @@ export default function IOModal({
                   </div>
                   <div className="h-full w-full">
                     {inputs.some(
-                      (input) => input.id === selectedViewField.id
+                      (input) => input.id === selectedViewField.id,
                     ) ? (
                       <IOFieldView
                         type={InputOutput.INPUT}
@@ -356,7 +356,7 @@ export default function IOModal({
               <div
                 className={cn(
                   "flex h-full w-full",
-                  selectedViewField ? "hidden" : ""
+                  selectedViewField ? "hidden" : "",
                 )}
               >
                 {haveChat ? (
@@ -391,7 +391,7 @@ export default function IOModal({
                   "h-4 w-4",
                   isBuilding
                     ? "animate-spin"
-                    : "fill-current text-medium-indigo"
+                    : "fill-current text-medium-indigo",
                 )}
               />
               Run Flow

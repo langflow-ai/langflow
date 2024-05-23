@@ -10,7 +10,7 @@
 # PYTHON-BASE
 # Sets up all our shared environment variables
 ################################
-FROM python:3.10-slim as python-base
+FROM python:3.12-slim as python-base
 
 # python
 ENV PYTHONUNBUFFERED=1 \
@@ -55,6 +55,8 @@ RUN apt-get update \
     build-essential \
     # npm
     npm \
+    # gcc
+    gcc \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -78,15 +80,11 @@ RUN cp -r src/frontend/build src/backend/base/langflow/frontend
 RUN rm -rf src/backend/base/dist
 RUN cd src/backend/base && $POETRY_HOME/bin/poetry build --format sdist
 
-# Final stage for the application
-FROM python-base as final
-
 # Copy virtual environment and built .tar.gz from builder base
 RUN useradd -m -u 1000 user
-COPY --from=builder-base /app/src/backend/base/dist/*.tar.gz ./
 # Install the package from the .tar.gz
-RUN pip install *.tar.gz --user
+RUN python -m pip install /app/dist/*.tar.gz --user
 
-WORKDIR /app
+
 ENTRYPOINT ["python", "-m", "langflow", "run"]
 CMD ["--host", "0.0.0.0", "--port", "7860"]

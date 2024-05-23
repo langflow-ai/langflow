@@ -1,0 +1,86 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+import Admonition from "@theme/Admonition";
+
+# Document QA
+
+Build a question-and-answer chatbot with a document loaded from local memory.
+
+## Prerequisites
+
+1. Install Langflow.
+```bash
+python -m pip install langflow --pre
+```
+
+2. Start a local Langflow instance with the Langflow CLI:
+```bash
+langflow run
+```
+Or start Langflow with Python:
+```bash
+python -m langflow run
+```
+
+Result:
+```
+│ Welcome to ⛓ Langflow                             │
+│                                                   │
+│ Access http://127.0.0.1:7860                      │
+│ Collaborate, and contribute at our GitHub Repo 🚀 │
+```
+
+<Admonition type="info">
+
+  Langflow v1.0 alpha is also available in [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true). Try it out or follow the instructions [here](/getting-started/huggingface-spaces) to install it locally.
+
+</Admonition>
+
+3. Create an [OpenAI API key](https://platform.openai.com).
+
+## Create the Document QA project
+
+1. From the Langflow dashboard, click **New Project**.
+2. Select **Document QA**.
+3. The **Document QA** flow is created.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/document-qa.png",
+    dark: "img/document-qa.png",
+  }}
+  style={{ width: "80%", margin: "20px auto" }}
+/>
+
+This flow creates a basic chatbot with the **Chat Input**, **Prompt**, **OpenAI**, and **Chat Output** components.
+This chatbot is augmented with the **Files** component, which loads a file from your local machine into the **Prompt** component as `{Document}`.
+The **Prompt** component is instructed to answer questions based on the contents of `{Document}`.
+Including a file with the prompt gives the **OpenAI** component context it may not otherwise have access to.
+
+4. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
+    1. In the **Variable Name** field, enter `openai_api_key`.
+    2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
+    3. Click **Save Variable**.
+
+5. To select a document to load, in the **Files** component, click within the **Path** field.
+    1. Select a local file, and then click **Open**.
+    2. The file name appears in the field.
+    <Admonition type="tip">
+        The file must be of an extension type listed [here](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/base/data/utils.py#L13).
+    </Admonition>
+
+## Run the Document QA flow
+
+1. Click the **Run** button.
+The **Interaction Panel** opens, where you can converse with your bot.
+2. Type a message and press Enter.
+For this example, we loaded an error log `.txt` file and asked, "What went wrong?"
+The bot responded:
+```
+The issue occurred during the execution of migrations in the application. Specifically, an error was raised by the Alembic library, indicating that new upgrade operations were detected that had not been accounted for in the existing migration scripts. The operation in question involved modifying the nullable property of a column (apikey, created_at) in the database, with details about the existing type (DATETIME()), existing server default, and other properties.
+```
+
+This result indicates that the bot received the loaded document and understood the context surrounding the vague question. It also correctly identified the issue in the error log, and followed up with appropriate troubleshooting suggestions. Nice!

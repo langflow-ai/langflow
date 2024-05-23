@@ -1,8 +1,8 @@
 import { cloneDeep } from "lodash";
 import { LinkIcon, SparklesIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import IconComponent from "../../../../components/genericIconComponent";
+import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import { PRIORITY_SIDEBAR_ORDER } from "../../../../constants/constants";
@@ -22,12 +22,12 @@ import {
 import {
   classNames,
   removeCountFromString,
-  sensitiveSort,
 } from "../../../../utils/utils";
 import DisclosureComponent from "../DisclosureComponent";
 import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import SidebarDraggableComponent from "./sideBarDraggableComponent";
 import { sortKeys } from "./utils";
+import sensitiveSort from "./utils/sensitive-sort";
 
 export default function ExtraSidebar(): JSX.Element {
   const data = useTypesStore((state) => state.data);

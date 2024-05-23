@@ -1,10 +1,10 @@
 import copy
-from typing import Literal, Optional
+import json
+from typing import Literal, Optional, cast
 
 from langchain_core.documents import Document
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from pydantic import BaseModel, model_validator
-from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 
 
 class Record(BaseModel):
@@ -67,8 +67,8 @@ class Record(BaseModel):
         Returns:
             Record: The converted Record.
         """
-        data = {"text": message.content}
-        data["metadata"] = message.to_json()
+        data: dict = {"text": message.content}
+        data["metadata"] = cast(dict, message.to_json())
         return cls(data=data, text_key="text")
 
     def __add__(self, other: "Record") -> "Record":
@@ -163,22 +163,14 @@ class Record(BaseModel):
         # Create a new Record object with a deep copy of the data dictionary
         return Record(data=copy.deepcopy(self.data, memo), text_key=self.text_key, default_value=self.default_value)
 
-    def __str__(self) -> str:
-        """
-        Returns a string representation of the Record, including text and data.
-        """
-        # Assuming a method to dump model data as JSON string exists.
-        # If it doesn't, you might need to implement it or use json.dumps() directly.
-        # build the string considering all keys in the data dictionary
-        prefix = "Record("
-        suffix = ")"
-        text = f"text_key={self.text_key}, "
-        text += ", ".join([f"{k}={v}" for k, v in self.data.items()])
-        return prefix + text + suffix
-
     # check which attributes the Record has by checking the keys in the data dictionary
     def __dir__(self):
         return super().__dir__() + list(self.data.keys())
+
+    def __str__(self) -> str:
+        # return a JSON string representation of the Record atributes
+
+        return json.dumps(self.data)
 
 
 INPUT_FIELD_NAME = "input_value"

@@ -7,7 +7,7 @@ from langflow.schema import Record
 
 class ChatInput(ChatComponent):
     display_name = "Chat Input"
-    description = "Get chat inputs from the Interaction Panel."
+    description = "Get chat inputs from the Playground."
     icon = "ChatInput"
 
     def build_config(self):

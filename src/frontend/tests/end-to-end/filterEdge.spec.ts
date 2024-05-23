@@ -15,7 +15,7 @@ test("LLMChain - Tooltip", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -40,7 +40,7 @@ test("LLMChain - Tooltip", async ({ page }) => {
 
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div/div/div[2]/div/div/div[2]/div[3]/div/button/div/div'
+      '//*[@id="react-flow-id"]/div[1]/div[1]/div/div/div[2]/div/div/div[2]/div[3]/div/button/div/div',
     )
     .hover()
     .then(async () => {
@@ -60,16 +60,18 @@ test("LLMChain - Tooltip", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div/div/div[2]/div/div/div[2]/div[4]/div/button/div/div'
+      '//*[@id="react-flow-id"]/div[1]/div[1]/div/div/div[2]/div/div/div[2]/div[4]/div/button/div/div',
     )
     .hover()
     .then(async () => {
       await expect(
-        page.getByTestId("tooltip-Model Specs").first()
+        page.getByTestId("tooltip-Model Specs").first(),
       ).toBeVisible();
       await page.waitForTimeout(2000);
 
-      await expect(page.getByTestId("tooltip-Models").first()).toBeVisible();
+      await expect(
+        page.getByTestId("tooltip-Model Specs").first(),
+      ).toBeVisible();
 
       await page.getByTestId("icon-Search").click();
 
@@ -79,12 +81,12 @@ test("LLMChain - Tooltip", async ({ page }) => {
 
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div/div/div[2]/div/div/div[2]/div[5]/div/button/div/div'
+      '//*[@id="react-flow-id"]/div[1]/div[1]/div/div/div[2]/div/div/div[2]/div[5]/div/button/div/div',
     )
     .hover()
     .then(async () => {
       await expect(
-        page.getByTestId("empty-tooltip-filter").first()
+        page.getByTestId("empty-tooltip-filter").first(),
       ).toBeVisible();
     });
 });
@@ -104,14 +106,14 @@ test("LLMChain - Filter", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.waitForTimeout(1000);
 
   await page.getByTestId(
-    "input-list-plus-btn-edit_metadata_indexing_include-2"
+    "input-list-plus-btn-edit_metadata_indexing_include-2",
   );
 
   await page.getByTestId("blank-flow").click();
@@ -134,17 +136,11 @@ test("LLMChain - Filter", async ({ page }) => {
 
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div/div/div[2]/div[4]/div/button/div/div'
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div/div/div[2]/div[4]/div/button/div/div',
     )
     .click();
 
-  await page
-    .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div/div/div[2]/div[4]/div/button/div/div'
-    )
-    .click();
-
-  await expect(page.getByTestId("disclosure-models")).toBeVisible();
+  await expect(page.getByTestId("disclosure-model specs")).toBeVisible();
   await expect(page.getByTestId("model_specsAnthropic").first()).toBeVisible();
   await expect(page.getByTestId("model_specsAmazon Bedrock")).toBeVisible();
   await expect(page.getByTestId("model_specsAzureChatOpenAI")).toBeVisible();
@@ -154,14 +150,14 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("model_specsChatVertexAI")).toBeVisible();
   await expect(page.getByTestId("model_specsCohere")).toBeVisible();
   await expect(
-    page.getByTestId("model_specsGoogle Generative AI")
+    page.getByTestId("model_specsGoogle Generative AI"),
   ).toBeVisible();
   await expect(
-    page.getByTestId("model_specsHugging Face Inference API")
+    page.getByTestId("model_specsHugging Face Inference API"),
   ).toBeVisible();
   await expect(page.getByTestId("model_specsOllama")).toBeVisible();
   await expect(
-    page.getByTestId("model_specsQianfanChatEndpoint")
+    page.getByTestId("model_specsQianfanChatEndpoint"),
   ).toBeVisible();
   await expect(page.getByTestId("model_specsQianfanLLMEndpoint")).toBeVisible();
   await expect(page.getByTestId("model_specsVertexAI")).toBeVisible();
@@ -173,7 +169,7 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("model_specsAmazon Bedrock")).not.toBeVisible();
   await expect(page.getByTestId("modelsAzure OpenAI")).not.toBeVisible();
   await expect(
-    page.getByTestId("model_specsAzureChatOpenAI")
+    page.getByTestId("model_specsAzureChatOpenAI"),
   ).not.toBeVisible();
   await expect(page.getByTestId("model_specsChatAnthropic")).not.toBeVisible();
   await expect(page.getByTestId("model_specsChatLiteLLM")).not.toBeVisible();
@@ -184,13 +180,13 @@ test("LLMChain - Filter", async ({ page }) => {
 
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div/div/div[2]/div[7]/button/div/div'
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div/div/div[2]/div[7]/button/div/div',
     )
     .click();
 
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div/div/div[2]/div[7]/button/div/div'
+      '//*[@id="react-flow-id"]/div/div[1]/div[1]/div/div[2]/div/div/div[2]/div[7]/button/div/div',
     )
     .click();
 

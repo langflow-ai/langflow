@@ -59,7 +59,7 @@ export default function Header(): JSX.Element {
           <Button
             className="gap-2"
             variant={
-              location.pathname === "/flows" ||
+              location.pathname === "/all" ||
               location.pathname === "/components"
                 ? "primary"
                 : "secondary"
@@ -73,18 +73,7 @@ export default function Header(): JSX.Element {
             <div className="hidden flex-1 md:block">{USER_PROJECTS_HEADER}</div>
           </Button>
         </Link>
-        {/* <Link to="/community">
-          <Button
-            className="gap-2"
-            variant={
-              location.pathname === "/community" ? "primary" : "secondary"
-            }
-            size="sm"
-          >
-            <IconComponent name="Users2" className="h-4 w-4" />
-            <div className="flex-1">Community Examples</div>
-          </Button>
-        </Link> */}
+
         {hasStore && (
           <Link to="/store">
             <Button
@@ -168,50 +157,57 @@ export default function Header(): JSX.Element {
               />
             </button>
           )}
-          {!autoLogin && (
-            <>
-              <Separator orientation="vertical" />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className={
-                      "h-7 w-7 rounded-full focus-visible:outline-0 " +
-                      (userData?.profile_image ??
-                        gradients[
-                          parseInt(userData?.id ?? "", 30) % gradients.length
-                        ])
-                    }
-                  />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {isAdmin && (
+
+          <>
+            <Separator orientation="vertical" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  data-testid="user-profile-settings"
+                  className={
+                    "h-7 w-7 rounded-full focus-visible:outline-0 " +
+                    (userData?.profile_image ??
+                      (userData?.id
+                        ? gradients[
+                            parseInt(userData?.id ?? "", 30) % gradients.length
+                          ]
+                        : "bg-gray-500"))
+                  }
+                />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>General</DropdownMenuLabel>
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={() => navigate("/settings")}
+                >
+                  Settings
+                </DropdownMenuItem>
+                {!autoLogin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    {isAdmin && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => navigate("/admin")}
+                      >
+                        Admin Page
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       className="cursor-pointer"
-                      onClick={() => navigate("/admin")}
+                      onClick={() => {
+                        logout();
+                      }}
                     >
-                      Admin Page
+                      Sign Out
                     </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    onClick={() => navigate("/account/settings")}
-                  >
-                    Profile Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    onClick={() => {
-                      logout();
-                    }}
-                  >
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          )}
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
         </div>
       </div>
     </div>

@@ -5,7 +5,9 @@ import Admonition from "@theme/Admonition";
 
 # 👋 Welcome to Langflow
 
-Langflow is an easy way to build from simple to complex AI applications. It is a low-code platform that allows you to integrate AI into everything you do.
+Langflow is a new, visual way to build, iterate, and deploy AI applications.
+
+Its intuitive interface allows for easy manipulation of AI building blocks, enabling developers to quickly prototype and turn their ideas into powerful, real-world solutions.
 
 {" "}
 
@@ -20,96 +22,17 @@ Langflow is an easy way to build from simple to complex AI applications. It is a
 
 ## 🚀 First steps
 
-## Installation
+- [Install Langflow](/getting-started/install-langflow) - Install and start a local Langflow server.
 
-Make sure you have **Python 3.10** installed on your system.
+- [Quickstart](/getting-started/quickstart) - Create a flow and run it.
 
-You can install **Langflow** with [pipx](https://pipx.pypa.io/stable/installation/) or with pip.
+- [HuggingFace Spaces](/getting-started/huggingface-spaces) - Duplicate the Langflow preview space and try it out before you install.
 
-Pipx can fetch the missing Python version for you, but you can also install it manually.
+- [New to LLMs?](/getting-started/new-to-llms) - Learn more about LLMs, prompting, and more at [promptingguide.ai](https://promptingguide.ai).
 
-```bash
-# Remember to check if you have Python 3.10 installed
-python -m pip install langflow -U
-# or
-pipx install langflow --python python3.10 --fetch-missing-python
-```
+## Learn more about Langflow 1.0
 
-Or you can install a pre-release version using:
+Learn more about the exciting changes in Langflow 1.0, and how to migrate your existing Langflow projects.
 
-```bash
-python -m pip install langflow --pre --force-reinstall
-# or
-pipx install langflow --python python3.10 --fetch-missing-python --pip-args="--pre --force-reinstall"
-```
-
-<Admonition type="tip">
-  <p>
-    Please, check out our [Possible Installation Issues
-    section](/migration/possible-installation-issues) if you encounter any
-    problems.
-  </p>
-</Admonition>
-
-We recommend using --force-reinstall to ensure you have the latest version of Langflow and its dependencies.
-
-### ⛓️ Running Langflow
-
-Langflow can be run in a variety of ways, including using the command-line interface (CLI) or HuggingFace Spaces.
-
-```bash
-python -m langflow run # or langflow --help
-```
-
-#### 🤗 HuggingFace Spaces
-
-Hugging Face provides a great alternative for running Langflow in their Spaces environment. This means you can run Langflow without any local installation required.
-
-The first step is to go to the [Langflow Space](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) or [Langflow 1.0 Preview Space](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true)
-
-Remember to use a Chromium-based browser for the best experience. You'll be presented with the following screen:
-
-<ZoomableImage
-  alt="Docusaurus themed image"
-  sources={{
-    light: "img/duplicate-space.png",
-    dark: "img/duplicate-space.png",
-  }}
-  style={{ width: "100%", margin: "20px auto" }}
-/>
-
-From here, just name your Space, define the visibility (Public or Private), and click on `Duplicate Space` to start the installation process. When that is done, you'll be redirected to the Space's main page to start using Langflow right away!
-
-Once you get Langflow running, click on New Project in the top right corner of the screen. Langflow provides a range of example flows to help you get started.
-
-To quickly try one of them, open a starter example, set up your API keys and click ⚡ Run, on the bottom right corner of the canvas. This will open up Langflow's Interaction Panel with the chat console, text inputs, and outputs.
-
-### 🖥️ Command Line Interface (CLI)
-
-Langflow provides a command-line interface (CLI) for easy management and configuration.
-
-#### Usage
-
-You can run the Langflow using the following command:
-
-```bash
-langflow run [OPTIONS]
-```
-
-Find more information about the available options by running:
-
-```bash
-python -m langflow --help
-```
-
-## Find out more about 1.0
-
-<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-  <p>
-    We are currently working on updating the documentation for Langflow 1.0.
-  </p>
-</Admonition>
-
-To get you learning more about what's new and why you should be excited about Langflow 1.0,
-go to [A new chapter for Langflow](/whats-new/a-new-chapter-langflow) and also come back often
-to check out our [migration guides](/whats-new/migrating-to-one-point-zero) as we release them.
+- [A new chapter for Langflow](/whats-new/a-new-chapter-langflow)
+- [Migration guides](/migration/migrating-to-one-point-zero)

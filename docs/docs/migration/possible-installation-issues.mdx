@@ -1,15 +1,18 @@
-# Possible Installation Issues
+# Common Installation Issues
 
-This is a list of possible issues that you may encounter when installing Langflow 1.0 Alpha and how to solve them.
+This is a list of possible issues that you may encounter when installing Langflow 1.0 alpha and how to solve them.
 
 ## _`No module named 'langflow.__main__'`_
 
-TLDR;
+### TL;DR
 
-- Run _`python -m langflow run`_ instead of _`langflow run`_. If that doesn't work, run _`_python -m pip install langflow --pre -U`_ to reinstall langflow.
-- If the above doesn't work, run _`python -m pip install langflow --pre -U --force-reinstall`_ to reinstall langflow and its dependencies.
+1. Run _`python -m langflow run`_ instead of _`langflow run`_.
+2. If that doesn't work, reinstall Langflow with _`_python -m pip install langflow --pre -U`_.
+3. If that doesn't work, reinstall Langflow and its dependencies with _`python -m pip install langflow --pre -U --force-reinstall`_.
 
-When you try to run langflow using the command `langflow run`, you may encounter the following error:
+### Details
+
+When you try to run Langflow using the command `langflow run`, you may encounter the following error:
 
 ```bash
 > langflow run
@@ -19,9 +22,27 @@ Traceback (most recent call last):
 ModuleNotFoundError: No module named 'langflow.__main__'
 ```
 
-For this error to occur, two scenarios are possible:
+There are two possible reasons for this error:
 
-1. You've installed langflow using _`pip install langflow`_ but you already had a previous version of langflow installed in your system.
-   In this case, you might not be running the correct executable.
-   To solve this issue, you can run the correct executable by running _`python -m langflow run`_ instead of _`langflow run`_ and if that doesn't work, you can try uninstalling langflow and reinstalling it using _`python -m pip install langflow --pre -U`_.
-2. Some version conflicts might have occurred during the installation process. Run _`python -m pip install langflow --pre -U --force-reinstall`_ to reinstall langflow and its dependencies.
+1. You've installed Langflow using _`pip install langflow`_ but you already had a previous version of Langflow installed in your system.
+  In this case, you might be running the wrong executable.
+  To solve this issue, run the correct executable by running _`python -m langflow run`_ instead of _`langflow run`_.
+  If that doesn't work, try uninstalling and reinstalling Langflow with _`python -m pip install langflow --pre -U`_.
+2. Some version conflicts might have occurred during the installation process.
+  Run _`python -m pip install langflow --pre -U --force-reinstall`_ to reinstall Langflow and its dependencies.
+
+## _`Something went wrong running migrations. Please, run 'langflow migration --fix'`_
+
+### TL;DR
+
+- Clear the cache by deleting the contents of the cache folder.
+  This folder can be found at:
+  - **Linux or WSL2 on Windows**: `home/<username>/.cache/langflow/`
+  - **MacOS**: `/Users/<username>/Library/Caches/langflow/`
+
+### Details
+
+This error can occur during Langflow upgrades when the new version can't override `langflow-pre.db` in `.cache/langflow/`. Clearing the cache removes this file but will also erase your settings.
+
+If you wish to retain your files, back them up before clearing the folder.
+

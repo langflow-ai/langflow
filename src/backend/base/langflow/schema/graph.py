@@ -1,7 +1,8 @@
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
+
+from pydantic import BaseModel, Field, RootModel
 
 from langflow.schema.schema import InputType
-from pydantic import BaseModel, Field, RootModel
 
 
 class InputValue(BaseModel):
@@ -14,7 +15,7 @@ class InputValue(BaseModel):
 
 
 class Tweaks(RootModel):
-    root: dict[str, Union[str, dict[str, str]]] = Field(
+    root: dict[str, Union[str, dict[str, Any]]] = Field(
         description="A dictionary of tweaks to adjust the flow's execution. Allows customizing flow behavior dynamically. All tweaks are overridden by the input values.",
     )
     model_config = {

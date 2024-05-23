@@ -1,7 +1,7 @@
 # Inputs and Outputs
 
 TL;DR: Inputs and Outputs are a category of components that are used to define where data comes in and out of your flow. They also
-dynamically change the Interaction Panel and can be renamed to make it easier to build and maintain your flows.
+dynamically change the Playground and can be renamed to make it easier to build and maintain your flows.
 
 ## Introduction
 
@@ -10,8 +10,8 @@ Langflow 1.0 introduces new categories of components called Inputs and Outputs. 
 Let's start with what they have in common:
 
 - Components in these categories connect to components that have Text or Record inputs or outputs. Some can connect to both but you have to pick what type of data you want to output or input.
-- They can be renamed to help you identify them more easily in the Interaction Panel and while using the API.
-- They dynamically change the Interaction Panel to make it easier to understand and interact with your flows.
+- They can be renamed to help you identify them more easily in the Playground and while using the API.
+- They dynamically change the Playground to make it easier to understand and interact with your flows.
 
 Native Langflow Components were created to be powerful tools that work around Langflow's features. They are designed to be easy to use and understand, and to help you build your flows faster.
 
@@ -21,7 +21,7 @@ Let's dive into Inputs and Outputs.
 
 Inputs are components that are used to define where data comes into your flow. They can be used to receive data from the user, from a database, or from any other source that can be converted to Text or Record.
 
-The difference between Chat Input and other Input components is the format of the output, the number of configurable fields, and the way they are displayed in the Interaction Panel.
+The difference between Chat Input and other Input components is the format of the output, the number of configurable fields, and the way they are displayed in the Playground.
 
 Chat Input components can output Text or Record. When you want to pass the sender name, or sender to the next component, you can use the Record output, and when you want to pass the message only you can use the Text output. This is useful when saving the message to a database or a memory system like Zep.
 
@@ -29,7 +29,7 @@ You can find out more about it and the other Inputs [here](../components/inputs)
 
 ## Outputs
 
-Outputs are components that are used to define where data comes out of your flow. They can be used to send data to the user, to the Interaction Panel, or to define how the data will be displayed in the Interaction Panel.
+Outputs are components that are used to define where data comes out of your flow. They can be used to send data to the user, to the Playground, or to define how the data will be displayed in the Playground.
 
 The Chat Output works similarly to the Chat Input but does not have a field that allows for written input. It is used as an Output definition and can be used to send data to the user.
 

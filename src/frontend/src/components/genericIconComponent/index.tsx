@@ -5,7 +5,9 @@ import { nodeIconsLucide } from "../../utils/styleUtils";
 import { cn } from "../../utils/utils";
 import Loading from "../ui/loading";
 
-const ForwardedIconComponent = memo(
+import { useEffect, useState } from "react";
+
+export const ForwardedIconComponent = memo(
   forwardRef(
     (
       {
@@ -16,11 +18,20 @@ const ForwardedIconComponent = memo(
         strokeWidth,
         id = "",
       }: IconComponentProps,
-      ref
+      ref,
     ) => {
+      const [showFallback, setShowFallback] = useState(false);
+
+      useEffect(() => {
+        const timer = setTimeout(() => {
+          setShowFallback(true);
+        }, 30);
+
+        return () => clearTimeout(timer);
+      }, []);
+
       let TargetIcon = nodeIconsLucide[name];
       if (!TargetIcon) {
-        // check if name exists in dynamicIconImports
         if (!dynamicIconImports[name]) {
           TargetIcon = nodeIconsLucide["unknown"];
         } else TargetIcon = lazy(dynamicIconImports[name]);
@@ -35,11 +46,15 @@ const ForwardedIconComponent = memo(
       if (!TargetIcon) {
         return null; // Render nothing until the icon is loaded
       }
-      const fallback = (
+
+      const fallback = showFallback ? (
         <div className={cn(className, "flex items-center justify-center")}>
           <Loading />
         </div>
+      ) : (
+        <div className={className}></div>
       );
+
       return (
         <Suspense fallback={fallback}>
           <TargetIcon
@@ -50,8 +65,8 @@ const ForwardedIconComponent = memo(
           />
         </Suspense>
       );
-    }
-  )
+    },
+  ),
 );
 
 export default ForwardedIconComponent;

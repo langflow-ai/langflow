@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -37,7 +37,11 @@ def create_variable(
         variable_dict["user_id"] = current_user.id
 
         db_variable = Variable.model_validate(variable_dict)
-        if not db_variable.value:
+        if not db_variable.name and not db_variable.value:
+            raise HTTPException(status_code=400, detail="Variable name and value cannot be empty")
+        elif not db_variable.name:
+            raise HTTPException(status_code=400, detail="Variable name cannot be empty")
+        elif not db_variable.value:
             raise HTTPException(status_code=400, detail="Variable value cannot be empty")
         encrypted = auth_utils.encrypt_api_key(db_variable.value, settings_service=settings_service)
         db_variable.value = encrypted
@@ -85,7 +89,7 @@ def update_variable(
         variable_data = variable.model_dump(exclude_unset=True)
         for key, value in variable_data.items():
             setattr(db_variable, key, value)
-        db_variable.updated_at = datetime.utcnow()
+        db_variable.updated_at = datetime.now(timezone.utc)
         session.commit()
         session.refresh(db_variable)
         return db_variable

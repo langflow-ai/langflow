@@ -1,7 +1,7 @@
 import { Transition } from "@headlessui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import ApiModal from "../../modals/ApiModal";
 import IOModal from "../../modals/IOModal";
+import ApiModal from "../../modals/apiModal/views";
 import ShareModal from "../../modals/shareModal";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -15,8 +15,8 @@ export default function FlowToolbar(): JSX.Element {
   const hasIO = useFlowStore((state) => state.hasIO);
   const hasStore = useStoreStore((state) => state.hasStore);
   const validApiKey = useStoreStore((state) => state.validApiKey);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -50,7 +50,7 @@ export default function FlowToolbar(): JSX.Element {
             "relative inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-background hover:bg-hover ",
             !hasApiKey || !validApiKey || !hasStore
               ? " button-disable text-muted-foreground  "
-              : ""
+              : "",
           )}
         >
           <ForwardedIconComponent
@@ -59,14 +59,14 @@ export default function FlowToolbar(): JSX.Element {
               "-m-0.5 -ml-1 h-6 w-6",
               !hasApiKey || !validApiKey || !hasStore
                 ? "extra-side-bar-save-disable"
-                : ""
+                : "",
             )}
           />
           Share
         </button>
       </ShareModal>
     ),
-    [hasApiKey, validApiKey, currentFlow, hasStore]
+    [hasApiKey, validApiKey, currentFlow, hasStore],
   );
 
   return (
@@ -87,15 +87,15 @@ export default function FlowToolbar(): JSX.Element {
           }
         >
           <div className="flex">
-            <div className="flex h-full w-full  gap-1 rounded-sm text-medium-indigo transition-all">
+            <div className="flex h-full w-full  gap-1 rounded-sm transition-all">
               {hasIO ? (
                 <IOModal open={open} setOpen={setOpen} disable={!hasIO}>
-                  <div className="relative inline-flex w-full items-center justify-center   gap-1 px-5 py-3 text-sm font-semibold text-medium-indigo transition-all transition-all duration-500 ease-in-out ease-in-out hover:bg-hover">
+                  <div className="relative inline-flex w-full items-center justify-center   gap-1 px-5 py-3 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-hover">
                     <ForwardedIconComponent
-                      name="Zap"
-                      className={"message-button-icon h-5 w-5 transition-all"}
+                      name="BotMessageSquareIcon"
+                      className={" h-5 w-5 transition-all"}
                     />
-                    Run
+                    Playground
                   </div>
                 </IOModal>
               ) : (
@@ -103,12 +103,10 @@ export default function FlowToolbar(): JSX.Element {
                   className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out ease-in-out`}
                 >
                   <ForwardedIconComponent
-                    name="Zap"
-                    className={
-                      "message-button-icon h-5 w-5 fill-muted-foreground stroke-muted-foreground transition-all"
-                    }
+                    name="BotMessageSquareIcon"
+                    className={" h-5 w-5 transition-all"}
                   />
-                  Run
+                  Playground
                 </div>
               )}
             </div>
@@ -120,7 +118,7 @@ export default function FlowToolbar(): JSX.Element {
                 <ApiModal flow={currentFlow}>
                   <div
                     className={classNames(
-                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover"
+                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover",
                     )}
                   >
                     <ForwardedIconComponent

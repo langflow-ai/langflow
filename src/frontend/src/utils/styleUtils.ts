@@ -5,6 +5,7 @@ import {
   ArrowUpToLine,
   Bell,
   Binary,
+  Blocks,
   BookMarked,
   BookmarkPlus,
   Bot,
@@ -52,7 +53,9 @@ import {
   FileType2,
   FileUp,
   FlaskConical,
+  FolderIcon,
   FolderPlus,
+  FolderPlusIcon,
   FormInput,
   Forward,
   Gift,
@@ -67,6 +70,7 @@ import {
   Home,
   Info,
   Key,
+  Keyboard,
   Laptop2,
   Layers,
   Link,
@@ -86,6 +90,7 @@ import {
   MoreHorizontal,
   Network,
   Package2,
+  Palette,
   Paperclip,
   Pencil,
   PencilLine,
@@ -102,12 +107,14 @@ import {
   SaveAll,
   Scissors,
   ScreenShare,
+  ScrollText,
   Search,
   Settings2,
   Share,
   Share2,
   Shield,
   Sliders,
+  SlidersHorizontal,
   Snowflake,
   Sparkles,
   Square,
@@ -137,7 +144,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { FaApple, FaGithub } from "react-icons/fa";
+import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
@@ -146,6 +153,7 @@ import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
 import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { ChromaIcon } from "../icons/ChromaIcon";
+import { CouchbaseIcon } from "../icons/Couchbase";
 import { CohereIcon } from "../icons/Cohere";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
@@ -158,6 +166,7 @@ import {
   GradientSave,
   GradientUngroup,
 } from "../icons/GradientSparkles";
+import { GroqIcon } from "../icons/Groq";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
 import { MetaIcon } from "../icons/Meta";
@@ -292,7 +301,8 @@ export const nodeIconsLucide: iconsType = {
   ListFlows: Group,
   ClearMessageHistory: FileClock,
   Python: PythonIcon,
-  ChatOutput: BotMessageSquareIcon,
+  ChatOutput: MessagesSquare,
+  BotMessageSquareIcon,
   ChatInput: MessagesSquare,
   inputs: Download,
   outputs: Upload,
@@ -315,6 +325,7 @@ export const nodeIconsLucide: iconsType = {
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
+  Couchbase: CouchbaseIcon,
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,
@@ -334,6 +345,7 @@ export const nodeIconsLucide: iconsType = {
   GoogleSearchRun: GoogleIcon,
   Google: GoogleIcon,
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
+  Groq: GroqIcon,
   HNLoader: HackerNewsIcon,
   HuggingFaceHub: HuggingFaceIcon,
   HuggingFace: HuggingFaceIcon,
@@ -374,8 +386,10 @@ export const nodeIconsLucide: iconsType = {
   tools: Hammer,
   advanced: Laptop2,
   chat: MessageCircle,
+  Keyboard: Keyboard,
   embeddings: Binary,
   saved_components: GradientSave,
+  ScrollText,
   documentloaders: Paperclip,
   vectorstores: Layers,
   vectorsearch: TextSearch,
@@ -412,6 +426,9 @@ export const nodeIconsLucide: iconsType = {
   MoonIcon,
   Bell,
   ChevronLeft,
+  SlidersHorizontal,
+  Palette,
+  Blocks,
   ChevronDown,
   ArrowLeft,
   Shield,
@@ -506,4 +523,7 @@ export const nodeIconsLucide: iconsType = {
   Command,
   ArrowBigUp,
   Dot,
+  FolderPlusIcon,
+  FolderIcon,
+  Discord: FaDiscord,
 };

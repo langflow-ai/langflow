@@ -74,23 +74,25 @@ def retrieve_file_paths(
     return file_paths
 
 
-def partition_file_to_record(file_path: str, silent_errors: bool) -> Optional[Record]:
-    # Use the partition function to load the file
-    from unstructured.partition.auto import partition  # type: ignore
+# ! Removing unstructured dependency until
+# ! 3.12 is supported
+# def partition_file_to_record(file_path: str, silent_errors: bool) -> Optional[Record]:
+#     # Use the partition function to load the file
+#     from unstructured.partition.auto import partition  # type: ignore
 
-    try:
-        elements = partition(file_path)
-    except Exception as e:
-        if not silent_errors:
-            raise ValueError(f"Error loading file {file_path}: {e}") from e
-        return None
+#     try:
+#         elements = partition(file_path)
+#     except Exception as e:
+#         if not silent_errors:
+#             raise ValueError(f"Error loading file {file_path}: {e}") from e
+#         return None
 
-    # Create a Record
-    text = "\n\n".join([Text(el) for el in elements])
-    metadata = elements.metadata if hasattr(elements, "metadata") else {}
-    metadata["file_path"] = file_path
-    record = Record(text=text, data=metadata)
-    return record
+#     # Create a Record
+#     text = "\n\n".join([Text(el) for el in elements])
+#     metadata = elements.metadata if hasattr(elements, "metadata") else {}
+#     metadata["file_path"] = file_path
+#     record = Record(text=text, data=metadata)
+#     return record
 
 
 def read_text_file(file_path: str) -> str:
@@ -138,18 +140,20 @@ def parse_text_file_to_record(file_path: str, silent_errors: bool) -> Optional[R
     return record
 
 
-def get_elements(
-    file_paths: List[str],
-    silent_errors: bool,
-    max_concurrency: int,
-    use_multithreading: bool,
-) -> List[Optional[Record]]:
-    if use_multithreading:
-        records = parallel_load_records(file_paths, silent_errors, max_concurrency)
-    else:
-        records = [partition_file_to_record(file_path, silent_errors) for file_path in file_paths]
-    records = list(filter(None, records))
-    return records
+# ! Removing unstructured dependency until
+# ! 3.12 is supported
+# def get_elements(
+#     file_paths: List[str],
+#     silent_errors: bool,
+#     max_concurrency: int,
+#     use_multithreading: bool,
+# ) -> List[Optional[Record]]:
+#     if use_multithreading:
+#         records = parallel_load_records(file_paths, silent_errors, max_concurrency)
+#     else:
+#         records = [partition_file_to_record(file_path, silent_errors) for file_path in file_paths]
+#     records = list(filter(None, records))
+#     return records
 
 
 def parallel_load_records(
