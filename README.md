@@ -23,10 +23,6 @@
     <a href="https://discord.com/invite/EqksyE2EX9">
         <img src="https://img.shields.io/discord/1116803230643527710?label=Discord">
     </a>
-    <a href="https://pypi.org/project/langflow/">
-        <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/langflow">
-    </a>
-
 </p>
 
 <p align="center">
@@ -46,7 +42,7 @@
 You can install Langflow with pip:
 
 ```shell
-# Make sure you have Python 3.10 installed on your system.
+# Make sure you have Python 3.10 or greater installed on your system.
 # Install the pre-release version (recommended for the latest updates)
 python -m pip install langflow --pre --force-reinstall
 
