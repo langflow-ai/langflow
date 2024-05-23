@@ -112,7 +112,6 @@ async def simplified_run_flow(
 
     try:
         flow_id_str = str(flow_id)
-        task_result: List[RunOutputs] = []
         artifacts = {}
         if input_request.session_id:
             session_data = await session_service.load_session(input_request.session_id, flow_id=flow_id_str)
@@ -240,7 +239,6 @@ async def experimental_run_flow(
         if outputs is None:
             outputs = []
 
-        task_result: List[RunOutputs] = []
         artifacts = {}
         if session_id:
             session_data = await session_service.load_session(session_id, flow_id=flow_id_str)
