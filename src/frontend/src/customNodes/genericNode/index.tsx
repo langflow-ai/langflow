@@ -27,8 +27,10 @@ import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
-import { classNames, cn, getFieldTitle, sortFields } from "../../utils/utils";
+import { classNames, cn } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
+import getFieldTitle from "../utils/get-field-title";
+import sortFields from "../utils/sort-fields";
 
 export default function GenericNode({
   data,

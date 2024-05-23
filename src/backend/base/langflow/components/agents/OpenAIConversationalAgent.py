@@ -12,6 +12,7 @@ from langchain_openai import ChatOpenAI
 
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.custom.custom_component import CustomComponent
+from pydantic.v1 import SecretStr
 
 
 class ConversationalAgent(CustomComponent):
@@ -57,9 +58,14 @@ class ConversationalAgent(CustomComponent):
         max_token_limit: int = 2000,
         temperature: float = 0.9,
     ) -> AgentExecutor:
+        if openai_api_key:
+            api_key = SecretStr(openai_api_key)
+        else:
+            api_key = None
+
         llm = ChatOpenAI(
             model=model_name,
-            api_key=openai_api_key,
+            api_key=api_key,
             base_url=openai_api_base,
             max_tokens=max_token_limit,
             temperature=temperature,

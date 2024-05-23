@@ -566,7 +566,7 @@
                 "load_from_db": false,
                 "title_case": false,
                 "input_types": ["Text"],
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "stream": {
                 "type": "bool",
@@ -854,9 +854,9 @@
       {
         "source": "URL-HYPkR",
         "target": "Prompt-Rse03",
-        "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-HYPkRœ}",
-        "targetHandle": "{œfieldNameœ:œreference_2œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
-        "id": "reactflow__edge-URL-HYPkR{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-HYPkRœ}-Prompt-Rse03{œfieldNameœ:œreference_2œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "sourceHandle": "{\u0153baseClasses\u0153:[\u0153Record\u0153],\u0153dataType\u0153:\u0153URL\u0153,\u0153id\u0153:\u0153URL-HYPkR\u0153}",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153reference_2\u0153,\u0153id\u0153:\u0153Prompt-Rse03\u0153,\u0153inputTypes\u0153:[\u0153Document\u0153,\u0153BaseOutputParser\u0153,\u0153Record\u0153,\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
+        "id": "reactflow__edge-URL-HYPkR{\u0153baseClasses\u0153:[\u0153Record\u0153],\u0153dataType\u0153:\u0153URL\u0153,\u0153id\u0153:\u0153URL-HYPkR\u0153}-Prompt-Rse03{\u0153fieldName\u0153:\u0153reference_2\u0153,\u0153id\u0153:\u0153Prompt-Rse03\u0153,\u0153inputTypes\u0153:[\u0153Document\u0153,\u0153BaseOutputParser\u0153,\u0153Record\u0153,\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "data": {
           "targetHandle": {
             "fieldName": "reference_2",
@@ -878,9 +878,9 @@
       },
       {
         "source": "OpenAIModel-gi29P",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gi29Pœ}",
+        "sourceHandle": "{\u0153baseClasses\u0153:[\u0153str\u0153,\u0153Text\u0153,\u0153object\u0153],\u0153dataType\u0153:\u0153OpenAIModel\u0153,\u0153id\u0153:\u0153OpenAIModel-gi29P\u0153}",
         "target": "ChatOutput-JPlxl",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JPlxlœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153ChatOutput-JPlxl\u0153,\u0153inputTypes\u0153:[\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
@@ -898,13 +898,13 @@
           "stroke": "#555"
         },
         "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-OpenAIModel-gi29P{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gi29Pœ}-ChatOutput-JPlxl{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JPlxlœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-gi29P{\u0153baseClasses\u0153:[\u0153str\u0153,\u0153Text\u0153,\u0153object\u0153],\u0153dataType\u0153:\u0153OpenAIModel\u0153,\u0153id\u0153:\u0153OpenAIModel-gi29P\u0153}-ChatOutput-JPlxl{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153ChatOutput-JPlxl\u0153,\u0153inputTypes\u0153:[\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}"
       },
       {
         "source": "URL-2cX90",
-        "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-2cX90œ}",
+        "sourceHandle": "{\u0153baseClasses\u0153:[\u0153Record\u0153],\u0153dataType\u0153:\u0153URL\u0153,\u0153id\u0153:\u0153URL-2cX90\u0153}",
         "target": "Prompt-Rse03",
-        "targetHandle": "{œfieldNameœ:œreference_1œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153reference_1\u0153,\u0153id\u0153:\u0153Prompt-Rse03\u0153,\u0153inputTypes\u0153:[\u0153Document\u0153,\u0153BaseOutputParser\u0153,\u0153Record\u0153,\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "data": {
           "targetHandle": {
             "fieldName": "reference_1",
@@ -922,13 +922,13 @@
           "stroke": "#555"
         },
         "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-URL-2cX90{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-2cX90œ}-Prompt-Rse03{œfieldNameœ:œreference_1œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-URL-2cX90{\u0153baseClasses\u0153:[\u0153Record\u0153],\u0153dataType\u0153:\u0153URL\u0153,\u0153id\u0153:\u0153URL-2cX90\u0153}-Prompt-Rse03{\u0153fieldName\u0153:\u0153reference_1\u0153,\u0153id\u0153:\u0153Prompt-Rse03\u0153,\u0153inputTypes\u0153:[\u0153Document\u0153,\u0153BaseOutputParser\u0153,\u0153Record\u0153,\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}"
       },
       {
         "source": "TextInput-og8Or",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-og8Orœ}",
+        "sourceHandle": "{\u0153baseClasses\u0153:[\u0153object\u0153,\u0153Text\u0153,\u0153str\u0153],\u0153dataType\u0153:\u0153TextInput\u0153,\u0153id\u0153:\u0153TextInput-og8Or\u0153}",
         "target": "Prompt-Rse03",
-        "targetHandle": "{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153instructions\u0153,\u0153id\u0153:\u0153Prompt-Rse03\u0153,\u0153inputTypes\u0153:[\u0153Document\u0153,\u0153BaseOutputParser\u0153,\u0153Record\u0153,\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "data": {
           "targetHandle": {
             "fieldName": "instructions",
@@ -946,13 +946,13 @@
           "stroke": "#555"
         },
         "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-TextInput-og8Or{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-og8Orœ}-Prompt-Rse03{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-TextInput-og8Or{\u0153baseClasses\u0153:[\u0153object\u0153,\u0153Text\u0153,\u0153str\u0153],\u0153dataType\u0153:\u0153TextInput\u0153,\u0153id\u0153:\u0153TextInput-og8Or\u0153}-Prompt-Rse03{\u0153fieldName\u0153:\u0153instructions\u0153,\u0153id\u0153:\u0153Prompt-Rse03\u0153,\u0153inputTypes\u0153:[\u0153Document\u0153,\u0153BaseOutputParser\u0153,\u0153Record\u0153,\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}"
       },
       {
         "source": "Prompt-Rse03",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-Rse03œ}",
+        "sourceHandle": "{\u0153baseClasses\u0153:[\u0153object\u0153,\u0153Text\u0153,\u0153str\u0153],\u0153dataType\u0153:\u0153Prompt\u0153,\u0153id\u0153:\u0153Prompt-Rse03\u0153}",
         "target": "OpenAIModel-gi29P",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-gi29Pœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153OpenAIModel-gi29P\u0153,\u0153inputTypes\u0153:[\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
@@ -970,7 +970,7 @@
           "stroke": "#555"
         },
         "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-Prompt-Rse03{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-Rse03œ}-OpenAIModel-gi29P{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-gi29Pœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-Rse03{\u0153baseClasses\u0153:[\u0153object\u0153,\u0153Text\u0153,\u0153str\u0153],\u0153dataType\u0153:\u0153Prompt\u0153,\u0153id\u0153:\u0153Prompt-Rse03\u0153}-OpenAIModel-gi29P{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153OpenAIModel-gi29P\u0153,\u0153inputTypes\u0153:[\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "selected": false
       }
     ],
