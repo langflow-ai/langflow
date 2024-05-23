@@ -21,14 +21,7 @@ const InputSearchComponent = ({
   onKeyDown,
 }: InputSearchComponentProps) => {
   const pagePath = window.location.pathname;
-
-  const [inputValue, setInputValue] = useState("");
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
-
-  const setSearchFlowsComponents = useFlowsManagerStore(
-    (state) => state.setSearchFlowsComponents,
-  );
-
   const searchFlowsComponents = useFlowsManagerStore(
     (state) => state.searchFlowsComponents,
   );
