@@ -53,7 +53,7 @@ async def try_running_celery_task(vertex, user_id):
 
 @router.post("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
 async def retrieve_vertices_order(
-    flow_id: str,
+    flow_id: uuid.UUID,
     data: Optional[Annotated[Optional[FlowDataRequest], Body(embed=True)]] = None,
     stop_component_id: Optional[str] = None,
     start_component_id: Optional[str] = None,
@@ -78,6 +78,7 @@ async def retrieve_vertices_order(
         HTTPException: If there is an error checking the build status.
     """
     try:
+        flow_id = str(flow_id)
         # First, we need to check if the flow_id is in the cache
         if not data:
             graph = await build_and_cache_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
@@ -119,7 +120,7 @@ async def retrieve_vertices_order(
 
 @router.post("/build/{flow_id}/vertices/{vertex_id}")
 async def build_vertex(
-    flow_id: str,
+    flow_id: uuid.UUID,
     vertex_id: str,
     background_tasks: BackgroundTasks,
     inputs: Annotated[Optional[InputValueRequest], Body(embed=True)] = None,
@@ -143,6 +144,8 @@ async def build_vertex(
         HTTPException: If there is an error building the vertex.
 
     """
+    flow_id = str(flow_id)
+
     next_runnable_vertices = []
     top_level_vertices = []
     try:
@@ -236,7 +239,7 @@ async def build_vertex(
 
 @router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse)
 async def build_vertex_stream(
-    flow_id: str,
+    flow_id: uuid.UUID,
     vertex_id: str,
     session_id: Optional[str] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
@@ -268,6 +271,7 @@ async def build_vertex_stream(
         HTTPException: If an error occurs while building the vertex.
     """
     try:
+        flow_id = str(flow_id)
 
         async def stream_vertex():
             try:
