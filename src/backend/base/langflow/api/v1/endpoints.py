@@ -400,23 +400,6 @@ async def custom_component(
     return built_frontend_node
 
 
-@router.post("/custom_component/reload", status_code=HTTPStatus.OK)
-async def reload_custom_component(path: str, user: User = Depends(get_current_active_user)):
-    from langflow.interface.custom.utils import build_custom_component_template
-
-    try:
-        reader = DirectoryReader("")
-        valid, content = reader.process_file(path)
-        if not valid:
-            raise ValueError(content)
-
-        extractor = CustomComponent(code=content)
-        frontend_node, _ = build_custom_component_template(extractor, user_id=user.id)
-        return frontend_node
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)
 async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
