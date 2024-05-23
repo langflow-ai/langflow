@@ -1,5 +1,5 @@
 export type GlobalVariablesStore = {
-  globalVariablesEntries: Array<string>;
+  globalVariablesEntries: Array<string> | undefined;
   globalVariables: {
     [name: string]: {
       id: string;

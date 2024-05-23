@@ -1,22 +1,27 @@
-import { useState } from "react";
+import { ChangeEvent, KeyboardEvent } from "react";
 import { Input } from "../../../../../../components/ui/input";
 import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
 import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
 
 type InputSearchComponentProps = {
   loading: boolean;
+  divClasses?: string;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onClick?: () => void;
+  value: string;
+  onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
 };
 
-const InputSearchComponent = ({ loading }: InputSearchComponentProps) => {
+const InputSearchComponent = ({
+  loading,
+  divClasses,
+  onChange,
+  onClick,
+  value,
+  onKeyDown,
+}: InputSearchComponentProps) => {
   const pagePath = window.location.pathname;
-
-  const [inputValue, setInputValue] = useState("");
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
-
-  const setSearchFlowsComponents = useFlowsManagerStore(
-    (state) => state.setSearchFlowsComponents,
-  );
-
   const searchFlowsComponents = useFlowsManagerStore(
     (state) => state.searchFlowsComponents,
   );
@@ -38,24 +43,18 @@ const InputSearchComponent = ({ loading }: InputSearchComponentProps) => {
 
   return (
     <>
-      <div className="relative h-12 w-[60%]">
+      <div className={`${divClasses ? divClasses : "relative h-12 w-[60%]"}`}>
         <Input
           data-testid="search-store-input"
           disabled={disableInputSearch}
           placeholder={getSearchPlaceholder()}
           className="absolute h-12 pl-5 pr-12"
-          onChange={(e) => {
-            setSearchFlowsComponents(e.target.value);
-            setInputValue(e.target.value);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              setSearchFlowsComponents(inputValue);
-            }
-          }}
-          value={inputValue}
+          onChange={onChange}
+          onKeyDown={onKeyDown}
+          value={value}
         />
         <button
+          onClick={onClick}
           disabled={loading}
           className="absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground"
           data-testid="search-store-button"

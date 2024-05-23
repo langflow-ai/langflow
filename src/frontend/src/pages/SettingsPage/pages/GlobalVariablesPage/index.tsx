@@ -55,6 +55,7 @@ export default function GlobalVariablesPage() {
       name: string;
       default_fields: string | undefined;
     }> = [];
+    if (globalVariablesEntries === undefined) return;
     globalVariablesEntries.forEach((entrie) => {
       const globalVariableObj = globalVariables[entrie];
       rows.push({
