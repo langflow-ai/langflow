@@ -17,7 +17,7 @@ export class Rds extends Construct {
     const { vpc, dbSG } = props;
     const instanceType = ec2.InstanceType.of(
       ec2.InstanceClass.BURSTABLE4_GRAVITON,
-      ec2.InstanceSize.MEDIUM
+      ec2.InstanceSize.MEDIUM,
     );
 
     // RDSのパスワードを自動生成してSecrets Managerに格納
@@ -33,11 +33,11 @@ export class Rds extends Construct {
         engine: rds.DatabaseClusterEngine.auroraMysql({
           version: rds.AuroraMysqlEngineVersion.of(
             "8.0.mysql_aurora.3.05.2",
-            "8.0"
+            "8.0",
           ),
         }),
         description: "for-langflow",
-      }
+      },
     );
     clusterParameterGroup.bindToCluster({});
 
@@ -49,11 +49,11 @@ export class Rds extends Construct {
         engine: rds.DatabaseClusterEngine.auroraMysql({
           version: rds.AuroraMysqlEngineVersion.of(
             "8.0.mysql_aurora.3.05.2",
-            "8.0"
+            "8.0",
           ),
         }),
         description: "for-langflow",
-      }
+      },
     );
     instanceParameterGroup.bindToInstance({});
 
@@ -61,7 +61,7 @@ export class Rds extends Construct {
       engine: rds.DatabaseClusterEngine.auroraMysql({
         version: rds.AuroraMysqlEngineVersion.of(
           "8.0.mysql_aurora.3.05.2",
-          "8.0"
+          "8.0",
         ),
       }),
       storageEncrypted: true,

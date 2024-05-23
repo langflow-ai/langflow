@@ -11,7 +11,7 @@ import { Badge } from "../../../../components/ui/badge";
 import { Card, CardContent } from "../../../../components/ui/card";
 import { deleteGlobalVariable } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
-import { useGlobalVariablesStore } from "../../../../stores/globalVariables";
+import { useGlobalVariablesStore } from "../../../../stores/globalVariablesStore/globalVariables";
 import { cn } from "../../../../utils/utils";
 
 export default function GlobalVariablesPage() {
