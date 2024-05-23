@@ -24,19 +24,19 @@ export default function AddNewVariableButton({ children }): JSX.Element {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
   const unavaliableFields = new Set(
-    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields)),
+    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields))
   );
 
   const availableFields = () => {
     const fields = Array.from(componentFields).filter(
-      (field) => !unavaliableFields.has(field),
+      (field) => !unavaliableFields.has(field)
     );
 
     return sortByName(fields);
   };
 
   const addGlobalVariable = useGlobalVariablesStore(
-    (state) => state.addGlobalVariable,
+    (state) => state.addGlobalVariable
   );
 
   function handleSaveVariable() {
@@ -130,8 +130,8 @@ export default function AddNewVariableButton({ children }): JSX.Element {
           <InputComponent
             setSelectedOptions={(value) => setFields(value)}
             selectedOptions={fields}
-            password={false}
             options={availableFields()}
+            password={false}
             placeholder="Choose a field for the variable..."
             id={"apply-to-fields"}
           ></InputComponent>

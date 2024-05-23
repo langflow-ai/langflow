@@ -30,6 +30,7 @@ class InterfaceComponentTypes(str, Enum, metaclass=ContainsEnumMeta):
     ChatOutput = "ChatOutput"
     TextInput = "TextInput"
     TextOutput = "TextOutput"
+    RecordsOutput = "RecordsOutput"
 
     def __contains__(cls, item):
         try:
@@ -40,6 +41,8 @@ class InterfaceComponentTypes(str, Enum, metaclass=ContainsEnumMeta):
             return True
 
 
+CHAT_COMPONENTS = [InterfaceComponentTypes.ChatInput, InterfaceComponentTypes.ChatOutput]
+RECORDS_COMPONENTS = [InterfaceComponentTypes.RecordsOutput]
 INPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatInput,
     InterfaceComponentTypes.TextInput,

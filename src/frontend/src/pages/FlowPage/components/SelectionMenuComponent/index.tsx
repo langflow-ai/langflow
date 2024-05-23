@@ -1,10 +1,30 @@
 import { useEffect, useState } from "react";
 import { NodeToolbar } from "reactflow";
 import { GradientGroup } from "../../../../icons/GradientSparkles";
-export default function SelectionMenu({ onClick, nodes, isVisible }) {
+import useFlowStore from "../../../../stores/flowStore";
+import { validateSelection } from "../../../../utils/reactflowUtils";
+export default function SelectionMenu({
+  onClick,
+  nodes,
+  isVisible,
+  lastSelection,
+}) {
+  const edges = useFlowStore((state) => state.edges);
+  const [disable, setDisable] = useState<boolean>(
+    lastSelection && edges.length > 0
+      ? validateSelection(lastSelection!, edges).length > 0
+      : false
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [lastNodes, setLastNodes] = useState(nodes);
+
+  useEffect(() => {
+    if (isOpen) {
+      return setDisable(validateSelection(lastSelection!, edges).length > 0);
+    }
+    setDisable(false);
+  }, [isOpen, setIsOpen]);
 
   // nodes get saved to not be gone after the toolbar closes
   useEffect(() => {
@@ -42,13 +62,19 @@ export default function SelectionMenu({ onClick, nodes, isVisible }) {
           }
         >
           <button
-            className="flex h-full w-full items-center justify-between text-sm hover:text-indigo-500"
+            className={`${
+              disable
+                ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
+                : "flex h-full w-full items-center justify-between text-sm hover:text-indigo-500"
+            }`}
             onClick={onClick}
+            disabled={disable}
           >
             <GradientGroup
               strokeWidth={1.5}
               size={22}
               className="text-primary"
+              disabled={disable}
             />
             Group
           </button>

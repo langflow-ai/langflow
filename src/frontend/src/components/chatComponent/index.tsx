@@ -15,8 +15,8 @@ export default function FlowToolbar(): JSX.Element {
   const hasIO = useFlowStore((state) => state.hasIO);
   const hasStore = useStoreStore((state) => state.hasStore);
   const validApiKey = useStoreStore((state) => state.validApiKey);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -50,7 +50,7 @@ export default function FlowToolbar(): JSX.Element {
             "relative inline-flex h-full w-full items-center justify-center gap-[4px] bg-muted px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-background hover:bg-hover ",
             !hasApiKey || !validApiKey || !hasStore
               ? " button-disable text-muted-foreground  "
-              : "",
+              : ""
           )}
         >
           <ForwardedIconComponent
@@ -59,14 +59,14 @@ export default function FlowToolbar(): JSX.Element {
               "-m-0.5 -ml-1 h-6 w-6",
               !hasApiKey || !validApiKey || !hasStore
                 ? "extra-side-bar-save-disable"
-                : "",
+                : ""
             )}
           />
           Share
         </button>
       </ShareModal>
     ),
-    [hasApiKey, validApiKey, currentFlow, hasStore],
+    [hasApiKey, validApiKey, currentFlow, hasStore]
   );
 
   return (
@@ -118,7 +118,7 @@ export default function FlowToolbar(): JSX.Element {
                 <ApiModal flow={currentFlow}>
                   <div
                     className={classNames(
-                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover",
+                      "relative inline-flex w-full items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-hover"
                     )}
                   >
                     <ForwardedIconComponent

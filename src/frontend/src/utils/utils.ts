@@ -1,5 +1,7 @@
+import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import TableAutoCellRender from "../components/tableAutoCellRender";
 import { priorityFields } from "../constants/constants";
 import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
 import {
@@ -326,6 +328,7 @@ export function getPythonApiCode(
   isAuth: boolean,
   tweaksBuildedObject,
 ): string {
+  const tweaksObject = tweaksBuildedObject[0];
   return `import requests
 from typing import Optional
 
@@ -333,7 +336,7 @@ BASE_API_URL = "${window.location.protocol}//${window.location.host}/api/v1/run"
 FLOW_ID = "${flowId}"
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
-TWEAKS = ${JSON.stringify(tweaksBuildedObject, null, 2)}
+TWEAKS = ${JSON.stringify(tweaksObject, null, 2)}
 
 def run_flow(message: str,
   flow_id: str,
@@ -383,6 +386,8 @@ export function getCurlCode(
   isAuth: boolean,
   tweaksBuildedObject,
 ): string {
+  const tweaksObject = tweaksBuildedObject[0];
+
   return `curl -X POST \\
   ${window.location.protocol}//${
     window.location.host
@@ -393,7 +398,7 @@ export function getCurlCode(
   -d '{"input_value": "message",
   "output_type": "chat",
   "input_type": "chat",
-  "tweaks": ${JSON.stringify(tweaksBuildedObject, null, 2)}'
+  "tweaks": ${JSON.stringify(tweaksObject, null, 2)}}'
   `;
 }
 
@@ -421,11 +426,14 @@ export function getOutputIds(flow) {
  * @returns {string} - The python code
  */
 export function getPythonCode(flowName: string, tweaksBuildedObject): string {
+  const tweaksObject = tweaksBuildedObject[0];
+
   return `from langflow.load import run_flow_from_json
-TWEAKS = ${JSON.stringify(tweaksBuildedObject, null, 2)}
+TWEAKS = ${JSON.stringify(tweaksObject, null, 2)}
 
 result = run_flow_from_json(flow="${flowName}.json",
                             input_value="message",
+                            fallback_to_env_vars=True, # False by default
                             tweaks=TWEAKS)`;
 }
 
@@ -691,4 +699,56 @@ export function convertTestName(name: string): string {
 
 export function sortByName(stringList: string[]): string[] {
   return stringList.sort((a, b) => a.localeCompare(b));
+}
+
+export function isTimeStampString(str: string): boolean {
+  const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?$/;
+  return timestampRegex.test(str);
+}
+
+export function extractColumnsFromRows(
+  rows: object[],
+  mode: "intersection" | "union",
+): (ColDef<any> | ColGroupDef<any>)[] {
+  const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
+  if (rows.length === 0) {
+    return [];
+  }
+  function intersection() {
+    for (const key in rows[0]) {
+      columnsKeys[key] = {
+        headerName: key,
+        field: key,
+        cellRenderer: TableAutoCellRender,
+        filter: true,
+        autoHeight: true,
+      };
+    }
+    for (const row of rows) {
+      for (const key in columnsKeys) {
+        if (!row[key]) {
+          delete columnsKeys[key];
+        }
+      }
+    }
+  }
+  function union() {
+    for (const row of rows) {
+      for (const key in row) {
+        columnsKeys[key] = {
+          headerName: key,
+          field: key,
+          filter: true,
+          cellRenderer: TableAutoCellRender,
+        };
+      }
+    }
+  }
+  if (mode === "intersection") {
+    intersection();
+  } else {
+    union();
+  }
+
+  return Object.values(columnsKeys);
 }

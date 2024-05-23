@@ -25,15 +25,21 @@ type TriggerProps = {
   children: ReactNode;
   asChild?: boolean;
   disable?: boolean;
+  className?: string;
 };
 
 const Content: React.FC<ContentProps> = ({ children }) => {
   return <div className="flex h-full w-full flex-col">{children}</div>;
 };
-const Trigger: React.FC<TriggerProps> = ({ children, asChild, disable }) => {
+const Trigger: React.FC<TriggerProps> = ({
+  children,
+  asChild,
+  disable,
+  className,
+}) => {
   return (
     <DialogTrigger
-      className={asChild ? "" : "w-full"}
+      className={asChild ? "" : cn("w-full", className)}
       hidden={children ? false : true}
       disabled={disable}
       asChild={asChild}
@@ -63,7 +69,7 @@ interface BaseModalProps {
     React.ReactElement<ContentProps>,
     React.ReactElement<HeaderProps>,
     React.ReactElement<TriggerProps>?,
-    React.ReactElement<FooterProps>?,
+    React.ReactElement<FooterProps>?
   ];
   open?: boolean;
   setOpen?: (open: boolean) => void;
@@ -95,16 +101,16 @@ function BaseModal({
   type = "dialog",
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Header,
+    (child) => (child as React.ReactElement).type === Header
   );
   const triggerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Trigger,
+    (child) => (child as React.ReactElement).type === Trigger
   );
   const ContentChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Content,
+    (child) => (child as React.ReactElement).type === Content
   );
   const ContentFooter = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Footer,
+    (child) => (child as React.ReactElement).type === Footer
   );
 
   let minWidth: string;
@@ -113,7 +119,7 @@ function BaseModal({
   switch (size) {
     case "x-small":
       minWidth = "min-w-[20vw]";
-      height = " ";
+      height = "h-full";
       break;
     case "smaller":
       minWidth = "min-w-[40vw]";
@@ -129,6 +135,7 @@ function BaseModal({
       break;
     case "small-h-full":
       minWidth = "min-w-[40vw]";
+      height = "h-full";
       break;
     case "medium":
       minWidth = "min-w-[60vw]";
@@ -136,6 +143,8 @@ function BaseModal({
       break;
     case "medium-h-full":
       minWidth = "min-w-[60vw]";
+      height = "h-full";
+
       break;
     case "large":
       minWidth = "min-w-[85vw]";
@@ -162,6 +171,7 @@ function BaseModal({
 
     case "large-h-full":
       minWidth = "min-w-[80vw]";
+      height = "h-full";
       break;
     default:
       minWidth = "min-w-[80vw]";
@@ -186,7 +196,7 @@ function BaseModal({
               {headerChild}
             </div>
             <div
-              className={`flex flex-col ${height!} w-full transition-all duration-300`}
+              className={`flex flex-col ${height} w-full transition-all duration-300`}
             >
               {ContentChild}
             </div>
@@ -203,7 +213,7 @@ function BaseModal({
               {headerChild}
             </div>
             <div
-              className={`flex flex-col ${height!} w-full transition-all duration-300`}
+              className={`flex flex-col ${height} w-full transition-all duration-300`}
             >
               {ContentChild}
             </div>

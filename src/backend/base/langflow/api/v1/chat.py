@@ -29,7 +29,7 @@ from langflow.services.deps import get_chat_service, get_session, get_session_se
 from langflow.services.monitor.utils import log_vertex_build
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.types import ChatVertex
+    from langflow.graph.vertex.types import InterfaceVertex
     from langflow.services.session.service import SessionService
 
 router = APIRouter(tags=["Chat"])
@@ -53,7 +53,7 @@ async def try_running_celery_task(vertex, user_id):
 
 @router.post("/build/{flow_id}/vertices", response_model=VerticesOrderResponse)
 async def retrieve_vertices_order(
-    flow_id: str,
+    flow_id: uuid.UUID,
     data: Optional[Annotated[Optional[FlowDataRequest], Body(embed=True)]] = None,
     stop_component_id: Optional[str] = None,
     start_component_id: Optional[str] = None,
@@ -78,6 +78,7 @@ async def retrieve_vertices_order(
         HTTPException: If there is an error checking the build status.
     """
     try:
+        flow_id = str(flow_id)
         # First, we need to check if the flow_id is in the cache
         if not data:
             graph = await build_and_cache_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
@@ -119,7 +120,7 @@ async def retrieve_vertices_order(
 
 @router.post("/build/{flow_id}/vertices/{vertex_id}")
 async def build_vertex(
-    flow_id: str,
+    flow_id: uuid.UUID,
     vertex_id: str,
     background_tasks: BackgroundTasks,
     inputs: Annotated[Optional[InputValueRequest], Body(embed=True)] = None,
@@ -143,8 +144,8 @@ async def build_vertex(
         HTTPException: If there is an error building the vertex.
 
     """
+    flow_id = str(flow_id)
 
-    start_time = time.perf_counter()
     next_runnable_vertices = []
     top_level_vertices = []
     try:
@@ -158,8 +159,7 @@ async def build_vertex(
             )
         else:
             graph = cache.get("result")
-        result_data_response = ResultDataResponse(results={})
-        duration = ""
+        ResultDataResponse(results={})
         vertex = graph.get_vertex(vertex_id)
         try:
             lock = chat_service._cache_locks[flow_id]
@@ -240,7 +240,7 @@ async def build_vertex(
 
 @router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse)
 async def build_vertex_stream(
-    flow_id: str,
+    flow_id: uuid.UUID,
     vertex_id: str,
     session_id: Optional[str] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
@@ -272,6 +272,7 @@ async def build_vertex_stream(
         HTTPException: If an error occurs while building the vertex.
     """
     try:
+        flow_id = str(flow_id)
 
         async def stream_vertex():
             try:
@@ -288,7 +289,7 @@ async def build_vertex_stream(
                     if not graph:
                         raise ValueError(f"No graph found for {flow_id}.")
 
-                vertex: "ChatVertex" = graph.get_vertex(vertex_id)
+                vertex: "InterfaceVertex" = graph.get_vertex(vertex_id)
                 if not hasattr(vertex, "stream"):
                     raise ValueError(f"Vertex {vertex_id} does not support streaming")
                 if isinstance(vertex._built_result, str) and vertex._built_result:
