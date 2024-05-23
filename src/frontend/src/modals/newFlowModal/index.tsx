@@ -32,7 +32,7 @@ export default function NewFlowModal({
               key={0}
               flow={
                 examples.find(
-                  (e) => e.name == "Basic Prompting (Hello, World)"
+                  (e) => e.name == "Basic Prompting (Hello, World)",
                 )!
               }
             />

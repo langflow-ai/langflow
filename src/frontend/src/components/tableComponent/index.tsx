@@ -29,7 +29,7 @@ const TableComponent = forwardRef<
       alertDescription = DEFAULT_TABLE_ALERT_MSG,
       ...props
     },
-    ref
+    ref,
   ) => {
     const dark = useDarkStore((state) => state.dark);
     var currentRowHeight: number;
@@ -67,14 +67,14 @@ const TableComponent = forwardRef<
       (params: any) => {
         updateRowHeight(params);
       },
-      [updateRowHeight]
+      [updateRowHeight],
     );
 
     const onGridSizeChanged = useCallback(
       (params: any) => {
         updateRowHeight(params);
       },
-      [updateRowHeight]
+      [updateRowHeight],
     );
 
     if (props.rowData.length === 0) {
@@ -96,7 +96,7 @@ const TableComponent = forwardRef<
       <div
         className={cn(
           dark ? "ag-theme-quartz-dark" : "ag-theme-quartz",
-          "ag-theme-shadcn flex h-full flex-col"
+          "ag-theme-shadcn flex h-full flex-col",
         )} // applying the grid theme
       >
         <AgGridReact
@@ -113,7 +113,7 @@ const TableComponent = forwardRef<
         />
       </div>
     );
-  }
+  },
 );
 
 export default TableComponent;

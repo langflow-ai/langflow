@@ -68,7 +68,7 @@ export default function InputComponent({
               editNode ? " input-edit-node " : "",
               password && editNode ? "pr-8" : "",
               password && !editNode ? "pr-10" : "",
-              className!
+              className!,
             )}
             placeholder={password && editNode ? "Key" : placeholder}
             onChange={(e) => {
@@ -147,7 +147,7 @@ export default function InputComponent({
         <span
           className={cn(
             password && selectedOption === "" ? "right-8" : "right-0",
-            "absolute inset-y-0 flex items-center pr-2.5"
+            "absolute inset-y-0 flex items-center pr-2.5",
           )}
         >
           <button
@@ -160,7 +160,7 @@ export default function InputComponent({
               selectedOption !== ""
                 ? "text-medium-indigo"
                 : "text-muted-foreground",
-              "hover:text-accent-foreground"
+              "hover:text-accent-foreground",
             )}
           >
             <ForwardedIconComponent
@@ -180,7 +180,7 @@ export default function InputComponent({
             "mb-px",
             editNode
               ? "input-component-true-button"
-              : "input-component-false-button"
+              : "input-component-false-button",
           )}
           onClick={(event) => {
             event.preventDefault();
@@ -197,7 +197,7 @@ export default function InputComponent({
               className={classNames(
                 editNode
                   ? "input-component-true-svg"
-                  : "input-component-false-svg"
+                  : "input-component-false-svg",
               )}
             >
               <path
@@ -216,7 +216,7 @@ export default function InputComponent({
               className={classNames(
                 editNode
                   ? "input-component-true-svg"
-                  : "input-component-false-svg"
+                  : "input-component-false-svg",
               )}
             >
               <path

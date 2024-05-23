@@ -35,6 +35,7 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
+import InputSearchComponent from "../MainPage/components/myCollectionComponent/components/inputSearchComponent";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -47,7 +48,7 @@ export default function StorePage(): JSX.Element {
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [loading, setLoading] = useState(true);
@@ -144,7 +145,7 @@ export default function StorePage(): JSX.Element {
           setTotalRowsCount(
             filteredCategories?.length === 0
               ? Number(res?.count ?? 0)
-              : res?.results?.length ?? 0
+              : res?.results?.length ?? 0,
           );
         }
       })
@@ -187,7 +188,7 @@ export default function StorePage(): JSX.Element {
                 disabled={loading}
                 className={cn(
                   `${!validApiKey ? "animate-pulse border-error" : ""}`,
-                  loading ? "cursor-not-allowed" : ""
+                  loading ? "cursor-not-allowed" : "",
                 )}
                 variant="primary"
               >
@@ -202,36 +203,20 @@ export default function StorePage(): JSX.Element {
       <div className="flex h-full w-full flex-col justify-between">
         <div className="flex w-full flex-col gap-4 p-0">
           <div className="flex items-end gap-4">
-            <div className="relative h-12 w-[40%]">
-              <Input
-                data-testid="search-store-input"
-                disabled={loading}
-                placeholder="Search Flows and Components"
-                className="absolute h-12 pl-5 pr-12"
-                onChange={(e) => {
-                  setInputText(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setSearchNow(uniqueId());
-                  }
-                }}
-                value={inputText}
-              />
-              <button
-                disabled={loading}
-                className="absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground"
-                onClick={() => {
+            <InputSearchComponent
+              loading={loading}
+              divClasses="relative h-12 w-[40%]"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
                   setSearchNow(uniqueId());
-                }}
-                data-testid="search-store-button"
-              >
-                <IconComponent
-                  name={loading ? "Loader2" : "Search"}
-                  className={loading ? " animate-spin cursor-not-allowed" : ""}
-                />
-              </button>
-            </div>
+                }
+              }}
+              onClick={() => {
+                setSearchNow(uniqueId());
+              }}
+            />
             <div className="ml-4 flex w-full gap-2 border-b border-border">
               <button
                 data-testid="all-button-store"
