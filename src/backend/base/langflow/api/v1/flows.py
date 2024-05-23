@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from typing import List
 from uuid import UUID
 
-from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
@@ -14,6 +13,7 @@ from langflow.api.v1.schemas import FlowListCreate, FlowListIds, FlowListRead
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
@@ -71,12 +71,9 @@ def read_flows(
         flow_ids = [flow.id for flow in flows]
         # with the session get the flows that DO NOT have a user_id
         try:
-            example_flows = session.exec(
-                select(Flow).where(
-                    Flow.user_id == None,  # noqa
-                    Flow.folder.has(Folder.name == STARTER_FOLDER_NAME),
-                )
-            ).all()
+            folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+
+            example_flows = folder.flows if folder else []
             for example_flow in example_flows:
                 if example_flow.id not in flow_ids:
                     flows.append(example_flow)  # type: ignore

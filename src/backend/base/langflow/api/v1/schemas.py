@@ -149,8 +149,8 @@ class FlowListRead(BaseModel):
 
 class FlowListReadWithFolderName(BaseModel):
     flows: List[FlowRead]
-    folder_name: str
-    folder_description: str
+    name: str
+    description: str
 
 
 class InitResponse(BaseModel):
