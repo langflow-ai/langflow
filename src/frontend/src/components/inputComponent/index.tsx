@@ -76,7 +76,6 @@ export default function InputComponent({
             placeholder={password && editNode ? "Key" : placeholder}
             onChange={(e) => {
               if (onChangeFolderName) {
-                console.log("oioioi");
                 return onChangeFolderName(e);
               }
               onChange && onChange(e.target.value);

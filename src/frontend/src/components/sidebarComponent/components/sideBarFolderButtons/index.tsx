@@ -193,7 +193,23 @@ const SideBarFoldersButtonsComponent = ({
                         }}
                         ref={refInput}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === "Escape") {
+                          if (e.key === "Escape") {
+                            const newEditFolders = editFolders.map((obj) => {
+                              if (obj.name === item.name) {
+                                return { name: item.name, edit: false };
+                              }
+                              return { name: obj.name, edit: false };
+                            });
+                            setEditFolderName(newEditFolders);
+                            setFoldersNames({});
+                            setEditFolderName(
+                              folders.map((obj) => ({
+                                name: obj.name,
+                                edit: false,
+                              })),
+                            );
+                          }
+                          if (e.key === "Enter") {
                             refInput.current?.blur();
                           }
                           handleKeyDown(e, e.key, "");
