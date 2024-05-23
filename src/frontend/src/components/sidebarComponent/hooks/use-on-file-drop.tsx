@@ -11,9 +11,12 @@ import { FlowType } from "../../../types/flow";
 
 const useFileDrop = (folderId, folderChangeCallback) => {
   const setFolderDragging = useFolderStore((state) => state.setFolderDragging);
+  const setFolderIdDragging = useFolderStore(
+    (state) => state.setFolderIdDragging,
+  );
+
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
-  const refreshFlows = useFlowsManagerStore((state) => state.refreshFlows);
   const flows = useFlowsManagerStore((state) => state.flows);
 
   const triggerFolderChange = (folderId) => {
@@ -41,24 +44,28 @@ const useFileDrop = (folderId, folderChangeCallback) => {
     e:
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
-      | React.DragEvent<HTMLAnchorElement>
+      | React.DragEvent<HTMLAnchorElement>,
+    folderId: string,
   ) => {
     e.preventDefault();
 
     if (e.dataTransfer.types.some((types) => types === "Files")) {
       setFolderDragging(true);
     }
+    setFolderIdDragging(folderId);
   };
 
   const dragEnter = (
     e:
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
-      | React.DragEvent<HTMLAnchorElement>
+      | React.DragEvent<HTMLAnchorElement>,
+    folderId: string,
   ) => {
     if (e.dataTransfer.types.some((types) => types === "Files")) {
       setFolderDragging(true);
     }
+    setFolderIdDragging(folderId);
     e.preventDefault();
   };
 
@@ -66,11 +73,12 @@ const useFileDrop = (folderId, folderChangeCallback) => {
     e:
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
-      | React.DragEvent<HTMLAnchorElement>
+      | React.DragEvent<HTMLAnchorElement>,
   ) => {
     e.preventDefault();
     if (e.target === e.currentTarget) {
       setFolderDragging(false);
+      setFolderIdDragging("");
     }
   };
 
@@ -79,7 +87,7 @@ const useFileDrop = (folderId, folderChangeCallback) => {
       | React.DragEvent<HTMLDivElement>
       | React.DragEvent<HTMLButtonElement>
       | React.DragEvent<HTMLAnchorElement>,
-    folderId: string
+    folderId: string,
   ) => {
     if (e?.dataTransfer?.getData("flow")) {
       const data = JSON.parse(e?.dataTransfer?.getData("flow"));
@@ -119,7 +127,6 @@ const useFileDrop = (folderId, folderChangeCallback) => {
     uploadFlowsFromFolders(formData).then(() => {
       getFoldersApi(true);
       triggerFolderChange(folderId);
-      refreshFlows();
     });
   };
 

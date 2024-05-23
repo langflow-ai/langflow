@@ -2,8 +2,6 @@ import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
 import { addFolder } from "../../../../pages/MainPage/services";
 import { handleDownloadFolderFn } from "../../../../pages/MainPage/utils/handle-download-folder";
-import useAlertStore from "../../../../stores/alertStore";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { cn } from "../../../../utils/utils";
 import IconComponent, {
@@ -30,9 +28,8 @@ const SideBarFoldersButtonsComponent = ({
   const currentFolder = pathname.split("/");
   const urlWithoutPath = pathname.split("/").length < 4;
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
-  const allFlows = useFlowsManagerStore((state) => state.allFlows);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const folderIdDragging = useFolderStore((state) => state.folderIdDragging);
 
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId) {
@@ -50,7 +47,7 @@ const SideBarFoldersButtonsComponent = ({
 
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(
     folderId,
-    handleFolderChange
+    handleFolderChange,
   );
 
   const handleUploadFlowsToFolder = () => {
@@ -65,7 +62,7 @@ const SideBarFoldersButtonsComponent = ({
     addFolder({ name: "New Folder", parent_id: null, description: "" }).then(
       (res) => {
         getFoldersApi(true);
-      }
+      },
     );
   }
 
@@ -96,8 +93,8 @@ const SideBarFoldersButtonsComponent = ({
         <>
           {folders.map((item, index) => (
             <div
-              onDragOver={dragOver}
-              onDragEnter={dragEnter}
+              onDragOver={(e) => dragOver(e, item.id!)}
+              onDragEnter={(e) => dragEnter(e, item.id!)}
               onDragLeave={dragLeave}
               onDrop={(e) => onDrop(e, item.id!)}
               key={item.id}
@@ -107,7 +104,8 @@ const SideBarFoldersButtonsComponent = ({
                 checkPathName(item.id!)
                   ? "border border-border bg-muted hover:bg-muted"
                   : "border hover:bg-transparent lg:border-transparent lg:hover:border-border",
-                "group flex w-full shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full"
+                "group flex w-full shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full",
+                folderIdDragging === item.id! ? "bg-border" : "",
               )}
               onClick={() => handleChangeFolder!(item.id!)}
             >
