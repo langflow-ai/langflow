@@ -146,8 +146,7 @@ class NotionSearch(CustomComponent):
             return [Record(text=self.status, data=[])]
 ```
 
-## Example Usage
-
+<Admonition type="info" title="Example Usage">
 Here's an example of how you can use the `NotionSearch` component in a Langflow flow:
 
 <ZoomableImage
@@ -160,6 +159,7 @@ Here's an example of how you can use the `NotionSearch` component in a Langflow 
 />
 
 In this example, the `NotionSearch` component is used to search for pages and databases in Notion based on the provided query and filter criteria. The retrieved data can then be processed further in the subsequent components of the flow.
+</Admonition>
 
 ## Best Practices
 

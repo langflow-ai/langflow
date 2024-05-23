@@ -105,9 +105,9 @@ class NotionPageContent(CustomComponent):
         return text
 ```
 
-> **Example Usage**
->
-> Here's an example of how you can use the `NotionPageContent` component in a Langflow flow:
+<Admonition type="info" title="Example Usage">
+
+Here's an example of how you can use the `NotionPageContent` component in a Langflow flow:
 
 <ZoomableImage
     alt="NotionPageContent Flow Example"
@@ -117,6 +117,7 @@ class NotionPageContent(CustomComponent):
     }}
     style={{ width: "100%", margin: "20px 0" }}
 />
+</Admonition>
 
 ## Best Practices
 
