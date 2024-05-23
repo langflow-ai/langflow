@@ -192,9 +192,11 @@ const SideBarFoldersButtonsComponent = ({
                           handleEditFolderName(e, item.name);
                         }}
                         onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === "Escape") {
+                            // @ts-ignore
+                            console.log(e.target.blur());
+                          }
                           handleKeyDown(e, foldersNames[item.name], "");
-                          if (true && e.key === "Enter")
-                            refInput.current?.blur();
                         }}
                         autoFocus={true}
                         onBlur={async () => {
