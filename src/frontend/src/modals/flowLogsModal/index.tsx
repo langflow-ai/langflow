@@ -63,7 +63,11 @@ export default function FlowLogsModal({
     if (open && activeTab === "Messages" && !noticed.current) {
       const haStream = nodes
         .map((nodes) => (nodes.data as NodeDataType).node!.template)
-        .some((template) => template["stream"]);
+        .some((template) => template["stream"] && template["stream"].value);
+      console.log(
+        haStream,
+        nodes.map((nodes) => (nodes.data as NodeDataType).node!.template),
+      );
       if (haStream) {
         setNoticeData({
           title: "Streamed messages will not appear in this table.",
