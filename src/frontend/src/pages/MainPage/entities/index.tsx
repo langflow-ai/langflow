@@ -6,6 +6,7 @@ export type FolderType = {
   id?: string | null;
   parent_id: string;
   flows: FlowType[];
+  components: string[];
 };
 
 export type AddFolderType = {
