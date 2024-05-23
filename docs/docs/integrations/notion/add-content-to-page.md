@@ -115,7 +115,7 @@ In this example, the `AddContentToPage` component connects to a `MarkdownLoader`
 
 </Admonition>
 
-<Admonition type="tip" title="Best Practices">
+## Best Pratices
 
 When using the `AddContentToPage` component:
 
@@ -123,7 +123,6 @@ When using the `AddContentToPage` component:
 - Verify the `block_id` corresponds to the right Notion page/block.
 - Keep your Notion integration token secure.
 - Test with sample markdown text before production use.
-</Admonition>
 
 <Admonition type="warning" title="Troubleshooting">
 

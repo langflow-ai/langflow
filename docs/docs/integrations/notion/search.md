@@ -160,14 +160,14 @@ Here's an example of how you can use the `NotionSearch` component in a Langflow 
 In this example, the `NotionSearch` component is used to search for pages and databases in Notion based on the provided query and filter criteria. The retrieved data can then be processed further in the subsequent components of the flow.
 </Admonition>
 
-<Admonition type="tip" title="Best Practices">
+## Best Pratices
+
  When using the `NotionSearch` component, consider the following best practices:
 
 - Ensure that you have a valid Notion integration token with the necessary permissions to search for pages and databases.
 - Provide a meaningful search query to narrow down the results to the desired pages or databases.
 - Choose the appropriate filter type (`page` or `database`) based on your search requirements.
 - Consider the sorting direction (`ascending` or `descending`) to organize the search results effectively.
-</Admonition>
 
 <Admonition type="warning" title="Troubleshooting">
  If you encounter any issues while using the `NotionSearch` component, consider the following:
