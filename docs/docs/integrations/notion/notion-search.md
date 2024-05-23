@@ -32,7 +32,116 @@ To use the `NotionSearch` component in a Langflow flow, follow these steps:
 ### Example Component Code
 
 ```python
-# Placeholder for the component code
+import requests
+from typing import Dict, Any, List
+from langflow.custom import CustomComponent
+from langflow.schema import Record
+
+class NotionSearch(CustomComponent):
+    display_name = "Search Notion"
+    description = (
+        "Searches all pages and databases that have been shared with an integration."
+    )
+    documentation: str = "https://developers.notion.com/reference/search"
+    icon = "NotionDirectoryLoader"
+
+    field_order = [
+        "notion_secret",
+        "query",
+        "filter_value",
+        "sort_direction",
+    ]
+
+    def build_config(self):
+        return {
+            "notion_secret": {
+                "display_name": "Notion Secret",
+                "field_type": "str",
+                "info": "The Notion integration token.",
+                "password": True,
+            },
+            "query": {
+                "display_name": "Search Query",
+                "field_type": "str",
+                "info": "The text that the API compares page and database titles against.",
+            },
+            "filter_value": {
+                "display_name": "Filter Type",
+                "field_type": "str",
+                "info": "Limits the results to either only pages or only databases.",
+                "options": ["page", "database"],
+                "default_value": "page",
+            },
+            "sort_direction": {
+                "display_name": "Sort Direction",
+                "field_type": "str",
+                "info": "The direction to sort the results.",
+                "options": ["ascending", "descending"],
+                "default_value": "descending",
+            },
+        }
+
+    def build(
+        self,
+        notion_secret: str,
+        query: str = "",
+        filter_value: str = "page",
+        sort_direction: str = "descending",
+    ) -> List[Record]:
+        try:
+            url = "https://api.notion.com/v1/search"
+            headers = {
+                "Authorization": f"Bearer {notion_secret}",
+                "Content-Type": "application/json",
+                "Notion-Version": "2022-06-28",
+            }
+
+            data = {
+                "query": query,
+                "filter": {
+                    "value": filter_value,
+                    "property": "object"
+                },
+                "sort":{
+                  "direction": sort_direction,
+                  "timestamp": "last_edited_time"
+                }
+            }
+
+            response = requests.post(url, headers=headers, json=data)
+            response.raise_for_status()
+
+            results = response.json()
+            records = []
+            combined_text = f"Results found: {len(results['results'])}\n\n"
+            for result in results['results']:
+                result_data = {
+                    'id': result['id'],
+                    'type': result['object'],
+                    'last_edited_time': result['last_edited_time'],
+                }
+                
+                if result['object'] == 'page':
+                    result_data['title_or_url'] = result['url']
+                    text = f"id: {result['id']}\ntitle_or_url: {result['url']}\n"
+                elif result['object'] == 'database':
+                    if 'title' in result and isinstance(result['title'], list) and len(result['title']) > 0:
+                        result_data['title_or_url'] = result['title'][0]['plain_text']
+                        text = f"id: {result['id']}\ntitle_or_url: {result['title'][0]['plain_text']}\n"
+                    else:
+                        result_data['title_or_url'] = "N/A"
+                        text = f"id: {result['id']}\ntitle_or_url: N/A\n"
+
+                text += f"type: {result['object']}\nlast_edited_time: {result['last_edited_time']}\n\n"
+                combined_text += text
+                records.append(Record(text=text, data=result_data))
+            
+            self.status = combined_text
+            return records
+
+        except Exception as e:
+            self.status = f"An error occurred: {str(e)}"
+            return [Record(text=self.status, data=[])]
 ```
 
 ## Example Usage
