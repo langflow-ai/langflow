@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# NotionPageContent Component in Langflow
+# Page Content
 
 Langflow allows you to extend its functionality with custom components. The `NotionPageContent` component is designed to retrieve the content of a Notion page as plain text. It provides a convenient way to integrate Notion page content into your Langflow workflows.
 
