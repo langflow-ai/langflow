@@ -13,9 +13,23 @@ services:
       - "7860:7860"
     volumes:
       - ./:/app
+      - shared-tmp:/tmp
     command: bash -c "uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --loop asyncio"
     networks:
       - langflow
+
+  discord:
+    build: ./src/discord
+    env_file:
+      - .env
+    ports:
+      - "7880:7880"
+    volumes:
+      - shared-tmp:/tmp
+    command: bash -c "uvicorn --factory src.main:create_app --host 0.0.0.0 --port 7880 --reload --loop asyncio"
+    networks:
+      - langflow
+
   frontend:
     build:
       context: ./src/frontend
@@ -35,3 +49,6 @@ services:
     restart: on-failure
     networks:
       - langflow
+
+volumes:
+  shared-tmp:
