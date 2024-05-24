@@ -38,6 +38,7 @@ module.exports = {
         "administration/login",
         "administration/api",
         "administration/cli",
+        "administration/canvas",
         "administration/playground",
         "administration/global-env",
         "administration/flows-components-collections",
