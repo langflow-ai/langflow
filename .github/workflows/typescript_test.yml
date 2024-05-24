@@ -30,7 +30,6 @@ jobs:
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
 
       - name: Cache Node.js dependencies
         uses: actions/cache@v4
