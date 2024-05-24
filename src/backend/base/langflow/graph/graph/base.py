@@ -14,7 +14,7 @@ from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import InterfaceVertex, LLMVertex, StateVertex, ToolkitVertex
+from langflow.graph.vertex.types import InterfaceVertex, StateVertex
 from langflow.schema import Record
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.deps import get_chat_service
@@ -686,16 +686,8 @@ class Graph:
 
     def _build_vertex_params(self) -> None:
         """Identifies and handles the LLM vertex within the graph."""
-        llm_vertex = None
         for vertex in self.vertices:
             vertex._build_params()
-            if isinstance(vertex, LLMVertex):
-                llm_vertex = vertex
-
-        if llm_vertex:
-            for vertex in self.vertices:
-                if isinstance(vertex, ToolkitVertex):
-                    vertex.params["llm"] = llm_vertex
 
     def _validate_vertex(self, vertex: Vertex) -> bool:
         """Validates a vertex."""
