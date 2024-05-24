@@ -14,8 +14,7 @@ from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import FileToolVertex, InterfaceVertex, LLMVertex, StateVertex, ToolkitVertex
-from langflow.interface.tools.constants import FILE_TOOLS
+from langflow.graph.vertex.types import InterfaceVertex, LLMVertex, StateVertex, ToolkitVertex
 from langflow.schema import Record
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.deps import get_chat_service
@@ -1003,8 +1002,6 @@ class Graph:
         elif node_name in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_name]
 
-        if node_type in FILE_TOOLS:
-            return FileToolVertex
         if node_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_type]
         return (
