@@ -1,9 +1,10 @@
 from typing import List
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langchain_text_splitters import CharacterTextSplitter
+
+from langflow.custom import CustomComponent
 from langflow.schema.schema import Record
 from langflow.utils.util import unescape_string
-from langchain_text_splitters import CharacterTextSplitter
 
 
 class CharacterTextSplitterComponent(CustomComponent):

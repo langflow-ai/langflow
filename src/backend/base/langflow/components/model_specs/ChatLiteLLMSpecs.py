@@ -1,8 +1,9 @@
 from typing import Any, Dict, Optional
 
 from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
+
+from langflow.custom import CustomComponent
 from langflow.field_typing import BaseLanguageModel
-from langflow.interface.custom.custom_component import CustomComponent
 
 
 class ChatLiteLLMComponent(CustomComponent):

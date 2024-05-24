@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from langchain_google_vertexai import VertexAIEmbeddings
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class VertexAIEmbeddingsComponent(CustomComponent):

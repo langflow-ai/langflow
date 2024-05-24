@@ -9,7 +9,7 @@ from .SupabaseVectorStoreSearch import SupabaseSearchComponent
 from .VectaraSearch import VectaraSearchComponent
 from .WeaviateSearch import WeaviateSearchVectorStore
 from .pgvectorSearch import PGVectorSearchComponent
-from .Couchbase import CouchbaseSearchComponent # type: ignore
+from .Couchbase import CouchbaseSearchComponent  # type: ignore
 
 __all__ = [
     "AstraDBSearchComponent",

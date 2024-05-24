@@ -1,9 +1,10 @@
 from typing import List, Union
-from metaphor_python import Metaphor  # type: ignore
 
-from langflow.interface.custom.custom_component import CustomComponent
 from langchain_community.agent_toolkits.base import BaseToolkit
 from langchain_core.tools import Tool, tool
+from metaphor_python import Metaphor  # type: ignore
+
+from langflow.custom import CustomComponent
 
 
 class MetaphorToolkit(CustomComponent):

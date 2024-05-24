@@ -3,12 +3,12 @@ from typing import Optional, Union
 import weaviate  # type: ignore
 from langchain_community.vectorstores import Weaviate
 from langchain_core.documents import Document
-
-from langflow.interface.custom.custom_component import CustomComponent
-from langflow.schema.schema import Record
 from langchain_core.embeddings import Embeddings
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
+
+from langflow.custom import CustomComponent
+from langflow.schema.schema import Record
 
 
 class WeaviateVectorStoreComponent(CustomComponent):
