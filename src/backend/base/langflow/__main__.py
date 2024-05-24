@@ -554,7 +554,7 @@ def api_key(
 
 def api_key_banner(unmasked_api_key):
     is_mac = platform.system() == "Darwin"
-    import pyperclip
+    import pyperclip  # type: ignore
 
     pyperclip.copy(unmasked_api_key.api_key)
     panel = Panel(
