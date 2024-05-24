@@ -6,11 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Sequence, Type
 import orjson
 from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
-from langchain.agents.agent_toolkits.base import BaseToolkit
-from langchain.agents.tools import BaseTool
 from langchain.chains.base import Chain
-from langchain.document_loaders.base import BaseLoader
-from langchain_community.vectorstores import VectorStore
 from langchain_core.documents import Document
 from loguru import logger
 from pydantic import ValidationError
@@ -27,6 +23,11 @@ from langflow.interface.wrappers.base import wrapper_creator
 from langflow.schema.schema import Record
 from langflow.utils import validate
 from langflow.utils.util import unescape_string
+from langchain_community.agent_toolkits.base import BaseToolkit
+from langchain_core.document_loaders import BaseLoader
+from langchain_core.tools import BaseTool
+from langchain_core.vectorstores import VectorStore
+from langchain_text_splitters import Language
 
 if TYPE_CHECKING:
     from langflow.custom import CustomComponent
@@ -430,8 +431,6 @@ def instantiate_textsplitter(
                 params["separators"] = [unescape_string(separator) for separator in params["separators"]]
         text_splitter = class_object(**params)
     else:
-        from langchain.text_splitter import Language
-
         language = params.pop("separator_type", None)
         params["language"] = Language(language)
         params.pop("separators", None)

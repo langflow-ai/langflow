@@ -1,9 +1,8 @@
 from typing import Optional
 
-from langchain.llms.base import BaseLanguageModel
-from langchain_community.chat_models.azure_openai import AzureChatOpenAI
-
 from langflow.interface.custom.custom_component import CustomComponent
+from langchain_core.language_models import BaseLanguageModel
+from langchain_openai import AzureChatOpenAI
 
 
 class AzureChatOpenAISpecsComponent(CustomComponent):

@@ -1,10 +1,10 @@
 from fastapi import HTTPException
-from langchain.prompts import PromptTemplate
 from loguru import logger
 
 from langflow.api.v1.base import INVALID_NAMES, check_input_variables
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.template.field.prompt import DefaultPromptField
+from langchain_core.prompts import PromptTemplate
 
 
 def validate_prompt(prompt_template: str, silent_errors: bool = False) -> list[str]:
