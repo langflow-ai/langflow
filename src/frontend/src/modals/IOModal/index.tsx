@@ -3,7 +3,6 @@ import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
 import {
   Tabs,
   TabsContent,
@@ -121,6 +120,7 @@ export default function IOModal({
       open={open}
       setOpen={setOpen}
       disable={disable}
+      onSubmit={() => sendMessage(1)}
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
@@ -371,13 +371,10 @@ export default function IOModal({
         </div>
       </BaseModal.Content>
       {!haveChat ? (
-        <BaseModal.Footer>
-          <div className="flex w-full justify-end  pt-2">
-            <Button
-              variant={"outline"}
-              className="flex gap-2 px-3"
-              onClick={() => sendMessage(1)}
-            >
+        <BaseModal.Footer
+          submit={{
+            label: "Run Flow",
+            icon: (
               <IconComponent
                 name={isBuilding ? "Loader2" : "Zap"}
                 className={cn(
@@ -387,10 +384,9 @@ export default function IOModal({
                     : "fill-current text-medium-indigo",
                 )}
               />
-              Run Flow
-            </Button>
-          </div>
-        </BaseModal.Footer>
+            ),
+          }}
+        />
       ) : (
         <></>
       )}
