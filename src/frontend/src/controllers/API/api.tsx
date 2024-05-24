@@ -10,6 +10,7 @@ import useFlowStore from "../../stores/flowStore";
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
   baseURL: "",
+  timeout: 30000,
 });
 
 function ApiInterceptor() {

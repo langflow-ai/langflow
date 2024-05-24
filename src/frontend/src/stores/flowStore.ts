@@ -488,8 +488,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           (id) => !vertexBuildData.inactivated_vertices?.includes(id),
         );
         const top_level_vertices = vertexBuildData.top_level_vertices.filter(
-          (vertex) =>
-            !vertexBuildData.inactivated_vertices?.includes(vertex.id),
+          (vertex) => !vertexBuildData.inactivated_vertices?.includes(vertex),
         );
         const nextVertices: VertexLayerElementType[] = zip(
           next_vertices_ids,
