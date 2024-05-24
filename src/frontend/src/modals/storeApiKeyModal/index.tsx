@@ -58,7 +58,7 @@ export default function StoreApiKeyModal({
           setHasApiKey(false);
           setValidApiKey(false);
           setLoadingApiKey(false);
-        }
+        },
       );
     }
   };
@@ -71,8 +71,8 @@ export default function StoreApiKeyModal({
           (hasApiKey && !validApiKey
             ? INVALID_API_KEY
             : !hasApiKey
-            ? NO_API_KEY
-            : "") + INSERT_API_KEY
+              ? NO_API_KEY
+              : "") + INSERT_API_KEY
         }
       >
         <span className="pr-2">API Key</span>
@@ -121,6 +121,7 @@ export default function StoreApiKeyModal({
               <Button
                 className="mr-3"
                 variant="outline"
+                type="button"
                 onClick={() => {
                   setOpen(false);
                 }}
@@ -128,14 +129,13 @@ export default function StoreApiKeyModal({
                 Cancel
               </Button>
 
-              <Form.Submit asChild>
-                <Button
-                  data-testid="api-key-save-button-store"
-                  className="mt-8"
-                >
-                  Save
-                </Button>
-              </Form.Submit>
+              <Button
+                data-testid="api-key-save-button-store"
+                className="mt-8"
+                type="submit"
+              >
+                Save
+              </Button>
             </div>
           </div>
         </Form.Root>
