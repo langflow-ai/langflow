@@ -1,7 +1,7 @@
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo
-from langchain_community.vectorstores import VectorStore
 
 from langflow.interface.custom.custom_component import CustomComponent
+from langchain_core.vectorstores import VectorStore
 
 
 class VectorStoreInfoComponent(CustomComponent):

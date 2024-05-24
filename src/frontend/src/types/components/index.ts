@@ -6,6 +6,7 @@ import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
+  name?: string;
   autoFocus?: boolean;
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
   value?: string;
@@ -30,6 +31,9 @@ export type InputComponentType = {
   setSelectedOption?: (value: string) => void;
   selectedOptions?: string[];
   setSelectedOptions?: (value: string[]) => void;
+  objectOptions?: Array<{ name: string; id: string }>;
+  isObjectOption?: boolean;
+  onChangeFolderName?: (e: any) => void;
 };
 export type ToggleComponentType = {
   enabled: boolean;
@@ -220,6 +224,7 @@ export type AccordionComponentType = {
   keyValue?: string;
   openDisc?: boolean;
   sideBar?: boolean;
+  options?: { title: string; icon: string }[];
 };
 export type Side = "top" | "right" | "bottom" | "left";
 
@@ -400,6 +405,7 @@ export type StoreApiKeyType = {
 export type groupedObjType = {
   family: string;
   type: string;
+  display_name?: string;
 };
 
 export type nodeGroupedObjType = {
@@ -663,6 +669,7 @@ export type codeTabsPropsType = {
   };
   activeTweaks?: boolean;
   setActiveTweaks?: (value: boolean) => void;
+  allowExport?: boolean;
 };
 
 export type crashComponentPropsType = {

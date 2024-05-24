@@ -1,7 +1,7 @@
-from langchain.embeddings.base import Embeddings
-from langchain_community.embeddings import AzureOpenAIEmbeddings
-
 from langflow.interface.custom.custom_component import CustomComponent
+from langchain_core.embeddings import Embeddings
+from langchain_openai import AzureOpenAIEmbeddings
+from pydantic.v1 import SecretStr
 
 
 class AzureOpenAIEmbeddingsComponent(CustomComponent):
@@ -52,12 +52,16 @@ class AzureOpenAIEmbeddingsComponent(CustomComponent):
         api_version: str,
         api_key: str,
     ) -> Embeddings:
+        if api_key:
+            azure_api_key = SecretStr(api_key)
+        else:
+            azure_api_key = None
         try:
             embeddings = AzureOpenAIEmbeddings(
                 azure_endpoint=azure_endpoint,
                 azure_deployment=azure_deployment,
                 api_version=api_version,
-                api_key=api_key,
+                api_key=azure_api_key,
             )
 
         except Exception as e:

@@ -1,10 +1,9 @@
 from typing import Callable, Optional
-
-from langchain.agents.tools import Tool
 from pydantic.v1 import BaseModel, validator
 
 from langflow.interface.custom.utils import get_function
 from langflow.utils import validate
+from langchain_core.tools import Tool
 
 
 class Function(BaseModel):

@@ -15,7 +15,7 @@ test("ToggleComponent", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -45,7 +45,7 @@ test("ToggleComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showload_hidden"]').click();
   expect(
-    await page.locator('//*[@id="showload_hidden"]').isChecked()
+    await page.locator('//*[@id="showload_hidden"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
@@ -81,12 +81,12 @@ test("ToggleComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showload_hidden"]').click();
   expect(
-    await page.locator('//*[@id="showload_hidden"]').isChecked()
+    await page.locator('//*[@id="showload_hidden"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showmax_concurrency"]').click();
   expect(
-    await page.locator('//*[@id="showmax_concurrency"]').isChecked()
+    await page.locator('//*[@id="showmax_concurrency"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showpath"]').click();
@@ -94,22 +94,22 @@ test("ToggleComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showrecursive"]').click();
   expect(
-    await page.locator('//*[@id="showrecursive"]').isChecked()
+    await page.locator('//*[@id="showrecursive"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showsilent_errors"]').click();
   expect(
-    await page.locator('//*[@id="showsilent_errors"]').isChecked()
+    await page.locator('//*[@id="showsilent_errors"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showuse_multithreading"]').click();
   expect(
-    await page.locator('//*[@id="showuse_multithreading"]').isChecked()
+    await page.locator('//*[@id="showuse_multithreading"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showmax_concurrency"]').click();
   expect(
-    await page.locator('//*[@id="showmax_concurrency"]').isChecked()
+    await page.locator('//*[@id="showmax_concurrency"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showpath"]').click();
@@ -117,17 +117,17 @@ test("ToggleComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showrecursive"]').click();
   expect(
-    await page.locator('//*[@id="showrecursive"]').isChecked()
+    await page.locator('//*[@id="showrecursive"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showsilent_errors"]').click();
   expect(
-    await page.locator('//*[@id="showsilent_errors"]').isChecked()
+    await page.locator('//*[@id="showsilent_errors"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showuse_multithreading"]').click();
   expect(
-    await page.locator('//*[@id="showuse_multithreading"]').isChecked()
+    await page.locator('//*[@id="showuse_multithreading"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
@@ -144,38 +144,38 @@ test("ToggleComponent", async ({ page }) => {
 
     await page.locator('//*[@id="showload_hidden"]').click();
     expect(
-      await page.locator('//*[@id="showload_hidden"]').isChecked()
+      await page.locator('//*[@id="showload_hidden"]').isChecked(),
     ).toBeTruthy();
 
     expect(
-      await page.getByTestId("toggle-edit-load_hidden").isChecked()
+      await page.getByTestId("toggle-edit-load_hidden").isChecked(),
     ).toBeTruthy();
 
     await page.locator('//*[@id="saveChangesBtn"]').click();
 
     await page.getByTestId("toggle-load_hidden").click();
     expect(
-      await page.getByTestId("toggle-load_hidden").isChecked()
+      await page.getByTestId("toggle-load_hidden").isChecked(),
     ).toBeFalsy();
 
     await page.getByTestId("toggle-load_hidden").click();
     expect(
-      await page.getByTestId("toggle-load_hidden").isChecked()
+      await page.getByTestId("toggle-load_hidden").isChecked(),
     ).toBeTruthy();
 
     await page.getByTestId("toggle-load_hidden").click();
     expect(
-      await page.getByTestId("toggle-load_hidden").isChecked()
+      await page.getByTestId("toggle-load_hidden").isChecked(),
     ).toBeFalsy();
 
     await page.getByTestId("toggle-load_hidden").click();
     expect(
-      await page.getByTestId("toggle-load_hidden").isChecked()
+      await page.getByTestId("toggle-load_hidden").isChecked(),
     ).toBeTruthy();
 
     await page.getByTestId("toggle-load_hidden").click();
     expect(
-      await page.getByTestId("toggle-load_hidden").isChecked()
+      await page.getByTestId("toggle-load_hidden").isChecked(),
     ).toBeFalsy();
   }
 });

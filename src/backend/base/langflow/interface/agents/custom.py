@@ -5,7 +5,6 @@ from langchain.agents.agent_toolkits import VectorStoreInfo, VectorStoreRouterTo
 from langchain.agents.agent_toolkits.vectorstore.prompt import PREFIX as VECTORSTORE_PREFIX
 from langchain.agents.agent_toolkits.vectorstore.prompt import ROUTER_PREFIX as VECTORSTORE_ROUTER_PREFIX
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
-from langchain.base_language import BaseLanguageModel
 from langchain.chains.llm import LLMChain
 from langchain_community.utilities import SQLDatabase
 from langchain.tools.sql_database.prompt import QUERY_CHECKER
@@ -18,6 +17,14 @@ from langchain_experimental.agents.agent_toolkits.pandas.prompt import SUFFIX_WI
 from langchain_experimental.tools.python.tool import PythonAstREPLTool
 
 from langflow.interface.base import CustomAgentExecutor
+from langchain_community.tools import (
+    InfoSQLDatabaseTool,
+    ListSQLDatabaseTool,
+    QuerySQLCheckerTool,
+    QuerySQLDataBaseTool,
+)
+from langchain_core.language_models import BaseLanguageModel
+from langchain_core.prompts import PromptTemplate
 
 
 class JsonAgent(CustomAgentExecutor):
@@ -164,17 +171,6 @@ class SQLAgent(CustomAgentExecutor):
         """Construct an SQL agent from an LLM and tools."""
         db = SQLDatabase.from_uri(database_uri)
         toolkit = SQLDatabaseToolkit(db=db, llm=llm)
-
-        # The right code should be this, but there is a problem with tools = toolkit.get_tools()
-        # related to `OPENAI_API_KEY`
-        # return create_sql_agent(llm=llm, toolkit=toolkit, verbose=True)
-        from langchain.prompts import PromptTemplate
-        from langchain.tools.sql_database.tool import (
-            InfoSQLDatabaseTool,
-            ListSQLDatabaseTool,
-            QuerySQLCheckerTool,
-            QuerySQLDataBaseTool,
-        )
 
         llmchain = LLMChain(
             llm=llm,

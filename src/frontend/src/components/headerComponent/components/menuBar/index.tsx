@@ -8,10 +8,10 @@ import {
 } from "../../../ui/dropdown-menu";
 
 import { useNavigate } from "react-router-dom";
-import { Node } from "reactflow";
 import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import { SAVED_HOVER } from "../../../../constants/constants";
 import ExportModal from "../../../../modals/exportModal";
+import FlowLogsModal from "../../../../modals/flowLogsModal";
 import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -21,11 +21,7 @@ import IconComponent from "../../../genericIconComponent";
 import ShadTooltip from "../../../shadTooltipComponent";
 import { Button } from "../../../ui/button";
 
-export const MenuBar = ({
-  removeFunction,
-}: {
-  removeFunction: (nodes: Node[]) => void;
-}): JSX.Element => {
+export const MenuBar = ({}: {}): JSX.Element => {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -34,7 +30,7 @@ export const MenuBar = ({
   const redo = useFlowsManagerStore((state) => state.redo);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const [openSettings, setOpenSettings] = useState(false);
-  const nodes = useFlowStore((state) => state.nodes);
+  const [openLogs, setOpenLogs] = useState(false);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -70,14 +66,6 @@ export const MenuBar = ({
 
   return currentFlow ? (
     <div className="round-button-div">
-      <button
-        onClick={() => {
-          removeFunction(nodes);
-          navigate("/");
-        }}
-      >
-        <IconComponent name="ChevronLeft" className="w-4" />
-      </button>
       <div className="header-menu-bar">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -124,6 +112,18 @@ export const MenuBar = ({
               Settings
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={() => {
+                setOpenLogs(true);
+              }}
+              className="cursor-pointer"
+            >
+              <IconComponent
+                name="ScrollText"
+                className="header-menu-options "
+              />
+              Logs
+            </DropdownMenuItem>
+            <DropdownMenuItem
               className="cursor-pointer"
               onClick={() => {
                 uploadFlow({ newProject: false, isComponent: false }).catch(
@@ -132,7 +132,7 @@ export const MenuBar = ({
                       title: UPLOAD_ERROR_ALERT,
                       list: [error],
                     });
-                  }
+                  },
                 );
               }}
             >
@@ -194,6 +194,7 @@ export const MenuBar = ({
           open={openSettings}
           setOpen={setOpenSettings}
         ></FlowSettingsModal>
+        <FlowLogsModal open={openLogs} setOpen={setOpenLogs}></FlowLogsModal>
       </div>
       {(currentFlow.updated_at || saveLoading) && (
         <ShadTooltip
@@ -213,7 +214,7 @@ export const MenuBar = ({
               name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
               className={cn(
                 "h-4 w-4",
-                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle"
+                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
               )}
             />
             {printByBuildStatus()}

@@ -53,7 +53,9 @@ import {
   FileType2,
   FileUp,
   FlaskConical,
+  FolderIcon,
   FolderPlus,
+  FolderPlusIcon,
   FormInput,
   Forward,
   Gift,
@@ -105,6 +107,7 @@ import {
   SaveAll,
   Scissors,
   ScreenShare,
+  ScrollText,
   Search,
   Settings2,
   Share,
@@ -141,7 +144,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { FaApple, FaGithub } from "react-icons/fa";
+import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
@@ -150,6 +153,7 @@ import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
 import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { ChromaIcon } from "../icons/ChromaIcon";
+import { CouchbaseIcon } from "../icons/Couchbase";
 import { CohereIcon } from "../icons/Cohere";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
@@ -321,6 +325,7 @@ export const nodeIconsLucide: iconsType = {
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
+  Couchbase: CouchbaseIcon,
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,
@@ -384,6 +389,7 @@ export const nodeIconsLucide: iconsType = {
   Keyboard: Keyboard,
   embeddings: Binary,
   saved_components: GradientSave,
+  ScrollText,
   documentloaders: Paperclip,
   vectorstores: Layers,
   vectorsearch: TextSearch,
@@ -517,4 +523,7 @@ export const nodeIconsLucide: iconsType = {
   Command,
   ArrowBigUp,
   Dot,
+  FolderPlusIcon,
+  FolderIcon,
+  Discord: FaDiscord,
 };

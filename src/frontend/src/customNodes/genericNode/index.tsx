@@ -27,8 +27,10 @@ import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
-import { classNames, cn, getFieldTitle, sortFields } from "../../utils/utils";
+import { classNames, cn } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
+import getFieldTitle from "../utils/get-field-title";
+import sortFields from "../utils/sort-fields";
 
 export default function GenericNode({
   data,
@@ -303,7 +305,7 @@ export default function GenericNode({
   ) => {
     let isInvalid = validationStatus && !validationStatus.valid;
 
-    if (buildStatus === BuildStatus.INACTIVE && isInvalid) {
+    if (buildStatus === BuildStatus.INACTIVE) {
       // INACTIVE should have its own class
       return "inactive-status";
     }
@@ -329,6 +331,7 @@ export default function GenericNode({
       buildStatus,
       validationStatus,
     );
+
     const baseBorderClass = getBaseBorderClass(selected);
     const nodeSizeClass = getNodeSizeClass(showNode);
     return classNames(
@@ -383,7 +386,6 @@ export default function GenericNode({
     isOutdated,
     selected,
   ]);
-
   return (
     <>
       {memoizedNodeToolbarComponent}

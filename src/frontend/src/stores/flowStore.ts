@@ -44,7 +44,6 @@ import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
-import FlowPage from "../pages/FlowPage";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
@@ -465,8 +464,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       status: BuildStatus,
       runId: string,
     ) {
+      console.log("handleBuildUpdate", vertexBuildData, status, runId);
       if (vertexBuildData && vertexBuildData.inactivated_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
+        get().updateBuildStatus(
+          vertexBuildData.inactivated_vertices,
+          BuildStatus.INACTIVE,
+        );
       }
 
       if (vertexBuildData.next_vertices_ids) {
@@ -483,9 +487,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         const next_vertices_ids = vertexBuildData.next_vertices_ids.filter(
           (id) => !vertexBuildData.inactivated_vertices?.includes(id),
         );
+        const top_level_vertices = vertexBuildData.top_level_vertices.filter(
+          (vertex) =>
+            !vertexBuildData.inactivated_vertices?.includes(vertex.id),
+        );
         const nextVertices: VertexLayerElementType[] = zip(
           next_vertices_ids,
-          vertexBuildData.top_level_vertices,
+          top_level_vertices,
         ).map(([id, reference]) => ({ id: id!, reference }));
 
         const newLayers = [
@@ -502,10 +510,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           runId: runId,
           verticesToRun: get().verticesBuild!.verticesToRun,
         });
-        get().updateBuildStatus(
-          vertexBuildData.top_level_vertices,
-          BuildStatus.TO_BUILD,
-        );
+        get().updateBuildStatus(top_level_vertices, BuildStatus.TO_BUILD);
       }
 
       get().addDataToFlowPool(

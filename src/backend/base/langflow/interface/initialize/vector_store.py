@@ -5,14 +5,13 @@ import orjson
 from langchain_community.vectorstores import (
     FAISS,
     Chroma,
-    ElasticsearchStore,
     MongoDBAtlasVectorSearch,
-    Pinecone,
     Qdrant,
     SupabaseVectorStore,
     Weaviate,
 )
 from langchain_core.documents import Document
+from langchain_pinecone import Pinecone
 
 
 def docs_in_params(params: dict) -> bool:

@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlmodel import Session
+
 from langflow.api.v1.schemas import Token
 from langflow.services.auth.utils import (
     authenticate_user,
@@ -7,14 +9,10 @@ from langflow.services.auth.utils import (
     create_user_longterm_token,
     create_user_tokens,
 )
-from langflow.services.deps import (
-    get_session,
-    get_settings_service,
-    get_variable_service,
-)
+from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
+from langflow.services.deps import get_session, get_settings_service, get_variable_service
 from langflow.services.settings.manager import SettingsService
 from langflow.services.variable.service import VariableService
-from sqlmodel import Session
 
 router = APIRouter(tags=["Login"])
 
@@ -58,6 +56,8 @@ async def login_to_get_access_token(
             expires=auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
         )
         variable_service.initialize_user_variables(user.id, db)
+        # Create default folder for user if it doesn't exist
+        create_default_folder_if_it_doesnt_exist(db, user.id)
         return tokens
     else:
         raise HTTPException(
@@ -86,6 +86,7 @@ async def auto_login(
             expires=None,  # Set to None to make it a session cookie
         )
         variable_service.initialize_user_variables(user_id, db)
+        create_default_folder_if_it_doesnt_exist(db, user_id)
         return tokens
 
     raise HTTPException(
@@ -138,5 +139,4 @@ async def refresh_token(
 async def logout(response: Response):
     response.delete_cookie("refresh_token_lf")
     response.delete_cookie("access_token_lf")
-    return {"message": "Logout successful"}
     return {"message": "Logout successful"}

@@ -2,16 +2,16 @@ import { useState } from "react";
 import { registerGlobalVariable } from "../../controllers/API";
 import BaseModal from "../../modals/baseModal";
 import useAlertStore from "../../stores/alertStore";
-import { useGlobalVariablesStore } from "../../stores/globalVariables";
+import { useGlobalVariablesStore } from "../../stores/globalVariablesStore/globalVariables";
 import { useTypesStore } from "../../stores/typesStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
-import { sortByName } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
+import sortByName from "./utils/sort-by-name";
 
 //TODO IMPLEMENT FORM LOGIC
 
@@ -130,8 +130,8 @@ export default function AddNewVariableButton({ children }): JSX.Element {
           <InputComponent
             setSelectedOptions={(value) => setFields(value)}
             selectedOptions={fields}
-            password={false}
             options={availableFields()}
+            password={false}
             placeholder="Choose a field for the variable..."
             id={"apply-to-fields"}
           ></InputComponent>
