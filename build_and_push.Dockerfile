@@ -10,7 +10,7 @@
 # PYTHON-BASE
 # Sets up all our shared environment variables
 ################################
-FROM python:3.10-slim as python-base
+FROM python:3.12-slim as python-base
 
 # python
 ENV PYTHONUNBUFFERED=1 \
@@ -47,7 +47,7 @@ ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 # Used to build deps + create our virtual environment
 ################################
 FROM python-base as builder-base
-RUN
+
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
     # deps for installing poetry
@@ -55,7 +55,12 @@ RUN apt-get update \
     # deps for building python deps
     build-essential \
     # npm
-    npm
+    npm \
+    # gcc
+    gcc \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 
 
 # Now we need to copy the entire project into the image
@@ -70,15 +75,12 @@ RUN --mount=type=cache,target=/root/.cache \
 RUN python -m pip install requests && cd ./scripts && python update_dependencies.py
 RUN $POETRY_HOME/bin/poetry lock
 RUN $POETRY_HOME/bin/poetry build
-# Final stage for the application
-FROM python-base as final
 
 # Copy virtual environment and built .tar.gz from builder base
 RUN useradd -m -u 1000 user
-COPY --from=builder-base /app/dist/*.tar.gz ./
+USER user
 # Install the package from the .tar.gz
-RUN python -m pip install *.tar.gz --user
+RUN python -m pip install /app/dist/*.tar.gz
 
-WORKDIR /app
 ENTRYPOINT ["python", "-m", "langflow", "run"]
 CMD ["--host", "0.0.0.0", "--port", "7860"]

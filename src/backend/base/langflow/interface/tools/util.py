@@ -2,8 +2,7 @@ import ast
 import inspect
 import textwrap
 from typing import Dict, Union
-
-from langchain.agents.tools import Tool
+from langchain_core.tools import Tool
 
 
 def get_func_tool_params(func, **kwargs) -> Union[Dict, None]:

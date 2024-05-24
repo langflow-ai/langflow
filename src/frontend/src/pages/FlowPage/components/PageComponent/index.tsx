@@ -34,9 +34,10 @@ import {
   updateIds,
   validateSelection,
 } from "../../../../utils/reactflowUtils";
-import { getRandomName, isWrappedWithClass } from "../../../../utils/utils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
+import isWrappedWithClass from "./utils/is-wrapped-with-class";
+import getRandomName from "./utils/get-random-name";
 
 const nodeTypes = {
   genericNode: GenericNode,
@@ -483,6 +484,7 @@ export default function Page({
               ></Controls>
             )}
             <SelectionMenu
+              lastSelection={lastSelection}
               isVisible={selectionMenuVisible}
               nodes={lastSelection?.nodes}
               onClick={() => {

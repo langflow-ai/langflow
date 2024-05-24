@@ -15,8 +15,8 @@ export default function FlowToolbar(): JSX.Element {
   const hasIO = useFlowStore((state) => state.hasIO);
   const hasStore = useStoreStore((state) => state.hasStore);
   const validApiKey = useStoreStore((state) => state.validApiKey);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

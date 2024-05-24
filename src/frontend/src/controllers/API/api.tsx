@@ -2,6 +2,7 @@ import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { renewAccessToken } from ".";
+import { AUTHORIZED_DUPLICATE_REQUESTS } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
@@ -22,7 +23,10 @@ function ApiInterceptor() {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (error.response?.status === 403 || error.response?.status === 401) {
+        if (
+          error?.response?.status === 403 ||
+          error?.response?.status === 401
+        ) {
           if (!autoLogin) {
             if (error?.config?.url?.includes("github")) {
               return Promise.reject(error);
@@ -44,7 +48,7 @@ function ApiInterceptor() {
         }
         await clearBuildVerticesState(error);
         return Promise.reject(error);
-      }
+      },
     );
 
     const isAuthorizedURL = (url) => {
@@ -61,10 +65,10 @@ function ApiInterceptor() {
         const parsedURL = new URL(url);
 
         const isDomainAllowed = authorizedDomains.some(
-          (domain) => parsedURL.origin === new URL(domain).origin
+          (domain) => parsedURL.origin === new URL(domain).origin,
         );
         const isEndpointAllowed = authorizedEndpoints.some((endpoint) =>
-          parsedURL.pathname.includes(endpoint)
+          parsedURL.pathname.includes(endpoint),
         );
 
         return isDomainAllowed || isEndpointAllowed;
@@ -77,6 +81,28 @@ function ApiInterceptor() {
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
+        const lastUrl = localStorage.getItem("lastUrlCalled");
+        const lastMethodCalled = localStorage.getItem("lastMethodCalled");
+
+        const isContained = AUTHORIZED_DUPLICATE_REQUESTS.some((request) =>
+          config?.url!.includes(request),
+        );
+
+        if (
+          config?.url === lastUrl &&
+          !isContained &&
+          lastMethodCalled === config.method
+        ) {
+          return Promise.reject("Duplicate request");
+        }
+
+        localStorage.setItem("lastUrlCalled", config.url ?? "");
+        localStorage.setItem("lastMethodCalled", config.method ?? "");
+        localStorage.setItem(
+          "lastRequestData",
+          JSON.stringify(config.data) ?? "",
+        );
+
         const accessToken = cookies.get("access_token_lf");
         if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
@@ -86,7 +112,7 @@ function ApiInterceptor() {
       },
       (error) => {
         return Promise.reject(error);
-      }
+      },
     );
 
     return () => {
@@ -118,7 +144,7 @@ function ApiInterceptor() {
       if (error?.config?.headers) {
         delete error.config.headers["Authorization"];
         error.config.headers["Authorization"] = `Bearer ${cookies.get(
-          "access_token_lf"
+          "access_token_lf",
         )}`;
         const response = await axios.request(error.config);
         return response;

@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from loguru import logger
 
@@ -60,7 +60,7 @@ def get_messages(
     return records
 
 
-def add_messages(records: Union[list[Record], Record]):
+def add_messages(records: Union[list[Record], Record], flow_id: Optional[str] = None):
     """
     Add a message to the monitor service.
     """
@@ -76,7 +76,8 @@ def add_messages(records: Union[list[Record], Record]):
 
         messages: list[MessageModel] = []
         for record in records:
-            messages.append(MessageModel.from_record(record))
+            record.timestamp = monitor_service.get_timestamp()
+            messages.append(MessageModel.from_record(record, flow_id=flow_id))
 
         for message in messages:
             try:
@@ -107,8 +108,24 @@ def store_message(
     session_id: Optional[str] = None,
     sender: Optional[str] = None,
     sender_name: Optional[str] = None,
-) -> list[Record]:
+    flow_id: Optional[str] = None,
+) -> List[Record]:
+    """
+    Stores a message in the memory.
 
+    Args:
+        message (Union[str, Record]): The message to be stored. It can be either a string or a Record object.
+        session_id (Optional[str]): The session ID associated with the message.
+        sender (Optional[str]): The sender ID associated with the message.
+        sender_name (Optional[str]): The name of the sender associated with the message.
+        flow_id (Optional[str]): The flow ID associated with the message. When running from the CustomComponent you can access this using `self.graph.flow_id`.
+
+    Returns:
+        List[Record]: A list of records containing the stored message.
+
+    Raises:
+        ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
+    """
     if not message:
         warnings.warn("No message provided.")
         return []
@@ -135,4 +152,4 @@ def store_message(
             },
         )
 
-    return add_messages([record])
+    return add_messages([record], flow_id=flow_id)

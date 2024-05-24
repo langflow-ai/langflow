@@ -1,15 +1,12 @@
 import inspect
 import json
+import os
 from typing import TYPE_CHECKING, Any, Callable, Dict, Sequence, Type
 
 import orjson
 from langchain.agents import agent as agent_module
 from langchain.agents.agent import AgentExecutor
-from langchain.agents.agent_toolkits.base import BaseToolkit
-from langchain.agents.tools import BaseTool
 from langchain.chains.base import Chain
-from langchain.document_loaders.base import BaseLoader
-from langchain_community.vectorstores import VectorStore
 from langchain_core.documents import Document
 from loguru import logger
 from pydantic import ValidationError
@@ -26,6 +23,11 @@ from langflow.interface.wrappers.base import wrapper_creator
 from langflow.schema.schema import Record
 from langflow.utils import validate
 from langflow.utils.util import unescape_string
+from langchain_community.agent_toolkits.base import BaseToolkit
+from langchain_core.document_loaders import BaseLoader
+from langchain_core.tools import BaseTool
+from langchain_core.vectorstores import VectorStore
+from langchain_text_splitters import Language
 
 if TYPE_CHECKING:
     from langflow.custom import CustomComponent
@@ -34,6 +36,7 @@ if TYPE_CHECKING:
 
 async def instantiate_class(
     vertex: "Vertex",
+    fallback_to_env_vars,
     user_id=None,
 ) -> Any:
     """Instantiate class from module type and key, and params"""
@@ -56,7 +59,7 @@ async def instantiate_class(
     if not base_type:
         raise ValueError("No base type provided for vertex")
     if base_type == "custom_components":
-        return await instantiate_custom_component(params, user_id, vertex)
+        return await instantiate_custom_component(params, user_id, vertex, fallback_to_env_vars=fallback_to_env_vars)
     class_object = import_by_type(_type=base_type, name=vertex_type)
     return await instantiate_based_on_type(
         class_object=class_object,
@@ -65,6 +68,7 @@ async def instantiate_class(
         params=params,
         user_id=user_id,
         vertex=vertex,
+        fallback_to_env_vars=fallback_to_env_vars,
     )
 
 
@@ -92,14 +96,7 @@ def convert_kwargs(params):
     return params
 
 
-async def instantiate_based_on_type(
-    class_object,
-    base_type,
-    node_type,
-    params,
-    user_id,
-    vertex,
-):
+async def instantiate_based_on_type(class_object, base_type, node_type, params, user_id, vertex, fallback_to_env_vars):
     if base_type == "agents":
         return instantiate_agent(node_type, class_object, params)
     elif base_type == "prompts":
@@ -131,33 +128,49 @@ async def instantiate_based_on_type(
     elif base_type == "memory":
         return instantiate_memory(node_type, class_object, params)
     elif base_type == "custom_components":
-        return await instantiate_custom_component(
-            params,
-            user_id,
-            vertex,
-        )
+        return await instantiate_custom_component(params, user_id, vertex, fallback_to_env_vars=fallback_to_env_vars)
     elif base_type == "wrappers":
         return instantiate_wrapper(node_type, class_object, params)
     else:
         return class_object(**params)
 
 
-def update_params_with_load_from_db_fields(custom_component: "CustomComponent", params, load_from_db_fields):
+def update_params_with_load_from_db_fields(
+    custom_component: "CustomComponent", params, load_from_db_fields, fallback_to_env_vars=False
+):
     # For each field in load_from_db_fields, we will check if it's in the params
     # and if it is, we will get the value from the custom_component.keys(name)
     # and update the params with the value
     for field in load_from_db_fields:
         if field in params:
             try:
-                key = custom_component.variables(params[field])
-                params[field] = key if key else params[field]
+                key = None
+                try:
+                    key = custom_component.variables(params[field])
+                except ValueError as e:
+                    # check if "User id is not set" is in the error message
+                    if "User id is not set" in str(e) and not fallback_to_env_vars:
+                        raise e
+                    logger.debug(str(e))
+                if fallback_to_env_vars and key is None:
+                    var = os.getenv(params[field])
+                    if var is None:
+                        raise ValueError(f"Environment variable {params[field]} is not set.")
+                    key = var
+                    logger.info(f"Using environment variable {params[field]} for {field}")
+                if key is None:
+                    logger.warning(f"Could not get value for {field}. Setting it to None.")
+                params[field] = key
+
             except Exception as exc:
-                logger.error(f"Failed to get value for {field} from custom component. Error: {exc}")
-                pass
+                logger.error(f"Failed to get value for {field} from custom component. Setting it to None. Error: {exc}")
+
+                params[field] = None
+
     return params
 
 
-async def instantiate_custom_component(params, user_id, vertex):
+async def instantiate_custom_component(params, user_id, vertex, fallback_to_env_vars: bool = False):
     params_copy = params.copy()
     class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
     custom_component: "CustomComponent" = class_object(
@@ -166,7 +179,9 @@ async def instantiate_custom_component(params, user_id, vertex):
         vertex=vertex,
         selected_output_type=vertex.selected_output_type,
     )
-    params_copy = update_params_with_load_from_db_fields(custom_component, params_copy, vertex.load_from_db_fields)
+    params_copy = update_params_with_load_from_db_fields(
+        custom_component, params_copy, vertex.load_from_db_fields, fallback_to_env_vars
+    )
 
     if "retriever" in params_copy and hasattr(params_copy["retriever"], "as_retriever"):
         params_copy["retriever"] = params_copy["retriever"].as_retriever()
@@ -416,8 +431,6 @@ def instantiate_textsplitter(
                 params["separators"] = [unescape_string(separator) for separator in params["separators"]]
         text_splitter = class_object(**params)
     else:
-        from langchain.text_splitter import Language
-
         language = params.pop("separator_type", None)
         params["language"] = Language(language)
         params.pop("separators", None)
