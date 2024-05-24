@@ -41,7 +41,12 @@ export default function FlowSettingsModal({
   }, [flows]);
 
   return (
-    <BaseModal open={open} setOpen={setOpen} size="smaller">
+    <BaseModal
+      open={open}
+      setOpen={setOpen}
+      size="smaller"
+      onSubmit={handleClick}
+    >
       <BaseModal.Header description={SETTINGS_DIALOG_SUBTITLE}>
         <span className="pr-2">Settings</span>
         <IconComponent name="Settings2" className="mr-2 h-4 w-4 " />
@@ -56,15 +61,12 @@ export default function FlowSettingsModal({
         />
       </BaseModal.Content>
 
-      <BaseModal.Footer>
-        <Button
-          disabled={nameLists.includes(name) && name !== currentFlow!.name}
-          onClick={handleClick}
-          type="submit"
-        >
-          Save
-        </Button>
-      </BaseModal.Footer>
+      <BaseModal.Footer
+        submit={{
+          label: "Save",
+          disabled: nameLists.includes(name) && name !== currentFlow!.name,
+        }}
+      />
     </BaseModal>
   );
 }

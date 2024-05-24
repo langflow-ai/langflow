@@ -16,6 +16,7 @@ import {
 } from "../../components/ui/dialog-with-no-close";
 
 import { DialogClose } from "@radix-ui/react-dialog";
+import ForwardedIconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
@@ -65,7 +66,12 @@ const Header: React.FC<{ children: ReactNode; description: string | null }> = ({
 
 const Footer: React.FC<{
   children?: ReactNode;
-  submit?: { label: string; icon?: ReactNode };
+  submit?: {
+    label: string;
+    icon?: ReactNode;
+    loading?: boolean;
+    disabled?: boolean;
+  };
 }> = ({ children, submit }) => {
   return submit ? (
     <div className="flex w-full items-center justify-between">
@@ -76,9 +82,26 @@ const Footer: React.FC<{
             Cancel
           </Button>
         </DialogClose>
-        <Button type="submit">
-          {submit.icon && submit.icon}
-          {submit.label}
+        <Button
+          type="submit"
+          disabled={submit.loading || submit.disabled}
+          className="relative"
+        >
+          <div
+            className={cn(
+              submit.loading ? "opacity-100" : "opacity-0",
+              "absolute self-center",
+            )}
+          >
+            <ForwardedIconComponent
+              name={"Loader2"}
+              className={"animate-spin"}
+            />
+          </div>
+          <div className={cn(submit.loading ? "opacity-0" : "opacity-100")}>
+            {submit.icon && submit.icon}
+            {submit.label}
+          </div>
         </Button>
       </div>
     </div>
@@ -242,7 +265,7 @@ function BaseModal({
                   event.preventDefault();
                   onSubmit();
                 }}
-                className="flex flex-col gap-4"
+                className="flex flex-col gap-6"
               >
                 <div
                   className={`flex flex-col ${height} w-full transition-all duration-300`}

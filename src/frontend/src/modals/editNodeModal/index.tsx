@@ -15,7 +15,6 @@ import ShadTooltip from "../../components/shadTooltipComponent";
 import TextAreaComponent from "../../components/textAreaComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
 import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
 import {
   Table,
   TableBody,
@@ -97,6 +96,16 @@ const EditNodeModal = forwardRef(
         setOpen={setOpen}
         onChangeOpenModal={(open) => {
           setMyData(data);
+        }}
+        onSubmit={() => {
+          setNode(data.id, (old) => ({
+            ...old,
+            data: {
+              ...old.data,
+              node: myData.node,
+            },
+          }));
+          setOpen(false);
         }}
       >
         <BaseModal.Trigger>
@@ -608,26 +617,7 @@ const EditNodeModal = forwardRef(
           </div>
         </BaseModal.Content>
 
-        <BaseModal.Footer>
-          <Button
-            data-test-id="saveChangesBtn"
-            id={"saveChangesBtn"}
-            className="mt-3"
-            onClick={() => {
-              setNode(data.id, (old) => ({
-                ...old,
-                data: {
-                  ...old.data,
-                  node: myData.node,
-                },
-              }));
-              setOpen(false);
-            }}
-            type="submit"
-          >
-            Save Changes
-          </Button>
-        </BaseModal.Footer>
+        <BaseModal.Footer submit={{ label: "Save Changes" }} />
       </BaseModal>
     );
   },
