@@ -1,6 +1,5 @@
-from typing import List, Optional
+from typing import Optional
 
-from langchain_core.messages.base import BaseMessage
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
@@ -93,7 +92,6 @@ class ChatVertexAIComponent(LCModelComponent):
         input_value: Text,
         credentials: Optional[str],
         project: str,
-        examples: Optional[List[BaseMessage]] = [],
         location: str = "us-central1",
         max_output_tokens: int = 128,
         model_name: str = "chat-bison",
@@ -112,7 +110,6 @@ class ChatVertexAIComponent(LCModelComponent):
             )
         output = ChatVertexAI(
             credentials=credentials,
-            examples=examples,
             location=location,
             max_output_tokens=max_output_tokens,
             model_name=model_name,

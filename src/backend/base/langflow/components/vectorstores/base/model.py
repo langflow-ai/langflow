@@ -4,9 +4,9 @@ from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
 
+from langflow.custom import CustomComponent
 from langflow.field_typing import Text
 from langflow.helpers.record import docs_to_records
-from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
 
 
