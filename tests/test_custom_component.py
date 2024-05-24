@@ -4,8 +4,7 @@ from uuid import uuid4
 
 import pytest
 from langchain_core.documents import Document
-
-from langflow.interface.custom.base import CustomComponent
+from langflow.custom import CustomComponent
 from langflow.interface.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
 from langflow.interface.custom.custom_component.component import Component, ComponentCodeNullError
 from langflow.services.database.models.flow import Flow, FlowCreate
