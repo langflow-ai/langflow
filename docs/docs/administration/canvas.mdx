@@ -126,6 +126,8 @@ For more, see [Playground](./playground.mdx).
 
 The **API** button opens the API window, where Langflow presents code for integrating your flow into external applications.
 
+Modify the call's parameters in the **Tweaks** window, click the **Copy Code** or **Download** buttons, and paste your code where you want to use it.
+
 <ZoomableImage
   alt="Docusaurus themed image"
   sources={{
@@ -136,6 +138,9 @@ The **API** button opens the API window, where Langflow presents code for integr
 />
 
 ### curl
+
+The **curl** tab displays sample code for posting a query to your flow.
+Modify the `input_value` to change your input message.
 
 ```curl
 curl -X POST \
@@ -159,10 +164,22 @@ Result:
 
 ### Python API
 
+The **Python API** tab displays code to interact with your flow using the Python HTTP requests library.
 
-When you sa, the API endpoint is created with your latest changes. Click the "code" button to use that flow as an API. You can post-adjust component parameters using the global variable TWEAKS.
+### Python Code
 
-The example below shows a Python script making a POST request to a local API endpoint, which gets a prediction based on the message input.
+The **Python Code** tab displays code to interact with your flow's `.json` file using the Langflow runtime.
+
+### Chat Widget HTML
+
+The **Chat Widget HTML** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
+For more, see the [Chat widget documentation](./chat-widget.mdx).
+
+### Tweaks
+
+The **Tweaks** tab displays the available parameters for your flow.
+Modifying the parameters changes the code parameters across all windows.
+For example, changing the **Chat Input** component's `input_value` will change that value across all API calls.
 
 <div
   style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
@@ -170,7 +187,7 @@ The example below shows a Python script making a POST request to a local API end
   <ReactPlayer playing controls url="/videos/langflow_api.mp4" />
 </div>
 
-## Project Options menu
+## Project options menu
 
 To see options for your project, in the upper left corner of the canvas, select the dropdown menu.
 
