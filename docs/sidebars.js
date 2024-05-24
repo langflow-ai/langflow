@@ -17,6 +17,7 @@ module.exports = {
         "getting-started/huggingface-spaces",
         "getting-started/canvas",
         "getting-started/flows-components-collections",
+        "migration/possible-installation-issues",
         "getting-started/new-to-llms",
       ],
     },
