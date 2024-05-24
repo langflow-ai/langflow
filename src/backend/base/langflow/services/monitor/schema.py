@@ -81,9 +81,8 @@ class MessageModel(BaseModel):
         from_attributes = True
         populate_by_name = True
 
-    @validator("files", pre=True)
-    @field_validator("artifacts", mode="before")
-    def validate_target_args(cls, v):
+    @field_validator("files", mode="before")
+    def validate_files(cls, v):
         if isinstance(v, str):
             return json.loads(v)
         return v
@@ -107,12 +106,6 @@ class MessageModel(BaseModel):
 
 class MessageModelResponse(MessageModel):
     index: Optional[int] = Field(default=None)
-
-    @field_validator("artifacts", mode="before")
-    def serialize_artifacts(v):
-        if isinstance(v, str):
-            return json.loads(v)
-        return v
 
     @field_validator("index", mode="before")
     def validate_id(cls, v):
@@ -151,9 +144,8 @@ class VertexBuildModel(BaseModel):
             return v.model_dump_json()
         return v
 
-    @validator("logs", pre=True)
-    @field_validator("params", mode="before")
-    def validate_params(cls, v):
+    @field_validator("logs", mode="before")
+    def validate_logs(cls, v):
         if isinstance(v, str):
             try:
                 return json.loads(v)
@@ -171,14 +163,6 @@ class VertexBuildModel(BaseModel):
     def validate_data(cls, v):
         if isinstance(v, str):
             return json.loads(v)
-        return v
-
-    @field_validator("artifacts", mode="before")
-    def validate_artifacts(cls, v):
-        if isinstance(v, str):
-            return json.loads(v)
-        elif isinstance(v, BaseModel):
-            return v.model_dump()
         return v
 
 
