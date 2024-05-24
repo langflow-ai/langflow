@@ -15,6 +15,7 @@ import {
   DialogContent as ModalContent,
 } from "../../components/ui/dialog-with-no-close";
 
+import { Button } from "../../components/ui/button";
 import { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
 
@@ -61,8 +62,23 @@ const Header: React.FC<{ children: ReactNode; description: string | null }> = ({
   );
 };
 
-const Footer: React.FC<{ children: ReactNode }> = ({ children }) => {
-  return <>{children}</>;
+const Footer: React.FC<{
+  children?: ReactNode;
+  submit?: { label: string; icon?: ReactNode };
+}> = ({ children, submit }) => {
+  return submit ? (
+    <div className="flex w-full items-center justify-between">
+      {children ?? <div />}
+      <div className="flex items-center">
+        <Button type="submit">
+          {submit.icon && submit.icon}
+          {submit.label}
+        </Button>
+      </div>
+    </div>
+  ) : (
+    <>{children && children}</>
+  );
 };
 interface BaseModalProps {
   children: [
@@ -91,6 +107,7 @@ interface BaseModalProps {
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;
   type?: "modal" | "dialog";
+  onSubmit?: () => void;
 }
 function BaseModal({
   open,
@@ -99,6 +116,7 @@ function BaseModal({
   size = "large",
   onChangeOpenModal,
   type = "dialog",
+  onSubmit,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header,
@@ -212,13 +230,34 @@ function BaseModal({
             <div className="truncate-doubleline word-break-break-word">
               {headerChild}
             </div>
-            <div
-              className={`flex flex-col ${height} w-full transition-all duration-300`}
-            >
-              {ContentChild}
-            </div>
-            {ContentFooter && (
-              <div className="flex flex-row-reverse">{ContentFooter}</div>
+            {onSubmit ? (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  onSubmit();
+                }}
+                className="flex flex-col gap-4"
+              >
+                <div
+                  className={`flex flex-col ${height} w-full transition-all duration-300`}
+                >
+                  {ContentChild}
+                </div>
+                {ContentFooter && (
+                  <div className="flex flex-row-reverse">{ContentFooter}</div>
+                )}
+              </form>
+            ) : (
+              <>
+                <div
+                  className={`flex flex-col ${height} w-full transition-all duration-300`}
+                >
+                  {ContentChild}
+                </div>
+                {ContentFooter && (
+                  <div className="flex flex-row-reverse">{ContentFooter}</div>
+                )}
+              </>
             )}
           </DialogContent>
         </Dialog>
