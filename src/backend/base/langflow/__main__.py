@@ -554,12 +554,15 @@ def api_key(
 
 def api_key_banner(unmasked_api_key):
     is_mac = platform.system() == "Darwin"
+    import pyperclip
+
+    pyperclip.copy(unmasked_api_key.api_key)
     panel = Panel(
         f"[bold]API Key Created Successfully:[/bold]\n\n"
         f"[bold blue]{unmasked_api_key.api_key}[/bold blue]\n\n"
         "This is the only time the API key will be displayed. \n"
         "Make sure to store it in a secure location. \n\n"
-        f"To copy the API key, select it and use [bold]{['Ctrl','Cmd' ][is_mac]} + C[/bold].",
+        f"The API key has been copied to your clipboard. [bold]{['Ctrl','Cmd'][is_mac]} + V[/bold] to paste it.",
         box=box.ROUNDED,
         border_style="blue",
         expand=False,
