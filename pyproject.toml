@@ -70,11 +70,11 @@ langchain-cohere = "^0.1.0rc1"
 elasticsearch = "^8.12.0"
 pytube = "^15.0.0"
 dspy-ai = "^2.4.0"
-assemblyai = "^0.23.1"
-litellm = "^1.34.22"
-chromadb = "^0.4.24"
+assemblyai = "^0.26.0"
+litellm = "^1.38.0"
+chromadb = "^0.5.0"
 langchain-anthropic = "^0.1.6"
-langchain-astradb = "^0.1.0"
+langchain-astradb = "^0.3.0"
 langchain-openai = "^0.1.1"
 zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
 langchain-google-vertexai = "^1.0.3"
@@ -83,6 +83,7 @@ langchain-pinecone = "^0.1.0"
 langchain-mistralai = "^0.1.6"
 couchbase = "^4.2.1"
 youtube-transcript-api = "^0.6.2"
+markdown = "^3.6"
 
 
 [tool.poetry.group.dev.dependencies]
