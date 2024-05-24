@@ -4,13 +4,13 @@ import importlib
 from typing import Any, Type
 
 from langchain.agents import Agent
-from langchain.base_language import BaseLanguageModel
 from langchain.chains.base import Chain
-from langchain.prompts import PromptTemplate
-from langchain.tools import BaseTool
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from langflow.interface.wrappers.base import wrapper_creator
+from langchain_core.language_models import BaseLanguageModel
+from langchain_core.prompts import PromptTemplate
+from langchain_core.tools import BaseTool
 
 
 def import_module(module_path: str) -> Any:

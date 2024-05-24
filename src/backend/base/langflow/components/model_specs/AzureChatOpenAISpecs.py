@@ -1,9 +1,9 @@
 from typing import Optional
 
-from langchain.llms.base import BaseLanguageModel
-from langchain_community.chat_models.azure_openai import AzureChatOpenAI
-
 from langflow.interface.custom.custom_component import CustomComponent
+from langchain_core.language_models import BaseLanguageModel
+from langchain_openai import AzureChatOpenAI
+from pydantic.v1 import SecretStr
 
 
 class AzureChatOpenAISpecsComponent(CustomComponent):
@@ -84,13 +84,17 @@ class AzureChatOpenAISpecsComponent(CustomComponent):
         temperature: float = 0.7,
         max_tokens: Optional[int] = 1000,
     ) -> BaseLanguageModel:
+        if api_key:
+            azure_api_key = SecretStr(api_key)
+        else:
+            azure_api_key = None
         try:
             llm = AzureChatOpenAI(
                 model=model,
                 azure_endpoint=azure_endpoint,
                 azure_deployment=azure_deployment,
                 api_version=api_version,
-                api_key=api_key,
+                api_key=azure_api_key,
                 temperature=temperature,
                 max_tokens=max_tokens,
             )

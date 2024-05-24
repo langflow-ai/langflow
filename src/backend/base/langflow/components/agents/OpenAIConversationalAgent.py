@@ -4,15 +4,14 @@ from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits.conversational_retrieval.openai_functions import _get_default_system_message
 from langchain.agents.openai_functions_agent.base import OpenAIFunctionsAgent
 from langchain.memory.token_buffer import ConversationTokenBufferMemory
-from langchain.prompts import SystemMessagePromptTemplate
-from langchain.prompts.chat import MessagesPlaceholder
-from langchain.schema.memory import BaseMemory
-from langchain.tools import Tool
 from langchain_openai import ChatOpenAI
 
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.interface.custom.custom_component import CustomComponent
 from pydantic.v1 import SecretStr
+from langchain_core.memory import BaseMemory
+from langchain_core.prompts import MessagesPlaceholder, SystemMessagePromptTemplate
+from langchain_core.tools import Tool
 
 
 class ConversationalAgent(CustomComponent):

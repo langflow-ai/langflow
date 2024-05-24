@@ -1,11 +1,11 @@
 from typing import TYPE_CHECKING, List, Union
 
 from langchain.agents.agent import AgentExecutor
-from langchain.callbacks.base import BaseCallbackHandler
 from loguru import logger
 
 from langflow.processing.process import fix_memory_inputs, format_actions
 from langflow.services.deps import get_plugins_service
+from langchain_core.callbacks import BaseCallbackHandler
 
 if TYPE_CHECKING:
     from langfuse.callback import CallbackHandler  # type: ignore

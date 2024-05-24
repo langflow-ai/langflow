@@ -1,8 +1,6 @@
 from typing import List, Optional, Union
 
-from langchain.schema import BaseRetriever
-
-from langchain_community.vectorstores import CouchbaseVectorStore 
+from langchain_community.vectorstores import CouchbaseVectorStore
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, VectorStore
@@ -10,9 +8,10 @@ from langflow.schema import Record
 
 from datetime import timedelta
 
-from couchbase.auth import PasswordAuthenticator # type: ignore
-from couchbase.cluster import Cluster # type: ignore
-from couchbase.options import ClusterOptions # type: ignore
+from couchbase.auth import PasswordAuthenticator  # type: ignore
+from couchbase.cluster import Cluster  # type: ignore
+from couchbase.options import ClusterOptions  # type: ignore
+from langchain_core.retrievers import BaseRetriever
 
 
 class CouchbaseComponent(CustomComponent):
@@ -34,17 +33,13 @@ class CouchbaseComponent(CustomComponent):
         return {
             "inputs": {"display_name": "Input", "input_types": ["Document", "Record"]},
             "embedding": {"display_name": "Embedding"},
-            "couchbase_connection_string": {"display_name": "Couchbase Cluster connection string","required": True},
-            "couchbase_username": {"display_name": "Couchbase username","required": True},
-            "couchbase_password": {
-                "display_name": "Couchbase password",
-                "password": True,
-                "required": True
-            },
-            "bucket_name": {"display_name": "Bucket Name","required": True},
-            "scope_name": {"display_name": "Scope Name","required": True},
-            "collection_name": {"display_name": "Collection Name","required": True},
-            "index_name": {"display_name": "Index Name","required": True},
+            "couchbase_connection_string": {"display_name": "Couchbase Cluster connection string", "required": True},
+            "couchbase_username": {"display_name": "Couchbase username", "required": True},
+            "couchbase_password": {"display_name": "Couchbase password", "password": True, "required": True},
+            "bucket_name": {"display_name": "Bucket Name", "required": True},
+            "scope_name": {"display_name": "Scope Name", "required": True},
+            "collection_name": {"display_name": "Collection Name", "required": True},
+            "index_name": {"display_name": "Index Name", "required": True},
         }
 
     def build(

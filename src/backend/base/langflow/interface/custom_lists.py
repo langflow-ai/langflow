@@ -3,11 +3,13 @@ from typing import Any
 
 from langchain import llms, memory, text_splitter
 from langchain_community import agent_toolkits, document_loaders, embeddings
-from langchain_community.chat_models import AzureChatOpenAI, ChatAnthropic, ChatOpenAI, ChatVertexAI
+from langchain_community.chat_models import ChatVertexAI
 
 from langflow.interface.agents.custom import CUSTOM_AGENTS
 from langflow.interface.chains.custom import CUSTOM_CHAINS
 from langflow.interface.importing.utils import import_class
+from langchain_anthropic import ChatAnthropic
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
 
 # LLMs
 llm_type_to_cls_dict = {}
