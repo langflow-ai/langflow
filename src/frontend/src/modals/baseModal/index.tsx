@@ -15,6 +15,7 @@ import {
   DialogContent as ModalContent,
 } from "../../components/ui/dialog-with-no-close";
 
+import { DialogClose } from "@radix-ui/react-dialog";
 import { Button } from "../../components/ui/button";
 import { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
@@ -69,7 +70,12 @@ const Footer: React.FC<{
   return submit ? (
     <div className="flex w-full items-center justify-between">
       {children ?? <div />}
-      <div className="flex items-center">
+      <div className="flex items-center gap-3">
+        <DialogClose asChild>
+          <Button variant="outline" type="button">
+            Cancel
+          </Button>
+        </DialogClose>
         <Button type="submit">
           {submit.icon && submit.icon}
           {submit.label}
