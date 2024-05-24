@@ -8,8 +8,8 @@ from cachetools import TTLCache, cachedmethod, keys
 from fastapi import HTTPException
 from loguru import logger
 
-from langflow.interface.custom.eval import eval_custom_component_code
-from langflow.interface.custom.schema import CallableCodeDetails, ClassCodeDetails, MissingDefault
+from langflow.custom.eval import eval_custom_component_code
+from langflow.custom.schema import CallableCodeDetails, ClassCodeDetails, MissingDefault
 
 
 class CodeSyntaxError(HTTPException):

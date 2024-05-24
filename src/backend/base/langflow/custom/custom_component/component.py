@@ -5,9 +5,9 @@ from typing import Any, ClassVar, Optional
 from cachetools import TTLCache, cachedmethod
 from fastapi import HTTPException
 
-from langflow.interface.custom.attributes import ATTR_FUNC_MAPPING
-from langflow.interface.custom.code_parser import CodeParser
-from langflow.interface.custom.eval import eval_custom_component_code
+from langflow.custom.attributes import ATTR_FUNC_MAPPING
+from langflow.custom.code_parser import CodeParser
+from langflow.custom.eval import eval_custom_component_code
 from langflow.utils import validate
 
 

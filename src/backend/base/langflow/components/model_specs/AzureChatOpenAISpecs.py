@@ -1,9 +1,10 @@
 from typing import Optional
 
-from langflow.interface.custom.custom_component import CustomComponent
 from langchain_core.language_models import BaseLanguageModel
 from langchain_openai import AzureChatOpenAI
 from pydantic.v1 import SecretStr
+
+from langflow.custom import CustomComponent
 
 
 class AzureChatOpenAISpecsComponent(CustomComponent):

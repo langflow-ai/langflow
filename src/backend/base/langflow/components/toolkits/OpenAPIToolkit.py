@@ -1,13 +1,12 @@
 from pathlib import Path
 
-
 import yaml
 from langchain_community.agent_toolkits.openapi.toolkit import BaseToolkit, OpenAPIToolkit
 from langchain_community.tools.json.tool import JsonSpec
 from langchain_community.utilities.requests import TextRequestsWrapper
 
+from langflow.custom import CustomComponent
 from langflow.field_typing import BaseLanguageModel
-from langflow.interface.custom.custom_component import CustomComponent
 
 
 class OpenAPIToolkitComponent(CustomComponent):

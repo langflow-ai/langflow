@@ -4,8 +4,7 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
-
-from langflow.interface.custom.directory_reader.directory_reader import DirectoryReader
+from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
 
 

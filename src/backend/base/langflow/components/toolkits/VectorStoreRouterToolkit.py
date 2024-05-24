@@ -2,8 +2,8 @@ from typing import List, Union
 
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreInfo, VectorStoreRouterToolkit
 
+from langflow.custom import CustomComponent
 from langflow.field_typing import BaseLanguageModel, Tool
-from langflow.interface.custom.custom_component import CustomComponent
 
 
 class VectorStoreRouterToolkitComponent(CustomComponent):

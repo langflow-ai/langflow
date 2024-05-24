@@ -7,13 +7,12 @@ import yaml
 from cachetools import TTLCache, cachedmethod
 from langchain_core.documents import Document
 from pydantic import BaseModel
-
-from langflow.helpers.flow import list_flows, load_flow, run_flow
-from langflow.interface.custom.code_parser.utils import (
+from langflow.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
 )
-from langflow.interface.custom.custom_component.component import Component
+from langflow.custom.custom_component.component import Component
+from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope

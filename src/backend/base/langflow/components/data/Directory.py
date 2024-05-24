@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional
 
 from langflow.base.data.utils import parallel_load_records, parse_text_file_to_record, retrieve_file_paths
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 from langflow.schema import Record
 
 

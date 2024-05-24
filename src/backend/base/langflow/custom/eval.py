@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Type
 from langflow.utils import validate
 
 if TYPE_CHECKING:
-    from langflow.interface.custom.custom_component import CustomComponent
+    from langflow.custom import CustomComponent
 
 
 def eval_custom_component_code(code: str) -> Type["CustomComponent"]:

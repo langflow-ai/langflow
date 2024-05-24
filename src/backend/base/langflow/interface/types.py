@@ -1,4 +1,4 @@
-from langflow.interface.custom.utils import build_custom_components
+from langflow.custom.utils import build_custom_components
 
 
 def get_all_types_dict(components_paths):

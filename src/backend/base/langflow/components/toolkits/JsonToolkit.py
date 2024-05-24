@@ -1,11 +1,10 @@
 from pathlib import Path
 
-
 import yaml
 from langchain_community.agent_toolkits.json.toolkit import JsonToolkit
 from langchain_community.tools.json.tool import JsonSpec
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class JsonToolkitComponent(CustomComponent):

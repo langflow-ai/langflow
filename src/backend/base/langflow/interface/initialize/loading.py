@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Type
 import orjson
 from loguru import logger
 
-from langflow.interface.custom.eval import eval_custom_component_code
+from langflow.custom.eval import eval_custom_component_code
 from langflow.schema.schema import Record
 
 if TYPE_CHECKING:

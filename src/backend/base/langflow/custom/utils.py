@@ -10,17 +10,17 @@ from fastapi import HTTPException
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.field_typing.range_spec import RangeSpec
-from langflow.interface.custom.attributes import ATTR_FUNC_MAPPING
-from langflow.interface.custom.code_parser.utils import extract_inner_type
-from langflow.interface.custom.custom_component import CustomComponent
-from langflow.interface.custom.directory_reader.utils import (
+from langflow.custom import CustomComponent
+from langflow.custom.attributes import ATTR_FUNC_MAPPING
+from langflow.custom.code_parser.utils import extract_inner_type
+from langflow.custom.directory_reader.utils import (
     build_custom_component_list_from_path,
     determine_component_name,
     merge_nested_dicts_with_renaming,
 )
-from langflow.interface.custom.eval import eval_custom_component_code
-from langflow.interface.custom.schema import MissingDefault
+from langflow.custom.eval import eval_custom_component_code
+from langflow.custom.schema import MissingDefault
+from langflow.field_typing.range_spec import RangeSpec
 from langflow.schema import dotdict
 from langflow.template.field.base import TemplateField
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode

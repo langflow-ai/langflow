@@ -5,7 +5,7 @@ from langchain_community.chat_models import ChatOllama
 from langchain_core.language_models.chat_models import BaseChatModel
 
 # from langchain.chat_models import ChatOllama
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 # from langchain.callbacks.manager import CallbackManager
 

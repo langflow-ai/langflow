@@ -3,8 +3,8 @@ from typing import Dict, List, Optional
 from langchain_openai.embeddings.base import OpenAIEmbeddings
 from pydantic.v1 import SecretStr
 
+from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, NestedDict
-from langflow.interface.custom.custom_component import CustomComponent
 
 
 class OpenAIEmbeddingsComponent(CustomComponent):

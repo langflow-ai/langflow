@@ -5,7 +5,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class CustomComponentPathValueError(ValueError):
@@ -67,7 +67,7 @@ class DirectoryReader:
         return len(file_content.strip()) == 0
 
     def filter_loaded_components(self, data: dict, with_errors: bool) -> dict:
-        from langflow.interface.custom.utils import build_component
+        from langflow.custom.utils import build_component
 
         items = []
         for menu in data["menu"]:

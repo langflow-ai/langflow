@@ -2,8 +2,8 @@ from typing import Optional
 
 from langchain.retrievers import MultiQueryRetriever
 
+from langflow.custom import CustomComponent
 from langflow.field_typing import BaseLanguageModel, BaseRetriever, PromptTemplate, Text
-from langflow.interface.custom.custom_component import CustomComponent
 
 
 class MultiQueryRetrieverComponent(CustomComponent):
