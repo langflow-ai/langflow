@@ -6,6 +6,7 @@ import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
+  name?: string;
   autoFocus?: boolean;
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
   value?: string;
@@ -32,6 +33,7 @@ export type InputComponentType = {
   setSelectedOptions?: (value: string[]) => void;
   objectOptions?: Array<{ name: string; id: string }>;
   isObjectOption?: boolean;
+  onChangeFolderName?: (e: any) => void;
 };
 export type ToggleComponentType = {
   enabled: boolean;

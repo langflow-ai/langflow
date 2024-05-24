@@ -19,7 +19,6 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 from langflow.graph.graph.base import Graph
-from langflow.graph.schema import RunOutputs
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.interface.custom.utils import build_custom_component_template
 from langflow.processing.process import process_tweaks, run_graph_internal

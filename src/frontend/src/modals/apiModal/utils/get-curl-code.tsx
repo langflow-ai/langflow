@@ -5,13 +5,13 @@
  * @returns {string} - The curl code
  */
 export default function getCurlCode(
-    flowId: string,
-    isAuth: boolean,
-    tweaksBuildedObject,
-  ): string {
-    const tweaksObject = tweaksBuildedObject[0];
-  
-    return `curl -X POST \\
+  flowId: string,
+  isAuth: boolean,
+  tweaksBuildedObject,
+): string {
+  const tweaksObject = tweaksBuildedObject[0];
+
+  return `curl -X POST \\
     ${window.location.protocol}//${
       window.location.host
     }/api/v1/run/${flowId}?stream=false \\
@@ -23,4 +23,4 @@ export default function getCurlCode(
     "input_type": "chat",
     "tweaks": ${JSON.stringify(tweaksObject, null, 2)}'
     `;
-  }
+}

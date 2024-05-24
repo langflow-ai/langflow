@@ -1,12 +1,11 @@
 from typing import Optional, Union
-
-from langchain.embeddings.base import Embeddings
-from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.redis import Redis
 from langchain_core.retrievers import BaseRetriever
 
 from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema.schema import Record
+from langchain_core.embeddings import Embeddings
+from langchain_core.vectorstores import VectorStore
 
 
 class RedisComponent(CustomComponent):

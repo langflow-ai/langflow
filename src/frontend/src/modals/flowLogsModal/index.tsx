@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
-import { FlowType } from "../../types/flow";
+import { FlowType, NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
 import TableComponent from "../../components/tableComponent";
 import { getMessagesTable, getTransactionTable } from "../../controllers/API";
@@ -12,15 +12,20 @@ import {
   ColGroupDef,
   SizeColumnsToFitGridStrategy,
 } from "ag-grid-community";
+import useAlertStore from "../../stores/alertStore";
+import useFlowStore from "../../stores/flowStore";
 
 export default function FlowLogsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
   const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
+  const nodes = useFlowStore((state) => state.nodes);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const flows = useFlowsManagerStore((state) => state.flows);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
+
   useEffect(() => {
     setName(currentFlow!.name);
     setDescription(currentFlow!.description);
@@ -31,6 +36,7 @@ export default function FlowLogsModal({
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
   const [activeTab, setActiveTab] = useState("Executions");
+  const noticed = useRef(false);
 
   function handleClick(): void {
     currentFlow!.name = name;
@@ -52,6 +58,25 @@ export default function FlowLogsModal({
         setColumns(columns.map((col) => ({ ...col, editable: true })));
         setRows(rows);
       });
+    }
+
+    if (open && activeTab === "Messages" && !noticed.current) {
+      const haStream = nodes
+        .map((nodes) => (nodes.data as NodeDataType).node!.template)
+        .some((template) => template["stream"] && template["stream"].value);
+      console.log(
+        haStream,
+        nodes.map((nodes) => (nodes.data as NodeDataType).node!.template),
+      );
+      if (haStream) {
+        setNoticeData({
+          title: "Streamed messages will not appear in this table.",
+        });
+        noticed.current = true;
+      }
+    }
+    if (!open) {
+      noticed.current = false;
     }
   }, [open, activeTab]);
 

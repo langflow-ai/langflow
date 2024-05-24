@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 
 from langchain.agents import AgentExecutor
-from langchain.schema import AgentAction
 from loguru import logger
 from pydantic import BaseModel
 
@@ -13,6 +12,7 @@ from langflow.interface.run import get_memory_key, update_memory_keys
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.session.service import SessionService
+from langchain_core.agents import AgentAction
 
 
 if TYPE_CHECKING:
