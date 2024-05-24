@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { GlobalVariablesStore } from "../types/zustand/globalVariables";
-import { getUnavailableFields } from "../utils/utils";
+import { GlobalVariablesStore } from "../../types/zustand/globalVariables";
+import getUnavailableFields from "./utils/get-unavailable-fields";
 
 export const useGlobalVariablesStore = create<GlobalVariablesStore>(
   (set, get) => ({
@@ -13,7 +13,7 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
       delete newFields[field];
       set({ unavaliableFields: newFields });
     },
-    globalVariablesEntries: [],
+    globalVariablesEntries: undefined,
     globalVariables: {},
     setGlobalVariables: (variables) => {
       set({
@@ -45,5 +45,5 @@ export const useGlobalVariablesStore = create<GlobalVariablesStore>(
     getVariableId: (name) => {
       return get().globalVariables[name]?.id;
     },
-  })
+  }),
 );

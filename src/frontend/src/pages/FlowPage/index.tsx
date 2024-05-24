@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import FlowToolbar from "../../components/chatComponent";
 import Header from "../../components/headerComponent";
 import { useDarkStore } from "../../stores/darkStore";
@@ -16,9 +16,19 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const { id } = useParams();
+  const navigate = useNavigate();
+
+  const flows = useFlowsManagerStore((state) => state.flows);
 
   // Set flow tab id
   useEffect(() => {
+    const isAnExistingFlow = flows.some((flow) => flow.id === id);
+
+    if (!isAnExistingFlow) {
+      navigate("/all");
+      return;
+    }
+
     setCurrentFlowId(id!);
     setOnFlowPage(true);
 

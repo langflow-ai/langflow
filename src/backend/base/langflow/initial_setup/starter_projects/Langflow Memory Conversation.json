@@ -1,6 +1,6 @@
 {
   "id": "08d5cccf-d098-4367-b14b-1078429c9ed9",
-  "icon": "🤖",
+  "icon": "\ud83e\udd16",
   "icon_bg_color": "#FFD700",
   "data": {
     "nodes": [
@@ -792,7 +792,7 @@
                 "load_from_db": false,
                 "title_case": false,
                 "input_types": ["Text"],
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "stream": {
                 "type": "bool",
@@ -1003,9 +1003,9 @@
     "edges": [
       {
         "source": "MemoryComponent-cdA1J",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-cdA1Jœ}",
+        "sourceHandle": "{\u0153baseClasses\u0153:[\u0153str\u0153,\u0153Text\u0153,\u0153object\u0153],\u0153dataType\u0153:\u0153MemoryComponent\u0153,\u0153id\u0153:\u0153MemoryComponent-cdA1J\u0153}",
         "target": "Prompt-ODkUx",
-        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-ODkUxœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153context\u0153,\u0153id\u0153:\u0153Prompt-ODkUx\u0153,\u0153inputTypes\u0153:[\u0153Document\u0153,\u0153BaseOutputParser\u0153,\u0153Record\u0153,\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "data": {
           "targetHandle": {
             "fieldName": "context",
@@ -1023,14 +1023,14 @@
           "stroke": "#555"
         },
         "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-MemoryComponent-cdA1J{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-cdA1Jœ}-Prompt-ODkUx{œfieldNameœ:œcontextœ,œidœ:œPrompt-ODkUxœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-MemoryComponent-cdA1J{\u0153baseClasses\u0153:[\u0153str\u0153,\u0153Text\u0153,\u0153object\u0153],\u0153dataType\u0153:\u0153MemoryComponent\u0153,\u0153id\u0153:\u0153MemoryComponent-cdA1J\u0153}-Prompt-ODkUx{\u0153fieldName\u0153:\u0153context\u0153,\u0153id\u0153:\u0153Prompt-ODkUx\u0153,\u0153inputTypes\u0153:[\u0153Document\u0153,\u0153BaseOutputParser\u0153,\u0153Record\u0153,\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "selected": false
       },
       {
         "source": "ChatInput-t7F8v",
-        "sourceHandle": "{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-t7F8vœ}",
+        "sourceHandle": "{\u0153baseClasses\u0153:[\u0153Text\u0153,\u0153object\u0153,\u0153Record\u0153,\u0153str\u0153],\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-t7F8v\u0153}",
         "target": "Prompt-ODkUx",
-        "targetHandle": "{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-ODkUxœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153user_message\u0153,\u0153id\u0153:\u0153Prompt-ODkUx\u0153,\u0153inputTypes\u0153:[\u0153Document\u0153,\u0153BaseOutputParser\u0153,\u0153Record\u0153,\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "data": {
           "targetHandle": {
             "fieldName": "user_message",
@@ -1048,14 +1048,14 @@
           "stroke": "#555"
         },
         "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-ChatInput-t7F8v{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-t7F8vœ}-Prompt-ODkUx{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-ODkUxœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-t7F8v{\u0153baseClasses\u0153:[\u0153Text\u0153,\u0153object\u0153,\u0153Record\u0153,\u0153str\u0153],\u0153dataType\u0153:\u0153ChatInput\u0153,\u0153id\u0153:\u0153ChatInput-t7F8v\u0153}-Prompt-ODkUx{\u0153fieldName\u0153:\u0153user_message\u0153,\u0153id\u0153:\u0153Prompt-ODkUx\u0153,\u0153inputTypes\u0153:[\u0153Document\u0153,\u0153BaseOutputParser\u0153,\u0153Record\u0153,\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "selected": false
       },
       {
         "source": "Prompt-ODkUx",
-        "sourceHandle": "{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-ODkUxœ}",
+        "sourceHandle": "{\u0153baseClasses\u0153:[\u0153Text\u0153,\u0153str\u0153,\u0153object\u0153],\u0153dataType\u0153:\u0153Prompt\u0153,\u0153id\u0153:\u0153Prompt-ODkUx\u0153}",
         "target": "OpenAIModel-9RykF",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-9RykFœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153OpenAIModel-9RykF\u0153,\u0153inputTypes\u0153:[\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
@@ -1073,13 +1073,13 @@
           "stroke": "#555"
         },
         "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-Prompt-ODkUx{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-ODkUxœ}-OpenAIModel-9RykF{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-9RykFœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-Prompt-ODkUx{\u0153baseClasses\u0153:[\u0153Text\u0153,\u0153str\u0153,\u0153object\u0153],\u0153dataType\u0153:\u0153Prompt\u0153,\u0153id\u0153:\u0153Prompt-ODkUx\u0153}-OpenAIModel-9RykF{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153OpenAIModel-9RykF\u0153,\u0153inputTypes\u0153:[\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}"
       },
       {
         "source": "OpenAIModel-9RykF",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œobjectœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-9RykFœ}",
+        "sourceHandle": "{\u0153baseClasses\u0153:[\u0153str\u0153,\u0153object\u0153,\u0153Text\u0153],\u0153dataType\u0153:\u0153OpenAIModel\u0153,\u0153id\u0153:\u0153OpenAIModel-9RykF\u0153}",
         "target": "ChatOutput-P1jEe",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-P1jEeœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153ChatOutput-P1jEe\u0153,\u0153inputTypes\u0153:[\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
@@ -1097,13 +1097,13 @@
           "stroke": "#555"
         },
         "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-OpenAIModel-9RykF{œbaseClassesœ:[œstrœ,œobjectœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-9RykFœ}-ChatOutput-P1jEe{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-P1jEeœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-9RykF{\u0153baseClasses\u0153:[\u0153str\u0153,\u0153object\u0153,\u0153Text\u0153],\u0153dataType\u0153:\u0153OpenAIModel\u0153,\u0153id\u0153:\u0153OpenAIModel-9RykF\u0153}-ChatOutput-P1jEe{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153ChatOutput-P1jEe\u0153,\u0153inputTypes\u0153:[\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}"
       },
       {
         "source": "MemoryComponent-cdA1J",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-cdA1Jœ}",
+        "sourceHandle": "{\u0153baseClasses\u0153:[\u0153str\u0153,\u0153Text\u0153,\u0153object\u0153],\u0153dataType\u0153:\u0153MemoryComponent\u0153,\u0153id\u0153:\u0153MemoryComponent-cdA1J\u0153}",
         "target": "TextOutput-vrs6T",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-vrs6Tœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "targetHandle": "{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153TextOutput-vrs6T\u0153,\u0153inputTypes\u0153:[\u0153Record\u0153,\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
@@ -1121,7 +1121,7 @@
           "stroke": "#555"
         },
         "className": "stroke-foreground stroke-connection",
-        "id": "reactflow__edge-MemoryComponent-cdA1J{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-cdA1Jœ}-TextOutput-vrs6T{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-vrs6Tœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-MemoryComponent-cdA1J{\u0153baseClasses\u0153:[\u0153str\u0153,\u0153Text\u0153,\u0153object\u0153],\u0153dataType\u0153:\u0153MemoryComponent\u0153,\u0153id\u0153:\u0153MemoryComponent-cdA1J\u0153}-TextOutput-vrs6T{\u0153fieldName\u0153:\u0153input_value\u0153,\u0153id\u0153:\u0153TextOutput-vrs6T\u0153,\u0153inputTypes\u0153:[\u0153Record\u0153,\u0153Text\u0153],\u0153type\u0153:\u0153str\u0153}"
       }
     ],
     "viewport": {

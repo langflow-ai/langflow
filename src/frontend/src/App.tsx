@@ -15,20 +15,23 @@ import {
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
 import { autoLogin, getGlobalVariables, getHealth } from "./controllers/API";
+import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
 import { useFolderStore } from "./stores/foldersStore";
-import { useGlobalVariablesStore } from "./stores/globalVariables";
+import { useGlobalVariablesStore } from "./stores/globalVariablesStore/globalVariables";
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
 export default function App() {
+  useTrackLastVisitedPath();
+
   const removeFromTempNotificationList = useAlertStore(
-    (state) => state.removeFromTempNotificationList
+    (state) => state.removeFromTempNotificationList,
   );
   const tempNotificationList = useAlertStore(
-    (state) => state.tempNotificationList
+    (state) => state.tempNotificationList,
   );
   const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
@@ -46,7 +49,7 @@ export default function App() {
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const setGlobalVariables = useGlobalVariablesStore(
-    (state) => state.setGlobalVariables
+    (state) => state.setGlobalVariables,
   );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const navigate = useNavigate();
@@ -104,7 +107,6 @@ export default function App() {
   const fetchAllData = async () => {
     setTimeout(async () => {
       await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
-      getFoldersApi();
     }, 1000);
   };
 
@@ -112,6 +114,7 @@ export default function App() {
     return new Promise<void>(async (resolve, reject) => {
       if (isAuthenticated) {
         try {
+          await getFoldersApi();
           await getTypes();
           await refreshFlows();
           const res = await getGlobalVariables();
@@ -208,7 +211,7 @@ export default function App() {
         <div className="flex flex-col-reverse" style={{ zIndex: 999 }}>
           {tempNotificationList.map((alert) => (
             <div key={alert.id}>
-              {alert.type === "error" && (
+              {alert.type === "error" ? (
                 <ErrorAlert
                   key={alert.id}
                   title={alert.title}
@@ -216,6 +219,16 @@ export default function App() {
                   id={alert.id}
                   removeAlert={removeAlert}
                 />
+              ) : (
+                alert.type === "notice" && (
+                  <NoticeAlert
+                    key={alert.id}
+                    title={alert.title}
+                    link={alert.link}
+                    id={alert.id}
+                    removeAlert={removeAlert}
+                  />
+                )
               )}
             </div>
           ))}
@@ -223,23 +236,13 @@ export default function App() {
         <div className="z-40 flex flex-col-reverse">
           {tempNotificationList.map((alert) => (
             <div key={alert.id}>
-              {alert.type === "notice" ? (
-                <NoticeAlert
+              {alert.type === "success" && (
+                <SuccessAlert
                   key={alert.id}
                   title={alert.title}
-                  link={alert.link}
                   id={alert.id}
                   removeAlert={removeAlert}
                 />
-              ) : (
-                alert.type === "success" && (
-                  <SuccessAlert
-                    key={alert.id}
-                    title={alert.title}
-                    id={alert.id}
-                    removeAlert={removeAlert}
-                  />
-                )
               )}
             </div>
           ))}

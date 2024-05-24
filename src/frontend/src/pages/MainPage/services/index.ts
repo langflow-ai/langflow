@@ -1,7 +1,7 @@
 import { BASE_URL_API } from "../../../constants/constants";
 import { api } from "../../../controllers/API/api";
 import { FlowType } from "../../../types/flow";
-import { AddFolderType, FolderType, StarterProjectsType } from "../entities";
+import { AddFolderType, FolderType } from "../entities";
 
 export async function getFolders(): Promise<FolderType[]> {
   try {
@@ -30,12 +30,12 @@ export async function addFolder(data: AddFolderType): Promise<FolderType> {
 
 export async function updateFolder(
   body: FolderType,
-  folderId: string,
+  folderId: string
 ): Promise<FolderType> {
   try {
     const response = await api.patch(
       `${BASE_URL_API}folders/${folderId}`,
-      body,
+      body
     );
     return response?.data;
   } catch (error) {
@@ -61,15 +61,6 @@ export async function getFolderById(folderId: string): Promise<FolderType> {
   }
 }
 
-export async function getStarterProjects(): Promise<StarterProjectsType> {
-  try {
-    const response = await api.get(`${BASE_URL_API}folders/starter-projects`);
-    return response?.data;
-  } catch (error) {
-    throw error;
-  }
-}
-
 export async function downloadFlowsFromFolders(folderId: string): Promise<{
   flows: FlowType[];
   folder_name: string;
@@ -77,7 +68,7 @@ export async function downloadFlowsFromFolders(folderId: string): Promise<{
 }> {
   try {
     const response = await api.get(
-      `${BASE_URL_API}folders/download/${folderId}`,
+      `${BASE_URL_API}folders/download/${folderId}`
     );
     if (response?.status !== 200) {
       throw new Error(`HTTP error! status: ${response?.status}`);
@@ -91,7 +82,7 @@ export async function downloadFlowsFromFolders(folderId: string): Promise<{
 }
 
 export async function uploadFlowsFromFolders(
-  flows: FormData,
+  flows: FormData
 ): Promise<FlowType[]> {
   try {
     const response = await api.post(`${BASE_URL_API}folders/upload/`, flows);
@@ -108,11 +99,11 @@ export async function uploadFlowsFromFolders(
 
 export async function moveFlowToFolder(
   flowId: string,
-  folderId: string,
+  folderId: string
 ): Promise<FlowType> {
   try {
     const response = await api.patch(
-      `${BASE_URL_API}folders/move_to_folder/${flowId}/${folderId}`,
+      `${BASE_URL_API}folders/move_to_folder/${flowId}/${folderId}`
     );
     return response?.data;
   } catch (error) {
