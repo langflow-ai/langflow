@@ -111,6 +111,13 @@ export type TextAreaComponentType = {
   readonly?: boolean;
 };
 
+export type outputComponentType = {
+  types: string[];
+  selected: string;
+  nodeId: string;
+  frozen?: boolean;
+};
+
 export type PromptAreaComponentType = {
   field_name?: string;
   nodeClass?: APIClassType;
