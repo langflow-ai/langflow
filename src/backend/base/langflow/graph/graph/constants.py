@@ -1,6 +1,5 @@
 from langflow.graph.schema import CHAT_COMPONENTS
 from langflow.graph.vertex import types
-from langflow.interface.custom.base import custom_component_creator
 from langflow.utils.lazy_load import LazyLoadDictBase
 
 
@@ -21,7 +20,7 @@ class VertexTypesDict(LazyLoadDictBase):
 
     def get_type_dict(self):
         return {
-            **{t: types.CustomComponentVertex for t in custom_component_creator.to_list()},
+            **{t: types.CustomComponentVertex for t in ["CustomComponent"]},
             **{t: types.InterfaceVertex for t in CHAT_COMPONENTS},
         }
 
