@@ -41,3 +41,7 @@ class SettingsService(Service):
             CONFIG_DIR=settings.CONFIG_DIR,
         )
         return cls(settings, auth_settings)
+
+    def set(self, key, value):
+        setattr(self.settings, key, value)
+        return self.settings

@@ -22,7 +22,7 @@ from sqlmodel import select
 from langflow.main import setup_app
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.deps import get_db_service, get_settings_service
 from langflow.services.utils import initialize_services
 from langflow.utils.logger import configure, logger
 from langflow.utils.util import update_settings
@@ -76,7 +76,7 @@ def set_var_for_macos_issue():
 def run(
     host: str = typer.Option("127.0.0.1", help="Host to bind the server to.", envvar="LANGFLOW_HOST"),
     workers: int = typer.Option(1, help="Number of worker processes.", envvar="LANGFLOW_WORKERS"),
-    timeout: int = typer.Option(300, help="Worker timeout in seconds."),
+    timeout: int = typer.Option(300, help="Worker timeout in seconds.", envvar="LANGFLOW_WORKER_TIMEOUT"),
     port: int = typer.Option(7860, help="Port to listen on.", envvar="LANGFLOW_PORT"),
     components_path: Optional[Path] = typer.Option(
         Path(__file__).parent / "components",
@@ -145,6 +145,10 @@ def run(
     # check if port is being used
     if is_port_in_use(port, host):
         port = get_free_port(port)
+
+    settings_service = get_settings_service()
+
+    settings_service.set("timeout", timeout)
 
     options = {
         "bind": f"{host}:{port}",
