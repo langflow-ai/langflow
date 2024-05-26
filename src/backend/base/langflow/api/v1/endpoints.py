@@ -19,9 +19,9 @@ from langflow.api.v1.schemas import (
     UpdateCustomComponentRequest,
     UploadFileResponse,
 )
+from langflow.custom import CustomComponent
+from langflow.custom.utils import build_custom_component_template
 from langflow.graph.graph.base import Graph
-from langflow.interface.custom.custom_component import CustomComponent
-from langflow.interface.custom.utils import build_custom_component_template
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user

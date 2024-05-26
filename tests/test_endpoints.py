@@ -4,10 +4,8 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
-
-from langflow.interface.custom.directory_reader.directory_reader import DirectoryReader
+from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
-from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
 
 
 def run_post(client, flow_id, headers, post_data):
@@ -271,7 +269,7 @@ def test_get_all(client: TestClient, logged_in_headers):
     all_names = [component_name for _, components in response.json().items() for component_name in components]
     json_response = response.json()
     # We need to test the custom nodes
-    assert len(all_names) > len(files)
+    assert len(all_names) == len(files)
     assert "ChatInput" in json_response["inputs"]
     assert "Prompt" in json_response["inputs"]
     assert "ChatOutput" in json_response["outputs"]
@@ -385,7 +383,6 @@ def test_invalid_prompt(client: TestClient):
     ],
 )
 def test_various_prompts(client, prompt, expected_input_variables):
-    TimeTravelGuideChainNode().to_dict()
     PROMPT_REQUEST["template"] = prompt
     response = client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
     assert response.status_code == 200

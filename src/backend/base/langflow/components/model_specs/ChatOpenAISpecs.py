@@ -3,10 +3,9 @@ from typing import Optional
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
-
 from langflow.base.models.openai_constants import MODEL_NAMES
+from langflow.custom import CustomComponent
 from langflow.field_typing import BaseLanguageModel, NestedDict
-from langflow.interface.custom.custom_component import CustomComponent
 
 
 class ChatOpenAIComponent(CustomComponent):

@@ -78,12 +78,13 @@ RUN cd src/frontend && npm run build
 COPY src/backend ./src/backend
 RUN cp -r src/frontend/build src/backend/base/langflow/frontend
 RUN rm -rf src/backend/base/dist
-RUN cd src/backend/base && $POETRY_HOME/bin/poetry build --format sdist
+RUN cd src/backend/base && $POETRY_HOME/bin/poetry build
 
 # Copy virtual environment and built .tar.gz from builder base
 RUN useradd -m -u 1000 user
+USER user
 # Install the package from the .tar.gz
-RUN python -m pip install /app/dist/*.tar.gz --user
+RUN python -m pip install /app/src/backend/base/dist/*.tar.gz
 
 
 ENTRYPOINT ["python", "-m", "langflow", "run"]

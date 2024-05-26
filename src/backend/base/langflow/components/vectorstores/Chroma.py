@@ -1,12 +1,12 @@
 from typing import List, Optional, Union
 
 import chromadb  # type: ignore
-from langchain.embeddings.base import Embeddings
-from langchain.schema import BaseRetriever
-from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.chroma import Chroma
+from langchain_core.embeddings import Embeddings
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.vectorstores import VectorStore
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 from langflow.schema.schema import Record
 
 
