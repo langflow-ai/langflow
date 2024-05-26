@@ -84,7 +84,6 @@ def run(
         help="Path to the directory containing custom components.",
         envvar="LANGFLOW_COMPONENTS_PATH",
     ),
-    config: str = typer.Option(Path(__file__).parent / "config.yaml", help="Path to the configuration file."),
     # .env file param
     env_file: Path = typer.Option(None, help="Path to the .env file containing environment variables."),
     log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
@@ -133,7 +132,6 @@ def run(
         load_dotenv(env_file, override=True)
 
     update_settings(
-        config,
         dev=dev,
         remove_api_keys=remove_api_keys,
         cache=cache,
