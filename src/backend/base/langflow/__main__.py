@@ -148,7 +148,7 @@ def run(
 
     settings_service = get_settings_service()
 
-    settings_service.set("timeout", timeout)
+    settings_service.set("worker_timeout", timeout)
 
     options = {
         "bind": f"{host}:{port}",

@@ -319,4 +319,4 @@ class FlowDataRequest(BaseModel):
 
 
 class ConfigResponse(BaseModel):
-    timeout: int
+    frontend_timeout: int

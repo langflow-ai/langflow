@@ -7,11 +7,12 @@ from typing import Any, List, Optional, Tuple, Type
 
 import orjson
 import yaml
-from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from loguru import logger
 from pydantic import field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
+
+from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 
 # BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
 BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent.parent / "components")
@@ -119,8 +120,10 @@ class Settings(BaseSettings):
     """Whether to store environment variables as Global Variables in the database."""
     variables_to_get_from_environment: list[str] = VARIABLES_TO_GET_FROM_ENVIRONMENT
     """List of environment variables to get from the environment and store in the database."""
-    timeout: int = 300
+    worker_timeout: int = 300
     """Timeout for the API calls in seconds."""
+    frontend_timeout: int = 30
+    """Timeout for the frontend API calls in seconds."""
 
     @field_validator("CONFIG_DIR", mode="before")
     def set_langflow_dir(cls, value):
