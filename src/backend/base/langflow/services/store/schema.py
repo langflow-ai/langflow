@@ -1,7 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 
 class TagResponse(BaseModel):
@@ -37,7 +37,8 @@ class ListComponentResponse(BaseModel):
     private: Optional[bool] = None
 
     # tags comes as a TagsIdResponse but we want to return a list of TagResponse
-    @validator("tags", pre=True)
+    @field_validator("tags", mode="before")
+    @classmethod
     def tags_to_list(cls, v):
         # Check if all values are have id and name
         # if so, return v else transform to TagResponse
