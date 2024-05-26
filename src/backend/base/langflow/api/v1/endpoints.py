@@ -43,7 +43,7 @@ def get_all(
 
     logger.debug("Building langchain types dict")
     try:
-        all_types_dict = get_all_types_dict(settings_service.settings.COMPONENTS_PATH)
+        all_types_dict = get_all_types_dict(settings_service.settings.components_path)
         return all_types_dict
     except Exception as exc:
         logger.exception(exc)
