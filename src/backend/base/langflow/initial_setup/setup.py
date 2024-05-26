@@ -206,7 +206,7 @@ def create_starter_folder(session):
 
 
 def create_or_update_starter_projects():
-    components_paths = get_settings_service().settings.COMPONENTS_PATH
+    components_paths = get_settings_service().settings.components_path
     try:
         all_types_dict = get_all_components(components_paths, as_dict=True)
     except Exception as e:
