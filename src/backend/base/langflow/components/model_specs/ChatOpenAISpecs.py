@@ -17,8 +17,8 @@ class ChatOpenAIComponent(CustomComponent):
         return {
             "max_tokens": {
                 "display_name": "Max Tokens",
-                "advanced": False,
-                "required": False,
+                "advanced": True,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             },
             "model_kwargs": {
                 "display_name": "Model Kwargs",
@@ -51,7 +51,7 @@ class ChatOpenAIComponent(CustomComponent):
 
     def build(
         self,
-        max_tokens: Optional[int] = 256,
+        max_tokens: Optional[int] = 0,
         model_kwargs: NestedDict = {},
         model_name: str = "gpt-4o",
         openai_api_base: Optional[str] = None,
@@ -65,7 +65,7 @@ class ChatOpenAIComponent(CustomComponent):
         else:
             api_key = None
         return ChatOpenAI(
-            max_tokens=max_tokens,
+            max_tokens=max_tokens or None,
             model_kwargs=model_kwargs,
             model=model_name,
             base_url=openai_api_base,

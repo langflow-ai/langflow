@@ -77,7 +77,7 @@ class MistralAIModelComponent(CustomComponent):
             output = ChatMistralAI(
                 model_name=model,
                 api_key=(SecretStr(mistral_api_key) if mistral_api_key else None),
-                max_tokens=max_tokens,
+                max_tokens=max_tokens or None,
                 temperature=temperature,
                 endpoint=mistral_api_base,
             )

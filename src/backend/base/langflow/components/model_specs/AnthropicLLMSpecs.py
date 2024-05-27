@@ -35,8 +35,8 @@ class ChatAntropicSpecsComponent(CustomComponent):
             },
             "max_tokens": {
                 "display_name": "Max Tokens",
-                "field_type": "int",
-                "value": 256,
+                "advanced": True,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             },
             "temperature": {
                 "display_name": "Temperature",
