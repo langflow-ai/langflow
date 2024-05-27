@@ -8,20 +8,20 @@ import ForwardedIconComponent from "../../../../components/genericIconComponent"
 import { outputComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
 import useFlowStore from "../../../../stores/flowStore";
+import { NodeDataType } from "../../../../types/flow";
+import { cloneDeep } from "lodash";
 
-export default function ComponentOutput({
+export default function OutputComponent({
   selected,
   types,
   frozen = false,
   nodeId,
+  idx,
 }: outputComponentType) {
   const setNode = useFlowStore((state) => state.setNode);
-  let displayTitle = selected ?? types[0];
 
   if (types.length < 2) {
-    return (
-      <span className={cn(frozen ? " text-ice" : "")}>{displayTitle}</span>
-    );
+    return <span className={cn(frozen ? " text-ice" : "")}>{selected}</span>;
   }
 
   return (
@@ -30,7 +30,7 @@ export default function ComponentOutput({
         <span
           className={cn(frozen ? " text-ice" : "", "flex items-center gap-1")}
         >
-          {displayTitle}
+          {selected}
           <ForwardedIconComponent name="ChevronDown" className="h-4 w-4" />
         </span>
       </DropdownMenuTrigger>
@@ -39,10 +39,12 @@ export default function ComponentOutput({
           <DropdownMenuItem
             onSelect={() => {
               // TODO: UDPDATE SET NODE TO NEW NODE FORM
-              setNode(nodeId, (node) => ({
-                ...node,
-                data: { ...node.data, selected: type },
-              }));
+              setNode(nodeId, (node) => {
+                const newNode = cloneDeep(node);
+                (newNode.data as NodeDataType).node!.outputs![idx].selected =
+                  type;
+                return newNode;
+              });
             }}
           >
             {type}
