@@ -38,7 +38,7 @@ class ChromaComponent(CustomComponent):
                 "advanced": True,
             },
             "chroma_server_host": {"display_name": "Server Host", "advanced": True},
-            "chroma_server_port": {"display_name": "Server Port", "advanced": True},
+            "chroma_server_http_port": {"display_name": "Server HTTP Port", "advanced": True},
             "chroma_server_grpc_port": {
                 "display_name": "Server gRPC Port",
                 "advanced": True,
@@ -58,7 +58,7 @@ class ChromaComponent(CustomComponent):
         inputs: Optional[List[Record]] = None,
         chroma_server_cors_allow_origins: List[str] = [],
         chroma_server_host: Optional[str] = None,
-        chroma_server_port: Optional[int] = None,
+        chroma_server_http_port: Optional[int] = None,
         chroma_server_grpc_port: Optional[int] = None,
     ) -> Union[VectorStore, BaseRetriever]:
         """
@@ -66,13 +66,13 @@ class ChromaComponent(CustomComponent):
 
         Args:
         - collection_name (str): The name of the collection.
-        - index_directory (Optional[str]): The directory to persist the Vector Store to.
+        - embedding (Embeddings): The embeddings to use for the Vector Store.
         - chroma_server_ssl_enabled (bool): Whether to enable SSL for the Chroma server.
-        - embedding (Optional[Embeddings]): The embeddings to use for the Vector Store.
-        - documents (Optional[Document]): The documents to use for the Vector Store.
-        - chroma_server_cors_allow_origins (Optional[str]): The CORS allow origins for the Chroma server.
+        - index_directory (Optional[str]): The directory to persist the Vector Store to.
+        - inputs (Optional[List[Record]]): The input records to use for the Vector Store.
+        - chroma_server_cors_allow_origins (List[str]): The CORS allow origins for the Chroma server.
         - chroma_server_host (Optional[str]): The host for the Chroma server.
-        - chroma_server_port (Optional[int]): The port for the Chroma server.
+        - chroma_server_http_port (Optional[int]): The HTTP port for the Chroma server.
         - chroma_server_grpc_port (Optional[int]): The gRPC port for the Chroma server.
 
         Returns:
@@ -86,7 +86,7 @@ class ChromaComponent(CustomComponent):
             chroma_settings = Settings(
                 chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or [],
                 chroma_server_host=chroma_server_host,
-                chroma_server_port=chroma_server_port or None,
+                chroma_server_http_port=chroma_server_http_port or None,
                 chroma_server_grpc_port=chroma_server_grpc_port or None,
                 chroma_server_ssl_enabled=chroma_server_ssl_enabled,
             )
