@@ -17,6 +17,8 @@ from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import InterfaceVertex, StateVertex
 from langflow.schema import Record
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
+from langflow.services.cache.utils import CacheMiss
+from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service
 
 if TYPE_CHECKING:
@@ -704,7 +706,7 @@ class Graph:
     async def build_vertex(
         self,
         lock: asyncio.Lock,
-        set_cache_coro: Callable[["Graph", asyncio.Lock], Coroutine],
+        chat_service: ChatService,
         vertex_id: str,
         inputs_dict: Optional[Dict[str, str]] = None,
         user_id: Optional[str] = None,
@@ -729,17 +731,34 @@ class Graph:
         """
         vertex = self.get_vertex(vertex_id)
         try:
-            if not vertex.frozen or not vertex._built:
+            params = ""
+            if vertex.frozen:
+                # Check the cache for the vertex
+                cached_result = await chat_service.get_cache(key=vertex.id)
+                if isinstance(cached_result, CacheMiss):
+                    await vertex.build(user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars)
+                    await chat_service.set_cache(key=vertex.id, data=vertex)
+                else:
+                    cached_vertex = cached_result["result"]
+                    # Now set update the vertex with the cached vertex
+                    vertex._built = cached_vertex._built
+                    vertex.result = cached_vertex.result
+                    vertex.artifacts = cached_vertex.artifacts
+                    vertex._built_object = cached_vertex._built_object
+                    vertex._custom_component = cached_vertex._custom_component
+                    vertex.result.used_frozen_result = True
+
+            else:
                 await vertex.build(user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars)
 
             if vertex.result is not None:
-                params = vertex._built_object_repr()
+                params = f"{vertex._built_object_repr()}{params}"
                 valid = True
                 result_dict = vertex.result
                 artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
-
+            set_cache_coro = partial(chat_service.set_cache, key=self.flow_id)
             next_runnable_vertices, top_level_vertices = await self.get_next_and_top_level_vertices(
                 lock, set_cache_coro, vertex
             )
