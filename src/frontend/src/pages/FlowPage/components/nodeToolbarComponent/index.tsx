@@ -29,7 +29,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { classNames } from "../../../../utils/utils";
+import { classNames, cn } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
 
 export default function NodeToolbarComponent({
@@ -58,7 +58,7 @@ export default function NodeToolbarComponent({
         data.node.template[templateField].type === "Any" ||
         data.node.template[templateField].type === "int" ||
         data.node.template[templateField].type === "dict" ||
-        data.node.template[templateField].type === "NestedDict"),
+        data.node.template[templateField].type === "NestedDict")
   ).length;
   const templates = useTypesStore((state) => state.templates);
   const hasStore = useStoreStore((state) => state.hasStore);
@@ -68,7 +68,7 @@ export default function NodeToolbarComponent({
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
-  // const frozen = data.node?.frozen ?? false;
+  const frozen = data.node?.frozen ?? false;
   const paste = useFlowStore((state) => state.paste);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -85,7 +85,7 @@ export default function NodeToolbarComponent({
   const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [flowComponent, setFlowComponent] = useState<FlowType>(
-    createFlowComponent(cloneDeep(data), version),
+    createFlowComponent(cloneDeep(data), version)
   );
 
   const openInNewTab = (url) => {
@@ -100,7 +100,7 @@ export default function NodeToolbarComponent({
   const updateNodeInternals = useUpdateNodeInternals();
 
   const setLastCopiedSelection = useFlowStore(
-    (state) => state.setLastCopiedSelection,
+    (state) => state.setLastCopiedSelection
   );
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -150,7 +150,7 @@ export default function NodeToolbarComponent({
           nodes,
           edges,
           setNodes,
-          setEdges,
+          setEdges
         );
         break;
       case "override":
@@ -174,7 +174,7 @@ export default function NodeToolbarComponent({
             y: 10,
             paneX: nodes.find((node) => node.id === data.id)?.position.x,
             paneY: nodes.find((node) => node.id === data.id)?.position.y,
-          },
+          }
         );
         break;
       case "update":
@@ -212,13 +212,13 @@ export default function NodeToolbarComponent({
   };
 
   const isSaved = flows.some((flow) =>
-    Object.values(flow).includes(data.node?.display_name!),
+    Object.values(flow).includes(data.node?.display_name!)
   );
 
   const setNode = useFlowStore((state) => state.setNode);
 
   const handleOnNewValue = (
-    newValue: string | string[] | boolean | Object[],
+    newValue: string | string[] | boolean | Object[]
   ): void => {
     if (data.node!.template[name].value !== newValue) {
       takeSnapshot();
@@ -393,7 +393,7 @@ export default function NodeToolbarComponent({
               data-testid="save-button-modal"
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
-                hasCode ? " " : " rounded-l-md ",
+                hasCode ? " " : " rounded-l-md "
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -411,7 +411,7 @@ export default function NodeToolbarComponent({
             <button
               data-testid="duplicate-button-modal"
               className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -422,7 +422,7 @@ export default function NodeToolbarComponent({
             </button>
           </ShadTooltip>
 
-          {/* <ShadTooltip content="Freeze" side="top">
+          <ShadTooltip content="Freeze" side="top">
             <button
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
@@ -435,7 +435,7 @@ export default function NodeToolbarComponent({
                     ...old.data,
                     node: {
                       ...old.data.node,
-                      // frozen: old.data?.node?.frozen ? false : true,
+                      frozen: old.data?.node?.frozen ? false : true,
                     },
                   },
                 }));
@@ -450,7 +450,7 @@ export default function NodeToolbarComponent({
                 )}
               />
             </button>
-          </ShadTooltip> */}
+          </ShadTooltip>
 
           <Select onValueChange={handleSelectChange} value="">
             <ShadTooltip content="More" side="top">
@@ -459,7 +459,7 @@ export default function NodeToolbarComponent({
                   <div
                     data-testid="more-options-modal"
                     className={classNames(
-                      "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground  shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                      "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground  shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
                     )}
                   >
                     <IconComponent
