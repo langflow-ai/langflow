@@ -55,6 +55,7 @@ import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
 import TooltipRenderComponent from "../tooltipRenderComponent";
 import HandleTooltips from "../HandleTooltipComponent";
+import OutputComponent from "../OutputComponent";
 
 export default function ParameterComponent({
   left,
@@ -70,12 +71,9 @@ export default function ParameterComponent({
   info = "",
   proxy,
   showNode,
-  index = "",
+  index,
 }: ParameterComponentType): JSX.Element {
-  const ref = useRef<HTMLDivElement>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
@@ -145,40 +143,16 @@ export default function ParameterComponent({
   }, [info]);
 
   function renderTitle() {
-    const output_types = title.split("|");
-    const displayTitle = data.selected_output_type ?? output_types[0];
-    return !left && output_types.length > 1 ? (
-      <DropdownMenu>
-        <DropdownMenuTrigger>
-          <span
-            className={cn(
-              !left && data.node?.frozen ? " text-ice" : "",
-              "flex items-center gap-1",
-            )}
-          >
-            {displayTitle}
-            <ForwardedIconComponent name="ChevronDown" className="h-4 w-4" />
-          </span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          {output_types.map((type) => (
-            <DropdownMenuItem
-              onSelect={() => {
-                setNode(data.id, (node) => ({
-                  ...node,
-                  data: { ...node.data, selected_output_type: type },
-                }));
-              }}
-            >
-              {type}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+    return !left ? (
+      <OutputComponent
+        idx={index}
+        types={type?.split("|") ?? []}
+        selected={title}
+        nodeId={data.id}
+        frozen={data.node?.frozen}
+      />
     ) : (
-      <span className={cn(!left && data.node?.frozen ? " text-ice" : "")}>
-        {title}
-      </span>
+      <span>{title}</span>
     );
   }
 
@@ -244,7 +218,6 @@ export default function ParameterComponent({
     )
   ) : (
     <div
-      ref={ref}
       className={
         "relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
         ((name === "code" && type === "code") ||

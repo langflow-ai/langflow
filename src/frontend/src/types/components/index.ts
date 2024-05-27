@@ -67,7 +67,7 @@ export type ParameterComponentType = {
   info?: string;
   proxy?: { field: string; id: string };
   showNode?: boolean;
-  index?: string;
+  index: number;
   onCloseModal?: (close: boolean) => void;
 };
 export type InputListComponentType = {
@@ -116,6 +116,7 @@ export type outputComponentType = {
   selected: string;
   nodeId: string;
   frozen?: boolean;
+  idx: number;
 };
 
 export type PromptAreaComponentType = {
