@@ -78,6 +78,7 @@ RUN $POETRY_HOME/bin/poetry build
 
 # Copy virtual environment and built .tar.gz from builder base
 RUN useradd -m -u 1000 user
+RUN chown -R user:user /app
 USER user
 # Install the package from the .tar.gz
 RUN python -m pip install /app/dist/*.tar.gz

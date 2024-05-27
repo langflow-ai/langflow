@@ -38,7 +38,10 @@ def create_flow(
     db_flow.updated_at = datetime.now(timezone.utc)
 
     if db_flow.folder_id is None:
-        default_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
+        # Make sure flows always have a folder
+        default_folder = session.exec(
+            select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME, Folder.user_id == current_user.id)
+        ).first()
         if default_folder:
             db_flow.folder_id = default_folder.id
 
