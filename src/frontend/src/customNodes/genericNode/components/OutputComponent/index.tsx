@@ -1,15 +1,15 @@
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@radix-ui/react-dropdown-menu";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import { outputComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
 import useFlowStore from "../../../../stores/flowStore";
 import { NodeDataType } from "../../../../types/flow";
 import { cloneDeep } from "lodash";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../../../components/ui/dropdown-menu";
 
 export default function OutputComponent({
   selected,
