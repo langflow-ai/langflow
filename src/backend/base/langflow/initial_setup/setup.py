@@ -159,7 +159,7 @@ def create_new_project(
     project_data,
     project_icon,
     project_icon_bg_color,
-    new_folder_id
+    new_folder_id,
 ):
     logger.debug(f"Creating starter project {project_name}")
     new_project = FlowCreate(
@@ -206,7 +206,7 @@ def create_starter_folder(session):
 
 
 def create_or_update_starter_projects():
-    components_paths = get_settings_service().settings.COMPONENTS_PATH
+    components_paths = get_settings_service().settings.components_path
     try:
         all_types_dict = get_all_components(components_paths, as_dict=True)
     except Exception as e:
@@ -247,5 +247,5 @@ def create_or_update_starter_projects():
                     project_data,
                     project_icon,
                     project_icon_bg_color,
-                    new_folder.id
+                    new_folder.id,
                 )

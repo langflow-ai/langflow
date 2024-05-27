@@ -1,7 +1,7 @@
 import uuid
 from typing import Any, Optional
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class UUIDGeneratorComponent(CustomComponent):
