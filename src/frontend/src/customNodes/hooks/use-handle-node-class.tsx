@@ -6,7 +6,6 @@ const useHandleNodeClass = (
   takeSnapshot,
   setNode,
   updateNodeInternals,
-  renderTooltips,
 ) => {
   const handleNodeClass = (newNodeClass, code) => {
     if (!data.node) return;
@@ -30,8 +29,6 @@ const useHandleNodeClass = (
     });
 
     updateNodeInternals(data.id);
-
-    renderTooltips();
   };
 
   return { handleNodeClass };

@@ -31,6 +31,7 @@ import { classNames, cn } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
+import ComponentOutputs from "./components/componentOutputs";
 
 export default function GenericNode({
   data,
@@ -824,6 +825,9 @@ export default function GenericNode({
               >
                 {" "}
               </div>
+              {data.node!.outputs && data.node!.outputs.length > 0 && (
+                <ComponentOutputs data={data} />
+              )}
               {data.node!.base_classes.length > 0 && (
                 <ParameterComponent
                   key={scapedJSONStringfy({
