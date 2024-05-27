@@ -191,8 +191,8 @@ export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
   let data = flow?.data ? flow.data : null;
   if (data) {
     processFlowEdges(flow);
-    //prevent node update for now
-    // processFlowNodes(flow);
+    //add dropdown option to nodeOutputs
+    processFlowNodes(flow);
     //add animation to text type edges
     updateEdges(data.edges);
     // updateNodes(data.nodes, data.edges);
@@ -410,6 +410,34 @@ export function updateEdgesHandleIds({
   return newEdges;
 }
 
+export function updateNewOutput({ nodes, edges }: updateEdgesHandleIdsType) {
+  let newEdges = cloneDeep(edges);
+  let newNodes = cloneDeep(nodes);
+  newNodes.forEach((node) => {
+    if (
+      !node.data.node?.outputs &&
+      (node.data.node?.base_classes ?? []).length > 0
+    ) {
+      const selected = node.data.node?.base_classes[0]!;
+      node.data.node!.outputs = [
+        { types: node.data.node!.base_classes, selected: selected },
+      ];
+      newEdges.forEach((edge) => {
+        if (edge.source === node.id && edge.sourceHandle) {
+          let newSourceHandle: sourceHandleType = scapeJSONParse(
+            edge.sourceHandle,
+          );
+          newSourceHandle.baseClasses = [selected];
+          edge.sourceHandle = scapedJSONStringfy(newSourceHandle);
+          edge.data.sourceHandle = newSourceHandle;
+        }
+      });
+    }
+  });
+
+  return { nodes: newNodes, edges: newEdges };
+}
+
 export function handleKeyDown(
   e:
     | React.KeyboardEvent<HTMLInputElement>
@@ -559,6 +587,10 @@ export function checkOldEdgesHandles(edges: Edge[]): boolean {
       !edge.sourceHandle.includes("{") ||
       !edge.targetHandle.includes("{"),
   );
+}
+
+export function checkOldNodesOutput(nodes: NodeType[]): boolean {
+  return nodes.some((node) => !node.data.node?.outputs);
 }
 
 export function customStringify(obj: any): string {
@@ -1015,6 +1047,15 @@ export function processFlowEdges(flow: FlowType) {
     edge.className = "";
     edge.style = { stroke: "#555" };
   });
+}
+
+export function processFlowNodes(flow: FlowType) {
+  if (!flow.data || !flow.data.nodes) return;
+  if (checkOldNodesOutput(flow.data.nodes)) {
+    const { nodes, edges } = updateNewOutput(flow.data);
+    flow.data.nodes = nodes;
+    flow.data.edges = edges;
+  }
 }
 
 export function expandGroupNode(
