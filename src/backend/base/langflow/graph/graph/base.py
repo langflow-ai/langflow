@@ -746,7 +746,8 @@ class Graph:
                     vertex.artifacts = cached_vertex.artifacts
                     vertex._built_object = cached_vertex._built_object
                     vertex._custom_component = cached_vertex._custom_component
-                    vertex.result.used_frozen_result = True
+                    if vertex.result is not None:
+                        vertex.result.used_frozen_result = True
 
             else:
                 await vertex.build(user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars)
@@ -829,11 +830,10 @@ class Graph:
             for vertex_id in current_batch:
                 vertex = self.get_vertex(vertex_id)
                 lock = chat_service._cache_locks[self.run_id]
-                set_cache_coro = partial(chat_service.set_cache, flow_id=self.run_id)
                 task = asyncio.create_task(
                     self.build_vertex(
                         lock=lock,
-                        set_cache_coro=set_cache_coro,
+                        chat_service=chat_service,
                         vertex_id=vertex_id,
                         user_id=self.user_id,
                         inputs_dict={},
