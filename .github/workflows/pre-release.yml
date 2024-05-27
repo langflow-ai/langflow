@@ -1,5 +1,5 @@
-name: Langflow Pre-release
-run-name: Langflow Pre-release by @${{ github.actor }}
+name: Langflow Pre-release (Unified)
+run-name: Langflow (${{inputs.release_type}}) Pre-release by @${{ github.actor }}
 on:
   workflow_dispatch:
     inputs:
