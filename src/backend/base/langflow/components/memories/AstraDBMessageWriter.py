@@ -5,7 +5,7 @@ from langflow.field_typing import Text
 from langflow.schema.schema import Record
 
 from langchain_core.messages import BaseMessage
-from langchain_community.chat_message_histories.astradb import AstraDBChatMessageHistory
+from langchain_astradb import AstraDBChatMessageHistory
 
 
 class AstraDBMessageWriterComponent(BaseMemoryComponent):
@@ -74,13 +74,15 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
         if memory is None:
             raise ValueError("AstraDBChatMessageHistory instance is required.")
 
-        text_list = [BaseMessage(
-            content=text,
-            sender=sender,
-            sender_name=sender_name,
-            metadata=metadata,
-            session_id=session_id,
-        )]
+        text_list = [
+            BaseMessage(
+                content=text,
+                sender=sender,
+                sender_name=sender_name,
+                metadata=metadata,
+                session_id=session_id,
+            )
+        ]
 
         memory.add_messages(text_list)
 
@@ -94,9 +96,7 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
         namespace: Optional[str] = None,
     ) -> Record:
         try:
-            from langchain_community.chat_message_histories.astradb import (
-                AstraDBChatMessageHistory,
-            )
+            pass
         except ImportError:
             raise ImportError(
                 "Could not import langchain Astra DB integration package. "

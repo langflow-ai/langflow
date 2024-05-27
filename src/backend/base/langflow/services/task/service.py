@@ -29,7 +29,7 @@ class TaskService(Service):
     def __init__(self, settings_service: "SettingsService"):
         self.settings_service = settings_service
         try:
-            if self.settings_service.settings.CELERY_ENABLED:
+            if self.settings_service.settings.celery_enabled:
                 USE_CELERY = True
                 status = check_celery_availability()
 

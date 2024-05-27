@@ -722,8 +722,19 @@ export const NATIVE_CATEGORIES = [
   "agents",
 ];
 
+export const AUTHORIZED_DUPLICATE_REQUESTS = [
+  "/health",
+  "/flows",
+  "/logout",
+  "/refresh",
+  "/login",
+  "/auto_login",
+];
+
 export const SAVE_DEBOUNCE_TIME = 300;
 
 export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
 
 export const DEFAULT_TABLE_ALERT_TITLE = "No Data Available";
+
+export const LOCATIONS_TO_RETURN = ["/flow/", "/settings/"];

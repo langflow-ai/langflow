@@ -11,10 +11,7 @@ type SideBarButtonsComponentProps = {
   pathname: string;
   handleOpenNewFolderModal?: () => void;
 };
-const SideBarButtonsComponent = ({
-  items,
-  handleOpenNewFolderModal,
-}: SideBarButtonsComponentProps) => {
+const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
   return (
     <>
       {items.map((item) => (
@@ -26,7 +23,6 @@ const SideBarButtonsComponent = ({
               buttonVariants({ variant: "ghost" }),
               "!w-[200px] cursor-pointer justify-start gap-2 border border-transparent hover:border-border hover:bg-transparent"
             )}
-            onClick={handleOpenNewFolderModal}
           >
             {item.title}
           </div>

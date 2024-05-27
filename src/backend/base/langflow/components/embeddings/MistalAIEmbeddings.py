@@ -1,7 +1,7 @@
+from langchain_mistralai.embeddings import MistralAIEmbeddings
 from pydantic.v1 import SecretStr
 
-from langchain_mistralai.embeddings import MistralAIEmbeddings
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings
 
 

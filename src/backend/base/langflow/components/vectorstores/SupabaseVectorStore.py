@@ -1,12 +1,12 @@
 from typing import List, Optional, Union
 
-from langchain.schema import BaseRetriever
-from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.supabase import SupabaseVectorStore
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.vectorstores import VectorStore
 from supabase.client import Client, create_client
 
+from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings
-from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema.schema import Record
 
 

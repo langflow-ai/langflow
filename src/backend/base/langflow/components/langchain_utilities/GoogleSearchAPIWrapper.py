@@ -2,7 +2,7 @@ from typing import Callable, Union
 
 from langchain_community.utilities.google_search import GoogleSearchAPIWrapper
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class GoogleSearchAPIWrapperComponent(CustomComponent):

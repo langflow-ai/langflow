@@ -1,10 +1,10 @@
 from typing import Optional
 
-from langchain.llms.base import BaseLanguageModel
 from langchain_anthropic import ChatAnthropic
+from langchain_core.language_models import BaseLanguageModel
 from pydantic.v1 import SecretStr
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class ChatAntropicSpecsComponent(CustomComponent):
