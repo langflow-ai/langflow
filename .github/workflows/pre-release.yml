@@ -73,6 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: release
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/workflows/docker-build.yml
         with:
           version: ${{ needs.release.outputs.version }}
