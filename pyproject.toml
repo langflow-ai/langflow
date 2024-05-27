@@ -84,6 +84,7 @@ langchain-mistralai = "^0.1.6"
 couchbase = "^4.2.1"
 youtube-transcript-api = "^0.6.2"
 markdown = "^3.6"
+langchain-chroma = "^0.1.1"
 
 
 [tool.poetry.group.dev.dependencies]
