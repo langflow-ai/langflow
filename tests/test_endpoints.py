@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
+
 from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
 
@@ -263,7 +264,7 @@ def test_get_all(client: TestClient, logged_in_headers):
     response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     settings = get_settings_service().settings
-    dir_reader = DirectoryReader(settings.COMPONENTS_PATH[0])
+    dir_reader = DirectoryReader(settings.components_path[0])
     files = dir_reader.get_files()
     # json_response is a dict of dicts
     all_names = [component_name for _, components in response.json().items() for component_name in components]
