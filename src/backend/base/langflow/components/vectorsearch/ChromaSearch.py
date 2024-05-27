@@ -1,7 +1,7 @@
 from typing import List, Optional
 
-import chromadb  # type: ignore
-from langchain_community.vectorstores.chroma import Chroma
+from chromadb.config import Settings
+from langchain_chroma import Chroma
 
 from langflow.components.vectorstores.base.model import LCVectorStoreComponent
 from langflow.field_typing import Embeddings, Text
@@ -64,7 +64,7 @@ class ChromaSearchComponent(LCVectorStoreComponent):
         chroma_server_ssl_enabled: bool,
         number_of_results: int = 4,
         index_directory: Optional[str] = None,
-        chroma_server_cors_allow_origins: Optional[str] = None,
+        chroma_server_cors_allow_origins: List[str] = [],
         chroma_server_host: Optional[str] = None,
         chroma_server_port: Optional[int] = None,
         chroma_server_grpc_port: Optional[int] = None,
@@ -79,7 +79,7 @@ class ChromaSearchComponent(LCVectorStoreComponent):
         - persist (bool): Whether to persist the Vector Store or not.
         - embedding (Optional[Embeddings]): The embeddings to use for the Vector Store.
         - documents (Optional[Document]): The documents to use for the Vector Store.
-        - chroma_server_cors_allow_origins (Optional[str]): The CORS allow origins for the Chroma server.
+        - chroma_server_cors_allow_origins (List[str]): The CORS allow origins for the Chroma server.
         - chroma_server_host (Optional[str]): The host for the Chroma server.
         - chroma_server_port (Optional[int]): The port for the Chroma server.
         - chroma_server_grpc_port (Optional[int]): The gRPC port for the Chroma server.
@@ -92,8 +92,8 @@ class ChromaSearchComponent(LCVectorStoreComponent):
         chroma_settings = None
 
         if chroma_server_host is not None:
-            chroma_settings = chromadb.config.Settings(
-                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or None,
+            chroma_settings = Settings(
+                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or [],
                 chroma_server_host=chroma_server_host,
                 chroma_server_port=chroma_server_port or None,
                 chroma_server_grpc_port=chroma_server_grpc_port or None,

@@ -4090,6 +4090,23 @@ langchain-core = ">=0.1.31,<0.3"
 numpy = ">=1,<2"
 
 [[package]]
+name = "langchain-chroma"
+version = "0.1.1"
+description = "An integration package connecting Chroma and LangChain"
+optional = false
+python-versions = "<3.13,>=3.8.1"
+files = [
+    {file = "langchain_chroma-0.1.1-py3-none-any.whl", hash = "sha256:7346ba749e5c5735e2a659bc5e3bb2901177bd08448d61682db5a7f882e27b87"},
+    {file = "langchain_chroma-0.1.1.tar.gz", hash = "sha256:fb17c0cc591a425179958ca8cdb25d6cc9e43f4954a1ad4f3fe9cc2d306c455a"},
+]
+
+[package.dependencies]
+chromadb = ">=0.4.0,<0.6.0"
+fastapi = ">=0.95.2,<1"
+langchain-core = ">=0.1.40,<0.3"
+numpy = ">=1,<2"
+
+[[package]]
 name = "langchain-cohere"
 version = "0.1.5"
 description = "An integration package connecting Cohere and LangChain"
@@ -10005,4 +10022,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "90454066807e8ae6341a0b4e9569bfabb027b005081e94bbfb763ce8c72de10f"
+content-hash = "36778b105f6f6e5efd0c1d37651d7b97defb0bc0db74b868a41e38de22251924"

@@ -1,7 +1,7 @@
 from typing import List, Optional, Union
 
-import chromadb  # type: ignore
-from langchain_community.vectorstores.chroma import Chroma
+from chromadb.config import Settings
+from langchain_chroma import Chroma
 from langchain_core.embeddings import Embeddings
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
@@ -56,7 +56,7 @@ class ChromaComponent(CustomComponent):
         chroma_server_ssl_enabled: bool,
         index_directory: Optional[str] = None,
         inputs: Optional[List[Record]] = None,
-        chroma_server_cors_allow_origins: Optional[str] = None,
+        chroma_server_cors_allow_origins: List[str] = [],
         chroma_server_host: Optional[str] = None,
         chroma_server_port: Optional[int] = None,
         chroma_server_grpc_port: Optional[int] = None,
@@ -83,8 +83,8 @@ class ChromaComponent(CustomComponent):
         chroma_settings = None
 
         if chroma_server_host is not None:
-            chroma_settings = chromadb.config.Settings(
-                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or None,
+            chroma_settings = Settings(
+                chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or [],
                 chroma_server_host=chroma_server_host,
                 chroma_server_port=chroma_server_port or None,
                 chroma_server_grpc_port=chroma_server_grpc_port or None,
