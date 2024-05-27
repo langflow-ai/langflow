@@ -1,0 +1,5 @@
+[server]
+enableCORS = false
+enableXsrfProtection = false
+port = 5001
+fileWatcherType = "watchdog"

@@ -1,0 +1,51 @@
+[tool.poetry]
+name = "langflow-streamlit"
+version = "0.0.1"
+description = "A langflow extension to provide streamlit integration"
+authors = ["Langflow <contact@langflow.org>"]
+maintainers = [
+    "Carlos Coelho <carlos@langflow.org>",
+    "Cristhian Zanforlin <cristhian.lousa@gmail.com>",
+    "Gabriel Almeida <gabriel@langflow.org>",
+    "Igor Carvalho <igorr.ackerman@gmail.com>",
+    "Lucas Eduoli <lucaseduoli@gmail.com>",
+    "Otávio Anovazzi <otavio2204@gmail.com>",
+    "Rodrigo Nader <rodrigo@langflow.org>",
+]
+repository = "https://github.com/langflow-ai/langflow"
+license = "MIT"
+readme = "README.md"
+keywords = ["nlp", "langchain", "openai", "gpt", "streamlit"]
+packages = [{ include = "src" }]
+include = ["pyproject.toml", "README.md", "langflow/**/*"]
+documentation = "https://docs.langflow.org"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+fastapi = "^0.111.0"
+pydantic = "^2.7.1"
+streamlit = "^1.35.0"
+aiohttp = "^3.9.5"
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra"
+testpaths = ["tests", "integration"]
+console_output_style = "progress"
+filterwarnings = ["ignore::DeprecationWarning"]
+log_cli = true
+markers = ["async_test"]
+
+[tool.mypy]
+namespace_packages = true
+mypy_path = "langflow"
+ignore_missing_imports = true
+
+[tool.ruff]
+exclude = ["src/discord/src/alembic/*"]
+line-length = 120
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

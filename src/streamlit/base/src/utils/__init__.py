@@ -1,0 +1,1 @@
+from .default import DEFAULT_MESSAGE_FILE, DEFAULT_SCRIPT_FILE
