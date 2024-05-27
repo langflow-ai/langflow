@@ -54,7 +54,7 @@ def check_if_store_is_enabled(
     settings_service=Depends(get_settings_service),
 ):
     return {
-        "enabled": settings_service.settings.STORE,
+        "enabled": settings_service.settings.store,
     }
 
 
