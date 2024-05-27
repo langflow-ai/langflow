@@ -93,9 +93,7 @@ class ChatLiteLLMModelComponent(LCModelComponent):
             },
             "max_tokens": {
                 "display_name": "Max tokens",
-                "field_type": "int",
                 "advanced": False,
-                "required": False,
                 "default": 256,
                 "info": "The maximum number of tokens to generate for each chat completion.",
             },
