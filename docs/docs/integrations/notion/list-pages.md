@@ -5,8 +5,7 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # List Pages
 
-Langflow allows you to extend its functionality with custom components. The `NotionListPages
-` component is designed to query a Notion database with filtering and sorting. It provides a convenient way to integrate Notion database querying capabilities into your Langflow workflows.
+The `NotionListPages` component queries a Notion database with filtering and sorting. It provides a convenient way to integrate Notion database querying capabilities into your Langflow workflows.
 
 [Notion Reference](https://developers.notion.com/reference/post-database-query)
 
@@ -33,7 +32,7 @@ To use the `NotionListPages
 3. **Connect the `NotionListPages
 ` component to other components in your flow as needed.**
 
-### Example Component Code
+## Component Python code
 
 ```python
 import requests
@@ -129,7 +128,7 @@ class NotionListPages(CustomComponent):
 
                 combined_text += text
                 records.append(Record(text=text, data=page_data))
-            
+
             self.status = combined_text.strip()
             return records
 
@@ -140,8 +139,8 @@ class NotionListPages(CustomComponent):
 
 <Admonition type="info" title="Example Usage">
 
-Here's an example of how you can use the `NotionListPages
-` component in a Langflow flow and passing to the Prompt component:
+## Example Usage
+Here's an example of how you can use the `NotionListPages` component in a Langflow flow and passing to the Prompt component:
 
 <ZoomableImage
     alt="NotionListPages
@@ -153,11 +152,10 @@ Here's an example of how you can use the `NotionListPages
     style={{ width: "100%", margin: "20px 0" }}
 />
 
-In this example, the `NotionListPages
-` component is used to retrieve specific pages from a Notion database based on the provided filters and sorting options. The retrieved data can then be processed further in the subsequent components of the flow.
+In this example, the `NotionListPages` component is used to retrieve specific pages from a Notion database based on the provided filters and sorting options. The retrieved data can then be processed further in the subsequent components of the flow.
 </Admonition>
 
-## Best Pratices
+## Best Practices
 
  When using the `NotionListPages
 ` component, consider the following best practices:
@@ -165,16 +163,16 @@ In this example, the `NotionListPages
 - Ensure that you have a valid Notion integration token with the necessary permissions to query the desired database.
 - Construct the `query_payload` JSON string carefully, following the Notion API documentation for filtering and sorting options.
 
-<Admonition type="warning" title="Troubleshooting">
- If you encounter any issues while using the `NotionListPages` component, consider the following:
-
-- Double-check that the `notion_secret` and `database_id` are correct and valid.
-- Verify that the `query_payload` JSON string is properly formatted and contains valid filtering and sorting options.
-- Check the Notion API documentation for any updates or changes that may affect the component's functionality.
-</Admonition>
-
 The `NotionListPages
 ` component provides a powerful way to integrate Notion database querying capabilities into your Langflow workflows. By leveraging this component, you can easily retrieve specific pages from a Notion database based on custom filters and sorting options, enabling you to build more dynamic and data-driven flows.
 
 We encourage you to explore the capabilities of the `NotionListPages
 ` component further and experiment with different querying scenarios to unlock the full potential of integrating Notion databases into your Langflow workflows.
+
+## Troubleshooting
+
+ If you encounter any issues while using the `NotionListPages` component, consider the following:
+
+- Double-check that the `notion_secret` and `database_id` are correct and valid.
+- Verify that the `query_payload` JSON string is properly formatted and contains valid filtering and sorting options.
+- Check the Notion API documentation for any updates or changes that may affect the component's functionality.

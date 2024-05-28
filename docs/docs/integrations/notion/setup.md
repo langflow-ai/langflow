@@ -24,7 +24,7 @@ When creating the integration, make sure to enable the necessary capabilities ba
 
 After creating the integration, you need to configure its capabilities to define what actions it can perform and what data it can access.
 
-1. In the integration settings page, go to the "Capabilities" tab.
+1. In the integration settings page, go to the **Capabilities** tab.
 2. Enable the required capabilities for your integration. For example:
    - If your integration needs to read data from Notion, enable the "Read content" capability.
    - If your integration needs to create new content in Notion, enable the "Insert content" capability.
@@ -76,3 +76,4 @@ Refer to the individual component documentation for more details on how to use e
 - [Notion Integration Capabilities](https://developers.notion.com/reference/capabilities)
 
 If you encounter any issues or have questions, please reach out to our support team or consult the Langflow community forums.
+

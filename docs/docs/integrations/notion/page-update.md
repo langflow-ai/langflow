@@ -5,7 +5,7 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # Page Update
 
-Langflow allows you to extend its functionality with custom components. The `NotionPageUpdate` component is designed to update the properties of a Notion page. It provides a convenient way to integrate updating Notion page properties into your Langflow workflows.
+The `NotionPageUpdate` component updates the properties of a Notion page. It provides a convenient way to integrate updating Notion page properties into your Langflow workflows.
 
 [Notion Reference](https://developers.notion.com/reference/patch-page)
 
@@ -18,7 +18,7 @@ To use the `NotionPageUpdate` component in your Langflow flow:
 3. Provide the required parameters as defined in the component's `build_config` method.
 4. Connect the component to other nodes in your flow as needed.
 
-Here's the code for the `NotionPageUpdate` component:
+## Component Python Code
 
 ```python
 import json
@@ -103,6 +103,8 @@ Let's break down the key parts of this component:
 
 - The component also stores the updated page properties in the `status` attribute for logging and debugging purposes.
 
+## Example Usage
+
 <Admonition type="info" title="Example Usage">
 Here's an example of how to use the `NotionPageUpdate` component in a Langflow flow using:
 
@@ -116,7 +118,7 @@ Here's an example of how to use the `NotionPageUpdate` component in a Langflow f
 />
 </Admonition>
 
-## Best Pratices
+## Best Practices
 
 When using the `NotionPageUpdate` component, consider the following best practices:
 
@@ -124,14 +126,14 @@ When using the `NotionPageUpdate` component, consider the following best practic
 - Handle edge cases and error scenarios gracefully, such as invalid JSON format for properties or API request failures.
 - We recommend using an LLM to generate the inputs for this component, to allow flexibilty
 
-<Admonition type="warning" title="Troubleshooting">
+By leveraging the `NotionPageUpdate` component in Langflow, you can easily integrate updating Notion page properties into your language model workflows and build powerful applications that extend Langflow's capabilities.
+
+
+## Troubleshooting
+
 If you encounter any issues while using the `NotionPageUpdate` component, consider the following:
 
 - Double-check that you have correctly configured the component with the required parameters, including the page ID, properties JSON, and Notion integration token.
 - Verify that your Notion integration token has the necessary permissions to update page properties.
 - Check the Langflow logs for any error messages or exceptions related to the component, such as invalid JSON format or API request failures.
 - Consult the [Notion API Documentation](https://developers.notion.com/reference/patch-page) for specific troubleshooting steps or common issues related to updating page properties.
-
-</Admonition>
-
-By leveraging the `NotionPageUpdate` component in Langflow, you can easily integrate updating Notion page properties into your language model workflows and build powerful applications that extend Langflow's capabilities.

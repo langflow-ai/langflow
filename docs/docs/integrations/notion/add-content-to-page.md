@@ -5,7 +5,7 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # Add Content To Page
 
-Langflow allows extending its functionality with custom components like `AddContentToPage`, which converts markdown text to Notion blocks and appends them to a Notion page.
+The `AddContentToPage` component converts markdown text to Notion blocks and appends them to a Notion page.
 
 [Notion Reference](https://developers.notion.com/reference/patch-block-children)
 
@@ -30,7 +30,7 @@ To use the `AddContentToPage` component in a Langflow flow:
 3. **Connect the component** to other nodes in your flow as needed.
 4. **Run the flow** to convert the markdown text and append it to the specified Notion page.
 
-## Code Block for the `AddContentToPage` Component
+## Component Python Code
 
 ```python
 import json
@@ -98,9 +98,11 @@ class NotionPageCreator(CustomComponent):
             raise Exception(error_message)
 ```
 
+## Example Usage
+
 <Admonition type="info" title="Example Usage">
 
-Example of using the `AddContentToPage` component in a Langflow flow using a Markdown as input:
+Example of using the `AddContentToPage` component in a Langflow flow using Markdown as input:
 
 <ZoomableImage
   alt="NotionDatabaseProperties Flow Example"
@@ -115,7 +117,7 @@ In this example, the `AddContentToPage` component connects to a `MarkdownLoader`
 
 </Admonition>
 
-## Best Pratices
+## Best Practices
 
 When using the `AddContentToPage` component:
 
@@ -124,15 +126,13 @@ When using the `AddContentToPage` component:
 - Keep your Notion integration token secure.
 - Test with sample markdown text before production use.
 
-<Admonition type="warning" title="Troubleshooting">
+The `AddContentToPage` component is a powerful tool for integrating Notion content creation into Langflow workflows, facilitating easy conversion of markdown text to Notion blocks and appending them to specific pages.
 
-If issues arise:
+## Troubleshooting
 
+If you encounter any issues while using the `AddContentToPage` component, consider the following:
 - Verify the Notion integration token’s validity and permissions.
 - Check the Notion API documentation for updates.
 - Ensure markdown text is properly formatted.
 - Double-check the `block_id` for correctness.
 
-</Admonition>
-
-The `AddContentToPage` component is a powerful tool for integrating Notion content creation into Langflow workflows, facilitating easy conversion of markdown text to Notion blocks and appending them to specific pages.

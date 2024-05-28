@@ -34,7 +34,7 @@ The Notion integration in Langflow enables seamless connectivity with Notion dat
 
 ### Getting Started with Notion Integration in Langflow
 
-1. **Set Up Notion Integration**: Follow the guide [Setting up a Notion App](./integrations/notion/setup) to set up a Notion integration in your workspace.
+1. **Set Up Notion Integration**: Follow the guide [Setting up a Notion App](./setup) to set up a Notion integration in your workspace.
 2. **Configure Notion Components**: Provide the necessary authentication details and parameters to configure the Notion components in your Langflow flows.
 3. **Connect Components**: Integrate Notion components with other Langflow components to build your workflow.
 4. **Test and Refine**: Ensure your Langflow flow operates as intended by testing and refining it.
