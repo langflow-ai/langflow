@@ -22,7 +22,6 @@ import {
   TOOLTIP_EMPTY,
 } from "../../../../constants/constants";
 import { Case } from "../../../../shared/components/caseComponent";
-import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useTypesStore } from "../../../../stores/typesStore";
@@ -66,7 +65,6 @@ export default function ParameterComponent({
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -172,8 +170,6 @@ export default function ParameterComponent({
   useEffect(() => {
     renderTooltips();
   }, [tooltipTitle, flow]);
-
-  console.log(left === true && type === "dict");
 
   return !showNode ? (
     left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
