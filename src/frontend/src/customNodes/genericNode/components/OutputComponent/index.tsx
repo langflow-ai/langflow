@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../../../components/ui/dropdown-menu";
+import { useUpdateNodeInternals } from "reactflow";
 
 export default function OutputComponent({
   selected,
@@ -19,6 +20,7 @@ export default function OutputComponent({
   idx,
 }: outputComponentType) {
   const setNode = useFlowStore((state) => state.setNode);
+  const updateNodeInternals = useUpdateNodeInternals();
 
   if (types.length < 2) {
     return <span className={cn(frozen ? " text-ice" : "")}>{selected}</span>;
@@ -45,6 +47,7 @@ export default function OutputComponent({
                   type;
                 return newNode;
               });
+              updateNodeInternals(nodeId);
             }}
           >
             {type}
