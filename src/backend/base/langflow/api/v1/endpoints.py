@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import Annotated, List, Optional, Union
+from typing import TYPE_CHECKING, Annotated, List, Optional, Union
 from uuid import UUID
 
 from langflow.graph.schema import RunOutputs
@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 
 from langflow.api.utils import update_frontend_node_with_template_values
 from langflow.api.v1.schemas import (
+    ConfigResponse,
     CustomComponentRequest,
     InputValueRequest,
     ProcessResponse,
@@ -33,7 +34,9 @@ from langflow.services.deps import get_session, get_session_service, get_setting
 from langflow.services.session.service import SessionService
 from langflow.services.task.service import TaskService
 
-# build router
+if TYPE_CHECKING:
+    from langflow.services.settings.manager import SettingsService
+
 router = APIRouter(tags=["Base"])
 
 
@@ -528,3 +531,15 @@ async def custom_component_update(
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/config", response_model=ConfigResponse)
+def get_config():
+    try:
+        from langflow.services.deps import get_settings_service
+
+        settings_service: "SettingsService" = get_settings_service()
+        return settings_service.settings.model_dump()
+    except Exception as exc:
+        logger.exception(exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

@@ -1,5 +1,6 @@
 from typing import List, Optional
 
+import chromadb
 from chromadb.config import Settings
 from langchain_chroma import Chroma
 
@@ -91,7 +92,7 @@ class ChromaSearchComponent(LCVectorStoreComponent):
 
         # Chroma settings
         chroma_settings = None
-
+        client = None
         if chroma_server_host is not None:
             chroma_settings = Settings(
                 chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or [],
@@ -100,13 +101,14 @@ class ChromaSearchComponent(LCVectorStoreComponent):
                 chroma_server_grpc_port=chroma_server_grpc_port or None,
                 chroma_server_ssl_enabled=chroma_server_ssl_enabled,
             )
+            client = chromadb.HttpClient(settings=chroma_settings)
         if index_directory:
             index_directory = self.resolve_path(index_directory)
         vector_store = Chroma(
             embedding_function=embedding,
             collection_name=collection_name,
             persist_directory=index_directory,
-            client_settings=chroma_settings,
+            client=client,
         )
 
         return self.search_with_vector_store(input_value, search_type, vector_store, k=number_of_results)

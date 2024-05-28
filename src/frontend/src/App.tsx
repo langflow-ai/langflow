@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useContext, useEffect, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +16,7 @@ import {
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
 import { autoLogin, getGlobalVariables, getHealth } from "./controllers/API";
+import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
@@ -28,10 +30,10 @@ export default function App() {
   useTrackLastVisitedPath();
 
   const removeFromTempNotificationList = useAlertStore(
-    (state) => state.removeFromTempNotificationList,
+    (state) => state.removeFromTempNotificationList
   );
   const tempNotificationList = useAlertStore(
-    (state) => state.tempNotificationList,
+    (state) => state.tempNotificationList
   );
   const [fetchError, setFetchError] = useState(false);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
@@ -49,7 +51,7 @@ export default function App() {
   const refreshVersion = useDarkStore((state) => state.refreshVersion);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const setGlobalVariables = useGlobalVariablesStore(
-    (state) => state.setGlobalVariables,
+    (state) => state.setGlobalVariables
   );
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const navigate = useNavigate();
@@ -114,9 +116,11 @@ export default function App() {
     return new Promise<void>(async (resolve, reject) => {
       if (isAuthenticated) {
         try {
+          await setupAxiosDefaults();
           await getFoldersApi();
           await getTypes();
           await refreshFlows();
+          console.log(axios.defaults);
           const res = await getGlobalVariables();
           setGlobalVariables(res);
           checkHasStore();
