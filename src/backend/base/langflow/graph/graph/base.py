@@ -735,16 +735,16 @@ class Graph:
 
             if vertex.result is not None:
                 params = vertex._built_object_repr()
+                log_type = vertex.artifacts_type
                 valid = True
                 result_dict = vertex.result
-                artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
 
             next_runnable_vertices, top_level_vertices = await self.get_next_and_top_level_vertices(
                 lock, set_cache_coro, vertex
             )
-            return next_runnable_vertices, top_level_vertices, result_dict, params, valid, artifacts, vertex
+            return next_runnable_vertices, top_level_vertices, result_dict, params, valid, log_type, vertex
         except Exception as exc:
             logger.exception(f"Error building vertex: {exc}")
             raise exc
