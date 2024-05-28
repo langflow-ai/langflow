@@ -38,7 +38,10 @@ def create_flow(
     db_flow.updated_at = datetime.now(timezone.utc)
 
     if db_flow.folder_id is None:
-        default_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
+        # Make sure flows always have a folder
+        default_folder = session.exec(
+            select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME, Folder.user_id == current_user.id)
+        ).first()
         if default_folder:
             db_flow.folder_id = default_folder.id
 
@@ -127,7 +130,7 @@ def update_flow(
     if not db_flow:
         raise HTTPException(status_code=404, detail="Flow not found")
     flow_data = flow.model_dump(exclude_unset=True)
-    if settings_service.settings.REMOVE_API_KEYS:
+    if settings_service.settings.remove_api_keys:
         flow_data = remove_api_keys(flow_data)
     for key, value in flow_data.items():
         if value is not None:

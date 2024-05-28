@@ -31,6 +31,7 @@ class MistralAIModelComponent(LCModelComponent):
             "max_tokens": {
                 "display_name": "Max Tokens",
                 "advanced": True,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             },
             "model_name": {
                 "display_name": "Model Name",
@@ -125,7 +126,7 @@ class MistralAIModelComponent(LCModelComponent):
             api_key = None
 
         chat_model = ChatMistralAI(
-            max_tokens=max_tokens,
+            max_tokens=max_tokens or None,
             model_name=model_name,
             endpoint=mistral_api_base,
             api_key=api_key,

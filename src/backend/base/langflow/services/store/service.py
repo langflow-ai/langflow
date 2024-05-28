@@ -79,9 +79,9 @@ class StoreService(Service):
 
     def __init__(self, settings_service: "SettingsService"):
         self.settings_service = settings_service
-        self.base_url = self.settings_service.settings.STORE_URL
-        self.download_webhook_url = self.settings_service.settings.DOWNLOAD_WEBHOOK_URL
-        self.like_webhook_url = self.settings_service.settings.LIKE_WEBHOOK_URL
+        self.base_url = self.settings_service.settings.store_url
+        self.download_webhook_url = self.settings_service.settings.download_webhook_url
+        self.like_webhook_url = self.settings_service.settings.like_webhook_url
         self.components_url = f"{self.base_url}/items/components"
         self.default_fields = [
             "id",

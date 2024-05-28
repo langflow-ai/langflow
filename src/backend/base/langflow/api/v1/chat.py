@@ -171,7 +171,7 @@ async def build_vertex(
                 result_dict,
                 log_message,
                 valid,
-                _,
+                log_type,
                 vertex,
             ) = await graph.build_vertex(
                 lock=lock,
@@ -186,6 +186,7 @@ async def build_vertex(
         except Exception as exc:
             logger.exception(f"Error building vertex: {exc}")
             log_message = format_exception_message(exc)
+            log_type = type(exc).__name__
             valid = False
             result_data_response = ResultDataResponse(results={})
 
@@ -193,7 +194,7 @@ async def build_vertex(
             # we need to clear the cache
             await chat_service.clear_cache(flow_id_str)
 
-        log_object = Log(message=log_message)
+        log_object = Log(message=log_message, type=log_type)
         result_data_response.logs.append(log_object)
 
         # Log the vertex build
