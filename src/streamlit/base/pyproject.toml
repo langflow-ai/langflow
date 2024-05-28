@@ -43,7 +43,7 @@ mypy_path = "langflow"
 ignore_missing_imports = true
 
 [tool.ruff]
-exclude = ["src/discord/src/alembic/*"]
+exclude = ["src/streamlit/src/alembic/*"]
 line-length = 120
 
 [build-system]
