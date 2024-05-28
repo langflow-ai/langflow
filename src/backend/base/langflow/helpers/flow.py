@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Tuple, Type, Union, cast
+from uuid import UUID
 
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import select
@@ -88,7 +89,9 @@ async def run_flow(
     return await graph.arun(inputs_list, inputs_components=inputs_components, types=types)
 
 
-def generate_function_for_flow(inputs: List["Vertex"], flow_id: str) -> Callable[..., Awaitable[Any]]:
+def generate_function_for_flow(
+    inputs: List["Vertex"], flow_id: str, user_id: str | UUID
+) -> Callable[..., Awaitable[Any]]:
     """
     Generate a dynamic flow function based on the given inputs and flow ID.
 
@@ -132,11 +135,23 @@ async def flow_function({func_args}):
     tweaks = {{ {arg_mappings} }}
     from langflow.helpers.flow import run_flow
     from langchain_core.tools import ToolException
+    from langflow.base.flow_processing.utils import build_records_from_result_data, format_flow_output_records
     try:
-        return await run_flow(
+        run_outputs = await run_flow(
             tweaks={{key: {{'input_value': value}} for key, value in tweaks.items()}},
             flow_id="{flow_id}",
+            user_id="{user_id}"
         )
+        if not run_outputs:
+                return []
+        run_output = run_outputs[0]
+
+        records = []
+        if run_output is not None:
+            for output in run_output.outputs:
+                if output:
+                    records.extend(build_records_from_result_data(output, get_final_results_only=True))
+        return format_flow_output_records(records)
     except Exception as e:
         raise ToolException(f'Error running flow: ' + e)
 """
@@ -148,7 +163,7 @@ async def flow_function({func_args}):
 
 
 def build_function_and_schema(
-    flow_record: Record, graph: "Graph"
+    flow_record: Record, graph: "Graph", user_id: str | UUID
 ) -> Tuple[Callable[..., Awaitable[Any]], Type[BaseModel]]:
     """
     Builds a dynamic function and schema for a given flow.
@@ -162,7 +177,7 @@ def build_function_and_schema(
     """
     flow_id = flow_record.id
     inputs = get_flow_inputs(graph)
-    dynamic_flow_function = generate_function_for_flow(inputs, flow_id)
+    dynamic_flow_function = generate_function_for_flow(inputs, flow_id, user_id=user_id)
     schema = build_schema_from_inputs(flow_record.name, inputs)
     return dynamic_flow_function, schema
 
