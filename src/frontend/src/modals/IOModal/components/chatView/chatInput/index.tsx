@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import IconComponent from "../../../../../components/genericIconComponent";
 import { Textarea } from "../../../../../components/ui/textarea";
@@ -7,6 +7,7 @@ import {
   CHAT_INPUT_PLACEHOLDER_SEND,
 } from "../../../../../constants/constants";
 import { uploadFile } from "../../../../../controllers/API";
+import { Case } from "../../../../../shared/components/caseComponent";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import {
   FilePreviewType,
@@ -14,6 +15,9 @@ import {
 } from "../../../../../types/components";
 import { classNames } from "../../../../../utils/utils";
 import FilePreview from "../filePreviewChat";
+import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
+import useFocusOnUnlock from "./hooks/use-focus-unlock";
+import useUpload from "./hooks/use-upload";
 export default function ChatInput({
   lockChat,
   chatValue,
@@ -28,74 +32,17 @@ export default function ChatInput({
   const uid = new ShortUniqueId({ length: 3 });
   const [files, setFiles] = useState<FilePreviewType[]>([]);
 
-  useEffect(() => {
-    if (!lockChat && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [lockChat, inputRef]);
+  useFocusOnUnlock(lockChat, inputRef);
+  useAutoResizeTextArea(chatValue, inputRef);
+  useUpload(uploadFile, currentFlowId, setFiles, uid);
 
-  useEffect(() => {
-    if (inputRef.current && inputRef.current.scrollHeight !== 0) {
-      inputRef.current.style.height = "inherit"; // Reset the height
-      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`; // Set it to the scrollHeight
-    }
-  }, [chatValue]);
-
-  //listen to ctrl-v to paste images
-  useEffect(() => {
-    const handlePaste = (event: ClipboardEvent): void => {
-      const items = event.clipboardData?.items;
-      if (items) {
-        for (let i = 0; i < items.length; i++) {
-          if (items[i].type.indexOf("image") !== -1) {
-            const blob = items[i].getAsFile();
-            if (blob) {
-              const id = uid();
-              setFiles([
-                ...files,
-                { file: blob, loading: true, error: false, id },
-              ]);
-              uploadFile(blob, currentFlowId)
-                .then((res) => {
-                  setFiles((prev) => {
-                    const newFiles = [...prev];
-                    const updatedIndex = newFiles.findIndex(
-                      (file) => file.id === id
-                    );
-                    newFiles[updatedIndex].loading = false;
-                    newFiles[updatedIndex].path = res.data.file_path;
-                    return newFiles;
-                  });
-                })
-                .catch((err) => {
-                  setFiles((prev) => {
-                    const newFiles = [...prev];
-                    const updatedIndex = newFiles.findIndex(
-                      (file) => file.id === id
-                    );
-                    newFiles[updatedIndex].loading = false;
-                    newFiles[updatedIndex].error = true;
-                    return newFiles;
-                  });
-                });
-            }
-          }
-        }
-      }
-    };
-    document.addEventListener("paste", handlePaste);
-    return () => {
-      document.removeEventListener("paste", handlePaste);
-    };
-  }, []);
-
-  function send() {
+  const send = () => {
     sendMessage({
       repeat,
       files: files.map((file) => file.path ?? "").filter((file) => file !== ""),
     });
     setFiles([]);
-  }
+  };
 
   return (
     <div className="flex w-full flex-col-reverse">
@@ -135,10 +82,10 @@ export default function ChatInput({
             lockChat || saveLoading
               ? " form-modal-lock-true bg-input"
               : noInput
-              ? "form-modal-no-input bg-input"
-              : " form-modal-lock-false bg-background",
+                ? "form-modal-no-input bg-input"
+                : " form-modal-lock-false bg-background",
 
-            "form-modal-lockchat"
+            "form-modal-lockchat",
           )}
           placeholder={
             noInput ? CHAT_INPUT_PLACEHOLDER : CHAT_INPUT_PLACEHOLDER_SEND
@@ -151,31 +98,35 @@ export default function ChatInput({
               noInput
                 ? "bg-high-indigo text-background"
                 : chatValue === ""
-                ? "text-primary"
-                : "bg-chat-send text-background"
+                  ? "text-primary"
+                  : "bg-chat-send text-background",
             )}
             disabled={lockChat || saveLoading}
             onClick={(): void => send()}
           >
-            {lockChat || saveLoading ? (
+            <Case condition={lockChat || saveLoading}>
               <IconComponent
                 name="Lock"
                 className="form-modal-lock-icon"
                 aria-hidden="true"
               />
-            ) : noInput ? (
+            </Case>
+
+            <Case condition={noInput}>
               <IconComponent
                 name="Zap"
                 className="form-modal-play-icon"
                 aria-hidden="true"
               />
-            ) : (
+            </Case>
+
+            <Case condition={!(lockChat || saveLoading) && !noInput}>
               <IconComponent
                 name="LucideSend"
                 className="form-modal-send-icon "
                 aria-hidden="true"
               />
-            )}
+            </Case>
           </button>
         </div>
       </div>
@@ -188,32 +139,10 @@ export default function ChatInput({
             key={file.id}
             onDelete={() => {
               setFiles((prev) => prev.filter((f) => f.id !== file.id));
-              // TODO: delete file on backend
             }}
           />
         ))}
       </div>
-      {/*
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="primary" className="h-13 px-4">
-            <IconComponent name="Repeat" className="" aria-hidden="true" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-fit">
-          <div className="flex flex-col items-center justify-center gap-2">
-            <span className="text-sm">Repetitions: </span>
-            <Input
-              onChange={(e) => {
-                handleChange(parseInt(e.target.value));
-              }}
-              className="w-16"
-              type="number"
-              min={0}
-            />
-          </div>
-        </PopoverContent>
-      </Popover> */}
     </div>
   );
 }
