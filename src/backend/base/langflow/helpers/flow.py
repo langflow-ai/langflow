@@ -53,7 +53,7 @@ async def load_flow(
         raise ValueError(f"Flow {flow_id} not found")
     if tweaks:
         graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-    graph = Graph.from_payload(graph_data, flow_id=flow_id)
+    graph = Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
     return graph
 
 
@@ -218,4 +218,19 @@ def build_schema_from_inputs(name: str, inputs: List["Vertex"]) -> Type[BaseMode
         description = input_.description
         fields[field_name] = (str, Field(default="", description=description))
     return create_model(name, **fields)  # type: ignore
-    return create_model(name, **fields)  # type: ignore
+
+
+def get_arg_names(inputs: List["Vertex"]) -> List[dict[str, str]]:
+    """
+    Returns a list of dictionaries containing the component name and its corresponding argument name.
+
+    Args:
+        inputs (List[Vertex]): A list of Vertex objects representing the inputs.
+
+    Returns:
+        List[dict[str, str]]: A list of dictionaries, where each dictionary contains the component name and its argument name.
+    """
+    return [
+        {"component_name": input_.display_name, "arg_name": input_.display_name.lower().replace(" ", "_")}
+        for input_ in inputs
+    ]
