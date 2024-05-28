@@ -79,7 +79,7 @@ RUN $POETRY_HOME/bin/poetry build
 # Copy virtual environment and built .tar.gz from builder base
 RUN useradd -m -u 1000 user && \
     mkdir -p /app/langflow && \
-    chown -R user:user /app \
+    chown -R user:user /app && \
     chmod -R u+w /app/langflow
 USER user
 # Install the package from the .tar.gz
