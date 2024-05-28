@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, 
 from loguru import logger
 
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, UnbuiltResult
+from langflow.graph.utils import UnbuiltObject, UnbuiltResult, ArtifactType
 from langflow.graph.vertex.utils import log_transaction
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
@@ -63,6 +63,7 @@ class Vertex:
         self._built_result = None
         self._built = False
         self.artifacts: Dict[str, Any] = {}
+        self.artifacts_type: Optional[str] = None
         self.steps: List[Callable] = [self._build]
         self.steps_ran: List[Callable] = []
         self.task_id: Optional[str] = None
@@ -625,6 +626,8 @@ class Vertex:
                 self._built_object, self.artifacts = result
             elif len(result) == 3:
                 self._custom_component, self._built_object, self.artifacts = result
+                self.artifacts_type = self.artifacts.get("type") or ArtifactType.UNKNOWN.value
+
         else:
             self._built_object = result
 
