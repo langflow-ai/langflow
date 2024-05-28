@@ -5,7 +5,7 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # Page Create
 
-Langflow allows you to extend its functionality with custom components. The `NotionPageCreator` component is designed to create pages in a Notion database. It provides a convenient way to integrate Notion page creation into your Langflow workflows.
+The `NotionPageCreator` component creates pages in a Notion database. It provides a convenient way to integrate Notion page creation into your Langflow workflows.
 
 [Notion Reference](https://developers.notion.com/reference/patch-block-children)
 
@@ -28,7 +28,7 @@ To use the `NotionPageCreator` component in a Langflow flow, follow these steps:
 3. Connect the component to other components in your flow as needed.
 4. Run the flow to create Notion pages based on the configured inputs.
 
-Here's the code block for the `NotionPageCreator` component:
+## Component Python Code
 
 ```python
 import json
@@ -96,6 +96,7 @@ class NotionPageCreator(CustomComponent):
             raise Exception(error_message)
 ```
 
+## Example Usage
 <Admonition type="info" title="Example Usage">
 Here's an example of how to use the `NotionPageCreator` component in a Langflow flow:
 
@@ -118,11 +119,11 @@ When using the `NotionPageCreator` component, consider the following best practi
 - Handle any errors or exceptions that may occur during the page creation process and provide appropriate error messages.
 - To avoid the hassle of messing with JSON, we recommend using the LLM to create the JSON for you as input.
 
-<Admonition type="warning" title="Troubleshooting">
+The `NotionPageCreator` component simplifies the process of creating pages in a Notion database directly from your Langflow workflows. By leveraging this component, you can seamlessly integrate Notion page creation functionality into your automated processes, saving time and effort. Feel free to explore the capabilities of the `NotionPageCreator` component and adapt it to suit your specific requirements.
+
+## Troubleshooting
+
 If you encounter any issues while using the `NotionPageCreator` component, consider the following:
 - Double-check that the `database_id` and `notion_secret` inputs are correct and valid.
 - Verify that the `properties` input is properly formatted as a JSON string and matches the structure of your Notion database.
 - Check the Notion API documentation for any updates or changes that may affect the component's functionality.
-</Admonition>
-
-The `NotionPageCreator` component simplifies the process of creating pages in a Notion database directly from your Langflow workflows. By leveraging this component, you can seamlessly integrate Notion page creation functionality into your automated processes, saving time and effort. Feel free to explore the capabilities of the `NotionPageCreator` component and adapt it to suit your specific requirements.

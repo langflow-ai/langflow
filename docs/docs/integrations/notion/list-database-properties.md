@@ -5,7 +5,7 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # Database Properties
 
-Langflow allows you to extend its functionality with custom components. The `NotionDatabaseProperties` component is designed to retrieve properties of a Notion database. It provides a convenient way to integrate Notion database information into your Langflow workflows.
+The `NotionDatabaseProperties` component retrieves properties of a Notion database. It provides a convenient way to integrate Notion database information into your Langflow workflows.
 
 [Notion Reference](https://developers.notion.com/reference/post-database-query)
 
@@ -26,7 +26,7 @@ To use the `NotionDatabaseProperties` component in a Langflow flow, follow these
    - `notion_secret`: The Notion integration token for authentication.
 3. Connect the output of the `NotionDatabaseProperties` component to other components in your flow as needed.
 
-Here's the code block for the `NotionDatabaseProperties` component:
+## Component Python code
 
 ```python
 import requests
@@ -79,6 +79,7 @@ class NotionDatabaseProperties(CustomComponent):
         return record
 ```
 
+## Example Usage
 <Admonition type="info" title="Example Usage">
 Here's an example of how you can use the `NotionDatabaseProperties` component in a Langflow flow:
 
@@ -94,7 +95,7 @@ style={{ width: "100%", margin: "20px 0" }}
 In this example, the `NotionDatabaseProperties` component retrieves the properties of a Notion database, and the retrieved properties are then used as input for subsequent components in the flow.
 </Admonition>
 
-## Best Pratices
+## Best Practices
 
 When using the `NotionDatabaseProperties` component, consider the following best practices:
 
@@ -102,13 +103,13 @@ When using the `NotionDatabaseProperties` component, consider the following best
 - Double-check the database ID to avoid retrieving properties from the wrong database.
 - Handle potential errors gracefully by checking the response status and providing appropriate error messages.
 
-<Admonition type="warning" title="Troubleshooting">
+The `NotionDatabaseProperties` component simplifies the process of retrieving properties from a Notion database and integrating them into your Langflow workflows. By leveraging this component, you can easily access and utilize Notion database information in your flows, enabling powerful integrations and automations.
+
+Feel free to explore the capabilities of the `NotionDatabaseProperties` component and experiment with different use cases to enhance your Langflow workflows!
+
+## Troubleshooting
+
 If you encounter any issues while using the `NotionDatabaseProperties` component, consider the following:
 - Verify that the Notion integration token is valid and has the required permissions.
 - Check the database ID to ensure it matches the intended Notion database.
 - Inspect the response from the Notion API for any error messages or status codes that may indicate the cause of the issue.
-</Admonition>
-
-The `NotionDatabaseProperties` component simplifies the process of retrieving properties from a Notion database and integrating them into your Langflow workflows. By leveraging this component, you can easily access and utilize Notion database information in your flows, enabling powerful integrations and automations.
-
-Feel free to explore the capabilities of the `NotionDatabaseProperties` component and experiment with different use cases to enhance your Langflow workflows!

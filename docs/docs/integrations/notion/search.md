@@ -5,7 +5,7 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # Notion Search
 
-Langflow allows you to extend its functionality with custom components. The `NotionSearch` component is designed to search all pages and databases that have been shared with an integration in Notion. It provides a convenient way to integrate Notion search capabilities into your Langflow workflows.
+The `NotionSearch` component is designed to search all pages and databases that have been shared with an integration in Notion. It provides a convenient way to integrate Notion search capabilities into your Langflow workflows.
 
 [Notion Reference](https://developers.notion.com/reference/search)
 
@@ -30,7 +30,7 @@ To use the `NotionSearch` component in a Langflow flow, follow these steps:
    - `sort_direction`: The direction to sort the search results (ascending or descending).
 3. **Connect the `NotionSearch` component to other components in your flow as needed.**
 
-### Example Component Code
+## Component Python Code
 
 ```python
 import requests
@@ -121,7 +121,7 @@ class NotionSearch(CustomComponent):
                     'type': result['object'],
                     'last_edited_time': result['last_edited_time'],
                 }
-                
+
                 if result['object'] == 'page':
                     result_data['title_or_url'] = result['url']
                     text = f"id: {result['id']}\ntitle_or_url: {result['url']}\n"
@@ -136,7 +136,7 @@ class NotionSearch(CustomComponent):
                 text += f"type: {result['object']}\nlast_edited_time: {result['last_edited_time']}\n\n"
                 combined_text += text
                 records.append(Record(text=text, data=result_data))
-            
+
             self.status = combined_text
             return records
 
@@ -145,6 +145,7 @@ class NotionSearch(CustomComponent):
             return [Record(text=self.status, data=[])]
 ```
 
+## Example Usage
 <Admonition type="info" title="Example Usage">
 Here's an example of how you can use the `NotionSearch` component in a Langflow flow:
 
@@ -160,23 +161,23 @@ Here's an example of how you can use the `NotionSearch` component in a Langflow 
 In this example, the `NotionSearch` component is used to search for pages and databases in Notion based on the provided query and filter criteria. The retrieved data can then be processed further in the subsequent components of the flow.
 </Admonition>
 
-## Best Pratices
+## Best Practices
 
- When using the `NotionSearch` component, consider the following best practices:
+When using the `NotionSearch` component, consider these best practices:
 
-- Ensure that you have a valid Notion integration token with the necessary permissions to search for pages and databases.
+- Ensure you have a valid Notion integration token with the necessary permissions to search for pages and databases.
 - Provide a meaningful search query to narrow down the results to the desired pages or databases.
 - Choose the appropriate filter type (`page` or `database`) based on your search requirements.
 - Consider the sorting direction (`ascending` or `descending`) to organize the search results effectively.
 
-<Admonition type="warning" title="Troubleshooting">
- If you encounter any issues while using the `NotionSearch` component, consider the following:
+The `NotionSearch` component provides a powerful way to integrate Notion search capabilities into your Langflow workflows. By leveraging this component, you can easily search for pages and databases in Notion based on custom queries and filters, enabling you to build more dynamic and data-driven flows.
+
+We encourage you to explore the capabilities of the `NotionSearch` component further and experiment with different search scenarios to unlock the full potential of integrating Notion search into your Langflow workflows.
+
+## Troubleshooting
+
+If you encounter any issues while using the `NotionSearch` component, consider the following:
 
 - Double-check that the `notion_secret` is correct and valid.
 - Verify that the Notion integration has the necessary permissions to access the desired pages and databases.
 - Check the Notion API documentation for any updates or changes that may affect the component's functionality.
-</Admonition>
-
-The `NotionSearch` component provides a powerful way to integrate Notion search capabilities into your Langflow workflows. By leveraging this component, you can easily search for pages and databases in Notion based on custom queries and filters, enabling you to build more dynamic and data-driven flows.
-
-We encourage you to explore the capabilities of the `NotionSearch` component further and experiment with different search scenarios to unlock the full potential of integrating Notion search into your Langflow workflows.
