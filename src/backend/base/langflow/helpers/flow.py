@@ -1,10 +1,13 @@
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Tuple, Type, Union, cast
+from uuid import UUID
 
+from pydantic.v1 import BaseModel, Field, create_model
+from sqlmodel import select
+
+from langflow.graph.schema import RunOutputs
 from langflow.schema.schema import INPUT_FIELD_NAME, Record
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
-from pydantic.v1 import BaseModel, Field, create_model
-from sqlmodel import select
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
@@ -51,7 +54,7 @@ async def load_flow(
         raise ValueError(f"Flow {flow_id} not found")
     if tweaks:
         graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-    graph = Graph.from_payload(graph_data, flow_id=flow_id)
+    graph = Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
     return graph
 
 
@@ -67,25 +70,29 @@ async def run_flow(
     flow_id: Optional[str] = None,
     flow_name: Optional[str] = None,
     user_id: Optional[str] = None,
-) -> Any:
+) -> List[RunOutputs]:
     if user_id is None:
         raise ValueError("Session is invalid")
     graph = await load_flow(user_id, flow_id, flow_name, tweaks)
 
     if inputs is None:
         inputs = []
+    if isinstance(inputs, dict):
+        inputs = [inputs]
     inputs_list = []
     inputs_components = []
     types = []
     for input_dict in inputs:
         inputs_list.append({INPUT_FIELD_NAME: cast(str, input_dict.get("input_value"))})
         inputs_components.append(input_dict.get("components", []))
-        types.append(input_dict.get("type", []))
+        types.append(input_dict.get("type", "chat"))
 
     return await graph.arun(inputs_list, inputs_components=inputs_components, types=types)
 
 
-def generate_function_for_flow(inputs: List["Vertex"], flow_id: str) -> Callable[..., Awaitable[Any]]:
+def generate_function_for_flow(
+    inputs: List["Vertex"], flow_id: str, user_id: str | UUID | None
+) -> Callable[..., Awaitable[Any]]:
     """
     Generate a dynamic flow function based on the given inputs and flow ID.
 
@@ -129,11 +136,23 @@ async def flow_function({func_args}):
     tweaks = {{ {arg_mappings} }}
     from langflow.helpers.flow import run_flow
     from langchain_core.tools import ToolException
+    from langflow.base.flow_processing.utils import build_records_from_result_data, format_flow_output_records
     try:
-        return await run_flow(
+        run_outputs = await run_flow(
             tweaks={{key: {{'input_value': value}} for key, value in tweaks.items()}},
             flow_id="{flow_id}",
+            user_id="{user_id}"
         )
+        if not run_outputs:
+                return []
+        run_output = run_outputs[0]
+
+        records = []
+        if run_output is not None:
+            for output in run_output.outputs:
+                if output:
+                    records.extend(build_records_from_result_data(output, get_final_results_only=True))
+        return format_flow_output_records(records)
     except Exception as e:
         raise ToolException(f'Error running flow: ' + e)
 """
@@ -145,7 +164,7 @@ async def flow_function({func_args}):
 
 
 def build_function_and_schema(
-    flow_record: Record, graph: "Graph"
+    flow_record: Record, graph: "Graph", user_id: str | UUID | None
 ) -> Tuple[Callable[..., Awaitable[Any]], Type[BaseModel]]:
     """
     Builds a dynamic function and schema for a given flow.
@@ -159,7 +178,7 @@ def build_function_and_schema(
     """
     flow_id = flow_record.id
     inputs = get_flow_inputs(graph)
-    dynamic_flow_function = generate_function_for_flow(inputs, flow_id)
+    dynamic_flow_function = generate_function_for_flow(inputs, flow_id, user_id=user_id)
     schema = build_schema_from_inputs(flow_record.name, inputs)
     return dynamic_flow_function, schema
 
@@ -200,3 +219,19 @@ def build_schema_from_inputs(name: str, inputs: List["Vertex"]) -> Type[BaseMode
         description = input_.description
         fields[field_name] = (str, Field(default="", description=description))
     return create_model(name, **fields)  # type: ignore
+
+
+def get_arg_names(inputs: List["Vertex"]) -> List[dict[str, str]]:
+    """
+    Returns a list of dictionaries containing the component name and its corresponding argument name.
+
+    Args:
+        inputs (List[Vertex]): A list of Vertex objects representing the inputs.
+
+    Returns:
+        List[dict[str, str]]: A list of dictionaries, where each dictionary contains the component name and its argument name.
+    """
+    return [
+        {"component_name": input_.display_name, "arg_name": input_.display_name.lower().replace(" ", "_")}
+        for input_ in inputs
+    ]

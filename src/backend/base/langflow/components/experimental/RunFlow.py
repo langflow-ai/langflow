@@ -1,8 +1,9 @@
 from typing import Any, List, Optional
 
+from langflow.base.flow_processing.utils import build_records_from_run_outputs
 from langflow.custom import CustomComponent
 from langflow.field_typing import NestedDict, Text
-from langflow.graph.schema import ResultData
+from langflow.graph.schema import RunOutputs
 from langflow.schema import Record, dotdict
 
 
@@ -39,28 +40,17 @@ class RunFlowComponent(CustomComponent):
             },
         }
 
-    def build_records_from_result_data(self, result_data: ResultData) -> List[Record]:
-        messages = result_data.messages
-        if not messages:
-            return []
-        records = []
-        for message in messages:
-            message_dict = message if isinstance(message, dict) else message.model_dump()
-            record = Record(text=message_dict.get("text", ""), data={"result": result_data})
-            records.append(record)
-        return records
-
     async def build(self, input_value: Text, flow_name: str, tweaks: NestedDict) -> List[Record]:
-        results: List[Optional[ResultData]] = await self.run_flow(
+        results: List[Optional[RunOutputs]] = await self.run_flow(
             inputs={"input_value": input_value}, flow_name=flow_name, tweaks=tweaks
         )
         if isinstance(results, list):
             records = []
             for result in results:
                 if result:
-                    records.extend(self.build_records_from_result_data(result))
+                    records.extend(build_records_from_run_outputs(result))
         else:
-            records = self.build_records_from_result_data(results)
+            records = build_records_from_run_outputs()(results)
 
         self.status = records
         return records
