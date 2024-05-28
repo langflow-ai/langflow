@@ -16,6 +16,8 @@ import {
   specialCharsRegex,
 } from "../constants/constants";
 import { downloadFlowsFromDatabase } from "../controllers/API";
+import getFieldTitle from "../customNodes/utils/get-field-title";
+import { DESCRIPTIONS } from "../flow_constants";
 import {
   APIClassType,
   APIKindType,
@@ -37,8 +39,6 @@ import {
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
 import { createRandomKey, toTitleCase } from "./utils";
-import { DESCRIPTIONS } from "../flow_constants";
-import getFieldTitle from "../customNodes/utils/get-field-title";
 const uid = new ShortUniqueId({ length: 5 });
 
 export function checkChatInput(nodes: Node[]) {
@@ -413,25 +413,38 @@ export function updateEdgesHandleIds({
 export function updateNewOutput({ nodes, edges }: updateEdgesHandleIdsType) {
   let newEdges = cloneDeep(edges);
   let newNodes = cloneDeep(nodes);
-  newNodes.forEach((node) => {
-    if (
-      !node.data.node?.outputs &&
-      (node.data.node?.base_classes ?? []).length > 0
-    ) {
-      const selected = node.data.node?.base_classes[0]!;
-      node.data.node!.outputs = [
-        { types: node.data.node!.base_classes, selected: selected },
-      ];
-      newEdges.forEach((edge) => {
-        if (edge.source === node.id && edge.sourceHandle) {
-          let newSourceHandle: sourceHandleType = scapeJSONParse(
-            edge.sourceHandle,
-          );
-          newSourceHandle.baseClasses = [selected];
-          edge.sourceHandle = scapedJSONStringfy(newSourceHandle);
-          edge.data.sourceHandle = newSourceHandle;
+  newEdges.forEach((edge) => {
+    if (edge.sourceHandle && edge.targetHandle) {
+      let newSourceHandle: sourceHandleType = scapeJSONParse(edge.sourceHandle);
+      let newTargetHandle: targetHandleType = scapeJSONParse(edge.targetHandle);
+      let intersection;
+      if (newTargetHandle.inputTypes && newTargetHandle.inputTypes.length > 0) {
+        //conjuction subtraction
+        intersection = newSourceHandle.baseClasses.filter((type) =>
+          newTargetHandle.inputTypes!.includes(type),
+        );
+      } else {
+        intersection = newSourceHandle.baseClasses.filter(
+          (type) => type === newTargetHandle.type,
+        );
+      }
+      const selected = intersection[0];
+      newSourceHandle.baseClasses = [selected];
+      const id = newSourceHandle.id;
+      const sourceNodeIndex = newNodes.findIndex((node) => node.id === id);
+      if (sourceNodeIndex > -1) {
+        const sourceNode = newNodes[sourceNodeIndex];
+        if (
+          !sourceNode.data.node?.outputs ||
+          sourceNode.data.node!.outputs!.length === 0
+        ) {
+          sourceNode.data.node!.outputs = [
+            { types: sourceNode.data.node!.base_classes, selected: selected },
+          ];
         }
-      });
+      }
+      edge.sourceHandle = scapedJSONStringfy(newSourceHandle);
+      edge.data.sourceHandle = newSourceHandle;
     }
   });
 
