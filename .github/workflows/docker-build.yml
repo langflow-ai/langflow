@@ -44,6 +44,7 @@ jobs:
           else
             echo "DOCKERFILE=./docker/build_and_push.Dockerfile" >> $GITHUB_ENV
             echo "TAGS=langflowai/langflow:${{ inputs.version }},langflowai/langflow:1.0-alpha" >> $GITHUB_ENV
+          fi
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
