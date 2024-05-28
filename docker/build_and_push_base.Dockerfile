@@ -78,13 +78,16 @@ RUN cd src/frontend && npm run build
 COPY src/backend ./src/backend
 RUN cp -r src/frontend/build src/backend/base/langflow/frontend
 RUN rm -rf src/backend/base/dist
+RUN useradd -m -u 1000 user && \
+    mkdir -p /app/langflow && \
+    chown -R user:user /app && \
+    chmod -R u+w /app/langflow
+
+# Update PATH with home/user/.local/bin
+ENV PATH="/home/user/.local/bin:${PATH}"
 RUN cd src/backend/base && $POETRY_HOME/bin/poetry build
 
 # Copy virtual environment and built .tar.gz from builder base
-RUN useradd -m -u 1000 user && \
-    mkdir -p /app/langflow && \
-    chown -R user:user /app \
-    chmod -R u+w /app/langflow
 
 USER user
 # Install the package from the .tar.gz
