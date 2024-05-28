@@ -46,6 +46,7 @@ export function checkChatInput(nodes: Node[]) {
 }
 
 export function cleanEdges(nodes: Node[], edges: Edge[]) {
+  console.log("cleanEdges");
   let newEdges = cloneDeep(edges);
   edges.forEach((edge) => {
     // check if the source and target node still exists
@@ -75,12 +76,12 @@ export function cleanEdges(nodes: Node[], edges: Edge[]) {
       }
     }
     if (sourceHandle) {
+      const index = scapeJSONParse(sourceHandle).idx ?? 0;
       const id: sourceHandleType = {
         id: sourceNode.data.id,
-        baseClasses: sourceNode.data.node!.base_classes,
+        baseClasses: [sourceNode.data.node.outputs[index].selected],
         dataType: sourceNode.data.type,
-        idx:
-          sourceNode.data.node!.outputs[scapeJSONParse(sourceHandle).idx] ?? 0,
+        idx: index,
       };
       if (scapedJSONStringfy(id) !== sourceHandle) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -414,6 +415,7 @@ export function updateEdgesHandleIds({
 }
 
 export function updateNewOutput({ nodes, edges }: updateEdgesHandleIdsType) {
+  console.log("updateNewOutput");
   let newEdges = cloneDeep(edges);
   let newNodes = cloneDeep(nodes);
   newEdges.forEach((edge) => {
@@ -434,6 +436,7 @@ export function updateNewOutput({ nodes, edges }: updateEdgesHandleIdsType) {
       const selected = intersection[0];
       newSourceHandle.baseClasses = [selected];
       const id = newSourceHandle.id;
+      newSourceHandle.idx = 0;
       const sourceNodeIndex = newNodes.findIndex((node) => node.id === id);
       if (sourceNodeIndex > -1) {
         const sourceNode = newNodes[sourceNodeIndex];
