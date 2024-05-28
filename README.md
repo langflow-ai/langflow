@@ -65,7 +65,6 @@ Each option is detailed below:
 - `--workers`: Sets the number of worker processes. Can be set using the `LANGFLOW_WORKERS` environment variable. The default is `1`.
 - `--timeout`: Sets the worker timeout in seconds. The default is `60`.
 - `--port`: Sets the port to listen on. Can be set using the `LANGFLOW_PORT` environment variable. The default is `7860`.
-- `--config`: Defines the path to the configuration file. The default is `config.yaml`.
 - `--env-file`: Specifies the path to the .env file containing environment variables. The default is `.env`.
 - `--log-level`: Defines the logging level. Can be set using the `LANGFLOW_LOG_LEVEL` environment variable. The default is `critical`.
 - `--components-path`: Specifies the path to the directory containing custom components. Can be set using the `LANGFLOW_COMPONENTS_PATH` environment variable. The default is `langflow/components`.
@@ -99,6 +98,12 @@ Alternatively, click the **"Open in Cloud Shell"** button below to launch Google
 [![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/langflow-ai/langflow&working_dir=scripts/gcp&shellonly=true&tutorial=walkthroughtutorial_spot.md)
 
 ## Deploy on Railway
+
+Use this template to deploy Langflow 1.0 Preview on Railway:
+
+[![Deploy 1.0 Preview on Railway](https://railway.app/button.svg)](https://railway.app/template/UsJ1uB?referralCode=MnPSdg)
+
+Or this one to deploy Langflow 0.6.x:
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
 

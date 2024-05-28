@@ -50,10 +50,10 @@ jobs:
         with:
           context: .
           push: true
-          file: ./build_and_push.Dockerfile
+          file: ./docker/build_and_push.Dockerfile
           tags: |
-            logspace/langflow:${{ steps.check-version.outputs.version }}
-            logspace/langflow:latest
+            langflowai/langflow:${{ steps.check-version.outputs.version }}
+            langflowai/langflow:latest
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:

@@ -1,26 +1,33 @@
-import { Page, expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 
 test.describe("save component tests", () => {
-  async function saveComponent(page: Page, pattern: RegExp, n: number) {
-    for (let i = 0; i < n; i++) {
-      await page.getByTestId(pattern).click();
-      await page.getByLabel("Save").click();
-    }
-  }
-
   /// <reference lib="dom"/>
   test("save group component tests", async ({ page }) => {
-    await page.goto("http:localhost:3000/");
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.goto("/");
+    let modalCount = 0;
+    try {
+      const modalTitleElement = await page?.getByTestId("modal-title");
+      if (modalTitleElement) {
+        modalCount = await modalTitleElement.count();
+      }
+    } catch (error) {
+      modalCount = 0;
+    }
 
+    while (modalCount === 0) {
+      await page.getByText("New Project", { exact: true }).click();
+      await page.waitForTimeout(5000);
+      modalCount = await page.getByTestId("modal-title")?.count();
+    }
+    await page.waitForTimeout(1000);
     await page.getByTestId("blank-flow").click();
     await page.waitForTimeout(1000);
 
     // Read your file into a buffer.
     const jsonContent = readFileSync(
       "tests/end-to-end/assets/flow_group_test.json",
-      "utf-8"
+      "utf-8",
     );
 
     // Create the DataTransfer and File
@@ -42,11 +49,11 @@ test.describe("save component tests", () => {
       "drop",
       {
         dataTransfer,
-      }
+      },
     );
 
     const genericNoda = page.getByTestId("div-generic-node");
-    const elementCount = await genericNoda.count();
+    const elementCount = await genericNoda?.count();
     if (elementCount > 0) {
       expect(true).toBeTruthy();
     }
@@ -54,9 +61,6 @@ test.describe("save component tests", () => {
       .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[3]')
       .click();
 
-    await page.getByTestId("title-PythonFunctionTool").click({
-      modifiers: ["Control"],
-    });
     await page.getByTestId("title-ChatOpenAI").click({
       modifiers: ["Control"],
     });
@@ -68,13 +72,13 @@ test.describe("save component tests", () => {
     await page.getByRole("button", { name: "Group" }).click();
 
     let textArea = page.getByTestId("div-textarea-description");
-    let elementCountText = await textArea.count();
+    let elementCountText = await textArea?.count();
     if (elementCountText > 0) {
       expect(true).toBeTruthy();
     }
 
     let groupNode = page.getByTestId("title-Group");
-    let elementGroup = await groupNode.count();
+    let elementGroup = await groupNode?.count();
     if (elementGroup > 0) {
       expect(true).toBeTruthy();
     }
@@ -98,25 +102,18 @@ test.describe("save component tests", () => {
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    await page
-      .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-      .click();
-
-    await page
-      .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-      .click();
-
-    await page
-      .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-      .click();
+    await page.getByTitle("fit view").click();
+    await page.getByTitle("zoom out").click();
+    await page.getByTitle("zoom out").click();
+    await page.getByTitle("zoom out").click();
     textArea = page.getByTestId("div-textarea-description");
-    elementCountText = await textArea.count();
+    elementCountText = await textArea?.count();
     if (elementCountText > 0) {
       expect(true).toBeTruthy();
     }
 
     groupNode = page.getByTestId("title-Group");
-    elementGroup = await groupNode.count();
+    elementGroup = await groupNode?.count();
     if (elementGroup > 0) {
       expect(true).toBeTruthy();
     }

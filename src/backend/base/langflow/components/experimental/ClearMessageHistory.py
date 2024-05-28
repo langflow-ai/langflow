@@ -1,4 +1,4 @@
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 from langflow.memory import delete_messages, get_messages
 
 

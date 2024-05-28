@@ -1,123 +1,17 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
-from langchain.agents import AgentExecutor
-from langchain.schema import AgentAction
 from loguru import logger
 from pydantic import BaseModel
 
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
-from langflow.interface.run import get_memory_key, update_memory_keys
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.session.service import SessionService
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
-
-
-def fix_memory_inputs(langchain_object):
-    """
-    Given a LangChain object, this function checks if it has a memory attribute and if that memory key exists in the
-    object's input variables. If so, it does nothing. Otherwise, it gets a possible new memory key using the
-    get_memory_key function and updates the memory keys using the update_memory_keys function.
-    """
-    if not hasattr(langchain_object, "memory") or langchain_object.memory is None:
-        return
-    try:
-        if (
-            hasattr(langchain_object.memory, "memory_key")
-            and langchain_object.memory.memory_key in langchain_object.input_variables
-        ):
-            return
-    except AttributeError:
-        input_variables = (
-            langchain_object.prompt.input_variables
-            if hasattr(langchain_object, "prompt")
-            else langchain_object.input_keys
-        )
-        if langchain_object.memory.memory_key in input_variables:
-            return
-
-    possible_new_mem_key = get_memory_key(langchain_object)
-    if possible_new_mem_key is not None:
-        update_memory_keys(langchain_object, possible_new_mem_key)
-
-
-def format_actions(actions: List[Tuple[AgentAction, str]]) -> str:
-    """Format a list of (AgentAction, answer) tuples into a string."""
-    output = []
-    for action, answer in actions:
-        log = action.log
-        tool = action.tool
-        tool_input = action.tool_input
-        output.append(f"Log: {log}")
-        if "Action" not in log and "Action Input" not in log:
-            output.append(f"Tool: {tool}")
-            output.append(f"Tool Input: {tool_input}")
-        output.append(f"Answer: {answer}")
-        output.append("")  # Add a blank line
-    return "\n".join(output)
-
-
-def get_result_and_thought(langchain_object: Any, inputs: dict):
-    """Get result and thought from extracted json"""
-    try:
-        if hasattr(langchain_object, "verbose"):
-            langchain_object.verbose = True
-
-        if hasattr(langchain_object, "return_intermediate_steps"):
-            langchain_object.return_intermediate_steps = False
-
-        try:
-            if not isinstance(langchain_object, AgentExecutor):
-                fix_memory_inputs(langchain_object)
-        except Exception as exc:
-            logger.error(f"Error fixing memory inputs: {exc}")
-
-        try:
-            output = langchain_object(inputs, return_only_outputs=True)
-        except ValueError as exc:
-            # make the error message more informative
-            logger.debug(f"Error: {str(exc)}")
-            output = langchain_object.run(inputs)
-
-    except Exception as exc:
-        raise ValueError(f"Error: {str(exc)}") from exc
-    return output
-
-
-def get_input_str_if_only_one_input(inputs: dict) -> Optional[str]:
-    """Get input string if only one input is provided"""
-    return list(inputs.values())[0] if len(inputs) == 1 else None
-
-
-def process_inputs(
-    inputs: Optional[Union[dict, List[dict]]] = None,
-    artifacts: Optional[Dict[str, Any]] = None,
-) -> Union[dict, List[dict]]:
-    if inputs is None:
-        inputs = {}
-    if artifacts is None:
-        artifacts = {}
-
-    if isinstance(inputs, dict):
-        inputs = update_inputs_dict(inputs, artifacts)
-    elif isinstance(inputs, List):
-        inputs = [update_inputs_dict(inp, artifacts) for inp in inputs]
-
-    return inputs
-
-
-def update_inputs_dict(inputs: dict, artifacts: Dict[str, Any]) -> dict:
-    for key, value in artifacts.items():
-        if key == "repr":
-            continue
-        elif key not in inputs or not inputs[key]:
-            inputs[key] = value
-
-    return inputs
 
 
 class Result(BaseModel):
@@ -173,6 +67,7 @@ def run_graph(
     input_value: str,
     input_type: str,
     output_type: str,
+    fallback_to_env_vars: bool = False,
     output_component: Optional[str] = None,
 ) -> List[RunOutputs]:
     """
@@ -216,6 +111,7 @@ def run_graph(
         outputs or [],
         stream=False,
         session_id="",
+        fallback_to_env_vars=fallback_to_env_vars,
     )
     return run_outputs
 
@@ -243,7 +139,6 @@ def apply_tweaks(node: Dict[str, Any], node_tweaks: Dict[str, Any]) -> None:
 
     for tweak_name, tweak_value in node_tweaks.items():
         if tweak_name not in template_data:
-            logger.warning(f"Node {node.get('id')} does not have a tweak named {tweak_name}")
             continue
         if tweak_name in template_data:
             key = "file_path" if template_data[tweak_name]["type"] == "file" else "value"
@@ -256,27 +151,33 @@ def apply_tweaks_on_vertex(vertex: Vertex, node_tweaks: Dict[str, Any]) -> None:
             vertex.params[tweak_name] = tweak_value
 
 
-def process_tweaks(graph_data: Dict[str, Any], tweaks: Union["Tweaks", Dict[str, Dict[str, Any]]]) -> Dict[str, Any]:
+def process_tweaks(
+    graph_data: Dict[str, Any], tweaks: Union["Tweaks", Dict[str, Dict[str, Any]]], stream: bool = False
+) -> Dict[str, Any]:
     """
     This function is used to tweak the graph data using the node id and the tweaks dict.
 
     :param graph_data: The dictionary containing the graph data. It must contain a 'data' key with
                        'nodes' as its child or directly contain 'nodes' key. Each node should have an 'id' and 'data'.
     :param tweaks: The dictionary containing the tweaks. The keys can be the node id or the name of the tweak.
-                     The values can be a dictionary containing the tweaks for the node or the value of the tweak.
+                   The values can be a dictionary containing the tweaks for the node or the value of the tweak.
+    :param stream: A boolean flag indicating whether streaming should be deactivated across all components or not. Default is False.
     :return: The modified graph_data dictionary.
-
     :raises ValueError: If the input is not in the expected format.
     """
+    tweaks_dict = {}
     if not isinstance(tweaks, dict):
-        tweaks = tweaks.model_dump()
-
-    nodes = validate_input(graph_data, tweaks)
+        tweaks_dict = tweaks.model_dump()
+    else:
+        tweaks_dict = tweaks
+    if "stream" not in tweaks_dict:
+        tweaks_dict["stream"] = stream
+    nodes = validate_input(graph_data, tweaks_dict)
     nodes_map = {node.get("id"): node for node in nodes}
     nodes_display_name_map = {node.get("data", {}).get("node", {}).get("display_name"): node for node in nodes}
 
     all_nodes_tweaks = {}
-    for key, value in tweaks.items():
+    for key, value in tweaks_dict.items():
         if isinstance(value, dict):
             if node := nodes_map.get(key):
                 apply_tweaks(node, value)

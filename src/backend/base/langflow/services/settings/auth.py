@@ -4,7 +4,7 @@ from typing import Literal
 
 from loguru import logger
 from passlib.context import CryptContext
-from pydantic import Field, SecretStr, validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings
 
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
@@ -62,23 +62,25 @@ class AuthSettings(BaseSettings):
     # the default values
     # so we need to validate the superuser and superuser_password
     # fields
-    @validator("SUPERUSER", "SUPERUSER_PASSWORD", pre=True)
-    def validate_superuser(cls, value, values):
-        if values.get("AUTO_LOGIN"):
+    @field_validator("SUPERUSER", "SUPERUSER_PASSWORD", mode="before")
+    @classmethod
+    def validate_superuser(cls, value, info):
+        if info.data.get("AUTO_LOGIN"):
             if value != DEFAULT_SUPERUSER:
                 value = DEFAULT_SUPERUSER
                 logger.debug("Resetting superuser to default value")
-            if values.get("SUPERUSER_PASSWORD") != DEFAULT_SUPERUSER_PASSWORD:
-                values["SUPERUSER_PASSWORD"] = DEFAULT_SUPERUSER_PASSWORD
+            if info.data.get("SUPERUSER_PASSWORD") != DEFAULT_SUPERUSER_PASSWORD:
+                info.data["SUPERUSER_PASSWORD"] = DEFAULT_SUPERUSER_PASSWORD
                 logger.debug("Resetting superuser password to default value")
 
             return value
 
         return value
 
-    @validator("SECRET_KEY", pre=True)
-    def get_secret_key(cls, value, values):
-        config_dir = values.get("CONFIG_DIR")
+    @field_validator("SECRET_KEY", mode="before")
+    @classmethod
+    def get_secret_key(cls, value, info):
+        config_dir = info.data.get("CONFIG_DIR")
 
         if not config_dir:
             logger.debug("No CONFIG_DIR provided, not saving secret key")

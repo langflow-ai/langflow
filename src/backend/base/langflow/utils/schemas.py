@@ -45,6 +45,12 @@ class ChatOutputResponse(BaseModel):
         return self
 
 
+class RecordOutputResponse(BaseModel):
+    """Record output response schema."""
+
+    records: List[Optional[Dict]]
+
+
 class ContainsEnumMeta(enum.EnumMeta):
     def __contains__(cls, item):
         try:

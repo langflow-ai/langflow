@@ -10,7 +10,7 @@ from loguru import logger
 
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
-from langflow.graph.vertex.utils import generate_result
+from langflow.graph.vertex.utils import log_transaction
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.schema import INPUT_FIELD_NAME
@@ -72,7 +72,6 @@ class Vertex:
         self.load_from_db_fields: List[str] = []
         self.parent_is_top_level = False
         self.layer = None
-        self.should_run = True
         self.result: Optional[ResultData] = None
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
@@ -316,7 +315,11 @@ class Vertex:
                     params[field_name] = full_path
                 elif field.get("required"):
                     field_display_name = field.get("display_name")
-                    raise ValueError(f"File path not found for {field_display_name} in component {self.display_name}")
+                    logger.warning(
+                        f"File path not found for {field_display_name} in component {self.display_name}. Setting to None."
+                    )
+                    params[field_name] = None
+
             elif field.get("type") in DIRECT_TYPES and params.get(field_name) is None:
                 val = field.get("value")
                 if field.get("type") == "code":
@@ -391,13 +394,17 @@ class Vertex:
         self.params = self._raw_params.copy()
         self.updated_raw_params = True
 
-    async def _build(self, user_id=None):
+    async def _build(
+        self,
+        fallback_to_env_vars,
+        user_id=None,
+    ):
         """
         Initiate the build process.
         """
         logger.debug(f"Building {self.display_name}")
         await self._build_each_vertex_in_params_dict(user_id)
-        await self._get_and_instantiate_class(user_id)
+        await self._get_and_instantiate_class(user_id, fallback_to_env_vars)
         self._validate_built_object()
 
         self._built = True
@@ -433,7 +440,11 @@ class Vertex:
         # to the frontend
         self.set_artifacts()
         artifacts = self.artifacts
-        messages = self.extract_messages_from_artifacts(artifacts)
+        if isinstance(artifacts, dict):
+            messages = self.extract_messages_from_artifacts(artifacts)
+        else:
+            messages = []
+
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,
@@ -442,29 +453,6 @@ class Vertex:
             component_id=self.id,
         )
         self.set_result(result_dict)
-
-    async def _run(
-        self,
-        user_id: str,
-        inputs: Optional[dict] = None,
-        session_id: Optional[str] = None,
-    ):
-        # user_id is just for compatibility with the other build methods
-        inputs = inputs or {}
-        # inputs = {key: value or "" for key, value in inputs.items()}
-        # if hasattr(self._built_object, "input_keys"):
-        #     # test if all keys are in inputs
-        #     # and if not add them with empty string
-        #     # for key in self._built_object.input_keys:
-        #     #     if key not in inputs:
-        #     #         inputs[key] = ""
-        #     if inputs == {} and hasattr(self._built_object, "prompt"):
-        #         inputs = self._built_object.prompt.partial_variables
-        if isinstance(self._built_object, str):
-            self._built_result = self._built_object
-
-        result = await generate_result(self._built_object, inputs, self.has_external_output, session_id)
-        self._built_result = result
 
     async def _build_each_vertex_in_params_dict(self, user_id=None):
         """
@@ -501,7 +489,7 @@ class Vertex:
             if not self._is_vertex(value):
                 self.params[key][sub_key] = value
             else:
-                result = await value.get_result()
+                result = await value.get_result(self)
                 self.params[key][sub_key] = result
 
     def _is_vertex(self, value):
@@ -516,9 +504,7 @@ class Vertex:
         """
         return all(self._is_vertex(vertex) for vertex in value)
 
-    async def get_result(
-        self,
-    ) -> Any:
+    async def get_result(self, requester: "Vertex") -> Any:
         """
         Retrieves the result of the vertex.
 
@@ -528,9 +514,9 @@ class Vertex:
             The result of the vertex.
         """
         async with self._lock:
-            return await self._get_result()
+            return await self._get_result(requester)
 
-    async def _get_result(self) -> Any:
+    async def _get_result(self, requester: "Vertex") -> Any:
         """
         Retrieves the result of the built component.
 
@@ -540,15 +526,19 @@ class Vertex:
             The built result if use_result is True, else the built object.
         """
         if not self._built:
+            log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="error")
             raise ValueError(f"Component {self.display_name} has not been built yet")
-        return self._built_result if self.use_result else self._built_object
+
+        result = self._built_result if self.use_result else self._built_object
+        log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="success")
+        return result
 
     async def _build_vertex_and_update_params(self, key, vertex: "Vertex"):
         """
         Builds a given vertex and updates the params dictionary accordingly.
         """
 
-        result = await vertex.get_result()
+        result = await vertex.get_result(self)
         self._handle_func(key, result)
         if isinstance(result, list):
             self._extend_params_list_with_result(key, result)
@@ -564,7 +554,7 @@ class Vertex:
         """
         self.params[key] = []
         for vertex in vertices:
-            result = await vertex.get_result()
+            result = await vertex.get_result(self)
             # Weird check to see if the params[key] is a list
             # because sometimes it is a Record and breaks the code
             if not isinstance(self.params[key], list):
@@ -607,7 +597,7 @@ class Vertex:
         if isinstance(self.params[key], list):
             self.params[key].extend(result)
 
-    async def _get_and_instantiate_class(self, user_id=None):
+    async def _get_and_instantiate_class(self, user_id=None, fallback_to_env_vars=False):
         """
         Gets the class from a dictionary and instantiates it with the params.
         """
@@ -616,6 +606,7 @@ class Vertex:
         try:
             result = await loading.instantiate_class(
                 user_id=user_id,
+                fallback_to_env_vars=fallback_to_env_vars,
                 vertex=self,
             )
             self._update_built_object_and_artifacts(result)

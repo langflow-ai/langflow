@@ -31,14 +31,18 @@ class SettingsService(Service):
 
             for key in settings_dict:
                 if key not in Settings.model_fields.keys():
-                    raise KeyError(f"Key {key} not found in settings")
+                    logger.warning(f"Key {key} not found in settings")
                 logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
         settings = Settings(**settings_dict)
-        if not settings.CONFIG_DIR:
+        if not settings.config_dir:
             raise ValueError("CONFIG_DIR must be set in settings")
 
         auth_settings = AuthSettings(
-            CONFIG_DIR=settings.CONFIG_DIR,
+            CONFIG_DIR=settings.config_dir,
         )
         return cls(settings, auth_settings)
+
+    def set(self, key, value):
+        setattr(self.settings, key, value)
+        return self.settings

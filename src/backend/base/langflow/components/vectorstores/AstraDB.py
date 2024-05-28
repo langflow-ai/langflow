@@ -1,11 +1,11 @@
-from typing import List, Optional
-
+from typing import List, Optional, Union
 from langchain_astradb import AstraDBVectorStore
 from langchain_astradb.utils.astradb import SetupMode
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, VectorStore
 from langflow.schema import Record
+from langchain_core.retrievers import BaseRetriever
 
 
 class AstraDBVectorStoreComponent(CustomComponent):
@@ -110,7 +110,7 @@ class AstraDBVectorStoreComponent(CustomComponent):
         metadata_indexing_include: Optional[List[str]] = None,
         metadata_indexing_exclude: Optional[List[str]] = None,
         collection_indexing_policy: Optional[dict] = None,
-    ) -> VectorStore:
+    ) -> Union[VectorStore, BaseRetriever]:
         try:
             setup_mode_value = SetupMode[setup_mode.upper()]
         except KeyError:

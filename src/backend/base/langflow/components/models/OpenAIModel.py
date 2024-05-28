@@ -5,6 +5,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
+from langflow.base.models.openai_constants import MODEL_NAMES
 from langflow.field_typing import NestedDict, Text
 
 
@@ -31,6 +32,7 @@ class OpenAIModelComponent(LCModelComponent):
             "max_tokens": {
                 "display_name": "Max Tokens",
                 "advanced": True,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             },
             "model_kwargs": {
                 "display_name": "Model Kwargs",
@@ -39,17 +41,7 @@ class OpenAIModelComponent(LCModelComponent):
             "model_name": {
                 "display_name": "Model Name",
                 "advanced": False,
-                "options": [
-                    "gpt-4-turbo-2024-04-09",
-                    "gpt-4-turbo-preview",
-                    "gpt-3.5-turbo",
-                    "gpt-4-0125-preview",
-                    "gpt-4-1106-preview",
-                    "gpt-4-vision-preview",
-                    "gpt-3.5-turbo-0125",
-                    "gpt-3.5-turbo-1106",
-                ],
-                "value": "gpt-4-turbo-preview",
+                "options": MODEL_NAMES,
             },
             "openai_api_base": {
                 "display_name": "OpenAI API Base",
@@ -87,7 +79,7 @@ class OpenAIModelComponent(LCModelComponent):
         input_value: Text,
         openai_api_key: str,
         temperature: float,
-        model_name: str,
+        model_name: str = "gpt-4o",
         max_tokens: Optional[int] = 256,
         model_kwargs: NestedDict = {},
         openai_api_base: Optional[str] = None,
@@ -102,7 +94,7 @@ class OpenAIModelComponent(LCModelComponent):
             api_key = None
 
         output = ChatOpenAI(
-            max_tokens=max_tokens,
+            max_tokens=max_tokens or None,
             model_kwargs=model_kwargs,
             model=model_name,
             base_url=openai_api_base,

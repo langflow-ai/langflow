@@ -4,7 +4,7 @@ from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMExce
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import BaseLanguageModel, Text
+from langflow.field_typing import Text
 
 
 class ChatLiteLLMModelComponent(LCModelComponent):
@@ -93,9 +93,7 @@ class ChatLiteLLMModelComponent(LCModelComponent):
             },
             "max_tokens": {
                 "display_name": "Max tokens",
-                "field_type": "int",
                 "advanced": False,
-                "required": False,
                 "default": 256,
                 "info": "The maximum number of tokens to generate for each chat completion.",
             },
@@ -142,7 +140,7 @@ class ChatLiteLLMModelComponent(LCModelComponent):
         max_retries: int = 6,
         verbose: bool = False,
         system_message: Optional[str] = None,
-    ) -> BaseLanguageModel:
+    ) -> Text:
         try:
             import litellm  # type: ignore
 

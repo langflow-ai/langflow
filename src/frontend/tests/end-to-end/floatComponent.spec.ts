@@ -1,10 +1,24 @@
 import { expect, test } from "@playwright/test";
 
 test("FloatComponent", async ({ page }) => {
-  await page.goto("http:localhost:3000/");
+  await page.goto("/");
   await page.waitForTimeout(2000);
 
-  await page.locator('//*[@id="new-project-btn"]').click();
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
+    }
+  } catch (error) {
+    modalCount = 0;
+  }
+
+  while (modalCount === 0) {
+    await page.getByText("New Project", { exact: true }).click();
+    await page.waitForTimeout(5000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
   await page.waitForTimeout(1000);
 
   await page.getByTestId("blank-flow").click();
@@ -20,28 +34,10 @@ test("FloatComponent", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
-
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
-
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
-
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
-
-  await page
-    .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[2]')
-    .click();
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
 
   await page.locator('//*[@id="float-input"]').click();
   await page.locator('//*[@id="float-input"]').fill("3");
@@ -78,7 +74,7 @@ test("FloatComponent", async ({ page }) => {
 
   await page.getByTestId("showmirostat").click();
   expect(
-    await page.locator('//*[@id="showmirostat"]').isChecked()
+    await page.locator('//*[@id="showmirostat"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("showmirostat").click();
@@ -86,22 +82,22 @@ test("FloatComponent", async ({ page }) => {
 
   await page.getByTestId("showmirostat_eta").click();
   expect(
-    await page.locator('//*[@id="showmirostat_eta"]').isChecked()
+    await page.locator('//*[@id="showmirostat_eta"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("showmirostat_eta").click();
   expect(
-    await page.locator('//*[@id="showmirostat_eta"]').isChecked()
+    await page.locator('//*[@id="showmirostat_eta"]').isChecked(),
   ).toBeFalsy();
 
   await page.getByTestId("showmirostat_tau").click();
   expect(
-    await page.locator('//*[@id="showmirostat_tau"]').isChecked()
+    await page.locator('//*[@id="showmirostat_tau"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("showmirostat_tau").click();
   expect(
-    await page.locator('//*[@id="showmirostat_tau"]').isChecked()
+    await page.locator('//*[@id="showmirostat_tau"]').isChecked(),
   ).toBeFalsy();
 
   await page.getByTestId("showmodel").click();
@@ -124,28 +120,28 @@ test("FloatComponent", async ({ page }) => {
 
   await page.getByTestId("shownum_thread").click();
   expect(
-    await page.locator('//*[@id="shownum_thread"]').isChecked()
+    await page.locator('//*[@id="shownum_thread"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("shownum_thread").click();
   expect(
-    await page.locator('//*[@id="shownum_thread"]').isChecked()
+    await page.locator('//*[@id="shownum_thread"]').isChecked(),
   ).toBeFalsy();
 
   await page.getByTestId("showrepeat_last_n").click();
   expect(
-    await page.locator('//*[@id="showrepeat_last_n"]').isChecked()
+    await page.locator('//*[@id="showrepeat_last_n"]').isChecked(),
   ).toBeTruthy();
 
   await page.getByTestId("showrepeat_last_n").click();
   expect(
-    await page.locator('//*[@id="showrepeat_last_n"]').isChecked()
+    await page.locator('//*[@id="showrepeat_last_n"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="saveChangesBtn"]').click();
 
   const plusButtonLocator = page.locator('//*[@id="float-input"]');
-  const elementCount = await plusButtonLocator.count();
+  const elementCount = await plusButtonLocator?.count();
   if (elementCount === 0) {
     expect(true).toBeTruthy();
 
@@ -155,7 +151,7 @@ test("FloatComponent", async ({ page }) => {
     // showtemperature
     await page.locator('//*[@id="showtemperature"]').click();
     expect(
-      await page.locator('//*[@id="showtemperature"]').isChecked()
+      await page.locator('//*[@id="showtemperature"]').isChecked(),
     ).toBeTruthy();
 
     await page.locator('//*[@id="saveChangesBtn"]').click();

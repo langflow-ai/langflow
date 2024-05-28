@@ -1,6 +1,7 @@
 from langchain_core.documents import Document
+
 from langflow.components import helpers
-from langflow.interface.custom.utils import build_custom_component_template
+from langflow.custom.utils import build_custom_component_template
 from langflow.schema import Record
 
 

@@ -8,7 +8,7 @@ from typing import Any, List, Optional, Tuple, Type
 import orjson
 import yaml
 from loguru import logger
-from pydantic import field_validator, validator
+from pydantic import field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 
@@ -58,70 +58,65 @@ class MyCustomSource(EnvSettingsSource):
 
 
 class Settings(BaseSettings):
-    CHAINS: dict = {}
-    AGENTS: dict = {}
-    PROMPTS: dict = {}
-    LLMS: dict = {}
-    TOOLS: dict = {}
-    MEMORIES: dict = {}
-    EMBEDDINGS: dict = {}
-    VECTORSTORES: dict = {}
-    DOCUMENTLOADERS: dict = {}
-    WRAPPERS: dict = {}
-    RETRIEVERS: dict = {}
-    TOOLKITS: dict = {}
-    TEXTSPLITTERS: dict = {}
-    UTILITIES: dict = {}
-    OUTPUT_PARSERS: dict = {}
-    CUSTOM_COMPONENTS: dict = {}
-
     # Define the default LANGFLOW_DIR
-    CONFIG_DIR: Optional[str] = None
+    config_dir: Optional[str] = None
+    # Define if langflow db should be saved in config dir or
+    # in the langflow directory
+    save_db_in_config_dir: bool = False
+    """Define if langflow database should be saved in LANGFLOW_CONFIG_DIR or in the langflow directory (i.e. in the package directory)."""
 
-    DEV: bool = False
-    DATABASE_URL: Optional[str] = None
-    CACHE_TYPE: str = "async"
-    REMOVE_API_KEYS: bool = False
-    COMPONENTS_PATH: List[str] = []
-    LANGCHAIN_CACHE: str = "InMemoryCache"
+    dev: bool = False
+    database_url: Optional[str] = None
+    cache_type: str = "async"
+    remove_api_keys: bool = False
+    components_path: List[str] = []
+    langchain_cache: str = "InMemoryCache"
 
     # Redis
-    REDIS_HOST: str = "localhost"
-    REDIS_PORT: int = 6379
-    REDIS_DB: int = 0
-    REDIS_URL: Optional[str] = None
-    REDIS_CACHE_EXPIRE: int = 3600
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
+    redis_url: Optional[str] = None
+    redis_cache_expire: int = 3600
 
     # PLUGIN_DIR: Optional[str] = None
 
-    LANGFUSE_SECRET_KEY: Optional[str] = None
-    LANGFUSE_PUBLIC_KEY: Optional[str] = None
-    LANGFUSE_HOST: Optional[str] = None
+    langfuse_secret_key: Optional[str] = None
+    langfuse_public_key: Optional[str] = None
+    langfuse_host: Optional[str] = None
 
-    STORE: Optional[bool] = True
-    STORE_URL: Optional[str] = "https://api.langflow.store"
-    DOWNLOAD_WEBHOOK_URL: Optional[str] = (
+    store: Optional[bool] = True
+    store_url: Optional[str] = "https://api.langflow.store"
+    download_webhook_url: Optional[str] = (
         "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
     )
-    LIKE_WEBHOOK_URL: Optional[str] = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
+    like_webhook_url: Optional[str] = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
 
-    STORAGE_TYPE: str = "local"
+    storage_type: str = "local"
 
-    CELERY_ENABLED: bool = False
+    celery_enabled: bool = False
+
+    fallback_to_env_var: bool = True
+    """If set to True, Global Variables set in the UI will fallback to a environment variable
+    with the same name in case Langflow fails to retrieve the variable value."""
 
     store_environment_variables: bool = True
     """Whether to store environment variables as Global Variables in the database."""
     variables_to_get_from_environment: list[str] = VARIABLES_TO_GET_FROM_ENVIRONMENT
     """List of environment variables to get from the environment and store in the database."""
+    worker_timeout: int = 300
+    """Timeout for the API calls in seconds."""
+    frontend_timeout: int = 0
+    """Timeout for the frontend API calls in seconds."""
 
-    @validator("CONFIG_DIR", pre=True, allow_reuse=True)
+    @field_validator("config_dir", mode="before")
     def set_langflow_dir(cls, value):
         if not value:
             from platformdirs import user_cache_dir
 
             # Define the app name and author
             app_name = "langflow"
-            app_author = "logspace"
+            app_author = "langflow"
 
             # Get the cache directory for the application
             cache_dir = user_cache_dir(app_name, app_author)
@@ -137,41 +132,48 @@ class Settings(BaseSettings):
 
         return str(value)
 
-    @validator("DATABASE_URL", pre=True)
-    def set_database_url(cls, value, values):
+    @field_validator("database_url", mode="before")
+    def set_database_url(cls, value, info):
         if not value:
             logger.debug("No database_url provided, trying LANGFLOW_DATABASE_URL env variable")
             if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
                 value = langflow_database_url
                 logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
             else:
-                logger.debug("No DATABASE_URL env variable, using sqlite database")
+                logger.debug("No database_url env variable, using sqlite database")
                 # Originally, we used sqlite:///./langflow.db
                 # so we need to migrate to the new format
                 # if there is a database in that location
-                if not values["CONFIG_DIR"]:
-                    raise ValueError("CONFIG_DIR not set, please set it or provide a DATABASE_URL")
+                if not info.data["config_dir"]:
+                    raise ValueError("config_dir not set, please set it or provide a database_url")
                 from langflow.version import is_pre_release  # type: ignore
+
+                if info.data["save_db_in_config_dir"]:
+                    database_dir = info.data["config_dir"]
+                    logger.debug(f"Saving database to config_dir: {database_dir}")
+                else:
+                    database_dir = Path(__file__).parent.parent.parent.resolve()
+                    logger.debug(f"Saving database to langflow directory: {database_dir}")
 
                 pre_db_file_name = "langflow-pre.db"
                 db_file_name = "langflow.db"
-                new_pre_path = f"{values['CONFIG_DIR']}/{pre_db_file_name}"
-                new_path = f"{values['CONFIG_DIR']}/{db_file_name}"
+                new_pre_path = f"{database_dir}/{pre_db_file_name}"
+                new_path = f"{database_dir}/{db_file_name}"
                 final_path = None
                 if is_pre_release:
                     if Path(new_pre_path).exists():
                         final_path = new_pre_path
-                    elif Path(new_path).exists():
+                    elif Path(new_path).exists() and info.data["save_db_in_config_dir"]:
                         # We need to copy the current db to the new location
                         logger.debug("Copying existing database to new location")
                         copy2(new_path, new_pre_path)
                         logger.debug(f"Copied existing database to {new_pre_path}")
-                    elif Path(f"./{db_file_name}").exists():
+                    elif Path(f"./{db_file_name}").exists() and info.data["save_db_in_config_dir"]:
                         logger.debug("Copying existing database to new location")
                         copy2(f"./{db_file_name}", new_pre_path)
                         logger.debug(f"Copied existing database to {new_pre_path}")
                     else:
-                        logger.debug(f"Database already exists at {new_pre_path}, using it")
+                        logger.debug(f"Creating new database at {new_pre_path}")
                         final_path = new_pre_path
                 else:
                     if Path(new_path).exists():
@@ -198,7 +200,7 @@ class Settings(BaseSettings):
 
         return value
 
-    @field_validator("COMPONENTS_PATH", mode="before")
+    @field_validator("components_path", mode="before")
     def set_components_path(cls, value):
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
@@ -227,24 +229,8 @@ class Settings(BaseSettings):
 
     def update_from_yaml(self, file_path: str, dev: bool = False):
         new_settings = load_settings_from_yaml(file_path)
-        self.CHAINS = new_settings.CHAINS or {}
-        self.AGENTS = new_settings.AGENTS or {}
-        self.PROMPTS = new_settings.PROMPTS or {}
-        self.LLMS = new_settings.LLMS or {}
-        self.TOOLS = new_settings.TOOLS or {}
-        self.MEMORIES = new_settings.MEMORIES or {}
-        self.WRAPPERS = new_settings.WRAPPERS or {}
-        self.TOOLKITS = new_settings.TOOLKITS or {}
-        self.TEXTSPLITTERS = new_settings.TEXTSPLITTERS or {}
-        self.UTILITIES = new_settings.UTILITIES or {}
-        self.EMBEDDINGS = new_settings.EMBEDDINGS or {}
-        self.VECTORSTORES = new_settings.VECTORSTORES or {}
-        self.DOCUMENTLOADERS = new_settings.DOCUMENTLOADERS or {}
-        self.RETRIEVERS = new_settings.RETRIEVERS or {}
-        self.OUTPUT_PARSERS = new_settings.OUTPUT_PARSERS or {}
-        self.CUSTOM_COMPONENTS = new_settings.CUSTOM_COMPONENTS or {}
-        self.COMPONENTS_PATH = new_settings.COMPONENTS_PATH or []
-        self.DEV = dev
+        self.components_path = new_settings.components_path or []
+        self.dev = dev
 
     def update_settings(self, **kwargs):
         logger.debug("Updating settings")

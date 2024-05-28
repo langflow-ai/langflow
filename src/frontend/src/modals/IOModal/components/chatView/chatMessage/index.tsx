@@ -6,9 +6,9 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import MaleTechnology from "../../../../../assets/male-technologist.png";
 import Robot from "../../../../../assets/robot.png";
-import SanitizedHTMLWrapper from "../../../../../components/SanitizedHTMLWrapper";
 import CodeTabsComponent from "../../../../../components/codeTabsComponent";
 import IconComponent from "../../../../../components/genericIconComponent";
+import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
@@ -114,19 +114,19 @@ export default function ChatMessage({
       <div
         className={classNames(
           "form-modal-chat-position",
-          chat.isSend ? "" : " "
+          chat.isSend ? "" : " ",
         )}
       >
         <div
           className={classNames(
-            "mr-3 mt-1 flex w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3"
+            "mr-3 mt-1 flex w-24 flex-col items-center gap-1 overflow-hidden px-3 pb-3",
           )}
         >
           <div className="flex flex-col items-center gap-1">
             <div
               className={cn(
                 "relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md p-5 text-2xl",
-                !chat.isSend ? "bg-chat-bot-icon" : "bg-chat-user-icon"
+                !chat.isSend ? "bg-chat-bot-icon" : "bg-chat-user-icon",
               )}
             >
               <img
@@ -135,7 +135,12 @@ export default function ChatMessage({
                 alt={!chat.isSend ? "robot_image" : "male_technology"}
               />
             </div>
-            <span className="max-w-24 truncate text-xs">
+            <span
+              className="max-w-24 truncate text-xs"
+              data-testid={
+                "sender_name_" + chat.sender_name?.toLocaleLowerCase()
+              }
+            >
               {chat.sender_name}
             </span>
           </div>
@@ -205,12 +210,12 @@ dark:prose-invert"
 
                                   children[0] = (children[0] as string).replace(
                                     "`▍`",
-                                    "▍"
+                                    "▍",
                                   );
                                 }
 
                                 const match = /language-(\w+)/.exec(
-                                  className || ""
+                                  className || "",
                                 );
 
                                 return !inline ? (
@@ -225,7 +230,7 @@ dark:prose-invert"
                                         language: (match && match[1]) || "",
                                         code: String(children).replace(
                                           /\n$/,
-                                          ""
+                                          "",
                                         ),
                                       },
                                     ]}
@@ -243,7 +248,7 @@ dark:prose-invert"
                             {chatMessage}
                           </Markdown>
                         ),
-                      [chat.message, chatMessage]
+                      [chat.message, chatMessage],
                     )}
                   </div>
                   {chat.files && (
@@ -266,7 +271,7 @@ dark:prose-invert"
             </div>
           </div>
         ) : (
-          <div>
+          <div className="form-modal-chat-text-position min-w-96 flex-grow">
             {template ? (
               <>
                 <button
@@ -301,7 +306,7 @@ dark:prose-invert"
                             parts.push(
                               <span className="chat-message-highlight">
                                 {chat.message[match[1]]}
-                              </span>
+                              </span>,
                             );
                           }
 
@@ -319,6 +324,7 @@ dark:prose-invert"
               </>
             ) : (
               <span
+                className="prose text-primary word-break-break-word dark:prose-invert"
                 data-testid={
                   "chat-message-" + chat.sender_name + "-" + chatMessage
                 }
