@@ -2,9 +2,10 @@ from typing import Any, List, Optional
 
 from loguru import logger
 
+from langflow.base.flow_processing.utils import build_records_from_result_data
 from langflow.custom import CustomComponent
 from langflow.graph.graph.base import Graph
-from langflow.graph.schema import ResultData, RunOutputs
+from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
 from langflow.schema import Record
@@ -92,21 +93,6 @@ class SubFlowComponent(CustomComponent):
             },
         }
 
-    def build_records_from_result_data(self, result_data: ResultData, get_final_results_only: bool) -> List[Record]:
-        messages = result_data.messages
-        if not messages:
-            return []
-        records = []
-        for message in messages:
-            message_dict = message if isinstance(message, dict) else message.model_dump()
-            if get_final_results_only:
-                result_data_dict = result_data.model_dump()
-                results = result_data_dict.get("results", {})
-                inner_result = results.get("result", {})
-            record = Record(data={"result": inner_result, "message": message_dict}, text_key="result")
-            records.append(record)
-        return records
-
     async def build(self, flow_name: str, get_final_results_only: bool = True, **kwargs) -> List[Record]:
         tweaks = {key: {"input_value": value} for key, value in kwargs.items()}
         run_outputs: List[Optional[RunOutputs]] = await self.run_flow(
@@ -121,7 +107,7 @@ class SubFlowComponent(CustomComponent):
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    records.extend(self.build_records_from_result_data(output, get_final_results_only))
+                    records.extend(build_records_from_result_data(output, get_final_results_only))
 
         self.status = records
         logger.debug(records)

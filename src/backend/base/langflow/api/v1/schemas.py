@@ -322,3 +322,7 @@ class FlowDataRequest(BaseModel):
     nodes: List[dict]
     edges: List[dict]
     viewport: Optional[dict] = None
+
+
+class ConfigResponse(BaseModel):
+    frontend_timeout: int
