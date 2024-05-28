@@ -1,7 +1,9 @@
+import os
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import UUID
 
 import orjson
 from emoji import demojize, purely_emoji  # type: ignore
@@ -12,6 +14,7 @@ from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBU
 from langflow.interface.types import get_all_components
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder, FolderCreate
+from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import get_settings_service, session_scope
 
 STARTER_FOLDER_NAME = "Starter Projects"
@@ -204,6 +207,50 @@ def create_starter_folder(session):
     else:
         return session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
 
+
+def _is_valid_uuid(val):
+    try:
+        uuid_obj = UUID(val, version=4)
+    except ValueError:
+        return False
+    return str(uuid_obj) == val
+
+def load_flows_from_directory():
+    flows_path = get_settings_service().settings.load_flows_path
+    if not flows_path:
+        return
+    with session_scope() as session:
+        files = [f for f in os.listdir(flows_path) if os.path.isfile(os.path.join(flows_path, f))]
+        for filename in files:
+            if not filename.endswith(".json"):
+                continue
+            logger.info(f"Loading flow from file: {filename}")
+            with open(os.path.join(flows_path, filename), "r", encoding="utf-8") as file:
+                flow = orjson.loads(file.read())
+                no_json_name = file.name.replace(".json", "")
+                if _is_valid_uuid(no_json_name):
+                    flow["id"] = no_json_name
+                flow_id = flow.get("id")
+                if flow_id:
+                    stmt = select(Flow).where(Flow.id == flow_id)
+                    if existing := session.exec(stmt).first():
+                        logger.info(f"Updating existing flow: {flow_id}")
+                        for key, value in flow.items():
+                            if key == "user_id":
+                                continue
+                            if value is not None:
+                                setattr(existing, key, value)
+                        existing.updated_at = datetime.utcnow()
+                        session.add(existing)
+                        session.commit()
+                        continue
+
+                logger.info(f"Creating new flow: {flow_id}")
+                flow["user_id"] = None
+                flow = Flow.model_validate(flow, from_attributes=True)
+                flow.updated_at = datetime.utcnow()
+                session.add(flow)
+                session.commit()
 
 def create_or_update_starter_projects():
     components_paths = get_settings_service().settings.components_path

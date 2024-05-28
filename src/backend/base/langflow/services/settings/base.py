@@ -71,6 +71,7 @@ class Settings(BaseSettings):
     remove_api_keys: bool = False
     components_path: List[str] = []
     langchain_cache: str = "InMemoryCache"
+    load_flows_path: Optional[str] = None
 
     # Redis
     redis_host: str = "localhost"
@@ -269,16 +270,16 @@ class Settings(BaseSettings):
                 logger.debug(f"Updated {key}")
             logger.debug(f"{key}: {getattr(self, key)}")
 
-    @classmethod
-    def settings_customise_sources(
-        cls,
-        settings_cls: Type[BaseSettings],
-        init_settings: PydanticBaseSettingsSource,
-        env_settings: PydanticBaseSettingsSource,
-        dotenv_settings: PydanticBaseSettingsSource,
-        file_secret_settings: PydanticBaseSettingsSource,
-    ) -> Tuple[PydanticBaseSettingsSource, ...]:
-        return (MyCustomSource(settings_cls),)
+    # @classmethod
+    # def settings_customise_sources(
+    #     cls,
+    #     settings_cls: Type[BaseSettings],
+    #     init_settings: PydanticBaseSettingsSource,
+    #     env_settings: PydanticBaseSettingsSource,
+    #     dotenv_settings: PydanticBaseSettingsSource,
+    #     file_secret_settings: PydanticBaseSettingsSource,
+    # ) -> Tuple[PydanticBaseSettingsSource, ...]:
+    #     return (MyCustomSource(settings_cls),)
 
 
 def save_settings_to_yaml(settings: Settings, file_path: str):
@@ -288,6 +289,7 @@ def save_settings_to_yaml(settings: Settings, file_path: str):
 
 
 def load_settings_from_yaml(file_path: str) -> Settings:
+    print("load_settings_from_yaml..")
     # Check if a string is a valid path or a file name
     if "/" not in file_path:
         # Get current path
