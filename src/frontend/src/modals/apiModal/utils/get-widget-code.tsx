@@ -4,12 +4,12 @@
  * @returns {string} - The widget code
  */
 export default function getWidgetCode(
-    flowId: string,
-    flowName: string,
-    isAuth: boolean,
-  ): string {
-    return `<script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@1.0_alpha/dist/build/static/js/bundle.min.js"></script>
-  
+  flowId: string,
+  flowName: string,
+  isAuth: boolean,
+): string {
+  return `<script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@1.0_alpha/dist/build/static/js/bundle.min.js"></script>
+
   <langflow-chat
     window_title="${flowName}"
     flow_id="${flowId}"
@@ -19,6 +19,6 @@ export default function getWidgetCode(
     api_key="..."`
         : ""
     }
-  
+
   ></langflow-chat>`;
-  }
+}

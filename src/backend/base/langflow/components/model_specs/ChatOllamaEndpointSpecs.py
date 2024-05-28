@@ -1,11 +1,11 @@
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 # from langchain_community.chat_models import ChatOllama
 from langchain_community.chat_models import ChatOllama
 from langchain_core.language_models.chat_models import BaseChatModel
 
 # from langchain.chat_models import ChatOllama
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 # from langchain.callbacks.manager import CallbackManager
 
@@ -182,7 +182,7 @@ class ChatOllamaComponent(CustomComponent):
         num_ctx: Optional[int] = None,
         num_gpu: Optional[int] = None,
         format: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[Dict] = None,
         num_thread: Optional[int] = None,
         repeat_penalty: Optional[float] = None,
         stop: Optional[List[str]] = None,

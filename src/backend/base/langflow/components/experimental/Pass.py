@@ -1,7 +1,8 @@
 from typing import Union
-from langflow.interface.custom.custom_component import CustomComponent
-from langflow.schema import Record
+
+from langflow.custom import CustomComponent
 from langflow.field_typing import Text
+from langflow.schema import Record
 
 
 class PassComponent(CustomComponent):

@@ -46,9 +46,8 @@ class AnthropicLLM(CustomComponent):
             },
             "max_tokens": {
                 "display_name": "Max Tokens",
-                "field_type": "int",
                 "advanced": True,
-                "value": 256,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             },
             "temperature": {
                 "display_name": "Temperature",
