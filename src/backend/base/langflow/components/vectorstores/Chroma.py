@@ -1,5 +1,6 @@
 from typing import List, Optional, Union
 
+import chromadb
 from chromadb.config import Settings
 from langchain_chroma import Chroma
 from langchain_core.embeddings import Embeddings
@@ -81,7 +82,7 @@ class ChromaComponent(CustomComponent):
 
         # Chroma settings
         chroma_settings = None
-
+        client = None
         if chroma_server_host is not None:
             chroma_settings = Settings(
                 chroma_server_cors_allow_origins=chroma_server_cors_allow_origins or [],
@@ -90,6 +91,7 @@ class ChromaComponent(CustomComponent):
                 chroma_server_grpc_port=chroma_server_grpc_port or None,
                 chroma_server_ssl_enabled=chroma_server_ssl_enabled,
             )
+            client = chromadb.HttpClient(settings=chroma_settings)
 
         # If documents, then we need to create a Chroma instance using .from_documents
 
@@ -111,12 +113,12 @@ class ChromaComponent(CustomComponent):
                 persist_directory=index_directory,
                 collection_name=collection_name,
                 embedding=embedding,
-                client_settings=chroma_settings,
+                client=client,
             )
         else:
             chroma = Chroma(
                 persist_directory=index_directory,
-                client_settings=chroma_settings,
+                client=client,
                 embedding_function=embedding,
             )
         return chroma

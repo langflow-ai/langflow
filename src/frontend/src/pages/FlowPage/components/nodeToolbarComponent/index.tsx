@@ -271,7 +271,7 @@ export default function NodeToolbarComponent({
         selected &&
         (hasApiKey || hasStore) &&
         (event.ctrlKey || event.metaKey) &&
-        event.key === "u"
+        event.key.toUpperCase() === "U"
       ) {
         event.preventDefault();
         handleSelectChange("update");
@@ -280,7 +280,7 @@ export default function NodeToolbarComponent({
         selected &&
         isGroup &&
         (event.ctrlKey || event.metaKey) &&
-        event.key === "g"
+        event.key.toUpperCase() === "G"
       ) {
         event.preventDefault();
         handleSelectChange("ungroup");
@@ -290,7 +290,7 @@ export default function NodeToolbarComponent({
         (hasApiKey || hasStore) &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
-        event.key === "S"
+        event.key.toUpperCase() === "S"
       ) {
         event.preventDefault();
         setShowconfirmShare((state) => !state);
@@ -300,7 +300,7 @@ export default function NodeToolbarComponent({
         selected &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
-        event.key === "Q"
+        event.key.toUpperCase() === "Q"
       ) {
         event.preventDefault();
         if (isMinimal) {
@@ -317,7 +317,7 @@ export default function NodeToolbarComponent({
         selected &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
-        event.key === "U"
+        event.key.toUpperCase() === "U"
       ) {
         event.preventDefault();
         if (hasCode) return setOpenModal((state) => !state);
@@ -327,12 +327,16 @@ export default function NodeToolbarComponent({
         selected &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
-        event.key === "A"
+        event.key.toUpperCase() === "A"
       ) {
         event.preventDefault();
         setShowModalAdvanced((state) => !state);
       }
-      if (selected && (event.ctrlKey || event.metaKey) && event.key === "s") {
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toUpperCase() === "S"
+      ) {
         if (isSaved) {
           event.preventDefault();
           return setShowOverrideModal((state) => !state);
@@ -347,7 +351,7 @@ export default function NodeToolbarComponent({
         selected &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
-        event.key === "D"
+        event.key.toUpperCase() === "D"
       ) {
         event.preventDefault();
         if (data.node?.documentation) {
@@ -357,7 +361,11 @@ export default function NodeToolbarComponent({
           title: `${data.id} docs is not available at the moment.`,
         });
       }
-      if (selected && (event.ctrlKey || event.metaKey) && event.key === "j") {
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toUpperCase() === "J"
+      ) {
         event.preventDefault();
         downloadNode(flowComponent!);
       }

@@ -17,24 +17,10 @@ A [project](#project) can be a component or a flow. Projects are saved as part o
 
 For example, the **OpenAI LLM** is a **component** of the **Basic prompting** flow, and the **flow** is stored in a **collection**.
 
-## Flow
 
-A **flow** is a pipeline of components connected together in the Langflow canvas.
-
-For example, the [Basic prompting](../starter-projects/basic-prompting.mdx) flow is a pipeline of four components:
-
-<ZoomableImage
-  alt="Docusaurus themed image"
-  sources={{
-    light: "img/basic-prompting.png",
-    dark: "img/basic-prompting.png",
-  }}
-  style={{ width: "80%", margin: "20px auto" }}
-/>
-
-For example, the **OpenAI LLM component** receives input (left side) and produces output (right side) - in this case, receiving input from the **Chat Input** and **Prompt** components and producing output to the **Chat Output** component.
 
 ## Component
+
 
 Components are the building blocks of flows. They consist of inputs, outputs, and parameters that define their functionality. These elements provide a convenient and straightforward way to compose LLM-based applications. Learn more about components and how they work in the LangChain [documentation](https://python.langchain.com/docs/integrations/components).
 
@@ -108,8 +94,5 @@ Click the **![Playground icon](/logos/botmessage.svg) Playground** button to run
 
 In the top left corner of the screen are options for **Download Collection**, **Upload Collection**, and **New Project**.
 
-Select **Download Collection** to save your project to your local machine. This downloads all flows and components as a `.json` file.
 
-Select **Upload Collection** to upload a flow or component `.json` file from your local machine.
 
-Select **New Project** to create a new project. In addition to a blank canvas, [starter projects](../starter-projects/basic-prompting.mdx) are also available.
