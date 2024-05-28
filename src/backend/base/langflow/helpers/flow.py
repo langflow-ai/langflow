@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import select
 
+from langflow.graph.schema import RunOutputs
 from langflow.schema.schema import INPUT_FIELD_NAME, Record
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
@@ -69,7 +70,7 @@ async def run_flow(
     flow_id: Optional[str] = None,
     flow_name: Optional[str] = None,
     user_id: Optional[str] = None,
-) -> Any:
+) -> List[RunOutputs]:
     if user_id is None:
         raise ValueError("Session is invalid")
     graph = await load_flow(user_id, flow_id, flow_name, tweaks)

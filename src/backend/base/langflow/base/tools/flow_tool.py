@@ -1,5 +1,4 @@
 from typing import Any, List, Optional, Type
-from uuid import UUID
 
 from asyncer import syncify
 from langchain.tools import BaseTool
@@ -17,8 +16,8 @@ class FlowTool(BaseTool):
     name: str
     description: str
     graph: Optional[Graph] = None
-    flow_id: Optional[str | UUID] = None
-    user_id: Optional[str | UUID] = None
+    flow_id: Optional[str] = None
+    user_id: Optional[str] = None
     inputs: List["Vertex"] = []
     get_final_results_only: bool = True
 
@@ -33,6 +32,8 @@ class FlowTool(BaseTool):
             return self.args_schema
         elif self.graph is not None:
             return build_schema_from_inputs(self.name, get_flow_inputs(self.graph))
+        else:
+            raise ToolException("No input schema available.")
 
     def _run(
         self,
@@ -55,7 +56,7 @@ class FlowTool(BaseTool):
             user_id=self.user_id,
         )
         if not run_outputs:
-            return []
+            return "No output"
         run_output = run_outputs[0]
 
         records = []
@@ -103,7 +104,7 @@ class FlowTool(BaseTool):
             user_id=self.user_id,
         )
         if not run_outputs:
-            return []
+            return "No output"
         run_output = run_outputs[0]
 
         records = []
