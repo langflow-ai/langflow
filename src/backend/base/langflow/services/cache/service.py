@@ -9,6 +9,9 @@ from loguru import logger
 
 from langflow.services.base import Service
 from langflow.services.cache.base import AsyncBaseCacheService, CacheService
+from langflow.services.cache.utils import CacheMiss
+
+CACHE_MISS = CacheMiss()
 
 
 class ThreadingInMemoryCache(CacheService, Service):
@@ -341,12 +344,14 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Service):
 
     async def _get(self, key):
         item = self.cache.get(key, None)
-        if item and (time.time() - item["time"] < self.expiration_time):
-            self.cache.move_to_end(key)
-            return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
         if item:
-            await self.delete(key)
-        return None
+            if time.time() - item["time"] < self.expiration_time:
+                self.cache.move_to_end(key)
+                return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
+            else:
+                logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
+                await self.delete(key)  # Log before deleting the expired item
+        return CACHE_MISS
 
     async def set(self, key, value, lock: Optional[asyncio.Lock] = None):
         if not lock:
