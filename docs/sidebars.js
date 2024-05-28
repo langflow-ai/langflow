@@ -14,14 +14,7 @@ module.exports = {
         "index",
         "getting-started/install-langflow",
         "getting-started/quickstart",
-        {
-          type: "category",
-          label: "Langflow Functionality",
-          items: [
-            "getting-started/canvas",
-            "getting-started/flows-components-collections",
-          ],
-        },
+        "getting-started/canvas",
         "migration/possible-installation-issues",
         "getting-started/new-to-llms",
       ],
