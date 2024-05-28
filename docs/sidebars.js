@@ -131,5 +131,28 @@ module.exports = {
         "contributing/contribute-component",
       ],
     },
+    {
+      type: "category",
+      label: "Integrations",
+      collapsed: false,
+      items: [
+        {
+          type: "category",
+          label: "Notion",
+          items: [
+            "integrations/notion/intro",
+            "integrations/notion/setup",
+            "integrations/notion/search",
+            "integrations/notion/list-database-properties",
+            "integrations/notion/list-pages",
+            "integrations/notion/list-users",
+            "integrations/notion/page-create",
+            "integrations/notion/add-content-to-page",
+            "integrations/notion/page-update",
+            "integrations/notion/page-content-viewer",
+          ],
+        },
+      ],
+    },
   ],
 };
