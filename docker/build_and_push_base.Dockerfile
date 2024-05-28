@@ -81,11 +81,14 @@ RUN rm -rf src/backend/base/dist
 RUN cd src/backend/base && $POETRY_HOME/bin/poetry build
 
 # Copy virtual environment and built .tar.gz from builder base
-RUN useradd -m -u 1000 user
-RUN chown -R user:user /app
+RUN useradd -m -u 1000 user && \
+    mkdir -p /app/langflow && \
+    chown -R user:user /app \
+    chmod -R u+w /app/langflow
+
 USER user
 # Install the package from the .tar.gz
-RUN python -m pip install /app/src/backend/base/dist/*.tar.gz
+RUN python -m pip install /app/src/backend/base/dist/*.tar.gz --user
 
 
 ENTRYPOINT ["python", "-m", "langflow", "run"]
