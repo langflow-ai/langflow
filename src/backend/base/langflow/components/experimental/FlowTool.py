@@ -1,13 +1,12 @@
 from typing import Any, List, Optional
 
-from asyncer import syncify
-from langchain_core.tools import StructuredTool
 from loguru import logger
 
+from langflow.base.tools.flow_tool import FlowTool
 from langflow.custom import CustomComponent
 from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
-from langflow.helpers.flow import build_function_and_schema
+from langflow.helpers.flow import get_flow_inputs
 from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import Record
 
@@ -69,21 +68,22 @@ class FlowToolComponent(CustomComponent):
         }
 
     async def build(self, flow_name: str, name: str, description: str, return_direct: bool = False) -> Tool:
+        FlowTool.update_forward_refs()
         flow_record = self.get_flow(flow_name)
         if not flow_record:
             raise ValueError("Flow not found.")
         graph = Graph.from_payload(flow_record.data["data"])
-        dynamic_flow_function, schema = build_function_and_schema(flow_record, graph, user_id=self._user_id)
-        tool = StructuredTool.from_function(
-            func=syncify(dynamic_flow_function, raise_sync_error=False),  # type: ignore
-            coroutine=dynamic_flow_function,
+        inputs = get_flow_inputs(graph)
+        tool = FlowTool(
             name=name,
             description=description,
+            graph=graph,
             return_direct=return_direct,
-            args_schema=schema,
+            inputs=inputs,
+            flow_id=str(flow_record.id),
+            user_id=str(self._user_id),
         )
         description_repr = repr(tool.description).strip("'")
         args_str = "\n".join([f"- {arg_name}: {arg_data['description']}" for arg_name, arg_data in tool.args.items()])
         self.status = f"{description_repr}\nArguments:\n{args_str}"
-        return tool  # type: ignore
         return tool  # type: ignore
