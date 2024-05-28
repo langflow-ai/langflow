@@ -247,6 +247,7 @@ class VerticesOrderResponse(BaseModel):
 
 class Log(TypedDict):
     message: str
+    type: str
 
 
 class ResultDataResponse(BaseModel):

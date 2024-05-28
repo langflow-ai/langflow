@@ -51,9 +51,7 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
         Returns:
             list[Record]: A list of Record objects representing the search results.
         """
-        memory: AstraDBChatMessageHistory = cast(
-            AstraDBChatMessageHistory, kwargs.get("memory")
-        )
+        memory: AstraDBChatMessageHistory = cast(AstraDBChatMessageHistory, kwargs.get("memory"))
         if not memory:
             raise ValueError("AstraDBChatMessageHistory instance is required.")
 
@@ -72,9 +70,7 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
         namespace: Optional[str] = None,
     ) -> list[Record]:
         try:
-            from langchain_community.chat_message_histories.astradb import (
-                AstraDBChatMessageHistory,
-            )
+            pass
         except ImportError:
             raise ImportError(
                 "Could not import langchain Astra DB integration package. "

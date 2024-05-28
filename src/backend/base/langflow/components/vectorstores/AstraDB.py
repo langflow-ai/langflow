@@ -1,12 +1,11 @@
 from typing import List, Optional, Union
-
-from langchain.schema import BaseRetriever
 from langchain_astradb import AstraDBVectorStore
 from langchain_astradb.utils.astradb import SetupMode
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, VectorStore
 from langflow.schema import Record
+from langchain_core.retrievers import BaseRetriever
 
 
 class AstraDBVectorStoreComponent(CustomComponent):

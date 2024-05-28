@@ -1,10 +1,10 @@
 from typing import Optional
 
-from langchain.schema import BaseRetriever
 from langchain_community.retrievers import MetalRetriever
+from langchain_core.retrievers import BaseRetriever
 from metal_sdk.metal import Metal  # type: ignore
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class MetalRetrieverComponent(CustomComponent):

@@ -33,6 +33,8 @@ export default function InputComponent({
   optionButton,
   objectOptions,
   isObjectOption = false,
+  name,
+  onChangeFolderName,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
@@ -53,6 +55,7 @@ export default function InputComponent({
       {isForm ? (
         <Form.Control asChild>
           <Input
+            name={name}
             id={"form-" + id}
             ref={refInput}
             onBlur={onInputLostFocus}
@@ -72,6 +75,9 @@ export default function InputComponent({
             )}
             placeholder={password && editNode ? "Key" : placeholder}
             onChange={(e) => {
+              if (onChangeFolderName) {
+                return onChangeFolderName(e);
+              }
               onChange && onChange(e.target.value);
             }}
             onCopy={(e) => {

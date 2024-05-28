@@ -22,7 +22,8 @@ from sqlmodel import select
 from langflow.main import setup_app
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.deps import get_db_service, get_settings_service, session_scope
+from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
 from langflow.utils.logger import configure, logger
 from langflow.utils.util import update_settings
@@ -83,7 +84,6 @@ def run(
         help="Path to the directory containing custom components.",
         envvar="LANGFLOW_COMPONENTS_PATH",
     ),
-    config: str = typer.Option(Path(__file__).parent / "config.yaml", help="Path to the configuration file."),
     # .env file param
     env_file: Path = typer.Option(None, help="Path to the .env file containing environment variables."),
     log_level: str = typer.Option("critical", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
@@ -132,7 +132,6 @@ def run(
         load_dotenv(env_file, override=True)
 
     update_settings(
-        config,
         dev=dev,
         remove_api_keys=remove_api_keys,
         cache=cache,
@@ -508,6 +507,66 @@ def migration(
         db_service.run_migrations()
     results = db_service.run_migrations_test()
     display_results(results)
+
+
+@app.command()
+def api_key(
+    log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+):
+    """
+    Creates an API key for the default superuser if AUTO_LOGIN is enabled.
+
+    Args:
+        log_level (str, optional): Logging level. Defaults to "error".
+
+    Returns:
+        None
+    """
+    configure(log_level=log_level)
+    initialize_services()
+    settings_service = get_settings_service()
+    auth_settings = settings_service.auth_settings
+    if not auth_settings.AUTO_LOGIN:
+        typer.echo("Auto login is disabled. API keys cannot be created through the CLI.")
+        return
+    with session_scope() as session:
+        from langflow.services.database.models.user.model import User
+
+        superuser = session.exec(select(User).where(User.username == DEFAULT_SUPERUSER)).first()
+        if not superuser:
+            typer.echo("Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled.")
+            return
+        from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate
+        from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key
+
+        api_key = session.exec(select(ApiKey).where(ApiKey.user_id == superuser.id)).first()
+        if api_key:
+            delete_api_key(session, api_key.id)
+
+        api_key_create = ApiKeyCreate(name="CLI")
+        unmasked_api_key = create_api_key(session, api_key_create, user_id=superuser.id)
+        session.commit()
+        # Create a banner to display the API key and tell the user it won't be shown again
+        api_key_banner(unmasked_api_key)
+
+
+def api_key_banner(unmasked_api_key):
+    is_mac = platform.system() == "Darwin"
+    import pyperclip  # type: ignore
+
+    pyperclip.copy(unmasked_api_key.api_key)
+    panel = Panel(
+        f"[bold]API Key Created Successfully:[/bold]\n\n"
+        f"[bold blue]{unmasked_api_key.api_key}[/bold blue]\n\n"
+        "This is the only time the API key will be displayed. \n"
+        "Make sure to store it in a secure location. \n\n"
+        f"The API key has been copied to your clipboard. [bold]{['Ctrl','Cmd'][is_mac]} + V[/bold] to paste it.",
+        box=box.ROUNDED,
+        border_style="blue",
+        expand=False,
+    )
+    console = Console()
+    console.print(panel)
 
 
 def main():

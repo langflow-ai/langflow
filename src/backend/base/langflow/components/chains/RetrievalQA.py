@@ -3,8 +3,8 @@ from typing import Optional
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain_core.documents import Document
 
+from langflow.custom import CustomComponent
 from langflow.field_typing import BaseLanguageModel, BaseMemory, BaseRetriever, Text
-from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema.schema import Record
 
 

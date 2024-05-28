@@ -32,51 +32,6 @@ const TableComponent = forwardRef<
     ref,
   ) => {
     const dark = useDarkStore((state) => state.dark);
-    var currentRowHeight: number;
-    var minRowHeight = 25;
-
-    const getRowHeight = useCallback(() => {
-      return currentRowHeight;
-    }, []);
-
-    const onGridReady = useCallback((params: any) => {
-      minRowHeight = params.api.getSizesForCurrentTheme().rowHeight;
-      currentRowHeight = minRowHeight;
-    }, []);
-
-    const updateRowHeight = (params: { api: any }) => {
-      const bodyViewport = document.querySelector(".ag-body-viewport");
-      if (!bodyViewport) {
-        return;
-      }
-      var gridHeight = bodyViewport.clientHeight;
-      var renderedRowCount = params.api.getDisplayedRowCount();
-
-      if (renderedRowCount * minRowHeight >= gridHeight) {
-        if (currentRowHeight !== minRowHeight) {
-          currentRowHeight = minRowHeight;
-          params.api.resetRowHeights();
-        }
-      } else {
-        currentRowHeight = Math.floor(gridHeight / renderedRowCount);
-        params.api.resetRowHeights();
-      }
-    };
-
-    const onFirstDataRendered = useCallback(
-      (params: any) => {
-        updateRowHeight(params);
-      },
-      [updateRowHeight],
-    );
-
-    const onGridSizeChanged = useCallback(
-      (params: any) => {
-        updateRowHeight(params);
-      },
-      [updateRowHeight],
-    );
-
     if (props.rowData.length === 0) {
       return (
         <div className="flex h-full w-full items-center justify-center rounded-md border">
@@ -102,10 +57,6 @@ const TableComponent = forwardRef<
         <AgGridReact
           {...props}
           className={cn(props.className, "custom-scroll")}
-          getRowHeight={getRowHeight}
-          onGridReady={onGridReady}
-          onFirstDataRendered={onFirstDataRendered}
-          onGridSizeChanged={onGridSizeChanged}
           defaultColDef={{
             minWidth: 100,
           }}

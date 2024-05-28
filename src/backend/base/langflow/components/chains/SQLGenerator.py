@@ -5,8 +5,8 @@ from langchain_community.utilities.sql_database import SQLDatabase
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import Runnable
 
+from langflow.custom import CustomComponent
 from langflow.field_typing import BaseLanguageModel, Text
-from langflow.interface.custom.custom_component import CustomComponent
 
 
 class SQLGeneratorComponent(CustomComponent):

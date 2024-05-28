@@ -13,7 +13,7 @@ class StorageServiceFactory(ServiceFactory):
         )
 
     def create(self, session_service: SessionService, settings_service: SettingsService):
-        storage_type = settings_service.settings.STORAGE_TYPE
+        storage_type = settings_service.settings.storage_type
         if storage_type.lower() == "local":
             from .local import LocalStorageService
 
