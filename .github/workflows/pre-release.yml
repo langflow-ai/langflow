@@ -71,7 +71,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist${{ inputs.release_type }}
-          path: dist
+          path: ${{ inputs.release_type == 'base' && 'src/backend/base/dist' || 'dist' }}
 
   call_docker_build:
     name: Call Docker Build Workflow
