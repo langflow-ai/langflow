@@ -15,14 +15,15 @@ on:
           - main
 jobs:
   create_release:
-    name: Create Release
+    name: Create Release Job
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
+        name: Download Artifact
         with:
           name: dist${{ inputs.release_type }}
           path: dist
-      - name: Create Release
+      - name: Create Release Notes
         uses: ncipollo/release-action@v1
         with:
           artifacts: "dist/*"
