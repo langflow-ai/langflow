@@ -6,13 +6,14 @@ export type FolderType = {
   id?: string | null;
   parent_id: string;
   flows: FlowType[];
+  components: string[];
 };
 
 export type AddFolderType = {
   name: string;
   description: string;
   id?: string | null;
-  parent_id: string;
+  parent_id: string | null;
   flows?: string[];
   components?: string[];
 };

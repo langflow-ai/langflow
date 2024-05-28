@@ -4,7 +4,7 @@ from langchain.agents import create_vectorstore_router_agent
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreRouterToolkit
 from langchain_core.language_models.base import BaseLanguageModel
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class VectorStoreRouterAgentComponent(CustomComponent):

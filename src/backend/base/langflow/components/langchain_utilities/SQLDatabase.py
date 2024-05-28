@@ -1,6 +1,6 @@
 from langchain_experimental.sql.base import SQLDatabase
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class SQLDatabaseComponent(CustomComponent):

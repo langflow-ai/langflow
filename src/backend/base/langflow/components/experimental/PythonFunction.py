@@ -1,8 +1,8 @@
 from typing import Callable
 
+from langflow.custom import CustomComponent
+from langflow.custom.utils import get_function
 from langflow.field_typing import Code
-from langflow.interface.custom.custom_component import CustomComponent
-from langflow.interface.custom.utils import get_function
 
 
 class PythonFunctionComponent(CustomComponent):

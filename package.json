@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "@radix-ui/react-popover": "^1.0.7",
-    "cmdk": "^0.2.0"
-  }
-}

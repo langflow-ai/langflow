@@ -43,7 +43,7 @@ test("GlobalVariables", async ({ page }) => {
   const genericName = Math.random().toString();
   const credentialName = Math.random().toString();
 
-  await page.getByTestId("icon-Globe").nth(1).click();
+  await page.getByTestId("icon-Globe").nth(0).click();
   await page.getByText("Add New Variable", { exact: true }).click();
   await page
     .getByPlaceholder("Insert a name for the variable...")
@@ -69,6 +69,9 @@ test("GlobalVariables", async ({ page }) => {
   await page.getByText("Save Variable", { exact: true }).click();
   expect(page.getByText(credentialName, { exact: true })).not.toBeNull();
   await page.getByText(credentialName, { exact: true }).isVisible();
+  await page.getByText("Save Variable", { exact: true }).click();
+  await page.waitForTimeout(2000);
+
   await page
     .getByText(credentialName, { exact: true })
     .hover()

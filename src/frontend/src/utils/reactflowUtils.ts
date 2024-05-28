@@ -350,7 +350,12 @@ export function updateEdges(edges: Edge[]) {
 }
 
 export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
-  const existingNames = flows.map((item) => item.name);
+  console.log("flow", flow);
+  console.log("flows", flows);
+  const existingNames = flows
+    .filter((f) => f.folder_id === flow.folder_id)
+    .map((item) => item.name);
+  console.log("existingNames", existingNames);
   let newName = flow.name;
   let count = 1;
 
@@ -1297,6 +1302,7 @@ export function getRandomDescription(): string {
 export const createNewFlow = (
   flowData: ReactFlowJsonObject,
   flow: FlowType,
+  folderId: string,
 ) => {
   return {
     description: flow?.description ?? getRandomDescription(),
@@ -1304,7 +1310,7 @@ export const createNewFlow = (
     data: flowData,
     id: "",
     is_component: flow?.is_component ?? false,
-    folder_id: "",
+    folder_id: folderId,
   };
 };
 
