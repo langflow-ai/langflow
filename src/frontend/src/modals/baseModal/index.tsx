@@ -171,7 +171,8 @@ function BaseModal({
 
     case "large-h-full":
       minWidth = "min-w-[80vw]";
-      height = "h-full";
+      height = "h-full max-h-[70vh]";
+
       break;
     default:
       minWidth = "min-w-[80vw]";

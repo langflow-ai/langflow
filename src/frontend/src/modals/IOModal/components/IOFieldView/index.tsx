@@ -5,17 +5,10 @@ import CsvOutputComponent from "../../../../components/csvOutputComponent";
 import InputListComponent from "../../../../components/inputListComponent";
 import PdfViewer from "../../../../components/pdfViewer";
 import RecordsOutputComponent from "../../../../components/recordsOutputComponent";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../../../components/ui/select";
 import { Textarea } from "../../../../components/ui/textarea";
 import { PDFViewConstant } from "../../../../constants/constants";
 import { InputOutput } from "../../../../constants/enums";
+import TextOutputView from "../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../stores/flowStore";
 import { IOFieldViewProps } from "../../../../types/components";
 import {
@@ -24,6 +17,7 @@ import {
 } from "../../../../utils/reactflowUtils";
 import IOFileInput from "./components/FileInput";
 import IoJsonInput from "./components/JSONInput";
+import CsvSelect from "./components/csvSelect";
 import IOKeyPairInput from "./components/keyPairInput";
 
 export default function IOFieldView({
@@ -164,19 +158,7 @@ export default function IOFieldView({
         switch (fieldType) {
           case "TextOutput":
             return (
-              <Textarea
-                className={`w-full custom-scroll ${
-                  left ? " min-h-32" : " h-full"
-                }`}
-                placeholder={"Empty"}
-                // update to real value on flowPool
-                value={
-                  (flowPool[node.id] ?? [])[
-                    (flowPool[node.id]?.length ?? 1) - 1
-                  ]?.data.results.result ?? ""
-                }
-                readOnly
-              />
+              <TextOutputView left={left} node={node} flowPool={flowPool} />
             );
           case "PDFOutput":
             return left ? (
@@ -187,31 +169,10 @@ export default function IOFieldView({
           case "CSVOutput":
             return left ? (
               <>
-                <div className="flex justify-between">
-                  Expand the ouptut to see the CSV
-                </div>
-                <div className="flex items-center justify-between pt-5">
-                  <span>CSV separator </span>
-                  <Select
-                    value={node.data.node.template.separator.value}
-                    onValueChange={(e) => handleChangeSelect(e)}
-                  >
-                    <SelectTrigger className="w-[70px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {node?.data?.node?.template?.separator?.options.map(
-                          (separator) => (
-                            <SelectItem key={separator} value={separator}>
-                              {separator}
-                            </SelectItem>
-                          ),
-                        )}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <CsvSelect
+                  node={node}
+                  handleChangeSelect={handleChangeSelect}
+                />
               </>
             ) : (
               <>
