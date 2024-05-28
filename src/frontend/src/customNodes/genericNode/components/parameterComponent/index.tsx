@@ -238,6 +238,12 @@ export default function ParameterComponent({
             (left ? "" : " justify-end")
           }
         >
+          <Case condition={!left && data.node?.frozen}>
+            <div className="pr-1">
+              <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
+            </div>
+          </Case>
+
           {proxy ? (
             <ShadTooltip content={<span>{proxy.id}</span>}>
               <span className={!left && data.node?.frozen ? " text-ice" : ""}>
