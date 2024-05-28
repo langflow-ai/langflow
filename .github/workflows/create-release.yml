@@ -22,7 +22,7 @@ jobs:
         name: Download Artifact
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: Langflow Pre-release (Unified)
+          workflow: pre-release.yml
           name: dist${{ inputs.release_type }}
           path: dist
       - name: Create Release Notes
