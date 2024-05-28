@@ -116,7 +116,7 @@
   /* Frozen state border */
   .border-ring-frozen {
     position: relative;
-    @apply rounded-md shadow-frozen-ring;
+    @apply rounded-md  border shadow-frozen-ring;
   }
   .border-ring-frozen::before {
     content: "";
@@ -131,7 +131,7 @@
     @apply border-2 border-frozen-blue;
   }
   .border-frozen {
-    @apply shadow-frozen-ring;
+    @apply border shadow-frozen-ring;
   }
   .frosted {
     @apply rounded-md bg-frozen-blue backdrop-blur-xs;
