@@ -142,8 +142,8 @@ module.exports = {
         sans: ["var(--font-sans)", ...fontFamily.sans],
       },
       boxShadow: {
-        "frozen-ring": "0 0 10px 2px rgba(128, 190, 230, 0.3)",
-        "frosted-ring": "0 0 10px 2px rgba(128, 190, 230, 0.3)",
+        "frozen-ring": "0 0 10px 2px rgba(128, 190, 230, 0.5)",
+        "frosted-ring": "0 0 10px 2px rgba(128, 190, 230, 0.7)",
       },
       backdropBlur: {
         xs: "2px",

@@ -114,14 +114,27 @@
     @apply pointer-events-none;
   }
   /* Frozen state border */
-  .border-frozen {
-    @apply border  border-ring shadow-frozen-ring;
-  }
   .border-ring-frozen {
-    @apply border border-frozen-blue shadow-frosted-ring;
+    position: relative;
+    @apply rounded-md shadow-frozen-ring;
+  }
+  .border-ring-frozen::before {
+    content: "";
+    position: absolute;
+    top: -2px; /* Adjust based on desired border width */
+    bottom: -2px;
+    left: -2px;
+    right: -2px;
+    /* use the frozen-blue color from tailwind */
+    border-radius: inherit;
+    pointer-events: none;
+    @apply border-2 border-frozen-blue;
+  }
+  .border-frozen {
+    @apply shadow-frozen-ring;
   }
   .frosted {
-    @apply rounded-md bg-frosted-glass backdrop-blur-xs;
+    @apply rounded-md bg-frozen-blue backdrop-blur-xs;
   }
   .frozen {
     position: relative;
@@ -139,7 +152,7 @@
       255,
       255,
       255,
-      0.4
+      0.5
     ); /* Reduced opacity for better readability */
     border-radius: 10px;
     pointer-events: none;
