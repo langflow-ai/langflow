@@ -90,7 +90,7 @@ async def run_flow(
 
 
 def generate_function_for_flow(
-    inputs: List["Vertex"], flow_id: str, user_id: str | UUID
+    inputs: List["Vertex"], flow_id: str, user_id: str | UUID | None
 ) -> Callable[..., Awaitable[Any]]:
     """
     Generate a dynamic flow function based on the given inputs and flow ID.
