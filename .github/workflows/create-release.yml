@@ -18,9 +18,11 @@ jobs:
     name: Create Release Job
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: dawidd6/action-download-artifact@v3
         name: Download Artifact
         with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: Langflow Pre-release (Unified)
           name: dist${{ inputs.release_type }}
           path: dist
       - name: Create Release Notes
