@@ -9,13 +9,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    build-essential \
-    libssl-dev \
-    pkg-config \
-    git \
-    cargo
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl build-essential
 
 # Install Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 - \
@@ -25,13 +20,7 @@ RUN curl -sSL https://install.python-poetry.org | python3 - \
 COPY base/pyproject.toml base/poetry.lock* /app/
 
 # Install dependencies with Poetry
-RUN poetry install --no-interaction --no-ansi
-
-# Clone and build watchexec from source
-RUN git clone https://github.com/watchexec/watchexec.git \
-    && cd watchexec \
-    && cargo build --release \
-    && cp target/release/watchexec /usr/local/bin/
+RUN poetry add watchdog[watchmedo] && poetry install --no-interaction --no-ansi
 
 # Copy the application files
 COPY ./base /app
@@ -51,5 +40,13 @@ COPY --from=builder /app /app
 
 ENV PYTHONPATH="/root/.local/lib/python3.10/site-packages:$PYTHONPATH"
 
-# Command to run the application
-CMD ["uvicorn", "src.main:create_app", "--host", "0.0.0.0", "--port", "7881", "--reload", "--log-level", "debug", "--loop", "asyncio"]
+COPY ./script.py /tmp
+COPY ./restart_script.sh /tmp
+COPY ./start.sh /app
+
+RUN apt-get update && apt-get install -y procps && rm -rf /var/lib/apt/lists/*
+# Create a script to run both Uvicorn and Streamlit
+RUN chmod +x /tmp/restart_script.sh /app/start.sh
+
+# Command to run the applications
+CMD ["/app/start.sh"]

@@ -19,7 +19,6 @@ def create_app():
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    # app.add_middleware(JavaScriptMIMETypeMiddleware)
 
     @app.get("/health")
     def health():
@@ -27,16 +26,10 @@ def create_app():
 
     @app.on_event("startup")
     async def on_startup():
-        print("on_startup", flush=True)
         with open(default.DEFAULT_MESSAGE_FILE, "w") as f:
             f.write("[]")
         with open(default.DEFAULT_SCRIPT_FILE, "w") as f:
             f.write("import streamlit as st")
-        
-        # Monta o comando para executar o arquivo no Streamlit
-        command = ["streamlit", "run", default.DEFAULT_SCRIPT_FILE, "--browser.serverPort", "5001", "--server.port", "5001"]
-        from subprocess import Popen
-        Popen(command)
 
     app.include_router(router)
 
