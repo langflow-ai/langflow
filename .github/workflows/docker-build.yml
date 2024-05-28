@@ -35,20 +35,19 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set Dockerfile and Tags
+        id: set-vars
+        run: |
+          if [ "${{ inputs.release_type }}" == "base" ]; then
+            echo "DOCKERFILE=./docker/build_and_push_base.Dockerfile" >> $GITHUB_ENV
+            echo "TAGS=langflowai/langflow:base-${{ inputs.version }}" >> $GITHUB_ENV
+          else
+            echo "DOCKERFILE=./docker/build_and_push.Dockerfile" >> $GITHUB_ENV
+            echo "TAGS=langflowai/langflow:${{ inputs.version }},langflowai/langflow:1.0-alpha" >> $GITHUB_ENV
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          file: |
-            if [ "${{ inputs.release_type }}" == "base" ]; then
-              ./docker/build_and_push_base.Dockerfile
-            else
-              ./docker/build_and_push.Dockerfile
-            fi
-          tags: |
-            if [ "${{ inputs.release_type }}" == "base" ]; then
-              langflowai/langflow:base-${{ inputs.version }}
-            else
-              langflowai/langflow:${{ inputs.version }}
-              langflowai/langflow:1.0-alpha
+          file: ${{ env.DOCKERFILE }}
+          tags: ${{ env.TAGS }}
