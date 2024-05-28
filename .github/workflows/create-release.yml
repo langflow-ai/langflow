@@ -6,6 +6,13 @@ on:
         description: "Version to release"
         required: true
         type: string
+      release_type:
+        description: "Type of release (base or main)"
+        required: true
+        type: choice
+        options:
+          - base
+          - main
 jobs:
   create_release:
     name: Create Release
@@ -13,7 +20,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: dist
+          name: dist${{ inputs.release_type }}
           path: dist
       - name: Create Release
         uses: ncipollo/release-action@v1
