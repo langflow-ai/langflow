@@ -9,9 +9,7 @@
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings:
-      "rlig" 1,
-      "calt" 1;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
@@ -114,6 +112,44 @@
   }
   .button-disable {
     @apply pointer-events-none;
+  }
+  /* Frozen state border */
+  .border-frozen {
+    @apply border  border-ring shadow-frozen-ring;
+  }
+  .border-ring-frozen {
+    @apply border border-frozen-blue shadow-frosted-ring;
+  }
+  .frosted {
+    @apply rounded-md bg-frosted-glass backdrop-blur-xs;
+  }
+  .frozen {
+    position: relative;
+    overflow: hidden;
+  }
+  .frozen::before,
+  .frozen::after {
+    content: "";
+    position: absolute;
+    top: -10px;
+    bottom: -10px;
+    left: -10px;
+    right: -10px;
+    background: rgba(
+      255,
+      255,
+      255,
+      0.4
+    ); /* Reduced opacity for better readability */
+    border-radius: 10px;
+    pointer-events: none;
+  }
+  .frozen::before {
+    filter: blur(5px); /* Less blur for better readability */
+  }
+  .frozen::after {
+    filter: blur(10px); /* Less blur for better readability */
+    opacity: 0.2; /* Reduced opacity */
   }
   .extra-side-bar-buttons {
     @apply relative inline-flex w-full items-center justify-center rounded-md bg-background px-2 py-2 text-foreground transition-all duration-500 ease-in-out;
