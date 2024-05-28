@@ -72,15 +72,18 @@ COPY Makefile ./
 COPY README.md ./
 RUN --mount=type=cache,target=/root/.cache \
     curl -sSL https://install.python-poetry.org | python3 -
+RUN useradd -m -u 1000 user && \
+    mkdir -p /app/langflow && \
+    chown -R user:user /app && \
+    chmod -R u+w /app/langflow
+
+# Update PATH with home/user/.local/bin
+ENV PATH="/home/user/.local/bin:${PATH}"
 RUN python -m pip install requests && cd ./scripts && python update_dependencies.py
 RUN $POETRY_HOME/bin/poetry lock
 RUN $POETRY_HOME/bin/poetry build
 
 # Copy virtual environment and built .tar.gz from builder base
-RUN useradd -m -u 1000 user && \
-    mkdir -p /app/langflow && \
-    chown -R user:user /app \
-    chmod -R u+w /app/langflow
 USER user
 # Install the package from the .tar.gz
 RUN python -m pip install /app/dist/*.tar.gz --user
