@@ -70,14 +70,12 @@ jobs:
 
   call_docker_build:
     name: Call Docker Build Workflow
-    runs-on: ubuntu-latest
     needs: release
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/workflows/docker-build.yml
-        with:
-          version: ${{ needs.release.outputs.version }}
-          release_type: ${{ inputs.release_type }}
+    uses: langflow-ai/langflow/.github/workflows/docker-build.yml@dev
+    with:
+      version: ${{ needs.release.outputs.version }}
+      release_type: ${{ inputs.release_type }}
+    secrets: inherit
 
   create_release:
     name: Create Release
