@@ -147,6 +147,7 @@ export default function SecretKeyModal({
           {renderKey === false && (
             <div className="float-right">
               <Button
+                type="button"
                 className="mr-3"
                 variant="outline"
                 onClick={() => {

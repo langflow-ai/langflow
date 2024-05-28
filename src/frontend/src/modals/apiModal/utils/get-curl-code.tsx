@@ -21,6 +21,6 @@ export default function getCurlCode(
     -d '{"input_value": "message",
     "output_type": "chat",
     "input_type": "chat",
-    "tweaks": ${JSON.stringify(tweaksObject, null, 2)}'
+    "tweaks": ${JSON.stringify(tweaksObject, null, 2)}}'
     `;
 }
