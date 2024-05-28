@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, AsyncGenerator
 
 import orjson
 import pytest
+from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from langflow.graph.graph.base import Graph
@@ -25,6 +26,9 @@ from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
+
+
+load_dotenv()
 
 
 def pytest_configure(config):
