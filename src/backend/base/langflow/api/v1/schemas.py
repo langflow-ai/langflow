@@ -248,6 +248,7 @@ class ResultDataResponse(BaseModel):
     artifacts: Optional[Any] = Field(default_factory=dict)
     timedelta: Optional[float] = None
     duration: Optional[str] = None
+    used_frozen_result: Optional[bool] = False
 
 
 class VertexBuildResponse(BaseModel):
