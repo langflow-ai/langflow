@@ -67,6 +67,11 @@ jobs:
           else
             make publish main=true
           fi
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist${{ inputs.release_type }}
+          path: dist
 
   call_docker_build:
     name: Call Docker Build Workflow
