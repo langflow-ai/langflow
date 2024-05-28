@@ -59,6 +59,7 @@ jobs:
   create_release:
     name: Create Release Job
     runs-on: ubuntu-latest
+    needs: release
     steps:
       - uses: actions/download-artifact@v4
         with:
