@@ -163,7 +163,7 @@ async def flow_function({func_args}):
 
 
 def build_function_and_schema(
-    flow_record: Record, graph: "Graph", user_id: str | UUID
+    flow_record: Record, graph: "Graph", user_id: str | UUID | None
 ) -> Tuple[Callable[..., Awaitable[Any]], Type[BaseModel]]:
     """
     Builds a dynamic function and schema for a given flow.

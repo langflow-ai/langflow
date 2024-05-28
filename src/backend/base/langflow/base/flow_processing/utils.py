@@ -19,7 +19,8 @@ def build_records_from_run_outputs(run_outputs: RunOutputs) -> List[Record]:
         return []
     records = []
     for result_data in run_outputs.outputs:
-        records.extend(build_records_from_result_data(result_data))
+        if result_data:
+            records.extend(build_records_from_result_data(result_data))
     return records
 
 
