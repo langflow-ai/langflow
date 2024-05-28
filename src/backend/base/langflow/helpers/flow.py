@@ -1,10 +1,11 @@
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Tuple, Type, Union, cast
 
+from pydantic.v1 import BaseModel, Field, create_model
+from sqlmodel import select
+
 from langflow.schema.schema import INPUT_FIELD_NAME, Record
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import session_scope
-from pydantic.v1 import BaseModel, Field, create_model
-from sqlmodel import select
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
@@ -74,13 +75,15 @@ async def run_flow(
 
     if inputs is None:
         inputs = []
+    if isinstance(inputs, dict):
+        inputs = [inputs]
     inputs_list = []
     inputs_components = []
     types = []
     for input_dict in inputs:
         inputs_list.append({INPUT_FIELD_NAME: cast(str, input_dict.get("input_value"))})
         inputs_components.append(input_dict.get("components", []))
-        types.append(input_dict.get("type", []))
+        types.append(input_dict.get("type", "chat"))
 
     return await graph.arun(inputs_list, inputs_components=inputs_components, types=types)
 
@@ -199,4 +202,5 @@ def build_schema_from_inputs(name: str, inputs: List["Vertex"]) -> Type[BaseMode
         field_name = input_.display_name.lower().replace(" ", "_")
         description = input_.description
         fields[field_name] = (str, Field(default="", description=description))
+    return create_model(name, **fields)  # type: ignore
     return create_model(name, **fields)  # type: ignore
