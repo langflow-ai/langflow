@@ -79,6 +79,8 @@ export function cleanEdges(nodes: Node[], edges: Edge[]) {
         id: sourceNode.data.id,
         baseClasses: sourceNode.data.node!.base_classes,
         dataType: sourceNode.data.type,
+        idx:
+          sourceNode.data.node!.outputs[scapeJSONParse(sourceHandle).idx] ?? 0,
       };
       if (scapedJSONStringfy(id) !== sourceHandle) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -397,6 +399,7 @@ export function updateEdgesHandleIds({
         id: sourceNode.data.id,
         baseClasses: sourceNode.data.node!.base_classes,
         dataType: sourceNode.data.type,
+        idx: 0,
       };
     }
     edge.sourceHandle = scapedJSONStringfy(newSource!);

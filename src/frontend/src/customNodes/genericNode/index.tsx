@@ -589,6 +589,7 @@ export default function GenericNode({
                       baseClasses: data.node!.base_classes,
                       id: data.id,
                       dataType: data.type,
+                      idx: 0,
                     }}
                     type={data.node?.base_classes.join("|")}
                     left={false}
@@ -848,6 +849,7 @@ export default function GenericNode({
                       baseClasses: [output.selected ?? output.types[0]],
                       id: data.id,
                       dataType: data.type,
+                      idx: idx,
                     }}
                     type={output.types.join("|")}
                     left={false}

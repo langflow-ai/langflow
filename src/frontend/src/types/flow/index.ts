@@ -58,6 +58,7 @@ export type sourceHandleType = {
   dataType: string;
   id: string;
   baseClasses: string[];
+  idx: number;
 };
 //left side
 export type targetHandleType = {
