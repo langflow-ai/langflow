@@ -13,6 +13,9 @@ on:
         options:
           - base
           - main
+
+env:
+  POETRY_VERSION: "1.8.2"
 jobs:
   release:
     name: Build Langflow
