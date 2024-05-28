@@ -2,13 +2,14 @@ from typing import Any, List, Optional
 
 from asyncer import syncify
 from langchain_core.tools import StructuredTool
+from loguru import logger
+
 from langflow.custom import CustomComponent
 from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.helpers.flow import build_function_and_schema
 from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import Record
-from loguru import logger
 
 
 class FlowToolComponent(CustomComponent):
@@ -72,7 +73,7 @@ class FlowToolComponent(CustomComponent):
         if not flow_record:
             raise ValueError("Flow not found.")
         graph = Graph.from_payload(flow_record.data["data"])
-        dynamic_flow_function, schema = build_function_and_schema(flow_record, graph)
+        dynamic_flow_function, schema = build_function_and_schema(flow_record, graph, user_id=self._user_id)
         tool = StructuredTool.from_function(
             func=syncify(dynamic_flow_function, raise_sync_error=False),  # type: ignore
             coroutine=dynamic_flow_function,
@@ -84,4 +85,5 @@ class FlowToolComponent(CustomComponent):
         description_repr = repr(tool.description).strip("'")
         args_str = "\n".join([f"- {arg_name}: {arg_data['description']}" for arg_name, arg_data in tool.args.items()])
         self.status = f"{description_repr}\nArguments:\n{args_str}"
+        return tool  # type: ignore
         return tool  # type: ignore
