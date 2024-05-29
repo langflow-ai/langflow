@@ -68,7 +68,6 @@ export default function GenericNode({
   const [nodeDescription, setNodeDescription] = useState(
     data.node?.description!,
   );
-  const [openOutputModal, setOpenOutputModal] = useState(false);
   const [isOutdated, setIsOutdated] = useState(false);
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
@@ -449,13 +448,6 @@ export default function GenericNode({
             </div>
             {showNode && (
               <>
-                <Button
-                  onClick={() => {
-                    setOpenOutputModal(true);
-                  }}
-                >
-                  STATUS##
-                </Button>
                 <ShadTooltip
                   content={
                     buildStatus === BuildStatus.BUILDING ? (
@@ -706,14 +698,6 @@ export default function GenericNode({
           </div>
         )}
       </div>
-
-      {openOutputModal && (
-        <OutputModal
-          open={openOutputModal}
-          nodeId={data.id}
-          setOpen={setOpenOutputModal}
-        />
-      )}
     </>
   );
 }
