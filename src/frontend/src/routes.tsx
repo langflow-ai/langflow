@@ -20,6 +20,7 @@ import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import SignUp from "./pages/SignUpPage";
 import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
+import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 
 const Router = () => {
   return (
@@ -58,6 +59,7 @@ const Router = () => {
         <Route path="global-variables" element={<GlobalVariablesPage />} />
         <Route path="general" element={<GeneralPage />} />
         <Route path="shortcuts" element={<ShortcutsPage />} />
+        <Route path="Messages" element={<MessagesPage />} />
       </Route>
       <Route
         path="/store"

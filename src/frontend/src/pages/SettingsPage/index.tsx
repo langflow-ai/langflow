@@ -43,6 +43,13 @@ export default function SettingsPage(): JSX.Element {
         <ForwardedIconComponent name="Keyboard" className="w-5 stroke-[1.5]" />
       ),
     },
+    {
+      title: "Messages",
+      href: "/settings/messages",
+      icon: (
+        <ForwardedIconComponent name="Keyboard" className="w-5 stroke-[1.5]" />
+      ),
+    },
   ];
   return (
     <PageLayout
