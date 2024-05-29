@@ -4323,7 +4323,7 @@ types-requests = ">=2.31.0.2,<3.0.0.0"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.52"
+version = "0.0.53"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
@@ -4419,13 +4419,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "litellm"
-version = "1.38.12"
+version = "1.39.2"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.38.12-py3-none-any.whl", hash = "sha256:bd473eb9fe17bc312e1e8c1335fde87c67022f9af9e9571947f359e1e908a925"},
-    {file = "litellm-1.38.12.tar.gz", hash = "sha256:815fadee177413a98061210bf9cfece4eae1e9bfb2aadc3f2f8f9d620b1ffb6b"},
+    {file = "litellm-1.39.2-py3-none-any.whl", hash = "sha256:843cb9a4d45c89ba6da95529815ec83ee7e4b7fe07aa0ed633102f600fddd9ad"},
+    {file = "litellm-1.39.2.tar.gz", hash = "sha256:96c4f3d522ccf32817357b1e9f5f63fa36a4a884f336314e1f6d66c0576d689e"},
 ]
 
 [package.dependencies]
@@ -7554,13 +7554,13 @@ langchain = ["langchain (>=0.0.321)"]
 
 [[package]]
 name = "realtime"
-version = "1.0.4"
+version = "1.0.5"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "realtime-1.0.4-py3-none-any.whl", hash = "sha256:b06bea001985f089167320bda1e91c6b2d866f56ca810bb8d768ee3cf695ee21"},
-    {file = "realtime-1.0.4.tar.gz", hash = "sha256:a9095f60121a365e84656c582e6ccd8dc8b3a732ddddb2ccd26cc3d32b77bdf6"},
+    {file = "realtime-1.0.5-py3-none-any.whl", hash = "sha256:93342fbcb8812ed8d81733f2782c1199376f0471e78014675420c7d31f2f327d"},
+    {file = "realtime-1.0.5.tar.gz", hash = "sha256:4abbb3218b6ce8bd8d9d3b1112661d325e36ceab67a0e918673d0fd8fca04fb1"},
 ]
 
 [package.dependencies]
