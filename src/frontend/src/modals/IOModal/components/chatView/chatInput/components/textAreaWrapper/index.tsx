@@ -18,7 +18,35 @@ const TextAreaWrapper = ({
   inputRef,
   setInputFocus,
   files,
+  isDragging,
 }) => {
+  const getPlaceholderText = (
+    isDragging: boolean,
+    noInput: boolean,
+  ): string => {
+    if (isDragging) {
+      return "Drop here";
+    } else if (noInput) {
+      return CHAT_INPUT_PLACEHOLDER;
+    } else {
+      return CHAT_INPUT_PLACEHOLDER_SEND;
+    }
+  };
+
+  const lockClass =
+    lockChat || saveLoading
+      ? "form-modal-lock-true bg-input"
+      : noInput
+        ? "form-modal-no-input bg-input"
+        : "form-modal-lock-false bg-background";
+
+  const fileClass =
+    files.length > 0
+      ? "rounded-b-md border-t-0 border-border focus:border-t-0 focus:border-ring"
+      : "rounded-md border-t-2 border-border focus:border-ring";
+
+  const additionalClassNames = "form-modal-lockchat pl-10";
+
   return (
     <Textarea
       onFocus={(e) => {
@@ -52,24 +80,8 @@ const TextAreaWrapper = ({
       onChange={(event): void => {
         setChatValue(event.target.value);
       }}
-      className={classNames(
-        lockChat || saveLoading
-          ? " form-modal-lock-true bg-input"
-          : noInput
-            ? "form-modal-no-input bg-input"
-            : " form-modal-lock-false bg-background",
-
-        "form-modal-lockchat",
-        `${
-          files.length > 0
-            ? "rounded-b-md border-t-0 border-border focus:border-t-0 focus:border-ring"
-            : "rounded-md border-t-2 border-border focus:border-ring"
-        }`,
-        "pl-10",
-      )}
-      placeholder={
-        noInput ? CHAT_INPUT_PLACEHOLDER : CHAT_INPUT_PLACEHOLDER_SEND
-      }
+      className={classNames(lockClass, fileClass, additionalClassNames)}
+      placeholder={getPlaceholderText(isDragging, noInput)}
     />
   );
 };
