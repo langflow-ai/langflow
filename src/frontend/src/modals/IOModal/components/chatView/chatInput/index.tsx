@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   CHAT_INPUT_PLACEHOLDER,
   CHAT_INPUT_PLACEHOLDER_SEND,
@@ -12,10 +12,12 @@ import {
 import FilePreview from "../filePreviewChat";
 import ButtonSendWrapper from "./components/buttonSendWrapper";
 import TextAreaWrapper from "./components/textAreaWrapper";
+import UploadFileButton from "./components/uploadFileButton";
 import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useDragAndDrop from "./hooks/use-drag-and-drop";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
+import useHandleFileChange from "./hooks/use-handle-file-change";
 import useUpload from "./hooks/use-upload";
 export default function ChatInput({
   lockChat,
@@ -31,15 +33,17 @@ export default function ChatInput({
   const [files, setFiles] = useState<FilePreviewType[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [inputFocus, setInputFocus] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useFocusOnUnlock(lockChat, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
   useUpload(uploadFile, currentFlowId, setFiles);
+  const { handleFileChange } = useHandleFileChange(setFiles, currentFlowId);
 
   const { dragOver, dragEnter, dragLeave, onDrop } = useDragAndDrop(
     setIsDragging,
     setFiles,
-    currentFlowId
+    currentFlowId,
   );
 
   const send = () => {
@@ -62,6 +66,10 @@ export default function ChatInput({
 
   const classNameFilePreview = getClassNamesFilePreview(inputFocus);
 
+  const handleButtonClick = () => {
+    fileInputRef.current!.click();
+  };
+
   return (
     <div className="flex w-full flex-col-reverse">
       <div className="relative w-full">
@@ -82,6 +90,7 @@ export default function ChatInput({
           inputRef={inputRef}
           setInputFocus={setInputFocus}
           files={files}
+          isDragging={isDragging}
         />
 
         <div className="form-modal-send-icon-position">
@@ -93,6 +102,12 @@ export default function ChatInput({
             chatValue={chatValue}
           />
         </div>
+
+        <UploadFileButton
+          fileInputRef={fileInputRef}
+          handleFileChange={handleFileChange}
+          handleButtonClick={handleButtonClick}
+        />
       </div>
       {files.length > 0 && (
         <div className={classNameFilePreview}>
