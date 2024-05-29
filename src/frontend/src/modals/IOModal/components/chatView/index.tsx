@@ -9,11 +9,7 @@ import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { VertexBuildTypeAPI, sendAllProps } from "../../../../types/api";
-import {
-  ChatMessageType,
-  ChatOutputType,
-  FlowPoolObjectType,
-} from "../../../../types/chat";
+import { ChatMessageType, ChatOutputType } from "../../../../types/chat";
 import { chatViewProps } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
 import ChatInput from "./chatInput";
@@ -64,11 +60,13 @@ export default function ChatView({
     const chatMessages: ChatMessageType[] = chatOutputResponses
       .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
       //
-      .filter((output) => output.data.messages && output.data.messages.length > 0)
+      .filter(
+        (output) => output.data.messages && output.data.messages.length > 0,
+      )
       .map((output, index) => {
         try {
-          const { sender, message, sender_name, stream_url,files } = output.data
-            .messages[0] as ChatOutputType;
+          const { sender, message, sender_name, stream_url, files } = output
+            .data.messages[0] as ChatOutputType;
 
           const is_ai = sender === "Machine" || sender === null;
           return {
@@ -77,8 +75,7 @@ export default function ChatView({
             sender_name,
             componentId: output.id,
             stream_url: stream_url,
-            files
-            
+            files,
           };
         } catch (e) {
           console.error(e);
@@ -123,7 +120,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) {
     // if (message === "") return;
     chat.message = message;
@@ -158,7 +155,7 @@ export default function ChatView({
                 "h-5 w-5",
                 lockChat
                   ? "animate-pulse text-primary"
-                  : "text-primary hover:text-gray-600"
+                  : "text-primary hover:text-gray-600",
               )}
               aria-hidden="true"
             />
