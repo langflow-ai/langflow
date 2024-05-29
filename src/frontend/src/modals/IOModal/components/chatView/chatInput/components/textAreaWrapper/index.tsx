@@ -16,9 +16,16 @@ const TextAreaWrapper = ({
   CHAT_INPUT_PLACEHOLDER,
   CHAT_INPUT_PLACEHOLDER_SEND,
   inputRef,
+  setInputFocus,
+  files,
 }) => {
   return (
     <Textarea
+      onFocus={(e) => {
+        setInputFocus(true);
+        e.target.style.borderTopWidth = "0";
+      }}
+      onBlur={() => setInputFocus(false)}
       onDragOver={dragOver}
       onDragEnter={dragEnter}
       onDragLeave={dragLeave}
@@ -53,6 +60,12 @@ const TextAreaWrapper = ({
             : " form-modal-lock-false bg-background",
 
         "form-modal-lockchat",
+        `${
+          files.length > 0
+            ? "rounded-b-md border-t-0 border-border focus:border-t-0 focus:border-ring"
+            : "rounded-md border-t-2 border-border focus:border-ring"
+        }`,
+        "pl-10",
       )}
       placeholder={
         noInput ? CHAT_INPUT_PLACEHOLDER : CHAT_INPUT_PLACEHOLDER_SEND
