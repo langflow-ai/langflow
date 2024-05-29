@@ -246,7 +246,7 @@ class VerticesOrderResponse(BaseModel):
 
 
 class Log(TypedDict):
-    message: str
+    message: Union[dict, str]
     type: str
 
 
