@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 import orjson
@@ -57,31 +57,49 @@ def read_flows(
     current_user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session),
     settings_service: "SettingsService" = Depends(get_settings_service),
+    remove_example_flows: Optional[bool] = False,
+    is_component: Optional[bool] = None,
 ):
-    """Read all flows."""
+    """
+    Retrieve a list of flows.
+
+    Args:
+        current_user (User): The current authenticated user.
+        session (Session): The database session.
+        settings_service (SettingsService): The settings service.
+        remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.
+        is_component (bool, optional): Whether to filter by component. Defaults to None.
+
+
+    Returns:
+        List[Dict]: A list of flows in JSON format.
+    """
+
     try:
         auth_settings = settings_service.auth_settings
         if auth_settings.AUTO_LOGIN:
-            flows = session.exec(
-                select(Flow).where(
-                    (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa
-                )
-            ).all()
+            stmt = select(Flow).where(
+                (Flow.user_id == current_user.id) | (Flow.user_id == None)  # noqa
+            )
+            if is_component is not None:
+                stmt = stmt.where(Flow.is_component == is_component)
+            flows = session.exec(stmt).all()
         else:
             flows = current_user.flows
 
         flows = validate_is_component(flows)  # type: ignore
         flow_ids = [flow.id for flow in flows]
         # with the session get the flows that DO NOT have a user_id
-        try:
-            folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+        if not remove_example_flows:
+            try:
+                folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
 
-            example_flows = folder.flows if folder else []
-            for example_flow in example_flows:
-                if example_flow.id not in flow_ids:
-                    flows.append(example_flow)  # type: ignore
-        except Exception as e:
-            logger.error(e)
+                example_flows = folder.flows if folder else []
+                for example_flow in example_flows:
+                    if example_flow.id not in flow_ids:
+                        flows.append(example_flow)  # type: ignore
+            except Exception as e:
+                logger.error(e)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     return [jsonable_encoder(flow) for flow in flows]
