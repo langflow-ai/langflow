@@ -27,6 +27,7 @@ export default function ChatInput({
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const uid = new ShortUniqueId({ length: 3 });
   const [files, setFiles] = useState<FilePreviewType[]>([]);
+  const [inputFocus, setInputFocus] = useState<boolean>(false);
 
   useEffect(() => {
     if (!lockChat && inputRef.current) {
@@ -60,7 +61,7 @@ export default function ChatInput({
                   setFiles((prev) => {
                     const newFiles = [...prev];
                     const updatedIndex = newFiles.findIndex(
-                      (file) => file.id === id
+                      (file) => file.id === id,
                     );
                     newFiles[updatedIndex].loading = false;
                     newFiles[updatedIndex].path = res.data.file_path;
@@ -71,7 +72,7 @@ export default function ChatInput({
                   setFiles((prev) => {
                     const newFiles = [...prev];
                     const updatedIndex = newFiles.findIndex(
-                      (file) => file.id === id
+                      (file) => file.id === id,
                     );
                     newFiles[updatedIndex].loading = false;
                     newFiles[updatedIndex].error = true;
@@ -101,6 +102,11 @@ export default function ChatInput({
     <div className="flex w-full flex-col-reverse">
       <div className="relative w-full">
         <Textarea
+          onFocus={(e) => {
+            setInputFocus(true);
+            e.target.style.borderTopWidth = "0";
+          }}
+          onBlur={() => setInputFocus(false)}
           onKeyDown={(event) => {
             if (
               event.key === "Enter" &&
@@ -135,24 +141,26 @@ export default function ChatInput({
             lockChat || saveLoading
               ? " form-modal-lock-true bg-input"
               : noInput
-              ? "form-modal-no-input bg-input"
-              : " form-modal-lock-false bg-background",
+                ? "form-modal-no-input bg-input"
+                : " form-modal-lock-false bg-background",
 
-            "form-modal-lockchat"
+            "form-modal-lockchat",
+            `${files.length > 0 ? "rounded-b-md border-t-0 border-border focus:border-t-0 focus:border-ring" : "rounded-md border-t-2 border-border focus:border-ring"}`,
+            "pl-10",
           )}
           placeholder={
             noInput ? CHAT_INPUT_PLACEHOLDER : CHAT_INPUT_PLACEHOLDER_SEND
           }
         />
-        <div className="form-modal-send-icon-position">
+        <div className="form-modal-send-icon-position ">
           <button
             className={classNames(
               "form-modal-send-button",
               noInput
                 ? "bg-high-indigo text-background"
                 : chatValue === ""
-                ? "text-primary"
-                : "bg-chat-send text-background"
+                  ? "text-primary"
+                  : "bg-chat-send text-background",
             )}
             disabled={lockChat || saveLoading}
             onClick={(): void => send()}
@@ -179,20 +187,24 @@ export default function ChatInput({
           </button>
         </div>
       </div>
-      <div className="flex w-full gap-2 pb-2">
-        {files.map((file) => (
-          <FilePreview
-            error={file.error}
-            file={file.file}
-            loading={file.loading}
-            key={file.id}
-            onDelete={() => {
-              setFiles((prev) => prev.filter((f) => f.id !== file.id));
-              // TODO: delete file on backend
-            }}
-          />
-        ))}
-      </div>
+      {files.length > 0 && (
+        <div
+          className={`flex w-full items-center gap-2 rounded-t-md bg-background px-10 py-5 ${inputFocus ? "border-2 border-b-0 border-ring" : "border border-b-0 border-border"}`}
+        >
+          {files.map((file) => (
+            <FilePreview
+              error={file.error}
+              file={file.file}
+              loading={file.loading}
+              key={file.id}
+              onDelete={() => {
+                setFiles((prev) => prev.filter((f) => f.id !== file.id));
+                // TODO: delete file on backend
+              }}
+            />
+          ))}
+        </div>
+      )}
       {/*
       <Popover>
         <PopoverTrigger asChild>
