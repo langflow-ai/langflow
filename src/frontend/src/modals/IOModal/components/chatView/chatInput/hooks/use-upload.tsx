@@ -1,14 +1,15 @@
 import { useEffect } from "react";
-import { uploadFile } from "../../../../../../controllers/API";
+import ShortUniqueId from "short-unique-id";
+import useFileUpload from "./use-file-upload";
 
-const useUpload = (uploadFile, currentFlowId, setFiles, uid) => {
+const useUpload = (uploadFile, currentFlowId, setFiles) => {
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent): void => {
       const items = event.clipboardData?.items;
       if (items) {
         for (let i = 0; i < items.length; i++) {
           const type = items[0].type.split("/")[0];
-
+          const uid = new ShortUniqueId({ length: 3 });
           const blob = items[i].getAsFile();
           if (blob) {
             const id = uid();
@@ -16,8 +17,7 @@ const useUpload = (uploadFile, currentFlowId, setFiles, uid) => {
               ...prevFiles,
               { file: blob, loading: true, error: false, id, type },
             ]);
-
-            uploadFiles(blob, currentFlowId, setFiles, id);
+            useFileUpload(blob, currentFlowId, setFiles, id);
           }
         }
       }
@@ -30,28 +30,6 @@ const useUpload = (uploadFile, currentFlowId, setFiles, uid) => {
   }, [uploadFile, currentFlowId]);
 
   return null;
-};
-
-const uploadFiles = (blob, currentFlowId, setFiles, id) => {
-  uploadFile(blob, currentFlowId)
-    .then((res) => {
-      setFiles((prev) => {
-        const newFiles = [...prev];
-        const updatedIndex = newFiles.findIndex((file) => file.id === id);
-        newFiles[updatedIndex].loading = false;
-        newFiles[updatedIndex].path = res.data.file_path;
-        return newFiles;
-      });
-    })
-    .catch(() => {
-      setFiles((prev) => {
-        const newFiles = [...prev];
-        const updatedIndex = newFiles.findIndex((file) => file.id === id);
-        newFiles[updatedIndex].loading = false;
-        newFiles[updatedIndex].error = true;
-        return newFiles;
-      });
-    });
 };
 
 export default useUpload;
