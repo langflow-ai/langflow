@@ -53,11 +53,13 @@ export default function FlowLogsModal({
         setRows(rows);
       });
     } else if (activeTab === "Messages") {
-      getMessagesTable("union", currentFlowId).then((data) => {
-        const { columns, rows } = data;
-        setColumns(columns.map((col) => ({ ...col, editable: true })));
-        setRows(rows);
-      });
+      getMessagesTable("union", currentFlowId, ["index", "flow_id"]).then(
+        (data) => {
+          const { columns, rows } = data;
+          setColumns(columns.map((col) => ({ ...col, editable: true })));
+          setRows(rows);
+        },
+      );
     }
 
     if (open && activeTab === "Messages" && !noticed.current) {

@@ -1024,6 +1024,7 @@ export async function getTransactionTable(
 export async function getMessagesTable(
   mode: "intersection" | "union",
   id?: string,
+  excludedFields?: string[],
   params = {},
 ): Promise<{ rows: Array<object>; columns: Array<ColDef | ColGroupDef> }> {
   const config = {};
@@ -1034,6 +1035,6 @@ export async function getMessagesTable(
     config["params"] = { ...config["params"], ...params };
   }
   const rows = await api.get(`${BASE_URL_API}monitor/messages`, config);
-  const columns = extractColumnsFromRows(rows.data, mode);
+  const columns = extractColumnsFromRows(rows.data, mode, excludedFields);
   return { rows: rows.data, columns };
 }

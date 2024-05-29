@@ -354,8 +354,9 @@ export function isTimeStampString(str: string): boolean {
 export function extractColumnsFromRows(
   rows: object[],
   mode: "intersection" | "union",
+  excludeColumns?: Array<string>,
 ): (ColDef<any> | ColGroupDef<any>)[] {
-  const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
+  let columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
   if (rows.length === 0) {
     return [];
   }
@@ -393,6 +394,12 @@ export function extractColumnsFromRows(
     intersection();
   } else {
     union();
+  }
+
+  if (excludeColumns) {
+    for (const key of excludeColumns) {
+      delete columnsKeys[key];
+    }
   }
 
   return Object.values(columnsKeys);

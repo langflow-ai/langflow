@@ -46,6 +46,18 @@ const TableComponent = forwardRef<
         </div>
       );
     }
+    const colDef = props.columnDefs.map((col, index) => {
+      if (props.onSelectionChanged && index === 0) {
+        return {
+          ...col,
+          checkboxSelection: true,
+          headerCheckboxSelection: true,
+          headerCheckboxSelectionFilteredOnly: true,
+        };
+      } else {
+        return col;
+      }
+    });
 
     return (
       <div
@@ -60,6 +72,7 @@ const TableComponent = forwardRef<
           defaultColDef={{
             minWidth: 100,
           }}
+          columnDefs={colDef}
           ref={ref}
         />
       </div>
