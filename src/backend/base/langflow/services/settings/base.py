@@ -104,6 +104,10 @@ class Settings(BaseSettings):
     """Whether to store environment variables as Global Variables in the database."""
     variables_to_get_from_environment: list[str] = VARIABLES_TO_GET_FROM_ENVIRONMENT
     """List of environment variables to get from the environment and store in the database."""
+    worker_timeout: int = 300
+    """Timeout for the API calls in seconds."""
+    frontend_timeout: int = 0
+    """Timeout for the frontend API calls in seconds."""
 
     @field_validator("config_dir", mode="before")
     def set_langflow_dir(cls, value):

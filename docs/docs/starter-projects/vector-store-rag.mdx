@@ -4,7 +4,7 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 import ReactPlayer from "react-player";
 import Admonition from "@theme/Admonition";
 
-# Vector store RAG
+# Vector Store RAG
 
 Retrieval Augmented Generation, or RAG, is a pattern for training LLMs on your data and querying it.
 
@@ -17,16 +17,19 @@ We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-pr
 ## Prerequisites
 
 <Admonition type="info">
-  Langflow v1.0 alpha is also available in [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true). Try it out or follow the instructions [here](../getting-started/huggingface-spaces) to install it locally.
+  Langflow v1.0 alpha is also available in HuggingFace Spaces. [Clone the space
+  using this
+  link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true)
+  to create your own Langflow workspace in minutes.
 </Admonition>
 
-* [Langflow installed](../getting-started/install-langflow.mdx)
+- [Langflow installed and running](../getting-started/install-langflow.mdx)
 
-* [OpenAI API key](https://platform.openai.com)
+- [OpenAI API key](https://platform.openai.com)
 
-* [An Astra DB vector database created](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
-    * Application token (`AstraCS:WSnyFUhRxsrg…​`)
-    * API endpoint (`https://ASTRA_DB_ID-ASTRA_DB_REGION.apps.astra.datastax.com`)
+- [An Astra DB vector database created](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
+  - Application token (`AstraCS:WSnyFUhRxsrg…​`)
+  - API endpoint (`https://ASTRA_DB_ID-ASTRA_DB_REGION.apps.astra.datastax.com`)
 
 ## Create the vector store RAG project
 
@@ -49,38 +52,40 @@ The **ingestion** flow (bottom of the screen) populates the vector store with da
 It ingests data from a file (**File**), splits it into chunks (**Recursive Character Text Splitter**), indexes it in Astra DB (**Astra DB**), and computes embeddings for the chunks (**OpenAI Embeddings**).
 This forms a "brain" for the query flow.
 
-The **query**  flow (top of the screen) allows users to chat with the embedded vector store data. It's a little more complex:
+The **query** flow (top of the screen) allows users to chat with the embedded vector store data. It's a little more complex:
 
-* **Chat Input** component defines where to put the user input coming from the Playground.
-* **OpenAI Embeddings** component generates embeddings from the user input.
-* **Astra DB Search** component retrieves the most relevant Records from the Astra DB database.
-* **Text Output** component turns the Records into Text by concatenating them and also displays it in the Playground.
-* **Prompt** component takes in the user input and the retrieved Records as text and builds a prompt for the OpenAI model.
-* **OpenAI** component generates a response to the prompt.
-* **Chat Output** component displays the response in the Playground.
+- **Chat Input** component defines where to put the user input coming from the Playground.
+- **OpenAI Embeddings** component generates embeddings from the user input.
+- **Astra DB Search** component retrieves the most relevant Records from the Astra DB database.
+- **Text Output** component turns the Records into Text by concatenating them and also displays it in the Playground.
+- **Prompt** component takes in the user input and the retrieved Records as text and builds a prompt for the OpenAI model.
+- **OpenAI** component generates a response to the prompt.
+- **Chat Output** component displays the response in the Playground.
 
 4. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
-    1. In the **Variable Name** field, enter `openai_api_key`.
-    2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
-    3. Click **Save Variable**.
 
-4. To create environment variables for the **Astra DB** and **Astra DB Search** components:
-    1. In the **Token** field, click the **Globe** button, and then click **Add New Variable**.
-    2. In the **Variable Name** field, enter `astra_token`.
-    3. In the **Value** field, paste your Astra application token (`AstraCS:WSnyFUhRxsrg…​`).
-    4. Click **Save Variable**.
-    5. Repeat the above steps for the **API Endpoint** field, pasting your Astra API Endpoint instead (`https://ASTRA_DB_ID-ASTRA_DB_REGION.apps.astra.datastax.com`).
-    6. Add the global variable to both the **Astra DB** and **Astra DB Search** components.
+   1. In the **Variable Name** field, enter `openai_api_key`.
+   2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
+   3. Click **Save Variable**.
+
+5. To create environment variables for the **Astra DB** and **Astra DB Search** components:
+   1. In the **Token** field, click the **Globe** button, and then click **Add New Variable**.
+   2. In the **Variable Name** field, enter `astra_token`.
+   3. In the **Value** field, paste your Astra application token (`AstraCS:WSnyFUhRxsrg…​`).
+   4. Click **Save Variable**.
+   5. Repeat the above steps for the **API Endpoint** field, pasting your Astra API Endpoint instead (`https://ASTRA_DB_ID-ASTRA_DB_REGION.apps.astra.datastax.com`).
+   6. Add the global variable to both the **Astra DB** and **Astra DB Search** components.
 
 ## Run the vector store RAG flow
 
 1. Click the **Playground** button.
-The **Playground** opens, where you can chat with your data.
+   The **Playground** opens, where you can chat with your data.
 2. Type a message and press Enter. (Try something like "What topics do you know about?")
 3. The bot will respond with a summary of the data you've embedded.
 
 For example, we embedded a PDF of an engine maintenance manual and asked, "How do I change the oil?"
 The bot responds:
+
 ```
 To change the oil in the engine, follow these steps:
 
@@ -102,7 +107,3 @@ You should use a 3/8 inch wrench to remove the oil drain cap.
 ```
 
 This is the size the engine manual lists as well. This confirms our flow works, because the query returns the unique knowledge we embedded from the Astra vector store.
-
-
-
-

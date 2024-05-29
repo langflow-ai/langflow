@@ -19,6 +19,7 @@ class UnbuiltResult:
 class ArtifactType(str, Enum):
     TEXT = "text"
     RECORD = "record"
+    OBJECT = "object"
     UNKNOWN = "unknown"
 
 
@@ -60,16 +61,16 @@ def serialize_field(value):
     return value
 
 
-def get_artifact_type(build_result: Any) -> str:
-    result = None
-    match build_result:
+def get_artifact_type(value: Any) -> str:
+    result = ArtifactType.UNKNOWN
+    match value:
         case Record():
             result = ArtifactType.RECORD
 
         case str():
             result = ArtifactType.TEXT
 
-        case _:
-            result = ArtifactType.UNKNOWN
+        case dict():
+            result = ArtifactType.OBJECT
 
     return result.value

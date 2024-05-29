@@ -532,10 +532,10 @@
                 "advanced": false,
                 "dynamic": false,
                 "info": "",
-                "load_from_db": false,
+                "load_from_db": true,
                 "title_case": false,
                 "input_types": ["Text"],
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "openai_api_type": {
                 "type": "str",

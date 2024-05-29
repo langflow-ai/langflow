@@ -246,7 +246,7 @@ class VerticesOrderResponse(BaseModel):
 
 
 class Log(TypedDict):
-    message: str
+    message: Union[dict, str]
     type: str
 
 
@@ -322,3 +322,7 @@ class FlowDataRequest(BaseModel):
     nodes: List[dict]
     edges: List[dict]
     viewport: Optional[dict] = None
+
+
+class ConfigResponse(BaseModel):
+    frontend_timeout: int
