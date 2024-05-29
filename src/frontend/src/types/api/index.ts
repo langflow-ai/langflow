@@ -28,6 +28,7 @@ export type APIClassType = {
   documentation: string;
   error?: string;
   official?: boolean;
+  outputs?: Array<{ types: Array<string>; selected?: string }>;
   frozen?: boolean;
   flow?: FlowType;
   field_order?: string[];
@@ -39,7 +40,8 @@ export type APIClassType = {
     | FlowType
     | CustomFieldsType
     | boolean
-    | undefined;
+    | undefined
+    | Array<{ types: Array<string>; selected?: string }>;
 };
 
 export type TemplateVariableType = {

@@ -16,6 +16,8 @@ import {
   specialCharsRegex,
 } from "../constants/constants";
 import { downloadFlowsFromDatabase } from "../controllers/API";
+import getFieldTitle from "../customNodes/utils/get-field-title";
+import { DESCRIPTIONS } from "../flow_constants";
 import {
   APIClassType,
   APIKindType,
@@ -37,8 +39,6 @@ import {
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
 import { createRandomKey, toTitleCase } from "./utils";
-import { DESCRIPTIONS } from "../flow_constants";
-import getFieldTitle from "../customNodes/utils/get-field-title";
 const uid = new ShortUniqueId({ length: 5 });
 
 export function checkChatInput(nodes: Node[]) {
@@ -46,6 +46,7 @@ export function checkChatInput(nodes: Node[]) {
 }
 
 export function cleanEdges(nodes: Node[], edges: Edge[]) {
+  console.log("cleanEdges");
   let newEdges = cloneDeep(edges);
   edges.forEach((edge) => {
     // check if the source and target node still exists
@@ -75,10 +76,12 @@ export function cleanEdges(nodes: Node[], edges: Edge[]) {
       }
     }
     if (sourceHandle) {
+      const index = scapeJSONParse(sourceHandle).idx ?? 0;
       const id: sourceHandleType = {
         id: sourceNode.data.id,
-        baseClasses: sourceNode.data.node!.base_classes,
+        baseClasses: [sourceNode.data.node.outputs[index].selected],
         dataType: sourceNode.data.type,
+        idx: index,
       };
       if (scapedJSONStringfy(id) !== sourceHandle) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -191,8 +194,8 @@ export const processDataFromFlow = (flow: FlowType, refreshIds = true) => {
   let data = flow?.data ? flow.data : null;
   if (data) {
     processFlowEdges(flow);
-    //prevent node update for now
-    // processFlowNodes(flow);
+    //add dropdown option to nodeOutputs
+    processFlowNodes(flow);
     //add animation to text type edges
     updateEdges(data.edges);
     // updateNodes(data.nodes, data.edges);
@@ -397,6 +400,7 @@ export function updateEdgesHandleIds({
         id: sourceNode.data.id,
         baseClasses: sourceNode.data.node!.base_classes,
         dataType: sourceNode.data.type,
+        idx: 0,
       };
     }
     edge.sourceHandle = scapedJSONStringfy(newSource!);
@@ -408,6 +412,49 @@ export function updateEdgesHandleIds({
     edge.data = newData;
   });
   return newEdges;
+}
+
+export function updateNewOutput({ nodes, edges }: updateEdgesHandleIdsType) {
+  console.log("updateNewOutput");
+  let newEdges = cloneDeep(edges);
+  let newNodes = cloneDeep(nodes);
+  newEdges.forEach((edge) => {
+    if (edge.sourceHandle && edge.targetHandle) {
+      let newSourceHandle: sourceHandleType = scapeJSONParse(edge.sourceHandle);
+      let newTargetHandle: targetHandleType = scapeJSONParse(edge.targetHandle);
+      let intersection;
+      if (newTargetHandle.inputTypes && newTargetHandle.inputTypes.length > 0) {
+        //conjuction subtraction
+        intersection = newSourceHandle.baseClasses.filter((type) =>
+          newTargetHandle.inputTypes!.includes(type),
+        );
+      } else {
+        intersection = newSourceHandle.baseClasses.filter(
+          (type) => type === newTargetHandle.type,
+        );
+      }
+      const selected = intersection[0];
+      newSourceHandle.baseClasses = [selected];
+      const id = newSourceHandle.id;
+      newSourceHandle.idx = 0;
+      const sourceNodeIndex = newNodes.findIndex((node) => node.id === id);
+      if (sourceNodeIndex > -1) {
+        const sourceNode = newNodes[sourceNodeIndex];
+        if (
+          !sourceNode.data.node?.outputs ||
+          sourceNode.data.node!.outputs!.length === 0
+        ) {
+          sourceNode.data.node!.outputs = [
+            { types: sourceNode.data.node!.base_classes, selected: selected },
+          ];
+        }
+      }
+      edge.sourceHandle = scapedJSONStringfy(newSourceHandle);
+      edge.data.sourceHandle = newSourceHandle;
+    }
+  });
+
+  return { nodes: newNodes, edges: newEdges };
 }
 
 export function handleKeyDown(
@@ -559,6 +606,10 @@ export function checkOldEdgesHandles(edges: Edge[]): boolean {
       !edge.sourceHandle.includes("{") ||
       !edge.targetHandle.includes("{"),
   );
+}
+
+export function checkOldNodesOutput(nodes: NodeType[]): boolean {
+  return nodes.some((node) => !node.data.node?.outputs);
 }
 
 export function customStringify(obj: any): string {
@@ -1015,6 +1066,15 @@ export function processFlowEdges(flow: FlowType) {
     edge.className = "";
     edge.style = { stroke: "#555" };
   });
+}
+
+export function processFlowNodes(flow: FlowType) {
+  if (!flow.data || !flow.data.nodes) return;
+  if (checkOldNodesOutput(flow.data.nodes)) {
+    const { nodes, edges } = updateNewOutput(flow.data);
+    flow.data.nodes = nodes;
+    flow.data.edges = edges;
+  }
 }
 
 export function expandGroupNode(

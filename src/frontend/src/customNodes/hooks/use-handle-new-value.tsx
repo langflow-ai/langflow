@@ -9,7 +9,6 @@ const useHandleOnNewValue = (
   handleUpdateValues,
   debouncedHandleUpdateValues,
   setNode,
-  renderTooltips,
   isLoading,
   setIsLoading,
 ) => {
@@ -65,8 +64,6 @@ const useHandleOnNewValue = (
 
       return newNode;
     });
-
-    renderTooltips();
   };
 
   return { handleOnNewValue };

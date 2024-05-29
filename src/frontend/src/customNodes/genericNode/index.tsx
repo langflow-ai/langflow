@@ -553,7 +553,7 @@ export default function GenericNode({
                         data.node!.template[templateField].show &&
                         !data.node!.template[templateField].advanced && (
                           <ParameterComponent
-                            index={idx.toString()}
+                            index={idx}
                             key={scapedJSONStringfy({
                               inputTypes:
                                 data.node!.template[templateField].input_types,
@@ -626,6 +626,7 @@ export default function GenericNode({
                         )
                     )}
                   <ParameterComponent
+                    index={0}
                     key={scapedJSONStringfy({
                       baseClasses: data.node!.base_classes,
                       id: data.id,
@@ -636,7 +637,7 @@ export default function GenericNode({
                     title={
                       data.node?.output_types &&
                       data.node.output_types.length > 0
-                        ? data.node.output_types.join(" | ")
+                        ? data.node.output_types.join("|")
                         : data.type
                     }
                     tooltipTitle={data.node?.base_classes.join("\n")}
@@ -644,6 +645,7 @@ export default function GenericNode({
                       baseClasses: data.node!.base_classes,
                       id: data.id,
                       dataType: data.type,
+                      idx: 0,
                     }}
                     type={data.node?.base_classes.join("|")}
                     left={false}
@@ -803,7 +805,7 @@ export default function GenericNode({
                     {data.node!.template[templateField].show &&
                     !data.node!.template[templateField].advanced ? (
                       <ParameterComponent
-                        index={idx.toString()}
+                        index={idx}
                         key={scapedJSONStringfy({
                           inputTypes:
                             data.node!.template[templateField].input_types,
@@ -880,29 +882,36 @@ export default function GenericNode({
               >
                 {" "}
               </div>
-              <div>
-                {data.node!.base_classes.length > 0 &&
-                // if conditional_paths in data.node.conditional_paths
-                // then buildParameterComponent for each conditionalPath
-                // else buildParameterComponent for each data.node.base_classes
-                // first we check if there are any conditional paths
-                data.node!.conditional_paths &&
-                data.node!.conditional_paths.length > 0
-                  ? data.node!.conditional_paths.map((conditionalPath) =>
-                      buildParameterComponent({
-                        data,
-                        conditionalPath,
-                        showNode,
-                        left: false,
-                      })
-                    )
-                  : buildParameterComponent({
-                      data,
-                      conditionalPath: null,
-                      showNode,
-                      left: false,
+              {data.node!.outputs &&
+                data.node!.outputs.length > 0 &&
+                data.node!.outputs.map((output, idx) => (
+                  <ParameterComponent
+                    index={idx}
+                    key={scapedJSONStringfy({
+                      baseClasses: [output.selected ?? output.types[0]],
+                      id: data.id,
+                      dataType: data.type,
                     })}
-              </div>
+                    data={data}
+                    color={
+                      nodeColors[output.selected ?? output.types[0]] ??
+                      nodeColors[types[output.selected ?? output.types[0]]] ??
+                      nodeColors[types[data.type]] ??
+                      nodeColors.unknown
+                    }
+                    title={output.selected ?? output.types[0]}
+                    tooltipTitle={output.selected ?? output.types[0]}
+                    id={{
+                      baseClasses: [output.selected ?? output.types[0]],
+                      id: data.id,
+                      dataType: data.type,
+                      idx: idx,
+                    }}
+                    type={output.types.join("|")}
+                    left={false}
+                    showNode={showNode}
+                  />
+                ))}
             </>
           </div>
         )}
