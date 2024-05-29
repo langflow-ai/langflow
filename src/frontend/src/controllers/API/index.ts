@@ -1022,12 +1022,14 @@ export async function getTransactionTable(
 }
 
 export async function getMessagesTable(
-  id: string,
   mode: "intersection" | "union",
+  id?: string,
   params = {},
 ): Promise<{ rows: Array<object>; columns: Array<ColDef | ColGroupDef> }> {
   const config = {};
-  config["params"] = { flow_id: id };
+  if (id) {
+    config["params"] = { flow_id: id };
+  }
   if (params) {
     config["params"] = { ...config["params"], ...params };
   }

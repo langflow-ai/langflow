@@ -53,7 +53,7 @@ export default function FlowLogsModal({
         setRows(rows);
       });
     } else if (activeTab === "Messages") {
-      getMessagesTable(currentFlowId, "union").then((data) => {
+      getMessagesTable("union", currentFlowId).then((data) => {
         const { columns, rows } = data;
         setColumns(columns.map((col) => ({ ...col, editable: true })));
         setRows(rows);
