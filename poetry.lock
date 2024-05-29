@@ -9159,6 +9159,20 @@ files = [
 ]
 
 [[package]]
+name = "upstash-vector"
+version = "0.4.0"
+description = "Serverless Vector SDK from Upstash"
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "upstash_vector-0.4.0-py3-none-any.whl", hash = "sha256:1ba11d8fc7d036bf93fde741b862c9e04ad962397dc600d1dc7546b63a84da82"},
+    {file = "upstash_vector-0.4.0.tar.gz", hash = "sha256:a8ae11b2d3989c2615f1f06c66af39da763af7f7239b625fede621bf2fbb997d"},
+]
+
+[package.dependencies]
+httpx = ">=0.24.0,<0.28"
+
+[[package]]
 name = "uritemplate"
 version = "4.1.1"
 description = "Implementation of RFC 6570 URI Templates"
@@ -10019,4 +10033,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "36778b105f6f6e5efd0c1d37651d7b97defb0bc0db74b868a41e38de22251924"
+content-hash = "476c95dc8c6adb597a0cd2783eab65c02e0398fc144aa74d56a4cb36032f496f"
