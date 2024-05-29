@@ -26,7 +26,7 @@ class PineconeSearchComponent(PineconeComponent, LCVectorStoreComponent):
             "input_value": {"display_name": "Input"},
             "embedding": {"display_name": "Embedding"},
             "index_name": {"display_name": "Index Name"},
-            "namespace": {"display_name": "Namespace", "advanced": True},
+            "namespace": {"display_name": "Namespace", "info": "Namespace for the index."},
             "distance_strategy": {
                 "display_name": "Distance Strategy",
                 # get values from enum

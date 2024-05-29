@@ -156,6 +156,7 @@ import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
 import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { ChromaIcon } from "../icons/ChromaIcon";
+import { CouchbaseIcon } from "../icons/Couchbase";
 import { CohereIcon } from "../icons/Cohere";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
@@ -327,6 +328,7 @@ export const nodeIconsLucide: iconsType = {
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
   Chroma: ChromaIcon,
+  Couchbase: CouchbaseIcon,
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,

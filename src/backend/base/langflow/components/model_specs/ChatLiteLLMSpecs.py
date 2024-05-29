@@ -1,8 +1,9 @@
 from typing import Any, Dict, Optional
 
 from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
+
+from langflow.custom import CustomComponent
 from langflow.field_typing import BaseLanguageModel
-from langflow.interface.custom.custom_component import CustomComponent
 
 
 class ChatLiteLLMComponent(CustomComponent):
@@ -81,12 +82,9 @@ class ChatLiteLLMComponent(CustomComponent):
                 "default": 1,
             },
             "max_tokens": {
-                "display_name": "Max tokens",
-                "field_type": "int",
-                "advanced": False,
-                "required": False,
-                "default": 256,
-                "info": "The maximum number of tokens to generate for each chat completion.",
+                "display_name": "Max Tokens",
+                "advanced": True,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             },
             "max_retries": {
                 "display_name": "Max retries",

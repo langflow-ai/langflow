@@ -76,7 +76,6 @@ export async function updateVerticesOrder(
         title: "Oops! Looks like you missed something",
         list: [error.response?.data?.detail ?? "Unknown Error"],
       });
-      debugger;
       useFlowStore.getState().setIsBuilding(false);
       throw new Error("Invalid nodes");
     }

@@ -23,10 +23,10 @@ import {
   removeFileNameFromComponents,
   removeGlobalVariableFromComponents,
 } from "../../utils/reactflowUtils";
-import { getTagsIds } from "../../utils/storeUtils";
 import BaseModal from "../baseModal";
 import ConfirmationModal from "../confirmationModal";
 import ExportModal from "../exportModal";
+import getTagsIds from "./utils/get-tags-ids";
 
 export default function ShareModal({
   component,
@@ -138,14 +138,14 @@ export default function ShareModal({
             title: "Error sharing " + is_component ? "component" : "flow",
             list: [err["response"]["data"]["detail"]],
           });
-        }
+        },
       );
     else
       updateFlowStore(
         flow!,
         getTagsIds(selectedTags, tags),
         sharePublic,
-        unavaliableNames.find((e) => e.name === name)!.id
+        unavaliableNames.find((e) => e.name === name)!.id,
       ).then(successShare, (err) => {
         setErrorData({
           title: "Error sharing " + is_component ? "component" : "flow",
@@ -234,7 +234,7 @@ export default function ShareModal({
           <div className="mt-3 flex h-8 w-full">
             <TagsSelector
               tags={tags}
-               loadingTags={loadingTags}
+              loadingTags={loadingTags}
               disabled={false}
               selectedTags={selectedTags}
               setSelectedTags={setSelectedTags}
@@ -296,7 +296,7 @@ export default function ShareModal({
               className={is_component ? "w-40" : "w-28"}
               onClick={() => {
                 const isNameAvailable = !unavaliableNames.some(
-                  (element) => element.name === name
+                  (element) => element.name === name,
                 );
 
                 if (isNameAvailable) {

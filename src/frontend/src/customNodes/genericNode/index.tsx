@@ -27,14 +27,11 @@ import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
-import {
-  classNames,
-  cn,
-  getFieldTitle,
-  isWrappedWithClass,
-  sortFields,
-} from "../../utils/utils";
+import { classNames, cn } from "../../utils/utils";
 import ParameterComponent from "./components/parameterComponent";
+import getFieldTitle from "../utils/get-field-title";
+import sortFields from "../utils/sort-fields";
+import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
 
 export default function GenericNode({
   data,
