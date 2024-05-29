@@ -6,7 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "../../components/ui/popover";
-import { zeroNotifications } from "../../constants/constants";
+import { ZERO_NOTIFICATIONS } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { AlertDropdownType } from "../../types/alerts";
 import SingleAlert from "./components/singleAlertComponent";
@@ -70,7 +70,7 @@ export default function AlertDropdown({
             ))
           ) : (
             <div className="flex h-full w-full items-center justify-center pb-16 text-ring">
-              {zeroNotifications}
+              {ZERO_NOTIFICATIONS}
             </div>
           )}
         </div>

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { editTextModalTitle } from "../../constants/constants";
+import { EDIT_TEXT_MODAL_TITLE } from "../../constants/constants";
 import { TypeModal } from "../../constants/enums";
 import GenericModal from "../../modals/genericModal";
 import { TextAreaComponentType } from "../../types/components";
@@ -16,7 +16,7 @@ export default function TextAreaComponent({
   // Clear text area
   useEffect(() => {
     if (disabled && value !== "") {
-      onChange("");
+      onChange("", true);
     }
   }, [disabled]);
 
@@ -38,7 +38,7 @@ export default function TextAreaComponent({
           <GenericModal
             type={TypeModal.TEXT}
             buttonText="Finish Editing"
-            modalTitle={editTextModalTitle}
+            modalTitle={EDIT_TEXT_MODAL_TITLE}
             value={value}
             setValue={(value: string) => {
               onChange(value);
@@ -46,10 +46,11 @@ export default function TextAreaComponent({
           >
             {!editNode && (
               <IconComponent
+                strokeWidth={1.5}
                 id={id}
                 name="ExternalLink"
                 className={
-                  "icons-parameters-comp" +
+                  "icons-parameters-comp w-[1.35rem]" +
                   (disabled ? " text-ring" : " hover:text-accent-foreground")
                 }
               />

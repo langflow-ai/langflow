@@ -1,0 +1,116 @@
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
+
+# Global Variables
+
+## TLDR;
+
+- Global Variables are reusable variables that can be accessed from any Text field in your project.
+- To create a Global Variable, click on the 🌐 button in a Text field and then **+ Add New Variable**.
+- Define the **Name**, **Type**, and **Value** of the variable.
+- Click on **Save Variable** to create the variable.
+- All Credential Global Variables are encrypted and cannot be accessed by anyone but you.
+- Set _`LANGFLOW_STORE_ENVIRONMENT_VARIABLES`_ to _`true`_ in your `.env` file to add all variables in _`LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`_ to your user's Global Variables.
+
+Global Variables are a really useful feature of Langflow.
+They allow you to define reusable variables that can be accessed from any Text field in your project.
+
+The first thing you need to do is find a **Text field** in a Component, so let's talk about what a Text field is.
+
+## Text Fields
+
+Text fields are the fields in a Component where you can write text but that does not allow you to open a Text Area.
+
+The easiest way to find fields that are Text fields, though, is to look for fields that have a 🌐 button.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/ollama-gv.png",
+    dark: "img/ollama-gv.png",
+  }}
+  style={{ width: "50%" }}
+/>
+
+## Creating a Global Variable
+
+To create a Global Variable, you need to click on the 🌐 button in a Text field and that will open a dropdown showing your currently available variables and at the end of it **+ Add New Variable**.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/add-new-variable.png",
+    dark: "img/add-new-variable.png",
+  }}
+  style={{ width: "60%" }}
+/>
+
+Click on **+ Add New Variable** and a window will open where you can define your new Global Variable.
+
+In it, you can define the **Name** of the variable, the optional **Type** of the variable, and the **Value** of the variable.
+
+The **Name** is the name that you will use to refer to the variable in your Text fields.
+
+The **Type** is optional for now but will be used in the future to allow for more advanced features.
+
+The **Value** is the value that the variable will have.
+{/* say that all variables are encrypted */}
+
+<Admonition type="warning">
+  All Credential Global Variables are encrypted and cannot be accessed by anyone
+  but you.
+</Admonition>
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/create-variable-window.png",
+    dark: "img/create-variable-window.png",
+  }}
+  style={{ width: "60%" }}
+/>
+
+After you have defined your variable, click on **Save Variable** and your variable will be created.
+
+After that, once you click on the 🌐 button in a Text field, you will see your new variable in the dropdown.
+
+## Environment Variables
+
+If you set _`LANGFLOW_STORE_ENVIRONMENT_VARIABLES`_ to _`true`_ (which is the default value) in your `.env` file, all variables in _`LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`_ will be added to your user's Global Variables.
+
+All of these variables can be used in your project as any other Global Variable.
+
+<Admonition type="tip">
+  You can set _`LANGFLOW_STORE_ENVIRONMENT_VARIABLES`_ to _`false`_ in your
+  `.env` file to prevent this behavior.
+</Admonition>
+
+You can also set _`LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`_ to a list of variables that you want to get from the environment.
+
+The default list at the moment is:
+
+- ANTHROPIC_API_KEY
+- ASTRA_DB_API_ENDPOINT
+- ASTRA_DB_APPLICATION_TOKEN
+- AZURE_OPENAI_API_KEY
+- AZURE_OPENAI_API_DEPLOYMENT_NAME
+- AZURE_OPENAI_API_EMBEDDINGS_DEPLOYMENT_NAME
+- AZURE_OPENAI_API_INSTANCE_NAME
+- AZURE_OPENAI_API_VERSION
+- COHERE_API_KEY
+- GOOGLE_API_KEY
+- GROQ_API_KEY
+- HUGGINGFACEHUB_API_TOKEN
+- OPENAI_API_KEY
+- PINECONE_API_KEY
+- SEARCHAPI_API_KEY
+- SERPAPI_API_KEY
+- VECTARA_CUSTOMER_ID
+- VECTARA_CORPUS_ID
+- VECTARA_API_KEY
+
+<Admonition type="tip">
+  Set _`LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`_ as a comma-separated list
+  of variables (e.g. _`"VARIABLE1, VARIABLE2"`_) or as a JSON-encoded string
+  (e.g. _`'["VARIABLE1", "VARIABLE2"]'`_).
+</Admonition>

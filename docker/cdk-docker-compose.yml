@@ -1,0 +1,37 @@
+version: "3"
+networks:
+  langflow:
+
+services:
+  backend:
+    build:
+      context: ./
+      dockerfile: ./dev.Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./:/app
+    command: bash -c "uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --loop asyncio"
+    networks:
+      - langflow
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: ./cdk.Dockerfile
+      args:
+        - BACKEND_URL=http://backend:7860
+    depends_on:
+      - backend
+    environment:
+      - VITE_PROXY_TARGET=http://backend:7860
+    ports:
+      - "8080:3000"
+    volumes:
+      - ./src/frontend/public:/home/node/app/public
+      - ./src/frontend/src:/home/node/app/src
+      - ./src/frontend/package.json:/home/node/app/package.json
+    restart: on-failure
+    networks:
+      - langflow

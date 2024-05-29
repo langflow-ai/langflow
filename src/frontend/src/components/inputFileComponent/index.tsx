@@ -27,7 +27,7 @@ export default function InputFileComponent({
   useEffect(() => {
     if (disabled && value !== "") {
       setMyValue("");
-      onChange("");
+      onChange("", true);
       onFileChange("");
     }
   }, [disabled, onChange]);
@@ -106,8 +106,8 @@ export default function InputFileComponent({
             editNode
               ? "input-edit-node input-dialog text-muted-foreground"
               : disabled
-              ? "input-disable input-dialog primary-input"
-              : "input-dialog primary-input text-muted-foreground"
+                ? "input-disable input-dialog primary-input"
+                : "input-dialog primary-input text-muted-foreground"
           }
         >
           {myValue !== "" ? myValue : "No file"}

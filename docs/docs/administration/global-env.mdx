@@ -1,0 +1,54 @@
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
+import ReactPlayer from "react-player";
+
+# Global Environment Variables
+
+Langflow 1.0 alpha includes the option to add **Global Environment Variables** for your application.
+
+## Add a global variable to a project
+
+In this example, you'll add the `openai_api_key` credential as a global environment variable to the **Basic Prompting** starter project.
+
+For more information on the starter flow, see [Basic prompting](../starter-projects/basic-prompting.mdx).
+
+1. From the Langflow dashboard, click **New Project**.
+2. Select **Basic Prompting**.
+
+The **Basic Prompting** flow is created.
+
+3. To create an environment variable for the **OpenAI** component:
+   1. In the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
+   2. In the **Variable Name** field, enter `openai_api_key`.
+   3. In the **Value** field, paste your OpenAI API Key (`sk-...`).
+   4. For the variable **Type**, select **Credential**.
+   5. In the **Apply to Fields** field, select **OpenAI API Key** to apply this variable to all fields named **OpenAI API Key**.
+   6. Click **Save Variable**.
+
+You now have a `openai_api_key` global environment variable for your Langflow project.
+
+<Admonition type="tip">
+  You can also create global variables in **Settings** > **Variables and
+  Secrets**.
+</Admonition>
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/global-env.png",
+    dark: "img/global-env.png",
+  }}
+  style={{ width: "40%", margin: "20px auto" }}
+/>
+
+4. To view and manage your project's global environment variables, visit **Settings** > **Variables and Secrets**.
+
+For more on variables in HuggingFace Spaces, see [Managing Secrets](https://huggingface.co/docs/hub/spaces-overview#managing-secrets).
+
+## Video
+
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ReactPlayer playing controls url="/videos/langflow_global_variables.mp4" />
+</div>

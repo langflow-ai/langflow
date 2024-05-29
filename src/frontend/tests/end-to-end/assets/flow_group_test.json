@@ -1,0 +1,532 @@
+{
+  "id": "8404c1fc-1bce-43b4-a8bc-3febea587fc8",
+  "data": {
+    "nodes": [
+      {
+        "id": "PythonFunctionTool-RfJui",
+        "type": "genericNode",
+        "position": {
+          "x": 117.54690105175428,
+          "y": -84.2465475108354
+        },
+        "data": {
+          "type": "PythonFunctionTool",
+          "node": {
+            "template": {
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "\ndef python_function(text: str) -> str:\n    \"\"\"This is a default python function that returns the input text\"\"\"\n    return text\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false
+              },
+              "description": {
+                "type": "str",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "Returns the Text you send. This is a testing tool.",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "description",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "name": {
+                "type": "str",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": "PythonFunction",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "name",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "return_direct": {
+                "type": "bool",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "return_direct",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false
+              },
+              "_type": "PythonFunctionTool"
+            },
+            "description": "Python function to be executed.",
+            "base_classes": ["BaseTool", "Tool"],
+            "display_name": "PythonFunctionTool",
+            "documentation": "",
+            "custom_fields": {},
+            "output_types": [],
+            "field_formatters": {},
+            "pinned": false,
+            "beta": false
+          },
+          "id": "PythonFunctionTool-RfJui"
+        },
+        "selected": true,
+        "width": 384,
+        "height": 466,
+        "positionAbsolute": {
+          "x": 117.54690105175428,
+          "y": -84.2465475108354
+        },
+        "dragging": false
+      },
+      {
+        "id": "AgentInitializer-tPdJw",
+        "type": "genericNode",
+        "position": {
+          "x": 677.68677055088,
+          "y": 127.19859565276168
+        },
+        "data": {
+          "type": "AgentInitializer",
+          "node": {
+            "template": {
+              "llm": {
+                "type": "BaseLanguageModel",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "llm",
+                "display_name": "Language Model",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false
+              },
+              "memory": {
+                "type": "BaseChatMemory",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "memory",
+                "display_name": "Memory",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false
+              },
+              "tools": {
+                "type": "Tool",
+                "required": true,
+                "placeholder": "",
+                "list": true,
+                "show": true,
+                "multiline": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "tools",
+                "display_name": "Tools",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false
+              },
+              "agent": {
+                "type": "str",
+                "required": true,
+                "placeholder": "",
+                "list": true,
+                "show": true,
+                "multiline": false,
+                "value": "zero-shot-react-description",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "options": [
+                  "zero-shot-react-description",
+                  "react-docstore",
+                  "self-ask-with-search",
+                  "conversational-react-description",
+                  "chat-zero-shot-react-description",
+                  "chat-conversational-react-description",
+                  "structured-chat-zero-shot-react-description",
+                  "openai-functions",
+                  "openai-multi-functions",
+                  "JsonAgent",
+                  "CSVAgent",
+                  "VectorStoreAgent",
+                  "VectorStoreRouterAgent",
+                  "SQLAgent"
+                ],
+                "name": "agent",
+                "display_name": "Agent Type",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from typing import Callable, List, Optional, Union\n\nfrom langchain.agents import AgentExecutor, AgentType, initialize_agent, types\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import BaseChatMemory, BaseLanguageModel, Tool\n\n\nclass AgentInitializerComponent(CustomComponent):\n    display_name: str = \"Agent Initializer\"\n    description: str = \"Initialize a Langchain Agent.\"\n    documentation: str = \"https://python.langchain.com/docs/modules/agents/agent_types/\"\n\n    def build_config(self):\n        agents = list(types.AGENT_TO_CLASS.keys())\n        # field_type and required are optional\n        return {\n            \"agent\": {\"options\": agents, \"value\": agents[0], \"display_name\": \"Agent Type\"},\n            \"max_iterations\": {\"display_name\": \"Max Iterations\", \"value\": 10},\n            \"memory\": {\"display_name\": \"Memory\"},\n            \"tools\": {\"display_name\": \"Tools\"},\n            \"llm\": {\"display_name\": \"Language Model\"},\n            \"code\": {\"advanced\": True},\n        }\n\n    def build(\n        self,\n        agent: str,\n        llm: BaseLanguageModel,\n        tools: List[Tool],\n        max_iterations: int,\n        memory: Optional[BaseChatMemory] = None,\n    ) -> Union[AgentExecutor, Callable]:\n        agent = AgentType(agent)\n        if memory:\n            return initialize_agent(\n                tools=tools,\n                llm=llm,\n                agent=agent,\n                memory=memory,\n                return_intermediate_steps=True,\n                handle_parsing_errors=True,\n                max_iterations=max_iterations,\n            )\n        return initialize_agent(\n            tools=tools,\n            llm=llm,\n            agent=agent,\n            return_intermediate_steps=True,\n            handle_parsing_errors=True,\n            max_iterations=max_iterations,\n        )\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "title_case": false
+              },
+              "max_iterations": {
+                "type": "int",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": 10,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "max_iterations",
+                "display_name": "Max Iterations",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false
+              },
+              "_type": "CustomComponent"
+            },
+            "description": "Initialize a Langchain Agent.",
+            "base_classes": [
+              "Runnable",
+              "Chain",
+              "Serializable",
+              "object",
+              "AgentExecutor",
+              "Generic",
+              "RunnableSerializable",
+              "Callable"
+            ],
+            "display_name": "Agent Initializer",
+            "documentation": "https://python.langchain.com/docs/modules/agents/agent_types/",
+            "custom_fields": {
+              "agent": null,
+              "llm": null,
+              "tools": null,
+              "max_iterations": null,
+              "memory": null
+            },
+            "output_types": ["AgentExecutor", "Callable"],
+            "field_formatters": {},
+            "pinned": false,
+            "beta": true
+          },
+          "id": "AgentInitializer-tPdJw"
+        },
+        "selected": false,
+        "width": 384,
+        "height": 522
+      },
+      {
+        "id": "ChatOpenAISpecs-stxRM",
+        "type": "genericNode",
+        "position": {
+          "x": 18.226716205350385,
+          "y": 432.6122491402193
+        },
+        "data": {
+          "type": "ChatOpenAISpecs",
+          "node": {
+            "template": {
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from typing import Optional, Union\n\nfrom langchain.llms import BaseLLM\nfrom langchain_community.chat_models.openai import ChatOpenAI\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import BaseLanguageModel, NestedDict\n\n\nclass ChatOpenAIComponent(CustomComponent):\n    display_name = \"ChatOpenAI\"\n    description = \"`OpenAI` Chat large language models API.\"\n    icon = \"OpenAI\"\n\n    def build_config(self):\n        return {\n            \"max_tokens\": {\n                \"display_name\": \"Max Tokens\",\n                \"advanced\": False,\n                \"required\": False,\n            },\n            \"model_kwargs\": {\n                \"display_name\": \"Model Kwargs\",\n                \"advanced\": True,\n                \"required\": False,\n            },\n            \"model_name\": {\n                \"display_name\": \"Model Name\",\n                \"advanced\": False,\n                \"required\": False,\n                \"options\": [\n                    \"gpt-4-turbo-preview\",\n                    \"gpt-4-0125-preview\",\n                    \"gpt-4-1106-preview\",\n                    \"gpt-4-vision-preview\",\n                    \"gpt-3.5-turbo-0125\",\n                    \"gpt-3.5-turbo-1106\",\n                ],\n            },\n            \"openai_api_base\": {\n                \"display_name\": \"OpenAI API Base\",\n                \"advanced\": False,\n                \"required\": False,\n                \"info\": (\n                    \"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\\n\\n\"\n                    \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\"\n                ),\n            },\n            \"openai_api_key\": {\n                \"display_name\": \"OpenAI API Key\",\n                \"advanced\": False,\n                \"required\": False,\n                \"password\": True,\n            },\n            \"temperature\": {\n                \"display_name\": \"Temperature\",\n                \"advanced\": False,\n                \"required\": False,\n                \"value\": 0.7,\n            },\n        }\n\n    def build(\n        self,\n        max_tokens: Optional[int] = 256,\n        model_kwargs: NestedDict = {},\n        model_name: str = \"gpt-4-1106-preview\",\n        openai_api_base: Optional[str] = None,\n        openai_api_key: Optional[str] = None,\n        temperature: float = 0.7,\n    ) -> Union[BaseLanguageModel, BaseLLM]:\n        if not openai_api_base:\n            openai_api_base = \"https://api.openai.com/v1\"\n        return ChatOpenAI(\n            max_tokens=max_tokens,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=openai_api_key,\n            temperature=temperature,\n        )\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": false,
+                "dynamic": true,
+                "info": "",
+                "title_case": false
+              },
+              "max_tokens": {
+                "type": "int",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": 256,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "max_tokens",
+                "display_name": "Max Tokens",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false
+              },
+              "model_kwargs": {
+                "type": "NestedDict",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": {},
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "model_kwargs",
+                "display_name": "Model Kwargs",
+                "advanced": true,
+                "dynamic": false,
+                "info": "",
+                "title_case": false
+              },
+              "model_name": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": true,
+                "show": true,
+                "multiline": false,
+                "value": "gpt-4-1106-preview",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "options": [
+                  "gpt-4-turbo-preview",
+                  "gpt-4-0125-preview",
+                  "gpt-4-1106-preview",
+                  "gpt-4-vision-preview",
+                  "gpt-3.5-turbo-0125",
+                  "gpt-3.5-turbo-1106"
+                ],
+                "name": "model_name",
+                "display_name": "Model Name",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "openai_api_base": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "openai_api_base",
+                "display_name": "OpenAI API Base",
+                "advanced": false,
+                "dynamic": false,
+                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "openai_api_key": {
+                "type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": true,
+                "name": "openai_api_key",
+                "display_name": "OpenAI API Key",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "temperature": {
+                "type": "float",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": 0.7,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "temperature",
+                "display_name": "Temperature",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "rangeSpec": {
+                  "min": -1,
+                  "max": 1,
+                  "step": 0.1
+                },
+                "title_case": false
+              },
+              "_type": "CustomComponent"
+            },
+            "description": "`OpenAI` Chat large language models API.",
+            "icon": "OpenAI",
+            "base_classes": [
+              "Runnable",
+              "BaseLLM",
+              "Serializable",
+              "BaseLanguageModel",
+              "object",
+              "Generic",
+              "RunnableSerializable"
+            ],
+            "display_name": "ChatOpenAI",
+            "documentation": "",
+            "custom_fields": {
+              "max_tokens": null,
+              "model_kwargs": null,
+              "model_name": null,
+              "openai_api_base": null,
+              "openai_api_key": null,
+              "temperature": null
+            },
+            "output_types": ["BaseLanguageModel", "BaseLLM"],
+            "field_formatters": {},
+            "pinned": false,
+            "beta": true
+          },
+          "id": "ChatOpenAISpecs-stxRM"
+        },
+        "selected": false,
+        "width": 384,
+        "height": 666,
+        "positionAbsolute": {
+          "x": 18.226716205350385,
+          "y": 432.6122491402193
+        },
+        "dragging": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "ChatOpenAISpecs-stxRM",
+        "sourceHandle": "{œbaseClassesœ:[œRunnableœ,œBaseLLMœ,œSerializableœ,œBaseLanguageModelœ,œobjectœ,œGenericœ,œRunnableSerializableœ],œdataTypeœ:œChatOpenAISpecsœ,œidœ:œChatOpenAISpecs-stxRMœ}",
+        "target": "AgentInitializer-tPdJw",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œAgentInitializer-tPdJwœ,œinputTypesœ:null,œtypeœ:œBaseLanguageModelœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "AgentInitializer-tPdJw",
+            "inputTypes": null,
+            "type": "BaseLanguageModel"
+          },
+          "sourceHandle": {
+            "baseClasses": [
+              "Runnable",
+              "BaseLLM",
+              "Serializable",
+              "BaseLanguageModel",
+              "object",
+              "Generic",
+              "RunnableSerializable"
+            ],
+            "dataType": "ChatOpenAISpecs",
+            "id": "ChatOpenAISpecs-stxRM"
+          }
+        },
+        "style": {
+          "stroke": "#555"
+        },
+        "className": "stroke-foreground stroke-connection",
+        "id": "reactflow__edge-ChatOpenAISpecs-stxRM{œbaseClassesœ:[œRunnableœ,œBaseLLMœ,œSerializableœ,œBaseLanguageModelœ,œobjectœ,œGenericœ,œRunnableSerializableœ],œdataTypeœ:œChatOpenAISpecsœ,œidœ:œChatOpenAISpecs-stxRMœ}-AgentInitializer-tPdJw{œfieldNameœ:œllmœ,œidœ:œAgentInitializer-tPdJwœ,œinputTypesœ:null,œtypeœ:œBaseLanguageModelœ}"
+      },
+      {
+        "source": "PythonFunctionTool-RfJui",
+        "sourceHandle": "{œbaseClassesœ:[œBaseToolœ,œToolœ],œdataTypeœ:œPythonFunctionToolœ,œidœ:œPythonFunctionTool-RfJuiœ}",
+        "target": "AgentInitializer-tPdJw",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgentInitializer-tPdJwœ,œinputTypesœ:null,œtypeœ:œToolœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "AgentInitializer-tPdJw",
+            "inputTypes": null,
+            "type": "Tool"
+          },
+          "sourceHandle": {
+            "baseClasses": ["BaseTool", "Tool"],
+            "dataType": "PythonFunctionTool",
+            "id": "PythonFunctionTool-RfJui"
+          }
+        },
+        "style": {
+          "stroke": "#555"
+        },
+        "className": "stroke-foreground stroke-connection",
+        "id": "reactflow__edge-PythonFunctionTool-RfJui{œbaseClassesœ:[œBaseToolœ,œToolœ],œdataTypeœ:œPythonFunctionToolœ,œidœ:œPythonFunctionTool-RfJuiœ}-AgentInitializer-tPdJw{œfieldNameœ:œtoolsœ,œidœ:œAgentInitializer-tPdJwœ,œinputTypesœ:null,œtypeœ:œToolœ}"
+      }
+    ],
+    "viewport": {
+      "x": 37.63043052737157,
+      "y": 71.47518177614131,
+      "zoom": 0.5140569133280332
+    }
+  },
+  "description": "Uncover Business Opportunities with NLP.",
+  "name": "Untitled document (20)",
+  "last_tested_version": "0.7.0a0",
+  "is_component": false
+}

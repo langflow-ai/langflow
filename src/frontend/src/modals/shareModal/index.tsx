@@ -1,6 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import EditFlowSettings from "../../components/EditFlowSettingsComponent";
+import EditFlowSettings from "../../components/editFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
 import { Button } from "../../components/ui/button";
@@ -20,10 +20,12 @@ import {
   downloadNode,
   removeApiKeys,
   removeFileNameFromComponents,
+  removeGlobalVariableFromComponents,
 } from "../../utils/reactflowUtils";
-import { getTagsIds } from "../../utils/storeUtils";
-import ConfirmationModal from "../ConfirmationModal";
 import BaseModal from "../baseModal";
+import ConfirmationModal from "../confirmationModal";
+import ExportModal from "../exportModal";
+import getTagsIds from "./utils/get-tags-ids";
 
 export default function ShareModal({
   component,
@@ -48,7 +50,7 @@ export default function ShareModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [internalOpen, internalSetOpen] = useState(children ? false : true);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
-  const nameComponent = is_component ? "component" : "flow";
+  const nameComponent = is_component ? "component" : "workflow";
 
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [loadingTags, setLoadingTags] = useState<boolean>(false);
@@ -100,6 +102,7 @@ export default function ShareModal({
   const handleShareComponent = async (update = false) => {
     //remove file names from flows before sharing
     removeFileNameFromComponents(component);
+    removeGlobalVariableFromComponents(component);
     const flow: FlowType = removeApiKeys({
       id: component!.id,
       data: component!.data,
@@ -126,14 +129,14 @@ export default function ShareModal({
             title: "Error sharing " + is_component ? "component" : "flow",
             list: [err["response"]["data"]["detail"]],
           });
-        }
+        },
       );
     else
       updateFlowStore(
         flow!,
         getTagsIds(selectedTags, tags),
         sharePublic,
-        unavaliableNames.find((e) => e.name === name)!.id
+        unavaliableNames.find((e) => e.name === name)!.id,
       ).then(successShare, (err) => {
         setErrorData({
           title: "Error sharing " + is_component ? "component" : "flow",
@@ -179,7 +182,7 @@ export default function ShareModal({
             </span>
             <br></br>
             <span className=" text-xs text-destructive ">
-              Warning: This action cannot be undone.
+              Note: This action is irreversible.
             </span>
           </ConfirmationModal.Content>
         </ConfirmationModal>
@@ -204,7 +207,9 @@ export default function ShareModal({
           {children ? children : <></>}
         </BaseModal.Trigger>
         <BaseModal.Header
-          description={`Share your ${nameComponent} to the Langflow Store.`}
+          description={`Publish ${
+            is_component ? "your component" : "workflow"
+          } to the Langflow Store.`}
         >
           <span className="pr-2">Share</span>
           <IconComponent
@@ -233,38 +238,56 @@ export default function ShareModal({
               onCheckedChange={(event: boolean) => {
                 setSharePublic(event);
               }}
+              data-testid="public-checkbox"
             />
             <label htmlFor="public" className="export-modal-save-api text-sm ">
-              Make {nameComponent} public
+              Set {nameComponent} status to public
             </label>
           </div>
           <span className=" text-xs text-destructive ">
-            <b>Warning:</b> API keys in designated fields are removed when
-            sharing.
+            <b>Attention:</b> API keys in specified fields are automatically
+            removed upon sharing.
           </span>
         </BaseModal.Content>
 
         <BaseModal.Footer>
           <div className="flex w-full justify-between gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="gap-2"
-              onClick={() => {
-                handleExportComponent();
-                (setOpen || internalSetOpen)(false);
-              }}
-            >
-              <IconComponent name="Download" className="h-4 w-4" />
-              Export
-            </Button>
+            {!is_component && (
+              <ExportModal>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    // (setOpen || internalSetOpen)(false);
+                  }}
+                >
+                  <IconComponent name="Download" className="h-4 w-4" />
+                  Export
+                </Button>
+              </ExportModal>
+            )}
+            {is_component && (
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                onClick={() => {
+                  (setOpen || internalSetOpen)(false);
+                  handleExportComponent();
+                }}
+              >
+                <IconComponent name="Download" className="h-4 w-4" />
+                Export
+              </Button>
+            )}
             <Button
               disabled={loadingNames}
               type="button"
               className={is_component ? "w-40" : "w-28"}
               onClick={() => {
                 const isNameAvailable = !unavaliableNames.some(
-                  (element) => element.name === name
+                  (element) => element.name === name,
                 );
 
                 if (isNameAvailable) {

@@ -1,0 +1,130 @@
+name: Run Frontend Tests
+
+on:
+  pull_request:
+    paths:
+      - "src/frontend/**"
+
+env:
+  POETRY_VERSION: "1.8.2"
+  NODE_VERSION: "21"
+  PYTHON_VERSION: "3.12"
+  # Define the directory where Playwright browsers will be installed.
+  # Adjust if your project uses a different path.
+  PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
+
+jobs:
+  setup-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shardIndex: [1, 2, 3, 4]
+        shardTotal: [4]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        id: setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache Node.js dependencies
+        uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('src/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install Node.js dependencies
+        run: |
+          cd src/frontend
+          npm ci
+        if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
+
+      - name: Cache playwright binaries
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: |
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('src/frontend/package-lock.json') }}
+      - name: Install Frontend dependencies
+        run: |
+          cd src/frontend
+          npm ci
+
+      - name: Install Playwright's browser binaries
+        run: |
+          cd src/frontend
+          npx playwright install --with-deps
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+      - name: Install Playwright's dependencies
+        run: |
+          cd src/frontend
+          npx playwright install-deps
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install Python dependencies
+        run: |
+          poetry env use ${{ env.PYTHON_VERSION }}
+          poetry install
+
+      - name: create .env
+        run: |
+          touch .env
+          echo "${{ secrets.ENV_VARS }}" > .env
+
+      - name: Run Playwright Tests
+        run: |
+          cd src/frontend
+          npx playwright test --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
+
+      - name: Upload blob report to GitHub Actions Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.shardIndex }}
+          path: src/frontend/blob-report
+          retention-days: 1
+
+  merge-reports:
+    needs: setup-and-test
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download blob reports from GitHub Actions Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: Merge into HTML Report
+        run: |
+          npx playwright merge-reports --reporter html ./all-blob-reports
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-report--attempt-${{ github.run_attempt }}
+          path: playwright-report
+          retention-days: 14

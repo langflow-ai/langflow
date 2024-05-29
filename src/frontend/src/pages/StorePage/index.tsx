@@ -1,15 +1,15 @@
 import { uniqueId } from "lodash";
 import { useContext, useEffect, useState } from "react";
-import PaginatorComponent from "../../components/PaginatorComponent";
-import ShadTooltip from "../../components/ShadTooltipComponent";
 import CollectionCardComponent from "../../components/cardComponent";
 import IconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
+import ShadTooltip from "../../components/shadTooltipComponent";
 import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import PaginatorComponent from "../../components/paginatorComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";
 import { Badge } from "../../components/ui/badge";
 import {
@@ -26,15 +26,16 @@ import {
   INVALID_API_ERROR_ALERT,
   NOAPI_ERROR_ALERT,
 } from "../../constants/alerts_constants";
-import { storeDesc, storeTitle } from "../../constants/constants";
+import { STORE_DESC, STORE_TITLE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { getStoreComponents, getStoreTags } from "../../controllers/API";
-import StoreApiKeyModal from "../../modals/StoreApiKeyModal";
+import StoreApiKeyModal from "../../modals/storeApiKeyModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { storeComponent } from "../../types/store";
 import { cn } from "../../utils/utils";
+import InputSearchComponent from "../MainPage/components/myCollectionComponent/components/inputSearchComponent";
 
 export default function StorePage(): JSX.Element {
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -47,7 +48,7 @@ export default function StorePage(): JSX.Element {
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [loading, setLoading] = useState(true);
@@ -64,6 +65,8 @@ export default function StorePage(): JSX.Element {
   const [tabActive, setTabActive] = useState("All");
   const [searchNow, setSearchNow] = useState("");
   const [selectFilter, setSelectFilter] = useState("all");
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!loadingApiKey) {
@@ -142,12 +145,12 @@ export default function StorePage(): JSX.Element {
           setTotalRowsCount(
             filteredCategories?.length === 0
               ? Number(res?.count ?? 0)
-              : res?.results?.length ?? 0
+              : res?.results?.length ?? 0,
           );
         }
       })
       .catch((err) => {
-        if (err.response.status === 403 || err.response.status === 401) {
+        if (err.response?.status === 403 || err.response?.status === 401) {
           setValidApiKey(false);
         } else {
           setSearchData([]);
@@ -174,17 +177,18 @@ export default function StorePage(): JSX.Element {
   return (
     <PageLayout
       betaIcon
-      title={storeTitle}
-      description={storeDesc}
+      title={STORE_TITLE}
+      description={STORE_DESC}
       button={
         <>
           {StoreApiKeyModal && (
             <StoreApiKeyModal disabled={loading}>
               <Button
+                data-testid="api-key-button-store"
                 disabled={loading}
                 className={cn(
                   `${!validApiKey ? "animate-pulse border-error" : ""}`,
-                  loading ? "cursor-not-allowed" : ""
+                  loading ? "cursor-not-allowed" : "",
                 )}
                 variant="primary"
               >
@@ -199,36 +203,23 @@ export default function StorePage(): JSX.Element {
       <div className="flex h-full w-full flex-col justify-between">
         <div className="flex w-full flex-col gap-4 p-0">
           <div className="flex items-end gap-4">
-            <div className="relative h-12 w-[40%]">
-              <Input
-                disabled={loading}
-                placeholder="Search Flows and Components"
-                className="absolute h-12 pl-5 pr-12"
-                onChange={(e) => {
-                  setInputText(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setSearchNow(uniqueId());
-                  }
-                }}
-                value={inputText}
-              />
-              <button
-                disabled={loading}
-                className="absolute bottom-0 right-4 top-0 my-auto h-6 cursor-pointer stroke-1 text-muted-foreground"
-                onClick={() => {
+            <InputSearchComponent
+              loading={loading}
+              divClasses="relative h-12 w-[40%]"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
                   setSearchNow(uniqueId());
-                }}
-              >
-                <IconComponent
-                  name={loading ? "Loader2" : "Search"}
-                  className={loading ? " animate-spin cursor-not-allowed" : ""}
-                />
-              </button>
-            </div>
+                }
+              }}
+              onClick={() => {
+                setSearchNow(uniqueId());
+              }}
+            />
             <div className="ml-4 flex w-full gap-2 border-b border-border">
               <button
+                data-testid="all-button-store"
                 disabled={loading}
                 onClick={() => {
                   setTabActive("All");
@@ -243,6 +234,7 @@ export default function StorePage(): JSX.Element {
                 All
               </button>
               <button
+                data-testid="flows-button-store"
                 disabled={loading}
                 onClick={() => {
                   resetPagination();
@@ -258,6 +250,7 @@ export default function StorePage(): JSX.Element {
                 Flows
               </button>
               <button
+                data-testid="components-button-store"
                 disabled={loading}
                 onClick={() => {
                   resetPagination();
@@ -344,7 +337,7 @@ export default function StorePage(): JSX.Element {
                 setPageOrder(e);
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger data-testid="select-order-store">
                 <SelectValue placeholder="Popular" />
               </SelectTrigger>
               <SelectContent>
@@ -365,6 +358,10 @@ export default function StorePage(): JSX.Element {
                       data={item}
                       authorized={validApiKey}
                       disabled={loading}
+                      playground={
+                        item.last_tested_version?.includes("1.0.0") &&
+                        !item.is_component
+                      }
                     />
                   </>
                 );

@@ -1,22 +1,25 @@
 import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import { useUpdateNodeInternals } from "reactflow";
-import ShadTooltip from "../../../../components/ShadTooltipComponent";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import IconComponent from "../../../../components/genericIconComponent";
+import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
-import ConfirmationModal from "../../../../modals/ConfirmationModal";
-import EditNodeModal from "../../../../modals/EditNodeModal";
+import { postCustomComponent } from "../../../../controllers/API";
+import ConfirmationModal from "../../../../modals/confirmationModal";
+import EditNodeModal from "../../../../modals/editNodeModal";
 import ShareModal from "../../../../modals/shareModal";
+import useAlertStore from "../../../../stores/alertStore";
 import { useDarkStore } from "../../../../stores/darkStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../../stores/storeStore";
+import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { FlowType } from "../../../../types/flow";
@@ -27,17 +30,20 @@ import {
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn } from "../../../../utils/utils";
+import ToolbarSelectItem from "./toolbarSelectItem";
 
 export default function NodeToolbarComponent({
   data,
   deleteNode,
-  position,
   setShowNode,
   numberOfHandles,
   showNode,
   name = "code",
   selected,
+  updateNodeCode,
+  setShowState,
   onCloseAdvancedModal,
+  isOutdated,
 }: nodeToolbarPropsType): JSX.Element {
   const nodeLength = Object.keys(data.node!.template).filter(
     (templateField) =>
@@ -54,7 +60,7 @@ export default function NodeToolbarComponent({
         data.node.template[templateField].type === "dict" ||
         data.node.template[templateField].type === "NestedDict")
   ).length;
-
+  const templates = useTypesStore((state) => state.templates);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
@@ -62,22 +68,25 @@ export default function NodeToolbarComponent({
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
-  const pinned = data.node?.pinned ?? false;
+  const frozen = data.node?.frozen ?? false;
   const paste = useFlowStore((state) => state.paste);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNodes = useFlowStore((state) => state.setNodes);
-  const setEdges = useFlowStore((state) => state.setEdges);
 
+  const setEdges = useFlowStore((state) => state.setEdges);
+  const unselectAll = useFlowStore((state) => state.unselectAll);
   const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
+  const getNodePosition = useFlowStore((state) => state.getNodePosition);
   const flows = useFlowsManagerStore((state) => state.flows);
   const version = useDarkStore((state) => state.version);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
   const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
-
-  const [flowComponent, setFlowComponent] = useState<FlowType>();
+  const [flowComponent, setFlowComponent] = useState<FlowType>(
+    createFlowComponent(cloneDeep(data), version)
+  );
 
   const openInNewTab = (url) => {
     window.open(url, "_blank", "noreferrer");
@@ -93,6 +102,10 @@ export default function NodeToolbarComponent({
   const setLastCopiedSelection = useFlowStore(
     (state) => state.setLastCopiedSelection
   );
+
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
+
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
   }, [
@@ -132,7 +145,7 @@ export default function NodeToolbarComponent({
         takeSnapshot();
         expandGroupNode(
           data.id,
-          updateFlowPosition(position, data.node?.flow!),
+          updateFlowPosition(getNodePosition(data.id), data.node?.flow!),
           data.node!.template,
           nodes,
           edges,
@@ -149,6 +162,52 @@ export default function NodeToolbarComponent({
       case "copy":
         const node = nodes.filter((node) => node.id === data.id);
         setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
+        break;
+      case "duplicate":
+        paste(
+          {
+            nodes: [nodes.find((node) => node.id === data.id)!],
+            edges: [],
+          },
+          {
+            x: 50,
+            y: 10,
+            paneX: nodes.find((node) => node.id === data.id)?.position.x,
+            paneY: nodes.find((node) => node.id === data.id)?.position.y,
+          }
+        );
+        break;
+      case "update":
+        takeSnapshot();
+        // to update we must get the code from the templates in useTypesStore
+        const thisNodeTemplate = templates[data.type].template;
+        // if the template does not have a code key
+        // return
+        if (!thisNodeTemplate.code) return;
+
+        const currentCode = thisNodeTemplate.code.value;
+        if (data.node) {
+          postCustomComponent(currentCode, data.node)
+            .then((apiReturn) => {
+              const { data } = apiReturn;
+              if (data && updateNodeCode) {
+                updateNodeCode(data, currentCode, "code");
+              }
+            })
+            .catch((err) => {
+              console.log(err);
+            });
+          setNode(data.id, (oldNode) => {
+            let newNode = cloneDeep(oldNode);
+            newNode.data = {
+              ...data,
+            };
+            newNode.data.node.template.code.value = currentCode;
+            return newNode;
+          });
+        }
+
+        break;
     }
   };
 
@@ -206,11 +265,124 @@ export default function NodeToolbarComponent({
   const [openModal, setOpenModal] = useState(false);
   const hasCode = Object.keys(data.node!.template).includes("code");
 
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (
+        selected &&
+        (hasApiKey || hasStore) &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toUpperCase() === "U"
+      ) {
+        event.preventDefault();
+        handleSelectChange("update");
+      }
+      if (
+        selected &&
+        isGroup &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toUpperCase() === "G"
+      ) {
+        event.preventDefault();
+        handleSelectChange("ungroup");
+      }
+      if (
+        selected &&
+        (hasApiKey || hasStore) &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey &&
+        event.key.toUpperCase() === "S"
+      ) {
+        event.preventDefault();
+        setShowconfirmShare((state) => !state);
+      }
+
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey &&
+        event.key.toUpperCase() === "Q"
+      ) {
+        event.preventDefault();
+        if (isMinimal) {
+          setShowState((show) => !show);
+          setShowNode(data.showNode ?? true ? false : true);
+          return;
+        }
+        setNoticeData({
+          title:
+            "Minimization are only available for nodes with one handle or fewer.",
+        });
+      }
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey &&
+        event.key.toUpperCase() === "U"
+      ) {
+        event.preventDefault();
+        if (hasCode) return setOpenModal((state) => !state);
+        setNoticeData({ title: `You can not access ${data.id} code` });
+      }
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey &&
+        event.key.toUpperCase() === "A"
+      ) {
+        event.preventDefault();
+        setShowModalAdvanced((state) => !state);
+      }
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toUpperCase() === "S"
+      ) {
+        if (isSaved) {
+          event.preventDefault();
+          return setShowOverrideModal((state) => !state);
+        }
+        if (hasCode) {
+          event.preventDefault();
+          saveComponent(cloneDeep(data), false);
+          setSuccessData({ title: `${data.id} saved successfully` });
+        }
+      }
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey &&
+        event.key.toUpperCase() === "D"
+      ) {
+        event.preventDefault();
+        if (data.node?.documentation) {
+          return openInNewTab(data.node?.documentation);
+        }
+        setNoticeData({
+          title: `${data.id} docs is not available at the moment.`,
+        });
+      }
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toUpperCase() === "J"
+      ) {
+        event.preventDefault();
+        downloadNode(flowComponent!);
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isSaved, showNode, data.showNode, isMinimal]);
+
   return (
     <>
       <div className="w-26 h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
-          {hasCode ? (
+          {hasCode && (
             <ShadTooltip content="Code" side="top">
               <button
                 className="relative inline-flex items-center rounded-l-md  bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
@@ -219,72 +391,46 @@ export default function NodeToolbarComponent({
                 }}
                 data-testid="code-button-modal"
               >
-                <div className="hidden">
-                  <CodeAreaComponent
-                    openModal={openModal}
-                    readonly={
-                      data.node?.flow && data.node.template[name].dynamic
-                        ? true
-                        : false
-                    }
-                    dynamic={data.node?.template[name].dynamic ?? false}
-                    setNodeClass={handleNodeClass}
-                    nodeClass={data.node}
-                    disabled={false}
-                    value={data.node?.template[name].value ?? ""}
-                    onChange={handleOnNewValue}
-                    id={"code-input-node-toolbar-" + name}
-                  />
-                </div>
-                <IconComponent name="TerminalSquare" className="h-4 w-4" />
-              </button>
-            </ShadTooltip>
-          ) : (
-            <ShadTooltip content="Save" side="top">
-              <button
-                className={classNames(
-                  "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
-                  hasCode ? "" : "rounded-l-md"
-                )}
-                onClick={() => {
-                  isSaved
-                    ? setShowOverrideModal(true)
-                    : saveComponent(cloneDeep(data), false);
-                }}
-              >
-                <IconComponent name="SaveAll" className=" h-4 w-4" />
+                <IconComponent name="Code" className="h-4 w-4" />
               </button>
             </ShadTooltip>
           )}
 
-          <ShadTooltip content="Duplicate" side="top">
+          <ShadTooltip content={"Save"} side="top">
             <button
+              data-testid="save-button-modal"
+              className={classNames(
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                hasCode ? " " : " rounded-l-md "
+              )}
+              onClick={(event) => {
+                event.preventDefault();
+                if (isSaved) {
+                  return setShowOverrideModal(true);
+                }
+                saveComponent(cloneDeep(data), false);
+              }}
+            >
+              <IconComponent name="SaveAll" className="h-4 w-4" />
+            </button>
+          </ShadTooltip>
+
+          <ShadTooltip content={"Duplicate"} side="top">
+            <button
+              data-testid="duplicate-button-modal"
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
               )}
               onClick={(event) => {
                 event.preventDefault();
-                paste(
-                  {
-                    nodes: [nodes.find((node) => node.id === data.id)!],
-                    edges: [],
-                  },
-                  {
-                    x: 50,
-                    y: 10,
-                    paneX: nodes.find((node) => node.id === data.id)?.position
-                      .x,
-                    paneY: nodes.find((node) => node.id === data.id)?.position
-                      .y,
-                  }
-                );
+                handleSelectChange("duplicate");
               }}
             >
               <IconComponent name="Copy" className="h-4 w-4" />
             </button>
           </ShadTooltip>
 
-          <ShadTooltip content="Pin" side="top">
+          <ShadTooltip content="Freeze" side="top">
             <button
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
@@ -297,17 +443,18 @@ export default function NodeToolbarComponent({
                     ...old.data,
                     node: {
                       ...old.data.node,
-                      pinned: old.data?.node?.pinned ? false : true,
+                      frozen: old.data?.node?.frozen ? false : true,
                     },
                   },
                 }));
               }}
             >
               <IconComponent
-                name="Pin"
+                name="Snowflake"
                 className={cn(
                   "h-4 w-4 transition-all",
-                  pinned ? "animate-wiggle fill-current" : ""
+                  // TODO UPDATE THIS COLOR TO BE A VARIABLE
+                  frozen ? "animate-wiggle text-ice" : ""
                 )}
               />
             </button>
@@ -334,109 +481,124 @@ export default function NodeToolbarComponent({
             <SelectContent>
               {nodeLength > 0 && (
                 <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
-                  <div className="flex" data-testid="edit-button-modal">
-                    <IconComponent
-                      name="Settings2"
-                      className="relative top-0.5 mr-2 h-4 w-4"
-                    />{" "}
-                    Edit{" "}
-                  </div>{" "}
+                  <ToolbarSelectItem
+                    keyboardKey="A"
+                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                    shift={true}
+                    value={"Advanced"}
+                    icon={"Settings2"}
+                    dataTestId="edit-button-modal"
+                  />
                 </SelectItem>
               )}
-
-              {isSaved ? (
-                <SelectItem value={"override"}>
-                  <div className="flex" data-testid="save-button-modal">
-                    <IconComponent
-                      name="SaveAll"
-                      className="relative top-0.5 mr-2 h-4 w-4"
-                    />{" "}
-                    Save{" "}
-                  </div>{" "}
-                </SelectItem>
-              ) : (
-                hasCode && (
-                  <SelectItem value={"SaveAll"}>
-                    <div className="flex" data-testid="save-button-modal">
-                      <IconComponent
-                        name="SaveAll"
-                        className="relative top-0.5 mr-2 h-4 w-4"
-                      />{" "}
-                      Save{" "}
-                    </div>{" "}
-                  </SelectItem>
-                )
-              )}
+              {/* <SelectItem value={"duplicate"}>
+                <ToolbarSelectItem
+                  keyboardKey="D"
+                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                  shift={false}
+                  value={"Duplicate"}
+                  icon={"Copy"}
+                  dataTestId="duplicate-button-modal"
+                />
+              </SelectItem> */}
               <SelectItem value={"copy"}>
-                <div className="flex">
-                  <IconComponent
-                    name="Copy"
-                    className="relative top-0.5 mr-2 h-4 w-4 "
-                  />{" "}
-                  <span className="">Copy</span>{" "}
-                  <IconComponent
-                    name="Command"
-                    className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                  ></IconComponent>
-                  <span className="absolute right-2 top-[0.5em]">C</span>
-                </div>
+                <ToolbarSelectItem
+                  keyboardKey="C"
+                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                  shift={false}
+                  value={"Copy"}
+                  icon={"Clipboard"}
+                  dataTestId="copy-button-modal"
+                />
               </SelectItem>
+              {isOutdated && (
+                <SelectItem value={"update"}>
+                  <ToolbarSelectItem
+                    keyboardKey="U"
+                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                    shift={false}
+                    value={"Update"}
+                    icon={"Code"}
+                    dataTestId="update-button-modal"
+                    ping={isOutdated}
+                  />
+                </SelectItem>
+              )}
               {hasStore && (
                 <SelectItem
                   value={"Share"}
                   disabled={!hasApiKey || !validApiKey}
                 >
-                  <div className="flex" data-testid="save-button-modal">
-                    <IconComponent
-                      name="Share3"
-                      className="relative top-0.5 -m-1 mr-1 h-6 w-6"
-                    />{" "}
-                    Share{" "}
-                  </div>{" "}
+                  <ToolbarSelectItem
+                    keyboardKey="S"
+                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                    shift={true}
+                    value={"Share"}
+                    icon={"Share3"}
+                    styleObj={{
+                      iconClasses: "relative top-0.5 -m-1 mr-[0.25rem] h-6 w-6",
+                    }}
+                    dataTestId="share-button-modal"
+                  />
                 </SelectItem>
               )}
-              {!hasStore && (
+              {(!hasStore || !hasApiKey || !validApiKey) && (
                 <SelectItem value={"Download"}>
-                  <div className="flex">
-                    <IconComponent
-                      name="Download"
-                      className="relative top-0.5 mr-2 h-4 w-4"
-                    />{" "}
-                    Download{" "}
-                  </div>{" "}
+                  <ToolbarSelectItem
+                    value="Download"
+                    shift={false}
+                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                    icon="Download"
+                    styleObj={{ iconClasses: "relative top-0.5 mr-2 h-4 w-4" }}
+                    keyboardKey={"J"}
+                    dataTestId={"Dowload-button-nodeToolbar"}
+                  />
                 </SelectItem>
               )}
               <SelectItem
                 value={"documentation"}
                 disabled={data.node?.documentation === ""}
               >
-                <div className="flex">
-                  <IconComponent
-                    name="FileText"
-                    className="relative top-0.5 mr-2 h-4 w-4"
-                  />{" "}
-                  Docs
-                </div>{" "}
+                <ToolbarSelectItem
+                  keyboardKey="D"
+                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                  shift={true}
+                  value={"Docs"}
+                  icon={"FileText"}
+                  dataTestId="docs-button-modal"
+                />
               </SelectItem>
               {isMinimal && (
                 <SelectItem value={"show"}>
-                  <div className="flex">
-                    <IconComponent
-                      name={showNode ? "Minimize2" : "Maximize2"}
-                      className="relative top-0.5 mr-2 h-4 w-4"
-                    />
-                    {showNode ? "Minimize" : "Expand"}
-                  </div>
+                  <ToolbarSelectItem
+                    icon={showNode ? "Minimize2" : "Maximize2"}
+                    value={showNode ? "Minimize" : "Expand"}
+                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                    shift={true}
+                    keyboardKey={"Q"}
+                    dataTestId={"minimize-button-nodeToolbar"}
+                  />
                 </SelectItem>
               )}
               {isGroup && (
                 <SelectItem value="ungroup">
                   <div className="flex">
                     <IconComponent
-                      name="Combine"
-                      className="relative top-0.5 mr-2 h-4 w-4"
+                      name="Ungroup"
+                      className="relative top-0.5 mr-2 h-4 w-4 "
                     />{" "}
-                    Ungroup{" "}
+                    <span className="">Ungroup</span>{" "}
+                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
+                      <IconComponent
+                        name="Command"
+                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
+                      ></IconComponent>
+                    ) : (
+                      <span className="absolute right-[1.30rem] top-[0.40em] stroke-2">
+                        Ctrl +{" "}
+                      </span>
+                    )}
+                    <span className="absolute right-2 top-[0.43em]">G</span>
                   </div>
                 </SelectItem>
               )}
@@ -469,9 +631,13 @@ export default function NodeToolbarComponent({
             index={6}
             onConfirm={(index, user) => {
               saveComponent(cloneDeep(data), true);
+              setSuccessData({ title: `${data.id} successfully overridden!` });
             }}
             onClose={setShowOverrideModal}
-            onCancel={() => saveComponent(cloneDeep(data), false)}
+            onCancel={() => {
+              saveComponent(cloneDeep(data), false);
+              setSuccessData({ title: "New node successfully saved!" });
+            }}
           >
             <ConfirmationModal.Content>
               <span>
@@ -486,12 +652,36 @@ export default function NodeToolbarComponent({
             open={showModalAdvanced}
             setOpen={setShowModalAdvanced}
           />
-          <ShareModal
-            open={showconfirmShare}
-            setOpen={setShowconfirmShare}
-            is_component={true}
-            component={flowComponent!}
-          />
+          {showconfirmShare && (
+            <ShareModal
+              open={showconfirmShare}
+              setOpen={setShowconfirmShare}
+              is_component={true}
+              component={flowComponent!}
+            />
+          )}
+          {hasCode && (
+            <div className="hidden">
+              {openModal && (
+                <CodeAreaComponent
+                  open={openModal}
+                  setOpen={setOpenModal}
+                  readonly={
+                    data.node?.flow && data.node.template[name].dynamic
+                      ? true
+                      : false
+                  }
+                  dynamic={data.node?.template[name].dynamic ?? false}
+                  setNodeClass={handleNodeClass}
+                  nodeClass={data.node}
+                  disabled={false}
+                  value={data.node?.template[name].value ?? ""}
+                  onChange={handleOnNewValue}
+                  id={"code-input-node-toolbar-" + name}
+                />
+              )}
+            </div>
+          )}
         </span>
       </div>
     </>

@@ -1,8 +1,8 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
-import { useNavigate } from "react-router-dom";
 import { renewAccessToken } from ".";
+import { AUTHORIZED_DUPLICATE_REQUESTS } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
@@ -17,26 +17,34 @@ function ApiInterceptor() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   let { accessToken, login, logout, authenticationErrorCount, autoLogin } =
     useContext(AuthContext);
-  const navigate = useNavigate();
   const cookies = new Cookies();
 
   useEffect(() => {
     const interceptor = api.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          const accessToken = cookies.get("access_token_lf");
+        if (
+          error?.response?.status === 403 ||
+          error?.response?.status === 401
+        ) {
+          if (!autoLogin) {
+            if (error?.config?.url?.includes("github")) {
+              return Promise.reject(error);
+            }
+            const stillRefresh = checkErrorCount();
+            if (!stillRefresh) {
+              return Promise.reject(error);
+            }
+            const acceptedRequest = await tryToRenewAccessToken(error);
 
-          if (accessToken && !autoLogin) {
-            checkErrorCount();
-            await tryToRenewAccessToken(error);
+            const accessToken = cookies.get("access_token_lf");
+
+            if (!accessToken && error?.config?.url?.includes("login")) {
+              return Promise.reject(error);
+            }
+
+            return acceptedRequest;
           }
-
-          if (!accessToken && error?.config?.url?.includes("login")) {
-            return Promise.reject(error);
-          }
-
-          return logout();
         }
         await clearBuildVerticesState(error);
         return Promise.reject(error);
@@ -45,9 +53,9 @@ function ApiInterceptor() {
 
     const isAuthorizedURL = (url) => {
       const authorizedDomains = [
-        "https://raw.githubusercontent.com/logspace-ai/langflow_examples/main/examples",
-        "https://api.github.com/repos/logspace-ai/langflow_examples/contents/examples",
-        "https://api.github.com/repos/logspace-ai/langflow",
+        "https://raw.githubusercontent.com/langflow-ai/langflow_examples/main/examples",
+        "https://api.github.com/repos/langflow-ai/langflow_examples/contents/examples",
+        "https://api.github.com/repos/langflow-ai/langflow",
         "auto_login",
       ];
 
@@ -73,6 +81,28 @@ function ApiInterceptor() {
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
+        const lastUrl = localStorage.getItem("lastUrlCalled");
+        const lastMethodCalled = localStorage.getItem("lastMethodCalled");
+
+        const isContained = AUTHORIZED_DUPLICATE_REQUESTS.some((request) =>
+          config?.url!.includes(request),
+        );
+
+        if (
+          config?.url === lastUrl &&
+          !isContained &&
+          lastMethodCalled === config.method
+        ) {
+          return Promise.reject("Duplicate request");
+        }
+
+        localStorage.setItem("lastUrlCalled", config.url ?? "");
+        localStorage.setItem("lastMethodCalled", config.method ?? "");
+        localStorage.setItem(
+          "lastRequestData",
+          JSON.stringify(config.data) ?? "",
+        );
+
         const accessToken = cookies.get("access_token_lf");
         if (accessToken && !isAuthorizedURL(config?.url)) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
@@ -98,11 +128,15 @@ function ApiInterceptor() {
     if (authenticationErrorCount > 3) {
       authenticationErrorCount = 0;
       logout();
+      return false;
     }
+
+    return true;
   }
 
   async function tryToRenewAccessToken(error: AxiosError) {
     try {
+      if (window.location.pathname.includes("/login")) return;
       const res = await renewAccessToken();
       if (res?.data?.access_token && res?.data?.refresh_token) {
         login(res?.data?.access_token);
@@ -116,7 +150,9 @@ function ApiInterceptor() {
         return response;
       }
     } catch (error) {
+      clearBuildVerticesState(error);
       logout();
+      return Promise.reject("Authentication error");
     }
   }
 

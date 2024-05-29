@@ -1,0 +1,45 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "poetry.lock"
+      - "pyproject.toml"
+      - "src/backend/**"
+  pull_request:
+    branches: [dev]
+    paths:
+      - "poetry.lock"
+      - "pyproject.toml"
+      - "src/backend/**"
+
+env:
+  POETRY_VERSION: "1.8.2"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - "3.12"
+          - "3.11"
+          - "3.10"
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: ${{ matrix.python-version }}
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install Python dependencies
+        run: |
+          poetry env use ${{ matrix.python-version }}
+          poetry install
+      - name: Run unit tests
+        run: |
+          make tests args="-n auto"
