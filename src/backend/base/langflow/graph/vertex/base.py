@@ -201,7 +201,9 @@ class Vertex:
 
         self.description = self.data["node"].get("description", "")
         self.frozen = self.data["node"].get("frozen", False)
-        self.selected_output_type = self.data["node"].get("selected_output_type")
+        self.selected_output_type = (
+            str(self.data.get("selected_output_type")).strip() if self.data.get("selected_output_type") else None
+        )
         self.is_input = self.data["node"].get("is_input") or self.is_input
         self.is_output = self.data["node"].get("is_output") or self.is_output
         template_dicts = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}
