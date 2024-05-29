@@ -2,6 +2,7 @@ import { useState } from "react";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../../components/genericIconComponent";
+import formatFileName from "./utils/format-file-name";
 
 export default function FilePreview({
   error,
@@ -17,15 +18,6 @@ export default function FilePreview({
   const isImage = file.type.toLowerCase().includes("image");
 
   const [isHovered, setIsHovered] = useState(false);
-
-  const formatFileName = (name) => {
-    const fileExtension = name.split(".").pop(); // Get the file extension
-    const baseName = name.slice(0, name.lastIndexOf(".")); // Get the base name without the extension
-    if (baseName.length > 6) {
-      return `${baseName.slice(0, 29)}...${fileExtension}`;
-    }
-    return name;
-  };
 
   return (
     <div className="relative inline-block">
