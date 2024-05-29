@@ -22,7 +22,7 @@ export default function FilePreview({
     const fileExtension = name.split(".").pop(); // Get the file extension
     const baseName = name.slice(0, name.lastIndexOf(".")); // Get the base name without the extension
     if (baseName.length > 6) {
-      return `${baseName.slice(0, 10)}...${fileExtension}`;
+      return `${baseName.slice(0, 29)}...${fileExtension}`;
     }
     return name;
   };
@@ -52,7 +52,7 @@ export default function FilePreview({
         <div>Error...</div>
       ) : (
         <div
-          className={`relative ${isImage ? "h-20 w-20" : "h-20 w-48"} cursor-pointer rounded-lg border  border-ring bg-background transition duration-300 ${
+          className={`relative ${isImage ? "h-20 w-20" : "h-20 w-80"} cursor-pointer rounded-lg border  border-ring bg-background transition duration-300 ${
             isHovered ? "shadow-md" : ""
           }`}
           onMouseEnter={() => setIsHovered(true)}
@@ -75,7 +75,7 @@ export default function FilePreview({
           )}
           {isHovered && (
             <div
-              className={`absolute ${isImage ? "bottom-16 left-16" : "bottom-16 left-44"}  flex h-5 w-5 items-center justify-center`}
+              className={`absolute ${isImage ? "bottom-16 left-16" : "bottom-16 left-[19em]"}  flex h-5 w-5 items-center justify-center`}
             >
               <div
                 className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-gray-200 p-2 transition-all"
