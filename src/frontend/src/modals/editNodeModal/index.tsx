@@ -53,7 +53,7 @@ const EditNodeModal = forwardRef(
       open: boolean;
       setOpen: (open: boolean) => void;
     },
-    ref,
+    ref
   ) => {
     const [myData, setMyData] = useState(data);
 
@@ -121,7 +121,7 @@ const EditNodeModal = forwardRef(
                 "edit-node-modal-box",
                 nodeLength > limitScrollFieldsModal
                   ? "overflow-scroll overflow-x-hidden custom-scroll"
-                  : "",
+                  : ""
               )}
             >
               {nodeLength > 0 && (
@@ -143,8 +143,8 @@ const EditNodeModal = forwardRef(
                             templateParam.charAt(0) !== "_" &&
                             myData.node?.template[templateParam].show &&
                             LANGFLOW_SUPPORTED_TYPES.has(
-                              myData.node!.template[templateParam].type,
-                            ),
+                              myData.node!.template[templateParam].type
+                            )
                         )
                         .map((templateParam, index) => {
                           let id = {
@@ -166,8 +166,8 @@ const EditNodeModal = forwardRef(
                                           myData.node?.template[templateParam]
                                             .proxy,
                                       }
-                                    : id,
-                                ),
+                                    : id
+                                )
                             ) ?? false;
                           return (
                             <TableRow
@@ -229,7 +229,7 @@ const EditNodeModal = forwardRef(
                                         onChange={(value: string[]) => {
                                           handleOnNewValue(
                                             value,
-                                            templateParam,
+                                            templateParam
                                           );
                                         }}
                                       />
@@ -253,11 +253,11 @@ const EditNodeModal = forwardRef(
                                             .value ?? ""
                                         }
                                         onChange={(
-                                          value: string | string[],
+                                          value: string | string[]
                                         ) => {
                                           handleOnNewValue(
                                             value,
-                                            templateParam,
+                                            templateParam
                                           );
                                         }}
                                       />
@@ -293,23 +293,33 @@ const EditNodeModal = forwardRef(
                                     <DictComponent
                                       disabled={disabled}
                                       editNode={true}
-                                      value={
-                                        myData.node!.template[
-                                          templateParam
-                                        ]?.value?.toString() === "{}"
-                                          ? {
-                                              // yourkey: "value",
-                                            }
-                                          : myData.node!.template[templateParam]
-                                              .value
-                                      }
+                                      value={() => {
+                                        // instead of the above, try to stringify the object
+                                        // if it fails, return an empty object
+                                        console.log(
+                                          myData.node!.template[templateParam]
+                                            .value
+                                        );
+                                        try {
+                                          return JSON.parse(
+                                            myData.node!.template[templateParam]
+                                              .value as string
+                                          );
+                                        } catch (e) {
+                                          console.error(
+                                            "Error parsing object",
+                                            e
+                                          );
+                                          return {};
+                                        }
+                                      }}
                                       onChange={(newValue) => {
                                         myData.node!.template[
                                           templateParam
                                         ].value = newValue;
                                         handleOnNewValue(
                                           newValue,
-                                          templateParam,
+                                          templateParam
                                         );
                                       }}
                                       id="editnode-div-dict-input"
@@ -326,7 +336,7 @@ const EditNodeModal = forwardRef(
                                       myData.node!.template[templateParam].value
                                         ?.length > 1
                                         ? "my-3"
-                                        : "",
+                                        : ""
                                     )}
                                   >
                                     <KeypairListComponent
@@ -342,7 +352,7 @@ const EditNodeModal = forwardRef(
                                               myData.node!.template[
                                                 templateParam
                                               ].value,
-                                              type(templateParam)!,
+                                              type(templateParam)!
                                             )
                                       }
                                       duplicateKey={errorDuplicateKey}
@@ -353,11 +363,11 @@ const EditNodeModal = forwardRef(
                                           templateParam
                                         ].value = valueToNumbers;
                                         setErrorDuplicateKey(
-                                          hasDuplicateKeys(valueToNumbers),
+                                          hasDuplicateKeys(valueToNumbers)
                                         );
                                         handleOnNewValue(
                                           valueToNumbers,
-                                          templateParam,
+                                          templateParam
                                         );
                                       }}
                                       isList={
@@ -387,7 +397,7 @@ const EditNodeModal = forwardRef(
                                       setEnabled={(isEnabled) => {
                                         handleOnNewValue(
                                           isEnabled,
-                                          templateParam,
+                                          templateParam
                                         );
                                       }}
                                       size="small"
@@ -630,7 +640,7 @@ const EditNodeModal = forwardRef(
         </BaseModal.Footer>
       </BaseModal>
     );
-  },
+  }
 );
 
 export default EditNodeModal;

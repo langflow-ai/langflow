@@ -340,12 +340,10 @@ export default function GenericNode({
       "generic-node-div",
       specificClassFromBuildStatus
     );
-    console.log("names", names);
     return names;
   };
 
   const getBaseBorderClass = (selected) => {
-    console.log("data.node?.frozen", data.node?.frozen);
     let className = selected ? "border border-ring" : "border";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     return data.node?.frozen ? frozenClass : className;
