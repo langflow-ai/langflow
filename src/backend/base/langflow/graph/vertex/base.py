@@ -63,6 +63,7 @@ class Vertex:
         self._built_result = None
         self._built = False
         self.artifacts: Dict[str, Any] = {}
+        self.artifacts_raw: Any = None
         self.artifacts_type: Optional[str] = None
         self.steps: List[Callable] = [self._build]
         self.steps_ran: List[Callable] = []
@@ -626,6 +627,7 @@ class Vertex:
                 self._built_object, self.artifacts = result
             elif len(result) == 3:
                 self._custom_component, self._built_object, self.artifacts = result
+                self.artifacts_raw = self.artifacts.get("raw")
                 self.artifacts_type = self.artifacts.get("type") or ArtifactType.UNKNOWN.value
 
         else:

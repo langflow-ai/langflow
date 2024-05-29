@@ -4,7 +4,7 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 import ReactPlayer from "react-player";
 import Admonition from "@theme/Admonition";
 
-# Basic prompting
+# Basic Prompting
 
 Prompts serve as the inputs to a large language model (LLM), acting as the interface between human instructions and computational tasks.
 
@@ -14,35 +14,16 @@ This article demonstrates how to use Langflow's prompt tools to issue basic prom
 
 ## Prerequisites
 
-1. Install Langflow.
-```bash
-python -m pip install langflow --pre
-```
+- [Langflow installed and running](../getting-started/install-langflow.mdx)
 
-2. Start a local Langflow instance with the Langflow CLI:
-```bash
-langflow run
-```
-Or start Langflow with Python:
-```bash
-python -m langflow run
-```
-
-Result:
-```
-│ Welcome to ⛓ Langflow                             │
-│                                                   │
-│ Access http://127.0.0.1:7860                      │
-│ Collaborate, and contribute at our GitHub Repo 🚀 │
-```
+- [OpenAI API key created](https://platform.openai.com)
 
 <Admonition type="info">
-
-  Langflow v1.0 alpha is also available in [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true). Try it out or follow the instructions [here](/getting-started/huggingface-spaces) to install it locally.
-
+  Langflow v1.0 alpha is also available in HuggingFace Spaces. [Clone the space
+  using this
+  link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true)
+  to create your own Langflow workspace in minutes.
 </Admonition>
-
-3. Create an [OpenAI API key](https://platform.openai.com).
 
 ## Create the basic prompting project
 
@@ -64,25 +45,21 @@ Examine the **Prompt** component. The **Template** field instructs the LLM to `A
 This should be interesting...
 
 4. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
-    1. In the **Variable Name** field, enter `openai_api_key`.
-    2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
-    3. Click **Save Variable**.
+   1. In the **Variable Name** field, enter `openai_api_key`.
+   2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
+   3. Click **Save Variable**.
 
 ## Run the basic prompting flow
 
 1. Click the **Run** button.
-The **Interaction Panel** opens, where you can converse with your bot.
+   The **Interaction Panel** opens, where you can converse with your bot.
 2. Type a message and press Enter.
-The bot responds in a markedly piratical manner!
+   The bot responds in a markedly piratical manner!
 
 ## Modify the prompt for a different result
 
 1. To modify your prompt results, in the **Prompt** template, click the **Template** field.
-The **Edit Prompt** window opens.
+   The **Edit Prompt** window opens.
 2. Change `Answer the user as if you were a pirate` to a different character, perhaps `Answer the user as if you were Harold Abelson.`
 3. Run the basic prompting flow again.
-The response will be markedly different.
-
-
-
-
+   The response will be markedly different.

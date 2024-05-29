@@ -734,7 +734,7 @@ class Graph:
                 await vertex.build(user_id=user_id, inputs=inputs_dict,files=files, fallback_to_env_vars=fallback_to_env_vars)
 
             if vertex.result is not None:
-                params = vertex._built_object_repr()
+                params = vertex.artifacts_raw
                 log_type = vertex.artifacts_type
                 valid = True
                 result_dict = vertex.result
