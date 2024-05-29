@@ -12,6 +12,7 @@ import {
 import FilePreview from "../filePreviewChat";
 import ButtonSendWrapper from "./components/buttonSendWrapper";
 import TextAreaWrapper from "./components/textAreaWrapper";
+import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useDragAndDrop from "./hooks/use-drag-and-drop";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
@@ -38,7 +39,7 @@ export default function ChatInput({
   const { dragOver, dragEnter, dragLeave, onDrop } = useDragAndDrop(
     setIsDragging,
     setFiles,
-    currentFlowId,
+    currentFlowId
   );
 
   const send = () => {
@@ -58,6 +59,8 @@ export default function ChatInput({
       !event.nativeEvent.isComposing
     );
   };
+
+  const classNameFilePreview = getClassNamesFilePreview(inputFocus);
 
   return (
     <div className="flex w-full flex-col-reverse">
@@ -92,13 +95,7 @@ export default function ChatInput({
         </div>
       </div>
       {files.length > 0 && (
-        <div
-          className={`flex w-full items-center gap-2 rounded-t-md bg-background px-10 py-5 ${
-            inputFocus
-              ? "border-2 border-b-0 border-ring"
-              : "border border-b-0 border-border"
-          }`}
-        >
+        <div className={classNameFilePreview}>
           {files.map((file) => (
             <FilePreview
               error={file.error}
