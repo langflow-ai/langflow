@@ -78,9 +78,6 @@ export default function GlobalVariablesPage() {
   // Column Definitions: Defines the columns to be displayed.
   const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
     {
-      headerCheckboxSelection: true,
-      checkboxSelection: true,
-      showDisabledCheckboxes: true,
       headerName: "Variable Name",
       field: "name",
       flex: 2,

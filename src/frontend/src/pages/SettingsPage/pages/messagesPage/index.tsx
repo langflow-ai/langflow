@@ -49,7 +49,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     console.log("MessagesPage useEffect");
-    getMessagesTable("union").then((data) => {
+    getMessagesTable("union", undefined, ["index"]).then((data) => {
       const { columns, rows } = data;
       console.log(data);
       setColumns(columns.map((col) => ({ ...col, editable: true })));
