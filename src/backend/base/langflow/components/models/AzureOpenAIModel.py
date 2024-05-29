@@ -74,9 +74,8 @@ class AzureChatOpenAIComponent(LCModelComponent):
             },
             "max_tokens": {
                 "display_name": "Max Tokens",
-                "value": 1000,
                 "advanced": True,
-                "info": "Maximum number of tokens to generate.",
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             },
             "code": {"show": False},
             "input_value": {"display_name": "Input"},
@@ -117,7 +116,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
                 api_version=api_version,
                 api_key=secret_api_key,
                 temperature=temperature,
-                max_tokens=max_tokens,
+                max_tokens=max_tokens or None,
             )
         except Exception as e:
             raise ValueError("Could not connect to AzureOpenAI API.") from e

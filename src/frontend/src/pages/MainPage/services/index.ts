@@ -1,7 +1,7 @@
 import { BASE_URL_API } from "../../../constants/constants";
 import { api } from "../../../controllers/API/api";
 import { FlowType } from "../../../types/flow";
-import { AddFolderType, FolderType, StarterProjectsType } from "../entities";
+import { AddFolderType, FolderType } from "../entities";
 
 export async function getFolders(): Promise<FolderType[]> {
   try {
@@ -55,15 +55,6 @@ export async function deleteFolder(folderId: string) {
 export async function getFolderById(folderId: string): Promise<FolderType> {
   try {
     const response = await api.get(`${BASE_URL_API}folders/${folderId}`);
-    return response?.data;
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function getStarterProjects(): Promise<StarterProjectsType> {
-  try {
-    const response = await api.get(`${BASE_URL_API}folders/starter-projects`);
     return response?.data;
   } catch (error) {
     throw error;

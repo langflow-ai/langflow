@@ -3,8 +3,8 @@ from typing import Callable, Union
 from langchain.agents import AgentExecutor, create_vectorstore_agent
 from langchain.agents.agent_toolkits.vectorstore.toolkit import VectorStoreToolkit
 
+from langflow.custom import CustomComponent
 from langflow.field_typing import BaseLanguageModel
-from langflow.interface.custom.custom_component import CustomComponent
 
 
 class VectorStoreAgentComponent(CustomComponent):

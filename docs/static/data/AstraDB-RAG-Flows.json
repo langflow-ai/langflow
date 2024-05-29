@@ -572,12 +572,12 @@
                                 "advanced": false,
                                 "dynamic": false,
                                 "info": "",
-                                "load_from_db": false,
+                                "load_from_db": true,
                                 "title_case": false,
                                 "input_types": [
                                     "Text"
                                 ],
-                                "value": ""
+                                "value": "OPENAI_API_KEY"
                             },
                             "openai_api_type": {
                                 "type": "str",
@@ -967,12 +967,12 @@
                                 "advanced": false,
                                 "dynamic": false,
                                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                                "load_from_db": false,
+                                "load_from_db": true,
                                 "title_case": false,
                                 "input_types": [
                                     "Text"
                                 ],
-                                "value": ""
+                                "value": "OPENAI_API_KEY"
                             },
                             "stream": {
                                 "type": "bool",
@@ -1760,12 +1760,12 @@
                                 "advanced": false,
                                 "dynamic": false,
                                 "info": "API endpoint URL for the Astra DB service.",
-                                "load_from_db": false,
+                                "load_from_db": true,
                                 "title_case": false,
                                 "input_types": [
                                     "Text"
                                 ],
-                                "value": ""
+                                "value": "ASTRA_DB_API_ENDPOINT"
                             },
                             "batch_size": {
                                 "type": "int",
@@ -2087,12 +2087,12 @@
                                 "advanced": false,
                                 "dynamic": false,
                                 "info": "Authentication token for accessing Astra DB.",
-                                "load_from_db": false,
+                                "load_from_db": true,
                                 "title_case": false,
                                 "input_types": [
                                     "Text"
                                 ],
-                                "value": ""
+                                "value": "ASTRA_DB_APPLICATION_TOKEN"
                             },
                             "_type": "CustomComponent"
                         },
@@ -2210,12 +2210,12 @@
                                 "advanced": false,
                                 "dynamic": false,
                                 "info": "API endpoint URL for the Astra DB service.",
-                                "load_from_db": false,
+                                "load_from_db": true,
                                 "title_case": false,
                                 "input_types": [
                                     "Text"
                                 ],
-                                "value": ""
+                                "value": "ASTRA_DB_API_ENDPOINT"
                             },
                             "batch_size": {
                                 "type": "int",
@@ -2492,12 +2492,12 @@
                                 "advanced": false,
                                 "dynamic": false,
                                 "info": "Authentication token for accessing Astra DB.",
-                                "load_from_db": false,
+                                "load_from_db": true,
                                 "title_case": false,
                                 "input_types": [
                                     "Text"
                                 ],
-                                "value": ""
+                                "value": "ASTRA_DB_APPLICATION_TOKEN"
                             },
                             "_type": "CustomComponent"
                         },

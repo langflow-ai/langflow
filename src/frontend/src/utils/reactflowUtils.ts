@@ -36,12 +36,9 @@ import {
   unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
-import {
-  createRandomKey,
-  getFieldTitle,
-  getRandomDescription,
-  toTitleCase,
-} from "./utils";
+import { createRandomKey, toTitleCase } from "./utils";
+import { DESCRIPTIONS } from "../flow_constants";
+import getFieldTitle from "../customNodes/utils/get-field-title";
 const uid = new ShortUniqueId({ length: 5 });
 
 export function checkChatInput(nodes: Node[]) {
@@ -353,7 +350,12 @@ export function updateEdges(edges: Edge[]) {
 }
 
 export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
-  const existingNames = flows.map((item) => item.name);
+  console.log("flow", flow);
+  console.log("flows", flows);
+  const existingNames = flows
+    .filter((f) => f.folder_id === flow.folder_id)
+    .map((item) => item.name);
+  console.log("existingNames", existingNames);
   let newName = flow.name;
   let count = 1;
 
@@ -1289,9 +1291,18 @@ export function downloadFlows() {
   });
 }
 
+export function getRandomElement<T>(array: T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+export function getRandomDescription(): string {
+  return getRandomElement(DESCRIPTIONS);
+}
+
 export const createNewFlow = (
   flowData: ReactFlowJsonObject,
   flow: FlowType,
+  folderId: string,
 ) => {
   return {
     description: flow?.description ?? getRandomDescription(),
@@ -1299,7 +1310,7 @@ export const createNewFlow = (
     data: flowData,
     id: "",
     is_component: flow?.is_component ?? false,
-    folder_id: "",
+    folder_id: folderId,
   };
 };
 

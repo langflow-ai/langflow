@@ -11,7 +11,7 @@ class LocalStorageService(StorageService):
     def __init__(self, session_service, settings_service):
         """Initialize the local storage service with session and settings services."""
         super().__init__(session_service, settings_service)
-        self.data_dir = Path(settings_service.settings.CONFIG_DIR)
+        self.data_dir = Path(settings_service.settings.config_dir)
         self.set_ready()
 
     def build_full_path(self, flow_id: str, file_name: str) -> str:

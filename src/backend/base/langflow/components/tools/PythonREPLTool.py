@@ -1,10 +1,9 @@
 import importlib
-
-from langchain.agents import Tool
 from langchain_experimental.utilities import PythonREPL
 
 from langflow.base.tools.base import build_status_from_tool
 from langflow.custom import CustomComponent
+from langchain_core.tools import Tool
 
 
 class PythonREPLToolComponent(CustomComponent):

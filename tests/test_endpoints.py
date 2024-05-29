@@ -1,13 +1,12 @@
 import time
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from langflow.interface.custom.directory_reader.directory_reader import DirectoryReader
+from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
-from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
 
 
 def run_post(client, flow_id, headers, post_data):
@@ -265,13 +264,13 @@ def test_get_all(client: TestClient, logged_in_headers):
     response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     settings = get_settings_service().settings
-    dir_reader = DirectoryReader(settings.COMPONENTS_PATH[0])
+    dir_reader = DirectoryReader(settings.components_path[0])
     files = dir_reader.get_files()
     # json_response is a dict of dicts
     all_names = [component_name for _, components in response.json().items() for component_name in components]
     json_response = response.json()
     # We need to test the custom nodes
-    assert len(all_names) > len(files)
+    assert len(all_names) == len(files)
     assert "ChatInput" in json_response["inputs"]
     assert "Prompt" in json_response["inputs"]
     assert "ChatOutput" in json_response["outputs"]
@@ -385,7 +384,6 @@ def test_invalid_prompt(client: TestClient):
     ],
 )
 def test_various_prompts(client, prompt, expected_input_variables):
-    TimeTravelGuideChainNode().to_dict()
     PROMPT_REQUEST["template"] = prompt
     response = client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
     assert response.status_code == 200
@@ -393,8 +391,9 @@ def test_various_prompts(client, prompt, expected_input_variables):
 
 
 def test_get_vertices_flow_not_found(client, logged_in_headers):
-    response = client.post("/api/v1/build/nonexistent_id/vertices", headers=logged_in_headers)
-    assert response.status_code == 500  # Or whatever status code you've set for invalid ID
+    uuid = uuid4()
+    response = client.post(f"/api/v1/build/{uuid}/vertices", headers=logged_in_headers)
+    assert response.status_code == 500
 
 
 def test_get_vertices(client, added_flow_with_prompt_and_history, logged_in_headers):
@@ -414,7 +413,8 @@ def test_get_vertices(client, added_flow_with_prompt_and_history, logged_in_head
 
 
 def test_build_vertex_invalid_flow_id(client, logged_in_headers):
-    response = client.post("/api/v1/build/nonexistent_id/vertices/vertex_id", headers=logged_in_headers)
+    uuid = uuid4()
+    response = client.post(f"/api/v1/build/{uuid}/vertices/vertex_id", headers=logged_in_headers)
     assert response.status_code == 500
 
 
@@ -652,7 +652,11 @@ def test_invalid_flow_id(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = "invalid-flow-id"
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = UUID(int=0)
+    response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
     # Check if the error detail is as expected
 
 

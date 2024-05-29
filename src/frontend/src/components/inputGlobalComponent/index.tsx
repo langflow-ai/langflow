@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { deleteGlobalVariable } from "../../controllers/API";
 import DeleteConfirmationModal from "../../modals/deleteConfirmationModal";
 import useAlertStore from "../../stores/alertStore";
-import { useGlobalVariablesStore } from "../../stores/globalVariables";
+import { useGlobalVariablesStore } from "../../stores/globalVariablesStore/globalVariables";
 import { InputGlobalComponentType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import AddNewVariableButton from "../addNewVariableButtonComponent/addNewVariableButton";
@@ -34,6 +34,7 @@ export default function InputGlobalComponent({
   useEffect(() => {
     if (data.node?.template[name])
       if (
+        globalVariablesEntries &&
         !globalVariablesEntries.includes(data.node?.template[name].value) &&
         data.node?.template[name].load_from_db
       ) {
@@ -138,6 +139,7 @@ export default function InputGlobalComponent({
       )}
       selectedOption={
         data?.node?.template[name].load_from_db &&
+        globalVariablesEntries &&
         globalVariablesEntries.includes(data?.node?.template[name].value ?? "")
           ? data?.node?.template[name].value
           : ""

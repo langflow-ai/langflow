@@ -13,7 +13,7 @@ import { storeComponent } from "../../types/store";
 import cloneFLowWithParent, {
   getInputsAndOutputs,
 } from "../../utils/storeUtils";
-import { cn, convertTestName } from "../../utils/utils";
+import { cn } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import ShadTooltip from "../shadTooltipComponent";
 import { Button } from "../ui/button";
@@ -27,6 +27,7 @@ import {
 import { Checkbox } from "../ui/checkbox";
 import { FormControl, FormField } from "../ui/form";
 import Loading from "../ui/loading";
+import { convertTestName } from "./utils/convert-test-name";
 import DragCardComponent from "./components/dragCardComponent";
 
 export default function CollectionCardComponent({

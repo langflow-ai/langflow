@@ -7,12 +7,13 @@ from typing import Dict
 
 import yaml
 from docstring_parser import parse
-from langchain.base_language import BaseLanguageModel
+from langchain_core.language_models import BaseLanguageModel
+from loguru import logger
+from PIL.Image import Image
+
 from langflow.services.chat.config import ChatConfig
 from langflow.services.deps import get_settings_service
 from langflow.utils.util import format_dict, get_base_classes, get_default_factory
-from loguru import logger
-from PIL.Image import Image
 
 
 def load_file_into_dict(file_path: str) -> dict:
@@ -95,13 +96,14 @@ def setup_llm_caching():
     try:
         set_langchain_cache(settings_service.settings)
     except ImportError:
-        logger.warning(f"Could not import {settings_service.settings.CACHE_TYPE}. ")
+        logger.warning(f"Could not import {settings_service.settings.cache_type}. ")
     except Exception as exc:
         logger.warning(f"Could not setup LLM caching. Error: {exc}")
 
 
 def set_langchain_cache(settings):
     from langchain.globals import set_llm_cache
+
     from langflow.interface.importing.utils import import_class
 
     if cache_type := os.getenv("LANGFLOW_LANGCHAIN_CACHE"):

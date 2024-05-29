@@ -2,6 +2,7 @@ import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { renewAccessToken } from ".";
+import { AUTHORIZED_DUPLICATE_REQUESTS } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
@@ -81,16 +82,26 @@ function ApiInterceptor() {
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
         const lastUrl = localStorage.getItem("lastUrlCalled");
+        const lastMethodCalled = localStorage.getItem("lastMethodCalled");
+
+        const isContained = AUTHORIZED_DUPLICATE_REQUESTS.some((request) =>
+          config?.url!.includes(request),
+        );
 
         if (
           config?.url === lastUrl &&
-          config?.url !== "/health" &&
-          config?.method === "get"
+          !isContained &&
+          lastMethodCalled === config.method
         ) {
           return Promise.reject("Duplicate request");
         }
 
         localStorage.setItem("lastUrlCalled", config.url ?? "");
+        localStorage.setItem("lastMethodCalled", config.method ?? "");
+        localStorage.setItem(
+          "lastRequestData",
+          JSON.stringify(config.data) ?? "",
+        );
 
         const accessToken = cookies.get("access_token_lf");
         if (accessToken && !isAuthorizedURL(config?.url)) {

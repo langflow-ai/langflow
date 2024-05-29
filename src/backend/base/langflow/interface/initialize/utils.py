@@ -4,9 +4,10 @@ from typing import Any, Dict, List
 
 import orjson
 from langchain.agents import ZeroShotAgent
-from langchain.schema import BaseOutputParser, Document
 
 from langflow.services.database.models.base import orjson_dumps
+from langchain_core.documents import Document
+from langchain_core.output_parsers import BaseOutputParser
 
 
 def handle_node_type(node_type, class_object, params: Dict):

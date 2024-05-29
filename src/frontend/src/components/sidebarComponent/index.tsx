@@ -5,6 +5,9 @@ import { cn } from "../../utils/utils";
 import HorizontalScrollFadeComponent from "../horizontalScrollFadeComponent";
 import SideBarButtonsComponent from "./components/sideBarButtons";
 import SideBarFoldersButtonsComponent from "./components/sideBarFolderButtons";
+import { addFolder } from "../../pages/MainPage/services";
+import { useNavigate } from "react-router-dom";
+import useFlowStore from "../../stores/flowStore";
 
 type SidebarNavProps = {
   items: {
@@ -22,7 +25,6 @@ type SidebarNavProps = {
 export default function SidebarNav({
   className,
   items,
-  handleOpenNewFolderModal,
   handleChangeFolder,
   handleEditFolder,
   handleDeleteFolder,
@@ -39,11 +41,7 @@ export default function SidebarNav({
   return (
     <nav className={cn(className)} {...props}>
       <HorizontalScrollFadeComponent>
-        <SideBarButtonsComponent
-          items={items}
-          pathname={pathname}
-          handleOpenNewFolderModal={handleOpenNewFolderModal}
-        />
+        <SideBarButtonsComponent items={items} pathname={pathname} />
 
         {!loadingFolders && folders?.length > 0 && isFolderPath && (
           <SideBarFoldersButtonsComponent
@@ -52,7 +50,6 @@ export default function SidebarNav({
             handleChangeFolder={handleChangeFolder}
             handleEditFolder={handleEditFolder}
             handleDeleteFolder={handleDeleteFolder}
-            handleAddFolder={handleOpenNewFolderModal}
           />
         )}
       </HorizontalScrollFadeComponent>

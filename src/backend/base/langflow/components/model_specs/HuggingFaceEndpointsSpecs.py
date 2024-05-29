@@ -1,9 +1,9 @@
 from typing import Optional
 
-from langflow.field_typing import BaseLanguageModel
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
+from langflow.field_typing import BaseLanguageModel
 
 
 class HuggingFaceEndpointsComponent(CustomComponent):

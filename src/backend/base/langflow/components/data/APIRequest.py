@@ -3,7 +3,8 @@ import json
 from typing import List, Optional
 
 import httpx
-from langflow.interface.custom.custom_component import CustomComponent
+
+from langflow.custom import CustomComponent
 from langflow.schema import Record
 
 

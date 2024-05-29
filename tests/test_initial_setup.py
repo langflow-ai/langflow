@@ -1,16 +1,16 @@
 from datetime import datetime
 from pathlib import Path
 
+from sqlmodel import select
+
 from langflow.initial_setup.setup import (
     STARTER_FOLDER_NAME,
     create_or_update_starter_projects,
     get_project_data,
     load_starter_projects,
 )
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import session_scope
-from sqlalchemy import func
-from sqlmodel import select
 
 
 def test_load_starter_projects():
@@ -50,7 +50,8 @@ def test_create_or_update_starter_projects(client):
         num_projects = len(load_starter_projects())
 
         # Get the number of projects in the database
-        num_db_projects = session.exec(select(func.count(Flow.id)).where(Flow.folder == STARTER_FOLDER_NAME)).one()
+        folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+        num_db_projects = len(folder.flows)
 
         # Check that the number of projects in the database is the same as the number of projects returned by load_starter_projects
         assert num_db_projects == num_projects

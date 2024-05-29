@@ -1,0 +1,54 @@
+name: Docker Build and Push
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      release_type:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        type: string
+      release_type:
+        required: true
+        type: choice
+        options:
+          - base
+          - main
+
+jobs:
+  docker_build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          file: |
+            if [ "${{ inputs.release_type }}" == "base" ]; then
+              ./docker/build_and_push_base.Dockerfile
+            else
+              ./docker/build_and_push.Dockerfile
+            fi
+          tags: |
+            if [ "${{ inputs.release_type }}" == "base" ]; then
+              langflowai/langflow:base-${{ inputs.version }}
+            else
+              langflowai/langflow:${{ inputs.version }}
+              langflowai/langflow:1.0-alpha

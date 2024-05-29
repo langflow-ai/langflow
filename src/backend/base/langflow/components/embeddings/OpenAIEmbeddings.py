@@ -1,10 +1,10 @@
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from langchain_openai.embeddings.base import OpenAIEmbeddings
 from pydantic.v1 import SecretStr
 
+from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, NestedDict
-from langflow.interface.custom.custom_component import CustomComponent
 
 
 class OpenAIEmbeddingsComponent(CustomComponent):
@@ -94,7 +94,6 @@ class OpenAIEmbeddingsComponent(CustomComponent):
         allowed_special: List[str] = [],
         disallowed_special: List[str] = ["all"],
         chunk_size: int = 1000,
-        client: Optional[Any] = None,
         deployment: str = "text-embedding-ada-002",
         embedding_ctx_length: int = 8191,
         max_retries: int = 6,
@@ -126,7 +125,6 @@ class OpenAIEmbeddingsComponent(CustomComponent):
             allowed_special=set(allowed_special),
             disallowed_special="all",
             chunk_size=chunk_size,
-            client=client,
             deployment=deployment,
             embedding_ctx_length=embedding_ctx_length,
             max_retries=max_retries,

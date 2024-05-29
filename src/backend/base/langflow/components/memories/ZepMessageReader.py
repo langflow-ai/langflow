@@ -116,19 +116,18 @@ class ZepMessageReaderComponent(BaseMemoryComponent):
         url: Optional[Text] = None,
         api_key: Optional[Text] = None,
         query: Optional[Text] = None,
-        search_scope: SearchScope = SearchScope.messages,
-        search_type: SearchType = SearchType.similarity,
+        search_scope: str = SearchScope.messages,
+        search_type: str = SearchType.similarity,
         limit: Optional[int] = None,
     ) -> list[Record]:
         try:
-            from zep_python import ZepClient
-            from zep_python.langchain import ZepChatMessageHistory
-
             # Monkeypatch API_BASE_PATH to
             # avoid 404
             # This is a workaround for the local Zep instance
             # cloud Zep works with v2
             import zep_python.zep_client
+            from zep_python import ZepClient
+            from zep_python.langchain import ZepChatMessageHistory
 
             zep_python.zep_client.API_BASE_PATH = api_base_path
         except ImportError:

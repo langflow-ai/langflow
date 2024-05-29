@@ -173,8 +173,6 @@ export default function ParameterComponent({
     renderTooltips();
   }, [tooltipTitle, flow]);
 
-  console.log(left === true && type === "dict");
-
   return !showNode ? (
     left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
       <></>

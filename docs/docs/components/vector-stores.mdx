@@ -97,6 +97,44 @@ For detailed documentation and integration guides, please refer to the [Chroma C
 
 ---
 
+### Couchbase
+
+`Couchbase` builds a Couchbase vector store from records, streamlining the storage and retrieval of documents.
+
+**Parameters:**
+
+- **Embedding:** Model used by Couchbase.
+- **Input:** Documents or records.
+- **Couchbase Cluster Connection String:** Cluster Connection string.
+- **Couchbase Cluster Username:** Cluster Username.
+- **Couchbase Cluster Password:** Cluster Password.
+- **Bucket Name:** Bucket identifier in Couchbase.
+- **Scope Name:** Scope identifier in Couchbase.
+- **Collection Name:** Collection identifier in Couchbase.
+- **Index Name:** Index identifier.
+
+For detailed documentation and integration guides, please refer to the [Couchbase Component Documentation](https://python.langchain.com/docs/integrations/vectorstores/couchbase).
+
+---
+
+### Couchbase Search
+
+`CouchbaseSearch` leverages the Couchbase component to search for documents based on similarity metric.
+
+**Parameters:**
+
+- **Input:** Search query.
+- **Embedding:** Model used in the Vector Store.
+- **Couchbase Cluster Connection String:** Cluster Connection string.
+- **Couchbase Cluster Username:** Cluster Username.
+- **Couchbase Cluster Password:** Cluster Password.
+- **Bucket Name:** Bucket identifier.
+- **Scope Name:** Scope identifier.
+- **Collection Name:** Collection identifier in Couchbase.
+- **Index Name:** Index identifier.
+
+---
+
 ### FAISS
 
 The `FAISS` component manages document ingestion into a FAISS Vector Store, optimizing document indexing and retrieval.

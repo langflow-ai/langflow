@@ -1,8 +1,8 @@
-from langflow.base.io.text import TextComponent
+from langflow.custom import CustomComponent
 from langflow.schema import Record
 
 
-class RecordsOutput(TextComponent):
+class RecordsOutput(CustomComponent):
     display_name = "Records Output"
     description = "Display Records as a Table"
 

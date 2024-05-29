@@ -1,10 +1,10 @@
 from typing import Optional
 
-from langchain.llms.base import BaseLanguageModel
 from langchain_anthropic import ChatAnthropic
+from langchain_core.language_models import BaseLanguageModel
 from pydantic.v1 import SecretStr
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class ChatAntropicSpecsComponent(CustomComponent):
@@ -35,8 +35,8 @@ class ChatAntropicSpecsComponent(CustomComponent):
             },
             "max_tokens": {
                 "display_name": "Max Tokens",
-                "field_type": "int",
-                "value": 256,
+                "advanced": True,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             },
             "temperature": {
                 "display_name": "Temperature",
