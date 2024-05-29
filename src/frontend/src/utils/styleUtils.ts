@@ -143,6 +143,7 @@ import {
   X,
   XCircle,
   Zap,
+  PaperclipIcon,
 } from "lucide-react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -526,4 +527,5 @@ export const nodeIconsLucide: iconsType = {
   FolderPlusIcon,
   FolderIcon,
   Discord: FaDiscord,
+  PaperclipIcon,
 };

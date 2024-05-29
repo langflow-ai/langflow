@@ -92,7 +92,6 @@ export default function ChatInput({
           files={files}
           isDragging={isDragging}
         />
-
         <div className="form-modal-send-icon-position">
           <ButtonSendWrapper
             send={send}
@@ -103,11 +102,13 @@ export default function ChatInput({
           />
         </div>
 
-        <UploadFileButton
-          fileInputRef={fileInputRef}
-          handleFileChange={handleFileChange}
-          handleButtonClick={handleButtonClick}
-        />
+        <div className="absolute bottom-2 left-4">
+          <UploadFileButton
+            fileInputRef={fileInputRef}
+            handleFileChange={handleFileChange}
+            handleButtonClick={handleButtonClick}
+          />
+        </div>
       </div>
       {files.length > 0 && (
         <div className={classNameFilePreview}>

@@ -1,5 +1,7 @@
 import { useState } from "react";
-import IconComponent from "../../../../../components/genericIconComponent";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../../../components/genericIconComponent";
 
 export default function FilePreview({
   error,
@@ -12,12 +14,23 @@ export default function FilePreview({
   error: boolean;
   onDelete: () => void;
 }) {
+  const isImage = file.type.toLowerCase().includes("image");
+
   const [isHovered, setIsHovered] = useState(false);
+
+  const formatFileName = (name) => {
+    const fileExtension = name.split(".").pop(); // Get the file extension
+    const baseName = name.slice(0, name.lastIndexOf(".")); // Get the base name without the extension
+    if (baseName.length > 6) {
+      return `${baseName.slice(0, 10)}...${fileExtension}`;
+    }
+    return name;
+  };
 
   return (
     <div className="relative inline-block">
       {loading ? (
-        <div className="flex h-24 w-24 items-center justify-center rounded-md border border-ring bg-background ">
+        <div className="flex h-20 w-20 items-center justify-center rounded-md border border-ring bg-background ">
           <svg
             aria-hidden="true"
             className={`h-10 w-10 animate-spin fill-black  text-muted`}
@@ -39,19 +52,31 @@ export default function FilePreview({
         <div>Error...</div>
       ) : (
         <div
-          className={`relative h-24 w-24 rounded-md border border-ring  bg-background transition duration-300 ${
+          className={`relative ${isImage ? "h-20 w-20" : "h-20 w-48"} cursor-pointer rounded-lg border  border-ring bg-background transition duration-300 ${
             isHovered ? "shadow-md" : ""
           }`}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          <img
-            src={URL.createObjectURL(file)}
-            alt="file"
-            className="block h-full w-full rounded-md border border-border"
-          />
+          {isImage ? (
+            <img
+              src={URL.createObjectURL(file)}
+              alt="file"
+              className="block h-full w-full rounded-md border border-border"
+            />
+          ) : (
+            <div className="ml-3 flex h-full w-full items-center gap-2 text-sm">
+              <ForwardedIconComponent name="File" className="h-8 w-8" />
+              <div className="flex flex-col">
+                <span className="font-bold">{formatFileName(file.name)}</span>
+                <span>File</span>
+              </div>
+            </div>
+          )}
           {isHovered && (
-            <div className="absolute bottom-20 left-20 flex h-5 w-5 items-center justify-center bg-black bg-opacity-30">
+            <div
+              className={`absolute ${isImage ? "bottom-16 left-16" : "bottom-16 left-44"}  flex h-5 w-5 items-center justify-center`}
+            >
               <div
                 className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-gray-200 p-2 transition-all"
                 onClick={onDelete}
