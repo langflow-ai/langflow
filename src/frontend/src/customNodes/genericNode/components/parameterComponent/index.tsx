@@ -45,6 +45,7 @@ import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
 import TooltipRenderComponent from "../tooltipRenderComponent";
+import OutputModal from "../outputModal";
 
 export default function ParameterComponent({
   left,
@@ -77,6 +78,10 @@ export default function ParameterComponent({
   const flow = currentFlow?.data?.nodes ?? null;
   const groupedEdge = useRef(null);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
+  const [openOutputModal, setOpenOutputModal] = useState(false);
+  const flowPool = useFlowStore((state) => state.flowPool);
+
+  const displayOutputPreview = !!flowPool[data.id];
 
   const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue(
     data,
@@ -249,9 +254,33 @@ export default function ParameterComponent({
               </span>
             </ShadTooltip>
           ) : (
-            <span className={!left && data.node?.frozen ? " text-ice" : ""}>
-              {title}
-            </span>
+            <div className="flex gap-2">
+              <span className={!left && data.node?.frozen ? " text-ice" : ""}>
+                {title}
+              </span>
+              <ShadTooltip
+                content={
+                  displayOutputPreview
+                    ? "Inspect Output"
+                    : "Please build the component first"
+                }
+              >
+                <button
+                  disabled={!displayOutputPreview}
+                  onClick={() => setOpenOutputModal(true)}
+                >
+                  <IconComponent
+                    className={classNames(
+                      "h-5 w-5",
+                      displayOutputPreview
+                        ? ""
+                        : " cursor-not-allowed text-muted-foreground",
+                    )}
+                    name={"Eye"}
+                  />
+                </button>
+              </ShadTooltip>
+            </div>
           )}
           <span className={(required ? "ml-2 " : "") + "text-status-red"}>
             {required ? "*" : ""}
@@ -582,6 +611,13 @@ export default function ParameterComponent({
             />
           </div>
         </Case>
+        {openOutputModal && (
+          <OutputModal
+            open={openOutputModal}
+            nodeId={data.id}
+            setOpen={setOpenOutputModal}
+          />
+        )}
       </>
     </div>
   );
