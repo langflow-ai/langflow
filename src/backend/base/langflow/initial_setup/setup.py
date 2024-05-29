@@ -1,3 +1,4 @@
+import logging
 import os
 from collections import defaultdict
 from copy import deepcopy
@@ -216,8 +217,12 @@ def _is_valid_uuid(val):
     return str(uuid_obj) == val
 
 def load_flows_from_directory():
-    flows_path = get_settings_service().settings.load_flows_path
+    settings_service = get_settings_service()
+    flows_path = settings_service.settings.load_flows_path
     if not flows_path:
+        return
+    if not settings_service.auth_settings.AUTO_LOGIN:
+        logging.warning("AUTO_LOGIN is disabled, not loading flows from directory")
         return
     with session_scope() as session:
         files = [f for f in os.listdir(flows_path) if os.path.isfile(os.path.join(flows_path, f))]
