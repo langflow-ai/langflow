@@ -96,7 +96,7 @@ Example of using the `DiscordGetGuildUsers` component in a Langflow flow with th
  alt="Discord Get Guild Users Flow"
  sources={{
    light: "img/discord/DiscordGetGuildUsers_flow_example.png",
-   dark: "img/discord/DiscordGetGuildUsers_flow_example.png",
+   dark: "img/discord/DiscordGetGuildUsers_flow_example_dark.png",
  }}
  style={{ width: "100%", margin: "20px 0" }}
 />

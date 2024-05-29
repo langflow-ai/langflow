@@ -82,7 +82,7 @@ Example of using the `DiscordTextMessageListener` component in a Langflow flow w
   alt="Discord Listen Message Flow"
   sources={{
     light: "img/discord/DiscordTextMessageListener_flow_example.png",
-    dark: "img/discord/DiscordTextMessageListener_flow_example.png",
+    dark: "img/discord/DiscordTextMessageListener_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />

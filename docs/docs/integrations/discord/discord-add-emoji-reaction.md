@@ -111,7 +111,7 @@ Example of using the `DiscordAddEmojiReaction` component in a Langflow flow with
   alt="Discord Add Emoji Reaction Flow"
   sources={{
     light: "img/discord/DiscordAddEmojiReaction_flow_example.png",
-    dark: "img/discord/DiscordAddEmojiReaction_flow_example.png",
+    dark: "img/discord/DiscordAddEmojiReaction_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />

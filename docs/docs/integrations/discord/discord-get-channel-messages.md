@@ -119,7 +119,7 @@ Example of using the `DiscordGetChannelMessages` component in a Langflow flow wi
   alt="Discord Get Channel Messages Flow"
   sources={{
     light: "img/discord/DiscordGetChannelMessages_flow_example.png",
-    dark: "img/discord/DiscordGetChannelMessages_flow_example.png",
+    dark: "img/discord/DiscordGetChannelMessages_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />

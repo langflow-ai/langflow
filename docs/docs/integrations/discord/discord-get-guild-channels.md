@@ -106,7 +106,7 @@ Example of using the `DiscordGetGuildChannels` component in a Langflow flow with
 alt="Discord Get Guild Channels Flow"
 sources={{
 light: "img/discord/DiscordGetGuildChannels_flow_example.png",
-dark: "img/discord/DiscordGetGuildChannels_flow_example.png",
+dark: "img/discord/DiscordGetGuildChannels_flow_example_dark.png",
 }}
 style={{ width: "100%", margin: "20px 0" }}
 />

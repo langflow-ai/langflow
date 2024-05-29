@@ -121,7 +121,7 @@ Example of using the `DiscordThreads` component in a Langflow flow with the spec
   alt="Discord Threads Flow"
   sources={{
     light: "img/discord/DiscordThreads_flow_example.png",
-    dark: "img/discord/DiscordThreads_flow_example.png",
+    dark: "img/discord/DiscordThreads_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />

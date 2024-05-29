@@ -102,7 +102,7 @@ Example of using the `DiscordGetImage` component in a Langflow flow with the spe
   alt="Discord Get Image Message Flow"
   sources={{
     light: "img/discord/DiscordGetImage_flow_example.png",
-    dark: "img/discord/DiscordGetImage_flow_example.png",
+    dark: "img/discord/DiscordGetImage_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />

@@ -117,7 +117,7 @@ Example of using the `DiscordRemoveEmojiReaction` component in a Langflow flow w
   alt="Discord Remove Emoji Reaction Flow"
   sources={{
     light: "img/discord/DiscordRemoveEmojiReaction_flow_example.png",
-    dark: "img/discord/DiscordRemoveEmojiReaction_flow_example.png",
+    dark: "img/discord/DiscordRemoveEmojiReaction_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />

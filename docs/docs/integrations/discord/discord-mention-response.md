@@ -112,7 +112,7 @@ Example of using the `DiscordMentionResponse` component in a Langflow flow with 
   alt="Discord Mention Response Flow"
   sources={{
     light: "img/discord/DiscordMentionResponse_flow_example.png",
-    dark: "img/discord/DiscordMentionResponse_flow_example.png",
+    dark: "img/discord/DiscordMentionResponse_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />

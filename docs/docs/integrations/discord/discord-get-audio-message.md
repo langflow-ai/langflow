@@ -101,7 +101,7 @@ Example of using the `DiscordGetAudioMessage` component in a Langflow flow with 
   alt="Discord Get Audio Message Flow"
   sources={{
     light: "img/discord/DiscordGetAudioMessage_flow_example.png",
-    dark: "img/discord/DiscordGetAudioMessage_flow_example.png",
+    dark: "img/discord/DiscordGetAudioMessage_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />

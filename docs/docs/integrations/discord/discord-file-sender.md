@@ -110,7 +110,7 @@
     alt="Discord File Sender Flow"
     sources={{
       light: "img/discord/DiscordFileSender_flow_example.png",
-      dark: "img/discord/DiscordFileSender_flow_example.png",
+      dark: "img/discord/DiscordFileSender_flow_example_dark.png",
     }}
     style={{ width: "100%", margin: "20px 0" }}
   />
