@@ -1,4 +1,4 @@
-import { cloneDeep } from "lodash";
+import { cloneDeep, zip } from "lodash";
 import {
   Edge,
   EdgeChange,
@@ -26,6 +26,7 @@ import {
   ChatOutputType,
   FlowPoolObjectType,
   FlowStoreType,
+  VertexLayerElementType,
   chatInputType,
 } from "../types/zustand/flow";
 import { buildVertices } from "../utils/buildUtils";
@@ -36,6 +37,7 @@ import {
   getNodeId,
   scapeJSONParse,
   scapedJSONStringfy,
+  updateGroupRecursion,
   validateNodes,
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
@@ -45,6 +47,8 @@ import useFlowsManagerStore from "./flowsManagerStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
+  onFlowPage: false,
+  setOnFlowPage: (FlowPage) => set({ onFlowPage: FlowPage }),
   flowState: undefined,
   flowBuildStatus: {},
   nodes: [],
@@ -68,10 +72,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
     get().setFlowPool(newFlowPool);
   },
+  getNodePosition: (nodeId: string) => {
+    const node = get().nodes.find((node) => node.id === nodeId);
+    return node?.position || { x: 0, y: 0 };
+  },
   updateFlowPool: (
     nodeId: string,
     data: FlowPoolObjectType | ChatOutputType | chatInputType,
-    buildId?: string
+    buildId?: string,
   ) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
     if (!newFlowPool[nodeId]) {
@@ -143,7 +151,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: applyEdgeChanges(changes, get().edges),
     });
   },
-  setNodes: (change) => {
+  setNodes: (change, skipSave = false) => {
     let newChange = typeof change === "function" ? change(get().nodes) : change;
     let newEdges = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
@@ -158,15 +166,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
 
     const flowsManager = useFlowsManagerStore.getState();
-    if (!get().isBuilding) {
+    if (!get().isBuilding && !skipSave && get().onFlowPage) {
       flowsManager.autoSaveCurrentFlow(
         newChange,
         newEdges,
-        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
+        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 },
       );
     }
   },
-  setEdges: (change) => {
+  setEdges: (change, skipSave = false) => {
     let newChange = typeof change === "function" ? change(get().edges) : change;
     set({
       edges: newChange,
@@ -174,11 +182,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
 
     const flowsManager = useFlowsManagerStore.getState();
-    if (!get().isBuilding) {
+    if (!get().isBuilding && !skipSave && get().onFlowPage) {
       flowsManager.autoSaveCurrentFlow(
         get().nodes,
         newChange,
-        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
+        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 },
       );
     }
   },
@@ -187,14 +195,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       typeof change === "function"
         ? change(get().nodes.find((node) => node.id === id)!)
         : change;
-
     get().setNodes((oldNodes) =>
       oldNodes.map((node) => {
         if (node.id === id) {
+          if ((node.data as NodeDataType).node?.frozen) {
+            (newChange.data as NodeDataType).node!.frozen = false;
+          }
           return newChange;
         }
         return node;
-      })
+      }),
     );
   },
   getNode: (id: string) => {
@@ -205,8 +215,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       get().nodes.filter((node) =>
         typeof nodeId === "string"
           ? node.id !== nodeId
-          : !nodeId.includes(node.id)
-      )
+          : !nodeId.includes(node.id),
+      ),
     );
   },
   deleteEdge: (edgeId) => {
@@ -214,13 +224,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       get().edges.filter((edge) =>
         typeof edgeId === "string"
           ? edge.id !== edgeId
-          : !edgeId.includes(edge.id)
-      )
+          : !edgeId.includes(edge.id),
+      ),
     );
   },
   paste: (selection, position) => {
-    if(selection.nodes.some((node) => node.data.type === "ChatInput") && checkChatInput(get().nodes)){
-      useAlertStore.getState().setErrorData({title: "Error pasting components", list: ["You can only have one ChatInput component in the flow"]});
+    if (
+      selection.nodes.some((node) => node.data.type === "ChatInput") &&
+      checkChatInput(get().nodes)
+    ) {
+      useAlertStore.getState().setErrorData({
+        title: "Error pasting components",
+        list: ["You can only have one ChatInput component in the flow"],
+      });
       return;
     }
     let minimumX = Infinity;
@@ -262,6 +278,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           id: newId,
         },
       };
+      updateGroupRecursion(newNode, selection.edges);
 
       // Add the new node to the list of nodes in state
       newNodes = newNodes
@@ -274,7 +291,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       let source = idsMap[edge.source];
       let target = idsMap[edge.target];
       const sourceHandleObject: sourceHandleType = scapeJSONParse(
-        edge.sourceHandle!
+        edge.sourceHandle!,
       );
       let sourceHandle = scapedJSONStringfy({
         ...sourceHandleObject,
@@ -284,7 +301,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
       edge.data.sourceHandle = sourceHandleObject;
       const targetHandleObject: targetHandleType = scapeJSONParse(
-        edge.targetHandle!
+        edge.targetHandle!,
       );
       let targetHandle = scapedJSONStringfy({
         ...targetHandleObject,
@@ -305,7 +322,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           className: "stroke-gray-900 ",
           selected: false,
         },
-        newEdges.map((edge) => ({ ...edge, selected: false }))
+        newEdges.map((edge) => ({ ...edge, selected: false })),
       );
     });
     get().setEdges(newEdges);
@@ -324,10 +341,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
 
       const newNodes = get().nodes.filter(
-        (node) => !nodesIdsSelected.includes(node.id)
+        (node) => !nodesIdsSelected.includes(node.id),
       );
       const newEdges = get().edges.filter(
-        (edge) => !edgesIdsSelected.includes(edge.id)
+        (edge) => !edgesIdsSelected.includes(edge.id),
       );
 
       set({ nodes: newNodes, edges: newEdges });
@@ -385,7 +402,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           style: { stroke: "#555" },
           className: "stroke-foreground stroke-connection",
         },
-        oldEdges
+        oldEdges,
       );
 
       return newEdges;
@@ -395,7 +412,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       .autoSaveCurrentFlow(
         get().nodes,
         newEdges,
-        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 }
+        get().reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 },
       );
   },
   unselectAll: () => {
@@ -410,10 +427,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   buildFlow: async ({
-    nodeId,
+    startNodeId,
+    stopNodeId,
     input_value,
   }: {
-    nodeId?: string;
+    startNodeId?: string;
+    stopNodeId?: string;
     input_value?: string;
   }) => {
     get().setIsBuilding(true);
@@ -422,42 +441,107 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const setErrorData = useAlertStore.getState().setErrorData;
     const setNoticeData = useAlertStore.getState().setNoticeData;
     function validateSubgraph(nodes: string[]) {
-      const errors = validateNodes(
+      const errorsObjs = validateNodes(
         get().nodes.filter((node) => nodes.includes(node.id)),
-        get().edges
+        get().edges,
       );
+
+      const errors = errorsObjs.map((obj) => obj.errors).flat();
       if (errors.length > 0) {
         setErrorData({
           title: MISSED_ERROR_ALERT,
           list: errors,
         });
         get().setIsBuilding(false);
+        const ids = errorsObjs.map((obj) => obj.id).flat();
+
+        get().updateBuildStatus(ids, BuildStatus.ERROR);
         throw new Error("Invalid nodes");
       }
     }
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
       status: BuildStatus,
-      buildId: string
+      runId: string,
     ) {
-      if (vertexBuildData && vertexBuildData.inactive_vertices) {
-        get().removeFromVerticesBuild(vertexBuildData.inactive_vertices);
+      console.log("handleBuildUpdate", vertexBuildData, status, runId);
+      if (vertexBuildData && vertexBuildData.inactivated_vertices) {
+        get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
+        get().updateBuildStatus(
+          vertexBuildData.inactivated_vertices,
+          BuildStatus.INACTIVE,
+        );
       }
+
+      if (vertexBuildData.next_vertices_ids) {
+        // next_vertices_ids is a list of vertices that are going to be built next
+        // verticesLayers is a list of list of vertices ids, where each list is a layer of vertices
+        // we want to add a new layer (next_vertices_ids) to the list of layers (verticesLayers)
+        // and the values of next_vertices_ids to the list of vertices ids (verticesIds)
+
+        // const nextVertices will be the zip of vertexBuildData.next_vertices_ids and
+        // vertexBuildData.top_level_vertices
+        // the VertexLayerElementType as {id: next_vertices_id, layer: top_level_vertex}
+
+        // next_vertices_ids should be next_vertices_ids without the inactivated vertices
+        const next_vertices_ids = vertexBuildData.next_vertices_ids.filter(
+          (id) => !vertexBuildData.inactivated_vertices?.includes(id),
+        );
+        const top_level_vertices = vertexBuildData.top_level_vertices.filter(
+          (vertex) =>
+            !vertexBuildData.inactivated_vertices?.includes(vertex.id),
+        );
+        const nextVertices: VertexLayerElementType[] = zip(
+          next_vertices_ids,
+          top_level_vertices,
+        ).map(([id, reference]) => ({ id: id!, reference }));
+
+        const newLayers = [
+          ...get().verticesBuild!.verticesLayers,
+          nextVertices,
+        ];
+        const newIds = [
+          ...get().verticesBuild!.verticesIds,
+          ...next_vertices_ids,
+        ];
+        get().updateVerticesBuild({
+          verticesIds: newIds,
+          verticesLayers: newLayers,
+          runId: runId,
+          verticesToRun: get().verticesBuild!.verticesToRun,
+        });
+        get().updateBuildStatus(top_level_vertices, BuildStatus.TO_BUILD);
+      }
+
       get().addDataToFlowPool(
-        { ...vertexBuildData, buildId },
-        vertexBuildData.id
+        { ...vertexBuildData, buildId: runId },
+        vertexBuildData.id,
       );
+
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
+
+      const verticesIds = get().verticesBuild?.verticesIds;
+      const newFlowBuildStatus = { ...get().flowBuildStatus };
+      // filter out the vertices that are not status
+      const verticesToUpdate = verticesIds?.filter(
+        (id) => newFlowBuildStatus[id]?.status !== BuildStatus.BUILT,
+      );
+
+      if (verticesToUpdate) {
+        useFlowStore.getState().updateBuildStatus(verticesToUpdate, status);
+      }
     }
     await buildVertices({
       input_value,
       flowId: currentFlow!.id,
-      nodeId,
+      startNodeId,
+      stopNodeId,
       onGetOrderSuccess: () => {
         setNoticeData({ title: "Running components" });
       },
-      onBuildComplete: () => {
-        if (nodeId) {
+      onBuildComplete: (allNodesValid) => {
+        const nodeId = startNodeId || stopNodeId;
+        if (nodeId && allNodesValid) {
           setSuccessData({
             title: `${
               get().nodes.find((node) => node.id === nodeId)?.data.node
@@ -470,15 +554,26 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().setIsBuilding(false);
       },
       onBuildUpdate: handleBuildUpdate,
-      onBuildError: (title, list, idList) => {
+      onBuildError: (title: string, list: string[], elementList) => {
+        const idList = elementList
+          .map((element) => element.id)
+          .filter(Boolean) as string[];
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
         setErrorData({ list, title });
+        get().setIsBuilding(false);
       },
-      onBuildStart: (idList) => {
+      onBuildStart: (elementList) => {
+        const idList = elementList
+          // reference is the id of the vertex or the id of the parent in a group node
+          .map((element) => element.reference)
+          .filter(Boolean) as string[];
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILDING);
       },
-      validateNodes: validateSubgraph,
+      onValidateNodes: validateSubgraph,
+      nodes: !get().onFlowPage ? get().nodes : undefined,
+      edges: !get().onFlowPage ? get().edges : undefined,
     });
+    get().setIsBuilding(false);
     get().revertBuiltStatusFromBuilding();
   },
   getFlow: () => {
@@ -491,22 +586,35 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateVerticesBuild: (
     vertices: {
       verticesIds: string[];
-      verticesOrder: string[][];
-      verticesLayers: string[][];
+      verticesLayers: VertexLayerElementType[][];
       runId: string;
-    } | null
+      verticesToRun: string[];
+    } | null,
   ) => {
     set({ verticesBuild: vertices });
   },
   verticesBuild: null,
+  addToVerticesBuild: (vertices: string[]) => {
+    const verticesBuild = get().verticesBuild;
+    if (!verticesBuild) return;
+    set({
+      verticesBuild: {
+        ...verticesBuild,
+        verticesIds: [...verticesBuild.verticesIds, ...vertices],
+      },
+    });
+  },
   removeFromVerticesBuild: (vertices: string[]) => {
     const verticesBuild = get().verticesBuild;
     if (!verticesBuild) return;
     set({
       verticesBuild: {
         ...verticesBuild,
+        // remove the vertices from the list of vertices ids
+        // that are going to be built
         verticesIds: get().verticesBuild!.verticesIds.filter(
-          (vertex) => !vertices.includes(vertex)
+          // keep the vertices that are not in the list of vertices to remove
+          (vertex) => !vertices.includes(vertex),
         ),
       },
     });
@@ -514,15 +622,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     nodeIdList.forEach((id) => {
-      newFlowBuildStatus[id] = status;
+      newFlowBuildStatus[id] = {
+        status,
+      };
+      if (status == BuildStatus.BUILT) {
+        const timestamp_string = new Date(Date.now()).toLocaleString();
+        newFlowBuildStatus[id].timestamp = timestamp_string;
+      }
     });
     set({ flowBuildStatus: newFlowBuildStatus });
   },
   revertBuiltStatusFromBuilding: () => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     Object.keys(newFlowBuildStatus).forEach((id) => {
-      if (newFlowBuildStatus[id] === BuildStatus.BUILDING) {
-        newFlowBuildStatus[id] = BuildStatus.BUILT;
+      if (newFlowBuildStatus[id].status === BuildStatus.BUILDING) {
+        newFlowBuildStatus[id].status = BuildStatus.BUILT;
       }
     });
   },

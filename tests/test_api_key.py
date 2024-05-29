@@ -6,7 +6,7 @@ from langflow.services.database.models.api_key import ApiKeyCreate
 def api_key(client, logged_in_headers, active_user):
     api_key = ApiKeyCreate(name="test-api-key")
 
-    response = client.post("api/v1/api_key", data=api_key.json(), headers=logged_in_headers)
+    response = client.post("api/v1/api_key", data=api_key.model_dump_json(), headers=logged_in_headers)
     assert response.status_code == 200, response.text
     return response.json()
 
@@ -21,7 +21,6 @@ def test_get_api_keys(client, logged_in_headers, api_key):
     assert any("test-api-key" in api_key["name"] for api_key in data["api_keys"])
     # assert all api keys in data["api_keys"] are masked
     assert all("**" in api_key["api_key"] for api_key in data["api_keys"])
-    # Add more assertions as needed based on the expected data structure and content
 
 
 def test_create_api_key(client, logged_in_headers):

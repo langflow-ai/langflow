@@ -28,7 +28,7 @@ def test_components_path(runner, client, default_settings):
     )
     assert result.exit_code == 0, result.stdout
     settings_service = deps.get_settings_service()
-    assert str(temp_dir) in settings_service.settings.COMPONENTS_PATH
+    assert str(temp_dir) in settings_service.settings.components_path
 
 
 def test_superuser(runner, client, session):

@@ -1,0 +1,230 @@
+agents:
+  ZeroShotAgent:
+    documentation: "https://python.langchain.com/docs/modules/agents/how_to/custom_mrkl_agent"
+  JsonAgent:
+    documentation: "https://python.langchain.com/docs/modules/agents/toolkits/openapi"
+  CSVAgent:
+    documentation: "https://python.langchain.com/docs/modules/agents/toolkits/csv"
+  VectorStoreAgent:
+    documentation: ""
+  VectorStoreRouterAgent:
+    documentation: ""
+  SQLAgent:
+    documentation: ""
+documentloaders:
+  AirbyteJSONLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/airbyte_json"
+  CoNLLULoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/conll-u"
+  CSVLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/csv"
+  UnstructuredEmailLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/email"
+  EverNoteLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/evernote"
+  FacebookChatLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/facebook_chat"
+  GutenbergLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/gutenberg"
+  BSHTMLLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/html"
+  UnstructuredHTMLLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/html"
+  UnstructuredMarkdownLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/markdown"
+  PyPDFDirectoryLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/pdf"
+  PyPDFLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/pdf"
+  UnstructuredPowerPointLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/microsoft_powerpoint"
+  SRTLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/subtitle"
+  TelegramChatLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/telegram"
+  TextLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/"
+  UnstructuredWordDocumentLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/microsoft_word"
+  WebBaseLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/web_base"
+  AZLyricsLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/azlyrics"
+  CollegeConfidentialLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/college_confidential"
+  HNLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/hacker_news"
+  IFixitLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/ifixit"
+  IMSDbLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/imsdb"
+  GitbookLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/gitbook"
+  ReadTheDocsLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/readthedocs_documentation"
+  SlackDirectoryLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/slack"
+  NotionDirectoryLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/notion"
+  DirectoryLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/how_to/file_directory"
+  GitLoader:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_loaders/integrations/git"
+embeddings:
+  OpenAIEmbeddings:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/openai"
+  HuggingFaceEmbeddings:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/sentence_transformers"
+  CohereEmbeddings:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/cohere"
+  VertexAIEmbeddings:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/google_vertex_ai_palm"
+  AmazonBedrockEmbeddings:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/bedrock"
+  OllamaEmbeddings:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/ollama"
+
+memories:
+  # https://github.com/supabase-community/supabase-py/issues/482
+  # ZepChatMessageHistory:
+  #   documentation: "https://python.langchain.com/docs/modules/memory/integrations/zep_memory"
+  ConversationEntityMemory:
+    documentation: "https://python.langchain.com/docs/modules/memory/integrations/entity_memory_with_sqlite"
+  # https://github.com/hwchase17/langchain/issues/6091
+  # SQLiteEntityStore:
+  #   documentation: "https://python.langchain.com/docs/modules/memory/integrations/entity_memory_with_sqlite"
+  PostgresChatMessageHistory:
+    documentation: "https://python.langchain.com/docs/modules/memory/integrations/postgres_chat_message_history"
+  ConversationBufferMemory:
+    documentation: "https://python.langchain.com/docs/modules/memory/how_to/buffer"
+  ConversationSummaryMemory:
+    documentation: "https://python.langchain.com/docs/modules/memory/how_to/summary"
+  ConversationKGMemory:
+    documentation: "https://python.langchain.com/docs/modules/memory/how_to/kg"
+  ConversationBufferWindowMemory:
+    documentation: "https://python.langchain.com/docs/modules/memory/how_to/buffer_window"
+  VectorStoreRetrieverMemory:
+    documentation: "https://python.langchain.com/docs/modules/memory/how_to/vectorstore_retriever_memory"
+  MongoDBChatMessageHistory:
+    documentation: "https://python.langchain.com/docs/modules/memory/integrations/mongodb_chat_message_history"
+  MotorheadMemory:
+    documentation: "https://python.langchain.com/docs/integrations/memory/motorhead_memory"
+prompts:
+  ChatMessagePromptTemplate:
+    documentation: "https://python.langchain.com/docs/modules/model_io/prompts/prompt_templates/msg_prompt_templates"
+  HumanMessagePromptTemplate:
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/how_to/prompts"
+  SystemMessagePromptTemplate:
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/how_to/prompts"
+  ChatPromptTemplate:
+    documentation: "https://python.langchain.com/docs/modules/model_io/models/chat/how_to/prompts"
+  PromptTemplate:
+    documentation: "https://python.langchain.com/docs/modules/model_io/prompts/prompt_templates/"
+textsplitters:
+  CharacterTextSplitter:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_transformers/text_splitters/character_text_splitter"
+  RecursiveCharacterTextSplitter:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/document_transformers/recursive_text_splitter"
+toolkits:
+  OpenAPIToolkit:
+    documentation: ""
+  JsonToolkit:
+    documentation: ""
+  VectorStoreInfo:
+    documentation: ""
+  VectorStoreRouterToolkit:
+    documentation: ""
+  VectorStoreToolkit:
+    documentation: ""
+tools:
+  Search:
+    documentation: ""
+  PAL-MATH:
+    documentation: ""
+  Calculator:
+    documentation: ""
+  Serper Search:
+    documentation: ""
+  Tool:
+    documentation: ""
+  PythonFunctionTool:
+    documentation: ""
+  PythonFunction:
+    documentation: ""
+  JsonSpec:
+    documentation: ""
+  News API:
+    documentation: ""
+  TMDB API:
+    documentation: ""
+  Podcast API:
+    documentation: ""
+  QuerySQLDataBaseTool:
+    documentation: ""
+  InfoSQLDatabaseTool:
+    documentation: ""
+  ListSQLDatabaseTool:
+    documentation: ""
+  BingSearchRun:
+    documentation: ""
+  GoogleSearchRun:
+    documentation: ""
+  GoogleSearchResults:
+    documentation: ""
+  GoogleSerperRun:
+    documentation: ""
+  JsonListKeysTool:
+    documentation: ""
+  JsonGetValueTool:
+    documentation: ""
+  PythonREPLTool:
+    documentation: ""
+  PythonAstREPLTool:
+    documentation: ""
+  RequestsGetTool:
+    documentation: ""
+  RequestsPostTool:
+    documentation: ""
+  RequestsPatchTool:
+    documentation: ""
+  RequestsPutTool:
+    documentation: ""
+  RequestsDeleteTool:
+    documentation: ""
+  WikipediaQueryRun:
+    documentation: ""
+  WolframAlphaQueryRun:
+    documentation: ""
+utilities:
+  BingSearchAPIWrapper:
+    documentation: ""
+  GoogleSearchAPIWrapper:
+    documentation: ""
+  GoogleSerperAPIWrapper:
+    documentation: ""
+  SearxResults:
+    documentation: ""
+  SearxSearchWrapper:
+    documentation: ""
+  SerpAPIWrapper:
+    documentation: ""
+  WikipediaAPIWrapper:
+    documentation: ""
+  WolframAlphaAPIWrapper:
+    documentation: ""
+retrievers:
+  MultiQueryRetriever:
+    documentation: "https://python.langchain.com/docs/modules/data_connection/retrievers/how_to/MultiQueryRetriever"
+  # https://github.com/supabase-community/supabase-py/issues/482
+  # ZepRetriever:
+  #   documentation: "https://python.langchain.com/docs/modules/data_connection/retrievers/integrations/zep_memorystore"
+
+wrappers:
+  RequestsWrapper:
+    documentation: ""
+  SQLDatabase:
+    documentation: ""
+custom_components:
+  CustomComponent:
+    documentation: "https://docs.langflow.org/guidelines/custom-component"
+    # documentation: "https://docs.langflow.org/administration/custom-component"

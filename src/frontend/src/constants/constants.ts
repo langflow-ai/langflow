@@ -25,10 +25,18 @@ export const INVALID_CHARACTERS = [
 
 /**
  * regex to highlight the variables in the text
- * @constant
+ * @constant regexHighlight
+ * @type {RegExp}
+ * @default
+ * @example
+ * {{variable}} or {variable}
+ * @returns {RegExp}
+ * @description
+ * This regex is used to highlight the variables in the text.
+ * It matches the variables in the text that are between {{}} or {}.
  */
 
-export const regexHighlight = /\{([^}]+)\}/g;
+export const regexHighlight = /\{\{(.*?)\}\}|\{([^{}]+)\}/g;
 export const specialCharsRegex = /[!@#$%^&*()\-_=+[\]{}|;:'",.<>/?\\`´]/;
 
 export const programmingLanguages: languageMap = {
@@ -88,6 +96,12 @@ export const EXPORT_DIALOG_SUBTITLE = "Export flow as JSON file.";
 export const SETTINGS_DIALOG_SUBTITLE = "Edit details about your project.";
 
 /**
+ * The base text for subtitle of Flow Logs (Menubar)
+ * @constant
+ */
+export const LOGS_DIALOG_SUBTITLE = "Check out information about your flow.";
+
+/**
  * The base text for subtitle of Code Dialog (Toolbar)
  * @constant
  */
@@ -117,7 +131,6 @@ export const CODE_PROMPT_DIALOG_SUBTITLE =
 
 export const CODE_DICT_DIALOG_SUBTITLE =
   "Edit your dictionary. This dialog allows you to create your own customized dictionary. You can add as many key-value pairs as you want. While in edit mode, you can enter ({}) or ([]), and this will result in adding a new object or array.";
-
 /**
  * The base text for subtitle of Prompt Dialog
  * @constant
@@ -152,6 +165,29 @@ export const IMPORT_DIALOG_SUBTITLE =
  * @constant
  */
 export const TOOLTIP_EMPTY = "No compatible components found.";
+
+export const CSVViewErrorTitle = "CSV output";
+
+export const CSVNoDataError = "No data available";
+
+export const PDFViewConstant = "Expand the ouptut to see the PDF";
+
+export const CSVError = "Error loading CSV";
+
+export const PDFLoadErrorTitle = "Error loading PDF";
+
+export const PDFCheckFlow = "Please check your flow and try again";
+
+export const PDFErrorTitle = "PDF Output";
+
+export const PDFLoadError = "Run the flow to see the pdf";
+
+export const IMGViewConstant = "Expand the view to see the image";
+
+export const IMGViewErrorMSG =
+  "Run the flow or inform a valid url to see your image";
+
+export const IMGViewErrorTitle = "Image output";
 
 /**
  * The base text for subtitle of code dialog
@@ -502,6 +538,8 @@ export const NOUNS: string[] = [
  */
 export const USER_PROJECTS_HEADER = "My Collection";
 
+export const DEFAULT_FOLDER = "My Projects";
+
 /**
  * Header text for admin page
  * @constant
@@ -680,41 +718,101 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
 
 export const priorityFields = new Set(["code", "template"]);
 
-export const INPUT_TYPES = new Set(["ChatInput", "TextInput"]);
-export const OUTPUT_TYPES = new Set(["ChatOutput", "TextOutput"]);
+export const INPUT_TYPES = new Set([
+  "ChatInput",
+  "TextInput",
+  "KeyPairInput",
+  "JsonInput",
+  "StringListInput",
+]);
+export const OUTPUT_TYPES = new Set([
+  "ChatOutput",
+  "TextOutput",
+  "PDFOutput",
+  "ImageOutput",
+  "CSVOutput",
+  "JsonOutput",
+  "KeyPairOutput",
+  "StringListOutput",
+  "RecordsOutput",
+  "TableOutput",
+]);
 
-export const chatFirstInitialText =
+export const CHAT_FIRST_INITIAL_TEXT =
   "Start a conversation and click the agent's thoughts";
 
-export const chatSecondInitialText = "to inspect the chaining process.";
+export const CHAT_SECOND_INITIAL_TEXT = "to inspect the chaining process.";
 
-export const zeroNotifications = "No new notifications";
+export const ZERO_NOTIFICATIONS = "No new notifications";
 
-export const successBuild = "Built sucessfully ✨";
+export const SUCCESS_BUILD = "Built sucessfully ✨";
 
-export const alertSaveWApi =
+export const ALERT_SAVE_WITH_API =
   "Caution: Uncheck this box only removes API keys from fields specifically designated for API keys.";
 
-export const saveWApiCheckbox = "Save with my API keys";
-export const editTextModalTitle = "Edit Text";
-export const editTextPlaceholder = "Type message here.";
-export const inputHandleHover = "Avaliable input components:";
-export const outputHandleHover = "Avaliable output components:";
-export const textInputModalTitle = "Text Inputs";
-export const outputsModalTitle = "Text Outputs";
-export const langflowChatTitle = "Langflow Chat";
-export const chatInputPlaceholder =
+export const SAVE_WITH_API_CHECKBOX = "Save with my API keys";
+export const EDIT_TEXT_MODAL_TITLE = "Edit Text";
+export const EDIT_TEXT_PLACEHOLDER = "Type message here.";
+export const INPUT_HANDLER_HOVER = "Avaliable input components:";
+export const OUTPUT_HANDLER_HOVER = "Avaliable output components:";
+export const TEXT_INPUT_MODAL_TITLE = "Inputs";
+export const OUTPUTS_MODAL_TITLE = "Outputs";
+export const LANGFLOW_CHAT_TITLE = "Langflow Chat";
+export const CHAT_INPUT_PLACEHOLDER =
   "No chat input variables found. Click to run your flow.";
-export const chatInputPlaceholderSend = "Send a message...";
-export const editCodeTitle = "Edit Code";
-export const myCollectionDesc =
-  "Manage your personal projects. Download or upload your collection.";
-export const storeDesc = "Search flows and components from the community.";
-export const storeTitle = "Langflow Store";
-export const noApi = "You don't have an API key. ";
-export const insertApi = "Insert your Langflow API key.";
-export const invalidApi = "Your API key is not valid. ";
-export const createApi = `Don’t have an API key? Sign up at`;
-export const statusBuild = "Build to validate status.";
-export const statusBuilding = "Building...";
-export const savedHover = "Last saved at ";
+export const CHAT_INPUT_PLACEHOLDER_SEND = "Send a message...";
+export const EDIT_CODE_TITLE = "Edit Code";
+export const MY_COLLECTION_DESC =
+  "Manage your personal projects. Download and upload entire collections.";
+export const STORE_DESC = "Explore community-shared flows and components.";
+export const STORE_TITLE = "Langflow Store";
+export const NO_API_KEY = "You don't have an API key. ";
+export const INSERT_API_KEY = "Insert your Langflow API key.";
+export const INVALID_API_KEY = "Your API key is not valid. ";
+export const CREATE_API_KEY = `Don’t have an API key? Sign up at`;
+export const STATUS_BUILD = "Build to validate status.";
+export const STATUS_BUILDING = "Building...";
+export const SAVED_HOVER = "Last saved at ";
+export const RUN_TIMESTAMP_PREFIX = "Last Run: ";
+export const STARTER_FOLDER_NAME = "Starter Projects";
+export const PRIORITY_SIDEBAR_ORDER = [
+  "saved_components",
+  "inputs",
+  "outputs",
+  "prompts",
+  "data",
+  "prompt",
+  "models",
+  "helpers",
+  "vectorstores",
+  "vectorsearch",
+  "embeddings",
+];
+export const NATIVE_CATEGORIES = [
+  "inputs",
+  "outputs",
+  "prompts",
+  "data",
+  "prompt",
+  "models",
+  "helpers",
+  "experimental",
+  "agents",
+];
+
+export const AUTHORIZED_DUPLICATE_REQUESTS = [
+  "/health",
+  "/flows",
+  "/logout",
+  "/refresh",
+  "/login",
+  "/auto_login",
+];
+
+export const SAVE_DEBOUNCE_TIME = 300;
+
+export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
+
+export const DEFAULT_TABLE_ALERT_TITLE = "No Data Available";
+
+export const LOCATIONS_TO_RETURN = ["/flow/", "/settings/"];

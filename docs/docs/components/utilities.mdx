@@ -2,95 +2,91 @@ import Admonition from "@theme/Admonition";
 
 # Utilities
 
-<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-  <p>
-    We appreciate your understanding as we polish our documentation – it may
-    contain some rough edges. Share your feedback or report issues to help us
-    improve! 🛠️📝
-  </p>
+<Admonition type="caution" icon="🚧" title="Zone Under Construction">
+  We appreciate your understanding as we polish our documentation—it may
+  contain some rough edges. Share your feedback or report issues to help us
+  improve! 🛠️📝
 </Admonition>
 
 Utilities are a set of actions that can be used to perform common tasks in a flow. They are available in the **Utilities** section in the sidebar.
 
 ---
 
-### GET Request
+### GET request
 
-Make a GET request to the given URL.
+Make a GET request to the specified URL.
 
-**Params**
+**Parameters**
 
-- **URL:** The URL to make the request to. There can be more than one URL, in which case the request will be made to each URL in order.
+- **URL:** The URL to make the request to. If there are multiple URLs, the request will be made to each URL in order.
 - **Headers:** A dictionary of headers to send with the request.
 
 **Output**
 
-- **List of Documents:** A list of Documents containing the JSON response from each request.
+- **List of documents:** A list of documents containing the JSON response from each request.
 
 ---
 
-### POST Request
+### POST request
 
-Make a POST request to the given URL.
+Make a POST request to the specified URL.
 
-**Params**
+**Parameters**
 
 - **URL:** The URL to make the request to.
 - **Headers:** A dictionary of headers to send with the request.
-- **Document:** The Document containing a JSON object to send with the request.
+- **Document:** The document containing a JSON object to send with the request.
 
 **Output**
 
-- **Document:** The JSON response from the request as a Document.
+- **Document:** The JSON response from the request as a document.
 
 ---
 
-### Update Request
+### Update request
 
-Make a PATCH or PUT request to the given URL.
+Make a PATCH or PUT request to the specified URL.
 
-**Params**
+**Parameters**
 
 - **URL:** The URL to make the request to.
 - **Headers:** A dictionary of headers to send with the request.
-- **Document:** The Document containing a JSON object to send with the request.
-- **Method:** The HTTP method to use for the request. Can be either `PATCH` or `PUT`.
+- **Document:** The document containing a JSON object to send with the request.
+- **Method:** The HTTP method to use for the request, either `PATCH` or `PUT`.
 
 **Output**
 
-- **Document:** The JSON response from the request as a Document.
+- **Document:** The JSON response from the request as a document.
 
 ---
 
-### JSON Document Builder
+### JSON document builder
 
-Build a Document containing a JSON object using a key and another Document page content.
+Build a document containing a JSON object using a key and another document page content.
 
-**Params**
+**Parameters**
 
 - **Key:** The key to use for the JSON object.
-- **Document:** The Document page to use for the JSON object.
+- **Document:** The document page to use for the JSON object.
 
 **Output**
 
-- **List of Documents:** A list containing the Document with the JSON object.
+- **List of documents:** A list containing the document with the JSON object.
 
-## Unique ID Generator
+## Unique ID generator
 
 Generates a unique identifier (UUID) for each instance it is invoked, providing a distinct and reliable identifier suitable for a variety of applications.
 
-**Params**
+**Parameters**
 
-- **Value:** This field displays the generated unique identifier (UUID). The UUID is generated dynamically for each instance of the component, ensuring uniqueness across different uses.
+- **Value:** This field displays the generated unique identifier (UUID). The UUID is dynamically generated for each instance of the component, ensuring uniqueness across different uses.
 
 **Output**
 
 - Returns a unique identifier (UUID) as a string. This UUID is generated using Python's `uuid` module, ensuring that each identifier is unique and can be used as a reliable reference in your application.
 
 <Admonition type="note" title="Note">
-    <p>
-        The Unique ID Generator is crucial for scenarios requiring distinct identifiers, such as session management, transaction tracking, or any context where different instances or entities must be uniquely identified. The generated UUID is provided as a hexadecimal string, offering a high level of uniqueness and security for identification purposes.
-    </p>
+    The Unique ID Generator is crucial for scenarios requiring distinct identifiers, such as session management, transaction tracking, or any context where different instances or entities must be uniquely identified. The generated UUID is provided as a hexadecimal string, offering a high level of uniqueness and security for identification purposes.
 </Admonition>
 
 For additional information and examples, please consult the [Langflow Components Custom Documentation](http://docs.langflow.org/components/custom).

@@ -11,6 +11,8 @@ export default function InputListComponent({
   onChange,
   disabled,
   editNode = false,
+  componentName,
+  playgroundDisabled,
 }: InputListComponentType): JSX.Element {
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
@@ -23,7 +25,7 @@ export default function InputListComponent({
     value = [value];
   }
 
-  if (!value.length) value = [""];
+  if (!value?.length) value = [""];
 
   return (
     <div
@@ -36,7 +38,7 @@ export default function InputListComponent({
         return (
           <div key={idx} className="flex w-full gap-3">
             <Input
-              disabled={disabled}
+              disabled={disabled || playgroundDisabled}
               type="text"
               value={singleValue}
               className={editNode ? "input-edit-node" : ""}
@@ -46,6 +48,10 @@ export default function InputListComponent({
                 newInputList[idx] = event.target.value;
                 onChange(newInputList);
               }}
+              data-testid={
+                `input-list-input${editNode ? "-edit" : ""}_${componentName}-` +
+                idx
+              }
             />
             {idx === value.length - 1 ? (
               <button
@@ -54,6 +60,12 @@ export default function InputListComponent({
                   newInputList.push("");
                   onChange(newInputList);
                 }}
+                data-testid={
+                  `input-list-plus-btn${
+                    editNode ? "-edit" : ""
+                  }_${componentName}-` + idx
+                }
+                disabled={disabled || playgroundDisabled}
               >
                 <IconComponent
                   name="Plus"
@@ -62,15 +74,25 @@ export default function InputListComponent({
               </button>
             ) : (
               <button
+                data-testid={
+                  `input-list-minus-btn${
+                    editNode ? "-edit" : ""
+                  }_${componentName}-` + idx
+                }
                 onClick={() => {
                   let newInputList = _.cloneDeep(value);
                   newInputList.splice(idx, 1);
                   onChange(newInputList);
                 }}
+                disabled={disabled || playgroundDisabled}
               >
                 <IconComponent
                   name="X"
-                  className="h-4 w-4 hover:text-status-red"
+                  className={`h-4 w-4 ${
+                    disabled || playgroundDisabled
+                      ? ""
+                      : "hover:text-accent-foreground"
+                  }`}
                 />
               </button>
             )}
