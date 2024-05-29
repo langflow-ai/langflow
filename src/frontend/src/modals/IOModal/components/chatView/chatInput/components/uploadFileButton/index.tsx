@@ -1,3 +1,5 @@
+import ForwardedIconComponent from "../../../../../../../components/genericIconComponent";
+
 const UploadFileButton = ({
   fileInputRef,
   handleFileChange,
@@ -12,10 +14,10 @@ const UploadFileButton = ({
         onChange={handleFileChange}
       />
       <button
-        className="absolute rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700"
+        className="font-bold text-white transition-all hover:text-muted-foreground"
         onClick={handleButtonClick}
       >
-        Upload File
+        <ForwardedIconComponent name="PaperclipIcon" />
       </button>
     </div>
   );
