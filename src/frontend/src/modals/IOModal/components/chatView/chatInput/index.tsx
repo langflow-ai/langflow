@@ -29,6 +29,7 @@ export default function ChatInput({
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [files, setFiles] = useState<FilePreviewType[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [inputFocus, setInputFocus] = useState<boolean>(false);
 
   useFocusOnUnlock(lockChat, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
@@ -76,6 +77,8 @@ export default function ChatInput({
           CHAT_INPUT_PLACEHOLDER={CHAT_INPUT_PLACEHOLDER}
           CHAT_INPUT_PLACEHOLDER_SEND={CHAT_INPUT_PLACEHOLDER_SEND}
           inputRef={inputRef}
+          setInputFocus={setInputFocus}
+          files={files}
         />
 
         <div className="form-modal-send-icon-position">
@@ -88,19 +91,28 @@ export default function ChatInput({
           />
         </div>
       </div>
-      <div className="flex w-full gap-2 pb-2">
-        {files.map((file) => (
-          <FilePreview
-            error={file.error}
-            file={file.file}
-            loading={file.loading}
-            key={file.id}
-            onDelete={() => {
-              setFiles((prev) => prev.filter((f) => f.id !== file.id));
-            }}
-          />
-        ))}
-      </div>
+      {files.length > 0 && (
+        <div
+          className={`flex w-full items-center gap-2 rounded-t-md bg-background px-10 py-5 ${
+            inputFocus
+              ? "border-2 border-b-0 border-ring"
+              : "border border-b-0 border-border"
+          }`}
+        >
+          {files.map((file) => (
+            <FilePreview
+              error={file.error}
+              file={file.file}
+              loading={file.loading}
+              key={file.id}
+              onDelete={() => {
+                setFiles((prev) => prev.filter((f) => f.id !== file.id));
+                // TODO: delete file on backend
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
