@@ -9,6 +9,7 @@ from langflow.services.auth.utils import (
     create_user_longterm_token,
     create_user_tokens,
 )
+from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.deps import get_session, get_settings_service, get_variable_service
 from langflow.services.settings.manager import SettingsService
 from langflow.services.variable.service import VariableService
