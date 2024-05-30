@@ -43,19 +43,23 @@ import BaseModal from "../baseModal";
 const EditNodeModal = forwardRef(
   (
     {
-      data,
       nodeLength,
       open,
       setOpen,
+      data,
     }: {
-      data: NodeDataType;
       nodeLength: number;
       open: boolean;
       setOpen: (open: boolean) => void;
+      data: NodeDataType;
     },
     ref
   ) => {
-    const [myData, setMyData] = useState(data);
+    const nodes = useFlowStore((state) => state.nodes);
+
+    const dataFromStore = nodes.find((node) => node.id === node.id)?.data;
+
+    const [myData, setMyData] = useState(dataFromStore ?? data);
 
     const edges = useFlowStore((state) => state.edges);
     const setNode = useFlowStore((state) => state.setNode);
@@ -293,26 +297,14 @@ const EditNodeModal = forwardRef(
                                     <DictComponent
                                       disabled={disabled}
                                       editNode={true}
-                                      value={() => {
-                                        // instead of the above, try to stringify the object
-                                        // if it fails, return an empty object
-                                        console.log(
-                                          myData.node!.template[templateParam]
-                                            .value
-                                        );
-                                        try {
-                                          return JSON.parse(
-                                            myData.node!.template[templateParam]
-                                              .value as string
-                                          );
-                                        } catch (e) {
-                                          console.error(
-                                            "Error parsing object",
-                                            e
-                                          );
-                                          return {};
-                                        }
-                                      }}
+                                      value={
+                                        myData.node!.template[
+                                          templateParam
+                                        ]?.value?.toString() === "{}"
+                                          ? {}
+                                          : myData.node!.template[templateParam]
+                                              .value
+                                      }
                                       onChange={(newValue) => {
                                         myData.node!.template[
                                           templateParam
