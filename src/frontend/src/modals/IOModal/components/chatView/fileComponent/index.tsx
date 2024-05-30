@@ -27,14 +27,14 @@ export default function FileCard({
   if (imgTypes.has(fileType)) {
     return (
       <div
-        className="relative h-1/4 w-1/4"
+        className="relative ml-20 h-auto w-auto border border-border"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
         <img
-            src={`${BACKEND_URL.slice(0,BACKEND_URL.length-1)}${BASE_URL_API}files/images/${content}`}
-            alt="generated image"
-          className="h-full  w-full rounded-lg"
+          src={`${BACKEND_URL.slice(0, BACKEND_URL.length - 1)}${BASE_URL_API}files/images/${content}`}
+          alt="generated image"
+          className="h-auto  w-auto rounded-lg border border-border"
         />
         {isHovered && (
           <div className={`file-card-modal-image-div `}>
@@ -59,7 +59,7 @@ export default function FileCard({
         {" "}
         {imgTypes.has(fileType) ? (
           <img
-            src={`${BACKEND_URL.slice(0,BACKEND_URL.length-1)}${BASE_URL_API}files/images/${content}`}
+            src={`${BACKEND_URL.slice(0, BACKEND_URL.length - 1)}${BASE_URL_API}files/images/${content}`}
             alt=""
             className="h-8 w-8"
           />
