@@ -258,28 +258,30 @@ export default function ParameterComponent({
               <span className={!left && data.node?.frozen ? " text-ice" : ""}>
                 {title}
               </span>
-              <ShadTooltip
-                content={
-                  displayOutputPreview
-                    ? "Inspect Output"
-                    : "Please build the component first"
-                }
-              >
-                <button
-                  disabled={!displayOutputPreview}
-                  onClick={() => setOpenOutputModal(true)}
+              {!left && (
+                <ShadTooltip
+                  content={
+                    displayOutputPreview
+                      ? "Inspect Output"
+                      : "Please build the component first"
+                  }
                 >
-                  <IconComponent
-                    className={classNames(
-                      "h-5 w-5",
-                      displayOutputPreview
-                        ? ""
-                        : " cursor-not-allowed text-muted-foreground",
-                    )}
-                    name={"Eye"}
-                  />
-                </button>
-              </ShadTooltip>
+                  <button
+                    disabled={!displayOutputPreview}
+                    onClick={() => setOpenOutputModal(true)}
+                  >
+                    <IconComponent
+                      className={classNames(
+                        "h-5 w-5",
+                        displayOutputPreview
+                          ? ""
+                          : " cursor-not-allowed text-muted-foreground",
+                      )}
+                      name={"ScanEye"}
+                    />
+                  </button>
+                </ShadTooltip>
+              )}
             </div>
           )}
           <span className={(required ? "ml-2 " : "") + "text-status-red"}>
