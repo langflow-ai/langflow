@@ -7,6 +7,7 @@ from loguru import logger
 
 from langflow.base.curl.parse import parse_context
 from langflow.custom import CustomComponent
+from langflow.field_typing import NestedDict
 from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
 
@@ -55,13 +56,14 @@ class APIRequest(CustomComponent):
                 curl = field_value
                 parsed = parse_context(curl)
                 build_config["urls"]["value"] = [parsed.url]
-                build_config["method"]["value"] = parsed.method
+                build_config["method"]["value"] = parsed.method.upper()
                 build_config["headers"]["value"] = parsed.headers
+
                 try:
                     json_data = json.loads(parsed.data)
                     build_config["body"]["value"] = json_data
-                except json.JSONDecodeError:
-                    pass
+                except json.JSONDecodeError as e:
+                    print(e)
             except Exception as exc:
                 logger.error(f"Error parsing curl: {exc}")
                 raise ValueError(f"Error parsing curl: {exc}")
@@ -120,21 +122,22 @@ class APIRequest(CustomComponent):
         method: str,
         urls: List[str],
         curl: Optional[str] = None,
-        headers: Optional[Record] = {},
-        body: Optional[Record] = {},
+        headers: Optional[NestedDict] = {},
+        body: Optional[NestedDict] = {},
         timeout: int = 5,
     ) -> List[Record]:
         if headers is None:
             headers_dict = {}
-        else:
+        elif isinstance(headers, Record):
             headers_dict = headers.data
 
         bodies = []
         if body:
-            if isinstance(body, list):
-                bodies = [b.data if isinstance(b, Record) else b for b in body]
+            if not isinstance(body, list):
+                bodies = [body]
             else:
-                bodies = [body.data if isinstance(body, Record) else body]
+                bodies = body
+            bodies = [b.data if isinstance(b, Record) else b for b in bodies]
 
         if len(urls) != len(bodies):
             # add bodies with None
