@@ -13,9 +13,9 @@ The `normalize_newlines` function is a helper function that replaces the line co
 import re
 import shlex
 from collections import OrderedDict, namedtuple
+from http.cookies import SimpleCookie
 
-from six.moves import http_cookies as Cookie
-from uncurl.api import parser
+from uncurl.api import parser  # type: ignore
 
 parser.add_argument("-x", "--proxy", default={})
 parser.add_argument("-U", "--proxy-user", default="")
@@ -52,7 +52,7 @@ def parse_context(curl_command):
             header_key, header_value = curl_header.split(":", 1)
 
         if header_key.lower().strip("$") == "cookie":
-            cookie = Cookie.SimpleCookie(bytes(header_value, "ascii").decode("unicode-escape"))
+            cookie = SimpleCookie(bytes(header_value, "ascii").decode("unicode-escape"))
             for key in cookie:
                 cookie_dict[key] = cookie[key].value
         else:

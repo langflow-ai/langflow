@@ -142,7 +142,7 @@ class APIRequest(CustomComponent):
                 bodies = [body]
             else:
                 bodies = body
-            bodies = [b.data if isinstance(b, Record) else b for b in bodies]
+            bodies = [b.data if isinstance(b, Record) else b for b in bodies]  # type: ignore
 
         if len(urls) != len(bodies):
             # add bodies with None
