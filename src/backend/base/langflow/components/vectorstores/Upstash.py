@@ -39,6 +39,11 @@ class UpstashVectorStoreComponent(CustomComponent):
                 "display_name": "Index Token",
                 "info": "The token for the Upstash index.",
             },
+            "text_key": {
+                "display_name": "Text Key",
+                "info": "The key in the record to use as text.",
+                "advanced": True,
+            },
         }
 
     def build(

@@ -43,6 +43,16 @@ class UpstashSearchComponent(UpstashVectorStoreComponent, LCVectorStoreComponent
                 "display_name": "Index Token",
                 "info": "The token for the Upstash index.",
             },
+            "number_of_results": {
+                "display_name": "Number of Results",
+                "info": "Number of results to return.",
+                "advanced": True,
+            },
+            "text_key": {
+                "display_name": "Text Key",
+                "info": "The key in the record to use as text.",
+                "advanced": True,
+            },
         }
 
     def build(  # type: ignore[override]
