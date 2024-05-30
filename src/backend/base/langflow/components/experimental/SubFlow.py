@@ -10,7 +10,7 @@ from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
 from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
-from langflow.template.field.base import TemplateField
+from langflow.template.field.base import InputField
 
 
 class SubFlowComponent(CustomComponent):
@@ -54,9 +54,9 @@ class SubFlowComponent(CustomComponent):
         return build_config
 
     def add_inputs_to_build_config(self, inputs: List[Vertex], build_config: dotdict):
-        new_fields: list[TemplateField] = []
+        new_fields: list[InputField] = []
         for vertex in inputs:
-            field = TemplateField(
+            field = InputField(
                 display_name=vertex.display_name,
                 name=vertex.id,
                 info=vertex.description,

@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_valid
 from langflow.field_typing.range_spec import RangeSpec
 
 
-class TemplateField(BaseModel):
+class InputField(BaseModel):
     model_config = ConfigDict()
 
     field_type: str = Field(default="str", serialization_alias="type")
@@ -128,3 +128,17 @@ class TemplateField(BaseModel):
             (f".{file_type}" if isinstance(file_type, str) and not file_type.startswith(".") else file_type)
             for file_type in value
         ]
+
+
+class OutputField(BaseModel):
+    types: list[str] = Field(default=[], serialization_alias="types")
+    """List of output types for the field."""
+
+    selected: Optional[str] = Field(default=None, serialization_alias="selected")
+    """The selected output type for the field."""
+
+    name: str = Field(default="", serialization_alias="name")
+    """The name of the field."""
+
+    def to_dict(self):
+        return self.model_dump(by_alias=True, exclude_none=True)
