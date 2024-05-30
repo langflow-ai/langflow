@@ -523,6 +523,7 @@ export type fileCardPropsType = {
   fileName: string;
   content: string;
   fileType: string;
+  showFile?: boolean;
 };
 
 export type nodeToolbarPropsType = {
