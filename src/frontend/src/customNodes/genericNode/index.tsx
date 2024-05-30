@@ -704,14 +704,14 @@ export default function GenericNode({
               ) : (
                 <div
                   className={cn(
-                    "generic-node-desc-text truncate-multiline word-break-break-word",
+                    "generic-node-desc-text cursor-text truncate-multiline word-break-break-word",
                     (data.node?.description === "" ||
                       !data.node?.description) &&
                       nameEditable
                       ? "font-light italic"
                       : "",
                   )}
-                  onDoubleClick={(e) => {
+                  onClick={(e) => {
                     setInputDescription(true);
                     takeSnapshot();
                   }}
