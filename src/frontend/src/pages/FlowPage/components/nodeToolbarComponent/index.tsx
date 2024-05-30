@@ -639,7 +639,7 @@ export default function NodeToolbarComponent({
             </ConfirmationModal.Content>
           </ConfirmationModal>
           <EditNodeModal
-            nodeId={data.id}
+            data={data}
             nodeLength={nodeLength}
             open={showModalAdvanced}
             setOpen={setShowModalAdvanced}

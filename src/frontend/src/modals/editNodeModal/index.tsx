@@ -30,6 +30,7 @@ import {
 } from "../../constants/constants";
 import { Case } from "../../shared/components/caseComponent";
 import useFlowStore from "../../stores/flowStore";
+import { NodeDataType } from "../../types/flow";
 import {
   convertObjToArray,
   convertValuesToNumbers,
@@ -42,23 +43,23 @@ import BaseModal from "../baseModal";
 const EditNodeModal = forwardRef(
   (
     {
-      nodeId,
       nodeLength,
       open,
       setOpen,
+      data,
     }: {
-      nodeId: string;
       nodeLength: number;
       open: boolean;
       setOpen: (open: boolean) => void;
+      data: NodeDataType;
     },
     ref,
   ) => {
     const nodes = useFlowStore((state) => state.nodes);
 
-    const data = nodes.find((node) => node.id === nodeId)!.data;
+    const dataFromStore = nodes.find((node) => node.id === node.id)?.data;
 
-    const [myData, setMyData] = useState(data);
+    const [myData, setMyData] = useState(dataFromStore ?? data);
 
     const edges = useFlowStore((state) => state.edges);
     const setNode = useFlowStore((state) => state.setNode);
