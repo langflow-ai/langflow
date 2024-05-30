@@ -33,6 +33,7 @@ async def api_key_security(
     db: Session = Depends(get_session),
 ) -> Optional[User]:
     settings_service = get_settings_service()
+    result: Optional[Union[ApiKey, User]] = None
     if settings_service.auth_settings.AUTO_LOGIN:
         # Get the first user
         if not settings_service.auth_settings.SUPERUSER:
