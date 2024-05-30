@@ -19,15 +19,21 @@ export default function DictComponent({
   }, [disabled]);
 
   useEffect(() => {
-    if (value) onChange(value);
+    const hasPropsObject = Object.keys(value).length > 0;
+    if (hasPropsObject) onChange(value);
   }, [value]);
 
+  useEffect(() => {
+    if (value) onChange(value);
+  }, []);
+
   const ref = useRef(value);
+
   return (
     <div
       className={classNames(
         value.length > 1 && editNode ? "my-1" : "",
-        "flex flex-col gap-3"
+        "flex flex-col gap-3",
       )}
     >
       {
