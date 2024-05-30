@@ -45,6 +45,10 @@ export default function IOFieldView({
 
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
 
+  const textOutputValue =
+    (flowPool[node!.id] ?? [])[(flowPool[node!.id]?.length ?? 1) - 1]?.data
+      .results.result ?? "";
+
   function handleOutputType() {
     if (!node) return <>"No node found!"</>;
     switch (type) {
@@ -158,7 +162,12 @@ export default function IOFieldView({
         switch (fieldType) {
           case "TextOutput":
             return (
-              <TextOutputView left={left} node={node} flowPool={flowPool} />
+              <TextOutputView
+                left={left}
+                node={node}
+                flowPool={flowPool}
+                value={textOutputValue}
+              />
             );
           case "PDFOutput":
             return left ? (
