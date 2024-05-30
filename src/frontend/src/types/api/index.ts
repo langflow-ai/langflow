@@ -28,7 +28,7 @@ export type APIClassType = {
   documentation: string;
   error?: string;
   official?: boolean;
-  outputs?: Array<{ types: Array<string>; selected?: string }>;
+  outputs?: Array<OutputFieldType>;
   frozen?: boolean;
   flow?: FlowType;
   field_order?: string[];
@@ -63,7 +63,11 @@ export type InputFieldType = {
   refresh_button_text?: string;
   [key: string]: any;
 };
-
+export type OutputFieldType = {
+  types: Array<string>;
+  selected?: string;
+  name: string;
+};
 export type sendAllProps = {
   nodes: Node[];
   edges: Edge[];
