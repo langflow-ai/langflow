@@ -2,8 +2,6 @@ import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import TableAutoCellRender from "../components/tableAutoCellRender";
-import { priorityFields } from "../constants/constants";
-import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
 import { APIDataType, TemplateVariableType } from "../types/api";
 import {
   groupedObjType,
@@ -353,7 +351,7 @@ export function isTimeStampString(str: string): boolean {
 
 export function extractColumnsFromRows(
   rows: object[],
-  mode: "intersection" | "union",
+  mode: "intersection" | "union" | "all",
 ): (ColDef<any> | ColGroupDef<any>)[] {
   const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
   if (rows.length === 0) {
@@ -366,7 +364,6 @@ export function extractColumnsFromRows(
         field: key,
         cellRenderer: TableAutoCellRender,
         filter: true,
-        autoHeight: true,
       };
     }
     for (const row of rows) {
@@ -385,14 +382,19 @@ export function extractColumnsFromRows(
           field: key,
           filter: true,
           cellRenderer: TableAutoCellRender,
+          suppressAutoSize: true,
+          tooltipField: key,
         };
       }
     }
   }
+
   if (mode === "intersection") {
     intersection();
-  } else {
+  } else if (mode === "union") {
     union();
+  } else {
+    return rows;
   }
 
   return Object.values(columnsKeys);

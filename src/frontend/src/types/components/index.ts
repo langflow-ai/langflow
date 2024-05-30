@@ -76,6 +76,7 @@ export type InputListComponentType = {
   disabled: boolean;
   editNode?: boolean;
   componentName?: string;
+  playgroundDisabled?: boolean;
 };
 
 export type InputGlobalComponentType = {

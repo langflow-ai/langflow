@@ -49,6 +49,8 @@ export default function IOFieldView({
     (flowPool[node!.id] ?? [])[(flowPool[node!.id]?.length ?? 1) - 1]?.data
       .results.result ?? "";
 
+  console.log(flowPoolNode?.data?.artifacts?.records);
+
   function handleOutputType() {
     if (!node) return <>"No node found!"</>;
     switch (type) {
@@ -161,14 +163,7 @@ export default function IOFieldView({
       case InputOutput.OUTPUT:
         switch (fieldType) {
           case "TextOutput":
-            return (
-              <TextOutputView
-                left={left}
-                node={node}
-                flowPool={flowPool}
-                value={textOutputValue}
-              />
-            );
+            return <TextOutputView left={left} value={textOutputValue} />;
           case "PDFOutput":
             return left ? (
               <div>{PDFViewConstant}</div>
@@ -256,8 +251,9 @@ export default function IOFieldView({
             return (
               <div className={left ? "h-56" : "h-full"}>
                 <RecordsOutputComponent
-                  flowPoolObject={flowPoolNode}
                   pagination={!left}
+                  rows={flowPoolNode?.data?.artifacts?.records ?? []}
+                  columnMode="union"
                 />
               </div>
             );
