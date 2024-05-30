@@ -52,3 +52,12 @@ jobs:
           push: true
           file: ${{ env.DOCKERFILE }}
           tags: ${{ env.TAGS }}
+      - name: Wait for Docker Hub to propagate
+        run: sleep 120
+      - name: Restart HuggingFace Spaces Build
+        #   There's a script in ./scripts/factory_reset_space.py that will reset the build
+        # using the HUGGINGFACE_API_TOKEN secret
+        run: |
+          python ./scripts/factory_reset_space.py
+        env:
+          HUGGINGFACE_API_TOKEN: ${{ secrets.HUGGINGFACE_API_TOKEN }}
