@@ -228,7 +228,6 @@ def load_flows_from_directory():
     with session_scope() as session:
         user_id = get_user_by_username(session, settings_service.auth_settings.SUPERUSER).id
         files = [f for f in os.listdir(flows_path) if os.path.isfile(os.path.join(flows_path, f))]
-        print("loading flows" + str(user_id))
         for filename in files:
             if not filename.endswith(".json"):
                 continue
@@ -236,13 +235,9 @@ def load_flows_from_directory():
             with open(os.path.join(flows_path, filename), "r", encoding="utf-8") as file:
                 flow = orjson.loads(file.read())
                 no_json_name = filename.replace(".json", "")
-                str(no_json_name)
                 if _is_valid_uuid(no_json_name):
                     flow["id"] = no_json_name
-                else:
-                    print("not valid..")
                 flow_id = flow.get("id")
-                print("got flow Id" + str(flow_id))
                 if flow_id:
                     stmt = select(Flow).where(Flow.id == flow_id)
                     if existing := session.exec(stmt).first():
@@ -262,7 +257,6 @@ def load_flows_from_directory():
                 flow["user_id"] = user_id
                 flow = Flow.model_validate(flow, from_attributes=True)
                 flow.updated_at = datetime.utcnow()
-                print("add flow " + str(flow))
                 session.add(flow)
                 session.commit()
 
