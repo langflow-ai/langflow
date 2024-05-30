@@ -9,7 +9,6 @@ from langflow.services.auth.utils import (
     create_user_longterm_token,
     create_user_tokens,
 )
-from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.deps import get_session, get_settings_service, get_variable_service
 from langflow.services.settings.manager import SettingsService
 from langflow.services.variable.service import VariableService
@@ -73,8 +72,7 @@ async def login_to_get_access_token(
 async def auto_login(
     response: Response,
     db: Session = Depends(get_session),
-    settings_service=Depends(get_settings_service),
-    variable_service: VariableService = Depends(get_variable_service),
+    settings_service=Depends(get_settings_service)
 ):
     auth_settings = settings_service.auth_settings
     if settings_service.auth_settings.AUTO_LOGIN:
@@ -88,8 +86,7 @@ async def auto_login(
             expires=None,  # Set to None to make it a session cookie
             domain=auth_settings.COOKIE_DOMAIN,
         )
-        variable_service.initialize_user_variables(user_id, db)
-        create_default_folder_if_it_doesnt_exist(db, user_id)
+
         return tokens
 
     raise HTTPException(
