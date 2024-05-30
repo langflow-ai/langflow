@@ -10,7 +10,7 @@ import IconComponent from "../../../components/genericIconComponent";
 import { EXPORT_CODE_DIALOG } from "../../../constants/constants";
 import { AuthContext } from "../../../contexts/authContext";
 import { useTweaksStore } from "../../../stores/tweaksStore";
-import { TemplateVariableType } from "../../../types/api";
+import { InputFieldType } from "../../../types/api";
 import { uniqueTweakType } from "../../../types/components";
 import { FlowType } from "../../../types/flow/index";
 import BaseModal from "../../baseModal";
@@ -128,7 +128,7 @@ const ApiModal = forwardRef(
     async function buildTweakObject(
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: TemplateVariableType
+      template: InputFieldType
     ) {
       changes = getChangesType(changes, template);
 

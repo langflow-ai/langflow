@@ -2,9 +2,7 @@ import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import TableAutoCellRender from "../components/tableAutoCellRender";
-import { priorityFields } from "../constants/constants";
-import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
-import { APIDataType, TemplateVariableType } from "../types/api";
+import { APIDataType, InputFieldType } from "../types/api";
 import {
   groupedObjType,
   nodeGroupedObjType,
@@ -57,7 +55,7 @@ export function normalCaseToSnakeCase(str: string): string {
 
 export function toTitleCase(
   str: string | undefined,
-  isNodeField?: boolean,
+  isNodeField?: boolean
 ): string {
   if (!str) return "";
   let result = str
@@ -66,7 +64,7 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+          word[0].toUpperCase() + word.slice(1).toLowerCase()
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -79,7 +77,7 @@ export function toTitleCase(
       if (isNodeField) return word;
       if (index === 0) {
         return checkUpperWords(
-          word[0].toUpperCase() + word.slice(1).toLowerCase(),
+          word[0].toUpperCase() + word.slice(1).toLowerCase()
         );
       }
       return checkUpperWords(word.toLowerCase());
@@ -183,7 +181,7 @@ export function checkLocalStorageKey(key: string): boolean {
 
 export function IncrementObjectKey(
   object: object,
-  key: string,
+  key: string
 ): { newKey: string; increment: number } {
   let count = 1;
   const type = removeCountFromString(key);
@@ -218,7 +216,7 @@ export function groupByFamily(
   data: APIDataType,
   baseClasses: string,
   left: boolean,
-  flow?: NodeType[],
+  flow?: NodeType[]
 ): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
   let arrOfPossibleInputs: Array<{
@@ -236,7 +234,7 @@ export function groupByFamily(
   let checkedNodes = new Map();
   const excludeTypes = new Set(["bool", "float", "code", "file", "int"]);
 
-  const checkBaseClass = (template: TemplateVariableType) => {
+  const checkBaseClass = (template: InputFieldType) => {
     return (
       template.type &&
       template.show &&
@@ -244,7 +242,7 @@ export function groupByFamily(
         baseClassesSet.has(template.type)) ||
         (template.input_types &&
           template.input_types.some((inputType) =>
-            baseClassesSet.has(inputType),
+            baseClassesSet.has(inputType)
           )))
     );
   };
@@ -264,7 +262,7 @@ export function groupByFamily(
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
           nodeData.node!.base_classes.some((baseClass) =>
-            baseClassesSet.has(baseClass),
+            baseClassesSet.has(baseClass)
           ), //seta como anterior ou verifica se o node tem base class
         displayName: nodeData.node?.display_name,
       });
@@ -281,10 +279,10 @@ export function groupByFamily(
       if (!foundNode) {
         foundNode = {
           hasBaseClassInTemplate: Object.values(node!.template).some(
-            checkBaseClass,
+            checkBaseClass
           ),
           hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
-            baseClassesSet.has(baseClass),
+            baseClassesSet.has(baseClass)
           ),
           displayName: node?.display_name,
         };
@@ -353,7 +351,7 @@ export function isTimeStampString(str: string): boolean {
 
 export function extractColumnsFromRows(
   rows: object[],
-  mode: "intersection" | "union",
+  mode: "intersection" | "union"
 ): (ColDef<any> | ColGroupDef<any>)[] {
   const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
   if (rows.length === 0) {
