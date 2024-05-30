@@ -71,7 +71,7 @@ export default function HomePage(): JSX.Element {
   return (
     <PageLayout
       title={USER_PROJECTS_HEADER}
-      description="Manage your personal projects. Download or upload your collection for StackRoute"
+      description="Manage your personal projects. Download or upload your collection for StackRoute, NIIT Ltd"
       title= Stackroute
       button={
         <div className="flex gap-2">
