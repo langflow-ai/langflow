@@ -1,5 +1,6 @@
 # Path: src/backend/langflow/services/database/models/flow/model.py
 
+import re
 import warnings
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Dict, Optional
@@ -7,7 +8,9 @@ from uuid import UUID, uuid4
 
 import emoji
 from emoji import purely_emoji  # type: ignore
+from fastapi import HTTPException, status
 from pydantic import field_serializer, field_validator
+from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema.schema import Record
@@ -26,6 +29,24 @@ class FlowBase(SQLModel):
     is_component: Optional[bool] = Field(default=False, nullable=True)
     updated_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
     folder_id: Optional[UUID] = Field(default=None, nullable=True)
+    endpoint_name: Optional[str] = Field(default=None, nullable=True, index=True)
+
+    @field_validator("endpoint_name")
+    @classmethod
+    def validate_endpoint_name(cls, v):
+        # Endpoint name must be a string containing only letters, numbers, hyphens, and underscores
+        if v is not None:
+            if not isinstance(v, str):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Endpoint name must be a string",
+                )
+            if not re.match(r"^[a-zA-Z0-9_-]+$", v):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Endpoint name must contain only letters, numbers, hyphens, and underscores",
+                )
+        return v
 
     @field_validator("icon_bg_color")
     def validate_icon_bg_color(cls, v):
@@ -128,6 +149,11 @@ class Flow(FlowBase, table=True):
         record = Record(data=data)
         return record
 
+    __table_args__ = (
+        UniqueConstraint("user_id", "name", name="unique_flow_name"),
+        UniqueConstraint("user_id", "endpoint_name", name="unique_flow_endpoint_name"),
+    )
+
 
 class FlowCreate(FlowBase):
     user_id: Optional[UUID] = None
@@ -145,3 +171,21 @@ class FlowUpdate(SQLModel):
     description: Optional[str] = None
     data: Optional[Dict] = None
     folder_id: Optional[UUID] = None
+    endpoint_name: Optional[str] = None
+
+    @field_validator("endpoint_name")
+    @classmethod
+    def validate_endpoint_name(cls, v):
+        # Endpoint name must be a string containing only letters, numbers, hyphens, and underscores
+        if v is not None:
+            if not isinstance(v, str):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Endpoint name must be a string",
+                )
+            if not re.match(r"^[a-zA-Z0-9_-]+$", v):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Endpoint name must contain only letters, numbers, hyphens, and underscores",
+                )
+        return v
