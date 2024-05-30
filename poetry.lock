@@ -167,20 +167,20 @@ files = [
 
 [[package]]
 name = "anthropic"
-version = "0.26.1"
+version = "0.27.0"
 description = "The official Python library for the anthropic API"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "anthropic-0.26.1-py3-none-any.whl", hash = "sha256:2812b9b250b551ed8a1f0a7e6ae3f005654098994f45ebca5b5808bd154c9628"},
-    {file = "anthropic-0.26.1.tar.gz", hash = "sha256:26680ff781a6f678a30a1dccd0743631e602b23a47719439ffdef5335fa167d8"},
+    {file = "anthropic-0.27.0-py3-none-any.whl", hash = "sha256:c6e73035e910b3ff3f52853b15b42c5e99bf649ce0b510bd491a2c4befeda694"},
+    {file = "anthropic-0.27.0.tar.gz", hash = "sha256:9a86671376d376c4e75981a5dc2dc9c81f8e277b38e9240b3c0a7f574b4cc2a6"},
 ]
 
 [package.dependencies]
 anyio = ">=3.5.0,<5"
 distro = ">=1.7.0,<2"
 httpx = ">=0.23.0,<1"
-jiter = ">=0.1.0,<1"
+jiter = ">=0.4.0,<1"
 pydantic = ">=1.9.0,<3"
 sniffio = "*"
 tokenizers = ">=0.13.0"
@@ -472,17 +472,17 @@ files = [
 
 [[package]]
 name = "boto3"
-version = "1.34.114"
+version = "1.34.115"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3-1.34.114-py3-none-any.whl", hash = "sha256:4460958d2b0c53bd2195b23ed5d45db2350e514486fe8caeb38b285b30742280"},
-    {file = "boto3-1.34.114.tar.gz", hash = "sha256:eeb11bca9b19d12baf93436fb8a16b8b824f1f7e8b9bcc722607e862c46b1b08"},
+    {file = "boto3-1.34.115-py3-none-any.whl", hash = "sha256:0a580de3d25364da5db26ecc7dde9438ee1be1e529a7c04cc96972b6e2258378"},
+    {file = "boto3-1.34.115.tar.gz", hash = "sha256:67f5a6d6e6eff9c15711c265173b53eb4ad8d05b756b76ef33ac792cea7958f6"},
 ]
 
 [package.dependencies]
-botocore = ">=1.34.114,<1.35.0"
+botocore = ">=1.34.115,<1.35.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.10.0,<0.11.0"
 
@@ -491,13 +491,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.34.114"
+version = "1.34.115"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "botocore-1.34.114-py3-none-any.whl", hash = "sha256:606d1e55984d45e41a812badee292755f4db0233eed9cca63ea3bb8f5755507f"},
-    {file = "botocore-1.34.114.tar.gz", hash = "sha256:5705f74fda009656a218ffaf4afd81228359160f2ab806ab8222d07e9da3a73b"},
+    {file = "botocore-1.34.115-py3-none-any.whl", hash = "sha256:15b8ad1ee0e9cd57884fb0bcaf3a9551d2552e44a02c2ffb55ec583eebdb888e"},
+    {file = "botocore-1.34.115.tar.gz", hash = "sha256:a5d5e28b9c847b17a1ecb7660b46b83d9512b125f671e03e93d14bf6f0b274c2"},
 ]
 
 [package.dependencies]
@@ -4075,17 +4075,17 @@ langchain-core = ">=0.1.43,<0.3"
 
 [[package]]
 name = "langchain-astradb"
-version = "0.3.2"
+version = "0.3.3"
 description = "An integration package connecting Astra DB and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_astradb-0.3.2-py3-none-any.whl", hash = "sha256:15afc5c0105e863e8f57bf8686490c00be47ed05e47d3263ad1577f2031c0dd5"},
-    {file = "langchain_astradb-0.3.2.tar.gz", hash = "sha256:4316f2c59402779a347a811e1b5470a0570348cb89baac17472d860b63188122"},
+    {file = "langchain_astradb-0.3.3-py3-none-any.whl", hash = "sha256:39deef1253947ef1bfaf3c27881ecdf07621d96c2cf37814aed9e506a9bee217"},
+    {file = "langchain_astradb-0.3.3.tar.gz", hash = "sha256:f9a996ec4bef134896195430adeb7f264389c368a03d2ea91356837e8ddde091"},
 ]
 
 [package.dependencies]
-astrapy = ">=1,<2"
+astrapy = ">=1.2,<2.0"
 langchain-core = ">=0.1.31,<0.3"
 numpy = ">=1,<2"
 
@@ -4150,13 +4150,13 @@ extended-testing = ["aiosqlite (>=0.19.0,<0.20.0)", "aleph-alpha-client (>=2.15.
 
 [[package]]
 name = "langchain-core"
-version = "0.2.1"
+version = "0.2.2"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_core-0.2.1-py3-none-any.whl", hash = "sha256:3521e1e573988c47399fca9739270c5d34f8ecec147253ad829eb9ff288f76d5"},
-    {file = "langchain_core-0.2.1.tar.gz", hash = "sha256:49383126168d934559a543ce812c485048d9e6ac9b6798fbf3d4a72b6bba5b0c"},
+    {file = "langchain_core-0.2.2-py3-none-any.whl", hash = "sha256:4b3b55a5f214acbcf8d6d8e322da3a9d6248d6b6f45ac1b86ab0494fd3716128"},
+    {file = "langchain_core-0.2.2.tar.gz", hash = "sha256:6884a87f7ac8e0d43e4d83c5f9efa95236c7bd535e22a0a51db19156875b4cd6"},
 ]
 
 [package.dependencies]
@@ -4259,18 +4259,18 @@ tokenizers = ">=0.15.1,<1"
 
 [[package]]
 name = "langchain-openai"
-version = "0.1.7"
+version = "0.1.8"
 description = "An integration package connecting OpenAI and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_openai-0.1.7-py3-none-any.whl", hash = "sha256:39c3cb22bb739900ae8294d4d9939a6138c0ca7ad11198e57038eb14c08d04ec"},
-    {file = "langchain_openai-0.1.7.tar.gz", hash = "sha256:fd7e1c33ba8e2cab4b2154f3a2fd4a0d9cc6518b41cf49bb87255f9f732a4896"},
+    {file = "langchain_openai-0.1.8-py3-none-any.whl", hash = "sha256:8125c84223e9f43b05defbca64eedbcf362fd78a680de6c25e64f973b34a8063"},
+    {file = "langchain_openai-0.1.8.tar.gz", hash = "sha256:a11fcce15def7917c44232abda6baaa63dfc79fe44be1531eea650d39a44cd95"},
 ]
 
 [package.dependencies]
-langchain-core = ">=0.1.46,<0.3"
-openai = ">=1.24.0,<2.0.0"
+langchain-core = ">=0.2.2,<0.3"
+openai = ">=1.26.0,<2.0.0"
 tiktoken = ">=0.7,<1"
 
 [[package]]
@@ -4380,13 +4380,13 @@ url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
-version = "2.33.0"
+version = "2.33.1"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langfuse-2.33.0-py3-none-any.whl", hash = "sha256:362e3078c5a891df0b7ba3c9ce82f046d1f0274eab3d55337e443fff526f18ad"},
-    {file = "langfuse-2.33.0.tar.gz", hash = "sha256:3ca2ef8539a8f28cb80135f4b46b80d5585ce183f8e2035f318be296d09d7d88"},
+    {file = "langfuse-2.33.1-py3-none-any.whl", hash = "sha256:61ff3ff4b9c9c195028c981cba892106fdf90028e3950209a15f0ae06a378a36"},
+    {file = "langfuse-2.33.1.tar.gz", hash = "sha256:444a870e8b13ad37df710931389ecd3bad9997e550edf3c3178b5a0bd7ada013"},
 ]
 
 [package.dependencies]
@@ -4404,13 +4404,13 @@ openai = ["openai (>=0.27.8)"]
 
 [[package]]
 name = "langsmith"
-version = "0.1.63"
+version = "0.1.65"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.63-py3-none-any.whl", hash = "sha256:7810afdf5e3f3b472fc581a29371fb96cd843dde2149e048d1b9610325159d1e"},
-    {file = "langsmith-0.1.63.tar.gz", hash = "sha256:a609405b52f6f54df442a142cbf19ab38662d54e532f96028b4c546434d4afdf"},
+    {file = "langsmith-0.1.65-py3-none-any.whl", hash = "sha256:ab4487029240e69cca30da1065f1e9138e5a7ca2bbe8c697f0bd7d5839f71cf7"},
+    {file = "langsmith-0.1.65.tar.gz", hash = "sha256:d3c2eb2391478bd79989f02652cf66e29a7959d677614b6993a47cef43f7f43b"},
 ]
 
 [package.dependencies]
@@ -4420,13 +4420,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "litellm"
-version = "1.39.2"
+version = "1.39.4"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.39.2-py3-none-any.whl", hash = "sha256:843cb9a4d45c89ba6da95529815ec83ee7e4b7fe07aa0ed633102f600fddd9ad"},
-    {file = "litellm-1.39.2.tar.gz", hash = "sha256:96c4f3d522ccf32817357b1e9f5f63fa36a4a884f336314e1f6d66c0576d689e"},
+    {file = "litellm-1.39.4-py3-none-any.whl", hash = "sha256:3edd2b153153e8902770ada641b93bcdeaba8d23cb579e599919331b52741040"},
+    {file = "litellm-1.39.4.tar.gz", hash = "sha256:f7ec8ef44257235de10c8e0d326fff0083b48de4bc71531d78d8c6778af9d401"},
 ]
 
 [package.dependencies]
@@ -5584,13 +5584,13 @@ sympy = "*"
 
 [[package]]
 name = "openai"
-version = "1.30.4"
+version = "1.30.5"
 description = "The official Python library for the openai API"
 optional = false
 python-versions = ">=3.7.1"
 files = [
-    {file = "openai-1.30.4-py3-none-any.whl", hash = "sha256:fb2635efd270efaf9fac2e07558d7948373b940637d3ae3ab624c1a983d4f03f"},
-    {file = "openai-1.30.4.tar.gz", hash = "sha256:f3488d9a1c4e0d332b019377d27d7cb4b3d6103fd5d0a416c7ceac780d1d9b88"},
+    {file = "openai-1.30.5-py3-none-any.whl", hash = "sha256:2ad95e926de0d2e09cde632a9204b0a6dca4a03c2cdcc84329b01f355784355a"},
+    {file = "openai-1.30.5.tar.gz", hash = "sha256:5366562eb2c5917e6116ae0391b7ae6e3acd62b0ae3f565ada32b35d8fcfa106"},
 ]
 
 [package.dependencies]
@@ -8391,17 +8391,17 @@ httpx = ">=0.24,<0.28"
 
 [[package]]
 name = "sympy"
-version = "1.12"
+version = "1.12.1"
 description = "Computer algebra system (CAS) in Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "sympy-1.12-py3-none-any.whl", hash = "sha256:c3588cd4295d0c0f603d0f2ae780587e64e2efeedb3521e46b9bb1d08d184fa5"},
-    {file = "sympy-1.12.tar.gz", hash = "sha256:ebf595c8dac3e0fdc4152c51878b498396ec7f30e7a914d6071e674d49420fb8"},
+    {file = "sympy-1.12.1-py3-none-any.whl", hash = "sha256:9b2cbc7f1a640289430e13d2a56f02f867a1da0190f2f99d8968c2f74da0e515"},
+    {file = "sympy-1.12.1.tar.gz", hash = "sha256:2877b03f998cd8c08f07cd0de5b767119cd3ef40d09f41c30d722f6686b0fb88"},
 ]
 
 [package.dependencies]
-mpmath = ">=0.19"
+mpmath = ">=1.1.0,<1.4.0"
 
 [[package]]
 name = "tbb"
@@ -9173,6 +9173,20 @@ files = [
 [package.dependencies]
 pyperclip = "*"
 six = "*"
+
+[[package]]
+name = "upstash-vector"
+version = "0.4.0"
+description = "Serverless Vector SDK from Upstash"
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "upstash_vector-0.4.0-py3-none-any.whl", hash = "sha256:1ba11d8fc7d036bf93fde741b862c9e04ad962397dc600d1dc7546b63a84da82"},
+    {file = "upstash_vector-0.4.0.tar.gz", hash = "sha256:a8ae11b2d3989c2615f1f06c66af39da763af7f7239b625fede621bf2fbb997d"},
+]
+
+[package.dependencies]
+httpx = ">=0.24.0,<0.28"
 
 [[package]]
 name = "uritemplate"
@@ -10035,4 +10049,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "36778b105f6f6e5efd0c1d37651d7b97defb0bc0db74b868a41e38de22251924"
+content-hash = "476c95dc8c6adb597a0cd2783eab65c02e0398fc144aa74d56a4cb36032f496f"
