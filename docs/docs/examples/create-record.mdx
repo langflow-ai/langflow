@@ -1,0 +1,17 @@
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+import Admonition from "@theme/Admonition";
+
+# Create Record
+
+In Langflow, a `Record` has a structure very similar to a Python dictionary. It is a key-value pair data structure.
+
+The **Create Record** component allows you to dynamically create a `Record` from a specified number of inputs. You can add as many key-value pairs as you want (as long as it is less than 15 😅). Once you've chosen the number of `Records`, add keys and fill up values, or pass on values from other components to the component using the input handles.
+
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ReactPlayer playing controls url="/videos/create_record.mp4" />
+</div>
