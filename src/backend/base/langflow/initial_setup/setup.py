@@ -211,7 +211,7 @@ def create_starter_folder(session):
 
 def _is_valid_uuid(val):
     try:
-        uuid_obj = UUID(val, version=4)
+        uuid_obj = UUID(val)
     except ValueError:
         return False
     return str(uuid_obj) == val
@@ -224,18 +224,25 @@ def load_flows_from_directory():
     if not settings_service.auth_settings.AUTO_LOGIN:
         logging.warning("AUTO_LOGIN is disabled, not loading flows from directory")
         return
+
     with session_scope() as session:
+        user_id = get_user_by_username(session, settings_service.auth_settings.SUPERUSER).id
         files = [f for f in os.listdir(flows_path) if os.path.isfile(os.path.join(flows_path, f))]
+        print("loading flows" + str(user_id))
         for filename in files:
             if not filename.endswith(".json"):
                 continue
             logger.info(f"Loading flow from file: {filename}")
             with open(os.path.join(flows_path, filename), "r", encoding="utf-8") as file:
                 flow = orjson.loads(file.read())
-                no_json_name = file.name.replace(".json", "")
+                no_json_name = filename.replace(".json", "")
+                str(no_json_name)
                 if _is_valid_uuid(no_json_name):
                     flow["id"] = no_json_name
+                else:
+                    print("not valid..")
                 flow_id = flow.get("id")
+                print("got flow Id" + str(flow_id))
                 if flow_id:
                     stmt = select(Flow).where(Flow.id == flow_id)
                     if existing := session.exec(stmt).first():
@@ -246,14 +253,16 @@ def load_flows_from_directory():
                             if value is not None:
                                 setattr(existing, key, value)
                         existing.updated_at = datetime.utcnow()
+                        existing.user_id = user_id
                         session.add(existing)
                         session.commit()
                         continue
 
                 logger.info(f"Creating new flow: {flow_id}")
-                flow["user_id"] = None
+                flow["user_id"] = user_id
                 flow = Flow.model_validate(flow, from_attributes=True)
                 flow.updated_at = datetime.utcnow()
+                print("add flow " + str(flow))
                 session.add(flow)
                 session.commit()
 

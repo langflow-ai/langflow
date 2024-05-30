@@ -32,6 +32,7 @@ async def api_key_security(
     header_param: str = Security(api_key_header),
     db: Session = Depends(get_session),
 ) -> Optional[User]:
+    print("api_key_security!")
     settings_service = get_settings_service()
     result: Optional[Union[ApiKey, User]] = None
     if settings_service.auth_settings.AUTO_LOGIN:
@@ -73,14 +74,10 @@ async def get_current_user(
     header_param: str = Security(api_key_header),
     db: Session = Depends(get_session),
 ) -> User:
+    print("get cu")
     if token:
         return await get_current_user_by_jwt(token, db)
     else:
-        if not query_param and not header_param:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="An API key as query or header, or a JWT token must be passed",
-            )
         user = await api_key_security(query_param, header_param, db)
         if user:
             return user

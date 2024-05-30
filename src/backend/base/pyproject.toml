@@ -73,7 +73,7 @@ all = ["deploy", "local"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra"
+#addopts = "-ra"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning"]
