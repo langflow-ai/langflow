@@ -1,0 +1,39 @@
+.\"
+.\" Original zdiff.1 for gzip: Jean-loup Gailly
+.\"
+.\" Modifications for XZ Utils: Lasse Collin
+.\"                             Andrew Dudman
+.\"
+.\" License: GNU GPLv2+
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZDIFF 1 2021\-06\-04 Tukaani "XZ 유틸리티"
+.SH 이름
+xzcmp, xzdiff, lzcmp, lzdiff \- 압축 파일을 비교합니다
+.SH 요약
+\fBxzcmp\fP [\fI<비교_옵션>\fP] \fI<파일1>\fP [\fI<파일2>\fP]
+.br
+\fBxzdiff\fP [\fI차이_옵션\fP] \fI<파일1>\fP [\fI<파일2>\fP]
+.br
+\fBlzcmp\fP [\fI<비교_옵션>\fP] \fI<파일1>\fP [\fI<파일2>\fP]
+.br
+\fBlzdiff\fP [\fI<차이_옵션>\fP] \fI<파일1>\fP [\fI<파일2>\fP]
+.SH 설명
+\fBxzcmp\fP 와 \fBxzdiff\fP 는 \fBxz\fP(1), \fBlzma\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1),
+\fBlzop\fP(1), \fBzstd\fP(1) 로 압축한 파일에 대해 \fBcmp\fP(1)  또는 \fBdiff\fP(1) 명령을 실행합니다. 지정한
+모든 옵션은 직접 \fBcmp\fP(1)  또는 \fBdiff\fP(1) 명령에 전달합니다.  파일 하나만 지정했을 경우
+\fI<파일1>\fP만 비교(지원 압축 형식 접미사를 넣어야 함)하며, \fI<파일1>\fP의 지원 압축 형식 접미사는
+빠집니다.  파일 둘을 지정하면, 필요한 경우 압축 해제하며, \fBcmp\fP(1)  또는 \fBdiff\fP(1) 명령으로 전달합니다.
+\fBcmp\fP(1)  또는 \fBdiff\fP(1) 명령의 종료 상태는 압축 해제 오류가 나타나지 않는 한 보존됩니다. 압축 해제 오류가
+나타나면 종료 상태는 2가 됩니다.
+.PP
+\fBlzcmp\fP 와 \fBlzdiff\fP 명령은 LZMA 유틸리티 하위 호환성을 목적으로 제공합니다.
+.SH "추가 참조"
+\fBcmp\fP(1), \fBdiff\fP(1), \fBxz\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1),
+\fBzstd\fP(1), \fBzdiff\fP(1)
+.SH 버그
+\fBcmp\fP(1)  프로그램 또는 \fBdiff\fP(1)  프로그램에서 온 메시지는 지정한 파일 이름 대신 임시 파일 이름을 참조합니다.

@@ -1,0 +1,45 @@
+.\"
+.\" Original zdiff.1 for gzip: Jean-loup Gailly
+.\"
+.\" Modifications for XZ Utils: Lasse Collin
+.\"                             Andrew Dudman
+.\"
+.\" License: GNU GPLv2+
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZDIFF 1 04.06.2021 Tukaani "Utilități XZ"
+.SH NUME
+xzcmp, xzdiff, lzcmp, lzdiff \- compară fișierele comprimate
+.SH REZUMAT
+\fBxzcmp\fP [\fIopțiuni_comparare\fP] \fIfișier1\fP [\fIfișier2\fP]
+.br
+\fBxzdiff\fP [\fIopțiuni_diferențe\fP] \fIfișier1\fP [\fIfișier2\fP]
+.br
+\fBlzcmp\fP [\fIopțiuni_comparare\fP] \fIfișier1\fP [\fIfișier2\fP]
+.br
+\fBlzdiff\fP [\fIopțiuni_diferențe\fP] \fIfișier1\fP [\fIfișier2\fP]
+.SH DESCRIERE
+\fBxzcmp\fP și \fBxzdiff\fP invocă \fBcmp\fP(1) sau \fBdiff\fP(1) pentru fișierele
+comprimate cu \fBxz\fP(1), \fBlzma\fP(1), \fBgzip\fP( 1), \fBbzip2\fP(1), \fBlzop\fP(1) sau
+\fBzstd\fP(1).  Toate opțiunile specificate sunt transmise direct către
+\fBcmp\fP(1) sau \fBdiff\fP(1).  Dacă este specificat un singur fișier, atunci
+fișierele comparate sunt \fIfișier1\fP (care trebuie să aibă un sufix al unui
+format de comprimare acceptat) și \fIfișier1\fP din care a fost eliminat
+sufixul formatului de comprimare.  Dacă sunt specificate două fișiere,
+atunci acestea sunt decomprimate dacă este necesar și introduse în \fBcmp\fP(1)
+sau \fBdiff\fP(1).  Starea de ieșire din \fBcmp\fP(1) sau \fBdiff\fP(1) este păstrată
+cu excepția cazului în care apare o eroare de decomprimare; atunci starea de
+ieșire este 2.
+.PP
+Numele \fBlzcmp\fP și \fBlzdiff\fP sunt furnizate pentru compatibilitatea cu LZMA
+Utils.
+.SH "CONSULTAȚI ȘI"
+\fBcmp\fP(1), \fBdiff\fP(1), \fBxz\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1),
+\fBzstd\fP(1), \fBzdiff\fP(1)
+.SH ERORI
+Mesajele din programele \fBcmp\fP(1) sau \fBdiff\fP(1) se referă la nume de
+fișiere temporare în loc de cele specificate.

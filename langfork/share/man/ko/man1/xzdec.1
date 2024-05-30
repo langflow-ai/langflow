@@ -1,0 +1,71 @@
+.\"
+.\" Author: Lasse Collin
+.\"
+.\" This file has been put into the public domain.
+.\" You can do whatever you want with this file.
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZDEC 1 2024\-01\-19 Tukaani "XZ 유틸리티"
+.SH 이름
+xzdec, lzmadec \- .xz와 .lzma용 작은 압축 해제 프로그램
+.SH 요약
+\fBxzdec\fP [\f\fI옵션\fP...\fP] [\fI<파일>...\fP]
+.br
+\fBlzmadec\fP [\f\fI옵션\fP...\fP] [\fI<파일>...\fP]
+.SH 설명
+\fBxzdec\fP은 liblzma 기반 \fB.xz\fP (그리고 \fB.xz\fP 확장자만) 파일 압축 해제 전용 도구 프로그램입니다.
+\fBxzdec\fP 은 \fBxz\fP(1)  명령을 활용하여 \fB.xz\fP 파일의 압축을 해제할 때 쓰던 \fBxz \-\-decompress \-\-stdout\fP (그리고 일반적으로 쓰던 몇가지 다른 옵션도 같이) 명령을 작성하던 일상적인 경우를 대신하려 만든 결과물입니다.
+\fBlzmadec\fP 는 \fB.xz\fP 파일 대신 \fB.lzma\fP 파일을 지원하는 점만 다르며, 나머지는 \fBxzdec\fP과 동일합니다.
+.PP
+실행 파일 크기를 줄이려는 목적으로, \fBxzdec\fP 에서는 다중\-스레드 실행 또는 현지 언어 표기를 지원하지 않으며
+\fBXZ_DEFAULTS\fP 환경 변수와 \fBXZ_OPT\fP 환경 변수의 옵션 값을 읽지 않습니다.  \fBxzdec\fP은 단계별 진행 정보를
+표시하지 않습니다. \fBxzdec\fP 명령어로 \fBSIGINFO\fP 시그널을 보내면 아무 동작도 취하지 않지만, \fBSIGUSR1\fP 시그널을
+보내면 프 정보를 표시하는 대신 프로세스를 끝냅니다.
+.SH 옵션
+.TP 
+\fB\-d\fP, \fB\-\-decompress\fP, \fB\-\-uncompress\fP
+\fBxz\fP(1)  호환성을 문제로 무시합니다.  \fBxzdec\fP은 압축 해제 기능만 지원합니다.
+.TP 
+\fB\-k\fP, \fB\-\-keep\fP
+\fBxz\fP(1)  호환성을 문제로 무시합니다.  \fBxzdec\fP은 어떤 파일도 만들거나 제거하지 않습니다.
+.TP 
+\fB\-c\fP, \fB\-\-stdout\fP, \fB\-\-to\-stdout\fP
+\fBxz\fP(1)  호환성을 문제로 무시합니다.  \fBxzdec\fP은 항상 압축 해제한 데이터를 표준 출력으로만 기록합니다.
+.TP 
+\fB\-q\fP, \fB\-\-quiet\fP
+이 옵션을 한번 지정하면 \fBxzdec\fP에서 어떤 경고나 알림을 표시하지 않기 때문에 아무런 동작도 취하지 않습니다.  오류 메시지를
+표시하지 않으려면 이 옵션을 두번 지정하십시오.
+.TP 
+\fB\-Q\fP, \fB\-\-no\-warn\fP
+\fBxz\fP(1)  호환성을 문제로 무시합니다.  \fBxzdec\fP은 종료 코드 2번을 사용하지 않습니다.
+.TP 
+\fB\-h\fP, \fB\-\-help\fP
+도움말 메시지를 나타내고 무사히 나갑니다.
+.TP 
+\fB\-V\fP, \fB\-\-version\fP
+\fBxzdec\fP과 liblzma의 버전 번호를 나타냅니다.
+.SH "종료 상태"
+.TP 
+\fB0\fP
+모든 상태 양호.
+.TP 
+\fB1\fP
+오류 발생.
+.PP
+\fBxzdec\fP 은 \fBxz\fP에 있는 경고 메시지를 출력하지 않기 때문에 \fBxzdec\fP 에서는 종료 코드 2번을 사용하지 않습니다.
+.SH 참고
+보통 매일 사용하실 목적이라면 \fBxzdec\fP 또는 \fBlzmadec\fP 대신 \fBxz\fP 명령을 사용하십시오.  \fBxzdec\fP 또는
+\fBlzmadec\fP은 완전한 기능을 갖춘 \fBxz\fP(1) 보다는 작은 압축 해제 프로그램을 사용해야 할 경우에만 사용하라고 있는
+명령입니다.
+.PP
+\fBxzdec\fP 과 \fBlzmadec\fP  은 실제로 그렇게 작은건 아닙니다.  컴파일 시간에 liblzma에서 얼마나 기능을 떨궈내느냐에
+따라 더 줄어들 수도 있습니다만, 보통 임베디드 운영체제 배포판이 아닌 경우는 이렇게 할 수가 없습니다.  실제로 작은 \fB.xz\fP 압축
+해제 프로그램이 필요하다면 XZ 임베디드 사용을 고려하십시오.
+.SH "추가 참조"
+\fBxz\fP(1)
+.PP
+XZ Embedded: <https://xz.tukaani.org/xz\-embedded/>

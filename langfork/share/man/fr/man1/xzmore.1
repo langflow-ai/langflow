@@ -1,0 +1,41 @@
+.\"
+.\" Original zdiff.1 for gzip: Jean-loup Gailly
+.\" Modifications for XZ Utils: Lasse Collin
+.\"
+.\" License: GNU GPLv2+
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZMORE 1 30\-06\-2013 Tukaani "Utilitaires XZ"
+.SH NOM
+xzmore, lzmore \- Voir le contenu des fichiers (texte) compressés xz ou lzma
+.SH SYNOPSIS
+\fBxzmore\fP [\fIfichier...\fP]
+.br
+\fBlzmore\fP [\fIfichier...\fP]
+.SH DESCRIPTION
+\fBxzmore\fP est un filtre qui permet d'examiner le contenu des fichiers texte
+compressés \fBxz\fP(1) ou \fBlzma\fP(1), une page d'écran à la fois, sur un
+terminal écran.
+.PP
+Pour utiliser un afficheur autre que \fBmore\fP, l'afficheur par défaut,
+définissez la variable d'environnement \fBPAGER\fP avec le nom du programme
+souhaité. Le nom \fBlzmore\fP est fourni pour la rétrocompatibilité avec les
+utilitaires LZMA.
+.TP 
+\fBe\fP ou \fBq\fP
+Lorsque l'invite \-\-More\-\-(prochain fichier\ : \fIfichier\fP) est affiché, cette
+commande force \fBxzmore\fP à quitter.
+.TP 
+\fBs\fP
+Lorsque l'invite \-\-More\-\-(prochain fichier\ : \fIfichier\fP) est affiché, cette
+commande force \fBxzmore\fP à ignorer le prochain fichier et continuer.
+.PP
+Pour une liste des commandes clavier prises en charge lors de la lecture du
+contenu d'un fichier, référez vous au manuel de l'afficheur (pager) que vous
+utilisez, habituellement \fBmore\fP(1).
+.SH "VOIR AUSSI"
+\fBmore\fP(1), \fBxz\fP(1), \fBxzless\fP(1), \fBzmore\fP(1)

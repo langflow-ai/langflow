@@ -1,0 +1,46 @@
+.\"
+.\" Authors: Andrew Dudman
+.\"          Lasse Collin
+.\"
+.\" This file has been put into the public domain.
+.\" You can do whatever you want with this file.
+.\"
+.\" (Note that this file is not based on gzip's zless.1.)
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZLESS 1 27\-09\-2010 Tukaani "Utilitaires XZ"
+.SH NOM
+xzless, lzless \- Voir le contenu des fichiers (texte) compressés xz ou lzma
+.SH SYNOPSIS
+\fBxzless\fP [\fIfichier\fP...]
+.br
+\fBlzless\fP [\fIfichier\fP...]
+.SH DESCRIPTION
+\fBxzless\fP est un filtre qui affiche le contenu de fichiers compressés dans
+un terminal. Cela fonctionne avec les fichiers compressés avec \fBxz\fP(1) ou
+\fBlzma\fP(1). Si aucun \fIfichier\fP n'est donné, \fBxzless\fP lit depuis l'entrée
+standard.
+.PP
+\fBxzless\fP utilise \fBless\fP(1) pour afficher sa sortie. Contrairement à
+\fBxzmore\fP, son choix d'afficheur ne peut pas être modifié en indiquant une
+variable d'environnement. Les commandes sont basées sur \fBmore\fP(1) et
+\fBvi\fP(1) et permettent des déplacements en avant et en arrière et des
+recherches. Voir le manuel de \fBless\fP(1) pour plus d'information.
+.PP
+La commande nommée \fBlzless\fP est fournie pour la rétrocompatibilité avec les
+utilitaires LZMA.
+.SH ENVIRONNEMENT
+.TP 
+\fBLESSMETACHARS\fP
+Une liste de caractères spéciaux pour l'interpréteur. Définis par \fBxzless\fP
+à moins qu'ils ne l'aient déjà été dans l'environnement.
+.TP 
+\fBLESSOPEN\fP
+Définir en ligne de commande le décompresseur \fBxz\fP(1) à invoquer pour
+préparer les fichiers en entrée pour \fBless\fP(1).
+.SH "VOIR AUSSI"
+\fBless\fP(1), \fBxz\fP(1), \fBxzmore\fP(1), \fBzless\fP(1)

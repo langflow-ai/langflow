@@ -1,0 +1,31 @@
+{
+  "build": "main",
+  "build_number": 0,
+  "channel": "https://repo.anaconda.com/pkgs/main/linux-64",
+  "constrains": [],
+  "depends": [],
+  "extracted_package_dir": "/home/niit/anaconda3/pkgs/_libgcc_mutex-0.1-main",
+  "features": "",
+  "files": [],
+  "fn": "_libgcc_mutex-0.1-main.conda",
+  "legacy_bz2_md5": "013d3f22cd3b87f71224bd936765bcad",
+  "link": {
+    "source": "/home/niit/anaconda3/pkgs/_libgcc_mutex-0.1-main",
+    "type": 1
+  },
+  "md5": "c3473ff8bdb3d124ed5ff11ec380d6f9",
+  "name": "_libgcc_mutex",
+  "package_tarball_full_path": "/home/niit/anaconda3/pkgs/_libgcc_mutex-0.1-main.conda",
+  "paths_data": {
+    "paths": [],
+    "paths_version": 1
+  },
+  "requested_spec": "None",
+  "sha256": "476626712f60e5ef0fe04c354727152b1ee5285d57ccd3575c7be930122bd051",
+  "size": 3473,
+  "subdir": "linux-64",
+  "timestamp": 1562011674792,
+  "track_features": "",
+  "url": "https://repo.anaconda.com/pkgs/main/linux-64/_libgcc_mutex-0.1-main.conda",
+  "version": "0.1"
+}

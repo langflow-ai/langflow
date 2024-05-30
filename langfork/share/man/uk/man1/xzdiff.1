@@ -1,0 +1,44 @@
+.\"
+.\" Original zdiff.1 for gzip: Jean-loup Gailly
+.\"
+.\" Modifications for XZ Utils: Lasse Collin
+.\"                             Andrew Dudman
+.\"
+.\" License: GNU GPLv2+
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZDIFF 1 "4 червня 2021 року" Tukaani "XZ Utils"
+.SH НАЗВА
+xzcmp, xzdiff, lzcmp, lzdiff — порівняння стиснених файлів
+.SH "КОРОТКИЙ ОПИС"
+\fBxzcmp\fP [\fIпараметри_cmp\fP] \fIфайл1\fP [\fIфайл2\fP]
+.br
+\fBxzdiff\fP [\fIпараметри_diff\fP] \fIфайл1\fP [\fIфайл2\fP]
+.br
+\fBlzcmp\fP [\fIпараметри_cmp\fP] \fIфайл1\fP [\fIфайл2\fP]
+.br
+\fBlzdiff\fP [\fIпараметри_diff\fP] \fIфайл1\fP [\fIфайл2\fP]
+.SH ОПИС
+\fBxzcmp\fP і \fBxzdiff\fP викликають \fBcmp\fP(1) або \fBdiff\fP(1) для файлів, які
+стиснено за допомогою \fBxz\fP(1), \fBlzma\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1),
+\fBlzop\fP(1) або \fBzstd\fP(1). Усі вказані параметри передаються безпосередньо
+\fBcmp\fP(1) або \fBdiff\fP(1). Якщо вказано лише один файл, порівнюваними файлами
+будуть \fIфайл1\fP (який повинен мати суфікс підтримуваного файла стискання) і
+\fIфайл1\fP, з назви якого вилучено суфікс формату стискання. Якщо вказано два
+файли, їх буде, якщо потрібно, розпаковано і передано \fBcmp\fP(1) або
+\fBdiff\fP(1). Стан виходу \fBcmp\fP(1) або \fBdiff\fP(1) буде збережено, якщо не
+станеться помилок розпаковування. Якщо станеться помилка розпаковування,
+станом виходу буде 2.
+.PP
+Працездатність назв \fBlzcmp\fP і \fBlzdiff\fP забезпечено для зворотної
+сумісності із LZMA Utils.
+.SH "ДИВ. ТАКОЖ"
+\fBcmp\fP(1), \fBdiff\fP(1), \fBxz\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1),
+\fBzstd\fP(1), \fBzdiff\fP(1)
+.SH ВАДИ
+Повідомлення від програм \fBcmp\fP(1) або \fBdiff\fP(1) посилатимуться на назви
+тимчасових файлів, а не вказані назви.

@@ -1,0 +1,40 @@
+.\"
+.\" Original zdiff.1 for gzip: Jean-loup Gailly
+.\" Modifications for XZ Utils: Lasse Collin
+.\"
+.\" License: GNU GPLv2+
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZMORE 1 "30. Juni 2013" Tukaani XZ\-Dienstprogramme
+.SH BEZEICHNUNG
+xzmore, lzmore \- mit xz oder lzma komprimierte (Text\-)Dateien lesen
+.SH ÜBERSICHT
+\fBxzmore\fP [\fIDatei …\fP]
+.br
+\fBlzmore\fP [\fIDatei …\fP]
+.SH BESCHREIBUNG
+\fBxzmore\fP ist ein Filter zur seitenweisen Anzeige von Textdateien in einem
+Terminal, die mit \fBxz\fP(1) oder \fBlzma\fP(1) komprimiert wurden.
+.PP
+Um ein anderes Textanzeigeprogramm als den voreingestellten \fBmore\fP zu
+verwenden, setzen Sie die Umgebungsvariable \fBPAGER\fP auf das gewünschte
+Programm. Der Name \fBlzmore\fP dient der Abwärtskompatibilität zu den
+LZMA\-Dienstprogrammen.
+.TP 
+\fBe\fP oder \fBq\fP
+Wenn die Zeile \-\-Mehr\-\-(Nächste Datei: \fIDatei\fP) angezeigt wird, wird
+\fBxzmore\fP mit diesem Befehl beendet.
+.TP 
+\fBs\fP
+Wenn die Zeile \-\-Mehr\-\-(Nächste Datei: \fIDatei\fP) angezeigt wird, springt
+\fBxzmore\fP zur nächsten Datei und zeigt diese an.
+.PP
+Eine Liste der bei der Betrachtung von Dateiinhalten verfügbaren
+Tastaturbefehle finden Sie in der Handbuchseite des verwendeten
+Textanzeigeprogramms, meist \fBmore\fP(1).
+.SH "SIEHE AUCH"
+\fBmore\fP(1), \fBxz\fP(1), \fBxzless\fP(1), \fBzmore\fP(1)

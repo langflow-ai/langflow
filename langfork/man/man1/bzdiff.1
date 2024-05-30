@@ -1,0 +1,47 @@
+\"Shamelessly copied from zmore.1 by Philippe Troin <phil@fifi.org>
+\"for Debian GNU/Linux
+.TH BZDIFF 1
+.SH NAME
+bzcmp, bzdiff \- compare bzip2 compressed files
+.SH SYNOPSIS
+.B bzcmp
+[ cmp_options ] file1
+[ file2 ]
+.br
+.B bzdiff
+[ diff_options ] file1
+[ file2 ]
+.SH DESCRIPTION
+.I  Bzcmp
+and 
+.I bzdiff
+are used to invoke the
+.I cmp
+or the
+.I diff
+program on bzip2 compressed files.  All options specified are passed
+directly to
+.I cmp
+or
+.IR diff "."
+If only 1 file is specified, then the files compared are
+.I file1
+and an uncompressed
+.IR file1 ".bz2."
+If two files are specified, then they are uncompressed if necessary and fed to
+.I cmp
+or
+.IR diff "."
+The exit status from 
+.I cmp
+or
+.I diff
+is preserved.
+.SH "SEE ALSO"
+cmp(1), diff(1), bzmore(1), bzless(1), bzgrep(1), bzip2(1)
+.SH BUGS
+Messages from the
+.I cmp
+or
+.I diff
+programs refer to temporary filenames instead of those specified.

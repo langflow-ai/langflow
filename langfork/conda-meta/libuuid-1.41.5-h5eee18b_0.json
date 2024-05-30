@@ -1,0 +1,85 @@
+{
+  "build": "h5eee18b_0",
+  "build_number": 0,
+  "channel": "https://repo.anaconda.com/pkgs/main/linux-64",
+  "constrains": [],
+  "depends": [
+    "libgcc-ng >=11.2.0"
+  ],
+  "extracted_package_dir": "/home/niit/anaconda3/pkgs/libuuid-1.41.5-h5eee18b_0",
+  "features": "",
+  "files": [
+    "include/uuid/uuid.h",
+    "lib/libuuid.a",
+    "lib/libuuid.so",
+    "lib/libuuid.so.1",
+    "lib/libuuid.so.1.3.0",
+    "lib/pkgconfig/uuid.pc"
+  ],
+  "fn": "libuuid-1.41.5-h5eee18b_0.conda",
+  "legacy_bz2_md5": "292768ec77416ae257cfdd44ea2071c8",
+  "license": "BSD-3-Clause",
+  "license_family": "BSD",
+  "link": {
+    "source": "/home/niit/anaconda3/pkgs/libuuid-1.41.5-h5eee18b_0",
+    "type": 1
+  },
+  "md5": "4a6a2354414c9080327274aa514e5299",
+  "name": "libuuid",
+  "package_tarball_full_path": "/home/niit/anaconda3/pkgs/libuuid-1.41.5-h5eee18b_0.conda",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "include/uuid/uuid.h",
+        "path_type": "hardlink",
+        "sha256": "926b9441cae3c113950827ef438cb0b07657f6ec1d2fe5f3ba557662ddbb526b",
+        "sha256_in_prefix": "926b9441cae3c113950827ef438cb0b07657f6ec1d2fe5f3ba557662ddbb526b",
+        "size_in_bytes": 3910
+      },
+      {
+        "_path": "lib/libuuid.a",
+        "path_type": "hardlink",
+        "sha256": "d16861859d7ad6a76c11296ef77000e95f64d75330ce6365f679c1c88c0ecabd",
+        "sha256_in_prefix": "d16861859d7ad6a76c11296ef77000e95f64d75330ce6365f679c1c88c0ecabd",
+        "size_in_bytes": 53390
+      },
+      {
+        "_path": "lib/libuuid.so",
+        "path_type": "softlink",
+        "sha256": "b42fa6cf1dcaca6b84e8155c4649d6bad561eaca2e8fa9473db178dbaa4aec53",
+        "size_in_bytes": 35944
+      },
+      {
+        "_path": "lib/libuuid.so.1",
+        "path_type": "softlink",
+        "sha256": "b42fa6cf1dcaca6b84e8155c4649d6bad561eaca2e8fa9473db178dbaa4aec53",
+        "size_in_bytes": 35944
+      },
+      {
+        "_path": "lib/libuuid.so.1.3.0",
+        "path_type": "hardlink",
+        "sha256": "b42fa6cf1dcaca6b84e8155c4649d6bad561eaca2e8fa9473db178dbaa4aec53",
+        "sha256_in_prefix": "b42fa6cf1dcaca6b84e8155c4649d6bad561eaca2e8fa9473db178dbaa4aec53",
+        "size_in_bytes": 35944
+      },
+      {
+        "_path": "lib/pkgconfig/uuid.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "/croot/libuuid_1668082679328/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold",
+        "sha256": "ad771b4cb15ca6fcc526199ebbc1c4ff31e1cf96f01fb4710b14462327ebbef1",
+        "sha256_in_prefix": "5e19c9db55c2dde77bfbd4f38b355b3b0f4cd1045586ee5ac6f5c67133248a0e",
+        "size_in_bytes": 1208
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "None",
+  "sha256": "2a401aafabac51b7736cfe12d2ab205d29052640ea8183253c9d0a8e7ed0d49a",
+  "size": 28110,
+  "subdir": "linux-64",
+  "timestamp": 1668082729834,
+  "track_features": "",
+  "url": "https://repo.anaconda.com/pkgs/main/linux-64/libuuid-1.41.5-h5eee18b_0.conda",
+  "version": "1.41.5"
+}

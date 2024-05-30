@@ -1,0 +1,1837 @@
+'\" t
+.\"
+.\" Authors: Lasse Collin
+.\"          Jia Tan
+.\"
+.\" This file has been put into the public domain.
+.\" You can do whatever you want with this file.
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZ 1 2024\-01\-19 Tukaani "XZ Utils"
+.
+.SH NOME
+xz, unxz, xzcat, lzma, unlzma, lzcat \- Compacta ou descompacta arquivos .xz
+e .lzma
+.
+.SH SINOPSE
+\fBxz\fP [\fIopção...\fP] [\fIarquivo...\fP]
+.
+.SH "COMANDOS APELIDOS"
+\fBunxz\fP é equivalente a  \fBxz \-\-decompress\fP.
+.br
+\fBxzcat\fP é equivalente a  \fBxz \-\-decompress \-\-stdout\fP.
+.br
+\fBlzma\fP é equivalente a  \fBxz \-\-format=lzma\fP.
+.br
+\fBunlzma\fP é equivalente a  \fBxz \-\-format=lzma \-\-decompress\fP.
+.br
+\fBlzcat\fP é equivalente a  \fBxz \-\-format=lzma \-\-decompress \-\-stdout\fP.
+.PP
+Ao escrever scripts que precisam descompactar arquivos, é recomendável
+sempre usar o nome \fBxz\fP com os argumentos apropriados (\fBxz \-d\fP ou \fBxz \-dc\fP) em vez dos nomes \fBunxz\fP e \fBxzcat\fP.
+.
+.SH DESCRIÇÃO
+\fBxz\fP é uma ferramenta de compactação de dados de uso geral com sintaxe de
+linha de comando semelhante ao \fBgzip\fP(1) e ao \fBbzip2\fP(1). O formato de
+arquivo nativo é o formato \fB.xz\fP, mas o formato legado \fB.lzma\fP usado por
+LZMA Utils e fluxos compactados brutos sem cabeçalhos de formato de
+contêiner também são suportados. Além disso, a descompactação do formato
+\&\fB.lz\fP usado por \fBlzip\fP é suportada.
+.PP
+\fBxz\fP compacta ou descompacta cada \fIarquivo\fP de acordo com o modo de
+operação selecionado. Se nenhum \fIarquivo\fP for fornecido ou \fIarquivo\fP for
+\fB\-\fP, \fBxz\fP lê da entrada padrão e grava os dados processados na saída
+padrão. \fBxz\fP recusará (exibirá um erro e ignorará o \fIarquivo\fP) para gravar
+dados compactados na saída padrão se for um terminal. Da mesma forma, \fBxz\fP
+se recusará a ler dados compactados da entrada padrão se for um terminal.
+.PP
+A menos que \fB\-\-stdout\fP seja especificado, \fIarquivos\fP diferentes de \fB\-\fP
+são gravados em um novo arquivo cujo nome é derivado do nome \fIarquivo\fP de
+origem:
+.IP \(bu 3
+Ao compactar, o sufixo do formato de arquivo de destino (\fB.xz\fP ou \fB.lzma\fP)
+é anexado ao nome do arquivo de origem para obter o nome do arquivo de
+destino.
+.IP \(bu 3
+Ao descompactar, o sufixo \fB.xz\fP, \fB.lzma\fP ou \fB.lz\fP é removido do nome do
+arquivo para obter o nome do arquivo de destino. \fBxz\fP também reconhece os
+sufixos \fB.txz\fP e \fB.tlz\fP e os substitui pelo sufixo \fB.tar\fP.
+.PP
+Se o arquivo de destino já existir, um erro será exibido e \fIarquivo\fP será
+ignorado.
+.PP
+A menos que grave na saída padrão, \fBxz\fP exibirá um aviso e pulará o
+\fIarquivo\fP se qualquer um dos seguintes se aplicar:
+.IP \(bu 3
+\fIArquivo\fP não é um arquivo normal. Links simbólicos não são seguidos e,
+portanto, não são considerados arquivos comuns.
+.IP \(bu 3
+\fIArquivo\fP tem mais de um link físico.
+.IP \(bu 3
+\fIFile\fP tem setuid, setgid ou sticky bit definido.
+.IP \(bu 3
+O modo de operação está definido para compactar e o \fIarquivo\fP já possui um
+sufixo do formato de arquivo de destino (\fB.xz\fP ou \fB.txz\fP ao compactar para
+o formato \fB.xz\fP e \fB.lzma \fP ou \fB.tlz\fP ao compactar para o formato
+\&\fB.lzma\fP).
+.IP \(bu 3
+O modo de operação está definido para descompactar e o \fIarquivo\fP não possui
+um sufixo de nenhum dos formatos de arquivo suportados (\fB.xz\fP, \fB.txz\fP,
+\&\fB.lzma\fP, \fB.tlz\fP , ou \fB.lz\fP).
+.PP
+Depois de compactar ou descompactar com êxito o \fIarquivo\fP, o \fBxz\fP copia o
+dono, grupo, permissões, horário de acesso e horário de modificação do
+\fIarquivo\fP de origem para o arquivo de destino. Se a cópia do grupo falhar,
+as permissões serão modificadas para que o arquivo de destino não se torne
+acessível a usuários que não têm permissão para acessar o \fIarquivo\fP de
+origem. \fBxz\fP ainda não oferece suporte à cópia de outros metadados, como
+listas de controle de acesso ou atributos estendidos.
+.PP
+Depois que o arquivo de destino for fechado com êxito, o \fIarquivo\fP de
+origem será removido, a menos que \fB\-\-keep\fP tenha sido especificado. O
+\fIarquivo\fP de origem nunca é removido se a saída for gravada na saída padrão
+ou se ocorrer um erro.
+.PP
+O envio de \fBSIGINFO\fP ou \fBSIGUSR1\fP para o processo do \fBxz\fP faz com que ele
+imprima informações de andamento para erro padrão. Isso tem uso limitado,
+pois quando o erro padrão é um terminal, usar \fB\-\-verbose\fP exibirá um
+indicador de progresso de atualização automática.
+.
+.SS "Uso de memória"
+O uso de memória de \fBxz\fP varia de algumas centenas de kilobytes a vários
+gigabytes, dependendo das configurações de compactação. As configurações
+usadas ao compactar um arquivo determinam os requisitos de memória do
+descompactador. Normalmente, o descompactador precisa de 5\ % a 20\ % da
+quantidade de memória que o compactador precisou ao criar o arquivo. Por
+exemplo, descompactar um arquivo criado com \fBxz \-9\fP atualmente requer 65\ MiB de memória. Ainda assim, é possível ter arquivos \fB.xz\fP que requerem
+vários gigabytes de memória para descompactar.
+.PP
+Especialmente os usuários de sistemas mais antigos podem achar irritante a
+possibilidade de uso de memória muito grande. Para evitar surpresas
+desconfortáveis, o \fBxz\fP possui um limitador de uso de memória embutido, que
+está desabilitado por padrão. Embora alguns sistemas operacionais forneçam
+maneiras de limitar o uso de memória dos processos, confiar nele não foi
+considerado flexível o suficiente (por exemplo, usar \fBulimit\fP(1) para
+limitar a memória virtual tende a prejudicar \fBmmap\fP(2)).
+.PP
+O limitador de uso de memória pode ser ativado com a opção de linha de
+comando \fB\-\-memlimit=\fP\fIlimite\fP. Geralmente é mais conveniente habilitar o
+limitador por padrão definindo a variável de ambiente \fBXZ_DEFAULTS\fP, por
+exemplo, \fBXZ_DEFAULTS=\-\-memlimit=150MiB\fP. É possível definir os limites
+separadamente para compactação e descompactação usando
+\fB\-\-memlimit\-compress=\fP\fIlimite\fP e \fB\-\-memlimit\-decompress=\fP\fIlimite\fP. Usar
+essas duas opções fora de \fBXZ_DEFAULTS\fP raramente é útil porque uma única
+execução de \fBxz\fP não pode fazer compactação e descompactação e
+\fB\-\-memlimit=\fP\fIlimite\fP (ou \fB\-M\fP \fIlimite\fP ) é mais curto para digitar na
+linha de comando.
+.PP
+Se o limite de uso de memória especificado for excedido durante a
+descompactação, \fBxz\fP exibirá um erro e a descompactação do arquivo
+falhará. Se o limite for excedido durante a compactação, \fBxz\fP tentará
+reduzir as configurações para que o limite não seja mais excedido (exceto ao
+usar \fB\-\-format=raw\fP ou \fB\-\-no\-adjust\fP). Dessa forma, a operação não
+falhará, a menos que o limite seja muito pequeno. A escala das configurações
+é feita em etapas que não correspondem às predefinições do nível de
+compactação, por exemplo, se o limite for apenas um pouco menor que o valor
+necessário para \fBxz \-9\fP, as configurações serão reduzidas apenas um pouco ,
+não até \fBxz \-8\fP.
+.
+.SS "Concatenação e preenchimento com arquivos .xz"
+É possível concatenar arquivos \fB.xz\fP como estão. \fBxz\fP irá descompactar
+tais arquivos como se fossem um único arquivo \fB.xz\fP.
+.PP
+É possível inserir preenchimento entre as partes concatenadas ou após a
+última parte. O preenchimento deve consistir em bytes nulos e o tamanho do
+preenchimento deve ser um múltiplo de quatro bytes. Isso pode ser útil, por
+exemplo, se o arquivo \fB.xz\fP for armazenado em uma mídia que mede tamanhos
+de arquivo em blocos de 512 bytes.
+.PP
+Concatenação e preenchimento não são permitidos com arquivos \fB.lzma\fP ou
+fluxos brutos.
+.
+.SH OPÇÕES
+.
+.SS "Sufixos inteiros e valores especiais"
+Na maioria dos lugares onde um argumento inteiro é esperado, um sufixo
+opcional é suportado para indicar facilmente números inteiros grandes. Não
+deve haver espaço entre o número inteiro e o sufixo.
+.TP 
+\fBKiB\fP
+Multiplica o inteiro por 1.024 (2^10). \fBKi\fP, \fBk\fP, \fBkB\fP, \fBK\fP e \fBKB\fP são
+aceitos como sinônimos de \fBKiB\fP.
+.TP 
+\fBMiB\fP
+Multiplica o número inteiro por 1.048.576 (2^20). \fBMi\fP, \fBm\fP, \fBM\fP e \fBMB\fP
+são aceitos como sinônimos de \fBMiB\fP.
+.TP 
+\fBGiB\fP
+Multiplica o número inteiro por 1.073.741.824 (2^30). \fBGi\fP, \fBg\fP, \fBG\fP e
+\fBGB\fP são aceitos como sinônimos de \fBGiB\fP.
+.PP
+O valor especial \fBmax\fP pode ser usado para indicar o valor inteiro máximo
+suportado pela opção.
+.
+.SS "Modo de operação"
+Se várias opções de modo de operação forem dadas, a última entrará em vigor.
+.TP 
+\fB\-z\fP, \fB\-\-compress\fP
+Compacta. Este é o modo de operação padrão quando nenhuma opção de modo de
+operação é especificada e nenhum outro modo de operação está implícito no
+nome do comando (por exemplo, \fBunxz\fP implica em \fB\-\-decompress\fP).
+.TP 
+\fB\-d\fP, \fB\-\-decompress\fP, \fB\-\-uncompress\fP
+Descompacta.
+.TP 
+\fB\-t\fP, \fB\-\-test\fP
+Testa a integridade de \fIarquivos\fP compactados. Esta opção é equivalente a
+\fB\-\-decompress \-\-stdout\fP exceto que os dados descompactados são descartados
+em vez de serem gravados na saída padrão. Nenhum arquivo é criado ou
+removido.
+.TP 
+\fB\-l\fP, \fB\-\-list\fP
+Imprime informações sobre \fIarquivos\fP compactados. Nenhuma saída
+descompactada é produzida e nenhum arquivo é criado ou removido. No modo de
+lista, o programa não pode ler os dados compactados da entrada padrão ou de
+outras fontes não pesquisáveis.
+.IP ""
+A listagem padrão mostra informações básicas sobre \fIarquivos\fP, um arquivo
+por linha. Para obter informações mais detalhadas, use também a opção
+\fB\-\-verbose\fP. Para obter ainda mais informações, use \fB\-\-verbose\fP duas
+vezes, mas observe que isso pode ser lento, porque obter todas as
+informações extras requer muitas buscas. A largura da saída detalhada excede
+80 caracteres, portanto, canalizar a saída para, por exemplo, \fBless\ \-S\fP
+pode ser conveniente se o terminal não tiver largura o suficiente.
+.IP ""
+A saída exata pode variar entre versões \fBxz\fP e localidades diferentes. Para
+saída legível por máquina, \fB\-\-robot \-\-list\fP deve ser usado.
+.
+.SS "Modificadores de operação"
+.TP 
+\fB\-k\fP, \fB\-\-keep\fP
+Não exclui os arquivos de entrada.
+.IP ""
+Desde \fBxz\fP 5.2.6, esta opção também faz \fBxz\fP compactar ou descompactar
+mesmo se a entrada for um link simbólico para um arquivo comum, tiver mais
+de um link físico ou tiver o setuid, setgid ou sticky bit definir. Os bits
+setuid, setgid e sticky não são copiados para o arquivo de destino. Nas
+versões anteriores, isso era feito apenas com \fB\-\-force\fP.
+.TP 
+\fB\-f\fP, \fB\-\-force\fP
+Esta opção tem vários efeitos:
+.RS
+.IP \(bu 3
+Se o arquivo de destino já existir, o exclui antes de compactar ou
+descompactar.
+.IP \(bu 3
+Compacta ou descompacta, mesmo que a entrada seja um link simbólico para um
+arquivo normal, tenha mais de um link físico ou tenha setuid, setgid ou
+sticky bit definido. Os bits setuid, setgid e sticky não são copiados para o
+arquivo de destino.
+.IP \(bu 3
+Quando usado com \fB\-\-decompress\fP \fB\-\-stdout\fP e \fBxz\fP não consegue reconhecer
+o tipo do arquivo de origem, copia o arquivo de origem como está na saída
+padrão. Isso permite que \fBxzcat\fP \fB\-\-force\fP seja usado como \fBcat\fP(1) para
+arquivos que não foram compactados com \fBxz\fP. Observe que, no futuro, o
+\fBxz\fP pode oferecer suporte a novos formatos de arquivo compactado, o que
+pode fazer com que o \fBxz\fP descompacte mais tipos de arquivos em vez de
+copiá\-los como na saída padrão. \fB\-\-format=\fP\fIformato\fP pode ser usado para
+restringir \fBxz\fP para descompactar apenas um único formato de arquivo.
+.RE
+.TP 
+\fB\-c\fP, \fB\-\-stdout\fP, \fB\-\-to\-stdout\fP
+Grava os dados compactados ou descompactados na saída padrão em vez de em um
+arquivo. Isso implica em \fB\-\-keep\fP.
+.TP 
+\fB\-\-single\-stream\fP
+Descompacta apenas o primeiro fluxo de \fB.xz\fP e ignora silenciosamente
+possíveis dados de entrada restantes após o fluxo. Normalmente, esse
+restante posterior sem uso faz com que \fBxz\fP exiba um erro.
+.IP ""
+\fBxz\fP nunca descompacta mais de um fluxo de arquivos \fB.lzma\fP ou fluxos
+brutos, mas esta opção ainda faz \fBxz\fP ignorar os possíveis dados
+posteriores após o arquivo \fB.lzma\fP ou fluxo bruto.
+.IP ""
+Esta opção não tem efeito se o modo de operação não for \fB\-\-decompress\fP ou
+\fB\-\-test\fP.
+.TP 
+\fB\-\-no\-sparse\fP
+Desativa a criação de arquivos esparsos. Por padrão, ao descompactar em um
+arquivo normal, \fBxz\fP tenta tornar o arquivo esparso se os dados
+descompactados contiverem longas sequências de zeros binários. Ele também
+funciona ao gravar na saída padrão, desde que a saída padrão esteja
+conectada a um arquivo normal e certas condições adicionais sejam atendidas
+para torná\-la segura. A criação de arquivos esparsos pode economizar espaço
+em disco e acelerar a descompactação, reduzindo a quantidade de E/S do
+disco.
+.TP 
+\fB\-S\fP \fI.suf\fP, \fB\-\-suffix=\fP\fI.suf\fP
+Ao compactar, usa \fI.suf\fP como sufixo para o arquivo de destino em vez de
+\&\fB.xz\fP ou \fB.lzma\fP. Se não estiver gravando na saída padrão e o arquivo de
+origem já tiver o sufixo \fI.suf\fP, um aviso será exibido e o arquivo será
+ignorado.
+.IP ""
+Ao descompactar, reconhece arquivos com o sufixo \fI.suf\fP além de arquivos
+com o sufixo \fB.xz\fP, \fB.txz\fP, \fB.lzma\fP, \fB.tlz\fP ou \fB.lz\fP . Se o arquivo de
+origem tiver o sufixo \fI.suf\fP, o sufixo será removido para obter o nome do
+arquivo de destino.
+.IP ""
+Ao compactar ou descompactar fluxos brutos (\fB\-\-format=raw\fP), o sufixo
+sempre deve ser especificado, a menos que seja gravado na saída padrão,
+porque não há sufixo padrão para fluxos brutos.
+.TP 
+\fB\-\-files\fP[\fB=\fP\fIarquivo\fP]
+Lê os nomes dos arquivos a serem processados em \fIarquivo\fP; se \fIarquivo\fP
+for omitido, os nomes dos arquivos serão lidos da entrada padrão. Os nomes
+de arquivo devem terminar com o caractere de nova linha. Um traço (\fB\-\fP) é
+considerado um nome de arquivo regular; não significa entrada padrão. Se os
+nomes de arquivo forem fornecidos também como argumentos de linha de
+comando, eles serão processados antes da leitura dos nomes de arquivo de
+\fIarquivo\fP.
+.TP 
+\fB\-\-files0\fP[\fB=\fP\fIarquivo\fP]
+Isso é idêntico a \fB\-\-files\fP[\fB=\fP\fIarquivo\fP], exceto que cada nome de
+arquivo deve ser finalizado com o caractere nulo.
+.
+.SS "Opções básicas de formato de arquivo e de compactação"
+.TP 
+\fB\-F\fP \fIformato\fP, \fB\-\-format=\fP\fIformato\fP
+Especifica o \fIformato\fP de arquivo para compactar ou descompactar:
+.RS
+.TP 
+\fBauto\fP
+Este é o padrão. Ao compactar, \fBauto\fP é equivalente a \fBxz\fP. Ao
+descompactar, o formato do arquivo de entrada é detectado
+automaticamente. Observe que os fluxos brutos (criados com \fB\-\-format=raw\fP)
+não podem ser detectados automaticamente.
+.TP 
+\fBxz\fP
+Compacta no formato de arquivo \fB.xz\fP ou aceite apenas arquivos \fB.xz\fP ao
+descompactar.
+.TP 
+\fBlzma\fP, \fBalone\fP
+Compacta no formato de arquivo legado \fB.lzma\fP ou aceite apenas arquivos
+\&\fB.lzma\fP ao descompactar. O nome alternativo \fBalone\fP é fornecido para
+compatibilidade com versões anteriores do LZMA Utils.
+.TP 
+\fBlzip\fP
+Aceita apenas arquivos \fB.lz\fP ao descompactar. Sem suporte a compactação.
+.IP ""
+O formato \fB.lz\fP versão 0 e a versão não estendida 1 são suportados. Os
+arquivos da versão 0 foram produzidos por \fBlzip\fP 1.3 e anteriores. Esses
+arquivos não são comuns, mas podem ser encontrados em arquivos compactados,
+pois alguns pacotes de origem foram lançados nesse formato. As pessoas
+também podem ter arquivos pessoais antigos neste formato. O suporte de
+descompactação para o formato versão 0 foi removido em \fBlzip\fP 1.18.
+.IP ""
+\fBlzip\fP 1.4 e posteriores criam arquivos no formato versão 1. A extensão do
+marcador de descarga de sincronização para o formato versão 1 foi adicionada
+em \fBlzip\fP 1.6. Esta extensão raramente é usada e não é suportada por \fBxz\fP
+(diagnosticada como entrada corrompida).
+.TP 
+\fBraw\fP
+Compacta ou descompacta um fluxo bruto (sem cabeçalhos). Isso é destinado
+apenas a usuários avançados. Para decodificar fluxos brutos, você precisa
+usar \fB\-\-format=raw\fP e especificar explicitamente a cadeia de filtros, que
+normalmente seria armazenada nos cabeçalhos do contêiner.
+.RE
+.TP 
+\fB\-C\fP \fIverificação\fP, \fB\-\-check=\fP\fIverificação\fP
+Especifica o tipo de verificação de integridade. A verificação é calculada a
+partir dos dados descompactados e armazenados no arquivo \fB.xz\fP. Esta opção
+tem efeito somente ao compactar no formato \fB.xz\fP; o formato \fB.lzma\fP não
+oferece suporte a verificações de integridade. A verificação de integridade
+(se for o caso) é verificada quando o arquivo \fB.xz\fP é descompactado.
+.IP ""
+Tipos de \fIverificação\fP suportados:
+.RS
+.TP 
+\fBnone\fP
+Não calcula uma verificação de integridade. Isso geralmente é uma má
+ideia. Pode ser útil quando a integridade dos dados é verificada por outros
+meios.
+.TP 
+\fBcrc32\fP
+Calcula CRC32 usando o polinômio do IEEE\-802.3 (Ethernet).
+.TP 
+\fBcrc64\fP
+Calcula CRC64 usando o polinômio de ECMA\-182. Este é o padrão, pois é um
+pouco melhor que o CRC32 na detecção de arquivos danificados e a diferença
+de velocidade é insignificante.
+.TP 
+\fBsha256\fP
+Calcula SHA\-256. Isso é um pouco mais lento do que CRC32 e CRC64.
+.RE
+.IP ""
+A integridade dos cabeçalhos de \fB.xz\fP é sempre verificada com CRC32. Não é
+possível alterá\-la ou desativá\-la.
+.TP 
+\fB\-\-ignore\-check\fP
+Não confere a verificação de integridade dos dados compactados ao
+descompactar. Os valores CRC32 nos cabeçalhos \fB.xz\fP ainda serão conferidos
+normalmente.
+.IP ""
+\fBNão use esta opção a menos que saiba o que está fazendo.\fP Possíveis razões
+para usar esta opção:
+.RS
+.IP \(bu 3
+Tentativa de recuperar dados de um arquivo .xz corrompido.
+.IP \(bu 3
+Acelerar a descompactação. Isso é importante principalmente com SHA\-256 ou
+com arquivos extremamente bem compactados. É recomendável não usar essa
+opção para essa finalidade, a menos que a integridade do arquivo seja
+verificada externamente de alguma outra forma.
+.RE
+.TP 
+\fB\-0\fP ... \fB\-9\fP
+Seleciona um nível de predefinição de compactação. O padrão é \fB\-6\fP. Se
+vários níveis de predefinição forem especificados, o último terá efeito. Se
+uma cadeia de filtro personalizada já foi especificada, especificar um nível
+de predefinição de compactação limpa a cadeia de filtro personalizada.
+.IP ""
+As diferenças entre as predefinições são mais significativas do que com
+\fBgzip\fP(1) e \fBbzip2\fP(1). As configurações de compactação selecionadas
+determinam os requisitos de memória do descompactador, portanto, usar um
+nível de predefinição muito alto pode dificultar a descompactação do arquivo
+em um sistema antigo com pouca RAM. Especificamente, \fBnão é uma boa ideia usar cegamente \-9 para tudo\fP como costuma acontecer com \fBgzip\fP(1) e
+\fBbzip2\fP(1).
+.RS
+.TP 
+\fB\-0\fP ... \fB\-3\fP
+Estas são predefinições um tanto rápidas. \fB\-0\fP às vezes é mais rápida que
+\fBgzip \-9\fP ao mesmo tempo que compacta muito melhor. As mais altas
+geralmente têm velocidade comparável ao \fBbzip2\fP(1) com taxa de compactação
+comparável ou melhor, embora os resultados dependam muito do tipo de dados
+que estão sendo compactados.
+.TP 
+\fB\-4\fP ... \fB\-6\fP
+Compactação boa a muito boa, mantendo o uso de memória do descompactador
+razoável mesmo para sistemas antigos. \fB\-6\fP é o padrão, que geralmente é uma
+boa escolha para distribuir arquivos que precisam ser descompactáveis, mesmo
+em sistemas com apenas 16\ MiB de RAM. (\fB\-5e\fP ou \fB\-6e\fP também vale a pena
+considerar. Veja \fB\-\-extreme\fP.)
+.TP 
+\fB\-7 ... \-9\fP
+Eles são como \fB\-6\fP, mas com requisitos de memória de compressor e
+descompressor mais altos. Eles são úteis apenas ao compactar arquivos
+maiores que 8\ MiB, 16\ MiB e 32\ MiB, respectivamente.
+.RE
+.IP ""
+No mesmo hardware, a velocidade de descompactação é aproximadamente um
+número constante de bytes de dados compactados por segundo. Em outras
+palavras, quanto melhor a compactação, mais rápida será a
+descompactação. Isso também significa que a quantidade de saída não
+compactada produzida por segundo pode variar muito.
+.IP ""
+A tabela a seguir resume os recursos das predefinições:
+.RS
+.RS
+.PP
+.TS
+tab(;);
+c c c c c
+n n n n n.
+Predefinição;DicTam;CompCPU;CompMem;DecMem
+\-0;256 KiB;0;3 MiB;1 MiB
+\-1;1 MiB;1;9 MiB;2 MiB
+\-2;2 MiB;2;17 MiB;3 MiB
+\-3;4 MiB;3;32 MiB;5 MiB
+\-4;4 MiB;4;48 MiB;5 MiB
+\-5;8 MiB;5;94 MiB;9 MiB
+\-6;8 MiB;6;94 MiB;9 MiB
+\-7;16 MiB;6;186 MiB;17 MiB
+\-8;32 MiB;6;370 MiB;33 MiB
+\-9;64 MiB;6;674 MiB;65 MiB
+.TE
+.RE
+.RE
+.IP ""
+Descrições das colunas:
+.RS
+.IP \(bu 3
+DicTam é o tamanho do dicionário LZMA2. É desperdício de memória usar um
+dicionário maior que o tamanho do arquivo descompactado. É por isso que é
+bom evitar usar as predefinições \fB\-7\fP ... \fB\-9\fP quando não há real
+necessidade deles. Em \fB\-6\fP e inferior, a quantidade de memória desperdiçada
+geralmente é baixa o suficiente para não importar.
+.IP \(bu 3
+CompCPU é uma representação simplificada das configurações LZMA2 que afetam
+a velocidade de compactação. O tamanho do dicionário também afeta a
+velocidade, portanto, embora o CompCPU seja o mesmo para os níveis \fB\-6\fP
+\&... \fB\-9\fP, níveis mais altos ainda tendem a ser um pouco mais lentos. Para
+obter uma compactação ainda mais lenta e possivelmente melhor, consulte
+\fB\-\-extreme\fP.
+.IP \(bu 3
+CompMem contém os requisitos de memória do compactador no modo de thread
+única.Pode variar ligeiramente entre as versões \fBxz\fP. Os requisitos de
+memória de alguns dos futuros modos de várias threads (multithread) podem
+ser dramaticamente maiores do que os do modo de thread única.
+.IP \(bu 3
+DecMem contém os requisitos de memória do descompactador. Ou seja, as
+configurações de compactação determinam os requisitos de memória do
+descompactador. O uso exato da memória do descompactador é um pouco maior do
+que o tamanho do dicionário LZMA2, mas os valores na tabela foram
+arredondados para o próximo MiB completo.
+.RE
+.TP 
+\fB\-e\fP, \fB\-\-extreme\fP
+Usa uma variante mais lenta do nível de predefinição de compactação
+selecionado (\fB\-0\fP ... \fB\-9\fP) para obter uma taxa de compactação um pouco
+melhor, mas, com azar, isso também pode piorar. O uso da memória do
+descompressor não é afetado, mas o uso da memória do compactador aumenta um
+pouco nos níveis de predefinição \fB\-0\fP ... \fB\-3\fP.
+.IP ""
+Como existem duas predefinições com tamanhos de dicionário 4\ MiB e 8\ MiB,
+as predefinições \fB\-3e\fP e \fB\-5e\fP usam configurações um pouco mais rápidas
+(CompCPU inferior) do que \fB\-4e\fP e \fB\-6e\fP, respectivamente. Dessa forma, não
+há duas predefinições idênticas.
+.RS
+.RS
+.PP
+.TS
+tab(;);
+c c c c c
+n n n n n.
+Predefinição;DicTam;CompCPU;CompMem;DecMem
+\-0e;256 KiB;8;4 MiB;1 MiB
+\-1e;1 MiB;8;13 MiB;2 MiB
+\-2e;2 MiB;8;25 MiB;3 MiB
+\-3e;4 MiB;7;48 MiB;5 MiB
+\-4e;4 MiB;8;48 MiB;5 MiB
+\-5e;8 MiB;7;94 MiB;9 MiB
+\-6e;8 MiB;8;94 MiB;9 MiB
+\-7e;16 MiB;8;186 MiB;17 MiB
+\-8e;32 MiB;8;370 MiB;33 MiB
+\-9e;64 MiB;8;674 MiB;65 MiB
+.TE
+.RE
+.RE
+.IP ""
+Por exemplo, há um total de quatro predefinições que usam o dicionário 8\ MiB, cuja ordem do mais rápido ao mais lento é \fB\-5\fP, \fB\-6\fP, \fB\-5e\fP e
+\fB\-6e\fP.
+.TP 
+\fB\-\-fast\fP
+.PD 0
+.TP 
+\fB\-\-best\fP
+.PD
+Esses são apelidos um tanto enganosos para \fB\-0\fP e \fB\-9\fP,
+respectivamente. Eles são fornecidos apenas para compatibilidade com versões
+anteriores do LZMA Utils. Evite usar essas opções.
+.TP 
+\fB\-\-block\-size=\fP\fItamanho\fP
+Ao compactar para o formato \fB.xz\fP, divida os dados de entrada em blocos de
+\fItamanho\fP bytes. Os blocos são compactados independentemente uns dos
+outros, o que ajuda no multi\-threading e torna possível a descompactação
+limitada de acesso aleatório. Essa opção normalmente é usada para substituir
+o tamanho de bloco padrão no modo multi\-thread, mas também pode ser usada em
+thread única.
+.IP ""
+No modo multi\-thread, cerca de três vezes \fItamanho\fP bytes serão alocados em
+cada thread para armazenar em buffer a entrada e a saída. O \fItamanho\fP
+padrão é três vezes o tamanho do dicionário LZMA2 ou 1 MiB, o que for
+maior. Normalmente, um bom valor é 2\(en4 vezes o tamanho do dicionário
+LZMA2 ou pelo menos 1 MiB. Usar \fItamanho\fP menor que o tamanho do dicionário
+LZMA2 é um desperdício de RAM porque o buffer do dicionário LZMA2 nunca será
+totalmente usado. Os tamanhos dos blocos são armazenados nos cabeçalhos dos
+blocos, que uma versão futura do \fBxz\fP usará para descompactação em
+multi\-thread.
+.IP ""
+No modo de thread única, nenhuma divisão de bloco é feita por
+padrão. Definir essa opção não afeta o uso da memória. Nenhuma informação de
+tamanho é armazenada nos cabeçalhos dos blocos, portanto, os arquivos
+criados no modo de thread única não serão idênticos aos arquivos criados no
+modo multi\-thread. A falta de informações de tamanho também significa que
+uma versão futura do \fBxz\fP não poderá descompactar os arquivos no modo
+multi\-thread.
+.TP 
+\fB\-\-block\-list=\fP\fItamanhos\fP
+Ao compactar para o formato \fB.xz\fP, inicia um novo bloco após os intervalos
+fornecidos de dados não compactados.
+.IP ""
+Os \fItamanhos\fP não compactados dos blocos são especificados como uma lista
+separada por vírgulas. Omitir um tamanho (duas ou mais vírgulas
+consecutivas) é uma forma abreviada de usar o tamanho do bloco anterior.
+.IP ""
+Se o arquivo de entrada for maior que a soma de \fItamanhos\fP, o último valor
+em \fItamanhos\fP é repetido até o final do arquivo. Um valor especial de \fB0\fP
+pode ser usado como o último valor para indicar que o restante do arquivo
+deve ser codificado como um único bloco.
+.IP ""
+Se alguém especificar \fItamanhos\fP que excedam o tamanho do bloco do
+codificador (seja o valor padrão no modo em threads ou o valor especificado
+com \fB\-\-block\-size=\fP\fItamanho\fP), o codificador criará blocos adicionais
+enquanto mantém o limites especificados em \fItamanhos\fP. Por exemplo, se
+alguém especificar \fB\-\-block\-size=10MiB\fP
+\fB\-\-block\-list=5MiB,10MiB,8MiB,12MiB,24MiB\fP e o arquivo de entrada for 80
+MiB, obterá 11 blocos: 5, 10, 8, 10, 2, 10, 10, 4, 10, 10 e 1 MiB.
+.IP ""
+No modo multi\-thread, os tamanhos dos blocos são armazenados nos cabeçalhos
+dos blocos. Isso não é feito no modo de thread única, portanto, a saída
+codificada não será idêntica à do modo multi\-thread.
+.TP 
+\fB\-\-flush\-timeout=\fP\fItempo_limite\fP
+Ao compactar, se mais de \fItempo_limite\fP milissegundos (um número inteiro
+positivo) se passaram desde a liberação anterior e a leitura de mais entrada
+seria bloqueada, todos os dados de entrada pendentes serão liberados do
+codificador e disponibilizados no fluxo de saída. Isso pode ser útil se
+\fBxz\fP for usado para compactar dados transmitidos por uma rede. Valores
+\fItempo_limite\fP pequenos tornam os dados disponíveis na extremidade
+receptora com um pequeno atraso, mas valores \fItempo_limite\fP grandes
+oferecem melhor taxa de compactação.
+.IP ""
+Esse recurso está desabilitado por padrão. Se esta opção for especificada
+mais de uma vez, a última terá efeito. O valor especial \fItempo_limite\fP de
+\fB0\fP pode ser usado para desabilitar explicitamente esse recurso.
+.IP ""
+Este recurso não está disponível em sistemas não\-POSIX.
+.IP ""
+.\" FIXME
+\fBEste recurso ainda é experimental.\fP Atualmente, \fBxz\fP não é adequado para
+descompactar o fluxo em tempo real devido à forma como \fBxz\fP faz o buffer.
+.TP 
+\fB\-\-memlimit\-compress=\fP\fIlimite\fP
+Define um limite de uso de memória para compactação. Se esta opção for
+especificada várias vezes, a última entrará em vigor.
+.IP ""
+Se as configurações de compactação excederem o \fIlimite\fP, \fBxz\fP tentará
+ajustar as configurações para baixo para que o limite não seja mais excedido
+e exibirá um aviso de que o ajuste automático foi feito. Os ajustes são
+feitos nesta ordem: reduzindo o número de encadeamentos, alternando para o
+modo sigle\-thread se até mesmo uma thread no modo multi\-thread exceder o
+\fIlimite\fP e, finalmente, reduzindo o tamanho do dicionário LZMA2.
+.IP ""
+Ao compactar com \fB\-\-format=raw\fP ou se \fB\-\-no\-adjust\fP tiver sido
+especificado, apenas o número de threads pode ser reduzido, pois isso pode
+ser feito sem afetar a saída compactada.
+.IP ""
+Se o \fIlimite\fP não puder ser alcançado mesmo com os ajustes descritos acima,
+um erro será exibido e \fBxz\fP sairá com status de saída 1.
+.IP ""
+O \fIlimite\fP pode ser especificado de várias maneiras:
+.RS
+.IP \(bu 3
+O \fIlimite\fP pode ser um valor absoluto em bytes. Usar um sufixo inteiro como
+\fBMiB\fP pode ser útil. Exemplo: \fB\-\-memlimit\-compress=80MiB\fP
+.IP \(bu 3
+O \fIlimite\fP pode ser especificado como uma porcentagem da memória física
+total (RAM). Isso pode ser útil especialmente ao definir a variável de
+ambiente \fBXZ_DEFAULTS\fP em um script de inicialização de shell que é
+compartilhado entre diferentes computadores. Dessa forma o limite é
+automaticamente maior em sistemas com mais memória. Exemplo:
+\fB\-\-memlimit\-compress=70%\fP
+.IP \(bu 3
+O \fIlimite\fP pode ser redefinido para seu valor padrão, definindo\-o como
+\fB0\fP. Atualmente, isso equivale a definir \fIlimite\fP como \fBmax\fP (sem limite
+de uso de memória).
+.RE
+.IP ""
+Para \fBxz\fP de 32 bits, há um caso especial: se o \fIlimite\fP estiver acima de
+\fB4020\ MiB\fP, o \fIlimite\fP é definido como \fB4020\ MiB\fP. No MIPS32 \fB2000\ MiB\fP é usado em seu lugar. (Os valores \fB0\fP e \fBmax\fP não são afetados por
+isso. Um recurso semelhante não existe para descompactação.) Isso pode ser
+útil quando um executável de 32 bits tem acesso a espaço de endereço de 4\ GiB (2 GiB no MIPS32) enquanto espero não causar danos em outras situações.
+.IP ""
+Consulte também a seção \fBUso de memória\fP.
+.TP 
+\fB\-\-memlimit\-decompress=\fP\fIlimite\fP
+Define um limite de uso de memória para descompactação. Isso também afeta o
+modo \fB\-\-list\fP. Se a operação não for possível sem exceder o \fIlimite\fP,
+\fBxz\fP exibirá um erro e a descompactação do arquivo falhará. Consulte
+\fB\-\-memlimit\-compress=\fP\fIlimite\fP para possíveis maneiras de especificar o
+\fIlimite\fP.
+.TP 
+\fB\-\-memlimit\-mt\-decompress=\fP\fIlimite\fP
+Define um limite de uso de memória para descompactação multi\-thread. Isso
+pode afetar apenas o número de threads; isso nunca fará com que \fBxz\fP se
+recuse a descompactar um arquivo. Se \fIlimite\fP for muito baixo para permitir
+qualquer multi\-thread, o \fIlimite\fP será ignorado e \fBxz\fP continuará no modo
+de thread única. Observe que se \fB\-\-memlimit\-decompress\fP também for usado,
+ele sempre se aplicará aos modos de thread única e multi\-thread e, portanto,
+o \fIlimite\fP efetivo para multi\-threading nunca será maior que o limite
+definido com \fB\-\-memlimit\-decompress\fP.
+.IP ""
+Em contraste com as outras opções de limite de uso de memória,
+\fB\-\-memlimit\-mt\-decompress=\fP\fIlimite\fP tem um padrão \fIlimite\fP específico do
+sistema. \fBxz \-\-info\-memory\fP pode ser usado para ver o valor atual.
+.IP ""
+Esta opção e seu valor padrão existem porque, sem qualquer limite, o
+descompactador usando threads pode acabar alocando uma quantidade insana de
+memória com alguns arquivos de entrada. Se o \fIlimite\fP padrão for muito
+baixo em seu sistema, sinta\-se à vontade para aumentar o \fIlimite\fP, mas
+nunca defina\-o para um valor maior que a quantidade de RAM utilizável, pois
+com os arquivos de entrada apropriados \fBxz\fP tentará usar essa quantidade de
+memória mesmo com um baixo número de threads. Ficar sem memória ou trocar
+não melhorará o desempenho da descompactação.
+.IP ""
+Consulte \fB\-\-memlimit\-compress=\fP\fIlimite\fP para possíveis maneiras de
+especificar o \fIlimite\fP. Definir \fIlimite\fP como \fB0\fP redefine \fIlimite\fP para
+o valor padrão específico do sistema.
+.TP 
+\fB\-M\fP \fIlimite\fP, \fB\-\-memlimit=\fP\fIlimite\fP, \fB\-\-memory=\fP\fIlimite\fP
+Isso é equivalente a especificar \fB\-\-memlimit\-compress=\fP\fIlimite\fP
+\fB\-\-memlimit\-decompress=\fP\fIlimite\fP \fB\-\-memlimit\-mt\-decompress=\fP\fIlimite\fP.
+.TP 
+\fB\-\-no\-adjust\fP
+Exibe um erro e saia se o limite de uso de memória não puder ser atendido
+sem ajustar as configurações que afetam a saída compactada. Ou seja, isso
+evita que \fBxz\fP alterne o codificador do modo multi\-thread para o modo
+encadeado único e reduza o tamanho do dicionário LZMA2. Mesmo quando esta
+opção é usada, o número de threads pode ser reduzido para atender ao limite
+de uso de memória, pois isso não afetará a saída compactada.
+.IP ""
+O ajuste automático é sempre desativado ao criar fluxos brutos
+(\fB\-\-format=raw\fP).
+.TP 
+\fB\-T\fP \fIthreads\fP, \fB\-\-threads=\fP\fIthreads\fP
+Especifica o número de threads de trabalho a serem usados. Definir
+\fIthreads\fP para um valor especial \fB0\fP faz com que \fBxz\fP use tantos threads
+quanto o(s) processador(es) no suporte do sistema. O número real de
+encadeamentos pode ser menor que \fIthreads\fP se o arquivo de entrada não for
+grande o suficiente para subdividir em threads com as configurações
+fornecidas ou se o uso de mais threads exceder o limite de uso de memória.
+.IP ""
+Os compactadores usando thread única e várias threads produzem saídas
+diferentes. O compactador de thread única fornecerá o menor tamanho de
+arquivo, mas apenas a saída do compactador de várias threads pode ser
+descompactada usando várias threads. Definir \fIthreads\fP como \fB1\fP usará o
+modo de thread única. Definir \fIthreads\fP para qualquer outro valor,
+incluindo \fB0\fP, usará o compressor de várias threads, mesmo que o sistema
+tenha suporte a apenas uma thread de hardware. (\fBxz\fP 5.2.x usou o modo de
+thread única nesta situação.)
+.IP ""
+Para usar o modo de várias threads com apenas uma thread, defina \fIthreads\fP
+como \fB+1\fP. O prefixo \fB+\fP não tem efeito com valores diferentes de \fB1\fP. Um
+limite de uso de memória ainda pode fazer \fBxz\fP alternar para o modo de
+thread única, a menos que \fB\-\-no\-adjust\fP seja usado. O suporte para o
+prefixo \fB+\fP foi adicionado no \fBxz\fP 5.4.0.
+.IP ""
+Se um número automático de threads foi solicitado e nenhum limite de uso de
+memória foi especificado, um limite flexível padrão específico do sistema
+será usado para possivelmente limitar o número de threads. É um limite
+flexível no sentido de que é ignorado se o número de threads se tornar um,
+portanto, um limite flexível nunca impedirá \fBxz\fP de compactar ou
+descompactar. Este limite flexível padrão não fará com que \fBxz\fP alterne do
+modo de várias threads para o modo de thread única. Os limites ativos podem
+ser vistos com \fBxz \-\-info\-memory\fP.
+.IP ""
+Atualmente, o único método de threading é dividir a entrada em blocos e
+comprimi\-los independentemente um do outro. O tamanho padrão do bloco
+depende do nível de compactação e pode ser substituído com a opção
+\fB\-\-block\-size=\fP\fItamanho\fP.
+.IP ""
+A descompactação em threads funciona apenas em arquivos que contêm vários
+blocos com informações de tamanho nos cabeçalhos dos blocos. Todos os
+arquivos grandes o suficiente compactados no modo de várias thread atendem a
+essa condição, mas os arquivos compactados no modo de thread única não
+atendem, mesmo se \fB\-\-block\-size=\fP\fItamanho\fP tiver sido usado.
+.
+.SS "Cadeias de filtro de compressor personalizadas"
+Uma cadeia de filtro personalizada permite especificar as configurações de
+compactação em detalhes, em vez de confiar nas configurações associadas às
+predefinições. Quando uma cadeia de filtro personalizada é especificada, as
+opções predefinidas (\fB\-0\fP \&...\& \fB\-9\fP e \fB\-\-extreme\fP) anteriores na linha
+de comando são esquecidas. Se uma opção predefinida for especificada após
+uma ou mais opções de cadeia de filtros personalizados, a nova predefinição
+entrará em vigor e as opções de cadeia de filtros personalizados
+especificadas anteriormente serão esquecidas.
+.PP
+Uma cadeia de filtro é comparável à tubulação na linha de comando. Ao
+compactar, a entrada descompactada vai para o primeiro filtro, cuja saída
+vai para o próximo filtro (se houver). A saída do último filtro é gravada no
+arquivo compactado. O número máximo de filtros na cadeia é quatro, mas
+normalmente uma cadeia de filtros tem apenas um ou dois filtros.
+.PP
+Muitos filtros têm limitações sobre onde podem estar na cadeia de filtros:
+alguns filtros podem funcionar apenas como o último filtro na cadeia, alguns
+apenas como filtro não\-último e alguns funcionam em qualquer posição na
+cadeia. Dependendo do filtro, essa limitação é inerente ao projeto do filtro
+ou existe para evitar problemas de segurança.
+.PP
+Uma cadeia de filtro personalizada é especificada usando uma ou mais opções
+de filtro na ordem desejada na cadeia de filtro. Ou seja, a ordem das opções
+de filtro é significativa! Ao decodificar fluxos brutos (\fB\-\-format=raw\fP), a
+cadeia de filtros é especificada na mesma ordem em que foi especificada
+durante a compactação.
+.PP
+Os filtros usam \fIopções\fP específicas do filtro como uma lista separada por
+vírgulas. As vírgulas extras em \fIopções\fP são ignoradas. Cada opção tem um
+valor padrão, portanto, você precisa especificar apenas aquelas que deseja
+alterar.
+.PP
+Para ver toda a cadeia de filtros e \fIopções\fP, use \fBxz \-vv\fP (isto é, use
+\fB\-\-verbose\fP duas vezes). Isso também funciona para visualizar as opções da
+cadeia de filtros usadas pelas predefinições.
+.TP 
+\fB\-\-lzma1\fP[\fB=\fP\fIopções\fP]
+.PD 0
+.TP 
+\fB\-\-lzma2\fP[\fB=\fP\fIopções\fP]
+.PD
+Adiciona o filtro LZMA1 ou LZMA2 à cadeia de filtros. Esses filtros podem
+ser usados apenas como o último filtro na cadeia.
+.IP ""
+LZMA1 é um filtro legado, que é suportado quase exclusivamente devido ao
+formato de arquivo legado \fB.lzma\fP, que suporta apenas LZMA1. LZMA2 é uma
+versão atualizada do LZMA1 para corrigir alguns problemas práticos do
+LZMA1. O formato \fB.xz\fP usa LZMA2 e não suporta LZMA1. A velocidade de
+compactação e as proporções de LZMA1 e LZMA2 são praticamente as mesmas.
+.IP ""
+LZMA1 e LZMA2 compartilham o mesmo conjunto de \fIopções\fP:
+.RS
+.TP 
+\fBpreset=\fP\fIpredefinição\fP
+Redefine todas as \fIopções\fP de LZMA1 ou LZMA2 para
+\fIpredefinição\fP. \fIPredefinição\fP consiste em um número inteiro, que pode ser
+seguido por modificadores de predefinição de uma única letra. O inteiro pode
+ser de \fB0\fP a \fB9\fP, correspondendo às opções de linha de comando \fB\-0\fP
+\&...\& \fB\-9\fP. O único modificador suportado atualmente é \fBe\fP, que
+corresponde a \fB\-\-extreme\fP. Se nenhum \fBpreset\fP for especificado, os valores
+padrão das \fIopções\fP LZMA1 ou LZMA2 serão obtidos da predefinição \fB6\fP.
+.TP 
+\fBdict=\fP\fItamanho\fP
+O \fItamanho\fP do dicionário (buffer de histórico) indica quantos bytes dos
+dados não compactados processados recentemente são mantidos na memória. O
+algoritmo tenta encontrar sequências de bytes repetidos (correspondências)
+nos dados não compactados e substituí\-los por referências aos dados
+atualmente no dicionário. Quanto maior o dicionário, maior a chance de
+encontrar uma correspondência. Portanto, aumentar o dicionário \fItamanho\fP
+geralmente melhora a taxa de compactação, mas um dicionário maior que o
+arquivo não compactado é um desperdício de memória.
+.IP ""
+Um \fItamanho\fP de dicionário típico é de 64\ KiB a 64\ MiB. O mínimo é 4\ KiB. O máximo para compactação é atualmente 1,5\ GiB (1536\ MiB). O
+descompactador já oferece suporte a dicionários de até um byte a menos de 4\ GiB, que é o máximo para os formatos de fluxo LZMA1 e LZMA2.
+.IP ""
+O \fItamanho\fP de dicionário e o localizador de correspondência (\fImf\fP) juntos
+determinam o uso de memória do codificador LZMA1 ou LZMA2. O mesmo (ou
+maior) \fItamanho\fP de dicionário é necessário para descompactar que foi usado
+durante a compactação, portanto, o uso de memória do decodificador é
+determinado pelo tamanho do dicionário usado durante a compactação. Os
+cabeçalhos \fB.xz\fP armazenam o \fItamanho\fP de dicionário como 2^\fIn\fP ou 2^\fIn\fP
++ 2^(\fIn\fP\-1), então esses \fItamanhos\fP são um tanto preferidos para
+compactação. Outros \fItamanhos\fP serão arredondados quando armazenados nos
+cabeçalhos \fB.xz\fP.
+.TP 
+\fBlc=\fP\fIlc\fP
+Especifica o número de bits de contexto literais. O mínimo é 0 e o máximo é
+4; o padrão é 3. Além disso, a soma de \fIlc\fP e \fIlp\fP não deve exceder 4.
+.IP ""
+Todos os bytes que não podem ser codificados como correspondências são
+codificados como literais. Ou seja, literais são simplesmente bytes de 8
+bits que são codificados um de cada vez.
+.IP ""
+A codificação literal assume que os bits \fIlc\fP mais altos do byte não
+compactado anterior se correlacionam com o próximo byte. Por exemplo, em um
+texto típico em inglês, uma letra maiúscula geralmente é seguida por uma
+letra minúscula, e uma letra minúscula geralmente é seguida por outra letra
+minúscula. No conjunto de caracteres US\-ASCII, os três bits mais altos são
+010 para letras maiúsculas e 011 para letras minúsculas. Quando \fIlc\fP é pelo
+menos 3, a codificação literal pode aproveitar essa propriedade nos dados
+não compactados.
+.IP ""
+O valor padrão (3) geralmente é bom. Se você deseja compactação máxima,
+experimente \fBlc=4\fP. Às vezes ajuda um pouco, às vezes piora a
+compactação. Se piorar, experimente \fBlc=2\fP também.
+.TP 
+\fBlp=\fP\fIlp\fP
+Especifica o número de bits de posição literal. O mínimo é 0 e o máximo é 4;
+o padrão é 0.
+.IP ""
+\fILp\fP afeta que tipo de alinhamento nos dados não compactados é assumido ao
+codificar literais. Consulte \fIpb\fP abaixo para obter mais informações sobre
+alinhamento.
+.TP 
+\fBpb=\fP\fIpb\fP
+Especifica o número de bits de posição. O mínimo é 0 e o máximo é 4; o
+padrão é 2.
+.IP ""
+\fIPb\fP afeta que tipo de alinhamento nos dados não compactados é assumido em
+geral. O padrão significa alinhamento de quatro bytes (2^\fIpb\fP=2^2=4), que
+geralmente é uma boa escolha quando não há melhor estimativa.
+.IP ""
+Quando o alinhamento é conhecido, definir \fIpb\fP adequadamente pode reduzir
+um pouco o tamanho do arquivo. Por exemplo, com arquivos de texto com
+alinhamento de um byte (US\-ASCII, ISO\-8859\-*, UTF\-8), a configuração \fBpb=0\fP
+pode melhorar um pouco a compactação. Para texto UTF\-16, \fBpb=1\fP é uma boa
+escolha. Se o alinhamento for um número ímpar como 3 bytes, \fBpb=0\fP pode ser
+a melhor escolha.
+.IP ""
+Embora o alinhamento assumido possa ser ajustado com \fIpb\fP e \fIlp\fP, LZMA1 e
+LZMA2 ainda favorecem ligeiramente o alinhamento de 16 bytes. Pode valer a
+pena levar em consideração ao projetar formatos de arquivo que provavelmente
+serão compactados com LZMA1 ou LZMA2.
+.TP 
+\fBmf=\fP\fImf\fP
+O localizador de correspondência tem um efeito importante na velocidade do
+codificador, uso de memória e taxa de compactação. Normalmente, os
+localizadores de correspondência de Hash Chain são mais rápidos do que os
+localizadores de correspondência de árvore binária. O padrão depende do
+\fIpredefinição\fP: 0 usa \fBhc3\fP, 1\(en3 usa \fBhc4\fP e o resto usa \fBbt4\fP.
+.IP ""
+Os seguintes localizadores de correspondência são suportados. As fórmulas de
+uso de memória abaixo são aproximações aproximadas, que estão mais próximas
+da realidade quando \fIdict\fP é uma potência de dois.
+.RS
+.TP 
+\fBhc3\fP
+Cadeia de hashs com hashing de 2 e 3 bytes
+.br
+Valor mínimo para \fInice\fP: 3
+.br
+Uso de memória:
+.br
+\fIdict\fP * 7.5 (if \fIdict\fP <= 16 MiB);
+.br
+\fIdict\fP * 5.5 + 64 MiB (if \fIdict\fP > 16 MiB)
+.TP 
+\fBhc4\fP
+Cadeia de hashs com hashing de 2, 3 e 4 bytes
+.br
+Valor mínimo para \fInice\fP: 4
+.br
+Uso de memória:
+.br
+\fIdict\fP * 7.5 (if \fIdict\fP <= 32 MiB);
+.br
+\fIdict\fP * 6.5 (if \fIdict\fP > 32 MiB)
+.TP 
+\fBbt2\fP
+Árvore binária com hashing de 2 bytes
+.br
+Valor mínimo para \fInice\fP: 2
+.br
+Uso de memória: \fIdict\fP * 9.5
+.TP 
+\fBbt3\fP
+Árvore binária com hashing de 2 e 3 bytes
+.br
+Valor mínimo para \fInice\fP: 3
+.br
+Uso de memória:
+.br
+\fIdict\fP * 11.5 (if \fIdict\fP <= 16 MiB);
+.br
+\fIdict\fP * 9.5 + 64 MiB (if \fIdict\fP > 16 MiB)
+.TP 
+\fBbt4\fP
+Árvore binária com hashing de 2, 3 e 4 bytes
+.br
+Valor mínimo para \fInice\fP: 4
+.br
+Uso de memória:
+.br
+\fIdict\fP * 11.5 (if \fIdict\fP <= 32 MiB);
+.br
+\fIdict\fP * 10.5 (if \fIdict\fP > 32 MiB)
+.RE
+.TP 
+\fBmode=\fP\fImodo\fP
+O \fImodo\fP de compactação especifica o método para analisar os dados
+produzidos pelo localizador de correspondência. Os \fImodos\fP suportados são
+\fBfast\fP e \fBnormal\fP. O padrão é \fBfast\fP para \fIpredefinições\fP 0\(en3 e
+\fBnormal\fP para \fIpredefinições\fP 4\(en9.
+.IP ""
+Normalmente, \fBfast\fP é usado com localizadores de correspondência cadeia de
+hashs e \fBnormal\fP com localizadores de correspondência de árvore
+binária. Isso também é o que os \fIpredefinições\fP fazem.
+.TP 
+\fBnice=\fP\fInice\fP
+Especifica o que é considerado um bom comprimento para uma
+correspondência. Uma vez que uma correspondência de pelo menos \fInice\fP bytes
+é encontrada, o algoritmo para de procurar correspondências possivelmente
+melhores.
+.IP ""
+\fINice\fP pode ser 2\(en273 bytes. Valores mais altos tendem a fornecer melhor
+taxa de compactação em detrimento da velocidade. O padrão depende do
+\fIpredefinição\fP.
+.TP 
+\fBdepth=\fP\fIprofundidade\fP
+Especifica a profundidade máxima de pesquisa no localizador de
+correspondências. O padrão é o valor especial de 0, que faz com que o
+compressor determine um \fIprofundidade\fP razoável de \fImf\fP e \fInice\fP.
+.IP ""
+Uma \fIprofundidade\fP razoável para cadeias de hash é 4\(en100 e 16\(en1000
+para árvores binárias. Usar valores muito altos para \fIprofundidade\fP pode
+tornar o codificador extremamente lento com alguns arquivos. Evite definir
+\fIprofundidade\fP acima de 1000 a menos que você esteja preparado para
+interromper a compactação caso ela esteja demorando muito.
+.RE
+.IP ""
+Ao decodificar fluxos brutos (\fB\-\-format=raw\fP), o LZMA2 precisa apenas do
+dicionário \fItamanho\fP. LZMA1 também precisa de \fIlc\fP, \fIlp\fP e \fIpb\fP.
+.TP 
+\fB\-\-x86\fP[\fB=\fP\fIopções\fP]
+.PD 0
+.TP 
+\fB\-\-arm\fP[\fB=\fP\fIopções\fP]
+.TP 
+\fB\-\-armthumb\fP[\fB=\fP\fIopções\fP]
+.TP 
+\fB\-\-arm64\fP[\fB=\fP\fIopções\fP]
+.TP 
+\fB\-\-powerpc\fP[\fB=\fP\fIopções\fP]
+.TP 
+\fB\-\-ia64\fP[\fB=\fP\fIopções\fP]
+.TP 
+\fB\-\-sparc\fP[\fB=\fP\fIopções\fP]
+.PD
+Adiciona um filtro de ramificação/chamada/salto (BCJ) à cadeia de
+filtros. Esses filtros podem ser usados apenas como um filtro não último na
+cadeia de filtros.
+.IP ""
+Um filtro BCJ converte endereços relativos no código de máquina em suas
+contrapartes absolutas. Isso não altera o tamanho dos dados, mas aumenta a
+redundância, o que pode ajudar o LZMA2 a produzir um arquivo \fB.xz\fP 0\(en15\ % menor. Os filtros BCJ são sempre reversíveis, portanto, usar um filtro BCJ
+para o tipo errado de dados não causa nenhuma perda de dados, embora possa
+piorar um pouco a taxa de compactação.Os filtros BCJ são muito rápidos e
+usam uma quantidade insignificante de memória.
+.IP ""
+Esses filtros BCJ têm problemas conhecidos relacionados à taxa de
+compactação:
+.RS
+.IP \(bu 3
+Alguns tipos de arquivos contendo código executável (por exemplo, arquivos
+de objeto, bibliotecas estáticas e módulos do kernel do Linux) têm os
+endereços nas instruções preenchidos com valores de preenchimento. Esses
+filtros BCJ ainda vão fazer a conversão de endereço, o que vai piorar a
+compactação desses arquivos.
+.IP \(bu 3
+Se um filtro BCJ for aplicado em um arquivo, é possível que isso torne a
+taxa de compactação pior do que não usar um filtro BCJ. Por exemplo, se
+houver executáveis semelhantes ou mesmo idênticos, a filtragem provavelmente
+tornará os arquivos menos semelhantes e, portanto, a compactação será
+pior. O conteúdo de arquivos não executáveis no mesmo arquivo também pode
+ser importante. Na prática tem que tentar com e sem filtro BCJ para ver qual
+é melhor em cada situação.
+.RE
+.IP ""
+Conjuntos de instruções diferentes têm alinhamento diferente: o arquivo
+executável deve ser alinhado a um múltiplo desse valor nos dados de entrada
+para fazer o filtro funcionar.
+.RS
+.RS
+.PP
+.TS
+tab(;);
+l n l
+l n l.
+Filtro;Alinhamento;Observações
+x86;1;x86 32 bits ou 64 bits
+ARM;4;
+ARM\-Thumb;2;
+ARM64;4;Alinhamento de 4096 bytes
+;;é melhor
+PowerPC;4;Somente big endian
+IA\-64;16;Itanium
+SPARC;4;
+.TE
+.RE
+.RE
+.IP ""
+Como os dados filtrados por BCJ geralmente são compactados com LZMA2, a taxa
+de compactação pode melhorar ligeiramente se as opções de LZMA2 forem
+definidas para corresponder ao alinhamento do filtro BCJ selecionado. Por
+exemplo, com o filtro IA\-64, é bom definir \fBpb=4\fP ou mesmo
+\fBpb=4,lp=4,lc=0\fP com LZMA2 (2^4=16). O filtro x86 é uma exceção; geralmente
+é bom manter o alinhamento padrão de quatro bytes do LZMA2 ao compactar
+executáveis x86.
+.IP ""
+Todos os filtros BCJ suportam as mesmas \fIopções\fP:
+.RS
+.TP 
+\fBstart=\fP\fIdeslocamento\fP
+Especifica o \fIdeslocamento\fP inicial que é usado na conversão entre
+endereços relativos e absolutos. O \fIdeslocamento\fP deve ser um múltiplo do
+alinhamento do filtro (ver tabela acima). O padrão é zero. Na prática, o
+padrão é bom; especificar um \fIdeslocamento\fP personalizado quase nunca é
+útil.
+.RE
+.TP 
+\fB\-\-delta\fP[\fB=\fP\fIopções\fP]
+Adiciona o filtro Delta à cadeia de filtros. O filtro Delta só pode ser
+usado como filtro não\-último na cadeia de filtros.
+.IP ""
+Atualmente, apenas o cálculo simples de delta byte a byte é suportado. Pode
+ser útil ao compactar, por exemplo, imagens bitmap não compactadas ou áudio
+PCM não compactado. No entanto, algoritmos de propósito especial podem
+fornecer resultados significativamente melhores do que Delta + LZMA2. Isso é
+verdade especialmente com áudio, que compacta mais rápido e melhor, por
+exemplo, com \fBflac\fP(1).
+.IP ""
+\fIOpções\fP suportadas:
+.RS
+.TP 
+\fBdist=\fP\fIdistância\fP
+Especifica a \fIdistância\fP do cálculo delta em bytes. \fIdistância\fP deve ser
+1\(en256. O padrão é 1.
+.IP ""
+Por exemplo, com \fBdist=2\fP e entrada de oito bytes A1 B1 A2 B3 A3 B5 A4 B7,
+a saída será A1 B1 01 02 01 02 01 02.
+.RE
+.
+.SS "Outras opções"
+.TP 
+\fB\-q\fP, \fB\-\-quiet\fP
+Suprime avisos e avisos. Especifique isso duas vezes para suprimir erros
+também. Esta opção não tem efeito no status de saída. Ou seja, mesmo que um
+aviso tenha sido suprimido, o status de saída para indicar um aviso ainda é
+usado.
+.TP 
+\fB\-v\fP, \fB\-\-verbose\fP
+Ser detalhado. Se o erro padrão estiver conectado a um terminal, \fBxz\fP
+exibirá um indicador de progresso. Especifique \fB\-\-verbose\fP duas vezes dará
+uma saída ainda mais detalhada.
+.IP ""
+O indicador de progresso mostra as seguintes informações:
+.RS
+.IP \(bu 3
+A porcentagem de conclusão é mostrada se o tamanho do arquivo de entrada for
+conhecido. Ou seja, a porcentagem não pode ser mostrada em encadeamentos
+(pipe).
+.IP \(bu 3
+Quantidade de dados compactados produzidos (compactando) ou consumidos
+(descompactando).
+.IP \(bu 3
+Quantidade de dados não compactados consumidos (compactação) ou produzidos
+(descompactação).
+.IP \(bu 3
+Taxa de compactação, que é calculada dividindo a quantidade de dados
+compactados processados até o momento pela quantidade de dados não
+compactados processados até o momento.
+.IP \(bu 3
+Velocidade de compactação ou descompactação. Isso é medido como a quantidade
+de dados não compactados consumidos (compactação) ou produzidos
+(descompactação) por segundo. É mostrado após alguns segundos desde que
+\fBxz\fP começou a processar o arquivo.
+.IP \(bu 3
+Tempo decorrido no formato M:SS ou H:MM:SS.
+.IP \(bu 3
+O tempo restante estimado é mostrado apenas quando o tamanho do arquivo de
+entrada é conhecido e alguns segundos já se passaram desde que \fBxz\fP começou
+a processar o arquivo. A hora é mostrada em um formato menos preciso que
+nunca tem dois pontos, por exemplo, 2 min 30 s.
+.RE
+.IP ""
+Quando o erro padrão não é um terminal, \fB\-\-verbose\fP fará com que \fBxz\fP
+imprima o nome do arquivo, tamanho compactado, tamanho não compactado, taxa
+de compactação e possivelmente também a velocidade e o tempo decorrido em
+uma única linha para o erro padrão após a compactação ou descompactando o
+arquivo. A velocidade e o tempo decorrido são incluídos apenas quando a
+operação leva pelo menos alguns segundos. Se a operação não foi concluída,
+por exemplo, devido à interrupção do usuário, também é impressa a
+porcentagem de conclusão se o tamanho do arquivo de entrada for conhecido.
+.TP 
+\fB\-Q\fP, \fB\-\-no\-warn\fP
+Não define o status de saída como 2, mesmo que uma condição digna de um
+aviso tenha sido detectada. Esta opção não afeta o nível de detalhamento,
+portanto, tanto \fB\-\-quiet\fP quanto \fB\-\-no\-warn\fP devem ser usados para não
+exibir avisos e não alterar o status de saída.
+.TP 
+\fB\-\-robot\fP
+Imprime mensagens em um formato analisável por máquina. Isso visa facilitar
+a criação de frontends que desejam usar \fBxz\fP em vez de liblzma, o que pode
+ser o caso de vários scripts. A saída com esta opção habilitada deve ser
+estável em versões \fBxz\fP. Consulte a seção \fBMODO ROBÔ\fP para obter detalhes.
+.TP 
+\fB\-\-info\-memory\fP
+Exibe, em formato legível por humanos, quanta memória física (RAM) e quantos
+threads de processador \fBxz\fP acredita que o sistema possui e os limites de
+uso de memória para compactação e descompactação e saia com êxito.
+.TP 
+\fB\-h\fP, \fB\-\-help\fP
+Exibe uma mensagem de ajuda descrevendo as opções mais usadas e sai com
+sucesso.
+.TP 
+\fB\-H\fP, \fB\-\-long\-help\fP
+Exibe uma mensagem de ajuda descrevendo todos os recursos de \fBxz\fP e sai com
+sucesso
+.TP 
+\fB\-V\fP, \fB\-\-version\fP
+Exibe o número da versão de \fBxz\fP e liblzma em formato legível por
+humanos. Para obter uma saída analisável por máquina, especifique \fB\-\-robot\fP
+antes de \fB\-\-version\fP.
+.
+.SH "MODO ROBÔ"
+O modo robô é ativado com a opção \fB\-\-robot\fP. Isso torna a saída de \fBxz\fP
+mais fácil de ser analisada por outros programas. Atualmente \fB\-\-robot\fP é
+suportado apenas junto com \fB\-\-version\fP, \fB\-\-info\-memory\fP e \fB\-\-list\fP. Ele
+terá suporte para compactação e descompactação no futuro.
+.
+.SS Versão
+\fBxz \-\-robot \-\-version\fP prints the version number of \fBxz\fP and liblzma in
+the following format:
+.PP
+\fBXZ_VERSION=\fP\fIXYYYZZZS\fP
+.br
+\fBLIBLZMA_VERSION=\fP\fIXYYYZZZS\fP
+.TP 
+\fIX\fP
+Versão principal.
+.TP 
+\fIYYY\fP
+Versão menor. Números pares são estáveis. Os números ímpares são versões
+alfa ou beta.
+.TP 
+\fIZZZ\fP
+Nível de patch para versões estáveis ou apenas um contador para versões de
+desenvolvimento.
+.TP 
+\fIS\fP
+Estabilidade. 0 é alfa, 1 é beta e 2 é estável. \fIS\fP deve ser sempre 2
+quando \fIYYY\fP for par.
+.PP
+\fIXYYYZZZS\fP são iguais em ambas as linhas se \fBxz\fP e liblzma forem da mesma
+versão do XZ Utils.
+.PP
+Exemplos: 4.999.9beta é \fB49990091\fP e 5.0.0 é \fB50000002\fP.
+.
+.SS "Informações de limite de memória"
+\fBxz \-\-robot \-\-info\-memory\fP prints a single line with multiple tab\-separated
+columns:
+.IP 1. 4
+Quantidade total de memória física (RAM) em bytes.
+.IP 2. 4
+Limite de uso de memória para compactação em bytes
+(\fB\-\-memlimit\-compress\fP). Um valor especial de \fB0\fP indica a configuração
+padrão que para o modo de thread única é o mesmo que sem limite.
+.IP 3. 4
+Limite de uso de memória para descompactação em bytes
+(\fB\-\-memlimit\-decompress\fP). Um valor especial de \fB0\fP indica a configuração
+padrão que para o modo de thread única é o mesmo que sem limite.
+.IP 4. 4
+Desde \fBxz\fP 5.3.4alpha: Uso de memória para descompactação com várias thread
+em bytes (\fB\-\-memlimit\-mt\-decompress\fP). Isso nunca é zero porque um valor
+padrão específico do sistema mostrado na coluna 5 é usado se nenhum limite
+for especificado explicitamente. Isso também nunca é maior que o valor na
+coluna 3, mesmo que um valor maior tenha sido especificado com
+\fB\-\-memlimit\-mt\-decompress\fP.
+.IP 5. 4
+Desde \fBxz\fP 5.3.4alpha: Um limite de uso de memória padrão específico do
+sistema que é usado para limitar o número de threads ao compactar com um
+número automático de threads (\fB\-\-threads=0\fP) e nenhum limite de uso de
+memória foi especificado (\fB\-\-memlimit\-compress\fP). Isso também é usado como
+o valor padrão para \fB\-\-memlimit\-mt\-decompress\fP.
+.IP 6. 4
+Desde \fBxz\fP 5.3.4alpha: Número de threads de processador disponíveis.
+.PP
+No futuro, a saída de \fBxz \-\-robot \-\-info\-memory\fP pode ter mais colunas, mas
+nunca mais do que uma única linha.
+.
+.SS "Modo lista"
+\fBxz \-\-robot \-\-list\fP usa saída separada por tabulações. A primeira coluna de
+cada linha possui uma string que indica o tipo de informação encontrada
+naquela linha:
+.TP 
+\fBname\fP
+Esta é sempre a primeira linha ao começar a listar um arquivo. A segunda
+coluna na linha é o nome do arquivo.
+.TP 
+\fBfile\fP
+Esta linha contém informações gerais sobre o arquivo \fB.xz\fP. Esta linha é
+sempre impressa após a linha \fBname\fP.
+.TP 
+\fBstream\fP
+Este tipo de linha é usado somente quando \fB\-\-verbose\fP foi
+especificado. Existem tantas linhas de \fBstream\fP quanto fluxos no arquivo
+\&\fB.xz\fP.
+.TP 
+\fBblock\fP
+Este tipo de linha é usado somente quando \fB\-\-verbose\fP foi
+especificado. Existem tantas linhas \fBblock\fP quanto blocos no arquivo
+\&\fB.xz\fP. As linhas \fBblock\fP são mostradas após todas as linhas \fBstream\fP;
+diferentes tipos de linha não são intercalados.
+.TP 
+\fBsummary\fP
+Este tipo de linha é usado apenas quando \fB\-\-verbose\fP foi especificado duas
+vezes. Esta linha é impressa após todas as linhas de \fBblock\fP. Assim como a
+linha \fBarquivo\fP, a linha \fBsummary\fP contém informações gerais sobre o
+arquivo \fB.xz\fP.
+.TP 
+\fBtotals\fP
+Esta linha é sempre a última linha da saída da lista. Ele mostra as
+contagens totais e tamanhos.
+.PP
+As colunas das linhas \fBfile\fP:
+.PD 0
+.RS
+.IP 2. 4
+Número de fluxos no arquivo
+.IP 3. 4
+Número total de blocos no(s) fluxo(s)
+.IP 4. 4
+Tamanho compactado do arquivo
+.IP 5. 4
+Uncompressed size of the file
+.IP 6. 4
+Taxa de compactação, por exemplo, \fB0.123\fP. Se a proporção for superior a
+9.999, serão exibidos três traços (\fB\-\-\-\fP) em vez da proporção.
+.IP 7. 4
+Lista separada por vírgulas de nomes de verificação de integridade. As
+seguintes strings são usadas para os tipos de verificação conhecidos:
+\fBNone\fP, \fBCRC32\fP, \fBCRC64\fP e \fBSHA\-256\fP. Para tipos de verificações
+desconhecidos, \fBUnknown\-\fP\fIN\fP é usado, onde \fIN\fP é o ID do cheque como um
+número decimal (um ou dois dígitos).
+.IP 8. 4
+Tamanho total do preenchimento de fluxo no arquivo
+.RE
+.PD
+.PP
+As colunas das linhas \fBstream\fP:
+.PD 0
+.RS
+.IP 2. 4
+Número do fluxo (o primeiro fluxo é 1)
+.IP 3. 4
+Número de blocos no fluxo
+.IP 4. 4
+Deslocamento inicial compactado
+.IP 5. 4
+Deslocamento inicial descompactado
+.IP 6. 4
+Tamanho compactado (não inclui preenchimento de fluxo)
+.IP 7. 4
+Tamanho descompactado
+.IP 8. 4
+Taxa de compactação
+.IP 9. 4
+Nome da verificação de integridade
+.IP 10. 4
+Tamanho do preenchimento do fluxo
+.RE
+.PD
+.PP
+As colunas das linhas \fBblock\fP:
+.PD 0
+.RS
+.IP 2. 4
+Número do fluxo que contém este bloco
+.IP 3. 4
+Número do bloco relativo ao início do fluxo (o primeiro bloco é 1)
+.IP 4. 4
+Número do bloco relativo ao início do arquivo
+.IP 5. 4
+Deslocamento inicial compactado em relação ao início do arquivo
+.IP 6. 4
+Deslocamento inicial descompactado em relação ao início do arquivo
+.IP 7. 4
+Tamanho total compactado do bloco (inclui cabeçalhos)
+.IP 8. 4
+Tamanho descompactado
+.IP 9. 4
+Taxa de compactação
+.IP 10. 4
+Nome da verificação de integridade
+.RE
+.PD
+.PP
+Se \fB\-\-verbose\fP for especificado duas vezes, colunas adicionais serão
+incluídas nas linhas \fBblock\fP. Eles não são exibidos com um único
+\fB\-\-verbose\fP, porque obter essas informações requer muitas buscas e,
+portanto, pode ser lento:
+.PD 0
+.RS
+.IP 11. 4
+Valor da verificação de integridade em hexadecimal
+.IP 12. 4
+Tamanho do cabeçalho do bloco
+.IP 13. 4
+Sinalizadores de bloco: \fBc\fP indica que o tamanho compactado está presente e
+\fBu\fP indica que o tamanho não compactado está presente. Se o sinalizador não
+estiver definido, um traço (\fB\-\fP) será exibido para manter o comprimento da
+string fixo. Novos sinalizadores podem ser adicionados ao final da string no
+futuro.
+.IP 14. 4
+Tamanho dos dados reais compactados no bloco (isso exclui o cabeçalho do
+bloco, o preenchimento do bloco e os campos de verificação)
+.IP 15. 4
+Quantidade de memória (em bytes) necessária para descompactar este bloco com
+esta versão \fBxz\fP
+.IP 16. 4
+Cadeia de filtro. Observe que a maioria das opções usadas no momento da
+compactação não pode ser conhecida, pois apenas as opções necessárias para a
+descompactação são armazenadas nos cabeçalhos \fB.xz\fP.
+.RE
+.PD
+.PP
+As colunas das linhas \fBsummary\fP:
+.PD 0
+.RS
+.IP 2. 4
+Quantidade de memória (em bytes) necessária para descompactar este arquivo
+com esta versão do \fBxz\fP
+.IP 3. 4
+\fByes\fP ou \fBno\fP indicando se todos os cabeçalhos de bloco têm tamanho
+compactado e tamanho não compactado armazenados neles
+.PP
+\fIDesde\fP \fBxz\fP \fI5.1.2alpha:\fP
+.IP 4. 4
+Versão mínima do \fBxz\fP necessária para descompactar o arquivo
+.RE
+.PD
+.PP
+As colunas da linha \fBtotals\fP:
+.PD 0
+.RS
+.IP 2. 4
+Número de fluxos
+.IP 3. 4
+Número de blocos
+.IP 4. 4
+Tamanho compactado
+.IP 5. 4
+Tamanho descompactado
+.IP 6. 4
+Taxa de compactação média
+.IP 7. 4
+Lista separada por vírgulas de nomes de verificação de integridade que
+estavam presentes nos arquivos
+.IP 8. 4
+Tamanho do preenchimento do fluxo
+.IP 9. 4
+Número de arquivos. Isso está aqui para manter a ordem das colunas
+anteriores a mesma das linhas \fBfile\fP.
+.PD
+.RE
+.PP
+Se \fB\-\-verbose\fP for especificado duas vezes, colunas adicionais serão
+incluídas na linha \fBtotals\fP:
+.PD 0
+.RS
+.IP 10. 4
+Quantidade máxima de memória (em bytes) necessária para descompactar os
+arquivos com esta versão do \fBxz\fP
+.IP 11. 4
+\fByes\fP ou \fBno\fP indicando se todos os cabeçalhos de bloco têm tamanho
+compactado e tamanho não compactado armazenados neles
+.PP
+\fIDesde\fP \fBxz\fP \fI5.1.2alpha:\fP
+.IP 12. 4
+Versão mínima do \fBxz\fP necessária para descompactar o arquivo
+.RE
+.PD
+.PP
+Versões futuras podem adicionar novos tipos de linha e novas colunas podem
+ser adicionadas aos tipos de linha existentes, mas as colunas existentes não
+serão alteradas.
+.
+.SH "STATUS DE SAÍDA"
+.TP 
+\fB0\fP
+Está tudo bem.
+.TP 
+\fB1\fP
+Ocorreu um erro.
+.TP 
+\fB2\fP
+Algo digno de um aviso ocorreu, mas ocorreu nenhum erro real.
+.PP
+Observações (não avisos ou erros) impressas no erro padrão não afetam o
+status de saída.
+.
+.SH AMBIENTE
+\fBxz\fP analisa listas de opções separadas por espaços das variáveis de
+ambiente \fBXZ_DEFAULTS\fP e \fBXZ_OPT\fP, nesta ordem, antes de analisar as
+opções da linha de comando. Observe que apenas as opções são analisadas a
+partir das variáveis de ambiente; todas as não opções são silenciosamente
+ignoradas. A análise é feita com \fBgetopt_long\fP(3) que também é usado para
+os argumentos da linha de comando.
+.TP 
+\fBXZ_DEFAULTS\fP
+Opções padrão específicas do usuário ou de todo o sistema. Normalmente, isso
+é definido em um script de inicialização do shell para habilitar o limitador
+de uso de memória do \fBxz\fP por padrão. Excluindo scripts de inicialização de
+shell e casos especiais semelhantes, os scripts nunca devem definir ou
+remover a definição de \fBXZ_DEFAULTS\fP.
+.TP 
+\fBXZ_OPT\fP
+Isso é para passar opções para \fBxz\fP quando não é possível definir as opções
+diretamente na linha de comando \fBxz\fP. Este é o caso quando \fBxz\fP é
+executado por um script ou ferramenta, por exemplo, GNU \fBtar\fP(1):
+.RS
+.RS
+.PP
+.nf
+\f(CWXZ_OPT=\-2v tar caf foo.tar.xz foo\fP
+.fi
+.RE
+.RE
+.IP ""
+Os scripts podem usar \fBXZ_OPT\fP, por exemplo, para definir opções de
+compactação padrão específicas do script. Ainda é recomendável permitir que
+os usuários substituam \fBXZ_OPT\fP se isso for razoável. Por exemplo, em
+scripts \fBsh\fP(1) pode\-se usar algo assim:
+.RS
+.RS
+.PP
+.nf
+\f(CWXZ_OPT=${XZ_OPT\-"\-7e"} export XZ_OPT\fP
+.fi
+.RE
+.RE
+.
+.SH "COMPATIBILIDADE COM LZMA UTILS"
+A sintaxe da linha de comando do \fBxz\fP é praticamente um superconjunto de
+\fBlzma\fP, \fBunlzma\fP e \fBlzcat\fP conforme encontrado no LZMA Utils 4.32.x. Na
+maioria dos casos, é possível substituir LZMA Utils por XZ Utils sem
+interromper os scripts existentes. Existem algumas incompatibilidades,
+porém, que às vezes podem causar problemas.
+.
+.SS "Níveis de predefinição de compactação"
+A numeração das predefinições de nível de compactação não é idêntica em
+\fBxz\fP e LZMA Utils. A diferença mais importante é como os tamanhos dos
+dicionários são mapeados para diferentes predefinições. O tamanho do
+dicionário é aproximadamente igual ao uso de memória do descompactador.
+.RS
+.PP
+.TS
+tab(;);
+c c c
+c n n.
+Nível;xz;LZMA Utils
+\-0;256 KiB;N/D
+\-1;1 MiB;64 KiB
+\-2;2 MiB;1 MiB
+\-3;4 MiB;512 KiB
+\-4;4 MiB;1 MiB
+\-5;8 MiB;2 MiB
+\-6;8 MiB;4 MiB
+\-7;16 MiB;8 MiB
+\-8;32 MiB;16 MiB
+\-9;64 MiB;32 MiB
+.TE
+.RE
+.PP
+As diferenças de tamanho do dicionário também afetam o uso da memória do
+compressor, mas existem algumas outras diferenças entre LZMA Utils e XZ
+Utils, que tornam a diferença ainda maior:
+.RS
+.PP
+.TS
+tab(;);
+c c c
+c n n.
+Nível;xz;LZMA Utils 4.32.x
+\-0;3 MiB;N/D
+\-1;9 MiB;2 MiB
+\-2;17 MiB;12 MiB
+\-3;32 MiB;12 MiB
+\-4;48 MiB;16 MiB
+\-5;94 MiB;26 MiB
+\-6;94 MiB;45 MiB
+\-7;186 MiB;83 MiB
+\-8;370 MiB;159 MiB
+\-9;674 MiB;311 MiB
+.TE
+.RE
+.PP
+O nível de predefinição padrão no LZMA Utils é \fB\-7\fP enquanto no XZ Utils é
+\fB\-6\fP, então ambos usam um dicionário de 8 MiB por padrão.
+.
+.SS "Arquivos .lzma em um fluxo versus sem ser em um fluxo"
+O tamanho descompactado do arquivo pode ser armazenado no cabeçalho de
+\&\fB.lzma\fP. O LZMA Utils faz isso ao compactar arquivos comuns. A alternativa
+é marcar que o tamanho não compactado é desconhecido e usar o marcador de
+fim de carga útil para indicar onde o descompactador deve parar. O LZMA
+Utils usa este método quando o tamanho não compactado não é conhecido, como
+é o caso, por exemplo, de encadeamentos (pipes).
+.PP
+\fBxz\fP oferece suporte à descompactação de arquivos \fB.lzma\fP com ou sem
+marcador de fim de carga útil, mas todos os arquivos \fB.lzma\fP criados por
+\fBxz\fP usarão marcador de fim de carga útil e terão o tamanho descompactado
+marcado como desconhecido no cabeçalho de \fB.lzma\fP. Isso pode ser um
+problema em algumas situações incomuns. Por exemplo, um descompactador de
+\&\fB.lzma\fP em um dispositivo embarcado pode funcionar apenas com arquivos que
+tenham tamanho descompactado conhecido. Se você encontrar esse problema,
+precisará usar o LZMA Utils ou o LZMA SDK para criar arquivos \fB.lzma\fP com
+tamanho descompactado conhecido.
+.
+.SS "Arquivos .lzma não suportados"
+O formato \fB.lzma\fP permite valores \fIlc\fP até 8 e valores \fIlp\fP até 4. LZMA
+Utils pode descompactar arquivos com qualquer \fIlc\fP e \fIlp\fP, mas sempre cria
+arquivos com \fBlc=3\fP e \fBlp=0\fP. Criar arquivos com outros \fIlc\fP e \fIlp\fP é
+possível com \fBxz\fP e com LZMA SDK.
+.PP
+A implementação do filtro LZMA1 em liblzma requer que a soma de \fIlc\fP e
+\fIlp\fP não exceda 4. Assim, arquivos \fB.lzma\fP, que excedam esta limitação,
+não podem ser descompactados com \fBxz\fP.
+.PP
+LZMA Utils cria apenas arquivos \fB.lzma\fP que possuem um tamanho de
+dicionário de 2^\fIn\fP (uma potência de 2), mas aceita arquivos com qualquer
+tamanho de dicionário. liblzma aceita apenas arquivos \fB.lzma\fP que tenham um
+tamanho de dicionário de 2^\fIn\fP ou 2^\fIn\fP + 2^(\fIn\fP\-1). Isso é para diminuir
+os falsos positivos ao detectar arquivos \fB.lzma\fP.
+.PP
+Essas limitações não devem ser um problema na prática, já que praticamente
+todos os arquivos \fB.lzma\fP foram compactados com configurações que o liblzma
+aceitará.
+.
+.SS "Lixo à direita"
+Ao descompactar, o LZMA Utils silenciosamente ignora tudo após o primeiro
+fluxo \fB.lzma\fP. Na maioria das situações, isso é um bug. Isso também
+significa que o LZMA Utils não oferece suporte a descompactação de arquivos
+\&\fB.lzma\fP concatenados.
+.PP
+Se houver dados restantes após o primeiro fluxo de \fB.lzma\fP, \fBxz\fP considera
+o arquivo corrompido, a menos que \fB\-\-single\-stream\fP tenha sido usado. Isso
+pode quebrar scripts obscuros que presumiram que o lixo à direita é
+ignorado.
+.
+.SH NOTAS
+.
+.SS "A saída compactada pode variar"
+A saída compactada exata produzida a partir do mesmo arquivo de entrada não
+compactado pode variar entre as versões do XZ Utils, mesmo se as opções de
+compactação forem idênticas. Isso ocorre porque o codificador pode ser
+aprimorado (compactação mais rápida ou melhor) sem afetar o formato do
+arquivo. A saída pode variar mesmo entre diferentes compilações da mesma
+versão do XZ Utils, se diferentes opções de compilação forem usadas.
+.PP
+A informação acima significa que, uma vez que \fB\-\-rsyncable\fP tenha sido
+implementado, os arquivos resultantes não serão necessariamente
+"rsyncáveis", a menos que os arquivos antigos e novos tenham sido
+compactados com a mesma versão xz. Esse problema pode ser corrigido se uma
+parte da implementação do codificador for congelada para manter a saída de
+rsyncable estável nas versões do xz.
+.
+.SS "Descompactadores .xz embarcados"
+As implementações do descompactador \fB.xz\fP embarcados, como o XZ Embedded,
+não oferecem necessariamente suporte a arquivos criados com tipos de
+\fIverificações\fP de integridade diferentes de \fBnone\fP e \fBcrc32\fP. Como o
+padrão é \fB\-\-check=crc64\fP, você deve usar \fB\-\-check=none\fP ou
+\fB\-\-check=crc32\fP ao criar arquivos para sistemas embarcados.
+.PP
+Fora dos sistemas embarcados, todos os descompactadores de formato \fB.xz\fP
+oferecem suporte a todos os tipos de \fIverificação\fP ou, pelo menos, são
+capazes de descompactar o arquivo sem verificar a verificação de integridade
+se a \fIverificação\fP específica não for suportada.
+.PP
+XZ Embedded oferece suporte a filtros BCJ, mas apenas com o deslocamento
+inicial padrão.
+.
+.SH EXEMPLOS
+.
+.SS Básico
+Compactar o arquivo \fIfoo\fP em \fIfoo.xz\fP usando o nível de compactação padrão
+(\fB\-6\fP) e remover \fIfoo\fP se a compactação for bem\-sucedida:
+.RS
+.PP
+.nf
+\f(CWxz foo\fP
+.fi
+.RE
+.PP
+Descompactar \fIbar.xz\fP em \fIbar\fP e não remover \fIbar.xz\fP mesmo se a
+descompactação for bem\-sucedida:
+.RS
+.PP
+.nf
+\f(CWxz \-dk bar.xz\fP
+.fi
+.RE
+.PP
+Criar \fIbaz.tar.xz\fP com a predefinição \fB\-4e\fP (\fB\-4 \-\-extreme\fP), que é mais
+lenta que o padrão \fB\-6\fP, mas precisa de menos memória para compactação e
+descompactação (48 \ MiB e 5\ MiB, respectivamente):
+.RS
+.PP
+.nf
+\f(CWtar cf \- baz | xz \-4e > baz.tar.xz\fP
+.fi
+.RE
+.PP
+Uma mistura de arquivos compactados e descompactados pode ser descompactada
+para a saída padrão com um único comando:
+.RS
+.PP
+.nf
+\f(CWxz \-dcf a.txt b.txt.xz c.txt d.txt.lzma > abcd.txt\fP
+.fi
+.RE
+.
+.SS "Compactação paralela de muitos arquivos"
+No GNU e *BSD, \fBfind\fP(1) e \fBxargs\fP(1) podem ser usados para paralelizar a
+compactação de muitos arquivos:
+.RS
+.PP
+.nf
+\f(CWfind . \-type f \e! \-name '*.xz' \-print0 \e     | xargs \-0r \-P4 \-n16 xz \-T1\fP
+.fi
+.RE
+.PP
+A opção \fB\-P\fP para \fBxargs\fP(1) define o número de processos paralelos do
+\fBxz\fP. O melhor valor para a opção \fB\-n\fP depende de quantos arquivos devem
+ser compactados. Se houver apenas alguns arquivos, o valor provavelmente
+deve ser 1; com dezenas de milhares de arquivos, 100 ou até mais podem ser
+apropriados para reduzir o número de processos de \fBxz\fP que \fBxargs\fP(1)
+eventualmente criará.
+.PP
+A opção \fB\-T1\fP para \fBxz\fP existe para forçá\-lo ao modo de thread única,
+porque \fBxargs\fP(1) é usado para controlar a quantidade de paralelização.
+.
+.SS "Modo robô"
+Calcular quantos bytes foram salvos no total depois de compactar vários
+arquivos:
+.RS
+.PP
+.nf
+\f(CWxz \-\-robot \-\-list *.xz | awk '/^totals/{print $5\-$4}'\fP
+.fi
+.RE
+.PP
+Um script pode querer saber que está usando \fBxz\fP novo o suficiente. O
+seguinte script \fBsh\fP(1) verifica se o número da versão da ferramenta \fBxz\fP
+é pelo menos 5.0.0. Este método é compatível com versões beta antigas, que
+não suportavam a opção \fB\-\-robot\fP:
+.RS
+.PP
+.nf
+\f(CWif ! eval "$(xz \-\-robot \-\-version 2> /dev/null)" ||         [ "$XZ_VERSION" \-lt 50000002 ]; then     echo "Your xz is too old." fi unset XZ_VERSION LIBLZMA_VERSION\fP
+.fi
+.RE
+.PP
+Definir um limite de uso de memória para descompactação usando \fBXZ_OPT\fP,
+mas se um limite já tiver sido definido, não o aumentar:
+.RS
+.PP
+.nf
+\f(CWNEWLIM=$((123 << 20))\ \ # 123 MiB OLDLIM=$(xz \-\-robot \-\-info\-memory | cut \-f3) if [ $OLDLIM \-eq 0 \-o $OLDLIM \-gt $NEWLIM ]; then     XZ_OPT="$XZ_OPT \-\-memlimit\-decompress=$NEWLIM"     export XZ_OPT fi\fP
+.fi
+.RE
+.
+.SS "Cadeias de filtro de compressor personalizadas"
+O uso mais simples para cadeias de filtro personalizadas é personalizar uma
+predefinição LZMA2. Isso pode ser útil, porque as predefinições abrangem
+apenas um subconjunto das combinações potencialmente úteis de configurações
+de compactação.
+.PP
+As colunas CompCPU das tabelas das descrições das opções \fB\-0\fP ... \fB\-9\fP e
+\fB\-\-extreme\fP são úteis ao personalizar as predefinições LZMA2. Aqui estão as
+partes relevantes coletadas dessas duas tabelas:
+.RS
+.PP
+.TS
+tab(;);
+c c
+n n.
+Predefinição;CompCPU
+\-0;0
+\-1;1
+\-2;2
+\-3;3
+\-4;4
+\-5;5
+\-6;6
+\-5e;7
+\-6e;8
+.TE
+.RE
+.PP
+Se você sabe que um arquivo requer um dicionário um tanto grande (por
+exemplo, 32\ MiB) para compactar bem, mas deseja comprimi\-lo mais
+rapidamente do que \fBxz \-8\fP faria, uma predefinição com um valor CompCPU
+baixo (por exemplo, 1) pode ser modificado para usar um dicionário maior:
+.RS
+.PP
+.nf
+\f(CWxz \-\-lzma2=preset=1,dict=32MiB foo.tar\fP
+.fi
+.RE
+.PP
+Com certos arquivos, o comando acima pode ser mais rápido que \fBxz \-6\fP
+enquanto compacta significativamente melhor. No entanto, deve\-se enfatizar
+que apenas alguns arquivos se beneficiam de um grande dicionário, mantendo o
+valor CompCPU baixo. A situação mais óbvia, onde um grande dicionário pode
+ajudar muito, é um arquivo contendo arquivos muito semelhantes de pelo menos
+alguns megabytes cada. O tamanho do dicionário deve ser significativamente
+maior do que qualquer arquivo individual para permitir que o LZMA2 aproveite
+ao máximo as semelhanças entre arquivos consecutivos.
+.PP
+Se o uso muito alto de memória do compactador e do descompactador for bom e
+o arquivo que está sendo compactado tiver pelo menos várias centenas de
+megabytes, pode ser útil usar um dicionário ainda maior do que os 64 MiB que
+o \fBxz \-9\fP usaria:
+.RS
+.PP
+.nf
+\f(CWxz \-vv \-\-lzma2=dict=192MiB big_foo.tar\fP
+.fi
+.RE
+.PP
+Usar \fB\-vv\fP (\fB\-\-verbose \-\-verbose\fP) como no exemplo acima pode ser útil
+para ver os requisitos de memória do compactador e do
+descompactador. Lembre\-se que usar um dicionário maior que o tamanho do
+arquivo descompactado é desperdício de memória, então o comando acima não é
+útil para arquivos pequenos.
+.PP
+Às vezes, o tempo de compactação não importa, mas o uso de memória do
+descompactador deve ser mantido baixo, por exemplo, para possibilitar a
+descompactação do arquivo em um sistema embarcado. O comando a seguir usa
+\fB\-6e\fP (\fB\-6 \-\-extreme\fP) como base e define o dicionário como apenas 64\ KiB. O arquivo resultante pode ser descompactado com XZ Embedded (é por isso
+que existe \fB\-\-check=crc32\fP) usando cerca de 100\ KiB de memória.
+.RS
+.PP
+.nf
+\f(CWxz \-\-check=crc32 \-\-lzma2=preset=6e,dict=64KiB foo\fP
+.fi
+.RE
+.PP
+Se você deseja espremer o máximo de bytes possível, ajustar o número de bits
+de contexto literal (\fIlc\fP) e o número de bits de posição (\fIpb\fP) às vezes
+pode ajudar. Ajustar o número de bits de posição literal (\fIlp\fP) também pode
+ajudar, mas geralmente \fIlc\fP e \fIpb\fP são mais importantes. Por exemplo, um
+arquivo de código\-fonte contém principalmente texto US\-ASCII, então algo
+como o seguinte pode fornecer um arquivo ligeiramente (como 0,1\ %) menor
+que \fBxz \-6e\fP (tente também sem \fBlc=4\fP):
+.RS
+.PP
+.nf
+\f(CWxz \-\-lzma2=preset=6e,pb=0,lc=4 source_code.tar\fP
+.fi
+.RE
+.PP
+O uso de outro filtro junto com o LZMA2 pode melhorar a compactação com
+determinados tipos de arquivo. Por exemplo, para compactar uma biblioteca
+compartilhada x86\-32 ou x86\-64 usando o filtro x86 BCJ:
+.RS
+.PP
+.nf
+\f(CWxz \-\-x86 \-\-lzma2 libfoo.so\fP
+.fi
+.RE
+.PP
+Observe que a ordem das opções de filtro é significativa. Se \fB\-\-x86\fP for
+especificado após \fB\-\-lzma2\fP, \fBxz\fP dará um erro, porque não pode haver
+nenhum filtro após LZMA2 e também porque o filtro x86 BCJ não pode ser usado
+como o último filtro em a corrente.
+.PP
+O filtro Delta junto com LZMA2 pode dar bons resultados com imagens
+bitmap. Ele geralmente deve superar o PNG, que possui alguns filtros mais
+avançados do que o delta simples, mas usa Deflate para a compactação real.
+.PP
+A imagem deve ser salva em formato não compactado, por exemplo, como TIFF
+não compactado. O parâmetro de distância do filtro Delta é definido para
+corresponder ao número de bytes por pixel na imagem. Por exemplo, bitmap RGB
+de 24 bits precisa de \fBdist=3\fP, e também é bom passar \fBpb=0\fP para LZMA2
+para acomodar o alinhamento de três bytes:
+.RS
+.PP
+.nf
+\f(CWxz \-\-delta=dist=3 \-\-lzma2=pb=0 foo.tiff\fP
+.fi
+.RE
+.PP
+Se várias imagens foram colocadas em um único arquivo (por exemplo,
+\&\fB.tar\fP), o filtro Delta também funcionará, desde que todas as imagens
+tenham o mesmo número de bytes por pixel.
+.
+.SH "VEJA TAMBÉM"
+\fBxzdec\fP(1), \fBxzdiff\fP(1), \fBxzgrep\fP(1), \fBxzless\fP(1), \fBxzmore\fP(1),
+\fBgzip\fP(1), \fBbzip2\fP(1), \fB7z\fP(1)
+.PP
+XZ Utils: <https://xz.tukaani.org/xz\-utils/>
+.br
+XZ Embedded: <https://xz.tukaani.org/xz\-embedded/>
+.br
+LZMA SDK: <https://7\-zip.org/sdk.html>

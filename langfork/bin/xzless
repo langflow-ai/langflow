@@ -1,0 +1,59 @@
+#!/bin/sh
+
+# Copyright (C) 1998, 2002, 2006, 2007 Free Software Foundation
+
+# The original version for gzip was written by Paul Eggert.
+# Modified for XZ Utils by Andrew Dudman and Lasse Collin.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+
+#SET_PATH - This line is a placeholder to ease patching this script.
+
+# Instead of unsetting XZ_OPT, just make sure that xz will use file format
+# autodetection. This way memory usage limit and thread limit can be
+# specified via XZ_OPT.
+xz='xz --format=auto'
+
+version='xzless (XZ Utils) 5.4.6'
+
+usage="Usage: ${0##*/} [OPTION]... [FILE]...
+Like 'less', but operate on the uncompressed contents of xz compressed FILEs.
+
+Options are the same as for 'less'.
+
+Report bugs to <xz@tukaani.org>."
+
+case $1 in
+	--help)    printf '%s\n' "$usage" || exit 2; exit;;
+	--version) printf '%s\n' "$version" || exit 2; exit;;
+esac
+
+if test "${LESSMETACHARS+set}" != set; then
+	# Work around a bug in less 394 and earlier;
+	# it mishandles the metacharacters '$%=~'.
+	space=' '
+	tab='	'
+	nl='
+'
+	LESSMETACHARS="$space$tab$nl'"';*?"()<>[|&^`#\$%=~'
+fi
+
+if test "$(less -V | { read _ ver _ && echo ${ver%%.*}; })" -ge 429; then
+	# less 429 or later: LESSOPEN pipe will be used on
+	# standard input if $LESSOPEN begins with |-.
+	LESSOPEN="|-$xz -cdfqQ -- %s"
+else
+	LESSOPEN="|$xz -cdfqQ -- %s"
+fi
+export LESSMETACHARS LESSOPEN
+
+exec less "$@"

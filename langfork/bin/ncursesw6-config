@@ -1,0 +1,331 @@
+#!/bin/sh
+# $Id: ncurses-config.in,v 1.52 2022/07/26 21:36:28 tom Exp $
+##############################################################################
+# Copyright 2018-2021,2022 Thomas E. Dickey                                  #
+# Copyright 2006-2015,2017 Free Software Foundation, Inc.                    #
+#                                                                            #
+# Permission is hereby granted, free of charge, to any person obtaining a    #
+# copy of this software and associated documentation files (the "Software"), #
+# to deal in the Software without restriction, including without limitation  #
+# the rights to use, copy, modify, merge, publish, distribute, distribute    #
+# with modifications, sublicense, and/or sell copies of the Software, and to #
+# permit persons to whom the Software is furnished to do so, subject to the  #
+# following conditions:                                                      #
+#                                                                            #
+# The above copyright notice and this permission notice shall be included in #
+# all copies or substantial portions of the Software.                        #
+#                                                                            #
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR #
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   #
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    #
+# THE ABOVE COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER      #
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING    #
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER        #
+# DEALINGS IN THE SOFTWARE.                                                  #
+#                                                                            #
+# Except as contained in this notice, the name(s) of the above copyright     #
+# holders shall not be used in advertising or otherwise to promote the sale, #
+# use or other dealings in this Software without prior written               #
+# authorization.                                                             #
+##############################################################################
+#
+# Author: Thomas E. Dickey, 2006-on
+
+LANG=C;		export LANG
+LANGUAGE=C;	export LANGUAGE
+LC_ALL=C;	export LC_ALL
+LC_CTYPE=C;	export LC_CTYPE
+
+prefix="/home/niit/Documents/logger/LangFlow_fork/langflow/langfork"
+exec_prefix="${prefix}"
+
+bindir="${exec_prefix}/bin"
+includedir="${prefix}/include"
+libdir="${exec_prefix}/lib"
+datarootdir="${prefix}/share"
+datadir="${datarootdir}"
+mandir="${datarootdir}/man"
+
+THIS="ncursesw"
+TINFO_LIB="tinfow"
+RPATH_LIST="${libdir}"
+
+includesubdir="${prefix}/include/${THIS}"
+
+# Ensure that RPATH_LIST contains only absolute pathnames, if it is nonempty.
+# We cannot filter it out within the build-process since the variable is used
+# in some special cases of installation using a relative path.
+if [ -n "$RPATH_LIST" ]
+then
+	save_IFS="$IFS"
+	IFS=':'
+	filtered=
+	for item in $RPATH_LIST
+	do
+		case "$item" in
+		./*|../*|*/..|*/../*)
+			;;
+		*)
+			[ -n "$filtered" ] && filtered="${filtered}:"
+			filtered="${filtered}${item}"
+			;;
+		esac
+	done
+	IFS="$save_IFS"
+	# if the result is empty, there is little we can do to fix it
+	RPATH_LIST="$filtered"
+fi
+
+# with --disable-overwrite, we installed into a subdirectory, but transformed
+# the headers to include like this:
+#	<ncursesw/curses.h>
+if [ xno = xno ]; then
+	case $includedir in
+	$prefix/include/ncursesw)
+		includedir=`echo "$includedir" | sed -e 's,/[^/]*$,,'`
+		;;
+	esac
+fi
+
+LIBS=""
+if [ "tinfo" = "ncurses" ]; then
+	LIBS="-l${THIS} $LIBS"
+else
+	LIBS="-l${THIS} -l${TINFO_LIB} $LIBS"
+fi
+
+# Ignore -L options which do not correspond to an actual directory, or which
+# are standard library directories (i.e., the linker is supposed to search
+# those directories).
+#
+# There is no portable way to find the list of standard library directories.
+# Require a POSIX shell anyway, to keep this simple.
+lib_flags=
+for opt in -L$libdir -Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,-rpath,/home/niit/Documents/logger/LangFlow_fork/langflow/langfork/lib -Wl,-rpath-link,/home/niit/Documents/logger/LangFlow_fork/langflow/langfork/lib -L/home/niit/Documents/logger/LangFlow_fork/langflow/langfork/lib  $LIBS
+do
+	case $opt in
+	-specs*) # ignore linker specs-files which were used to build library
+		continue
+		;;
+	-Wl,-z,*) # ignore flags used to manipulate shared image
+		continue
+		;;
+	-Wl,--dynamic-linker*) # ignore ELF interpreter
+		continue
+		;;
+	-Wl,--as-needed|-Wl,--build-id=*|-Wl,-dT,*|-Wl,-T,*)
+		continue
+		;;
+	-L*)
+		lib_check=`echo "x$opt" | sed -e 's/^.-L//'`
+		[ -d "$lib_check" ] || continue
+		case "$lib_check" in
+		/usr/local/lib64|/lib64|/usr/lib64|/usr/local/lib|/lib|/usr/lib) # skip standard libdir
+			if [ "$lib_check" = "$libdir" ]
+			then
+				lib_first=yes
+				IFS_save="$IFS"
+				IFS='|'
+				LIBDIRS="/usr/local/lib64|/lib64|/usr/lib64|/usr/local/lib|/lib|/usr/lib"
+				for lib_check in $LIBDIRS
+				do
+					if [ -d "$lib_check" ]
+					then
+						if [ "$lib_check" != "$libdir" ]
+						then
+							lib_first=no
+						fi
+						break
+					fi
+				done
+				IFS="$IFS_save"
+				[ $lib_first = yes ] && continue
+				found=no
+				for check in $lib_flags
+				do
+					if [ "x$check" = "x$opt" ]
+					then
+						found=yes
+						break
+					fi
+				done
+				[ $found = yes ] && continue
+				:
+			else
+				continue
+			fi
+			;;
+		*)
+			found=no
+			for check in $lib_flags
+			do
+				if [ "x$check" = "x$opt" ]
+				then
+					found=yes
+					break
+				fi
+			done
+			[ $found = yes ] && continue
+			;;
+		esac
+		;;
+	esac
+	lib_flags="$lib_flags $opt"
+done
+
+[ $# = 0 ] && exec /bin/sh "$0" --error
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+	# basic configuration
+	--prefix)
+		echo "$prefix"
+		;;
+	--exec-prefix)
+		echo "$exec_prefix"
+		;;
+	# compile/link
+	--cflags)
+		INCS=" -D_GNU_SOURCE -DNCURSES_WIDECHAR"
+		if [ "xno" = xno ]; then
+			INCS="$INCS -I${includesubdir}"
+		fi
+		if [ "${includedir}" != /usr/include ]; then
+			INCS="$INCS -I${includedir}"
+		fi
+		sed -e 's,^[ ]*,,' -e 's, [ ]*, ,g' -e 's,[ ]*$,,' <<-ENDECHO
+			$INCS
+ENDECHO
+		;;
+	--libs)
+		OPTS=
+		for opt in $lib_flags
+		do
+			[ -n "$OPTS" ] && OPTS="$OPTS "
+			OPTS="${OPTS}${opt}"
+		done
+		printf '%s\n' "$OPTS"
+		;;
+	--libs-only-L)
+		OPTS=
+		for opt in $lib_flags
+		do
+			case "x$opt" in
+			x-L*)
+				[ -n "$OPTS" ] && OPTS="$OPTS "
+				OPTS="${OPTS}${opt}"
+				;;
+			esac
+		done
+		printf '%s\n' "$OPTS"
+		;;
+	--libs-only-l)
+		OPTS=
+		for opt in $lib_flags
+		do
+			case "x$opt" in
+			x-l*)
+				[ -n "$OPTS" ] && OPTS="$OPTS "
+				OPTS="${OPTS}${opt}"
+				;;
+			esac
+		done
+		printf '%s\n' "$OPTS"
+		;;
+	--libs-only-other)
+		OPTS=
+		for opt in $lib_flags
+		do
+			case "x$opt" in
+			x-[lL]*)
+				;;
+			*)
+				[ -n "$OPTS" ] && OPTS="$OPTS "
+				OPTS="${OPTS}${opt}"
+				;;
+			esac
+		done
+		printf '%s\n' "$OPTS"
+		;;
+	# identification
+	--version)
+		echo "6.4.20221231"
+		;;
+	--abi-version)
+		echo "6"
+		;;
+	--mouse-version)
+		echo "2"
+		;;
+	# locations
+	--bindir)
+		echo "${bindir}"
+		;;
+	--datadir)
+		echo "${datadir}"
+		;;
+	--includedir)
+		INCS=
+		if [ "xno" = xno ]; then
+			INCS="${includesubdir}"
+		elif [ "${includedir}" != /usr/include ]; then
+			INCS="${includedir}"
+		fi
+		echo "$INCS"
+		;;
+	--libdir)
+		echo "${libdir}"
+		;;
+	--mandir)
+		echo "${mandir}"
+		;;
+	--terminfo)
+		echo "/home/niit/Documents/logger/LangFlow_fork/langflow/langfork/share/terminfo"
+		;;
+	--terminfo-dirs)
+		echo "/home/niit/Documents/logger/LangFlow_fork/langflow/langfork/share/terminfo"
+		;;
+	--termpath)
+		echo "/etc/termcap:/usr/share/misc/termcap"
+		;;
+	# general info
+	--help)
+		cat <<ENDHELP
+Usage: `basename "$0"` [options]
+
+Options:
+  --prefix           echos the package-prefix of ${THIS}
+  --exec-prefix      echos the executable-prefix of ${THIS}
+
+  --cflags           echos the C compiler flags needed to compile with ${THIS}
+  --libs             echos the libraries needed to link with ${THIS}
+
+  --libs-only-L      echos -L linker options (search path) for ${THIS}
+  --libs-only-l      echos -l linker options (libraries) for ${THIS}
+  --libs-only-other  echos linker options other than -L/-l
+
+  --version          echos the release+patchdate version of ${THIS}
+  --abi-version      echos the ABI version of ${THIS}
+  --mouse-version    echos the mouse-interface version of ${THIS}
+
+  --bindir           echos the directory containing ${THIS} programs
+  --datadir          echos the directory containing ${THIS} data
+  --includedir       echos the directory containing ${THIS} header files
+  --libdir           echos the directory containing ${THIS} libraries
+  --mandir           echos the directory containing ${THIS} manpages
+  --terminfo         echos the \$TERMINFO terminfo database path
+  --terminfo-dirs    echos the \$TERMINFO_DIRS directory list
+  --termpath         echos the \$TERMPATH termcap list
+
+  --help             prints this message
+ENDHELP
+		;;
+	--error|*)
+		/bin/sh "$0" --help 1>&2
+		exit 1
+		;;
+	esac
+	shift
+done
+# vi:ts=4 sw=4
+# vile:shmode

@@ -1,0 +1,39 @@
+.\"
+.\" Authors: Andrew Dudman
+.\"          Lasse Collin
+.\"
+.\" This file has been put into the public domain.
+.\" You can do whatever you want with this file.
+.\"
+.\" (Note that this file is not based on gzip's zless.1.)
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZLESS 1 2010\-09\-27 Tukaani "XZ 유틸리티"
+.SH 이름
+xzless, lzless \- xz 또는 lzma 압축 (텍스트) 파일을 봅니다
+.SH 요약
+\fBxzless\fP [\fI<파일>\fP...]
+.br
+\fBlzless\fP [\fI<파일>\fP...]
+.SH 설명
+\fBxzless\fP 는 압축 파일을 터미널에 나타내는 필터 프로그램입니다.  \fBxz\fP(1)  또는 \fBlzma\fP(1) 프로그램으로 압축한
+파일에 대해 동작합니다.  주어진 \fI<파일>\fP 값이 없다면, \fBxzless\fP 는 표준 입력을 읽어들입니다.
+.PP
+\fBxzless\fP 는 \fBless\fP(1)  를 사용하여 출력을 막습니다.  \fBxzmore\fP  와는 다르게, 환경 변수 설정으로 선택한
+페이저를 바꿀 수 없습니다.  명령은 \fBmore\fP(1)  와 \fBvi\fP(1)  가 기반이며, 앞뒤로 움직이고 검색할 수 있습니다.
+자세한 정보는 \fBless\fP(1)  설명서를 참고하십시오.
+.PP
+\fBlzless\fP 명령은 LZMA 유틸리티 하위 호환용으로 제공합니다.
+.SH 환경
+.TP 
+\fBLESSMETACHARS\fP
+셸에서 동작할 수도 있는 특수 문자 목록입니다.  환경에 미리 설정해두지 않았다면 \fBxzless\fP에서 설정합니다.
+.TP 
+\fBLESSOPEN\fP
+입력 파일을 \fBless\fP(1)  에 전달하기 전에 \fBxz\fP(1)  압축 해제 프로그램을 실행해서 미리 처리하는 명령행을 설정합니다.
+.SH "추가 참조"
+\fBless\fP(1), \fBxz\fP(1), \fBxzmore\fP(1), \fBzless\fP(1)

@@ -1,0 +1,105 @@
+{
+  "build": "h5eee18b_0",
+  "build_number": 0,
+  "channel": "https://repo.anaconda.com/pkgs/main/linux-64",
+  "constrains": [],
+  "depends": [
+    "libgcc-ng >=11.2.0",
+    "ncurses >=6.4,<7.0a0",
+    "readline >=8.0,<9.0a0",
+    "zlib >=1.2.13,<1.3.0a0",
+    "zlib >=1.2.13,<2.0a0"
+  ],
+  "extracted_package_dir": "/home/niit/anaconda3/pkgs/sqlite-3.45.3-h5eee18b_0",
+  "features": "",
+  "files": [
+    "bin/sqlite3",
+    "include/sqlite3.h",
+    "include/sqlite3ext.h",
+    "lib/libsqlite3.so",
+    "lib/libsqlite3.so.0",
+    "lib/libsqlite3.so.0.8.6",
+    "lib/pkgconfig/sqlite3.pc",
+    "share/man/man1/sqlite3.1"
+  ],
+  "fn": "sqlite-3.45.3-h5eee18b_0.conda",
+  "legacy_bz2_md5": "f86119b3243fe3508160aa0406245738",
+  "license": "blessing",
+  "license_family": "Other",
+  "link": {
+    "source": "/home/niit/anaconda3/pkgs/sqlite-3.45.3-h5eee18b_0",
+    "type": 1
+  },
+  "md5": "acf93d6aceb74d6110e20b44cc45939e",
+  "name": "sqlite",
+  "package_tarball_full_path": "/home/niit/anaconda3/pkgs/sqlite-3.45.3-h5eee18b_0.conda",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "bin/sqlite3",
+        "path_type": "hardlink",
+        "sha256": "b7c98c978efe537f94f522a16697b0ca86b384ca5e7a7bbc3eece38923194046",
+        "sha256_in_prefix": "b7c98c978efe537f94f522a16697b0ca86b384ca5e7a7bbc3eece38923194046",
+        "size_in_bytes": 1777144
+      },
+      {
+        "_path": "include/sqlite3.h",
+        "path_type": "hardlink",
+        "sha256": "882ad3c0448d0324fb3a6b1a85333a9173d539ac669c9972ae1f03722ff86282",
+        "sha256_in_prefix": "882ad3c0448d0324fb3a6b1a85333a9173d539ac669c9972ae1f03722ff86282",
+        "size_in_bytes": 641889
+      },
+      {
+        "_path": "include/sqlite3ext.h",
+        "path_type": "hardlink",
+        "sha256": "b184dd1586d935133d37ad76fa353faf0a1021ff2fdedeedcc3498fff74bbb94",
+        "sha256_in_prefix": "b184dd1586d935133d37ad76fa353faf0a1021ff2fdedeedcc3498fff74bbb94",
+        "size_in_bytes": 38149
+      },
+      {
+        "_path": "lib/libsqlite3.so",
+        "path_type": "softlink",
+        "sha256": "71932eb5bf89092fbd2c900601fc9f24aa184d65038aaec2445fd11b1d923327",
+        "size_in_bytes": 1543808
+      },
+      {
+        "_path": "lib/libsqlite3.so.0",
+        "path_type": "softlink",
+        "sha256": "71932eb5bf89092fbd2c900601fc9f24aa184d65038aaec2445fd11b1d923327",
+        "size_in_bytes": 1543808
+      },
+      {
+        "_path": "lib/libsqlite3.so.0.8.6",
+        "path_type": "hardlink",
+        "sha256": "71932eb5bf89092fbd2c900601fc9f24aa184d65038aaec2445fd11b1d923327",
+        "sha256_in_prefix": "71932eb5bf89092fbd2c900601fc9f24aa184d65038aaec2445fd11b1d923327",
+        "size_in_bytes": 1543808
+      },
+      {
+        "_path": "lib/pkgconfig/sqlite3.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "/croot/sqlite_1714488253653/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_",
+        "sha256": "ff5d5bee02eae3cc17981bd9944e890b07f1202bcfea54be7412f2aaa3851426",
+        "sha256_in_prefix": "c88334c76f0c289725d8b27c16648297c7943a1aa07da8445ee38306d0d08386",
+        "size_in_bytes": 531
+      },
+      {
+        "_path": "share/man/man1/sqlite3.1",
+        "path_type": "hardlink",
+        "sha256": "161127f79ba85a39c43520a33174d817a2465159ddf034aaddd4a696fe133564",
+        "sha256_in_prefix": "161127f79ba85a39c43520a33174d817a2465159ddf034aaddd4a696fe133564",
+        "size_in_bytes": 4340
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "None",
+  "sha256": "74b61ac1a7df6777b759680047b9d67ba8ac1a921f56de42e09c99b5cc2f778a",
+  "size": 1285571,
+  "subdir": "linux-64",
+  "timestamp": 1714488309729,
+  "track_features": "",
+  "url": "https://repo.anaconda.com/pkgs/main/linux-64/sqlite-3.45.3-h5eee18b_0.conda",
+  "version": "3.45.3"
+}

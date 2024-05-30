@@ -1,0 +1,40 @@
+.\"
+.\" Original zdiff.1 for gzip: Jean-loup Gailly
+.\" Modifications for XZ Utils: Lasse Collin
+.\"
+.\" License: GNU GPLv2+
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZMORE 1 30.06.2013 Tukaani "Utilități XZ"
+.SH NUME
+xzmore, lzmore \- vizualizează fișierele (text) comprimate xz sau lzma
+.SH REZUMAT
+\fBxzmore\fP [\fIfișier...\fP]
+.br
+\fBlzmore\fP [\fIfișier...\fP]
+.SH DESCRIERE
+\fBxzmore\fP este un filtru care vă permite să examinați conținutul fișierelor
+text comprimate \fBxz\fP(1) sau \fBlzma\fP(1), câte o pagină pe ecran, pe un
+terminal.
+.PP
+Pentru a utiliza un paginator, altul decât paginatorul implicit \fBmore\fP,
+definiți variabila de mediu \fBPAGER\fP cu numele programului dorit.  Comanda
+\fBlzmore\fP este furnizată pentru compatibilitatea cu LZMA Utils.
+.TP 
+\fBe\fP sau \fBq\fP
+Când linia \-\-More\-\-(Fișierul următor: \fIfișier\fP)  este afișată, această
+comandă face ca \fBxzmore\fP să iasă.
+.TP 
+\fBs\fP
+Când linia \-\-More\-\-(Fișierul următor: \fIfișier\fP)  este afișată, această
+comandă face ca \fBxzmore\fP să omită următorul fișier și să continue.
+.PP
+Pentru lista comenzilor de la tastatură acceptate în timp ce vizualizați
+conținutul unui fișier, consultați manualul paginatorului pe care îl
+utilizați, de obicei \fBmore\fP(1).
+.SH "CONSULTAȚI ȘI"
+\fBmore\fP(1), \fBxz\fP(1), \fBxzless\fP(1), \fBzmore\fP(1)

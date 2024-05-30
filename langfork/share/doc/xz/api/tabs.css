@@ -1,0 +1,62 @@
+.tabs, .tabs2, .tabs3 {
+    background-image: var(--nav-gradient-image);
+    width: 100%;
+    z-index: 101;
+    font-size: var(--nav-font-size-level1);
+    font-family: var(--font-family-nav);
+    display: table;
+}
+
+.tabs2 {
+    font-size: var(--nav-font-size-level2);
+}
+.tabs3 {
+    font-size: var(--nav-font-size-level3);
+}
+
+.tablist {
+    margin: 0;
+    padding: 0;
+    display: block;
+}
+
+.tablist li {
+    float: left;
+    display: table-cell;
+    background-image: var(--nav-gradient-image);
+    line-height: 36px;
+    list-style: none;
+}
+
+.tablist a {
+    display: block;
+    padding: 0 20px;
+    font-weight: bold;
+    background-image:var(--nav-separator-image);
+    background-repeat:no-repeat;
+    background-position:right;
+    color: var(--nav-text-normal-color);
+    text-shadow: var(--nav-text-normal-shadow);
+    text-decoration: none;
+    outline: none;
+}
+
+.tabs3 .tablist a {
+    padding: 0 10px;
+}
+
+.tablist a:hover {
+    background-image: var(--nav-gradient-hover-image);
+    background-repeat:repeat-x;
+    color: var(--nav-text-hover-color);
+    text-shadow: var(--nav-text-hover-shadow);
+    text-decoration: none;
+}
+
+.tablist li.current a {
+    background-image: var(--nav-gradient-active-image);
+    background-repeat:repeat-x;
+    color: var(--nav-text-active-color);
+    text-shadow: var(--nav-text-active-shadow);
+}
+

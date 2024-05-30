@@ -1,0 +1,47 @@
+.\"
+.\" Authors: Andrew Dudman
+.\"          Lasse Collin
+.\"
+.\" This file has been put into the public domain.
+.\" You can do whatever you want with this file.
+.\"
+.\" (Note that this file is not based on gzip's zless.1.)
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZLESS 1 27.09.2010 Tukaani "Utilități XZ"
+.SH NUME
+xzless, lzless \- vizualizează fișierele (text) comprimate xz sau lzma
+.SH REZUMAT
+\fBxzless\fP [\fIfișier\fP...]
+.br
+\fBlzless\fP [\fIfișier\fP...]
+.SH DESCRIERE
+\fBxzless\fP este un filtru care afișează textul din fișierele comprimate pe un
+terminal.  Funcționează pentru fișiere comprimate cu \fBxz\fP(1) sau
+\fBlzma\fP(1).  Dacă nu sunt date \fIfișiere\fP, \fBxzless\fP citește de la intrarea
+standard.
+.PP
+\fBxzless\fP folosește \fBless\fP(1) pentru a\-și prezenta rezultatul.  Spre
+deosebire de \fBxzmore\fP, alegerea sa de pager nu poate fi modificată prin
+definirea unei variabile de mediu.  Comenzile se bazează atât pe \fBmore\fP(1)
+cât și pe \fBvi\fP(1) și permit mișcarea înainte și înapoi și căutarea.
+Consultați manualul \fBless\fP(1) pentru mai multe informații.
+.PP
+Comanda numită \fBlzless\fP este furnizată pentru compatibilitatea cu LZMA
+Utils.
+.SH "VARIABILE DE MEDIU"
+.TP 
+\fBLESSMETACHARS\fP
+O listă de caractere speciale pentru shell.  Definită de \fBxzless\fP, cu
+excepția cazului în care este deja definită în mediu.
+.TP 
+\fBLESSOPEN\fP
+Aceasta este definită în linia de comandă pentru a invoca instrumentul de
+decomprimare \fBxz\fP(1)  pentru preprocesarea fișierelor de intrare pentru
+\fBless\fP(1).
+.SH "CONSULTAȚI ȘI"
+\fBless\fP(1), \fBxz\fP(1), \fBxzmore\fP(1), \fBzless\fP(1)

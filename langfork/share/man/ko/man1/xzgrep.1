@@ -1,0 +1,57 @@
+.\"
+.\" Original zgrep.1 for gzip: Jean-loup Gailly
+.\"                            Charles Levert <charles@comm.polymtl.ca>
+.\"
+.\" Modifications for XZ Utils: Lasse Collin
+.\"
+.\" License: GNU GPLv2+
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZGREP 1 2022\-07\-19 Tukaani "XZ 유틸리티"
+.SH 이름
+xzgrep \- 정규 표현식을 활용하여 압축 파일을 검색합니다
+.SH 요약
+\fBxzgrep\fP [\fIgrep_options\fP] [\fB\-e\fP] \fI<패턴>\fP [\fI<파일>...\fP]
+.br
+\fBxzegrep\fP \&...
+.br
+\fBxzfgrep\fP \&...
+.br
+\fBlzgrep\fP \&...
+.br
+\fBlzegrep\fP \&...
+.br
+\fBlzfgrep\fP \&...
+.SH 설명
+\fBxzgrep\fP 명령은 \fBxz\fP(1), \fBlzma\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1),
+\fBzstd\fP(1) 로 압축을 했거나 하지 않은 \fI<파일>\fP에 대해 \fBgrep\fP(1) 명령을 실행합니다.  모든 지정
+옵션은 \fBgrep\fP(1)에 바로 전달합니다.
+.PP
+지정한 \fI<파일>\fP이 없다면, 필요에 따라 표준 입력 데이터 압축을 풀어내어 \fBgrep\fP(1)  에 전달합니다.  표준
+입력에서 읽을 떄, \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1), \fBzstd\fP(1) 압축 파일은 지원하지 않습니다.
+.PP
+\fBxzgrep\fP을 \fBxzegrep\fP 또는 \fBxzfgrep\fP 으로 실행하면 \fBgrep\fP(1)  대신  \fBgrep \-E\fP 또는
+\fBgrep \-F\fP 명령을 활용합니다.  LZMA 유틸리티와 하위 호환성을 가진 \fBlzgrep\fP, \fBlzegrep\fP,
+\fBlzfgrep\fP 명령에도 동일합니다.
+.SH "종료 상태"
+.TP 
+0
+최소한 하나 이상의 파일에서 하나 이상의 일치하는 결과를 찾았습니다.  오류가 없습니다.
+.TP 
+1
+어떤 입력 파일에서든 일치하는 내용이 없습니다.  오류가 없습니다.
+.TP 
+>1
+하나 이상의 오류가 나타납니다.  일치하는 항목을 찾아낼 지 여부는 알 수 없습니다.
+.SH 환경
+.TP 
+\fBGREP\fP
+\fBGREP\fP 환경 변수를 설정하면, \fBxzgrep\fP을 \fBgrep\fP(1), \fBgrep \-E\fP, \fBgrep \-F\fP 환경 변수 대신
+활용합니다.
+.SH "추가 참조"
+\fBgrep\fP(1), \fBxz\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1), \fBzstd\fP(1),
+\fBzgrep\fP(1)

@@ -1,0 +1,46 @@
+.\"
+.\" Authors: Andrew Dudman
+.\"          Lasse Collin
+.\"
+.\" This file has been put into the public domain.
+.\" You can do whatever you want with this file.
+.\"
+.\" (Note that this file is not based on gzip's zless.1.)
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZLESS 1 2010\-09\-27 Tukaani "XZ Utils"
+.SH NOME
+xzless, lzless \- visualiza arquivos (texto) compactados em xz ou lzma
+.SH SINOPSE
+\fBxzless\fP [\fIarquivo\fP...]
+.br
+\fBlzless\fP [\fIarquivo\fP...]
+.SH DESCRIÇÃO
+\fBxzless\fP é um filtro que exibe texto de arquivos compactados em um
+terminal. Ele funciona em arquivos compactados com \fBxz\fP(1) ou
+\fBlzma\fP(1). Se nenhum \fIfiles\fP for fornecido, \fBxzless\fP lê da entrada
+padrão.
+.PP
+\fBxzless\fP usa \fBless\fP(1) para apresentar sua saída. Ao contrário de
+\fBxzmore\fP, sua escolha de pager não pode ser alterada pela configuração de
+uma variável de ambiente. Os comandos são baseados em \fBmore\fP(1) e \fBvi\fP(1)
+e permitem movimento e busca para frente e para trás. Consulte o manual
+\fBless\fP(1) para obter mais informações.
+.PP
+O comando denominado \fBlzless\fP é fornecido para compatibilidade com versões
+anteriores do LZMA Utils.
+.SH AMBIENTE
+.TP 
+\fBLESSMETACHARS\fP
+Uma lista de caracteres especiais para o shell. Definido por \fBxzless\fP a
+menos que já esteja definido no ambiente.
+.TP 
+\fBLESSOPEN\fP
+Defina como uma linha de comando para invocar o descompactador \fBxz\fP(1) para
+pré\-processar os arquivos de entrada para \fBless\fP(1).
+.SH "VEJA TAMBÉM"
+\fBless\fP(1), \fBxz\fP(1), \fBxzmore\fP(1), \fBzless\fP(1)

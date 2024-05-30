@@ -1,0 +1,64 @@
+.\"
+.\" Original zgrep.1 for gzip: Jean-loup Gailly
+.\"                            Charles Levert <charles@comm.polymtl.ca>
+.\"
+.\" Modifications for XZ Utils: Lasse Collin
+.\"
+.\" License: GNU GPLv2+
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZGREP 1 "19 липня 2022 року" Tukaani "XZ Utils"
+.SH НАЗВА
+xzgrep — пошук у стиснених файлах формального виразу
+.SH "КОРОТКИЙ ОПИС"
+\fBxzgrep\fP [\fIпараметри_grep\fP] [\fB\-e\fP] \fIвзірець\fP [\fIфайл...\fP]
+.br
+\fBxzegrep\fP \&...
+.br
+\fBxzfgrep\fP \&...
+.br
+\fBlzgrep\fP \&...
+.br
+\fBlzegrep\fP \&...
+.br
+\fBlzfgrep\fP \&...
+.SH ОПИС
+\fBxzgrep\fP викликає \fBgrep\fP(1) для \fIфайлів\fP, які можуть бути розпакованими
+або запакованими за допомогою \fBxz\fP(1), \fBlzma\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1),
+\fBlzop\fP(1) або \fBzstd\fP(1). Усі вказані параметри передаються безпосередньо
+\fBgrep\fP(1).
+.PP
+Якщо не вказано жодного \fIфайла\fP, буде розпаковано дані зі стандартного
+джерела вхідних даних і передано ці дані \fBgrep\fP(1). Якщо дані буде
+прочитано зі стандартного джерела вхідних даних, підтримку стиснених файлів
+\fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1) та \fBzstd\fP(1) буде вимкнено.
+.PP
+Якщо \fBxzgrep\fP викликано як \fBxzegrep\fP або \fBxzfgrep\fP, буде використано
+\fBgrep \-E\fP або \fBgrep \-F\fP замість \fBgrep\fP(1). Те саме стосується програм із
+назвами \fBlzgrep\fP, \fBlzegrep\fP та \fBlzfgrep\fP, які створено для зворотної
+сумісності з LZMA Utils.
+.SH "СТАН ВИХОДУ"
+.TP 
+0
+В одному з файлів вхідних даних знайдено принаймні одну
+відповідність. Помилок не сталося.
+.TP 
+1
+У жодному з файлів вхідних даних не знайдено відповідника. Не сталося ніяких
+помилок.
+.TP 
+>1
+Сталася одна або декілька помилок. Невідомо, чи було знайдено відповідники
+критерію пошуку.
+.SH СЕРЕДОВИЩЕ
+.TP 
+\fBGREP\fP
+Якщо встановлено значення змінної середовища \fBGREP\fP, буде використано це
+значення \fBxzgrep\fP, замість \fBgrep\fP(1), \fBgrep \-E\fP або \fBgrep \-F\fP.
+.SH "ДИВ. ТАКОЖ"
+\fBgrep\fP(1), \fBxz\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1), \fBzstd\fP(1),
+\fBzgrep\fP(1)

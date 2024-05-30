@@ -1,0 +1,6 @@
+#!/home/niit/Documents/logger/LangFlow_fork/langflow/langfork/bin/python
+import sys
+from langflow.__main__ import main
+
+if __name__ == '__main__':
+    sys.exit(main())

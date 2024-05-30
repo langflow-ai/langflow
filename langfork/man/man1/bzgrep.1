@@ -1,0 +1,56 @@
+\"Shamelessly copied from zmore.1 by Philippe Troin <phil@fifi.org>
+\"for Debian GNU/Linux
+.TH BZGREP 1
+.SH NAME
+bzgrep, bzfgrep, bzegrep \- search possibly bzip2 compressed files for a regular expression
+.SH SYNOPSIS
+.B bzgrep
+[ grep_options ]
+.BI  [\ -e\ ] " pattern"
+.IR filename ".\|.\|."
+.br
+.B bzegrep
+[ egrep_options ]
+.BI  [\ -e\ ] " pattern"
+.IR filename ".\|.\|."
+.br
+.B bzfgrep
+[ fgrep_options ]
+.BI  [\ -e\ ] " pattern"
+.IR filename ".\|.\|."
+.SH DESCRIPTION
+.IR  Bzgrep
+is used to invoke the
+.I grep
+on bzip2-compressed files. All options specified are passed directly to
+.I grep.
+If no file is specified, then the standard input is decompressed
+if necessary and fed to grep.
+Otherwise the given files are uncompressed if necessary and fed to
+.I grep.
+.PP
+If
+.I bzgrep
+is invoked as
+.I bzegrep
+or
+.I bzfgrep
+then
+.I egrep
+or
+.I fgrep
+is used instead of
+.I grep.
+If the GREP environment variable is set,
+.I bzgrep
+uses it as the
+.I grep
+program to be invoked. For example:
+
+    for sh:  GREP=fgrep  bzgrep string files
+    for csh: (setenv GREP fgrep; bzgrep string files)
+.SH AUTHOR
+Charles Levert (charles@comm.polymtl.ca). Adapted to bzip2 by Philippe
+Troin <phil@fifi.org> for Debian GNU/Linux.
+.SH "SEE ALSO"
+grep(1), egrep(1), fgrep(1), bzdiff(1), bzmore(1), bzless(1), bzip2(1)

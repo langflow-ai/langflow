@@ -1,0 +1,45 @@
+.\"
+.\" Original zdiff.1 for gzip: Jean-loup Gailly
+.\"
+.\" Modifications for XZ Utils: Lasse Collin
+.\"                             Andrew Dudman
+.\"
+.\" License: GNU GPLv2+
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZDIFF 1 "4. Juni 2021" Tukaani XZ\-Dienstprogramme
+.SH BEZEICHNUNG
+xzcmp, xzdiff, lzcmp, lzdiff \- komprimierte Dateien vergleichen
+.SH ÜBERSICHT
+\fBxzcmp\fP [\fIcmp\-Optionen\fP] \fIDatei1\fP [\fIDatei2\fP]
+.br
+\fBxzdiff\fP [\fIdiff\-Optionen\fP] \fIDatei1\fP [\fIDatei2\fP]
+.br
+\fBlzcmp\fP [\fIcmp\-Optionen\fP] \fIDatei1\fP [\fIDatei2\fP]
+.br
+\fBlzdiff\fP [\fIdiff\-Optionen\fP] \fIDatei1\fP [\fIDatei2\fP]
+.SH BESCHREIBUNG
+Die Dienstprogramme \fBxzcmp\fP und \fBxzdiff\fP führen die Programme \fBcmp\fP(1)
+beziehungsweise \fBdiff\fP(1) mit Dateien aus, die mittels \fBxz\fP(1),
+\fBlzma\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1),  \fBlzop\fP(1) oder \fBzstd\fP komprimiert
+wurden. Alle angegebenen Optionen werden direkt an \fBcmp\fP(1) oder \fBdiff\fP(1)
+übergeben. Wird nur eine Datei angegeben, wird diese \fIDatei1\fP (die eine
+Endung entsprechend eines der unterstützten Kompressionsformate haben muss)
+mit der \fIDatei1\fP verglichen, von der die Kompressionsformat\-Endung entfernt
+wird. Werden zwei Dateien angegeben, dann werden deren Inhalte (falls nötig,
+unkomprimiert) an \fBcmp\fP(1) oder \fBdiff\fP(1) weitergeleitet. Der Exit\-Status
+von \fBcmp\fP(1) oder \fBdiff\fP(1) wird dabei bewahrt (sofern kein
+Dekompressionsfehler auftrat; in diesem Fall ist der Exit\-Status 2).
+.PP
+Die Namen \fBlzcmp\fP und \fBlzdiff\fP dienen der Abwärtskompatibilität zu den
+LZMA\-Dienstprogrammen.
+.SH "SIEHE AUCH"
+\fBcmp\fP(1), \fBdiff\fP(1), \fBxz\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1),
+\fBzstd\fP(1), \fBzdiff\fP(1)
+.SH FEHLER
+Die Meldungen der Programme \fBcmp\fP(1) oder \fBdiff\fP(1) können auf temporäre
+Dateinamen verweisen anstatt auf die tatsächlich angegebenen Dateinamen.

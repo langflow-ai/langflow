@@ -1,0 +1,215 @@
+#!/bin/sh
+
+# Copyright (C) 1998, 2002, 2006, 2007 Free Software Foundation
+# Copyright (C) 1993 Jean-loup Gailly
+
+# Modified for XZ Utils by Andrew Dudman and Lasse Collin.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+
+#SET_PATH - This line is a placeholder to ease patching this script.
+
+# Instead of unsetting XZ_OPT, just make sure that xz will use file format
+# autodetection. This way memory usage limit and thread limit can be
+# specified via XZ_OPT. With gzip, bzip2, and lzop it's OK to just unset the
+# environment variables.
+xz='xz --format=auto'
+unset GZIP BZIP BZIP2 LZOP
+
+case ${0##*/} in
+  *cmp*) prog=xzcmp; cmp=${CMP:-cmp};;
+  *)     prog=xzdiff; cmp=${DIFF:-diff};;
+esac
+
+version="$prog (XZ Utils) 5.4.6"
+
+usage="Usage: ${0##*/} [OPTION]... FILE1 [FILE2]
+Compare FILE1 to FILE2, using their uncompressed contents if they are
+compressed.  If FILE2 is omitted, then the files compared are FILE1 and
+FILE1 from which the compression format suffix has been stripped.
+
+Do comparisons like '$cmp' does.  OPTIONs are the same as for '$cmp'.
+
+Report bugs to <xz@tukaani.org>."
+
+# sed script to escape all ' for the shell, and then (to handle trailing
+# newlines correctly) turn trailing X on last line into '.
+escape='
+  s/'\''/'\''\\'\'''\''/g
+  $s/X$/'\''/
+'
+
+while :; do
+  case $1 in
+    --h*) printf '%s\n' "$usage" || exit 2; exit;;
+    --v*) printf '%s\n' "$version" || exit 2; exit;;
+    --) shift; break;;
+    -*\'*) cmp="$cmp '"`printf '%sX\n' "$1" | sed "$escape"`;;
+    -?*) cmp="$cmp '$1'";;
+    *) break;;
+  esac
+  shift
+done
+cmp="$cmp --"
+
+for file; do
+  test "X$file" = X- || <"$file" || exit 2
+done
+
+# xz needs -qQ to ignore warnings like unsupported check type.
+xz1="$xz -qQ"
+xz2="$xz -qQ"
+xz_status=0
+exec 3>&1
+
+if test $# -eq 1; then
+  case $1 in
+    *[-.]xz | *[-.]lzma | *[-.]lz | *.t[lx]z)
+      ;;
+    *[-.]bz2 | *.tbz | *.tbz2)
+      xz1=bzip2;;
+    *[-.][zZ] | *_z | *[-.]gz | *.t[ag]z)
+      xz1=gzip;;
+    *[-.]lzo | *.tzo)
+      xz1=lzop;;
+    *[-.]zst | *.tzst)
+      xz1='zstd -q';;
+    *)
+      printf '%s\n' "$0: $1: Unknown compressed file name suffix" >&2
+      exit 2;;
+  esac
+  case $1 in
+    *[-.][zZ] | *_z | *[-.][gx]z | *[-.]bz2 | *[-.]lzma | *[-.]lz | *[-.]lzo | *[-.]zst)
+      FILE=`expr "X$1" : 'X\(.*\)[-.][abglmostxzZ2]*$'`;;
+    *.t[abglx]z)
+      FILE=`expr "X$1" : 'X\(.*[-.]t\)[abglx]z$'`ar;;
+    *.tbz2)
+      FILE=`expr "X$1" : 'X\(.*[-.]t\)bz2$'`ar;;
+    *.tzo)
+      FILE=`expr "X$1" : 'X\(.*[-.]t\)zo$'`ar;;
+    *.tzst)
+      FILE=`expr "X$1" : 'X\(.*[-.]t\)zst$'`ar;;
+  esac
+  xz_status=$(
+    exec 4>&1
+    ($xz1 -cd -- "$1" 4>&-; echo $? >&4) 3>&- | eval "$cmp" - '"$FILE"' >&3
+  )
+elif test $# -eq 2; then
+  case $1 in
+    *[-.]bz2 | *.tbz | *.tbz2) xz1=bzip2;;
+    *[-.][zZ] | *_z | *[-.]gz | *.t[ag]z) xz1=gzip;;
+    *[-.]lzo | *.tzo) xz1=lzop;;
+    *[-.]zst | *.tzst) xz1='zstd -q';;
+  esac
+  case $2 in
+    *[-.]bz2 | *.tbz | *.tbz2) xz2=bzip2;;
+    *[-.][zZ] | *_z | *[-.]gz | *.t[ag]z) xz2=gzip;;
+    *[-.]lzo | *.tzo) xz2=lzop;;
+    *[-.]zst | *.tzst) xz2='zstd -q';;
+  esac
+  case $1 in
+    *[-.][zZ] | *_z | *[-.][gx]z | *[-.]bz2 | *[-.]lzma | *[-.]lz | *.t[abglx]z | *.tbz2 | *[-.]lzo | *.tzo | *[-.]zst | *.tzst | -)
+      case "$2" in
+        *[-.][zZ] | *_z | *[-.][gx]z | *[-.]bz2 | *[-.]lzma | *[-.]lz | *.t[abglx]z | *.tbz2 | *[-.]lzo | *.tzo | *[-.]zst | *.tzst | -)
+          if test "$1$2" = --; then
+            xz_status=$(
+              exec 4>&1
+              ($xz1 -cdf - 4>&-; echo $? >&4) 3>&- |
+                eval "$cmp" - - >&3
+            )
+          elif # Reject Solaris 8's buggy /bin/bash 2.03.
+              echo X | (echo X | eval "$cmp" /dev/fd/5 - >/dev/null 2>&1) 5<&0; then
+            # NOTE: xz_status will contain two numbers.
+            xz_status=$(
+              exec 4>&1
+              ($xz1 -cdf -- "$1" 4>&-; echo $? >&4) 3>&- |
+                ( ($xz2 -cdf -- "$2" 4>&-; echo $? >&4) 3>&- 5<&- </dev/null |
+                eval "$cmp" /dev/fd/5 - >&3) 5<&0
+            )
+          else
+            F=`expr "/$2" : '.*/\(.*\)[-.][ablmotxz2]*$'` || F=$prog
+            tmp=
+            trap '
+              test -n "$tmp" && rm -rf "$tmp"
+              (exit 2); exit 2
+            ' HUP INT PIPE TERM 0
+            if type mktemp >/dev/null 2>&1; then
+              # Note that FreeBSD's mktemp isn't fully compatible with
+              # the implementations from mktemp.org and GNU coreutils.
+              # It is important that the -t argument is the last argument
+              # and that no "--" is used between -t and the template argument.
+              # This way this command works on all implementations.
+              tmp=`mktemp -d -t "$prog.XXXXXXXXXX"` || exit 2
+            else
+              # Fallback code if mktemp is missing. This isn't as
+              # robust as using mktemp since this doesn't try with
+              # different file names in case of a file name conflict.
+              #
+              # There's no need to save the original umask since
+              # we don't create any non-temp files. Note that using
+              # mkdir -m 0077 isn't secure since some mkdir implementations
+              # create the dir with the default umask and chmod the
+              # the dir afterwards.
+              umask 0077
+              mkdir -- "${TMPDIR-/tmp}/$prog.$$" || exit 2
+              tmp="${TMPDIR-/tmp}/$prog.$$"
+            fi
+            $xz2 -cdf -- "$2" > "$tmp/$F" || exit 2
+            xz_status=$(
+              exec 4>&1
+              ($xz1 -cdf -- "$1" 4>&-; echo $? >&4) 3>&- |
+                eval "$cmp" - '"$tmp/$F"' >&3
+            )
+            cmp_status=$?
+            rm -rf "$tmp" || xz_status=$?
+            trap - HUP INT PIPE TERM 0
+            (exit $cmp_status)
+          fi;;
+      *)
+        xz_status=$(
+          exec 4>&1
+          ($xz1 -cdf -- "$1" 4>&-; echo $? >&4) 3>&- |
+            eval "$cmp" - '"$2"' >&3
+        );;
+    esac;;
+  *)
+    case "$2" in
+      *[-.][zZ] | *_z | *[-.][gx]z | *[-.]bz2 | *[-.]lzma | *[-.]lz | *.t[abglx]z | *.tbz2 | *[-.]lzo | *.tzo | *[-.]zst | *.tzst | -)
+        xz_status=$(
+          exec 4>&1
+          ($xz2 -cdf -- "$2" 4>&-; echo $? >&4) 3>&- |
+            eval "$cmp" '"$1"' - >&3
+         );;
+      *)
+        eval "$cmp" '"$1"' '"$2"';;
+    esac;;
+  esac
+else
+  printf '%s\n' "$0: Invalid number of operands; try \`${0##*/} --help' for help" >&2
+  exit 2
+fi
+
+cmp_status=$?
+for num in $xz_status ; do
+  # 0 from decompressor means successful decompression. SIGPIPE from
+  # decompressor is possible when diff or cmp exits before the whole file
+  # has been decompressed. In that case we want to retain the exit status
+  # from diff or cmp. Note that using "trap '' PIPE" is not possible
+  # because gzip changes its behavior (including exit status) if SIGPIPE
+  # is ignored.
+  test "$num" -eq 0 && continue
+  test "$num" -ge 128 \
+      && test "$(kill -l "$num" 2> /dev/null)" = "PIPE" \
+      && continue
+  exit 2
+done
+exit $cmp_status

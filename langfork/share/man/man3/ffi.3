@@ -1,0 +1,41 @@
+.Dd February 15, 2008
+.Dt FFI 3
+.Sh NAME
+.Nm FFI
+.Nd Foreign Function Interface
+.Sh LIBRARY
+libffi, -lffi
+.Sh SYNOPSIS
+.In ffi.h
+.Ft ffi_status
+.Fo ffi_prep_cif
+.Fa "ffi_cif *cif"
+.Fa "ffi_abi abi"
+.Fa "unsigned int nargs"
+.Fa "ffi_type *rtype"
+.Fa "ffi_type **atypes"
+.Fc
+.Ft void
+.Fo ffi_prep_cif_var
+.Fa "ffi_cif *cif"
+.Fa "ffi_abi abi"
+.Fa "unsigned int nfixedargs"
+.Fa "unsigned int ntotalargs"
+.Fa "ffi_type *rtype"
+.Fa "ffi_type **atypes"
+.Fc
+.Ft void
+.Fo ffi_call
+.Fa "ffi_cif *cif"
+.Fa "void (*fn)(void)"
+.Fa "void *rvalue"
+.Fa "void **avalue"
+.Fc
+.Sh DESCRIPTION
+The foreign function interface provides a mechanism by which a function can
+generate a call to another function at runtime without requiring knowledge of
+the called function's interface at compile time.
+.Sh SEE ALSO
+.Xr ffi_prep_cif 3 ,
+.Xr ffi_prep_cif_var 3 ,
+.Xr ffi_call 3

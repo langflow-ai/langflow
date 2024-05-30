@@ -1,0 +1,5 @@
+#!/home/niit/Documents/logger/LangFlow_fork/langflow/langfork/bin/python3.10
+
+import pydoc
+if __name__ == '__main__':
+    pydoc.cli()

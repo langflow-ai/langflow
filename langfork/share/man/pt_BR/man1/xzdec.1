@@ -1,0 +1,85 @@
+.\"
+.\" Author: Lasse Collin
+.\"
+.\" This file has been put into the public domain.
+.\" You can do whatever you want with this file.
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZDEC 1 2024\-01\-19 Tukaani "XZ Utils"
+.SH NOME
+xzdec, lzmadec \- Pequenos descompactadores .xz e .lzma
+.SH SINOPSE
+\fBxzdec\fP [\fIopção...\fP] [\fIarquivo...\fP]
+.br
+\fBlzmadec\fP [\fIopção...\fP] [\fIarquivo...\fP]
+.SH DESCRIÇÃO
+\fBxzdec\fP é uma ferramenta de descompactação baseada em liblzma somente para
+arquivos \fB.xz\fP (e somente \fB.xz\fP). \fBxzdec\fP destina\-se a funcionar como um
+substituto para \fBxz\fP(1) nas situações mais comuns em que um script foi
+escrito para usar \fBxz \-\-decompress \-\-stdout\fP (e possivelmente alguns outras
+opções comumente usadas) para descompactar arquivos \fB.xz\fP. \fBlzmadec\fP é
+idêntico a \fBxzdec\fP exceto que \fBlzmadec\fP tem suporte a arquivos \fB.lzma\fP em
+vez de arquivos \fB.xz\fP.
+.PP
+Para reduzir o tamanho do executável, \fBxzdec\fP não tem suporte ao uso de
+várias threads ou a localização, e não lê opções de variáveis de ambiente
+\fBXZ_DEFAULTS\fP e \fBXZ_OPT\fP. \fBxzdec\fP não tem suporte à exibição de
+informações de progresso intermediárias: enviar \fBSIGINFO\fP para \fBxzdec\fP não
+faz nada, mas enviar \fBSIGUSR1\fP encerra o processo em vez de exibir
+informações de progresso.
+.SH OPÇÕES
+.TP 
+\fB\-d\fP, \fB\-\-decompress\fP, \fB\-\-uncompress\fP
+Ignorada para compatibilidade \fBxz\fP(1). \fBxzdec\fP tem suporte a apenas
+descompactação.
+.TP 
+\fB\-k\fP, \fB\-\-keep\fP
+Ignorada para compatibilidade \fBxz\fP(1). \fBxzdec\fP nunca cria ou remove
+quaisquer arquivos.
+.TP 
+\fB\-c\fP, \fB\-\-stdout\fP, \fB\-\-to\-stdout\fP
+Ignorada para compatibilidade \fBxz\fP(1). \fBxzdec\fP sempre grava os dados
+descompactados para a saída padrão.
+.TP 
+\fB\-q\fP, \fB\-\-quiet\fP
+Especificar isso uma vez não faz nada, pois \fBxzdec\fP nunca exibe nenhum
+aviso ou notificação. Especifique isso duas vezes para suprimir erros.
+.TP 
+\fB\-Q\fP, \fB\-\-no\-warn\fP
+Ignorada para compatibilidade \fBxz\fP(1). \fBxzdec\fP nunca usa o status de saída
+2.
+.TP 
+\fB\-h\fP, \fB\-\-help\fP
+Exibe uma mensagem de ajuda e sai com sucesso.
+.TP 
+\fB\-V\fP, \fB\-\-version\fP
+Mostra o número da versão do \fBxzdec\fP e liblzma.
+.SH "STATUS DE SAÍDA"
+.TP 
+\fB0\fP
+Correu tudo bem.
+.TP 
+\fB1\fP
+Ocorreu um erro.
+.PP
+\fBxzdec\fP não possui nenhuma mensagem de aviso como o \fBxz\fP(1), portanto, o
+status de saída 2 não é usado por \fBxzdec\fP.
+.SH NOTAS
+Use \fBxz\fP(1) em vez de \fBxzdec\fP ou \fBlzmadec\fP para uso diário
+normal. \fBxzdec\fP ou \fBlzmadec\fP destinam\-se apenas a situações em que é
+importante ter um descompactador menor do que o \fBxz\fP(1) completo.
+.PP
+\fBxzdec\fP e \fBlzmadec\fP não são realmente tão pequenos. O tamanho pode ser
+reduzido ainda mais eliminando recursos do liblzma no tempo de compilação,
+mas isso geralmente não deve ser feito para executáveis distribuídos em
+distribuições típicas de sistemas operacionais não embarcados. Se você
+precisa de um descompactador \fB.xz\fP realmente pequeno, considere usar o XZ
+Embedded.
+.SH "VEJA TAMBÉM"
+\fBxz\fP(1)
+.PP
+XZ Embedded: <https://xz.tukaani.org/xz\-embedded/>

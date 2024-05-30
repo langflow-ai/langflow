@@ -1,0 +1,152 @@
+.\"Shamelessly copied from zmore.1 by Philippe Troin <phil@fifi.org>
+.\"for Debian GNU/Linux
+.TH BZMORE 1
+.SH NAME
+bzmore, bzless \- file perusal filter for crt viewing of bzip2 compressed text
+.SH SYNOPSIS
+.B bzmore
+[ name ...  ]
+.br
+.B bzless
+[ name ...  ]
+.SH NOTE
+In the following description,
+.I bzless
+and
+.I less
+can be used interchangeably with
+.I bzmore
+and
+.I more.
+.SH DESCRIPTION
+.I  Bzmore
+is a filter which allows examination of compressed or plain text files
+one screenful at a time on a soft-copy terminal.
+.I bzmore
+works on files compressed with
+.I bzip2
+and also on uncompressed files.
+If a file does not exist,
+.I bzmore
+looks for a file of the same name with the addition of a .bz2 suffix.
+.PP
+.I Bzmore
+normally pauses after each screenful, printing --More--
+at the bottom of the screen.
+If the user then types a carriage return, one more line is displayed.
+If the user hits a space,
+another screenful is displayed.  Other possibilities are enumerated later.
+.PP
+.I Bzmore
+looks in the file
+.I /etc/termcap
+to determine terminal characteristics,
+and to determine the default window size.
+On a terminal capable of displaying 24 lines,
+the default window size is 22 lines.
+Other sequences which may be typed when
+.I bzmore
+pauses, and their effects, are as follows (\fIi\fP is an optional integer
+argument, defaulting to 1) :
+.PP
+.IP \fIi\|\fP<space>
+display
+.I i
+more lines, (or another screenful if no argument is given)
+.PP
+.IP ^D
+display 11 more lines (a ``scroll'').
+If
+.I i
+is given, then the scroll size is set to \fIi\|\fP.
+.PP
+.IP d
+same as ^D (control-D)
+.PP
+.IP \fIi\|\fPz
+same as typing a space except that \fIi\|\fP, if present, becomes the new
+window size.  Note that the window size reverts back to the default at the
+end of the current file.
+.PP
+.IP \fIi\|\fPs
+skip \fIi\|\fP lines and print a screenful of lines
+.PP
+.IP \fIi\|\fPf
+skip \fIi\fP screenfuls and print a screenful of lines
+.PP
+.IP "q or Q"
+quit reading the current file; go on to the next (if any)
+.PP
+.IP "e or q"
+When the prompt --More--(Next file: 
+.IR file )
+is printed, this command causes bzmore to exit.
+.PP
+.IP s
+When the prompt --More--(Next file: 
+.IR file )
+is printed, this command causes bzmore to skip the next file and continue.
+.PP 
+.IP =
+Display the current line number.
+.PP
+.IP \fIi\|\fP/expr
+search for the \fIi\|\fP-th occurrence of the regular expression \fIexpr.\fP
+If the pattern is not found,
+.I bzmore
+goes on to the next file (if any).
+Otherwise, a screenful is displayed, starting two lines before the place
+where the expression was found.
+The user's erase and kill characters may be used to edit the regular
+expression.
+Erasing back past the first column cancels the search command.
+.PP
+.IP \fIi\|\fPn
+search for the \fIi\|\fP-th occurrence of the last regular expression entered.
+.PP
+.IP !command
+invoke a shell with \fIcommand\|\fP. 
+The character `!' in "command" are replaced with the
+previous shell command.  The sequence "\\!" is replaced by "!".
+.PP
+.IP ":q or :Q"
+quit reading the current file; go on to the next (if any)
+(same as q or Q).
+.PP
+.IP .
+(dot) repeat the previous command.
+.PP
+The commands take effect immediately, i.e., it is not necessary to
+type a carriage return.
+Up to the time when the command character itself is given,
+the user may hit the line kill character to cancel the numerical
+argument being formed.
+In addition, the user may hit the erase character to redisplay the
+--More-- message.
+.PP
+At any time when output is being sent to the terminal, the user can
+hit the quit key (normally control\-\\).
+.I Bzmore
+will stop sending output, and will display the usual --More--
+prompt.
+The user may then enter one of the above commands in the normal manner.
+Unfortunately, some output is lost when this is done, due to the
+fact that any characters waiting in the terminal's output queue
+are flushed when the quit signal occurs.
+.PP
+The terminal is set to
+.I noecho
+mode by this program so that the output can be continuous.
+What you type will thus not show on your terminal, except for the / and !
+commands.
+.PP
+If the standard output is not a teletype, then
+.I bzmore
+acts just like
+.I bzcat,
+except that a header is printed before each file.
+.SH FILES
+.DT
+/etc/termcap		Terminal data base
+.SH "SEE ALSO"
+more(1), less(1), bzip2(1), bzdiff(1), bzgrep(1)

@@ -1,0 +1,246 @@
+{
+  "build": "h5eee18b_0",
+  "build_number": 0,
+  "channel": "https://repo.anaconda.com/pkgs/main/linux-64",
+  "constrains": [],
+  "depends": [
+    "libgcc-ng >=11.2.0",
+    "ncurses >=6.3,<7.0a0"
+  ],
+  "extracted_package_dir": "/home/niit/anaconda3/pkgs/readline-8.2-h5eee18b_0",
+  "features": "",
+  "files": [
+    "include/readline/chardefs.h",
+    "include/readline/history.h",
+    "include/readline/keymaps.h",
+    "include/readline/readline.h",
+    "include/readline/rlconf.h",
+    "include/readline/rlstdc.h",
+    "include/readline/rltypedefs.h",
+    "include/readline/tilde.h",
+    "lib/libhistory.a",
+    "lib/libhistory.so",
+    "lib/libhistory.so.8",
+    "lib/libhistory.so.8.2",
+    "lib/libreadline.a",
+    "lib/libreadline.so",
+    "lib/libreadline.so.8",
+    "lib/libreadline.so.8.2",
+    "lib/pkgconfig/history.pc",
+    "lib/pkgconfig/readline.pc",
+    "share/doc/readline/CHANGES",
+    "share/doc/readline/INSTALL",
+    "share/doc/readline/README",
+    "share/info/history.info",
+    "share/info/readline.info",
+    "share/info/rluserman.info",
+    "share/man/man3/history.3",
+    "share/man/man3/readline.3"
+  ],
+  "fn": "readline-8.2-h5eee18b_0.conda",
+  "legacy_bz2_md5": "960bf00d81e7bbdeff2c7d01ed78eaeb",
+  "license": "GPL-3.0-only",
+  "license_family": "GPL",
+  "link": {
+    "source": "/home/niit/anaconda3/pkgs/readline-8.2-h5eee18b_0",
+    "type": 1
+  },
+  "md5": "be42180685cce6e6b0329201d9f48efb",
+  "name": "readline",
+  "package_tarball_full_path": "/home/niit/anaconda3/pkgs/readline-8.2-h5eee18b_0.conda",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "include/readline/chardefs.h",
+        "path_type": "hardlink",
+        "sha256": "928fdcd4204b361a8a922085f12497181606981a70ae52c67d39118ae5fab640",
+        "sha256_in_prefix": "928fdcd4204b361a8a922085f12497181606981a70ae52c67d39118ae5fab640",
+        "size_in_bytes": 4694
+      },
+      {
+        "_path": "include/readline/history.h",
+        "path_type": "hardlink",
+        "sha256": "f33fed4d7598d513fdf223eea7853fde5452da0d7fd5b951865aef5553caf02b",
+        "sha256_in_prefix": "f33fed4d7598d513fdf223eea7853fde5452da0d7fd5b951865aef5553caf02b",
+        "size_in_bytes": 10663
+      },
+      {
+        "_path": "include/readline/keymaps.h",
+        "path_type": "hardlink",
+        "sha256": "4c42c3c5d2bb3aba10c7e7f27dd79841f30857fde61c6c85bf67f4f2ac1befc4",
+        "sha256_in_prefix": "4c42c3c5d2bb3aba10c7e7f27dd79841f30857fde61c6c85bf67f4f2ac1befc4",
+        "size_in_bytes": 3201
+      },
+      {
+        "_path": "include/readline/readline.h",
+        "path_type": "hardlink",
+        "sha256": "5c4d149f5609cd5771f2d1bd4c1557e7b7822cf4dbd415041490cee2c018b58d",
+        "sha256_in_prefix": "5c4d149f5609cd5771f2d1bd4c1557e7b7822cf4dbd415041490cee2c018b58d",
+        "size_in_bytes": 38147
+      },
+      {
+        "_path": "include/readline/rlconf.h",
+        "path_type": "hardlink",
+        "sha256": "b599f6bc28df4c0cb0143c5747233aeadc191b3c4f8bb9128509c4c68e946da6",
+        "sha256_in_prefix": "b599f6bc28df4c0cb0143c5747233aeadc191b3c4f8bb9128509c4c68e946da6",
+        "size_in_bytes": 2829
+      },
+      {
+        "_path": "include/readline/rlstdc.h",
+        "path_type": "hardlink",
+        "sha256": "77c9d0203d571a576ec2aabbfbdfbdd18802d6fcfe6e890d33fbab3536f3317a",
+        "sha256_in_prefix": "77c9d0203d571a576ec2aabbfbdfbdd18802d6fcfe6e890d33fbab3536f3317a",
+        "size_in_bytes": 1835
+      },
+      {
+        "_path": "include/readline/rltypedefs.h",
+        "path_type": "hardlink",
+        "sha256": "ed7e4063f9b73fa0071b2e202c4f939189fc883917aa931c5192d3652fac0914",
+        "sha256_in_prefix": "ed7e4063f9b73fa0071b2e202c4f939189fc883917aa931c5192d3652fac0914",
+        "size_in_bytes": 3021
+      },
+      {
+        "_path": "include/readline/tilde.h",
+        "path_type": "hardlink",
+        "sha256": "76ea2566b9045468f1ae1a0a97e62d765edcd642a2d1f12a62a6af1b4dfe9729",
+        "sha256_in_prefix": "76ea2566b9045468f1ae1a0a97e62d765edcd642a2d1f12a62a6af1b4dfe9729",
+        "size_in_bytes": 2652
+      },
+      {
+        "_path": "lib/libhistory.a",
+        "path_type": "hardlink",
+        "sha256": "567fc4fab7b1b7393e5c62e307301256d390d2032be9c259138681d2f7ae7461",
+        "sha256_in_prefix": "567fc4fab7b1b7393e5c62e307301256d390d2032be9c259138681d2f7ae7461",
+        "size_in_bytes": 78892
+      },
+      {
+        "_path": "lib/libhistory.so",
+        "path_type": "softlink",
+        "sha256": "d9fce146d1cb84fbdddb3843f01a28ff4705b3a45c7073cb2c318f24b6ee0ce6",
+        "size_in_bytes": 58520
+      },
+      {
+        "_path": "lib/libhistory.so.8",
+        "path_type": "softlink",
+        "sha256": "d9fce146d1cb84fbdddb3843f01a28ff4705b3a45c7073cb2c318f24b6ee0ce6",
+        "size_in_bytes": 58520
+      },
+      {
+        "_path": "lib/libhistory.so.8.2",
+        "path_type": "hardlink",
+        "sha256": "d9fce146d1cb84fbdddb3843f01a28ff4705b3a45c7073cb2c318f24b6ee0ce6",
+        "sha256_in_prefix": "d9fce146d1cb84fbdddb3843f01a28ff4705b3a45c7073cb2c318f24b6ee0ce6",
+        "size_in_bytes": 58520
+      },
+      {
+        "_path": "lib/libreadline.a",
+        "path_type": "hardlink",
+        "sha256": "34edb0aaf24f86fa37e869bb46389534179d560e141a744b15d854497148663a",
+        "sha256_in_prefix": "34edb0aaf24f86fa37e869bb46389534179d560e141a744b15d854497148663a",
+        "size_in_bytes": 749782
+      },
+      {
+        "_path": "lib/libreadline.so",
+        "path_type": "softlink",
+        "sha256": "0b6a9d66a73115c872272bb479c8f29df1bf7d9b16e5913e083d64b7753ce1c6",
+        "size_in_bytes": 411464
+      },
+      {
+        "_path": "lib/libreadline.so.8",
+        "path_type": "softlink",
+        "sha256": "0b6a9d66a73115c872272bb479c8f29df1bf7d9b16e5913e083d64b7753ce1c6",
+        "size_in_bytes": 411464
+      },
+      {
+        "_path": "lib/libreadline.so.8.2",
+        "path_type": "hardlink",
+        "sha256": "0b6a9d66a73115c872272bb479c8f29df1bf7d9b16e5913e083d64b7753ce1c6",
+        "sha256_in_prefix": "0b6a9d66a73115c872272bb479c8f29df1bf7d9b16e5913e083d64b7753ce1c6",
+        "size_in_bytes": 411464
+      },
+      {
+        "_path": "lib/pkgconfig/history.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "/croot/readline_1666648016169/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehol",
+        "sha256": "450ab807f966299a9f71160deed14aa40e56a56de9595f11db4e640557a57a9b",
+        "sha256_in_prefix": "2255d76320aa95b6c40cf3baf4476117b061da347234e70275f2c91d572cc74d",
+        "size_in_bytes": 548
+      },
+      {
+        "_path": "lib/pkgconfig/readline.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "/croot/readline_1666648016169/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehol",
+        "sha256": "72a89f8c5c4eca0ee90e99bd903a4e967b599ced760e528ec8beeacd226f8517",
+        "sha256_in_prefix": "2c2096e45c8cf5533e25f32028f4c1fd4b8eb375310a68eb2d22c1f501166f23",
+        "size_in_bytes": 562
+      },
+      {
+        "_path": "share/doc/readline/CHANGES",
+        "path_type": "hardlink",
+        "sha256": "f526ca246cec4c4fa535a792c04735fb7b06d318d9b4f61f6a0f64152fa39a43",
+        "sha256_in_prefix": "f526ca246cec4c4fa535a792c04735fb7b06d318d9b4f61f6a0f64152fa39a43",
+        "size_in_bytes": 81365
+      },
+      {
+        "_path": "share/doc/readline/INSTALL",
+        "path_type": "hardlink",
+        "sha256": "b7bbbc2908a61f0594277fb03b1a11c18f9ffbd8737a804f9a886454d0894967",
+        "sha256_in_prefix": "b7bbbc2908a61f0594277fb03b1a11c18f9ffbd8737a804f9a886454d0894967",
+        "size_in_bytes": 13357
+      },
+      {
+        "_path": "share/doc/readline/README",
+        "path_type": "hardlink",
+        "sha256": "680abe0d4e5866d49304863c1b5ef6f96055942da178f061a41a0dce9e3d89a9",
+        "sha256_in_prefix": "680abe0d4e5866d49304863c1b5ef6f96055942da178f061a41a0dce9e3d89a9",
+        "size_in_bytes": 8029
+      },
+      {
+        "_path": "share/info/history.info",
+        "path_type": "hardlink",
+        "sha256": "8b5ada1697abc91d4ebd07b70c383e34acab67d33c84855ec11f3a5e44a0711f",
+        "sha256_in_prefix": "8b5ada1697abc91d4ebd07b70c383e34acab67d33c84855ec11f3a5e44a0711f",
+        "size_in_bytes": 63497
+      },
+      {
+        "_path": "share/info/readline.info",
+        "path_type": "hardlink",
+        "sha256": "fe2b54b34a356a3fe82aa61f76c43e3a8a1ebe9173ba8b5640fe091b9331a5bc",
+        "sha256_in_prefix": "fe2b54b34a356a3fe82aa61f76c43e3a8a1ebe9173ba8b5640fe091b9331a5bc",
+        "size_in_bytes": 243177
+      },
+      {
+        "_path": "share/info/rluserman.info",
+        "path_type": "hardlink",
+        "sha256": "6d64db954627199edad6bf6cea65a026455a9dd72a342c3ce7e071d482ab4bf0",
+        "sha256_in_prefix": "6d64db954627199edad6bf6cea65a026455a9dd72a342c3ce7e071d482ab4bf0",
+        "size_in_bytes": 93405
+      },
+      {
+        "_path": "share/man/man3/history.3",
+        "path_type": "hardlink",
+        "sha256": "a8a01fea0adaac18e6aca4c71004d5dc61cdff363df44b76e2dc54ec721bafb8",
+        "sha256_in_prefix": "a8a01fea0adaac18e6aca4c71004d5dc61cdff363df44b76e2dc54ec721bafb8",
+        "size_in_bytes": 23204
+      },
+      {
+        "_path": "share/man/man3/readline.3",
+        "path_type": "hardlink",
+        "sha256": "dee2f232395d0381454b9d90eceed03c5027a5f43f32e6c514d56c2d12170965",
+        "sha256_in_prefix": "dee2f232395d0381454b9d90eceed03c5027a5f43f32e6c514d56c2d12170965",
+        "size_in_bytes": 52342
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "None",
+  "sha256": "3bf83c138bf0843b2fdacc5fe6b0956813b11107540d0233c148b97682e894fb",
+  "size": 365188,
+  "subdir": "linux-64",
+  "timestamp": 1666648052561,
+  "track_features": "",
+  "url": "https://repo.anaconda.com/pkgs/main/linux-64/readline-8.2-h5eee18b_0.conda",
+  "version": "8.2"
+}

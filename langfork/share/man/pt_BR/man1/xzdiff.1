@@ -1,0 +1,44 @@
+.\"
+.\" Original zdiff.1 for gzip: Jean-loup Gailly
+.\"
+.\" Modifications for XZ Utils: Lasse Collin
+.\"                             Andrew Dudman
+.\"
+.\" License: GNU GPLv2+
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZDIFF 1 2021\-06\-04 Tukaani "XZ Utils"
+.SH NOME
+xzcmp, xzdiff, lzcmp, lzdiff \- compara arquivos compactados
+.SH SINOPSE
+\fBxzcmp\fP [\fIopções_cmd\fP] \fIarquivo1\fP [\fIarquivo2\fP]
+.br
+\fBxzdiff\fP [\fIopções_diff\fP] \fIarquivo1\fP [\fIarquivo2\fP]
+.br
+\fBlzcmp\fP [\fIopções_cmp\fP] \fIarquivo1\fP [\fIarquivo2\fP]
+.br
+\fBlzdiff\fP [\fIopções_diff\fP] \fIarquivo1\fP [\fIarquivo2\fP]
+.SH DESCRIÇÃO
+\fBxzcmp\fP e \fBxzdiff\fP invocam \fBcmp\fP(1) ou \fBdiff\fP(1) em arquivos compactados
+com \fBxz\fP(1), \fBlzma\fP(1), \fBgzip\fP( 1), \fBbzip2\fP(1), \fBlzop\fP(1) ou
+\fBzstd\fP(1). Todas as opções especificadas são passadas diretamente para
+\fBcmp\fP(1) ou \fBdiff\fP(1). Se apenas um arquivo for especificado, os arquivos
+comparados serão \fIarquivo1\fP (que deve ter um sufixo de um formato de
+compactação compatível) e \fIarquivo1\fP do qual o sufixo do formato de
+compactação foi removido. Se dois arquivos forem especificados, eles serão
+descompactados, se necessário, e enviados para \fBcmp\fP(1) ou \fBdiff\fP(1). O
+status de saída de \fBcmp\fP(1) ou \fBdiff\fP(1) é preservado, a menos que ocorra
+um erro de descompactação; então o status de saída é 2.
+.PP
+Os nomes \fBlzcmp\fP e \fBlzdiff\fP são fornecidos para compatibilidade com
+versões anteriores do LZMA Utils.
+.SH "VEJA TAMBÉM"
+\fBcmp\fP(1), \fBdiff\fP(1), \fBxz\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1),
+\fBzstd\fP(1), \fBzdiff\fP(1)
+.SH BUGS
+As mensagens dos programas \fBcmp\fP(1) ou \fBdiff\fP(1) referem\-se a nomes de
+arquivos temporários em vez daqueles especificados.

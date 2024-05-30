@@ -1,0 +1,64 @@
+.\"
+.\" Original zgrep.1 for gzip: Jean-loup Gailly
+.\"                            Charles Levert <charles@comm.polymtl.ca>
+.\"
+.\" Modifications for XZ Utils: Lasse Collin
+.\"
+.\" License: GNU GPLv2+
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZGREP 1 19.07.2022 Tukaani "Utilități XZ"
+.SH NUME
+xzgrep \- caută în fișierele comprimate pentru o expresie regulată
+.SH REZUMAT
+\fBxzgrep\fP [\fIopțiuni_grep\fP] [\fB\-e\fP] \fImodel\fP [\fIfișier...\fP]
+.br
+\fBxzegrep\fP \&...
+.br
+\fBxzfgrep\fP \&...
+.br
+\fBlzgrep\fP \&...
+.br
+\fBlzegrep\fP \&...
+.br
+\fBlzfgrep\fP \&...
+.SH DESCRIERE
+\fBxzgrep\fP invocă \fBgrep\fP(1) pentru \fIfișiere\fP care pot să fie decomprimate
+sau comprimate cu \fBxz\fP(1), \fBlzma\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1)
+sau \fBzstd\fP(1).  Toate opțiunile specificate sunt transmise direct către
+\fBgrep\fP(1).
+.PP
+Dacă nu este specificat \fIfișier\fP, atunci intrarea standard este
+decomprimată dacă este necesar și alimentează \fBgrep\fP(1).  La citirea din
+intrarea standard, fișierele comprimate \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1)
+și \fBzstd\fP(1) nu sunt acceptate.
+.PP
+Dacă \fBxzgrep\fP este invocat ca \fBxzegrep\fP sau \fBxzfgrep\fP, atunci este
+folosit \fBgrep \-E\fP sau \fBgrep \-F\fP în loc de \fBgrep\fP(1).  Același lucru este
+valabil și pentru comenzile \fBlzgrep\fP, \fBlzegrep\fP și \fBlzfgrep\fP, care sunt
+furnizate pentru compatibilitate cu LZMA Utils.
+.SH "STARE DE IEȘIRE"
+.TP 
+0
+A fost găsită cel puțin o potrivire din cel puțin unul dintre fișierele de
+la intrare.  Nu au apărut erori.
+.TP 
+1
+Nu au fost găsite potriviri din niciunul dintre fișierele de la intrare.  Nu
+au apărut erori.
+.TP 
+>1
+A apărut una sau mai multe erori.  Nu se cunoaște dacă au fost găsite
+potriviri.
+.SH "VARIABILE DE MEDIU"
+.TP 
+\fBGREP\fP
+Dacă variabila de mediu \fBGREP\fP este definită, \fBxzgrep\fP o folosește în loc
+de \fBgrep\fP(1), \fBgrep \-E\fP sau \fBgrep \-F\fP.
+.SH "CONSULTAȚI ȘI"
+\fBgrep\fP(1), \fBxz\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1), \fBzstd\fP(1),
+\fBzgrep\fP(1)

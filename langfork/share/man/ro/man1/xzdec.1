@@ -1,0 +1,88 @@
+.\"
+.\" Author: Lasse Collin
+.\"
+.\" This file has been put into the public domain.
+.\" You can do whatever you want with this file.
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZDEC 1 2024\-01\-19 Tukaani "Utilități XZ"
+.SH NUME
+xzdec, lzmadec \- Programe de decomprimare mici de fișiere .xz și .lzma
+.SH REZUMAT
+\fBxzdec\fP [\fIopțiune...\fP] [\fIfișier...\fP]
+.br
+\fBlzmadec\fP [\fIopțiune...\fP] [\fIfișier...\fP]
+.SH DESCRIERE
+\fBxzdec\fP este un instrument de decomprimare bazat pe liblzma pentru
+fișierele \fB.xz\fP (și numai \fB.xz\fP).  \fBxzdec\fP este destinat să funcționeze
+ca un înlocuitor pentru \fBxz\fP(1) în cele mai frecvente situații în care un
+script a fost scris pentru a utiliza \fBxz \-\-decompress \-\-stdout\fP (și posibil
+câteva alte opțiuni frecvent utilizate) pentru a decomprima fișierele
+\&\fB.xz\fP.  \fBlzmadec\fP este identic cu \fBxzdec\fP cu excepția faptului că
+\fBlzmadec\fP acceptă fișierele \fB.lzma\fP în loc de fișierele \fB.xz\fP.
+.PP
+Pentru a reduce dimensiunea executabilului, \fBxzdec\fP nu acceptă modul cu mai
+multe fire de execuție sau localizarea(afișarea mesajelor în limba stabilită
+de configurările regionale) și nu citește opțiunile din variabilele de mediu
+\fBXZ_DEFAULTS\fP și \fBXZ_OPT\fP.  \fBxzdec\fP nu acceptă afișarea informațiilor
+intermediare de progres: trimiterea semnalului \fBSIGINFO\fP la \fBxzdec\fP nu
+face nimic, iar trimiterea semnalului \fBSIGUSR1\fP încheie procesul în loc să
+afișeze informații despre progres.
+.SH OPȚIUNI
+.TP 
+\fB\-d\fP, \fB\-\-decompress\fP, \fB\-\-uncompress\fP
+Ignorat pentru compatibilitate cu \fBxz\fP(1).  \fBxzdec\fP acceptă numai
+decomprimarea.
+.TP 
+\fB\-k\fP, \fB\-\-keep\fP
+Ignorat pentru compatibilitate cu \fBxz\fP(1).  \fBxzdec\fP nu creează sau elimină
+niciodată niciun fișier.
+.TP 
+\fB\-c\fP, \fB\-\-stdout\fP, \fB\-\-to\-stdout\fP
+Ignorat pentru compatibilitate cu \fBxz\fP(1).  \fBxzdec\fP scrie întotdeauna
+datele decomprimate la ieșirea standard.
+.TP 
+\fB\-q\fP, \fB\-\-quiet\fP
+Specificarea acestui lucru o dată nu face nimic, deoarece \fBxzdec\fP nu
+afișează niciodată avertismente sau notificări.  Specificați acest lucru de
+două ori pentru a suprima erorile.
+.TP 
+\fB\-Q\fP, \fB\-\-no\-warn\fP
+Ignorat pentru compatibilitate cu \fBxz\fP(1).  \fBxzdec\fP nu folosește niciodată
+starea de ieșire 2.
+.TP 
+\fB\-h\fP, \fB\-\-help\fP
+Afișează un mesaj de ajutor și iese cu succes.
+.TP 
+\fB\-V\fP, \fB\-\-version\fP
+Afișează numărul versiunii \fBxzdec\fP și liblzma.
+.SH "STARE DE IEȘIRE"
+.TP 
+\fB0\fP
+Toate au fost bine.
+.TP 
+\fB1\fP
+A apărut o eroare.
+.PP
+\fBxzdec\fP nu are niciun mesaj de avertizare precum \fBxz\fP(1), astfel că starea
+de ieșire 2 nu este folosită de \fBxzdec\fP.
+.SH NOTE
+Utilizați \fBxz\fP(1) în loc de \fBxzdec\fP sau \fBlzmadec\fP pentru utilizarea
+normală de zi cu zi.  \fBxzdec\fP sau \fBlzmadec\fP sunt destinate numai
+situațiilor în care este important să aveți un instrument de decomprimare
+mai mic decât \fBxz\fP(1), cu funcții complete.
+.PP
+\fBxzdec\fP și \fBlzmadec\fP nu sunt chiar atât de mici.  Dimensiunea poate fi
+redusă și mai mult prin eliminarea caracteristicilor din liblzma în timpul
+compilării, dar acest lucru nu ar trebui să se facă de obicei pentru
+executabilele distribuite în distribuții tipice de sisteme de operare
+neîncorporate.  Dacă aveți nevoie de un instrument de decomprimare \fB.xz\fP cu
+adevărat mic, luați în considerare utilizarea XZ Embedded.
+.SH "CONSULTAȚI ȘI"
+\fBxz\fP(1)
+.PP
+XZ Embedded: <https://xz.tukaani.org/xz\-embedded/>

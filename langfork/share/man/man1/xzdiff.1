@@ -1,0 +1,79 @@
+.\"
+.\" Original zdiff.1 for gzip: Jean-loup Gailly
+.\"
+.\" Modifications for XZ Utils: Lasse Collin
+.\"                             Andrew Dudman
+.\"
+.\" License: GNU GPLv2+
+.\"
+.TH XZDIFF 1 "2021-06-04" "Tukaani" "XZ Utils"
+.SH NAME
+xzcmp, xzdiff, lzcmp, lzdiff \- compare compressed files
+.SH SYNOPSIS
+.B xzcmp
+.RI [ cmp_options "] " file1 " [" file2 ]
+.br
+.B xzdiff
+.RI [ diff_options "] " file1 " [" file2 ]
+.br
+.B lzcmp
+.RI [ cmp_options "] " file1 " [" file2 ]
+.br
+.B lzdiff
+.RI [ diff_options "] " file1 " [" file2 ]
+.SH DESCRIPTION
+.B xzcmp
+and
+.B xzdiff
+invoke
+.BR cmp (1)
+or
+.BR diff (1)
+on files compressed with
+.BR xz (1),
+.BR lzma (1),
+.BR gzip (1),
+.BR bzip2 (1),
+.BR lzop (1),
+or
+.BR zstd (1).
+All options specified are passed directly to
+.BR cmp (1)
+or
+.BR diff (1).
+If only one file is specified, then the files compared are
+.I file1
+(which must have a suffix of a supported compression format) and
+.I file1
+from which the compression format suffix has been stripped.
+If two files are specified,
+then they are uncompressed if necessary and fed to
+.BR cmp (1)
+or
+.BR diff (1).
+The exit status from
+.BR cmp (1)
+or
+.BR diff (1)
+is preserved unless a decompression error occurs; then exit status is 2.
+.PP
+The names
+.B lzcmp
+and
+.B lzdiff
+are provided for backward compatibility with LZMA Utils.
+.SH "SEE ALSO"
+.BR cmp (1),
+.BR diff (1),
+.BR xz (1),
+.BR gzip (1),
+.BR bzip2 (1),
+.BR lzop (1),
+.BR zstd (1),
+.BR zdiff (1)
+.SH BUGS
+Messages from the
+.BR cmp (1)
+or
+.BR diff (1)
+programs refer to temporary filenames instead of those specified.

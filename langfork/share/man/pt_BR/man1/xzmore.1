@@ -1,0 +1,39 @@
+.\"
+.\" Original zdiff.1 for gzip: Jean-loup Gailly
+.\" Modifications for XZ Utils: Lasse Collin
+.\"
+.\" License: GNU GPLv2+
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZMORE 1 2013\-06\-30 Tukaani "XZ Utils"
+.SH NOME
+xzmore, lzmore \- visualiza arquivos (texto) compactados em xz ou lzma
+.SH SINOPSE
+\fBxzmore\fP [\fIarquivo...\fP]
+.br
+\fBlzmore\fP [\fIarquivo...\fP]
+.SH DESCRIÇÃO
+\fBxzmore\fP é um filtro que permite o exame de arquivos de texto compactados
+\fBxz\fP(1) ou \fBlzma\fP(1) uma tela por vez em um terminal de cópia eletrônica.
+.PP
+Para usar um pager diferente do padrão \fBmore,\fP defina a variável de
+ambiente \fBPAGER\fP para o nome do programa desejado. O nome \fBlzmore\fP é
+fornecido para compatibilidade com versões anteriores do LZMA Utils.
+.TP 
+\fBe\fP ou \fBq\fP
+Quando o prompt \-\-More\-\-(Next file: \fIarquivo\fP) é impresso, esse comando faz
+com que \fBxzmore\fP saia.
+.TP 
+\fBs\fP
+Quando o prompt \-\-More\-\-(Next file: \fIarquivo\fP) é impresso, esse comando faz
+com que \fBxzmore\fP pule o próximo arquivo e continue.
+.PP
+Para obter uma lista de comandos de teclado suportados durante a exibição
+real do conteúdo de um arquivo, consulte o manual do paginador que você usa,
+geralmente \fBmore\fP(1).
+.SH "VEJA TAMBÉM"
+\fBmore\fP(1), \fBxz\fP(1), \fBxzless\fP(1), \fBzmore\fP(1)

@@ -1,0 +1,2 @@
+Files in this folder are to enhance backwards compatibility of anaconda software with older compilers.
+See: https://github.com/conda/conda/issues/6030 for more information.

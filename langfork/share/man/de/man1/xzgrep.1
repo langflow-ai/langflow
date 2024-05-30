@@ -1,0 +1,64 @@
+.\"
+.\" Original zgrep.1 for gzip: Jean-loup Gailly
+.\"                            Charles Levert <charles@comm.polymtl.ca>
+.\"
+.\" Modifications for XZ Utils: Lasse Collin
+.\"
+.\" License: GNU GPLv2+
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZGREP 1 "19. Juli 2022" Tukaani XZ\-Dienstprogramme
+.SH BEZEICHNUNG
+xzgrep \- komprimierte Dateien nach einem regulären Ausdruck durchsuchen
+.SH ÜBERSICHT
+\fBxzgrep\fP [\fIgrep_Optionen\fP] [\fB\-e\fP] \fIMuster\fP [\fIDatei …\fP]
+.br
+\fBxzegrep\fP …
+.br
+\fBxzfgrep\fP …
+.br
+\fBlzgrep\fP …
+.br
+\fBlzegrep\fP …
+.br
+\fBlzfgrep\fP …
+.SH BESCHREIBUNG
+\fBxzgrep\fP wendet \fBgrep\fP(1) auf \fIDateien\fP an, die entweder unkomprimiert
+oder mit \fBxz\fP(1), \fBlzma\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1) oder
+\fBzstd\fP komprimiert sein können. Alle angegebenen Optionen werden direkt an
+\fBgrep\fP(1) übergeben.
+.PP
+Wenn keine \fIDatei\fP angegeben ist, wird die Standardeingabe dekomprimiert
+(falls nötig) und an \fBgrep\fP übergeben. Beim Lesen aus der Standardeingabe
+keine Dateien unterstützt, die mit \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1) oder
+\fBzstd\fP komprimiert sind.
+.PP
+Wenn \fBxzgrep\fP als \fBxzegrep\fP oder \fBxzfgrep\fP aufgerufen wird, dann wird
+\fBgrep \-E\fP oder \fBgrep \-F\fP anstelle von \fBgrep\fP(1) verwendet. Genauso
+verhalten sich die Befehle \fBlzgrep\fP, \fBlzegrep\fP und \fBlzfgrep\fP, die die
+Abwärtskompatibilität zu den LZMA\-Dienstprogrammen gewährleisten.
+.SH EXIT\-STATUS
+.TP 
+0
+In mindestens einer der Eingabedateien wurde mindestens ein Treffer
+gefunden. Es sind keine Fehler aufgetreten.
+.TP 
+1
+In keiner der Eingabedateien wurde ein Treffer gefunden. Es sind keine
+Fehler aufgetreten.
+.TP 
+>1
+Ein oder mehrere Fehler sind aufgetreten. Es ist unbekannt, ob Treffer
+gefunden wurden.
+.SH UMGEBUNGSVARIABLEN
+.TP 
+\fBGREP\fP
+Wenn die Umgebungsvariable \fBGREP\fP gesetzt ist, verwendet \fBxzgrep\fP deren
+Inhalt anstelle von \fBgrep\fP(1), \fBgrep \-E\fP oder \fBgrep \-F\fP.
+.SH "SIEHE AUCH"
+\fBgrep\fP(1), \fBxz\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1), \fBzstd\fP(1),
+\fBzgrep\fP(1)

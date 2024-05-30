@@ -1,0 +1,61 @@
+#!/bin/sh
+
+# Bzmore wrapped for bzip2, 
+# adapted from zmore by Philippe Troin <phil@fifi.org> for Debian GNU/Linux.
+
+PATH="/usr/bin:$PATH"; export PATH
+
+prog=`echo $0 | sed 's|.*/||'`
+case "$prog" in
+	*less)	more=less	;;
+	*)	more=more       ;;
+esac
+
+if test "`echo -n a`" = "-n a"; then
+  # looks like a SysV system:
+  n1=''; n2='\c'
+else
+  n1='-n'; n2=''
+fi
+oldtty=`stty -g 2>/dev/null`
+if stty -cbreak 2>/dev/null; then
+  cb='cbreak'; ncb='-cbreak'
+else
+  # 'stty min 1' resets eof to ^a on both SunOS and SysV!
+  cb='min 1 -icanon'; ncb='icanon eof ^d'
+fi
+if test $? -eq 0 -a -n "$oldtty"; then
+   trap 'stty $oldtty 2>/dev/null; exit' 0 2 3 5 10 13 15
+else
+   trap 'stty $ncb echo 2>/dev/null; exit' 0 2 3 5 10 13 15
+fi
+
+if test $# = 0; then
+    if test -t 0; then
+	echo usage: $prog files...
+    else
+	bzip2 -cdfq | eval $more
+    fi
+else
+    FIRST=1
+    for FILE
+    do
+	if test $FIRST -eq 0; then
+		echo $n1 "--More--(Next file: $FILE)$n2"
+		stty $cb -echo 2>/dev/null
+		ANS=`dd bs=1 count=1 2>/dev/null` 
+		stty $ncb echo 2>/dev/null
+		echo " "
+		if test "$ANS" = 'e' -o "$ANS" = 'q'; then
+			exit
+		fi
+	fi
+	if test "$ANS" != 's'; then
+		echo "------> $FILE <------"
+		bzip2 -cdfq "$FILE" | eval $more
+	fi
+	if test -t; then
+		FIRST=0
+	fi
+    done
+fi

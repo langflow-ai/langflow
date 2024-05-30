@@ -1,0 +1,63 @@
+.\"
+.\" Original zgrep.1 for gzip: Jean-loup Gailly
+.\"                            Charles Levert <charles@comm.polymtl.ca>
+.\"
+.\" Modifications for XZ Utils: Lasse Collin
+.\"
+.\" License: GNU GPLv2+
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZGREP 1 2022\-07\-19 Tukaani "XZ Utils"
+.SH NOME
+xzgrep \- pesquisa arquivos compactados para uma expressão regular
+.SH SINOPSE
+\fBxzgrep\fP [\fIopções_grep\fP] [\fB\-e\fP] \fIpadrão\fP [\fIarquivo...\fP]
+.br
+\fBxzegrep\fP \&...
+.br
+\fBxzfgrep\fP \&...
+.br
+\fBlzgrep\fP \&...
+.br
+\fBlzegrep\fP \&...
+.br
+\fBlzfgrep\fP \&...
+.SH DESCRIÇÃO
+\fBxzgrep\fP invoca \fBgrep\fP(1) em \fIarquivos\fP que podem ser descompactados ou
+compactados com \fBxz\fP(1), \fBlzma\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1),
+ou \fBzstd\fP(1). Todas as opções especificadas são passadas diretamente para
+\fBgrep\fP(1).
+.PP
+Se nenhum \fIarquivo\fP for especificado, a entrada padrão será descompactada,
+se necessário, e enviada para \fBgrep\fP(1). Ao ler da entrada padrão, os
+arquivos compactados \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1) e \fBzstd\fP(1) não
+são suportados.
+.PP
+Se \fBxzgrep\fP for chamado como \fBxzegrep\fP ou \fBxzfgrep\fP, então \fBgrep \-E\fP ou
+\fBgrep \-F\fP será usado em vez de \fBgrep\fP(1). O mesmo se aplica aos nomes
+\fBlzgrep\fP, \fBlzegrep\fP e \fBlzfgrep\fP, que são fornecidos para compatibilidade
+com versões anteriores do LZMA Utils.
+.SH "STATUS DE SAÍDA"
+.TP 
+0
+Pelo menos uma correspondência foi encontrada em pelo menos um dos arquivos
+de entrada. Nenhum erro ocorreu.
+.TP 
+1
+Nenhuma correspondência foi encontrada em nenhum dos arquivos de
+entrada. Nenhum erro ocorreu.
+.TP 
+>1
+Ocorreu um ou mais erros. Não se sabe se foram encontradas correspondências.
+.SH AMBIENTE
+.TP 
+\fBGREP\fP
+Se a variável de ambiente \fBGREP\fP for definida, \fBxzgrep\fP a usará em vez de
+\fBgrep\fP(1), \fBgrep \-E\fP ou \fBgrep \-F\fP.
+.SH "VEJA TAMBÉM"
+\fBgrep\fP(1), \fBxz\fP(1), \fBgzip\fP(1), \fBbzip2\fP(1), \fBlzop\fP(1), \fBzstd\fP(1),
+\fBzgrep\fP(1)

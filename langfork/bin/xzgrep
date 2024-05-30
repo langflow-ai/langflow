@@ -1,0 +1,298 @@
+#!/bin/sh
+
+# xzgrep -- a wrapper around a grep program that decompresses files as needed
+# Adapted from a version sent by Charles Levert <charles@comm.polymtl.ca>
+
+# Copyright (C) 1998, 2001, 2002, 2006, 2007 Free Software Foundation
+# Copyright (C) 1993 Jean-loup Gailly
+
+# Modified for XZ Utils by Andrew Dudman and Lasse Collin.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+
+#SET_PATH - This line is a placeholder to ease patching this script.
+
+# Instead of unsetting XZ_OPT, just make sure that xz will use file format
+# autodetection. This way memory usage limit and thread limit can be
+# specified via XZ_OPT. With gzip, bzip2, and lzop it's OK to just unset the
+# environment variables.
+xz='xz --format=auto'
+unset GZIP BZIP BZIP2 LZOP
+
+case ${0##*/} in
+  *egrep*) prog=xzegrep; grep=${GREP:-grep -E};;
+  *fgrep*) prog=xzfgrep; grep=${GREP:-grep -F};;
+  *)       prog=xzgrep; grep=${GREP:-grep};;
+esac
+
+version="$prog (XZ Utils) 5.4.6"
+
+usage="Usage: ${0##*/} [OPTION]... [-e] PATTERN [FILE]...
+Look for instances of PATTERN in the input FILEs, using their
+uncompressed contents if they are compressed.
+
+OPTIONs are the same as for '$grep'.
+
+Report bugs to <xz@tukaani.org>."
+
+# sed script to escape all ' for the shell, and then (to handle trailing
+# newlines correctly) turn trailing X on last line into '.
+escape='
+  s/'\''/'\''\\'\'''\''/g
+  $s/X$/'\''/
+'
+operands=
+have_pat=0
+files_with_matches=0
+files_without_matches=0
+no_filename=0
+with_filename=0
+
+# See if -H and --label options are supported (GNU and *BSDs).
+if test f:x = "$(eval "echo x | $grep -H --label=f x 2> /dev/null")"; then
+  grep_supports_label=1
+else
+  grep_supports_label=0
+fi
+
+while test $# -ne 0; do
+  option=$1
+  shift
+  optarg=
+
+  case $option in
+  (-[0123456789abcdEFGhHiIKlLnoPqrRsTuUvVwxyzZ]*[!0123456789]*)
+    # Something like -Fiv was specified, that is, $option contains more
+    # than one option of which the first option (in this example -F)
+    # doesn't take an argument. Split the first option into a standalone
+    # argument and continue parsing the rest of the options (in this example,
+    # replace -Fiv with -iv in the argument list and set option=-F).
+    #
+    # If there are digits [0-9] they are treated as if they were a single
+    # option character because this syntax is an alias for -C for GNU grep.
+    # For example, "grep -25F" is equivalent to "grep -C25 -F". If only
+    # digits are specified like "grep -25" we don't get here because the
+    # above pattern in the case-statement doesn't match such strings.
+    arg2=-\'$(LC_ALL=C expr "X${option}X" : 'X-.[0-9]*\(.*\)' |
+                LC_ALL=C sed "$escape")
+    eval "set -- $arg2 "'${1+"$@"}'
+    option=$(LC_ALL=C expr "X$option" : 'X\(-.[0-9]*\)');;
+  (--binary-*=* | --[lm]a*=* | --reg*=*)
+    # These options require an argument and an argument has been provided
+    # with the --foo=argument syntax. All is good.
+    ;;
+  (-[ABCDefmX] | --binary-* | --file | --[lm]a* | --reg*)
+    # These options require an argument which should now be in $1.
+    # If it isn't, display an error and exit.
+    case ${1?"$option option requires an argument"} in
+    (*\'*)
+      optarg=" '"$(printf '%sX\n' "$1" | LC_ALL=C sed "$escape");;
+    (*)
+      optarg=" '$1'";;
+    esac
+    shift;;
+  (--)
+    break;;
+  (-?*)
+    ;;
+  (*)
+    case $option in
+    (*\'*)
+      operands="$operands '"$(printf '%sX\n' "$option" |
+                                LC_ALL=C sed "$escape");;
+    (*)
+      operands="$operands '$option'";;
+    esac
+    ${POSIXLY_CORRECT+break}
+    continue;;
+  esac
+
+  case $option in
+  (-[drRzZ] | --di* | --exc* | --inc* | --rec* | --nu*)
+    printf >&2 '%s: %s: Option not supported\n' "$0" "$option"
+    exit 2;;
+  (-[ef]* | --file | --file=* | --reg*)
+    have_pat=1;;
+  (--h | --he | --hel | --help)
+    printf '%s\n' "$usage" || exit 2
+    exit;;
+  (-H | --wi | --wit | --with | --with- | --with-f | --with-fi \
+  | --with-fil | --with-file | --with-filen | --with-filena | --with-filenam \
+  | --with-filename)
+    with_filename=1
+    continue;;
+  (-l | --files-with-*)
+    files_with_matches=1
+    continue;;
+  (-L | --files-witho*)
+    files_without_matches=1
+    continue;;
+  (-h | --no-f*)
+    no_filename=1;;
+  (-V | --v | --ve | --ver | --vers | --versi | --versio | --version)
+    printf '%s\n' "$version" || exit 2
+    exit;;
+  esac
+
+  case $option in
+  (*\'?*)
+    option=\'$(printf '%sX\n' "$option" | LC_ALL=C sed "$escape");;
+  (*)
+    option="'$option'";;
+  esac
+
+  grep="$grep $option$optarg"
+done
+
+eval "set -- $operands "'${1+"$@"}'
+
+if test $have_pat -eq 0; then
+  case ${1?"Missing pattern; try \`${0##*/} --help' for help"} in
+  (*\'*)
+    grep="$grep -e '"$(printf '%sX\n' "$1" | LC_ALL=C sed "$escape");;
+  (*)
+    grep="$grep -e '$1'";;
+  esac
+  shift
+fi
+
+if test $# -eq 0; then
+  set -- -
+fi
+
+exec 3>&1
+
+# res=1 means that no file matched yet
+res=1
+
+for i; do
+  case $i in
+    *[-.][zZ] | *_z | *[-.]gz | *.t[ag]z) uncompress="gzip -cdf";;
+    *[-.]bz2 | *[-.]tbz | *.tbz2) uncompress="bzip2 -cdf";;
+    *[-.]lzo | *[-.]tzo) uncompress="lzop -cdf";;
+    *[-.]zst | *[-.]tzst) uncompress="zstd -cdfq";; # zstd needs -q.
+    *) uncompress="$xz -cdfqQ";; # -qQ to ignore warnings like unsupp. check.
+  esac
+  # xz_status will hold the decompressor's exit status.
+  # Exit status of grep (and in rare cases, printf or sed) is
+  # available as the exit status of this assignment command.
+  xz_status=$(
+    exec 5>&1
+    ($uncompress -- "$i" 5>&-; echo $? >&5) 3>&- |
+    if test $files_with_matches -eq 1; then
+      eval "$grep -q" && { printf '%s\n' "$i" || exit 2; }
+    elif test $files_without_matches -eq 1; then
+      eval "$grep -q" || {
+        r=$?
+        if test $r -eq 1; then
+          printf '%s\n' "$i" || r=2
+        fi
+        exit $r
+      }
+    elif test $with_filename -eq 0 &&
+         { test $# -eq 1 || test $no_filename -eq 1; }; then
+      eval "$grep"
+    elif test $grep_supports_label -eq 1; then
+      # The grep implementation in use allows us to specify the filename
+      # that grep will prefix to the output lines. This is faster and
+      # less prone to security bugs than the fallback method that uses sed.
+      # This also avoids confusing output with GNU grep >= 3.5 (2020-09-27)
+      # which prints "binary file matches" to stderr instead of stdout.
+      #
+      # If reading from stdin, let grep use whatever name it prefers for
+      # stdin. With GNU grep it is a locale-specific translated string.
+      if test "x$i" = "x-"; then
+        eval "$grep -H"
+      else
+        eval "$grep -H --label \"\$i\""
+      fi
+    else
+      # Append a colon so that the last character will never be a newline
+      # which would otherwise get lost in shell command substitution.
+      i="$i:"
+
+      # Escape & \ | and newlines only if such characters are present
+      # (speed optimization).
+      case $i in
+      (*'
+'* | *'&'* | *'\'* | *'|'*)
+        # If sed fails, set i to a known safe string to ensure that
+        # failing sed did not create a half-escaped dangerous string.
+        i=$(printf '%s\n' "$i" | LC_ALL=C sed 's/[&\|]/\\&/g; $!s/$/\\/') ||
+            i='(unknown filename):';;
+      esac
+
+      # $i already ends with a colon so do not add it here.
+      sed_script="s|^|$i|"
+
+      # If grep or sed fails, pick the larger value of the two exit statuses.
+      # If sed fails, use at least 2 since we use >= 2 to indicate errors.
+      r=$(
+        exec 4>&1
+        (eval "$grep" 4>&-; echo $? >&4) 3>&- |
+            LC_ALL=C sed "$sed_script" >&3 4>&-
+      ) || {
+        sed_status=$?
+        test "$sed_status" -lt 2 && sed_status=2
+        test "$r" -lt "$sed_status" && r=$sed_status
+      }
+      exit $r
+    fi >&3 5>&-
+  )
+  r=$?
+
+  # If grep or sed or other non-decompression command failed with a signal,
+  # exit immediately and ignore the possible remaining files.
+  #
+  # NOTE: Instead of 128 + signal_number, some shells use
+  # 256 + signal_number (ksh) or 384 + signal_number (yash).
+  # This is fine for us since their "exit" and "kill -l" commands take
+  # this into account. (At least the versions I tried do but there is
+  # a report of an old ksh variant whose "exit" truncates the exit status
+  # to 8 bits without any special handling for values indicating a signal.)
+  test "$r" -ge 128 && exit "$r"
+
+  if test -z "$xz_status"; then
+    # Something unusual happened, for example, we got a signal and
+    # the exit status of the decompressor was never echoed and thus
+    # $xz_status is empty. Exit immediately and ignore the possible
+    # remaining files.
+    exit 2
+  elif test "$xz_status" -ge 128; then
+    # The decompressor died due to a signal. SIGPIPE is ignored since it can
+    # occur if grep exits before the whole file has been decompressed (grep -q
+    # can do that). If the decompressor died with some other signal, exit
+    # immediately and ignore the possible remaining files.
+    test "$(kill -l "$xz_status" 2> /dev/null)" != "PIPE" && exit "$xz_status"
+  elif test "$xz_status" -gt 0; then
+    # Decompression failed but we will continue with the remaining
+    # files anwyway. Set exit status to at least 2 to indicate an error.
+    test "$r" -lt 2 && r=2
+  fi
+
+  # Since res=1 is the initial value, we only need to care about
+  # matches (r == 0) and errors (r >= 2) here; r == 1 can be ignored.
+  if test "$r" -ge 2; then
+    # An error occurred in decompressor, grep, or some other command. Update
+    # res unless a larger error code has been seen with an earlier file.
+    test "$res" -lt "$r" && res=$r
+  elif test "$r" -eq 0; then
+    # grep found a match and no errors occurred. Update res if no errors have
+    # occurred with earlier files.
+    test "$res" -eq 1 && res=0
+  fi
+done
+
+# 0: At least one file matched and no errors occurred.
+# 1: No matches were found and no errors occurred.
+# >=2: Error. It's unknown if matches were found.
+exit "$res"

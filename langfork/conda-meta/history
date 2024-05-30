@@ -1,0 +1,26 @@
+==> 2024-05-30 16:55:46 <==
+# cmd: /home/niit/anaconda3/bin/conda create -p langfork python=3.10 -y
+# conda version: 4.8.3
++defaults/linux-64::_libgcc_mutex-0.1-main
++defaults/linux-64::_openmp_mutex-5.1-1_gnu
++defaults/linux-64::bzip2-1.0.8-h5eee18b_6
++defaults/linux-64::ca-certificates-2024.3.11-h06a4308_0
++defaults/linux-64::ld_impl_linux-64-2.38-h1181459_1
++defaults/linux-64::libffi-3.4.4-h6a678d5_1
++defaults/linux-64::libgcc-ng-11.2.0-h1234567_1
++defaults/linux-64::libgomp-11.2.0-h1234567_1
++defaults/linux-64::libstdcxx-ng-11.2.0-h1234567_1
++defaults/linux-64::libuuid-1.41.5-h5eee18b_0
++defaults/linux-64::ncurses-6.4-h6a678d5_0
++defaults/linux-64::openssl-3.0.13-h7f8727e_2
++defaults/linux-64::pip-24.0-py310h06a4308_0
++defaults/linux-64::python-3.10.14-h955ad1f_1
++defaults/linux-64::readline-8.2-h5eee18b_0
++defaults/linux-64::setuptools-69.5.1-py310h06a4308_0
++defaults/linux-64::sqlite-3.45.3-h5eee18b_0
++defaults/linux-64::tk-8.6.14-h39e8969_0
++defaults/linux-64::wheel-0.43.0-py310h06a4308_0
++defaults/linux-64::xz-5.4.6-h5eee18b_1
++defaults/linux-64::zlib-1.2.13-h5eee18b_1
++defaults/noarch::tzdata-2024a-h04d1e81_0
+# update specs: ['python=3.10']

@@ -1,0 +1,4194 @@
+{
+  "build": "h39e8969_0",
+  "build_number": 0,
+  "channel": "https://repo.anaconda.com/pkgs/main/linux-64",
+  "constrains": [],
+  "depends": [
+    "libgcc-ng >=11.2.0",
+    "zlib >=1.2.13,<1.3.0a0"
+  ],
+  "extracted_package_dir": "/home/niit/anaconda3/pkgs/tk-8.6.14-h39e8969_0",
+  "features": "",
+  "files": [
+    "bin/sqlite3_analyzer",
+    "bin/tclsh",
+    "bin/tclsh8.6",
+    "bin/wish",
+    "bin/wish8.6",
+    "include/default.h",
+    "include/fakemysql.h",
+    "include/fakepq.h",
+    "include/fakesql.h",
+    "include/itcl.h",
+    "include/itcl2TclOO.h",
+    "include/itclDecls.h",
+    "include/itclInt.h",
+    "include/itclIntDecls.h",
+    "include/itclMigrate2TclCore.h",
+    "include/itclTclIntStubsFcn.h",
+    "include/ks_names.h",
+    "include/mysqlStubs.h",
+    "include/odbcStubs.h",
+    "include/pqStubs.h",
+    "include/tcl.h",
+    "include/tclDecls.h",
+    "include/tclInt.h",
+    "include/tclIntDecls.h",
+    "include/tclIntPlatDecls.h",
+    "include/tclOO.h",
+    "include/tclOODecls.h",
+    "include/tclOOInt.h",
+    "include/tclOOIntDecls.h",
+    "include/tclPlatDecls.h",
+    "include/tclPort.h",
+    "include/tclThread.h",
+    "include/tclTomMath.h",
+    "include/tclTomMathDecls.h",
+    "include/tclUnixPort.h",
+    "include/tdbc.h",
+    "include/tdbcDecls.h",
+    "include/tdbcInt.h",
+    "include/tk.h",
+    "include/tk3d.h",
+    "include/tkArray.h",
+    "include/tkBusy.h",
+    "include/tkButton.h",
+    "include/tkCanvas.h",
+    "include/tkColor.h",
+    "include/tkDList.h",
+    "include/tkDecls.h",
+    "include/tkEntry.h",
+    "include/tkFileFilter.h",
+    "include/tkFont.h",
+    "include/tkImgPhoto.h",
+    "include/tkInt.h",
+    "include/tkIntDecls.h",
+    "include/tkIntPlatDecls.h",
+    "include/tkIntXlibDecls.h",
+    "include/tkMacOSX.h",
+    "include/tkMacOSXColor.h",
+    "include/tkMacOSXConstants.h",
+    "include/tkMacOSXCursors.h",
+    "include/tkMacOSXDebug.h",
+    "include/tkMacOSXDefault.h",
+    "include/tkMacOSXEvent.h",
+    "include/tkMacOSXFont.h",
+    "include/tkMacOSXInt.h",
+    "include/tkMacOSXKeysyms.h",
+    "include/tkMacOSXPort.h",
+    "include/tkMacOSXPrivate.h",
+    "include/tkMacOSXWm.h",
+    "include/tkMacOSXXCursors.h",
+    "include/tkMenu.h",
+    "include/tkMenubutton.h",
+    "include/tkPlatDecls.h",
+    "include/tkPort.h",
+    "include/tkScale.h",
+    "include/tkScrollbar.h",
+    "include/tkSelect.h",
+    "include/tkText.h",
+    "include/tkUndo.h",
+    "include/tkUnixDefault.h",
+    "include/tkUnixInt.h",
+    "include/tkUnixPort.h",
+    "include/tkUuid.h",
+    "lib/itcl4.2.4/itcl.tcl",
+    "lib/itcl4.2.4/itclConfig.sh",
+    "lib/itcl4.2.4/itclHullCmds.tcl",
+    "lib/itcl4.2.4/itclWidget.tcl",
+    "lib/itcl4.2.4/libitcl4.2.4.so",
+    "lib/itcl4.2.4/libitclstub4.2.4.a",
+    "lib/itcl4.2.4/pkgIndex.tcl",
+    "lib/libtcl8.6.so",
+    "lib/libtclstub8.6.a",
+    "lib/libtk8.6.so",
+    "lib/libtkstub8.6.a",
+    "lib/pkgconfig/tcl.pc",
+    "lib/pkgconfig/tk.pc",
+    "lib/sqlite3.44.2/libsqlite3.44.2.so",
+    "lib/sqlite3.44.2/pkgIndex.tcl",
+    "lib/tcl8.6/auto.tcl",
+    "lib/tcl8.6/clock.tcl",
+    "lib/tcl8.6/encoding/ascii.enc",
+    "lib/tcl8.6/encoding/big5.enc",
+    "lib/tcl8.6/encoding/cns11643.enc",
+    "lib/tcl8.6/encoding/cp1250.enc",
+    "lib/tcl8.6/encoding/cp1251.enc",
+    "lib/tcl8.6/encoding/cp1252.enc",
+    "lib/tcl8.6/encoding/cp1253.enc",
+    "lib/tcl8.6/encoding/cp1254.enc",
+    "lib/tcl8.6/encoding/cp1255.enc",
+    "lib/tcl8.6/encoding/cp1256.enc",
+    "lib/tcl8.6/encoding/cp1257.enc",
+    "lib/tcl8.6/encoding/cp1258.enc",
+    "lib/tcl8.6/encoding/cp437.enc",
+    "lib/tcl8.6/encoding/cp737.enc",
+    "lib/tcl8.6/encoding/cp775.enc",
+    "lib/tcl8.6/encoding/cp850.enc",
+    "lib/tcl8.6/encoding/cp852.enc",
+    "lib/tcl8.6/encoding/cp855.enc",
+    "lib/tcl8.6/encoding/cp857.enc",
+    "lib/tcl8.6/encoding/cp860.enc",
+    "lib/tcl8.6/encoding/cp861.enc",
+    "lib/tcl8.6/encoding/cp862.enc",
+    "lib/tcl8.6/encoding/cp863.enc",
+    "lib/tcl8.6/encoding/cp864.enc",
+    "lib/tcl8.6/encoding/cp865.enc",
+    "lib/tcl8.6/encoding/cp866.enc",
+    "lib/tcl8.6/encoding/cp869.enc",
+    "lib/tcl8.6/encoding/cp874.enc",
+    "lib/tcl8.6/encoding/cp932.enc",
+    "lib/tcl8.6/encoding/cp936.enc",
+    "lib/tcl8.6/encoding/cp949.enc",
+    "lib/tcl8.6/encoding/cp950.enc",
+    "lib/tcl8.6/encoding/dingbats.enc",
+    "lib/tcl8.6/encoding/ebcdic.enc",
+    "lib/tcl8.6/encoding/euc-cn.enc",
+    "lib/tcl8.6/encoding/euc-jp.enc",
+    "lib/tcl8.6/encoding/euc-kr.enc",
+    "lib/tcl8.6/encoding/gb12345.enc",
+    "lib/tcl8.6/encoding/gb1988.enc",
+    "lib/tcl8.6/encoding/gb2312-raw.enc",
+    "lib/tcl8.6/encoding/gb2312.enc",
+    "lib/tcl8.6/encoding/iso2022-jp.enc",
+    "lib/tcl8.6/encoding/iso2022-kr.enc",
+    "lib/tcl8.6/encoding/iso2022.enc",
+    "lib/tcl8.6/encoding/iso8859-1.enc",
+    "lib/tcl8.6/encoding/iso8859-10.enc",
+    "lib/tcl8.6/encoding/iso8859-11.enc",
+    "lib/tcl8.6/encoding/iso8859-13.enc",
+    "lib/tcl8.6/encoding/iso8859-14.enc",
+    "lib/tcl8.6/encoding/iso8859-15.enc",
+    "lib/tcl8.6/encoding/iso8859-16.enc",
+    "lib/tcl8.6/encoding/iso8859-2.enc",
+    "lib/tcl8.6/encoding/iso8859-3.enc",
+    "lib/tcl8.6/encoding/iso8859-4.enc",
+    "lib/tcl8.6/encoding/iso8859-5.enc",
+    "lib/tcl8.6/encoding/iso8859-6.enc",
+    "lib/tcl8.6/encoding/iso8859-7.enc",
+    "lib/tcl8.6/encoding/iso8859-8.enc",
+    "lib/tcl8.6/encoding/iso8859-9.enc",
+    "lib/tcl8.6/encoding/jis0201.enc",
+    "lib/tcl8.6/encoding/jis0208.enc",
+    "lib/tcl8.6/encoding/jis0212.enc",
+    "lib/tcl8.6/encoding/koi8-r.enc",
+    "lib/tcl8.6/encoding/koi8-u.enc",
+    "lib/tcl8.6/encoding/ksc5601.enc",
+    "lib/tcl8.6/encoding/macCentEuro.enc",
+    "lib/tcl8.6/encoding/macCroatian.enc",
+    "lib/tcl8.6/encoding/macCyrillic.enc",
+    "lib/tcl8.6/encoding/macDingbats.enc",
+    "lib/tcl8.6/encoding/macGreek.enc",
+    "lib/tcl8.6/encoding/macIceland.enc",
+    "lib/tcl8.6/encoding/macJapan.enc",
+    "lib/tcl8.6/encoding/macRoman.enc",
+    "lib/tcl8.6/encoding/macRomania.enc",
+    "lib/tcl8.6/encoding/macThai.enc",
+    "lib/tcl8.6/encoding/macTurkish.enc",
+    "lib/tcl8.6/encoding/macUkraine.enc",
+    "lib/tcl8.6/encoding/shiftjis.enc",
+    "lib/tcl8.6/encoding/symbol.enc",
+    "lib/tcl8.6/encoding/tis-620.enc",
+    "lib/tcl8.6/history.tcl",
+    "lib/tcl8.6/http1.0/http.tcl",
+    "lib/tcl8.6/http1.0/pkgIndex.tcl",
+    "lib/tcl8.6/init.tcl",
+    "lib/tcl8.6/msgs/af.msg",
+    "lib/tcl8.6/msgs/af_za.msg",
+    "lib/tcl8.6/msgs/ar.msg",
+    "lib/tcl8.6/msgs/ar_in.msg",
+    "lib/tcl8.6/msgs/ar_jo.msg",
+    "lib/tcl8.6/msgs/ar_lb.msg",
+    "lib/tcl8.6/msgs/ar_sy.msg",
+    "lib/tcl8.6/msgs/be.msg",
+    "lib/tcl8.6/msgs/bg.msg",
+    "lib/tcl8.6/msgs/bn.msg",
+    "lib/tcl8.6/msgs/bn_in.msg",
+    "lib/tcl8.6/msgs/ca.msg",
+    "lib/tcl8.6/msgs/cs.msg",
+    "lib/tcl8.6/msgs/da.msg",
+    "lib/tcl8.6/msgs/de.msg",
+    "lib/tcl8.6/msgs/de_at.msg",
+    "lib/tcl8.6/msgs/de_be.msg",
+    "lib/tcl8.6/msgs/el.msg",
+    "lib/tcl8.6/msgs/en_au.msg",
+    "lib/tcl8.6/msgs/en_be.msg",
+    "lib/tcl8.6/msgs/en_bw.msg",
+    "lib/tcl8.6/msgs/en_ca.msg",
+    "lib/tcl8.6/msgs/en_gb.msg",
+    "lib/tcl8.6/msgs/en_hk.msg",
+    "lib/tcl8.6/msgs/en_ie.msg",
+    "lib/tcl8.6/msgs/en_in.msg",
+    "lib/tcl8.6/msgs/en_nz.msg",
+    "lib/tcl8.6/msgs/en_ph.msg",
+    "lib/tcl8.6/msgs/en_sg.msg",
+    "lib/tcl8.6/msgs/en_za.msg",
+    "lib/tcl8.6/msgs/en_zw.msg",
+    "lib/tcl8.6/msgs/eo.msg",
+    "lib/tcl8.6/msgs/es.msg",
+    "lib/tcl8.6/msgs/es_ar.msg",
+    "lib/tcl8.6/msgs/es_bo.msg",
+    "lib/tcl8.6/msgs/es_cl.msg",
+    "lib/tcl8.6/msgs/es_co.msg",
+    "lib/tcl8.6/msgs/es_cr.msg",
+    "lib/tcl8.6/msgs/es_do.msg",
+    "lib/tcl8.6/msgs/es_ec.msg",
+    "lib/tcl8.6/msgs/es_gt.msg",
+    "lib/tcl8.6/msgs/es_hn.msg",
+    "lib/tcl8.6/msgs/es_mx.msg",
+    "lib/tcl8.6/msgs/es_ni.msg",
+    "lib/tcl8.6/msgs/es_pa.msg",
+    "lib/tcl8.6/msgs/es_pe.msg",
+    "lib/tcl8.6/msgs/es_pr.msg",
+    "lib/tcl8.6/msgs/es_py.msg",
+    "lib/tcl8.6/msgs/es_sv.msg",
+    "lib/tcl8.6/msgs/es_uy.msg",
+    "lib/tcl8.6/msgs/es_ve.msg",
+    "lib/tcl8.6/msgs/et.msg",
+    "lib/tcl8.6/msgs/eu.msg",
+    "lib/tcl8.6/msgs/eu_es.msg",
+    "lib/tcl8.6/msgs/fa.msg",
+    "lib/tcl8.6/msgs/fa_in.msg",
+    "lib/tcl8.6/msgs/fa_ir.msg",
+    "lib/tcl8.6/msgs/fi.msg",
+    "lib/tcl8.6/msgs/fo.msg",
+    "lib/tcl8.6/msgs/fo_fo.msg",
+    "lib/tcl8.6/msgs/fr.msg",
+    "lib/tcl8.6/msgs/fr_be.msg",
+    "lib/tcl8.6/msgs/fr_ca.msg",
+    "lib/tcl8.6/msgs/fr_ch.msg",
+    "lib/tcl8.6/msgs/ga.msg",
+    "lib/tcl8.6/msgs/ga_ie.msg",
+    "lib/tcl8.6/msgs/gl.msg",
+    "lib/tcl8.6/msgs/gl_es.msg",
+    "lib/tcl8.6/msgs/gv.msg",
+    "lib/tcl8.6/msgs/gv_gb.msg",
+    "lib/tcl8.6/msgs/he.msg",
+    "lib/tcl8.6/msgs/hi.msg",
+    "lib/tcl8.6/msgs/hi_in.msg",
+    "lib/tcl8.6/msgs/hr.msg",
+    "lib/tcl8.6/msgs/hu.msg",
+    "lib/tcl8.6/msgs/id.msg",
+    "lib/tcl8.6/msgs/id_id.msg",
+    "lib/tcl8.6/msgs/is.msg",
+    "lib/tcl8.6/msgs/it.msg",
+    "lib/tcl8.6/msgs/it_ch.msg",
+    "lib/tcl8.6/msgs/ja.msg",
+    "lib/tcl8.6/msgs/kl.msg",
+    "lib/tcl8.6/msgs/kl_gl.msg",
+    "lib/tcl8.6/msgs/ko.msg",
+    "lib/tcl8.6/msgs/ko_kr.msg",
+    "lib/tcl8.6/msgs/kok.msg",
+    "lib/tcl8.6/msgs/kok_in.msg",
+    "lib/tcl8.6/msgs/kw.msg",
+    "lib/tcl8.6/msgs/kw_gb.msg",
+    "lib/tcl8.6/msgs/lt.msg",
+    "lib/tcl8.6/msgs/lv.msg",
+    "lib/tcl8.6/msgs/mk.msg",
+    "lib/tcl8.6/msgs/mr.msg",
+    "lib/tcl8.6/msgs/mr_in.msg",
+    "lib/tcl8.6/msgs/ms.msg",
+    "lib/tcl8.6/msgs/ms_my.msg",
+    "lib/tcl8.6/msgs/mt.msg",
+    "lib/tcl8.6/msgs/nb.msg",
+    "lib/tcl8.6/msgs/nl.msg",
+    "lib/tcl8.6/msgs/nl_be.msg",
+    "lib/tcl8.6/msgs/nn.msg",
+    "lib/tcl8.6/msgs/pl.msg",
+    "lib/tcl8.6/msgs/pt.msg",
+    "lib/tcl8.6/msgs/pt_br.msg",
+    "lib/tcl8.6/msgs/ro.msg",
+    "lib/tcl8.6/msgs/ru.msg",
+    "lib/tcl8.6/msgs/ru_ua.msg",
+    "lib/tcl8.6/msgs/sh.msg",
+    "lib/tcl8.6/msgs/sk.msg",
+    "lib/tcl8.6/msgs/sl.msg",
+    "lib/tcl8.6/msgs/sq.msg",
+    "lib/tcl8.6/msgs/sr.msg",
+    "lib/tcl8.6/msgs/sv.msg",
+    "lib/tcl8.6/msgs/sw.msg",
+    "lib/tcl8.6/msgs/ta.msg",
+    "lib/tcl8.6/msgs/ta_in.msg",
+    "lib/tcl8.6/msgs/te.msg",
+    "lib/tcl8.6/msgs/te_in.msg",
+    "lib/tcl8.6/msgs/th.msg",
+    "lib/tcl8.6/msgs/tr.msg",
+    "lib/tcl8.6/msgs/uk.msg",
+    "lib/tcl8.6/msgs/vi.msg",
+    "lib/tcl8.6/msgs/zh.msg",
+    "lib/tcl8.6/msgs/zh_cn.msg",
+    "lib/tcl8.6/msgs/zh_hk.msg",
+    "lib/tcl8.6/msgs/zh_sg.msg",
+    "lib/tcl8.6/msgs/zh_tw.msg",
+    "lib/tcl8.6/opt0.4/optparse.tcl",
+    "lib/tcl8.6/opt0.4/pkgIndex.tcl",
+    "lib/tcl8.6/package.tcl",
+    "lib/tcl8.6/parray.tcl",
+    "lib/tcl8.6/safe.tcl",
+    "lib/tcl8.6/tclAppInit.c",
+    "lib/tcl8.6/tclIndex",
+    "lib/tcl8.6/tm.tcl",
+    "lib/tcl8.6/word.tcl",
+    "lib/tcl8/8.4/platform-1.0.19.tm",
+    "lib/tcl8/8.4/platform/shell-1.1.4.tm",
+    "lib/tcl8/8.5/msgcat-1.6.1.tm",
+    "lib/tcl8/8.5/tcltest-2.5.7.tm",
+    "lib/tcl8/8.6/http-2.9.8.tm",
+    "lib/tcl8/8.6/tdbc/sqlite3-1.1.7.tm",
+    "lib/tclConfig.sh",
+    "lib/tclooConfig.sh",
+    "lib/tdbc1.1.7/libtdbc1.1.7.so",
+    "lib/tdbc1.1.7/libtdbcstub1.1.7.a",
+    "lib/tdbc1.1.7/pkgIndex.tcl",
+    "lib/tdbc1.1.7/tdbc.tcl",
+    "lib/tdbc1.1.7/tdbcConfig.sh",
+    "lib/tdbcmysql1.1.7/libtdbcmysql1.1.7.so",
+    "lib/tdbcmysql1.1.7/pkgIndex.tcl",
+    "lib/tdbcmysql1.1.7/tdbcmysql.tcl",
+    "lib/tdbcodbc1.1.7/libtdbcodbc1.1.7.so",
+    "lib/tdbcodbc1.1.7/pkgIndex.tcl",
+    "lib/tdbcodbc1.1.7/tdbcodbc.tcl",
+    "lib/tdbcpostgres1.1.7/libtdbcpostgres1.1.7.so",
+    "lib/tdbcpostgres1.1.7/pkgIndex.tcl",
+    "lib/tdbcpostgres1.1.7/tdbcpostgres.tcl",
+    "lib/thread2.8.9/libthread2.8.9.so",
+    "lib/thread2.8.9/pkgIndex.tcl",
+    "lib/thread2.8.9/ttrace.tcl",
+    "lib/tk8.6/bgerror.tcl",
+    "lib/tk8.6/button.tcl",
+    "lib/tk8.6/choosedir.tcl",
+    "lib/tk8.6/clrpick.tcl",
+    "lib/tk8.6/comdlg.tcl",
+    "lib/tk8.6/console.tcl",
+    "lib/tk8.6/demos/README",
+    "lib/tk8.6/demos/anilabel.tcl",
+    "lib/tk8.6/demos/aniwave.tcl",
+    "lib/tk8.6/demos/arrow.tcl",
+    "lib/tk8.6/demos/bind.tcl",
+    "lib/tk8.6/demos/bitmap.tcl",
+    "lib/tk8.6/demos/browse",
+    "lib/tk8.6/demos/button.tcl",
+    "lib/tk8.6/demos/check.tcl",
+    "lib/tk8.6/demos/clrpick.tcl",
+    "lib/tk8.6/demos/colors.tcl",
+    "lib/tk8.6/demos/combo.tcl",
+    "lib/tk8.6/demos/cscroll.tcl",
+    "lib/tk8.6/demos/ctext.tcl",
+    "lib/tk8.6/demos/dialog1.tcl",
+    "lib/tk8.6/demos/dialog2.tcl",
+    "lib/tk8.6/demos/en.msg",
+    "lib/tk8.6/demos/entry1.tcl",
+    "lib/tk8.6/demos/entry2.tcl",
+    "lib/tk8.6/demos/entry3.tcl",
+    "lib/tk8.6/demos/filebox.tcl",
+    "lib/tk8.6/demos/floor.tcl",
+    "lib/tk8.6/demos/fontchoose.tcl",
+    "lib/tk8.6/demos/form.tcl",
+    "lib/tk8.6/demos/goldberg.tcl",
+    "lib/tk8.6/demos/hello",
+    "lib/tk8.6/demos/hscale.tcl",
+    "lib/tk8.6/demos/icon.tcl",
+    "lib/tk8.6/demos/image1.tcl",
+    "lib/tk8.6/demos/image2.tcl",
+    "lib/tk8.6/demos/images/earth.gif",
+    "lib/tk8.6/demos/images/earthmenu.png",
+    "lib/tk8.6/demos/images/earthris.gif",
+    "lib/tk8.6/demos/images/flagdown.xbm",
+    "lib/tk8.6/demos/images/flagup.xbm",
+    "lib/tk8.6/demos/images/gray25.xbm",
+    "lib/tk8.6/demos/images/letters.xbm",
+    "lib/tk8.6/demos/images/noletter.xbm",
+    "lib/tk8.6/demos/images/ouster.png",
+    "lib/tk8.6/demos/images/pattern.xbm",
+    "lib/tk8.6/demos/images/tcllogo.gif",
+    "lib/tk8.6/demos/images/teapot.ppm",
+    "lib/tk8.6/demos/items.tcl",
+    "lib/tk8.6/demos/ixset",
+    "lib/tk8.6/demos/knightstour.tcl",
+    "lib/tk8.6/demos/label.tcl",
+    "lib/tk8.6/demos/labelframe.tcl",
+    "lib/tk8.6/demos/license.terms",
+    "lib/tk8.6/demos/mclist.tcl",
+    "lib/tk8.6/demos/menu.tcl",
+    "lib/tk8.6/demos/menubu.tcl",
+    "lib/tk8.6/demos/msgbox.tcl",
+    "lib/tk8.6/demos/nl.msg",
+    "lib/tk8.6/demos/paned1.tcl",
+    "lib/tk8.6/demos/paned2.tcl",
+    "lib/tk8.6/demos/pendulum.tcl",
+    "lib/tk8.6/demos/plot.tcl",
+    "lib/tk8.6/demos/puzzle.tcl",
+    "lib/tk8.6/demos/radio.tcl",
+    "lib/tk8.6/demos/rmt",
+    "lib/tk8.6/demos/rolodex",
+    "lib/tk8.6/demos/ruler.tcl",
+    "lib/tk8.6/demos/sayings.tcl",
+    "lib/tk8.6/demos/search.tcl",
+    "lib/tk8.6/demos/spin.tcl",
+    "lib/tk8.6/demos/states.tcl",
+    "lib/tk8.6/demos/style.tcl",
+    "lib/tk8.6/demos/tclIndex",
+    "lib/tk8.6/demos/tcolor",
+    "lib/tk8.6/demos/text.tcl",
+    "lib/tk8.6/demos/textpeer.tcl",
+    "lib/tk8.6/demos/timer",
+    "lib/tk8.6/demos/toolbar.tcl",
+    "lib/tk8.6/demos/tree.tcl",
+    "lib/tk8.6/demos/ttkbut.tcl",
+    "lib/tk8.6/demos/ttkmenu.tcl",
+    "lib/tk8.6/demos/ttknote.tcl",
+    "lib/tk8.6/demos/ttkpane.tcl",
+    "lib/tk8.6/demos/ttkprogress.tcl",
+    "lib/tk8.6/demos/ttkscale.tcl",
+    "lib/tk8.6/demos/twind.tcl",
+    "lib/tk8.6/demos/unicodeout.tcl",
+    "lib/tk8.6/demos/vscale.tcl",
+    "lib/tk8.6/demos/widget",
+    "lib/tk8.6/dialog.tcl",
+    "lib/tk8.6/entry.tcl",
+    "lib/tk8.6/focus.tcl",
+    "lib/tk8.6/fontchooser.tcl",
+    "lib/tk8.6/iconlist.tcl",
+    "lib/tk8.6/icons.tcl",
+    "lib/tk8.6/images/README",
+    "lib/tk8.6/images/logo.eps",
+    "lib/tk8.6/images/logo100.gif",
+    "lib/tk8.6/images/logo64.gif",
+    "lib/tk8.6/images/logoLarge.gif",
+    "lib/tk8.6/images/logoMed.gif",
+    "lib/tk8.6/images/pwrdLogo.eps",
+    "lib/tk8.6/images/pwrdLogo100.gif",
+    "lib/tk8.6/images/pwrdLogo150.gif",
+    "lib/tk8.6/images/pwrdLogo175.gif",
+    "lib/tk8.6/images/pwrdLogo200.gif",
+    "lib/tk8.6/images/pwrdLogo75.gif",
+    "lib/tk8.6/images/tai-ku.gif",
+    "lib/tk8.6/listbox.tcl",
+    "lib/tk8.6/megawidget.tcl",
+    "lib/tk8.6/menu.tcl",
+    "lib/tk8.6/mkpsenc.tcl",
+    "lib/tk8.6/msgbox.tcl",
+    "lib/tk8.6/msgs/cs.msg",
+    "lib/tk8.6/msgs/da.msg",
+    "lib/tk8.6/msgs/de.msg",
+    "lib/tk8.6/msgs/el.msg",
+    "lib/tk8.6/msgs/en.msg",
+    "lib/tk8.6/msgs/en_gb.msg",
+    "lib/tk8.6/msgs/eo.msg",
+    "lib/tk8.6/msgs/es.msg",
+    "lib/tk8.6/msgs/fi.msg",
+    "lib/tk8.6/msgs/fr.msg",
+    "lib/tk8.6/msgs/hu.msg",
+    "lib/tk8.6/msgs/it.msg",
+    "lib/tk8.6/msgs/nl.msg",
+    "lib/tk8.6/msgs/pl.msg",
+    "lib/tk8.6/msgs/pt.msg",
+    "lib/tk8.6/msgs/ru.msg",
+    "lib/tk8.6/msgs/sv.msg",
+    "lib/tk8.6/msgs/zh_cn.msg",
+    "lib/tk8.6/obsolete.tcl",
+    "lib/tk8.6/optMenu.tcl",
+    "lib/tk8.6/palette.tcl",
+    "lib/tk8.6/panedwindow.tcl",
+    "lib/tk8.6/pkgIndex.tcl",
+    "lib/tk8.6/safetk.tcl",
+    "lib/tk8.6/scale.tcl",
+    "lib/tk8.6/scrlbar.tcl",
+    "lib/tk8.6/spinbox.tcl",
+    "lib/tk8.6/tclIndex",
+    "lib/tk8.6/tearoff.tcl",
+    "lib/tk8.6/text.tcl",
+    "lib/tk8.6/tk.tcl",
+    "lib/tk8.6/tkAppInit.c",
+    "lib/tk8.6/tkfbox.tcl",
+    "lib/tk8.6/ttk/altTheme.tcl",
+    "lib/tk8.6/ttk/aquaTheme.tcl",
+    "lib/tk8.6/ttk/button.tcl",
+    "lib/tk8.6/ttk/clamTheme.tcl",
+    "lib/tk8.6/ttk/classicTheme.tcl",
+    "lib/tk8.6/ttk/combobox.tcl",
+    "lib/tk8.6/ttk/cursors.tcl",
+    "lib/tk8.6/ttk/defaults.tcl",
+    "lib/tk8.6/ttk/entry.tcl",
+    "lib/tk8.6/ttk/fonts.tcl",
+    "lib/tk8.6/ttk/menubutton.tcl",
+    "lib/tk8.6/ttk/notebook.tcl",
+    "lib/tk8.6/ttk/panedwindow.tcl",
+    "lib/tk8.6/ttk/progress.tcl",
+    "lib/tk8.6/ttk/scale.tcl",
+    "lib/tk8.6/ttk/scrollbar.tcl",
+    "lib/tk8.6/ttk/sizegrip.tcl",
+    "lib/tk8.6/ttk/spinbox.tcl",
+    "lib/tk8.6/ttk/treeview.tcl",
+    "lib/tk8.6/ttk/ttk.tcl",
+    "lib/tk8.6/ttk/utils.tcl",
+    "lib/tk8.6/ttk/vistaTheme.tcl",
+    "lib/tk8.6/ttk/winTheme.tcl",
+    "lib/tk8.6/ttk/xpTheme.tcl",
+    "lib/tk8.6/unsupported.tcl",
+    "lib/tk8.6/xmfbox.tcl",
+    "lib/tkConfig.sh"
+  ],
+  "fn": "tk-8.6.14-h39e8969_0.conda",
+  "legacy_bz2_md5": "e2512d57c8a1e91e7b20e265c6906546",
+  "license": "TCL",
+  "license_family": "BSD",
+  "link": {
+    "source": "/home/niit/anaconda3/pkgs/tk-8.6.14-h39e8969_0",
+    "type": 1
+  },
+  "md5": "78dbc5e3c69143ebc037fc5d5b22e597",
+  "name": "tk",
+  "package_tarball_full_path": "/home/niit/anaconda3/pkgs/tk-8.6.14-h39e8969_0.conda",
+  "paths_data": {
+    "paths": [
+      {
+        "_path": "bin/sqlite3_analyzer",
+        "path_type": "hardlink",
+        "sha256": "5889070b146a012ef470ebfe7b6473e479a7555119ea15c38d9100a34783d479",
+        "sha256_in_prefix": "5889070b146a012ef470ebfe7b6473e479a7555119ea15c38d9100a34783d479",
+        "size_in_bytes": 30392
+      },
+      {
+        "_path": "bin/tclsh",
+        "path_type": "softlink",
+        "sha256": "b331d550417f4e571375a4839dd92f28f2c23128ff45c8a4763666880ca88ce0",
+        "size_in_bytes": 15984
+      },
+      {
+        "_path": "bin/tclsh8.6",
+        "path_type": "hardlink",
+        "sha256": "b331d550417f4e571375a4839dd92f28f2c23128ff45c8a4763666880ca88ce0",
+        "sha256_in_prefix": "b331d550417f4e571375a4839dd92f28f2c23128ff45c8a4763666880ca88ce0",
+        "size_in_bytes": 15984
+      },
+      {
+        "_path": "bin/wish",
+        "path_type": "softlink",
+        "sha256": "45ab72172b6bfa9047292b7e4a792b2bd4ccc523847ec0a03093eec99b35aeec",
+        "size_in_bytes": 16136
+      },
+      {
+        "_path": "bin/wish8.6",
+        "path_type": "hardlink",
+        "sha256": "45ab72172b6bfa9047292b7e4a792b2bd4ccc523847ec0a03093eec99b35aeec",
+        "sha256_in_prefix": "45ab72172b6bfa9047292b7e4a792b2bd4ccc523847ec0a03093eec99b35aeec",
+        "size_in_bytes": 16136
+      },
+      {
+        "_path": "include/default.h",
+        "path_type": "hardlink",
+        "sha256": "dc59b2a40a644447c1439f9d4acedc911ff5f9d82c2a865c731871cf97a1255a",
+        "sha256_in_prefix": "dc59b2a40a644447c1439f9d4acedc911ff5f9d82c2a865c731871cf97a1255a",
+        "size_in_bytes": 581
+      },
+      {
+        "_path": "include/fakemysql.h",
+        "path_type": "hardlink",
+        "sha256": "d1f359880fb635b9820aa25edc05b4278aafbb1aeac479d43b821ecc3c331af2",
+        "sha256_in_prefix": "d1f359880fb635b9820aa25edc05b4278aafbb1aeac479d43b821ecc3c331af2",
+        "size_in_bytes": 8941
+      },
+      {
+        "_path": "include/fakepq.h",
+        "path_type": "hardlink",
+        "sha256": "35484a2ebb1776130d4667ecf75d73b5a8a20dee53b7d767454850bf175cdc82",
+        "sha256_in_prefix": "35484a2ebb1776130d4667ecf75d73b5a8a20dee53b7d767454850bf175cdc82",
+        "size_in_bytes": 1189
+      },
+      {
+        "_path": "include/fakesql.h",
+        "path_type": "hardlink",
+        "sha256": "82478be34c075c3808b0f07a263ffbd15baf7654cd08c9f45bb11c648361ab19",
+        "sha256_in_prefix": "82478be34c075c3808b0f07a263ffbd15baf7654cd08c9f45bb11c648361ab19",
+        "size_in_bytes": 6519
+      },
+      {
+        "_path": "include/itcl.h",
+        "path_type": "hardlink",
+        "sha256": "357e9222f4af5f40ebcb4ca0f75914bdec7467a44ceb4d126479919ee4ab7765",
+        "sha256_in_prefix": "357e9222f4af5f40ebcb4ca0f75914bdec7467a44ceb4d126479919ee4ab7765",
+        "size_in_bytes": 5662
+      },
+      {
+        "_path": "include/itcl2TclOO.h",
+        "path_type": "hardlink",
+        "sha256": "19a028e99b60efae5550a3886cd94bfaa25789fbd8c0336b01313d54e077d2a5",
+        "sha256_in_prefix": "19a028e99b60efae5550a3886cd94bfaa25789fbd8c0336b01313d54e077d2a5",
+        "size_in_bytes": 1853
+      },
+      {
+        "_path": "include/itclDecls.h",
+        "path_type": "hardlink",
+        "sha256": "4a3b3746d6985d28122c72b9843f26a79a494b2a4c317c9992aad46d563be374",
+        "sha256_in_prefix": "4a3b3746d6985d28122c72b9843f26a79a494b2a4c317c9992aad46d563be374",
+        "size_in_bytes": 7025
+      },
+      {
+        "_path": "include/itclInt.h",
+        "path_type": "hardlink",
+        "sha256": "6e607b34e53fad1467df3055a75cf5dff46ffb714026078bc9c81071137daa05",
+        "sha256_in_prefix": "6e607b34e53fad1467df3055a75cf5dff46ffb714026078bc9c81071137daa05",
+        "size_in_bytes": 37092
+      },
+      {
+        "_path": "include/itclIntDecls.h",
+        "path_type": "hardlink",
+        "sha256": "5e0f3a5db7c1a613fc49d0c0144aeb51b1a79e51bfdcd43e86f98e88704d9744",
+        "sha256_in_prefix": "5e0f3a5db7c1a613fc49d0c0144aeb51b1a79e51bfdcd43e86f98e88704d9744",
+        "size_in_bytes": 42748
+      },
+      {
+        "_path": "include/itclMigrate2TclCore.h",
+        "path_type": "hardlink",
+        "sha256": "91949ef11ebdd7fc4b8f06ab8d5151f3cdefa076e85a73e274e2bd5a773f4129",
+        "sha256_in_prefix": "91949ef11ebdd7fc4b8f06ab8d5151f3cdefa076e85a73e274e2bd5a773f4129",
+        "size_in_bytes": 2921
+      },
+      {
+        "_path": "include/itclTclIntStubsFcn.h",
+        "path_type": "hardlink",
+        "sha256": "949ea0a3af9aee32bd6515d693a0426746bd9c3a02cc67484f4828834a9cf435",
+        "sha256_in_prefix": "949ea0a3af9aee32bd6515d693a0426746bd9c3a02cc67484f4828834a9cf435",
+        "size_in_bytes": 1723
+      },
+      {
+        "_path": "include/ks_names.h",
+        "path_type": "hardlink",
+        "sha256": "447a768fbd1c9baf4a26e01e1b2e0bc47d9fc7f0b10819084bd8d00fd9e38e35",
+        "sha256_in_prefix": "447a768fbd1c9baf4a26e01e1b2e0bc47d9fc7f0b10819084bd8d00fd9e38e35",
+        "size_in_bytes": 45866
+      },
+      {
+        "_path": "include/mysqlStubs.h",
+        "path_type": "hardlink",
+        "sha256": "dfd2d3dc09af50035f26c275a0a217a0dafa61814f7f9d1a5d6b106f334a6c3e",
+        "sha256_in_prefix": "dfd2d3dc09af50035f26c275a0a217a0dafa61814f7f9d1a5d6b106f334a6c3e",
+        "size_in_bytes": 5650
+      },
+      {
+        "_path": "include/odbcStubs.h",
+        "path_type": "hardlink",
+        "sha256": "ed10e87c65e10b996228415852a86598ec8d73a5607ce9276acf29df69fb6e01",
+        "sha256_in_prefix": "ed10e87c65e10b996228415852a86598ec8d73a5607ce9276acf29df69fb6e01",
+        "size_in_bytes": 5179
+      },
+      {
+        "_path": "include/pqStubs.h",
+        "path_type": "hardlink",
+        "sha256": "c89330cabcc19f70e8071059880b80c2b45c09165c6eeb77d01e69a2b2a65f58",
+        "sha256_in_prefix": "c89330cabcc19f70e8071059880b80c2b45c09165c6eeb77d01e69a2b2a65f58",
+        "size_in_bytes": 3584
+      },
+      {
+        "_path": "include/tcl.h",
+        "path_type": "hardlink",
+        "sha256": "c5dbaf70369433020b4d5c924cbf1363e84629dad51617ec9a3bf3f90fd6f8db",
+        "sha256_in_prefix": "c5dbaf70369433020b4d5c924cbf1363e84629dad51617ec9a3bf3f90fd6f8db",
+        "size_in_bytes": 93892
+      },
+      {
+        "_path": "include/tclDecls.h",
+        "path_type": "hardlink",
+        "sha256": "77dd8db3c9011e74ff795f9b5f00407dc098398bf113278745e4678852a7554a",
+        "sha256_in_prefix": "77dd8db3c9011e74ff795f9b5f00407dc098398bf113278745e4678852a7554a",
+        "size_in_bytes": 175563
+      },
+      {
+        "_path": "include/tclInt.h",
+        "path_type": "hardlink",
+        "sha256": "1ba890e94e0af41492477202ac8d6910ee4e96d753d1b83686a492d946ec6213",
+        "sha256_in_prefix": "1ba890e94e0af41492477202ac8d6910ee4e96d753d1b83686a492d946ec6213",
+        "size_in_bytes": 173763
+      },
+      {
+        "_path": "include/tclIntDecls.h",
+        "path_type": "hardlink",
+        "sha256": "dd303cab02a101f96109c96f626eb91fa5576fe21294a9d80816b06a8014ca26",
+        "sha256_in_prefix": "dd303cab02a101f96109c96f626eb91fa5576fe21294a9d80816b06a8014ca26",
+        "size_in_bytes": 56969
+      },
+      {
+        "_path": "include/tclIntPlatDecls.h",
+        "path_type": "hardlink",
+        "sha256": "94469685c0c8bbb6cf1c63bfa50af29b66a8801096c4e18a760a50e76f779d00",
+        "sha256_in_prefix": "94469685c0c8bbb6cf1c63bfa50af29b66a8801096c4e18a760a50e76f779d00",
+        "size_in_bytes": 23256
+      },
+      {
+        "_path": "include/tclOO.h",
+        "path_type": "hardlink",
+        "sha256": "d8b423d477eff0cf0eb8b0d2cea98f84898bebf8adf937f022dc3392664f3990",
+        "sha256_in_prefix": "d8b423d477eff0cf0eb8b0d2cea98f84898bebf8adf937f022dc3392664f3990",
+        "size_in_bytes": 4257
+      },
+      {
+        "_path": "include/tclOODecls.h",
+        "path_type": "hardlink",
+        "sha256": "2ee41615f2f0eaa65d58825a8768ea011dc8491d33ee245f3a5062e721d41e54",
+        "sha256_in_prefix": "2ee41615f2f0eaa65d58825a8768ea011dc8491d33ee245f3a5062e721d41e54",
+        "size_in_bytes": 9677
+      },
+      {
+        "_path": "include/tclOOInt.h",
+        "path_type": "hardlink",
+        "sha256": "53a676e6c704d905885b5ba81e86b34cf718e074a748f079dbb0320c3ca3ea1d",
+        "sha256_in_prefix": "53a676e6c704d905885b5ba81e86b34cf718e074a748f079dbb0320c3ca3ea1d",
+        "size_in_bytes": 23636
+      },
+      {
+        "_path": "include/tclOOIntDecls.h",
+        "path_type": "hardlink",
+        "sha256": "09bf8c566b159f35b2a1f9a4850fadf12a950bf8467ed44135a16342239f347b",
+        "sha256_in_prefix": "09bf8c566b159f35b2a1f9a4850fadf12a950bf8467ed44135a16342239f347b",
+        "size_in_bytes": 7176
+      },
+      {
+        "_path": "include/tclPlatDecls.h",
+        "path_type": "hardlink",
+        "sha256": "9498557f03c1a6fa8b6f6c3b16988cba9efda86bbed8d1c6b4851b09db0da7de",
+        "sha256_in_prefix": "9498557f03c1a6fa8b6f6c3b16988cba9efda86bbed8d1c6b4851b09db0da7de",
+        "size_in_bytes": 4099
+      },
+      {
+        "_path": "include/tclPort.h",
+        "path_type": "hardlink",
+        "sha256": "b79fd3ba585ea82ad991ccc994a2bb2f284720ef055560936aa6cbab7b9e9e25",
+        "sha256_in_prefix": "b79fd3ba585ea82ad991ccc994a2bb2f284720ef055560936aa6cbab7b9e9e25",
+        "size_in_bytes": 1198
+      },
+      {
+        "_path": "include/tclThread.h",
+        "path_type": "hardlink",
+        "sha256": "ecab348638e23727e9d72db22bb57b54aaa1530162b21b015d786b6f71eb7820",
+        "sha256_in_prefix": "ecab348638e23727e9d72db22bb57b54aaa1530162b21b015d786b6f71eb7820",
+        "size_in_bytes": 821
+      },
+      {
+        "_path": "include/tclTomMath.h",
+        "path_type": "hardlink",
+        "sha256": "034d028ff726300f32fb54135eecb2ae444b1326d6d146b3356737532a0863c6",
+        "sha256_in_prefix": "034d028ff726300f32fb54135eecb2ae444b1326d6d146b3356737532a0863c6",
+        "size_in_bytes": 30476
+      },
+      {
+        "_path": "include/tclTomMathDecls.h",
+        "path_type": "hardlink",
+        "sha256": "69ee476711dee47fa882695dd1893a7a523260cf387c1ae90ec26ed9ee64cebe",
+        "sha256_in_prefix": "69ee476711dee47fa882695dd1893a7a523260cf387c1ae90ec26ed9ee64cebe",
+        "size_in_bytes": 27370
+      },
+      {
+        "_path": "include/tclUnixPort.h",
+        "path_type": "hardlink",
+        "sha256": "55e9070cafba9f774927b3a256f1ee13ce2a5188b44311769da01c9e83cbde18",
+        "sha256_in_prefix": "55e9070cafba9f774927b3a256f1ee13ce2a5188b44311769da01c9e83cbde18",
+        "size_in_bytes": 20702
+      },
+      {
+        "_path": "include/tdbc.h",
+        "path_type": "hardlink",
+        "sha256": "477383653f520630fff48d8fbaa11d8c1d66dea9e0100c56390650c31b8c986a",
+        "sha256_in_prefix": "477383653f520630fff48d8fbaa11d8c1d66dea9e0100c56390650c31b8c986a",
+        "size_in_bytes": 1680
+      },
+      {
+        "_path": "include/tdbcDecls.h",
+        "path_type": "hardlink",
+        "sha256": "c74af560bef803efaee5ede34e5b99f12c9f8c6cb18d76727c0f39de4ef96f59",
+        "sha256_in_prefix": "c74af560bef803efaee5ede34e5b99f12c9f8c6cb18d76727c0f39de4ef96f59",
+        "size_in_bytes": 1497
+      },
+      {
+        "_path": "include/tdbcInt.h",
+        "path_type": "hardlink",
+        "sha256": "a7bf229be4e37293b2088272b88c20a4d056049844153d7eca49110719885b19",
+        "sha256_in_prefix": "a7bf229be4e37293b2088272b88c20a4d056049844153d7eca49110719885b19",
+        "size_in_bytes": 1269
+      },
+      {
+        "_path": "include/tk.h",
+        "path_type": "hardlink",
+        "sha256": "944a7bd60026667f6b89f1090a61f9591e9628c69c77a864a5f506779c6aeeb9",
+        "sha256_in_prefix": "944a7bd60026667f6b89f1090a61f9591e9628c69c77a864a5f506779c6aeeb9",
+        "size_in_bytes": 58659
+      },
+      {
+        "_path": "include/tk3d.h",
+        "path_type": "hardlink",
+        "sha256": "8ce05c7475e6e16847150cb7b9ff7480fe7e50c02f57c583dbee65311d8622b1",
+        "sha256_in_prefix": "8ce05c7475e6e16847150cb7b9ff7480fe7e50c02f57c583dbee65311d8622b1",
+        "size_in_bytes": 3111
+      },
+      {
+        "_path": "include/tkArray.h",
+        "path_type": "hardlink",
+        "sha256": "22084f5a1f0d75b34b4805bdc349ed15f3038cf5b7c62f4fd9be65edaad00544",
+        "sha256_in_prefix": "22084f5a1f0d75b34b4805bdc349ed15f3038cf5b7c62f4fd9be65edaad00544",
+        "size_in_bytes": 18429
+      },
+      {
+        "_path": "include/tkBusy.h",
+        "path_type": "hardlink",
+        "sha256": "7b48fd3cdf08e21f09b53787dba4f3b48845e130e9981194ef17ec351e967065",
+        "sha256_in_prefix": "7b48fd3cdf08e21f09b53787dba4f3b48845e130e9981194ef17ec351e967065",
+        "size_in_bytes": 1622
+      },
+      {
+        "_path": "include/tkButton.h",
+        "path_type": "hardlink",
+        "sha256": "55c41f88141bcfb9d6a8440e0d3eb52ce96500a532ef350bc004c42692222c37",
+        "sha256_in_prefix": "55c41f88141bcfb9d6a8440e0d3eb52ce96500a532ef350bc004c42692222c37",
+        "size_in_bytes": 12496
+      },
+      {
+        "_path": "include/tkCanvas.h",
+        "path_type": "hardlink",
+        "sha256": "e4b8a0bde19a200548bcad9770a75454a7538ca45d790772f3a219fe30a38905",
+        "sha256_in_prefix": "e4b8a0bde19a200548bcad9770a75454a7538ca45d790772f3a219fe30a38905",
+        "size_in_bytes": 11491
+      },
+      {
+        "_path": "include/tkColor.h",
+        "path_type": "hardlink",
+        "sha256": "c44d58d41ac6a5ebf2af38f42583d84ae7e647c61cb1a3bdfff16b2216d4ebf0",
+        "sha256_in_prefix": "c44d58d41ac6a5ebf2af38f42583d84ae7e647c61cb1a3bdfff16b2216d4ebf0",
+        "size_in_bytes": 2660
+      },
+      {
+        "_path": "include/tkDList.h",
+        "path_type": "hardlink",
+        "sha256": "488c0e45709a62282418d74072a8a6bfc5be7e145e4907da7efa48334a28ff38",
+        "sha256_in_prefix": "488c0e45709a62282418d74072a8a6bfc5be7e145e4907da7efa48334a28ff38",
+        "size_in_bytes": 16756
+      },
+      {
+        "_path": "include/tkDecls.h",
+        "path_type": "hardlink",
+        "sha256": "9665192d3e7bc84260737356b9605dbd91154ad4b50a90841fc55b3b92a09259",
+        "sha256_in_prefix": "9665192d3e7bc84260737356b9605dbd91154ad4b50a90841fc55b3b92a09259",
+        "size_in_bytes": 77862
+      },
+      {
+        "_path": "include/tkEntry.h",
+        "path_type": "hardlink",
+        "sha256": "6098699ab1108377cb8311cbb466f1bbbce15f91c2cda1c298b9056d6f2d7302",
+        "sha256_in_prefix": "6098699ab1108377cb8311cbb466f1bbbce15f91c2cda1c298b9056d6f2d7302",
+        "size_in_bytes": 11237
+      },
+      {
+        "_path": "include/tkFileFilter.h",
+        "path_type": "hardlink",
+        "sha256": "3d63e37bcd2a932085abcd8b7a082ed753b9a55231742f24234703ceac43783d",
+        "sha256_in_prefix": "3d63e37bcd2a932085abcd8b7a082ed753b9a55231742f24234703ceac43783d",
+        "size_in_bytes": 2569
+      },
+      {
+        "_path": "include/tkFont.h",
+        "path_type": "hardlink",
+        "sha256": "5ef9bd9a4ba5da27b29fc11155ac3b1cb838b3ca64d2178910ef2ca4e3da5d5e",
+        "sha256_in_prefix": "5ef9bd9a4ba5da27b29fc11155ac3b1cb838b3ca64d2178910ef2ca4e3da5d5e",
+        "size_in_bytes": 8004
+      },
+      {
+        "_path": "include/tkImgPhoto.h",
+        "path_type": "hardlink",
+        "sha256": "48e664da91de1a7e17429ffbeacac7b8fde5f17a99234fe5e3de360620e84dc9",
+        "sha256_in_prefix": "48e664da91de1a7e17429ffbeacac7b8fde5f17a99234fe5e3de360620e84dc9",
+        "size_in_bytes": 9045
+      },
+      {
+        "_path": "include/tkInt.h",
+        "path_type": "hardlink",
+        "sha256": "e98329182bcca0087b7660e16ad31027f787c18d100913ced4446220e8603e9a",
+        "sha256_in_prefix": "e98329182bcca0087b7660e16ad31027f787c18d100913ced4446220e8603e9a",
+        "size_in_bytes": 48130
+      },
+      {
+        "_path": "include/tkIntDecls.h",
+        "path_type": "hardlink",
+        "sha256": "5ac9dfc59a27f9533165ef86d666051fdb62bbf3e4de60a4a9199cf567c98f4f",
+        "sha256_in_prefix": "5ac9dfc59a27f9533165ef86d666051fdb62bbf3e4de60a4a9199cf567c98f4f",
+        "size_in_bytes": 50872
+      },
+      {
+        "_path": "include/tkIntPlatDecls.h",
+        "path_type": "hardlink",
+        "sha256": "3c035bc3f55df4649b08f56abc2aae150fd0b89ecefa6a22a1db488f3ac71c88",
+        "sha256_in_prefix": "3c035bc3f55df4649b08f56abc2aae150fd0b89ecefa6a22a1db488f3ac71c88",
+        "size_in_bytes": 29823
+      },
+      {
+        "_path": "include/tkIntXlibDecls.h",
+        "path_type": "hardlink",
+        "sha256": "4a4e93a42012b674c78d09db8c91f671d96bc96badc7bc6c6b6c6e0d853d4b83",
+        "sha256_in_prefix": "4a4e93a42012b674c78d09db8c91f671d96bc96badc7bc6c6b6c6e0d853d4b83",
+        "size_in_bytes": 68364
+      },
+      {
+        "_path": "include/tkMacOSX.h",
+        "path_type": "hardlink",
+        "sha256": "ffc54123e83eaa2003a3590f2d7720d7526303bf2b20fcad543184bcdc418b89",
+        "sha256_in_prefix": "ffc54123e83eaa2003a3590f2d7720d7526303bf2b20fcad543184bcdc418b89",
+        "size_in_bytes": 1016
+      },
+      {
+        "_path": "include/tkMacOSXColor.h",
+        "path_type": "hardlink",
+        "sha256": "28bbf4a368feec894bb9bac338208f86df06631380653565296206ed7fa2cc42",
+        "sha256_in_prefix": "28bbf4a368feec894bb9bac338208f86df06631380653565296206ed7fa2cc42",
+        "size_in_bytes": 16966
+      },
+      {
+        "_path": "include/tkMacOSXConstants.h",
+        "path_type": "hardlink",
+        "sha256": "a602e8435f8e3fddb4f08bc45b71e923bcb74750ce6eec196ce37a1565028a7a",
+        "sha256_in_prefix": "a602e8435f8e3fddb4f08bc45b71e923bcb74750ce6eec196ce37a1565028a7a",
+        "size_in_bytes": 5013
+      },
+      {
+        "_path": "include/tkMacOSXCursors.h",
+        "path_type": "hardlink",
+        "sha256": "f4515a10018785023406930217193214a6d9dd8becee45874606c3bfd017e22a",
+        "sha256_in_prefix": "f4515a10018785023406930217193214a6d9dd8becee45874606c3bfd017e22a",
+        "size_in_bytes": 4316
+      },
+      {
+        "_path": "include/tkMacOSXDebug.h",
+        "path_type": "hardlink",
+        "sha256": "97bc2a12a3ec858752fd66605fc7ad5c9ea30af71f507eab7d1e39cc11d83ee6",
+        "sha256_in_prefix": "97bc2a12a3ec858752fd66605fc7ad5c9ea30af71f507eab7d1e39cc11d83ee6",
+        "size_in_bytes": 951
+      },
+      {
+        "_path": "include/tkMacOSXDefault.h",
+        "path_type": "hardlink",
+        "sha256": "6c823736ec402b0e6515e21edb0ca35d12a1b30425a28a7b195149b0ae6a1109",
+        "sha256_in_prefix": "6c823736ec402b0e6515e21edb0ca35d12a1b30425a28a7b195149b0ae6a1109",
+        "size_in_bytes": 18544
+      },
+      {
+        "_path": "include/tkMacOSXEvent.h",
+        "path_type": "hardlink",
+        "sha256": "1f92f89f907adb2aaf43ea188ed797f2e3e91a64a719f2ebec144b9c3c2fef42",
+        "sha256_in_prefix": "1f92f89f907adb2aaf43ea188ed797f2e3e91a64a719f2ebec144b9c3c2fef42",
+        "size_in_bytes": 526
+      },
+      {
+        "_path": "include/tkMacOSXFont.h",
+        "path_type": "hardlink",
+        "sha256": "2dfa9a1e9a7677e482f64e90245a0e06fa4cb83586c79c075331108c4a0e0cfd",
+        "sha256_in_prefix": "2dfa9a1e9a7677e482f64e90245a0e06fa4cb83586c79c075331108c4a0e0cfd",
+        "size_in_bytes": 798
+      },
+      {
+        "_path": "include/tkMacOSXInt.h",
+        "path_type": "hardlink",
+        "sha256": "8a1c2477b2f9e513be4d991f376f481e546edcfd6f21a34f2af37304bf91cdb1",
+        "sha256_in_prefix": "8a1c2477b2f9e513be4d991f376f481e546edcfd6f21a34f2af37304bf91cdb1",
+        "size_in_bytes": 4942
+      },
+      {
+        "_path": "include/tkMacOSXKeysyms.h",
+        "path_type": "hardlink",
+        "sha256": "f5107b0606e9752d2d8fa1cf47bddea0bb721e8860295f08872c1dbac60a1763",
+        "sha256_in_prefix": "f5107b0606e9752d2d8fa1cf47bddea0bb721e8860295f08872c1dbac60a1763",
+        "size_in_bytes": 50048
+      },
+      {
+        "_path": "include/tkMacOSXPort.h",
+        "path_type": "hardlink",
+        "sha256": "d0845df747357691f6aba0823bfa5faf4842b265fafaf849a60041fb1bc8a63d",
+        "sha256_in_prefix": "d0845df747357691f6aba0823bfa5faf4842b265fafaf849a60041fb1bc8a63d",
+        "size_in_bytes": 4873
+      },
+      {
+        "_path": "include/tkMacOSXPrivate.h",
+        "path_type": "hardlink",
+        "sha256": "04dd24b1afaf478d0b206f8a042ee909c4bf07bc646043db956c837a988d8bb0",
+        "sha256_in_prefix": "04dd24b1afaf478d0b206f8a042ee909c4bf07bc646043db956c837a988d8bb0",
+        "size_in_bytes": 18830
+      },
+      {
+        "_path": "include/tkMacOSXWm.h",
+        "path_type": "hardlink",
+        "sha256": "11054181c44d85c496605a5482d7bad1c7280d8f42244a466308335734c32694",
+        "sha256_in_prefix": "11054181c44d85c496605a5482d7bad1c7280d8f42244a466308335734c32694",
+        "size_in_bytes": 10249
+      },
+      {
+        "_path": "include/tkMacOSXXCursors.h",
+        "path_type": "hardlink",
+        "sha256": "bfbf51494f5933ed2613b0829d4b2a2867d218f4792b985cd49e420de46f5b9b",
+        "sha256_in_prefix": "bfbf51494f5933ed2613b0829d4b2a2867d218f4792b985cd49e420de46f5b9b",
+        "size_in_bytes": 37809
+      },
+      {
+        "_path": "include/tkMenu.h",
+        "path_type": "hardlink",
+        "sha256": "96f8b4c0011ab270683c921930136905fb32dfb30a5cd44fe27b1d004588131c",
+        "sha256_in_prefix": "96f8b4c0011ab270683c921930136905fb32dfb30a5cd44fe27b1d004588131c",
+        "size_in_bytes": 21228
+      },
+      {
+        "_path": "include/tkMenubutton.h",
+        "path_type": "hardlink",
+        "sha256": "d9117d7d3996d7b400af1bf3217b404191c5744da64ea2c1590b356030d32b9e",
+        "sha256_in_prefix": "d9117d7d3996d7b400af1bf3217b404191c5744da64ea2c1590b356030d32b9e",
+        "size_in_bytes": 8039
+      },
+      {
+        "_path": "include/tkPlatDecls.h",
+        "path_type": "hardlink",
+        "sha256": "508dbed395e9e4139fae1c58eb888521b8a722206b9c34e15c14a8a234c97937",
+        "sha256_in_prefix": "508dbed395e9e4139fae1c58eb888521b8a722206b9c34e15c14a8a234c97937",
+        "size_in_bytes": 6838
+      },
+      {
+        "_path": "include/tkPort.h",
+        "path_type": "hardlink",
+        "sha256": "97473febab39d0b5d461ebad1afc07d2506f09fd382dcc1379118d396eca7a0e",
+        "sha256_in_prefix": "97473febab39d0b5d461ebad1afc07d2506f09fd382dcc1379118d396eca7a0e",
+        "size_in_bytes": 632
+      },
+      {
+        "_path": "include/tkScale.h",
+        "path_type": "hardlink",
+        "sha256": "f6132789452b57a548fc22887021051e56f15570556f47e0aff5fb9e9ed4d0ea",
+        "sha256_in_prefix": "f6132789452b57a548fc22887021051e56f15570556f47e0aff5fb9e9ed4d0ea",
+        "size_in_bytes": 9030
+      },
+      {
+        "_path": "include/tkScrollbar.h",
+        "path_type": "hardlink",
+        "sha256": "1c5aa8ef4334bd2578eb7ce293a8e69c221037909436ac9c07c563c526008128",
+        "sha256_in_prefix": "1c5aa8ef4334bd2578eb7ce293a8e69c221037909436ac9c07c563c526008128",
+        "size_in_bytes": 6866
+      },
+      {
+        "_path": "include/tkSelect.h",
+        "path_type": "hardlink",
+        "sha256": "88813ce1ee7dc3d2bf113c09576ca687eef3795d77a329a57e45b5293aa5a613",
+        "sha256_in_prefix": "88813ce1ee7dc3d2bf113c09576ca687eef3795d77a329a57e45b5293aa5a613",
+        "size_in_bytes": 6769
+      },
+      {
+        "_path": "include/tkText.h",
+        "path_type": "hardlink",
+        "sha256": "53810bcab82f6a22c809e93c2f48e64957774cc81b68c64b6f3387b512196d21",
+        "sha256_in_prefix": "53810bcab82f6a22c809e93c2f48e64957774cc81b68c64b6f3387b512196d21",
+        "size_in_bytes": 46929
+      },
+      {
+        "_path": "include/tkUndo.h",
+        "path_type": "hardlink",
+        "sha256": "2a94ac2849e2bd0557b67db2cf8977bce984e55c80949f7e1d98dc2be12d6fd1",
+        "sha256_in_prefix": "2a94ac2849e2bd0557b67db2cf8977bce984e55c80949f7e1d98dc2be12d6fd1",
+        "size_in_bytes": 3678
+      },
+      {
+        "_path": "include/tkUnixDefault.h",
+        "path_type": "hardlink",
+        "sha256": "03c395e8506d78c5661a8dc651cfda33cfbb56f27989521918f5a7ee454259d9",
+        "sha256_in_prefix": "03c395e8506d78c5661a8dc651cfda33cfbb56f27989521918f5a7ee454259d9",
+        "size_in_bytes": 17351
+      },
+      {
+        "_path": "include/tkUnixInt.h",
+        "path_type": "hardlink",
+        "sha256": "b07455254744996ee12a5b425fb886c5a8ef2974cce71e316a00217eeea3d4f5",
+        "sha256_in_prefix": "b07455254744996ee12a5b425fb886c5a8ef2974cce71e316a00217eeea3d4f5",
+        "size_in_bytes": 674
+      },
+      {
+        "_path": "include/tkUnixPort.h",
+        "path_type": "hardlink",
+        "sha256": "d39f4ec7b15ad94da0bc09448de744b16fd0d4e8c79c85037ebc577613afe0fb",
+        "sha256_in_prefix": "d39f4ec7b15ad94da0bc09448de744b16fd0d4e8c79c85037ebc577613afe0fb",
+        "size_in_bytes": 4212
+      },
+      {
+        "_path": "include/tkUuid.h",
+        "path_type": "hardlink",
+        "sha256": "d865fd51dd882d5c30c5602d2af4f367c404fd3b377d97dfd28fdfcf26a09a7a",
+        "sha256_in_prefix": "d865fd51dd882d5c30c5602d2af4f367c404fd3b377d97dfd28fdfcf26a09a7a",
+        "size_in_bytes": 92
+      },
+      {
+        "_path": "lib/itcl4.2.4/itcl.tcl",
+        "path_type": "hardlink",
+        "sha256": "e4e2ceaa0a0b6314206192dfdc6ca885629d31b3e73ce496d7ea3dc892b91653",
+        "sha256_in_prefix": "e4e2ceaa0a0b6314206192dfdc6ca885629d31b3e73ce496d7ea3dc892b91653",
+        "size_in_bytes": 5161
+      },
+      {
+        "_path": "lib/itcl4.2.4/itclConfig.sh",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "/croot/tk_1714770549989/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_plac",
+        "sha256": "08a380a124a3515d3470f6e86245d52fb6dec9ad63f23ad258037f2f64d4f321",
+        "sha256_in_prefix": "68db5068a8072f9dc8b377d28e9cc35c8f6d1a2c7b14fbeadf70b057a843ae6e",
+        "size_in_bytes": 4492
+      },
+      {
+        "_path": "lib/itcl4.2.4/itclHullCmds.tcl",
+        "path_type": "hardlink",
+        "sha256": "986f2cd15caeebf97e6cb6fda6a375cb73ccb89d4431d3e93f4584a8755ad826",
+        "sha256_in_prefix": "986f2cd15caeebf97e6cb6fda6a375cb73ccb89d4431d3e93f4584a8755ad826",
+        "size_in_bytes": 21058
+      },
+      {
+        "_path": "lib/itcl4.2.4/itclWidget.tcl",
+        "path_type": "hardlink",
+        "sha256": "b77df713c6bbf0d2f4682a0ec35025067a2f1297db0ffce4e922bea80835b36e",
+        "sha256_in_prefix": "b77df713c6bbf0d2f4682a0ec35025067a2f1297db0ffce4e922bea80835b36e",
+        "size_in_bytes": 12653
+      },
+      {
+        "_path": "lib/itcl4.2.4/libitcl4.2.4.so",
+        "path_type": "hardlink",
+        "sha256": "b4dec209d072b6ea25863993f95c4fcf0023974e0d01d06a5705173db1313379",
+        "sha256_in_prefix": "b4dec209d072b6ea25863993f95c4fcf0023974e0d01d06a5705173db1313379",
+        "size_in_bytes": 318912
+      },
+      {
+        "_path": "lib/itcl4.2.4/libitclstub4.2.4.a",
+        "path_type": "hardlink",
+        "sha256": "3e696cd78a86f4bfc29a529ca53519181c7e1501b8ffb57192424ca46498b4a2",
+        "sha256_in_prefix": "3e696cd78a86f4bfc29a529ca53519181c7e1501b8ffb57192424ca46498b4a2",
+        "size_in_bytes": 2748
+      },
+      {
+        "_path": "lib/itcl4.2.4/pkgIndex.tcl",
+        "path_type": "hardlink",
+        "sha256": "72a817ab493c6c393d245bbf7d712c74410497f0bbf0770b15336eb4f6469e8b",
+        "sha256_in_prefix": "72a817ab493c6c393d245bbf7d712c74410497f0bbf0770b15336eb4f6469e8b",
+        "size_in_bytes": 436
+      },
+      {
+        "_path": "lib/libtcl8.6.so",
+        "file_mode": "binary",
+        "path_type": "hardlink",
+        "prefix_placeholder": "/croot/tk_1714770549989/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_plac",
+        "sha256": "f8791d47d4b8d4fecfea32fd69fa269fdfce308ff21d7801a9b99db9423cf4c9",
+        "sha256_in_prefix": "fb6b1acac277b1ff5cedb9380f523106d69aebb7d05d783a0f8f7f72204b2a36",
+        "size_in_bytes": 1983416
+      },
+      {
+        "_path": "lib/libtclstub8.6.a",
+        "path_type": "hardlink",
+        "sha256": "2c4e039a28542344980812e1aa5385fec3577d70d32c7668347f74385c1f58fd",
+        "sha256_in_prefix": "2c4e039a28542344980812e1aa5385fec3577d70d32c7668347f74385c1f58fd",
+        "size_in_bytes": 8388
+      },
+      {
+        "_path": "lib/libtk8.6.so",
+        "path_type": "hardlink",
+        "sha256": "e9d3fa72bdd8a3c61cefda30f2266d3b46cc67b91f32956e6acb203edd452325",
+        "sha256_in_prefix": "e9d3fa72bdd8a3c61cefda30f2266d3b46cc67b91f32956e6acb203edd452325",
+        "size_in_bytes": 1604176
+      },
+      {
+        "_path": "lib/libtkstub8.6.a",
+        "path_type": "hardlink",
+        "sha256": "37ca817f9b12764ebf872eadfe8dac1284084e1497030c2699dfb7c8ef23ef79",
+        "sha256_in_prefix": "37ca817f9b12764ebf872eadfe8dac1284084e1497030c2699dfb7c8ef23ef79",
+        "size_in_bytes": 6120
+      },
+      {
+        "_path": "lib/pkgconfig/tcl.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "/croot/tk_1714770549989/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_plac",
+        "sha256": "82d535e89c6a64dfe7a7e0041cac18bb544fa428af22c96f941750d1b2064fbf",
+        "sha256_in_prefix": "e3af9e5d8d32432e6fc1f873cc3cfda0aa8a2f094f59843a9e05f40f686d6b9c",
+        "size_in_bytes": 1199
+      },
+      {
+        "_path": "lib/pkgconfig/tk.pc",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "/croot/tk_1714770549989/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_plac",
+        "sha256": "4c911771c296d053f14bd81a0df530665f711b1845b3e9e76c450a814a871d4b",
+        "sha256_in_prefix": "bb65a72a8d80b5b23a8177e70006c5a0d52ed8640bb38fde445b95e7eaa89a3a",
+        "size_in_bytes": 1180
+      },
+      {
+        "_path": "lib/sqlite3.44.2/libsqlite3.44.2.so",
+        "path_type": "hardlink",
+        "sha256": "2ccfe88e9e8b573a4d312a3cf85f51de60783ab649a4ca9a4ae69b13c3f87ef1",
+        "sha256_in_prefix": "2ccfe88e9e8b573a4d312a3cf85f51de60783ab649a4ca9a4ae69b13c3f87ef1",
+        "size_in_bytes": 1596704
+      },
+      {
+        "_path": "lib/sqlite3.44.2/pkgIndex.tcl",
+        "path_type": "hardlink",
+        "sha256": "729c335527acce0ade3ec8886d2c66c8af3a1e40091dd287b9b7f55d813811b1",
+        "sha256_in_prefix": "729c335527acce0ade3ec8886d2c66c8af3a1e40091dd287b9b7f55d813811b1",
+        "size_in_bytes": 359
+      },
+      {
+        "_path": "lib/tcl8.6/auto.tcl",
+        "path_type": "hardlink",
+        "sha256": "2302234f123a10fef315aa50893bd349bc52201fa12f6dc7bc09fdfc8e84bf85",
+        "sha256_in_prefix": "2302234f123a10fef315aa50893bd349bc52201fa12f6dc7bc09fdfc8e84bf85",
+        "size_in_bytes": 20845
+      },
+      {
+        "_path": "lib/tcl8.6/clock.tcl",
+        "path_type": "hardlink",
+        "sha256": "08d61e36bb536aa02fda040abead556a862018ef9a7b465f1063a973d8da3af0",
+        "sha256_in_prefix": "08d61e36bb536aa02fda040abead556a862018ef9a7b465f1063a973d8da3af0",
+        "size_in_bytes": 128442
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/ascii.enc",
+        "path_type": "hardlink",
+        "sha256": "294c97175fd0894093b866e73548ae660aeed0c3cc1e73867eb66e52d34c0dd2",
+        "sha256_in_prefix": "294c97175fd0894093b866e73548ae660aeed0c3cc1e73867eb66e52d34c0dd2",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/big5.enc",
+        "path_type": "hardlink",
+        "sha256": "465ae2d4880b8006b1476cd60facf676875438244c1d93a7dbe4cde1035e745f",
+        "sha256_in_prefix": "465ae2d4880b8006b1476cd60facf676875438244c1d93a7dbe4cde1035e745f",
+        "size_in_bytes": 92873
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cns11643.enc",
+        "path_type": "hardlink",
+        "sha256": "0a95f67f90b1cdd407a78ea4032af9eb996fc38864c46d74b42b3a7f7eda0c8a",
+        "sha256_in_prefix": "0a95f67f90b1cdd407a78ea4032af9eb996fc38864c46d74b42b3a7f7eda0c8a",
+        "size_in_bytes": 97050
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp1250.enc",
+        "path_type": "hardlink",
+        "sha256": "1b42df7e7d6b0feb17cb0bc8d97e6ce6899492306dd880c48a39d1a2f0279004",
+        "sha256_in_prefix": "1b42df7e7d6b0feb17cb0bc8d97e6ce6899492306dd880c48a39d1a2f0279004",
+        "size_in_bytes": 1091
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp1251.enc",
+        "path_type": "hardlink",
+        "sha256": "2d1bed2422e131a140087faf1b12b8a46f7de3b6413bae8bc395c06f0d70b9b0",
+        "sha256_in_prefix": "2d1bed2422e131a140087faf1b12b8a46f7de3b6413bae8bc395c06f0d70b9b0",
+        "size_in_bytes": 1091
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp1252.enc",
+        "path_type": "hardlink",
+        "sha256": "14df3ae30e81e7620be6bbb7a9e42083af1ae04d94cf1203565f8a3c0542ace0",
+        "sha256_in_prefix": "14df3ae30e81e7620be6bbb7a9e42083af1ae04d94cf1203565f8a3c0542ace0",
+        "size_in_bytes": 1091
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp1253.enc",
+        "path_type": "hardlink",
+        "sha256": "2174d94e1c1d5ad93717b9e8c20569ed95a8af51b2d3ab2bce99f1a887049c0e",
+        "sha256_in_prefix": "2174d94e1c1d5ad93717b9e8c20569ed95a8af51b2d3ab2bce99f1a887049c0e",
+        "size_in_bytes": 1091
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp1254.enc",
+        "path_type": "hardlink",
+        "sha256": "bc4cbe4c99fd65abea45fbdaf28cc1d5c42119280125fbbd5c2c11892ae460b2",
+        "sha256_in_prefix": "bc4cbe4c99fd65abea45fbdaf28cc1d5c42119280125fbbd5c2c11892ae460b2",
+        "size_in_bytes": 1091
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp1255.enc",
+        "path_type": "hardlink",
+        "sha256": "f8bd79ae5a90e5390d77dc31cb3065b0f93cb8813c9e67accec72e2db2027a08",
+        "sha256_in_prefix": "f8bd79ae5a90e5390d77dc31cb3065b0f93cb8813c9e67accec72e2db2027a08",
+        "size_in_bytes": 1091
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp1256.enc",
+        "path_type": "hardlink",
+        "sha256": "bbacea81d4f7a3a7f3c036273a4534d31dbf8b6b5cca2bcc4c00cb1593cf03d8",
+        "sha256_in_prefix": "bbacea81d4f7a3a7f3c036273a4534d31dbf8b6b5cca2bcc4c00cb1593cf03d8",
+        "size_in_bytes": 1091
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp1257.enc",
+        "path_type": "hardlink",
+        "sha256": "4151434a714fc82228677c39b07908c4e19952fc058e26e7c3ebab7724ce0c77",
+        "sha256_in_prefix": "4151434a714fc82228677c39b07908c4e19952fc058e26e7c3ebab7724ce0c77",
+        "size_in_bytes": 1091
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp1258.enc",
+        "path_type": "hardlink",
+        "sha256": "0cdb59e255ccd7dcf4af847c9b020aeaee78ce7fcf5f214ebcf123328acf9f24",
+        "sha256_in_prefix": "0cdb59e255ccd7dcf4af847c9b020aeaee78ce7fcf5f214ebcf123328acf9f24",
+        "size_in_bytes": 1091
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp437.enc",
+        "path_type": "hardlink",
+        "sha256": "d707a1f03514806e714f01cbfcb7c9f9973acdc80c2d67bbd4e6f85223a50952",
+        "sha256_in_prefix": "d707a1f03514806e714f01cbfcb7c9f9973acdc80c2d67bbd4e6f85223a50952",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp737.enc",
+        "path_type": "hardlink",
+        "sha256": "8bfca34869b3f9a3b2fc71b02cbac41512af6d1f8ab17d2564e65320f88ede10",
+        "sha256_in_prefix": "8bfca34869b3f9a3b2fc71b02cbac41512af6d1f8ab17d2564e65320f88ede10",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp775.enc",
+        "path_type": "hardlink",
+        "sha256": "44fb04b5c72b584b6283a99b34789690c627b5083c5df6e8b5b7ab2c68903c06",
+        "sha256_in_prefix": "44fb04b5c72b584b6283a99b34789690c627b5083c5df6e8b5b7ab2c68903c06",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp850.enc",
+        "path_type": "hardlink",
+        "sha256": "55aa2d13b789b3125f5c9d0dc5b6e3a90d79426d3b7825dcd604f56d4c6e36a2",
+        "sha256_in_prefix": "55aa2d13b789b3125f5c9d0dc5b6e3a90d79426d3b7825dcd604f56d4c6e36a2",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp852.enc",
+        "path_type": "hardlink",
+        "sha256": "5266b6f18c3144cfadbcb7b1d27f0a7eaa1c641fd3b33905e42e4549fd373770",
+        "sha256_in_prefix": "5266b6f18c3144cfadbcb7b1d27f0a7eaa1c641fd3b33905e42e4549fd373770",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp855.enc",
+        "path_type": "hardlink",
+        "sha256": "e3f071c63ac43af66061506ef2c574c35f7bf48553fb5158ae41d9230c1a10df",
+        "sha256_in_prefix": "e3f071c63ac43af66061506ef2c574c35f7bf48553fb5158ae41d9230c1a10df",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp857.enc",
+        "path_type": "hardlink",
+        "sha256": "e39985c6a238086b54427475519c9e0285750707db521d1820e639723c01c36f",
+        "sha256_in_prefix": "e39985c6a238086b54427475519c9e0285750707db521d1820e639723c01c36f",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp860.enc",
+        "path_type": "hardlink",
+        "sha256": "6db59139627d29abd36f38ed2e0de2a6b234a7d7e681c7dbaf8b888f1cac49a5",
+        "sha256_in_prefix": "6db59139627d29abd36f38ed2e0de2a6b234a7d7e681c7dbaf8b888f1cac49a5",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp861.enc",
+        "path_type": "hardlink",
+        "sha256": "a43a5b58bfc57bd723b12bbdea9f6e1a921360b36d2d52c420f37299788442d3",
+        "sha256_in_prefix": "a43a5b58bfc57bd723b12bbdea9f6e1a921360b36d2d52c420f37299788442d3",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp862.enc",
+        "path_type": "hardlink",
+        "sha256": "aea716d490c35439621a8f00ca7e4397ef1c70428e206c5036b7af25f1c3d82f",
+        "sha256_in_prefix": "aea716d490c35439621a8f00ca7e4397ef1c70428e206c5036b7af25f1c3d82f",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp863.enc",
+        "path_type": "hardlink",
+        "sha256": "13b5cb481e0216a8fc28bfa9d0f6b060cdf5c457b3e12435ca826eb2ef52b068",
+        "sha256_in_prefix": "13b5cb481e0216a8fc28bfa9d0f6b060cdf5c457b3e12435ca826eb2ef52b068",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp864.enc",
+        "path_type": "hardlink",
+        "sha256": "e87ec076f950fcd58189e362e1505dd55b0c8f4fa7dd1a9331c5c111d2ce569f",
+        "sha256_in_prefix": "e87ec076f950fcd58189e362e1505dd55b0c8f4fa7dd1a9331c5c111d2ce569f",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp865.enc",
+        "path_type": "hardlink",
+        "sha256": "407fc0fe06d2a057e9ba0109ea9356cab38f27756d135ef3b06a85705b616f50",
+        "sha256_in_prefix": "407fc0fe06d2a057e9ba0109ea9356cab38f27756d135ef3b06a85705b616f50",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp866.enc",
+        "path_type": "hardlink",
+        "sha256": "82633643cd326543915acc5d28a634b5795274cd39974d3955e51d7330ba9338",
+        "sha256_in_prefix": "82633643cd326543915acc5d28a634b5795274cd39974d3955e51d7330ba9338",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp869.enc",
+        "path_type": "hardlink",
+        "sha256": "27f16e3dd02b2212c4980ea09bdc068cf01584a1b8bb91456c03fcababe0931e",
+        "sha256_in_prefix": "27f16e3dd02b2212c4980ea09bdc068cf01584a1b8bb91456c03fcababe0931e",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp874.enc",
+        "path_type": "hardlink",
+        "sha256": "3e067363fc07662ebe52ba617c2aad364920f2af395b3416297400859acd78bb",
+        "sha256_in_prefix": "3e067363fc07662ebe52ba617c2aad364920f2af395b3416297400859acd78bb",
+        "size_in_bytes": 1090
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp932.enc",
+        "path_type": "hardlink",
+        "sha256": "9d33df6e1cfdd2cf2553f5e2758f457d710caff5f8c69968f2665accd6e9a6fd",
+        "sha256_in_prefix": "9d33df6e1cfdd2cf2553f5e2758f457d710caff5f8c69968f2665accd6e9a6fd",
+        "size_in_bytes": 48207
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp936.enc",
+        "path_type": "hardlink",
+        "sha256": "619330192984a80f93ac6f2e4e5eaa463fd3dddc75c1f65f3975f33e0dd7a0bb",
+        "sha256_in_prefix": "619330192984a80f93ac6f2e4e5eaa463fd3dddc75c1f65f3975f33e0dd7a0bb",
+        "size_in_bytes": 132509
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp949.enc",
+        "path_type": "hardlink",
+        "sha256": "26bcb620472433962717712d04597a63264c8e444459432565c4c113de0a240b",
+        "sha256_in_prefix": "26bcb620472433962717712d04597a63264c8e444459432565c4c113de0a240b",
+        "size_in_bytes": 130423
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/cp950.enc",
+        "path_type": "hardlink",
+        "sha256": "1fb9a3d52d432ea2d6cd43927cebf9f58f309a236e1b11d20fe8d5a5fb944e6e",
+        "sha256_in_prefix": "1fb9a3d52d432ea2d6cd43927cebf9f58f309a236e1b11d20fe8d5a5fb944e6e",
+        "size_in_bytes": 91831
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/dingbats.enc",
+        "path_type": "hardlink",
+        "sha256": "3bde9ae7eaf9be799c84b2aa4e80d78be8acbaca1e486f10b9bdd42e3aeddcb2",
+        "sha256_in_prefix": "3bde9ae7eaf9be799c84b2aa4e80d78be8acbaca1e486f10b9bdd42e3aeddcb2",
+        "size_in_bytes": 1093
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/ebcdic.enc",
+        "path_type": "hardlink",
+        "sha256": "17a7d45f3b82f2a42e1d36b13db5ced077945a3e82700947cd1f803dd2a60dbf",
+        "sha256_in_prefix": "17a7d45f3b82f2a42e1d36b13db5ced077945a3e82700947cd1f803dd2a60dbf",
+        "size_in_bytes": 1054
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/euc-cn.enc",
+        "path_type": "hardlink",
+        "sha256": "546392237f47d71cee1daa1aae287d94d93216a1fabd648b50f59ddce7e8ae35",
+        "sha256_in_prefix": "546392237f47d71cee1daa1aae287d94d93216a1fabd648b50f59ddce7e8ae35",
+        "size_in_bytes": 85574
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/euc-jp.enc",
+        "path_type": "hardlink",
+        "sha256": "3bfb42c4d36d1763693aefce87f6277a11ad5a756d691deda804d9d0edcb3093",
+        "sha256_in_prefix": "3bfb42c4d36d1763693aefce87f6277a11ad5a756d691deda804d9d0edcb3093",
+        "size_in_bytes": 82537
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/euc-kr.enc",
+        "path_type": "hardlink",
+        "sha256": "1f1ad4c4079b33b706e948a735a8c3042f40cc68065c48c220d0f56fd048c33b",
+        "sha256_in_prefix": "1f1ad4c4079b33b706e948a735a8c3042f40cc68065c48c220d0f56fd048c33b",
+        "size_in_bytes": 93918
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/gb12345.enc",
+        "path_type": "hardlink",
+        "sha256": "0c0df17bfece897a1da7765c822453b09866573028cecced13e2efee02bcccc4",
+        "sha256_in_prefix": "0c0df17bfece897a1da7765c822453b09866573028cecced13e2efee02bcccc4",
+        "size_in_bytes": 86619
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/gb1988.enc",
+        "path_type": "hardlink",
+        "sha256": "a2717ae09e0cf2d566c245dc5c5889d326661b40db0d5d9a6d95b8e6b0f0e753",
+        "sha256_in_prefix": "a2717ae09e0cf2d566c245dc5c5889d326661b40db0d5d9a6d95b8e6b0f0e753",
+        "size_in_bytes": 1091
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/gb2312-raw.enc",
+        "path_type": "hardlink",
+        "sha256": "ec11bfd49c715cd89fb9d387a07cf54261e0f4a1ccec1a810e02c7b38ad2f285",
+        "sha256_in_prefix": "ec11bfd49c715cd89fb9d387a07cf54261e0f4a1ccec1a810e02c7b38ad2f285",
+        "size_in_bytes": 84532
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/gb2312.enc",
+        "path_type": "hardlink",
+        "sha256": "546392237f47d71cee1daa1aae287d94d93216a1fabd648b50f59ddce7e8ae35",
+        "sha256_in_prefix": "546392237f47d71cee1daa1aae287d94d93216a1fabd648b50f59ddce7e8ae35",
+        "size_in_bytes": 85574
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso2022-jp.enc",
+        "path_type": "hardlink",
+        "sha256": "e12928e8b5754d49d0d3e799135de2b480ba84b5dbaa0e350d9846fa67f943ec",
+        "sha256_in_prefix": "e12928e8b5754d49d0d3e799135de2b480ba84b5dbaa0e350d9846fa67f943ec",
+        "size_in_bytes": 192
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso2022-kr.enc",
+        "path_type": "hardlink",
+        "sha256": "6ac0f1845a56a1a537b9a6d9bcb724dddf3d3a5e61879ae925931b1c0534fbb7",
+        "sha256_in_prefix": "6ac0f1845a56a1a537b9a6d9bcb724dddf3d3a5e61879ae925931b1c0534fbb7",
+        "size_in_bytes": 115
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso2022.enc",
+        "path_type": "hardlink",
+        "sha256": "753dda518a7e9f6dc0309721b1faae58c9661f545801da9f04728391f70be2d0",
+        "sha256_in_prefix": "753dda518a7e9f6dc0309721b1faae58c9661f545801da9f04728391f70be2d0",
+        "size_in_bytes": 226
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-1.enc",
+        "path_type": "hardlink",
+        "sha256": "754ef6bf3a564228ab0b56dde391521dcc1a6c83cfb95d4b761141e71d2e8e87",
+        "sha256_in_prefix": "754ef6bf3a564228ab0b56dde391521dcc1a6c83cfb95d4b761141e71d2e8e87",
+        "size_in_bytes": 1094
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-10.enc",
+        "path_type": "hardlink",
+        "sha256": "79f6470d9bebd30832b3a9ca59cd1fdca28c5be6373bd01d949eee1ba51aa7a8",
+        "sha256_in_prefix": "79f6470d9bebd30832b3a9ca59cd1fdca28c5be6373bd01d949eee1ba51aa7a8",
+        "size_in_bytes": 1095
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-11.enc",
+        "path_type": "hardlink",
+        "sha256": "ad939139ff7140970bde3d91180f7c4d703d7fcf67a02c71392de1980dc560e4",
+        "sha256_in_prefix": "ad939139ff7140970bde3d91180f7c4d703d7fcf67a02c71392de1980dc560e4",
+        "size_in_bytes": 1095
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-13.enc",
+        "path_type": "hardlink",
+        "sha256": "33c6072a006ba4e9513d7b7fd3d08b1c745ca1079b6d796c36b2a5ae8e4ae02b",
+        "sha256_in_prefix": "33c6072a006ba4e9513d7b7fd3d08b1c745ca1079b6d796c36b2a5ae8e4ae02b",
+        "size_in_bytes": 1095
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-14.enc",
+        "path_type": "hardlink",
+        "sha256": "8d737283289baf8c08ef1dd7e47a6c775dace480419c5e2a92d6c0e85bb5b381",
+        "sha256_in_prefix": "8d737283289baf8c08ef1dd7e47a6c775dace480419c5e2a92d6c0e85bb5b381",
+        "size_in_bytes": 1095
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-15.enc",
+        "path_type": "hardlink",
+        "sha256": "c7b0377f30e42048492e4710fe5a0a54fa9865395b8a6748f7dac53b901284f9",
+        "sha256_in_prefix": "c7b0377f30e42048492e4710fe5a0a54fa9865395b8a6748f7dac53b901284f9",
+        "size_in_bytes": 1095
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-16.enc",
+        "path_type": "hardlink",
+        "sha256": "c40ca014b88f97ae62ae1a816c5963b1ed432a77d84d89c3a764ba15c8a23708",
+        "sha256_in_prefix": "c40ca014b88f97ae62ae1a816c5963b1ed432a77d84d89c3a764ba15c8a23708",
+        "size_in_bytes": 1095
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-2.enc",
+        "path_type": "hardlink",
+        "sha256": "0e0732480338a229cc3ad4cdde09021a0a81902dc6edfb5f12203e2aff44668f",
+        "sha256_in_prefix": "0e0732480338a229cc3ad4cdde09021a0a81902dc6edfb5f12203e2aff44668f",
+        "size_in_bytes": 1094
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-3.enc",
+        "path_type": "hardlink",
+        "sha256": "73342c27cf55f625d3db90c5fc8e7340ffdf85a51872dbfb1d0a8cb1e43ec5da",
+        "sha256_in_prefix": "73342c27cf55f625d3db90c5fc8e7340ffdf85a51872dbfb1d0a8cb1e43ec5da",
+        "size_in_bytes": 1094
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-4.enc",
+        "path_type": "hardlink",
+        "sha256": "17745bdd299779e91d41db0cee26cdc7132da3666907a94210b591ced5a55adb",
+        "sha256_in_prefix": "17745bdd299779e91d41db0cee26cdc7132da3666907a94210b591ced5a55adb",
+        "size_in_bytes": 1094
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-5.enc",
+        "path_type": "hardlink",
+        "sha256": "bc5ed164d15321404bbdcad0d647c322ffab1659462182dbd3945439d9ecbae7",
+        "sha256_in_prefix": "bc5ed164d15321404bbdcad0d647c322ffab1659462182dbd3945439d9ecbae7",
+        "size_in_bytes": 1094
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-6.enc",
+        "path_type": "hardlink",
+        "sha256": "f502e07ae3f19ccdc31e434049cfc733dd5df85487c0160b0331e40241ad0274",
+        "sha256_in_prefix": "f502e07ae3f19ccdc31e434049cfc733dd5df85487c0160b0331e40241ad0274",
+        "size_in_bytes": 1094
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-7.enc",
+        "path_type": "hardlink",
+        "sha256": "013b3b2911c66bc1ca54e510814af4954c310da10737f9b2a2474d714be2ab39",
+        "sha256_in_prefix": "013b3b2911c66bc1ca54e510814af4954c310da10737f9b2a2474d714be2ab39",
+        "size_in_bytes": 1094
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-8.enc",
+        "path_type": "hardlink",
+        "sha256": "e1d207917aa3483d9110e24a0cc0cd1e0e5843c8bfc901cfee7a6d872dd945a9",
+        "sha256_in_prefix": "e1d207917aa3483d9110e24a0cc0cd1e0e5843c8bfc901cfee7a6d872dd945a9",
+        "size_in_bytes": 1094
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/iso8859-9.enc",
+        "path_type": "hardlink",
+        "sha256": "1cdcf510c38464e5284edcfaec334e3fc516236c1ca3b9ab91ca878c23866914",
+        "sha256_in_prefix": "1cdcf510c38464e5284edcfaec334e3fc516236c1ca3b9ab91ca878c23866914",
+        "size_in_bytes": 1094
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/jis0201.enc",
+        "path_type": "hardlink",
+        "sha256": "480f61d0e1a75dee59bf9a66de0bb78faae4e87fd6317f93480412123277d442",
+        "sha256_in_prefix": "480f61d0e1a75dee59bf9a66de0bb78faae4e87fd6317f93480412123277d442",
+        "size_in_bytes": 1092
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/jis0208.enc",
+        "path_type": "hardlink",
+        "sha256": "118ea160ef29e11b46dec57af2c44405934dd8a7c49d2bc8b90c94e8baa6138b",
+        "sha256_in_prefix": "118ea160ef29e11b46dec57af2c44405934dd8a7c49d2bc8b90c94e8baa6138b",
+        "size_in_bytes": 80453
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/jis0212.enc",
+        "path_type": "hardlink",
+        "sha256": "24a9d379fda39f2bcc0580ca3e0bd2e99ae279af5e2841c9e7dbe7f931d19cc0",
+        "sha256_in_prefix": "24a9d379fda39f2bcc0580ca3e0bd2e99ae279af5e2841c9e7dbe7f931d19cc0",
+        "size_in_bytes": 70974
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/koi8-r.enc",
+        "path_type": "hardlink",
+        "sha256": "7142b1120b993d6091197574090fe04be3ea64ffc3ad5a167a4b5e0b42c9f062",
+        "sha256_in_prefix": "7142b1120b993d6091197574090fe04be3ea64ffc3ad5a167a4b5e0b42c9f062",
+        "size_in_bytes": 1091
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/koi8-u.enc",
+        "path_type": "hardlink",
+        "sha256": "bbb729b906f5fc3b7ee6694b208b206d19a9d4dc571e235b9c94dcdd4a323a2a",
+        "sha256_in_prefix": "bbb729b906f5fc3b7ee6694b208b206d19a9d4dc571e235b9c94dcdd4a323a2a",
+        "size_in_bytes": 1091
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/ksc5601.enc",
+        "path_type": "hardlink",
+        "sha256": "0f8b530ad0decbf8dd81da8291b8b0f976c643b5a292db84680b31ecfbe5d00a",
+        "sha256_in_prefix": "0f8b530ad0decbf8dd81da8291b8b0f976c643b5a292db84680b31ecfbe5d00a",
+        "size_in_bytes": 92877
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/macCentEuro.enc",
+        "path_type": "hardlink",
+        "sha256": "8f3089f4b2ca47b7ac4cb78375b2bfac01268113a7c67d020f8b5b7f2c25bbda",
+        "sha256_in_prefix": "8f3089f4b2ca47b7ac4cb78375b2bfac01268113a7c67d020f8b5b7f2c25bbda",
+        "size_in_bytes": 1096
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/macCroatian.enc",
+        "path_type": "hardlink",
+        "sha256": "8d0b6a882b742c5cce938241328606c111dda0cb83334ebedcda17605f3641ae",
+        "sha256_in_prefix": "8d0b6a882b742c5cce938241328606c111dda0cb83334ebedcda17605f3641ae",
+        "size_in_bytes": 1096
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/macCyrillic.enc",
+        "path_type": "hardlink",
+        "sha256": "eb135a89519f2e004282ded21b11c3af7ccb2320c9772f2df7d1a4a1b674e491",
+        "sha256_in_prefix": "eb135a89519f2e004282ded21b11c3af7ccb2320c9772f2df7d1a4a1b674e491",
+        "size_in_bytes": 1096
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/macDingbats.enc",
+        "path_type": "hardlink",
+        "sha256": "8fbcc63cb289afaae15b438752c1746f413f3b79ba5845c2ef52ba1104f8bda6",
+        "sha256_in_prefix": "8fbcc63cb289afaae15b438752c1746f413f3b79ba5845c2ef52ba1104f8bda6",
+        "size_in_bytes": 1096
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/macGreek.enc",
+        "path_type": "hardlink",
+        "sha256": "f7bff98228ded981ec9a4d1d0da62247a8d23f158926e3acbec3cce379c998c2",
+        "sha256_in_prefix": "f7bff98228ded981ec9a4d1d0da62247a8d23f158926e3acbec3cce379c998c2",
+        "size_in_bytes": 1093
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/macIceland.enc",
+        "path_type": "hardlink",
+        "sha256": "633f5e3e75bf1590c94ab9cbf3538d0f0a7a319db9016993908452d903d9c4fd",
+        "sha256_in_prefix": "633f5e3e75bf1590c94ab9cbf3538d0f0a7a319db9016993908452d903d9c4fd",
+        "size_in_bytes": 1095
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/macJapan.enc",
+        "path_type": "hardlink",
+        "sha256": "2a6856298ec629a16bdd924711dfe3f3b1e3a882ddf04b7310785d83ec0d566c",
+        "sha256_in_prefix": "2a6856298ec629a16bdd924711dfe3f3b1e3a882ddf04b7310785d83ec0d566c",
+        "size_in_bytes": 48028
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/macRoman.enc",
+        "path_type": "hardlink",
+        "sha256": "68f22bad30daa81b215925416c1cc83360b3bb87efc342058929731ac678ff37",
+        "sha256_in_prefix": "68f22bad30daa81b215925416c1cc83360b3bb87efc342058929731ac678ff37",
+        "size_in_bytes": 1093
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/macRomania.enc",
+        "path_type": "hardlink",
+        "sha256": "71ae80adfb437b7bc88f3c76fd37074449b3526e7aa5776d2b9fd5a43c066fa8",
+        "sha256_in_prefix": "71ae80adfb437b7bc88f3c76fd37074449b3526e7aa5776d2b9fd5a43c066fa8",
+        "size_in_bytes": 1095
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/macThai.enc",
+        "path_type": "hardlink",
+        "sha256": "cead5eb2b0b44ef4003fbcb2e49ca0503992ba1d6540d11acbbb84fdbbd6e79a",
+        "sha256_in_prefix": "cead5eb2b0b44ef4003fbcb2e49ca0503992ba1d6540d11acbbb84fdbbd6e79a",
+        "size_in_bytes": 1092
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/macTurkish.enc",
+        "path_type": "hardlink",
+        "sha256": "f703b7f74cc6f5faa959f51c757c94623677e27013bcae23befba01a392646d9",
+        "sha256_in_prefix": "f703b7f74cc6f5faa959f51c757c94623677e27013bcae23befba01a392646d9",
+        "size_in_bytes": 1095
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/macUkraine.enc",
+        "path_type": "hardlink",
+        "sha256": "4c94e7fbe183379805056d960ab624d78879e43278262e4d6b98ab78e5fefea8",
+        "sha256_in_prefix": "4c94e7fbe183379805056d960ab624d78879e43278262e4d6b98ab78e5fefea8",
+        "size_in_bytes": 1095
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/shiftjis.enc",
+        "path_type": "hardlink",
+        "sha256": "7502587d52e7810228f2ecb45ac4319ea0f5c008b7ac91053b920010dc6ddf94",
+        "sha256_in_prefix": "7502587d52e7810228f2ecb45ac4319ea0f5c008b7ac91053b920010dc6ddf94",
+        "size_in_bytes": 41862
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/symbol.enc",
+        "path_type": "hardlink",
+        "sha256": "73fd2b5e14309d8c036d334f137b9edf1f7b32dbd45491cf93184818582d0671",
+        "sha256_in_prefix": "73fd2b5e14309d8c036d334f137b9edf1f7b32dbd45491cf93184818582d0671",
+        "size_in_bytes": 1091
+      },
+      {
+        "_path": "lib/tcl8.6/encoding/tis-620.enc",
+        "path_type": "hardlink",
+        "sha256": "5918b5e1def09781efd28751b6883665aaee29f1d244f0891edecda9bf6a4b63",
+        "sha256_in_prefix": "5918b5e1def09781efd28751b6883665aaee29f1d244f0891edecda9bf6a4b63",
+        "size_in_bytes": 1092
+      },
+      {
+        "_path": "lib/tcl8.6/history.tcl",
+        "path_type": "hardlink",
+        "sha256": "cb1634980996ff393a0034afa5ed2dfe4afc2e2b25c4e399c74d7c3dcb8ee23d",
+        "sha256_in_prefix": "cb1634980996ff393a0034afa5ed2dfe4afc2e2b25c4e399c74d7c3dcb8ee23d",
+        "size_in_bytes": 7908
+      },
+      {
+        "_path": "lib/tcl8.6/http1.0/http.tcl",
+        "path_type": "hardlink",
+        "sha256": "acbff9b5ef75790920b95023156fad80b18aff8cafc4a6dc03893f9388e053a2",
+        "sha256_in_prefix": "acbff9b5ef75790920b95023156fad80b18aff8cafc4a6dc03893f9388e053a2",
+        "size_in_bytes": 9689
+      },
+      {
+        "_path": "lib/tcl8.6/http1.0/pkgIndex.tcl",
+        "path_type": "hardlink",
+        "sha256": "420c4b3088c9dacd21bc348011cac61d7cb283b9bee78ae72eed764ab094651c",
+        "sha256_in_prefix": "420c4b3088c9dacd21bc348011cac61d7cb283b9bee78ae72eed764ab094651c",
+        "size_in_bytes": 735
+      },
+      {
+        "_path": "lib/tcl8.6/init.tcl",
+        "path_type": "hardlink",
+        "sha256": "374e8e83d501dc0283d4b6cae60d96b46141048e5a57d1500dd379f966879f98",
+        "sha256_in_prefix": "374e8e83d501dc0283d4b6cae60d96b46141048e5a57d1500dd379f966879f98",
+        "size_in_bytes": 24826
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/af.msg",
+        "path_type": "hardlink",
+        "sha256": "2981965bd23a93a09eb5b4a334acb15d00645d645c596a5ecadb88bfa0b6a908",
+        "sha256_in_prefix": "2981965bd23a93a09eb5b4a334acb15d00645d645c596a5ecadb88bfa0b6a908",
+        "size_in_bytes": 989
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/af_za.msg",
+        "path_type": "hardlink",
+        "sha256": "3c2f5f631ed3603ef0d5bcb31c51b2353c5c27839c806a036f3b7007af7f3de8",
+        "sha256_in_prefix": "3c2f5f631ed3603ef0d5bcb31c51b2353c5c27839c806a036f3b7007af7f3de8",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ar.msg",
+        "path_type": "hardlink",
+        "sha256": "bf984ec7cf619e700fe7e00381ff58abe9bd2f4b3dd622eb2edaccc5e6681050",
+        "sha256_in_prefix": "bf984ec7cf619e700fe7e00381ff58abe9bd2f4b3dd622eb2edaccc5e6681050",
+        "size_in_bytes": 1964
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ar_in.msg",
+        "path_type": "hardlink",
+        "sha256": "29a70eac43b1f3aa189d8ae4d92658e07783965bae417fb66ee5f69cfcb564f3",
+        "sha256_in_prefix": "29a70eac43b1f3aa189d8ae4d92658e07783965bae417fb66ee5f69cfcb564f3",
+        "size_in_bytes": 259
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ar_jo.msg",
+        "path_type": "hardlink",
+        "sha256": "78116e7e706c7d1e3e7446094709819fb39a50c2a2302f92d6a498e06ed4a31b",
+        "sha256_in_prefix": "78116e7e706c7d1e3e7446094709819fb39a50c2a2302f92d6a498e06ed4a31b",
+        "size_in_bytes": 1812
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ar_lb.msg",
+        "path_type": "hardlink",
+        "sha256": "7c970efeb55c53758143df42cc452a3632f805487ca69db57e37c1f478a7571b",
+        "sha256_in_prefix": "7c970efeb55c53758143df42cc452a3632f805487ca69db57e37c1f478a7571b",
+        "size_in_bytes": 1812
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ar_sy.msg",
+        "path_type": "hardlink",
+        "sha256": "aef17b94a0db878e2f0fb49d982057c5b663289e3a8e0e2b195dcec37e8555b1",
+        "sha256_in_prefix": "aef17b94a0db878e2f0fb49d982057c5b663289e3a8e0e2b195dcec37e8555b1",
+        "size_in_bytes": 1812
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/be.msg",
+        "path_type": "hardlink",
+        "sha256": "d790e54217a4bf9a7e1dcb4f3399b5861728918e93cd3f00b63f1349bdb71c57",
+        "sha256_in_prefix": "d790e54217a4bf9a7e1dcb4f3399b5861728918e93cd3f00b63f1349bdb71c57",
+        "size_in_bytes": 2105
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/bg.msg",
+        "path_type": "hardlink",
+        "sha256": "e737d8dc724aa3b9ec07165c13e8628c6a8ac1e80345e10dc77e1fc62a6d86f1",
+        "sha256_in_prefix": "e737d8dc724aa3b9ec07165c13e8628c6a8ac1e80345e10dc77e1fc62a6d86f1",
+        "size_in_bytes": 1819
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/bn.msg",
+        "path_type": "hardlink",
+        "sha256": "297d4d7cae6e99db3ca6ee793519512bff65013cf261cf90ded4d28d3d4f826f",
+        "sha256_in_prefix": "297d4d7cae6e99db3ca6ee793519512bff65013cf261cf90ded4d28d3d4f826f",
+        "size_in_bytes": 2286
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/bn_in.msg",
+        "path_type": "hardlink",
+        "sha256": "7d3a956663c529d07c8a9610414356de717f3a2a2ce9b331b052367270acea94",
+        "sha256_in_prefix": "7d3a956663c529d07c8a9610414356de717f3a2a2ce9b331b052367270acea94",
+        "size_in_bytes": 259
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ca.msg",
+        "path_type": "hardlink",
+        "sha256": "14ff564fab584571e954be20d61c2facb096fe2b3ef369cc5ecb7c25c2d92d5a",
+        "sha256_in_prefix": "14ff564fab584571e954be20d61c2facb096fe2b3ef369cc5ecb7c25c2d92d5a",
+        "size_in_bytes": 1102
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/cs.msg",
+        "path_type": "hardlink",
+        "sha256": "49cf452eef0b8970bc56a7b8e040ba088215508228a77032cba0035522412f86",
+        "sha256_in_prefix": "49cf452eef0b8970bc56a7b8e040ba088215508228a77032cba0035522412f86",
+        "size_in_bytes": 1300
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/da.msg",
+        "path_type": "hardlink",
+        "sha256": "ca58ff5baa9681d9162e094e833470077b7555bb09eee8e8dd41881b108008a0",
+        "sha256_in_prefix": "ca58ff5baa9681d9162e094e833470077b7555bb09eee8e8dd41881b108008a0",
+        "size_in_bytes": 1156
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/de.msg",
+        "path_type": "hardlink",
+        "sha256": "cc3672969c1dd223eadd9a226e00cac731d8245532408b75ab9a70e9edd28673",
+        "sha256_in_prefix": "cc3672969c1dd223eadd9a226e00cac731d8245532408b75ab9a70e9edd28673",
+        "size_in_bytes": 1222
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/de_at.msg",
+        "path_type": "hardlink",
+        "sha256": "80513a9969a12a8fb01802d6fc3015712a4efdda64552911a1bb3ea7a098d02c",
+        "sha256_in_prefix": "80513a9969a12a8fb01802d6fc3015712a4efdda64552911a1bb3ea7a098d02c",
+        "size_in_bytes": 812
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/de_be.msg",
+        "path_type": "hardlink",
+        "sha256": "7573581dec27e90b0c7d34057d9f4ef89727317d55f2c4e0428a47740fb1eb7a",
+        "sha256_in_prefix": "7573581dec27e90b0c7d34057d9f4ef89727317d55f2c4e0428a47740fb1eb7a",
+        "size_in_bytes": 1223
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/el.msg",
+        "path_type": "hardlink",
+        "sha256": "9b2f91be34024fbcf645f6ef92460e5f944ca6a16268b79478ab904b2934d357",
+        "sha256_in_prefix": "9b2f91be34024fbcf645f6ef92460e5f944ca6a16268b79478ab904b2934d357",
+        "size_in_bytes": 2252
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/en_au.msg",
+        "path_type": "hardlink",
+        "sha256": "b85c9a373ff0f036151432652dd55c182b0704bd0625ea84bed1727ec0de3dd8",
+        "sha256_in_prefix": "b85c9a373ff0f036151432652dd55c182b0704bd0625ea84bed1727ec0de3dd8",
+        "size_in_bytes": 300
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/en_be.msg",
+        "path_type": "hardlink",
+        "sha256": "596ac02204c845aa74451fc527645549f2a3318cb63051fcacb2bf948fd77351",
+        "sha256_in_prefix": "596ac02204c845aa74451fc527645549f2a3318cb63051fcacb2bf948fd77351",
+        "size_in_bytes": 305
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/en_bw.msg",
+        "path_type": "hardlink",
+        "sha256": "340804f73b620686ab698b2202191d69227e736b1652271c99f2cfef03d72296",
+        "sha256_in_prefix": "340804f73b620686ab698b2202191d69227e736b1652271c99f2cfef03d72296",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/en_ca.msg",
+        "path_type": "hardlink",
+        "sha256": "c9fe2223c4949ac0a193f321fc0fd7c344a9e49a54b00f8a4c30404798658631",
+        "sha256_in_prefix": "c9fe2223c4949ac0a193f321fc0fd7c344a9e49a54b00f8a4c30404798658631",
+        "size_in_bytes": 288
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/en_gb.msg",
+        "path_type": "hardlink",
+        "sha256": "ae38ad5452314b0946c5cb9d3c89cdfc2ad214e146eb683b8d0ce3fe84070fe1",
+        "sha256_in_prefix": "ae38ad5452314b0946c5cb9d3c89cdfc2ad214e146eb683b8d0ce3fe84070fe1",
+        "size_in_bytes": 279
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/en_hk.msg",
+        "path_type": "hardlink",
+        "sha256": "c9be2c9ad31d516b508d01e85bcca375aaf807d6d8cd7c658085d5007069fffd",
+        "sha256_in_prefix": "c9be2c9ad31d516b508d01e85bcca375aaf807d6d8cd7c658085d5007069fffd",
+        "size_in_bytes": 321
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/en_ie.msg",
+        "path_type": "hardlink",
+        "sha256": "e7868c80fd59d18bb15345d29f5292856f639559cffd42ee649c16c7938bf58d",
+        "sha256_in_prefix": "e7868c80fd59d18bb15345d29f5292856f639559cffd42ee649c16c7938bf58d",
+        "size_in_bytes": 279
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/en_in.msg",
+        "path_type": "hardlink",
+        "sha256": "71e5367fe839afc4338c50d450f111728e097538ecaccc1b17b10238001b0bb1",
+        "sha256_in_prefix": "71e5367fe839afc4338c50d450f111728e097538ecaccc1b17b10238001b0bb1",
+        "size_in_bytes": 310
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/en_nz.msg",
+        "path_type": "hardlink",
+        "sha256": "812db204e4cb8266207a4e948fba3dd1efe4d071bbb793f9743a4320a1ceebe3",
+        "sha256_in_prefix": "812db204e4cb8266207a4e948fba3dd1efe4d071bbb793f9743a4320a1ceebe3",
+        "size_in_bytes": 300
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/en_ph.msg",
+        "path_type": "hardlink",
+        "sha256": "be107f5fae1e303ea766075c52ef2146ef149eda37662776e18e93685b176cdc",
+        "sha256_in_prefix": "be107f5fae1e303ea766075c52ef2146ef149eda37662776e18e93685b176cdc",
+        "size_in_bytes": 321
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/en_sg.msg",
+        "path_type": "hardlink",
+        "sha256": "b8d354519bd4eb1004eb7b25f4e23fd3ee7f533a5f491a46d19fd520ed34c930",
+        "sha256_in_prefix": "b8d354519bd4eb1004eb7b25f4e23fd3ee7f533a5f491a46d19fd520ed34c930",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/en_za.msg",
+        "path_type": "hardlink",
+        "sha256": "98ce9ca4bb590ba5f922d6a196e5381e19c64e7682cdbef914f2dce6745a7332",
+        "sha256_in_prefix": "98ce9ca4bb590ba5f922d6a196e5381e19c64e7682cdbef914f2dce6745a7332",
+        "size_in_bytes": 245
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/en_zw.msg",
+        "path_type": "hardlink",
+        "sha256": "91088bbbf58a704185dec13dbd421296bbd271a1aebbcb3ef85a99cecd848ff8",
+        "sha256_in_prefix": "91088bbbf58a704185dec13dbd421296bbd271a1aebbcb3ef85a99cecd848ff8",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/eo.msg",
+        "path_type": "hardlink",
+        "sha256": "50df3e0e669502ed08dd778d0afedf0f71993be388b0fcaa1065d1c91bd22d83",
+        "sha256_in_prefix": "50df3e0e669502ed08dd778d0afedf0f71993be388b0fcaa1065d1c91bd22d83",
+        "size_in_bytes": 1231
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es.msg",
+        "path_type": "hardlink",
+        "sha256": "fff2f08a5be202c81e469e16d4de1f8a0c1cfe556cda063da071279f29314837",
+        "sha256_in_prefix": "fff2f08a5be202c81e469e16d4de1f8a0c1cfe556cda063da071279f29314837",
+        "size_in_bytes": 1180
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_ar.msg",
+        "path_type": "hardlink",
+        "sha256": "af530acd69676678c95b803a29a44642ed2d2f2d077cf0f47b53ff24bac03b2e",
+        "sha256_in_prefix": "af530acd69676678c95b803a29a44642ed2d2f2d077cf0f47b53ff24bac03b2e",
+        "size_in_bytes": 242
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_bo.msg",
+        "path_type": "hardlink",
+        "sha256": "24b58de38cd4cb2abd08d1eda6c9454ffde7ed1a33367b457d7702434a0a55ee",
+        "sha256_in_prefix": "24b58de38cd4cb2abd08d1eda6c9454ffde7ed1a33367b457d7702434a0a55ee",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_cl.msg",
+        "path_type": "hardlink",
+        "sha256": "12ad1546eb391989105d80b41a87686d3b30626d0c42a73705f33b2d711950cc",
+        "sha256_in_prefix": "12ad1546eb391989105d80b41a87686d3b30626d0c42a73705f33b2d711950cc",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_co.msg",
+        "path_type": "hardlink",
+        "sha256": "1b4979874c3f025317dfcf0b06fc8cee080a28ff3e8efe1de9e899f6d4f4d21e",
+        "sha256_in_prefix": "1b4979874c3f025317dfcf0b06fc8cee080a28ff3e8efe1de9e899f6d4f4d21e",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_cr.msg",
+        "path_type": "hardlink",
+        "sha256": "7ac5fc35bc422a5445603e0430236e62cca3558787811de22305f72d439eb4bb",
+        "sha256_in_prefix": "7ac5fc35bc422a5445603e0430236e62cca3558787811de22305f72d439eb4bb",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_do.msg",
+        "path_type": "hardlink",
+        "sha256": "847c14c297dbe4d8517debaa8ed555f3daedf843d6bad1f411598631a0bd3507",
+        "sha256_in_prefix": "847c14c297dbe4d8517debaa8ed555f3daedf843d6bad1f411598631a0bd3507",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_ec.msg",
+        "path_type": "hardlink",
+        "sha256": "2086ee8d7398d5e60e5c3048843b388437bd6f2507d2293ca218936e3bf61e59",
+        "sha256_in_prefix": "2086ee8d7398d5e60e5c3048843b388437bd6f2507d2293ca218936e3bf61e59",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_gt.msg",
+        "path_type": "hardlink",
+        "sha256": "1bc22af98267d635e3f07615a264a716940a2b1faa5caa3aff54d4c5a4a34370",
+        "sha256_in_prefix": "1bc22af98267d635e3f07615a264a716940a2b1faa5caa3aff54d4c5a4a34370",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_hn.msg",
+        "path_type": "hardlink",
+        "sha256": "a2d25880c64309552aaced082deed1ee006482a14cab97db524e9983ee84acfc",
+        "sha256_in_prefix": "a2d25880c64309552aaced082deed1ee006482a14cab97db524e9983ee84acfc",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_mx.msg",
+        "path_type": "hardlink",
+        "sha256": "d0faa9d7997d5696bff92384144e0b9dfb2e4c38375817613f81a89c06ec6383",
+        "sha256_in_prefix": "d0faa9d7997d5696bff92384144e0b9dfb2e4c38375817613f81a89c06ec6383",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_ni.msg",
+        "path_type": "hardlink",
+        "sha256": "4b28b46981bbb78cbd2b22060e2dd018c66fcff1cee52755425ad4900a90d6c3",
+        "sha256_in_prefix": "4b28b46981bbb78cbd2b22060e2dd018c66fcff1cee52755425ad4900a90d6c3",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_pa.msg",
+        "path_type": "hardlink",
+        "sha256": "6832dc5ab9f610883784cf702691fcf16850651bc1c6a77a0efa81f43bc509ac",
+        "sha256_in_prefix": "6832dc5ab9f610883784cf702691fcf16850651bc1c6a77a0efa81f43bc509ac",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_pe.msg",
+        "path_type": "hardlink",
+        "sha256": "cc826c93682ef19d29ab6304657e07802c70cf18b1e5ea99c3480df6d2383983",
+        "sha256_in_prefix": "cc826c93682ef19d29ab6304657e07802c70cf18b1e5ea99c3480df6d2383983",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_pr.msg",
+        "path_type": "hardlink",
+        "sha256": "19563225ce7875696c6aa2c156e6438292de436b58f8d7c23253e3132069f9a2",
+        "sha256_in_prefix": "19563225ce7875696c6aa2c156e6438292de436b58f8d7c23253e3132069f9a2",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_py.msg",
+        "path_type": "hardlink",
+        "sha256": "94ff64201c27ab04f362617dd56b7d85b223bcca0735124196e7669270c591f0",
+        "sha256_in_prefix": "94ff64201c27ab04f362617dd56b7d85b223bcca0735124196e7669270c591f0",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_sv.msg",
+        "path_type": "hardlink",
+        "sha256": "e3268c95e9b7d471f5fd2436c17318d5a796220ba39cebebcd39fbb0141a49ce",
+        "sha256_in_prefix": "e3268c95e9b7d471f5fd2436c17318d5a796220ba39cebebcd39fbb0141a49ce",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_uy.msg",
+        "path_type": "hardlink",
+        "sha256": "ba557a3c656275a0c870fb8466f2237850f5a7cf2d001919896725bb3d3eaa4b",
+        "sha256_in_prefix": "ba557a3c656275a0c870fb8466f2237850f5a7cf2d001919896725bb3d3eaa4b",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/es_ve.msg",
+        "path_type": "hardlink",
+        "sha256": "64f796c5e3e300448a1f309a0da7d43548cc40511036ff3a3e0c917e32147d62",
+        "sha256_in_prefix": "64f796c5e3e300448a1f309a0da7d43548cc40511036ff3a3e0c917e32147d62",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/et.msg",
+        "path_type": "hardlink",
+        "sha256": "ccc2b4738db16fafb48bfc77c9e2f8be17bc19e4140e48b61f3ef1ce7c9f3a8c",
+        "sha256_in_prefix": "ccc2b4738db16fafb48bfc77c9e2f8be17bc19e4140e48b61f3ef1ce7c9f3a8c",
+        "size_in_bytes": 1206
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/eu.msg",
+        "path_type": "hardlink",
+        "sha256": "7dcc4966a5c13a52b6d1db62be200b9b5a1decbaccfcaf15045dd03a2c3e3faa",
+        "sha256_in_prefix": "7dcc4966a5c13a52b6d1db62be200b9b5a1decbaccfcaf15045dd03a2c3e3faa",
+        "size_in_bytes": 985
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/eu_es.msg",
+        "path_type": "hardlink",
+        "sha256": "935164a2d2d14815906b438562889b31139519b3a8e8db3d2ac152a77ec591dc",
+        "sha256_in_prefix": "935164a2d2d14815906b438562889b31139519b3a8e8db3d2ac152a77ec591dc",
+        "size_in_bytes": 287
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/fa.msg",
+        "path_type": "hardlink",
+        "sha256": "f9ca4819e8c8b044d7d68c97fc67e0f4ccd6245e30024161dab24d0f7c3a9683",
+        "sha256_in_prefix": "f9ca4819e8c8b044d7d68c97fc67e0f4ccd6245e30024161dab24d0f7c3a9683",
+        "size_in_bytes": 1664
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/fa_in.msg",
+        "path_type": "hardlink",
+        "sha256": "6360ce0f31ee593e311b275f3c1f1ed427e237f31010a4280ef2c58aa6f2633a",
+        "sha256_in_prefix": "6360ce0f31ee593e311b275f3c1f1ed427e237f31010a4280ef2c58aa6f2633a",
+        "size_in_bytes": 1957
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/fa_ir.msg",
+        "path_type": "hardlink",
+        "sha256": "cf492cbd73a6c230725225d70566b6e46d5730bd3f63879781de4433965620be",
+        "sha256_in_prefix": "cf492cbd73a6c230725225d70566b6e46d5730bd3f63879781de4433965620be",
+        "size_in_bytes": 417
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/fi.msg",
+        "path_type": "hardlink",
+        "sha256": "be0d2dce08e6cd786bc3b07a1fb1adc5b2cf12053c99eacddaacddb8802dfb9c",
+        "sha256_in_prefix": "be0d2dce08e6cd786bc3b07a1fb1adc5b2cf12053c99eacddaacddb8802dfb9c",
+        "size_in_bytes": 1145
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/fo.msg",
+        "path_type": "hardlink",
+        "sha256": "f249dd1698ed1687e13654c04d08b829193027a2fecc24222ec854b59350466a",
+        "sha256_in_prefix": "f249dd1698ed1687e13654c04d08b829193027a2fecc24222ec854b59350466a",
+        "size_in_bytes": 986
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/fo_fo.msg",
+        "path_type": "hardlink",
+        "sha256": "7145b57ac5c074bca968580b337c04a71bbd6efb93afaf291c1361fd700dc791",
+        "sha256_in_prefix": "7145b57ac5c074bca968580b337c04a71bbd6efb93afaf291c1361fd700dc791",
+        "size_in_bytes": 279
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/fr.msg",
+        "path_type": "hardlink",
+        "sha256": "7a87e418b6d8d14d8c11d63708b38d607d28f7ddbf39606c7d8fba22be7892ca",
+        "sha256_in_prefix": "7a87e418b6d8d14d8c11d63708b38d607d28f7ddbf39606c7d8fba22be7892ca",
+        "size_in_bytes": 1205
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/fr_be.msg",
+        "path_type": "hardlink",
+        "sha256": "980e703dfb1eede7de48c958f6b501ed4251f69cb0fbce0fca85555f5acf134a",
+        "sha256_in_prefix": "980e703dfb1eede7de48c958f6b501ed4251f69cb0fbce0fca85555f5acf134a",
+        "size_in_bytes": 279
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/fr_ca.msg",
+        "path_type": "hardlink",
+        "sha256": "f16e212d5d1f6e83a9fc4e56874e4c7b8f1947ee882610a73199480319efa529",
+        "sha256_in_prefix": "f16e212d5d1f6e83a9fc4e56874e4c7b8f1947ee882610a73199480319efa529",
+        "size_in_bytes": 279
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/fr_ch.msg",
+        "path_type": "hardlink",
+        "sha256": "ab160bfdeb5c3adf071e01c78312a81ee4223bbf5470ab880972bbf5965291f3",
+        "sha256_in_prefix": "ab160bfdeb5c3adf071e01c78312a81ee4223bbf5470ab880972bbf5965291f3",
+        "size_in_bytes": 281
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ga.msg",
+        "path_type": "hardlink",
+        "sha256": "057c75c1ad70653733dce43ea5bf151500f39314e8b0236ee80f8d5db623627f",
+        "sha256_in_prefix": "057c75c1ad70653733dce43ea5bf151500f39314e8b0236ee80f8d5db623627f",
+        "size_in_bytes": 1141
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ga_ie.msg",
+        "path_type": "hardlink",
+        "sha256": "2072e48c98b480db5677188836485b4605d5a9d99870ac73b5bfe9dcc6db46f4",
+        "sha256_in_prefix": "2072e48c98b480db5677188836485b4605d5a9d99870ac73b5bfe9dcc6db46f4",
+        "size_in_bytes": 279
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/gl.msg",
+        "path_type": "hardlink",
+        "sha256": "c71a07169cdbe9962616d28f38c32d641da277e53e67f8e3a69eb320c1e2b88c",
+        "sha256_in_prefix": "c71a07169cdbe9962616d28f38c32d641da277e53e67f8e3a69eb320c1e2b88c",
+        "size_in_bytes": 950
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/gl_es.msg",
+        "path_type": "hardlink",
+        "sha256": "bc2b0424cf27bef67f309e2b6dffef4d39c46f15d91c15e83e070c7fd4e20c9c",
+        "sha256_in_prefix": "bc2b0424cf27bef67f309e2b6dffef4d39c46f15d91c15e83e070c7fd4e20c9c",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/gv.msg",
+        "path_type": "hardlink",
+        "sha256": "75aa686ff901c9e66e51d36e8e78e5154b57ee9045784568f6a8798ea9689207",
+        "sha256_in_prefix": "75aa686ff901c9e66e51d36e8e78e5154b57ee9045784568f6a8798ea9689207",
+        "size_in_bytes": 1037
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/gv_gb.msg",
+        "path_type": "hardlink",
+        "sha256": "823af00f4e44613e929d32770edb214132b6e210e872751624824da5f0b78448",
+        "sha256_in_prefix": "823af00f4e44613e929d32770edb214132b6e210e872751624824da5f0b78448",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/he.msg",
+        "path_type": "hardlink",
+        "sha256": "d27adaf74ebb18d6964882cf931260331b93ae4b283427f9a0db147a83de1d55",
+        "sha256_in_prefix": "d27adaf74ebb18d6964882cf931260331b93ae4b283427f9a0db147a83de1d55",
+        "size_in_bytes": 1938
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/hi.msg",
+        "path_type": "hardlink",
+        "sha256": "fafe65db09bdcb863742fda8705bcd1c31b59e0dd8a3b347ea6dec2596cee0e9",
+        "sha256_in_prefix": "fafe65db09bdcb863742fda8705bcd1c31b59e0dd8a3b347ea6dec2596cee0e9",
+        "size_in_bytes": 1738
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/hi_in.msg",
+        "path_type": "hardlink",
+        "sha256": "29c7ca358fffcaf94753c7cc2f63b58386234b75552fa3272c2e36f253770c3f",
+        "sha256_in_prefix": "29c7ca358fffcaf94753c7cc2f63b58386234b75552fa3272c2e36f253770c3f",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/hr.msg",
+        "path_type": "hardlink",
+        "sha256": "9e14d8f7f54be953983f198c8d59f38842c5f73419a5e81be6460b3623e7307a",
+        "sha256_in_prefix": "9e14d8f7f54be953983f198c8d59f38842c5f73419a5e81be6460b3623e7307a",
+        "size_in_bytes": 1121
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/hu.msg",
+        "path_type": "hardlink",
+        "sha256": "314f4180c05de4a4860f65af6460900fff77f12c08edd728f68ca0065126b9ae",
+        "sha256_in_prefix": "314f4180c05de4a4860f65af6460900fff77f12c08edd728f68ca0065126b9ae",
+        "size_in_bytes": 1327
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/id.msg",
+        "path_type": "hardlink",
+        "sha256": "1f1b0f5dede0263bd81773a78e98af551f36361accb315b618c8ae70a5fe781e",
+        "sha256_in_prefix": "1f1b0f5dede0263bd81773a78e98af551f36361accb315b618c8ae70a5fe781e",
+        "size_in_bytes": 914
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/id_id.msg",
+        "path_type": "hardlink",
+        "sha256": "db81643ba1fd115e9d547943a889a56dfc0c81b63f21b1edc1955c6884c1b2f5",
+        "sha256_in_prefix": "db81643ba1fd115e9d547943a889a56dfc0c81b63f21b1edc1955c6884c1b2f5",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/is.msg",
+        "path_type": "hardlink",
+        "sha256": "6767115fff2da05f49a28bad78853fac6fc716186b985474d6d30764e1727c40",
+        "sha256_in_prefix": "6767115fff2da05f49a28bad78853fac6fc716186b985474d6d30764e1727c40",
+        "size_in_bytes": 1255
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/it.msg",
+        "path_type": "hardlink",
+        "sha256": "c7d84001855586a0bab236a6a5878922d9c4a2ea1799bf18544869359750c0df",
+        "sha256_in_prefix": "c7d84001855586a0bab236a6a5878922d9c4a2ea1799bf18544869359750c0df",
+        "size_in_bytes": 1240
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/it_ch.msg",
+        "path_type": "hardlink",
+        "sha256": "2ee356ffa2491a5a60bdf7d7febfac426824904738615a0c1d07aef6bda3b76f",
+        "sha256_in_prefix": "2ee356ffa2491a5a60bdf7d7febfac426824904738615a0c1d07aef6bda3b76f",
+        "size_in_bytes": 244
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ja.msg",
+        "path_type": "hardlink",
+        "sha256": "1fa391a6b22ddba5fb0431dfe0507f0b0754140b424700f1675f72c279ab0a0a",
+        "sha256_in_prefix": "1fa391a6b22ddba5fb0431dfe0507f0b0754140b424700f1675f72c279ab0a0a",
+        "size_in_bytes": 1645
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/kl.msg",
+        "path_type": "hardlink",
+        "sha256": "1b00229df5a979a040339bbc72d448f39968fee5cc24f07241c9f6129a9b53dd",
+        "sha256_in_prefix": "1b00229df5a979a040339bbc72d448f39968fee5cc24f07241c9f6129a9b53dd",
+        "size_in_bytes": 978
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/kl_gl.msg",
+        "path_type": "hardlink",
+        "sha256": "f99da45138a8aebfd92747fc28992f0c315c6c4ad97710eaf9427263bffa139c",
+        "sha256_in_prefix": "f99da45138a8aebfd92747fc28992f0c315c6c4ad97710eaf9427263bffa139c",
+        "size_in_bytes": 279
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ko.msg",
+        "path_type": "hardlink",
+        "sha256": "f6e2b0d116d2c9ac90dda430b6892371d87a4ecfb6955318978ed6f6e9d546a6",
+        "sha256_in_prefix": "f6e2b0d116d2c9ac90dda430b6892371d87a4ecfb6955318978ed6f6e9d546a6",
+        "size_in_bytes": 1566
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ko_kr.msg",
+        "path_type": "hardlink",
+        "sha256": "31a4b74f51c584354907251c55fe5ce894d2c9618156a1dc6f5a979bc350db17",
+        "sha256_in_prefix": "31a4b74f51c584354907251c55fe5ce894d2c9618156a1dc6f5a979bc350db17",
+        "size_in_bytes": 346
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/kok.msg",
+        "path_type": "hardlink",
+        "sha256": "d236d5b27184b1e813e686d901418117f22d67024e6944018fc4b633df9ff744",
+        "sha256_in_prefix": "d236d5b27184b1e813e686d901418117f22d67024e6944018fc4b633df9ff744",
+        "size_in_bytes": 1958
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/kok_in.msg",
+        "path_type": "hardlink",
+        "sha256": "bee07f14c7f4fc93b62ac318f89d2ed0dd6ff30d2bf21c2874654ff0292a6c4b",
+        "sha256_in_prefix": "bee07f14c7f4fc93b62ac318f89d2ed0dd6ff30d2bf21c2874654ff0292a6c4b",
+        "size_in_bytes": 254
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/kw.msg",
+        "path_type": "hardlink",
+        "sha256": "f49f4e1c7142bf7a82fc2b9fc075171ae45903fe69131478c15219d72bbaad33",
+        "sha256_in_prefix": "f49f4e1c7142bf7a82fc2b9fc075171ae45903fe69131478c15219d72bbaad33",
+        "size_in_bytes": 966
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/kw_gb.msg",
+        "path_type": "hardlink",
+        "sha256": "7a8a539c8b990aeffea06188b98dc437fd2a6e89ff66483ef334994e73fd0ec9",
+        "sha256_in_prefix": "7a8a539c8b990aeffea06188b98dc437fd2a6e89ff66483ef334994e73fd0ec9",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/lt.msg",
+        "path_type": "hardlink",
+        "sha256": "510d8eed3040b50afaf6a3c85bc98847f1b4d5d8a685c5ec06acc2491b890101",
+        "sha256_in_prefix": "510d8eed3040b50afaf6a3c85bc98847f1b4d5d8a685c5ec06acc2491b890101",
+        "size_in_bytes": 1255
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/lv.msg",
+        "path_type": "hardlink",
+        "sha256": "fd95b38a3bebd59468bdc2890bac59df31c352e17f2e77c82471e1ca89469802",
+        "sha256_in_prefix": "fd95b38a3bebd59468bdc2890bac59df31c352e17f2e77c82471e1ca89469802",
+        "size_in_bytes": 1219
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/mk.msg",
+        "path_type": "hardlink",
+        "sha256": "f384dd88523147cef42aa871d323fc4cbee338ff67cc5c95aec7940c0e531ae3",
+        "sha256_in_prefix": "f384dd88523147cef42aa871d323fc4cbee338ff67cc5c95aec7940c0e531ae3",
+        "size_in_bytes": 2105
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/mr.msg",
+        "path_type": "hardlink",
+        "sha256": "eb2e2b7a41854af68cef5881cf1fbf4d38e70d2fab2c3f3ce5901aa5cc56fc15",
+        "sha256_in_prefix": "eb2e2b7a41854af68cef5881cf1fbf4d38e70d2fab2c3f3ce5901aa5cc56fc15",
+        "size_in_bytes": 1807
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/mr_in.msg",
+        "path_type": "hardlink",
+        "sha256": "f75a29bb323db4354b0c759cb1c8c5a4ffc376dffd74274ca60a36994816a75c",
+        "sha256_in_prefix": "f75a29bb323db4354b0c759cb1c8c5a4ffc376dffd74274ca60a36994816a75c",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ms.msg",
+        "path_type": "hardlink",
+        "sha256": "831f611ee851a64bf1ba5f9a5441ec1d50722fa9f15b4227707fe1927f754de4",
+        "sha256_in_prefix": "831f611ee851a64bf1ba5f9a5441ec1d50722fa9f15b4227707fe1927f754de4",
+        "size_in_bytes": 910
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ms_my.msg",
+        "path_type": "hardlink",
+        "sha256": "d05948d75c06669addb9708bc5fb48e6b651d4e62ef1b327ef8a3f605fd5271c",
+        "sha256_in_prefix": "d05948d75c06669addb9708bc5fb48e6b651d4e62ef1b327ef8a3f605fd5271c",
+        "size_in_bytes": 259
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/mt.msg",
+        "path_type": "hardlink",
+        "sha256": "d115718818e3e3367847ce35bb5ff0361d08993d9749d438c918f8eb87ad8814",
+        "sha256_in_prefix": "d115718818e3e3367847ce35bb5ff0361d08993d9749d438c918f8eb87ad8814",
+        "size_in_bytes": 690
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/nb.msg",
+        "path_type": "hardlink",
+        "sha256": "bc401889dd934c49d10d99b471441be2b536b1722739c7b0ab7de7629680f602",
+        "sha256_in_prefix": "bc401889dd934c49d10d99b471441be2b536b1722739c7b0ab7de7629680f602",
+        "size_in_bytes": 1157
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/nl.msg",
+        "path_type": "hardlink",
+        "sha256": "49128b36b88e380188059c4b593c317382f32e29d1adc18d58d14d142459a2bb",
+        "sha256_in_prefix": "49128b36b88e380188059c4b593c317382f32e29d1adc18d58d14d142459a2bb",
+        "size_in_bytes": 1079
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/nl_be.msg",
+        "path_type": "hardlink",
+        "sha256": "9cd54ec24cbdbec5e4fe543dda8ca95390678d432d33201fa1c32b61f8fe225a",
+        "sha256_in_prefix": "9cd54ec24cbdbec5e4fe543dda8ca95390678d432d33201fa1c32b61f8fe225a",
+        "size_in_bytes": 279
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/nn.msg",
+        "path_type": "hardlink",
+        "sha256": "5ee93a8c245722deb64b68eff50c081f24da5de43d999c006a10c484e1d3b4ed",
+        "sha256_in_prefix": "5ee93a8c245722deb64b68eff50c081f24da5de43d999c006a10c484e1d3b4ed",
+        "size_in_bytes": 1148
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/pl.msg",
+        "path_type": "hardlink",
+        "sha256": "c39595ddc0095eb4ae9e66db02ee175b31ac3da1f649eb88fa61b911f838f753",
+        "sha256_in_prefix": "c39595ddc0095eb4ae9e66db02ee175b31ac3da1f649eb88fa61b911f838f753",
+        "size_in_bytes": 1211
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/pt.msg",
+        "path_type": "hardlink",
+        "sha256": "9f2bffa3b4d8783b2cfb2ced9cc4319acf06988f61829a1e5291d55b19854e88",
+        "sha256_in_prefix": "9f2bffa3b4d8783b2cfb2ced9cc4319acf06988f61829a1e5291d55b19854e88",
+        "size_in_bytes": 1127
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/pt_br.msg",
+        "path_type": "hardlink",
+        "sha256": "e383b20484ee90c00054d52dd5af473b2ac9dc50c14d459a579ef5f44271d256",
+        "sha256_in_prefix": "e383b20484ee90c00054d52dd5af473b2ac9dc50c14d459a579ef5f44271d256",
+        "size_in_bytes": 279
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ro.msg",
+        "path_type": "hardlink",
+        "sha256": "d2e14be188350d343927d5380eb5672039fe9a37e9a9957921b40e4619b36027",
+        "sha256_in_prefix": "d2e14be188350d343927d5380eb5672039fe9a37e9a9957921b40e4619b36027",
+        "size_in_bytes": 1172
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ru.msg",
+        "path_type": "hardlink",
+        "sha256": "c2a3a0be5bc5a46a6a63c4de34e317b402bad40c22fb2936e1a4f53c1e2f625f",
+        "sha256_in_prefix": "c2a3a0be5bc5a46a6a63c4de34e317b402bad40c22fb2936e1a4f53c1e2f625f",
+        "size_in_bytes": 2039
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ru_ua.msg",
+        "path_type": "hardlink",
+        "sha256": "ae5d3df23f019455f3edfc3262aac2b00098881f09b9a934c0d26c0ab896700c",
+        "sha256_in_prefix": "ae5d3df23f019455f3edfc3262aac2b00098881f09b9a934c0d26c0ab896700c",
+        "size_in_bytes": 242
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/sh.msg",
+        "path_type": "hardlink",
+        "sha256": "00f119701c9f3eba273701a6a731adafd7b8902f6bccf34e61308984456e193a",
+        "sha256_in_prefix": "00f119701c9f3eba273701a6a731adafd7b8902f6bccf34e61308984456e193a",
+        "size_in_bytes": 1160
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/sk.msg",
+        "path_type": "hardlink",
+        "sha256": "043dece6ea7c83956b3300b95f8a0e92badaa8fc29d6c510706649d1d810679a",
+        "sha256_in_prefix": "043dece6ea7c83956b3300b95f8a0e92badaa8fc29d6c510706649d1d810679a",
+        "size_in_bytes": 1203
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/sl.msg",
+        "path_type": "hardlink",
+        "sha256": "bd488c9d791abedf698b66b768e2bf24251ffeaf06f53fb3746cab457710ff77",
+        "sha256_in_prefix": "bd488c9d791abedf698b66b768e2bf24251ffeaf06f53fb3746cab457710ff77",
+        "size_in_bytes": 1164
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/sq.msg",
+        "path_type": "hardlink",
+        "sha256": "cb27007e138315b064576c17931280cfe6e6929efc3dafd7171713d204cfc3bf",
+        "sha256_in_prefix": "cb27007e138315b064576c17931280cfe6e6929efc3dafd7171713d204cfc3bf",
+        "size_in_bytes": 1267
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/sr.msg",
+        "path_type": "hardlink",
+        "sha256": "313e8cdbbc0288aed922b9927a7331d0faa2e451d4174b1f5b76c5c9faec8f9b",
+        "sha256_in_prefix": "313e8cdbbc0288aed922b9927a7331d0faa2e451d4174b1f5b76c5c9faec8f9b",
+        "size_in_bytes": 2035
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/sv.msg",
+        "path_type": "hardlink",
+        "sha256": "4f32e1518be3270f4db80136fac0031c385dd3ce133faa534f141cf459c6113a",
+        "sha256_in_prefix": "4f32e1518be3270f4db80136fac0031c385dd3ce133faa534f141cf459c6113a",
+        "size_in_bytes": 1167
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/sw.msg",
+        "path_type": "hardlink",
+        "sha256": "6b5ab8ae265db436b15d32263a8870ec55c7c0c07415b3f9baac37f73bc704e5",
+        "sha256_in_prefix": "6b5ab8ae265db436b15d32263a8870ec55c7c0c07415b3f9baac37f73bc704e5",
+        "size_in_bytes": 991
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ta.msg",
+        "path_type": "hardlink",
+        "sha256": "30a142a48e57f194ecc3aa9243930f3e6e1b4e8b331a8cdd2705ec9c280dccbb",
+        "sha256_in_prefix": "30a142a48e57f194ecc3aa9243930f3e6e1b4e8b331a8cdd2705ec9c280dccbb",
+        "size_in_bytes": 1835
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/ta_in.msg",
+        "path_type": "hardlink",
+        "sha256": "aa57d5fb5cc3f59ec6a3f99d7a5184403809aa3a3bc02ed0842507d4218b683d",
+        "sha256_in_prefix": "aa57d5fb5cc3f59ec6a3f99d7a5184403809aa3a3bc02ed0842507d4218b683d",
+        "size_in_bytes": 251
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/te.msg",
+        "path_type": "hardlink",
+        "sha256": "42c34d02a6079c4d0d683750b3809f345637bc6d814652c3fb0b344b66b70c79",
+        "sha256_in_prefix": "42c34d02a6079c4d0d683750b3809f345637bc6d814652c3fb0b344b66b70c79",
+        "size_in_bytes": 2102
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/te_in.msg",
+        "path_type": "hardlink",
+        "sha256": "88bdaf4b25b684b0320a2e11d3fe77dddd25e3b17141bd7ed1d63698c480e4ba",
+        "sha256_in_prefix": "88bdaf4b25b684b0320a2e11d3fe77dddd25e3b17141bd7ed1d63698c480e4ba",
+        "size_in_bytes": 411
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/th.msg",
+        "path_type": "hardlink",
+        "sha256": "f9641a6ebe3845ce5d36ced473749f5909c90c52e405f074a6da817ef6f39867",
+        "sha256_in_prefix": "f9641a6ebe3845ce5d36ced473749f5909c90c52e405f074a6da817ef6f39867",
+        "size_in_bytes": 2305
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/tr.msg",
+        "path_type": "hardlink",
+        "sha256": "df7c4ba67457cb47eef0f5ca8e028ff466acdd877a487697dc48ecac7347ac47",
+        "sha256_in_prefix": "df7c4ba67457cb47eef0f5ca8e028ff466acdd877a487697dc48ecac7347ac47",
+        "size_in_bytes": 1133
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/uk.msg",
+        "path_type": "hardlink",
+        "sha256": "cf2e78ef3322f0121e958098ef5f92da008344657a73439eac658cb6bf3d72bd",
+        "sha256_in_prefix": "cf2e78ef3322f0121e958098ef5f92da008344657a73439eac658cb6bf3d72bd",
+        "size_in_bytes": 2113
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/vi.msg",
+        "path_type": "hardlink",
+        "sha256": "9c69094c0bd52d5ae8448431574eae8ee4be31ec2e8602366df6c6bf4bc89a58",
+        "sha256_in_prefix": "9c69094c0bd52d5ae8448431574eae8ee4be31ec2e8602366df6c6bf4bc89a58",
+        "size_in_bytes": 1421
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/zh.msg",
+        "path_type": "hardlink",
+        "sha256": "ef81b41ec69f67a394ece2b3983b67b3d0c8813624c2bfa1d8a8c15b21608ac9",
+        "sha256_in_prefix": "ef81b41ec69f67a394ece2b3983b67b3d0c8813624c2bfa1d8a8c15b21608ac9",
+        "size_in_bytes": 3330
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/zh_cn.msg",
+        "path_type": "hardlink",
+        "sha256": "85f91cf6e316774aa5d0c1eca85c88e591fd537165bb79929c5e6a1ca99e56c8",
+        "sha256_in_prefix": "85f91cf6e316774aa5d0c1eca85c88e591fd537165bb79929c5e6a1ca99e56c8",
+        "size_in_bytes": 312
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/zh_hk.msg",
+        "path_type": "hardlink",
+        "sha256": "d123e0b4c2614f680808b58cca0c140ba187494b2c8bcf8c604c7eb739c70882",
+        "sha256_in_prefix": "d123e0b4c2614f680808b58cca0c140ba187494b2c8bcf8c604c7eb739c70882",
+        "size_in_bytes": 752
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/zh_sg.msg",
+        "path_type": "hardlink",
+        "sha256": "2683517766af9da0d87b7a862de9adea82d9a1454fc773a9e3c1a6d92aba947a",
+        "sha256_in_prefix": "2683517766af9da0d87b7a862de9adea82d9a1454fc773a9e3c1a6d92aba947a",
+        "size_in_bytes": 339
+      },
+      {
+        "_path": "lib/tcl8.6/msgs/zh_tw.msg",
+        "path_type": "hardlink",
+        "sha256": "d582406c51a3db1eadf6507c50a1f85740fda7da8e27fc1438feb6242900cb12",
+        "sha256_in_prefix": "d582406c51a3db1eadf6507c50a1f85740fda7da8e27fc1438feb6242900cb12",
+        "size_in_bytes": 346
+      },
+      {
+        "_path": "lib/tcl8.6/opt0.4/optparse.tcl",
+        "path_type": "hardlink",
+        "sha256": "0513c82e03403530c0ee66d34ab697d213e9a2def86dd935cc5f6bf01c3b7dcf",
+        "sha256_in_prefix": "0513c82e03403530c0ee66d34ab697d213e9a2def86dd935cc5f6bf01c3b7dcf",
+        "size_in_bytes": 32716
+      },
+      {
+        "_path": "lib/tcl8.6/opt0.4/pkgIndex.tcl",
+        "path_type": "hardlink",
+        "sha256": "bc4aff8132402e6244f497b3f849b6b30c328db8512a04e4c86c523a80f2fe68",
+        "sha256_in_prefix": "bc4aff8132402e6244f497b3f849b6b30c328db8512a04e4c86c523a80f2fe68",
+        "size_in_bytes": 608
+      },
+      {
+        "_path": "lib/tcl8.6/package.tcl",
+        "path_type": "hardlink",
+        "sha256": "9edf9783fe26c85040dc849b7aed8350becb25144b6b2ce6068f58cfdf574f4a",
+        "sha256_in_prefix": "9edf9783fe26c85040dc849b7aed8350becb25144b6b2ce6068f58cfdf574f4a",
+        "size_in_bytes": 23245
+      },
+      {
+        "_path": "lib/tcl8.6/parray.tcl",
+        "path_type": "hardlink",
+        "sha256": "ebe5a2b4cbbcd7fd3f7a6f76d68d7856301db01b350c040942a7b806a46e0014",
+        "sha256_in_prefix": "ebe5a2b4cbbcd7fd3f7a6f76d68d7856301db01b350c040942a7b806a46e0014",
+        "size_in_bytes": 816
+      },
+      {
+        "_path": "lib/tcl8.6/safe.tcl",
+        "path_type": "hardlink",
+        "sha256": "f39ba5d85c2041a86ea61fda6f67e1e0281f8d6ea7cc09431b885fff65d71f65",
+        "sha256_in_prefix": "f39ba5d85c2041a86ea61fda6f67e1e0281f8d6ea7cc09431b885fff65d71f65",
+        "size_in_bytes": 40936
+      },
+      {
+        "_path": "lib/tcl8.6/tclAppInit.c",
+        "path_type": "hardlink",
+        "sha256": "5006ea395c2ca96e74353e9486d6be3e2a85a7925969a4fe41662f092ef94caa",
+        "sha256_in_prefix": "5006ea395c2ca96e74353e9486d6be3e2a85a7925969a4fe41662f092ef94caa",
+        "size_in_bytes": 4871
+      },
+      {
+        "_path": "lib/tcl8.6/tclIndex",
+        "path_type": "hardlink",
+        "sha256": "f832bc13238565d1427c463fdcacef0a93f4dc0352c0e3f35b573d9b11deaca5",
+        "sha256_in_prefix": "f832bc13238565d1427c463fdcacef0a93f4dc0352c0e3f35b573d9b11deaca5",
+        "size_in_bytes": 5613
+      },
+      {
+        "_path": "lib/tcl8.6/tm.tcl",
+        "path_type": "hardlink",
+        "sha256": "78e0d5fb77e51be0c99cdfdfef596c91b66ba1160c46c48a63266611bbcf26ad",
+        "sha256_in_prefix": "78e0d5fb77e51be0c99cdfdfef596c91b66ba1160c46c48a63266611bbcf26ad",
+        "size_in_bytes": 11827
+      },
+      {
+        "_path": "lib/tcl8.6/word.tcl",
+        "path_type": "hardlink",
+        "sha256": "f18e8ae29aa8ed2be2cbb5568b4243f654f7fb0aa2066e16977863ee1415b9bc",
+        "sha256_in_prefix": "f18e8ae29aa8ed2be2cbb5568b4243f654f7fb0aa2066e16977863ee1415b9bc",
+        "size_in_bytes": 4897
+      },
+      {
+        "_path": "lib/tcl8/8.4/platform-1.0.19.tm",
+        "path_type": "hardlink",
+        "sha256": "cc798eb26659cb12469cf91f2e79555b44973dd6707bfebf7aa2b9d98d806a82",
+        "sha256_in_prefix": "cc798eb26659cb12469cf91f2e79555b44973dd6707bfebf7aa2b9d98d806a82",
+        "size_in_bytes": 11258
+      },
+      {
+        "_path": "lib/tcl8/8.4/platform/shell-1.1.4.tm",
+        "path_type": "hardlink",
+        "sha256": "46654e58c56bff375310e38bbc5c68f642c099e09c951b5bad9ac81d8a377e01",
+        "sha256_in_prefix": "46654e58c56bff375310e38bbc5c68f642c099e09c951b5bad9ac81d8a377e01",
+        "size_in_bytes": 5976
+      },
+      {
+        "_path": "lib/tcl8/8.5/msgcat-1.6.1.tm",
+        "path_type": "hardlink",
+        "sha256": "c29589596069ef698f1394262d019f5708a05a5211d8feceaa4c3ab74f5d7d9a",
+        "sha256_in_prefix": "c29589596069ef698f1394262d019f5708a05a5211d8feceaa4c3ab74f5d7d9a",
+        "size_in_bytes": 33931
+      },
+      {
+        "_path": "lib/tcl8/8.5/tcltest-2.5.7.tm",
+        "path_type": "hardlink",
+        "sha256": "df623d89cef0fa5d2c53cb9ace1ee8ff4afd5a735ab6d86e68757da89122f26b",
+        "sha256_in_prefix": "df623d89cef0fa5d2c53cb9ace1ee8ff4afd5a735ab6d86e68757da89122f26b",
+        "size_in_bytes": 105075
+      },
+      {
+        "_path": "lib/tcl8/8.6/http-2.9.8.tm",
+        "path_type": "hardlink",
+        "sha256": "751ea55adf3905201d97c8788e7d7ab6180a4fe21dafb876079e501fa448eca0",
+        "sha256_in_prefix": "751ea55adf3905201d97c8788e7d7ab6180a4fe21dafb876079e501fa448eca0",
+        "size_in_bytes": 114818
+      },
+      {
+        "_path": "lib/tcl8/8.6/tdbc/sqlite3-1.1.7.tm",
+        "path_type": "hardlink",
+        "sha256": "4453b83a1e2b385cabf306d28b6a7650de1a738c862bb8f2ef5eea2af9690922",
+        "sha256_in_prefix": "4453b83a1e2b385cabf306d28b6a7650de1a738c862bb8f2ef5eea2af9690922",
+        "size_in_bytes": 18903
+      },
+      {
+        "_path": "lib/tclConfig.sh",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "/croot/tk_1714770549989/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_plac",
+        "sha256": "b6a6bc6be20c6962a717ff2037f2f00c2f91f90d2eb34277d10a68d35a7dfff2",
+        "sha256_in_prefix": "f6783ac1363b3fe1b1f16dd1797e3c010308771f7c81d16afae5248951a17f93",
+        "size_in_bytes": 11776
+      },
+      {
+        "_path": "lib/tclooConfig.sh",
+        "path_type": "hardlink",
+        "sha256": "9a3210c14cba9aead381e376ff4bb454cc3dfd96f9d112fc66d8770e5197c17d",
+        "sha256_in_prefix": "9a3210c14cba9aead381e376ff4bb454cc3dfd96f9d112fc66d8770e5197c17d",
+        "size_in_bytes": 773
+      },
+      {
+        "_path": "lib/tdbc1.1.7/libtdbc1.1.7.so",
+        "path_type": "hardlink",
+        "sha256": "45ee3dd918752b7e0021eb50f90e2e4c1ce58b9851655d6550728d23478b7d7d",
+        "sha256_in_prefix": "45ee3dd918752b7e0021eb50f90e2e4c1ce58b9851655d6550728d23478b7d7d",
+        "size_in_bytes": 24272
+      },
+      {
+        "_path": "lib/tdbc1.1.7/libtdbcstub1.1.7.a",
+        "path_type": "hardlink",
+        "sha256": "ebe2a2aff24a68187c5dab15ab6d36df375091c51e0c635029c4db0f916dc2ca",
+        "sha256_in_prefix": "ebe2a2aff24a68187c5dab15ab6d36df375091c51e0c635029c4db0f916dc2ca",
+        "size_in_bytes": 3038
+      },
+      {
+        "_path": "lib/tdbc1.1.7/pkgIndex.tcl",
+        "path_type": "hardlink",
+        "sha256": "94a3c8e29da60ecb6e813932797d6b8c54e1e3b20014501fd145e7480311b925",
+        "sha256_in_prefix": "94a3c8e29da60ecb6e813932797d6b8c54e1e3b20014501fd145e7480311b925",
+        "size_in_bytes": 832
+      },
+      {
+        "_path": "lib/tdbc1.1.7/tdbc.tcl",
+        "path_type": "hardlink",
+        "sha256": "2985b90c234bdbebcd3b931aee7785820e336e4beca6edc398cb03252ecb007a",
+        "sha256_in_prefix": "2985b90c234bdbebcd3b931aee7785820e336e4beca6edc398cb03252ecb007a",
+        "size_in_bytes": 26703
+      },
+      {
+        "_path": "lib/tdbc1.1.7/tdbcConfig.sh",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "/croot/tk_1714770549989/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_plac",
+        "sha256": "d95fdf5299fd345d079afb703a0484f8bda004f64df398ad86a58e944e12df8c",
+        "sha256_in_prefix": "03449ee664ca0e6ab1112d675767430fbad699f58e31ebeef6a19b1e10fb1e15",
+        "size_in_bytes": 6067
+      },
+      {
+        "_path": "lib/tdbcmysql1.1.7/libtdbcmysql1.1.7.so",
+        "path_type": "hardlink",
+        "sha256": "2392655f9917861753617866dbceb849aa4ea84d7de794a1d1e4d9bbe6f9ea47",
+        "sha256_in_prefix": "2392655f9917861753617866dbceb849aa4ea84d7de794a1d1e4d9bbe6f9ea47",
+        "size_in_bytes": 52440
+      },
+      {
+        "_path": "lib/tdbcmysql1.1.7/pkgIndex.tcl",
+        "path_type": "hardlink",
+        "sha256": "31d24496784b052d98c56cd5fa5ee1136e77d8de68dfbdf4d9d64422f4b7a9bf",
+        "sha256_in_prefix": "31d24496784b052d98c56cd5fa5ee1136e77d8de68dfbdf4d9d64422f4b7a9bf",
+        "size_in_bytes": 541
+      },
+      {
+        "_path": "lib/tdbcmysql1.1.7/tdbcmysql.tcl",
+        "path_type": "hardlink",
+        "sha256": "7cc5cb4a13cd99c4e34eb89eba0454a1dbb1fb84c125928a70aa8b3dbc6feaea",
+        "sha256_in_prefix": "7cc5cb4a13cd99c4e34eb89eba0454a1dbb1fb84c125928a70aa8b3dbc6feaea",
+        "size_in_bytes": 6623
+      },
+      {
+        "_path": "lib/tdbcodbc1.1.7/libtdbcodbc1.1.7.so",
+        "path_type": "hardlink",
+        "sha256": "d37ad39b4f63d631aaf1bb694c5c6fdb4b4cdf8188b1acc2bd0226d9f44ce3fd",
+        "sha256_in_prefix": "d37ad39b4f63d631aaf1bb694c5c6fdb4b4cdf8188b1acc2bd0226d9f44ce3fd",
+        "size_in_bytes": 65952
+      },
+      {
+        "_path": "lib/tdbcodbc1.1.7/pkgIndex.tcl",
+        "path_type": "hardlink",
+        "sha256": "9d98ce5e646fa499e5e4d43539d4fbbebd1761b8967df5ef860ca37994f119c7",
+        "sha256_in_prefix": "9d98ce5e646fa499e5e4d43539d4fbbebd1761b8967df5ef860ca37994f119c7",
+        "size_in_bytes": 532
+      },
+      {
+        "_path": "lib/tdbcodbc1.1.7/tdbcodbc.tcl",
+        "path_type": "hardlink",
+        "sha256": "13f45a1f83c91486df91a6e967d6257620e1a35dc46a26d89dc6c07d8669d9a3",
+        "sha256_in_prefix": "13f45a1f83c91486df91a6e967d6257620e1a35dc46a26d89dc6c07d8669d9a3",
+        "size_in_bytes": 17071
+      },
+      {
+        "_path": "lib/tdbcpostgres1.1.7/libtdbcpostgres1.1.7.so",
+        "path_type": "hardlink",
+        "sha256": "6a40b6bed917bf95b06ca718275fe3960b6b548247c435aa0dade3d89c9a0b04",
+        "sha256_in_prefix": "6a40b6bed917bf95b06ca718275fe3960b6b548247c435aa0dade3d89c9a0b04",
+        "size_in_bytes": 48240
+      },
+      {
+        "_path": "lib/tdbcpostgres1.1.7/pkgIndex.tcl",
+        "path_type": "hardlink",
+        "sha256": "1bba0739bf5117991b2af410186c3a7f31d6e500d7b10f7dafefb1f8acd22f59",
+        "sha256_in_prefix": "1bba0739bf5117991b2af410186c3a7f31d6e500d7b10f7dafefb1f8acd22f59",
+        "size_in_bytes": 568
+      },
+      {
+        "_path": "lib/tdbcpostgres1.1.7/tdbcpostgres.tcl",
+        "path_type": "hardlink",
+        "sha256": "58ba4fe2b016dead9252075d3b29e2bcf46d1a0ce4edefeb56e259ed425a3d20",
+        "sha256_in_prefix": "58ba4fe2b016dead9252075d3b29e2bcf46d1a0ce4edefeb56e259ed425a3d20",
+        "size_in_bytes": 4363
+      },
+      {
+        "_path": "lib/thread2.8.9/libthread2.8.9.so",
+        "path_type": "hardlink",
+        "sha256": "5fadb662e1bcccb779e625a02102ceed557e97ca92e16d296bb6aef2d66e1aac",
+        "sha256_in_prefix": "5fadb662e1bcccb779e625a02102ceed557e97ca92e16d296bb6aef2d66e1aac",
+        "size_in_bytes": 98056
+      },
+      {
+        "_path": "lib/thread2.8.9/pkgIndex.tcl",
+        "path_type": "hardlink",
+        "sha256": "056cfc9c2757efaf3a5265883e256f75b4354e9cd54cf39c242544f4c8258c8b",
+        "sha256_in_prefix": "056cfc9c2757efaf3a5265883e256f75b4354e9cd54cf39c242544f4c8258c8b",
+        "size_in_bytes": 2394
+      },
+      {
+        "_path": "lib/thread2.8.9/ttrace.tcl",
+        "path_type": "hardlink",
+        "sha256": "fb88cb621738807356b192e0f1527c59968096157808483b2cb00cf81a9f0e69",
+        "sha256_in_prefix": "fb88cb621738807356b192e0f1527c59968096157808483b2cb00cf81a9f0e69",
+        "size_in_bytes": 29553
+      },
+      {
+        "_path": "lib/tk8.6/bgerror.tcl",
+        "path_type": "hardlink",
+        "sha256": "64448552e9dd75e84b8df63529e67f96db9351d4913ec2e96fd529fe4c35e05b",
+        "sha256_in_prefix": "64448552e9dd75e84b8df63529e67f96db9351d4913ec2e96fd529fe4c35e05b",
+        "size_in_bytes": 8534
+      },
+      {
+        "_path": "lib/tk8.6/button.tcl",
+        "path_type": "hardlink",
+        "sha256": "2f013b643d62f08ddaaa1dea39ff80d6607569c9e1acc19406377b64d75ccf53",
+        "sha256_in_prefix": "2f013b643d62f08ddaaa1dea39ff80d6607569c9e1acc19406377b64d75ccf53",
+        "size_in_bytes": 20830
+      },
+      {
+        "_path": "lib/tk8.6/choosedir.tcl",
+        "path_type": "hardlink",
+        "sha256": "351f389f090d0cfe5b1222f83785630a1eeae54f6827477845805bbb3d119f7c",
+        "sha256_in_prefix": "351f389f090d0cfe5b1222f83785630a1eeae54f6827477845805bbb3d119f7c",
+        "size_in_bytes": 9699
+      },
+      {
+        "_path": "lib/tk8.6/clrpick.tcl",
+        "path_type": "hardlink",
+        "sha256": "c55079c43426597be836c8b8ded04abdab8e1cd7d2b90a898af9520f802c6040",
+        "sha256_in_prefix": "c55079c43426597be836c8b8ded04abdab8e1cd7d2b90a898af9520f802c6040",
+        "size_in_bytes": 21345
+      },
+      {
+        "_path": "lib/tk8.6/comdlg.tcl",
+        "path_type": "hardlink",
+        "sha256": "f62ce5b8450ae7b3ec2bdd9fdf67c77fcc99aa18de195de5337c75c997a4b11c",
+        "sha256_in_prefix": "f62ce5b8450ae7b3ec2bdd9fdf67c77fcc99aa18de195de5337c75c997a4b11c",
+        "size_in_bytes": 8368
+      },
+      {
+        "_path": "lib/tk8.6/console.tcl",
+        "path_type": "hardlink",
+        "sha256": "65c32713abf982e8eb5b1d3bdd141aec1b45bd897b1b60876bf15fedb579acfd",
+        "sha256_in_prefix": "65c32713abf982e8eb5b1d3bdd141aec1b45bd897b1b60876bf15fedb579acfd",
+        "size_in_bytes": 32194
+      },
+      {
+        "_path": "lib/tk8.6/demos/README",
+        "path_type": "hardlink",
+        "sha256": "759d77d3a4bc6be4a310327fde118a554c039803cefeb51709db92cbf1722c7b",
+        "sha256_in_prefix": "759d77d3a4bc6be4a310327fde118a554c039803cefeb51709db92cbf1722c7b",
+        "size_in_bytes": 2082
+      },
+      {
+        "_path": "lib/tk8.6/demos/anilabel.tcl",
+        "path_type": "hardlink",
+        "sha256": "938d2a37988ac5b44d530355feecf1935a27e2e20de7d72fd5792e6db4db6a18",
+        "sha256_in_prefix": "938d2a37988ac5b44d530355feecf1935a27e2e20de7d72fd5792e6db4db6a18",
+        "size_in_bytes": 6670
+      },
+      {
+        "_path": "lib/tk8.6/demos/aniwave.tcl",
+        "path_type": "hardlink",
+        "sha256": "e15745e550e2e16194a4bf276d045bc9df7b9c3bfab52cea861c37e33c6c7f36",
+        "sha256_in_prefix": "e15745e550e2e16194a4bf276d045bc9df7b9c3bfab52cea861c37e33c6c7f36",
+        "size_in_bytes": 3494
+      },
+      {
+        "_path": "lib/tk8.6/demos/arrow.tcl",
+        "path_type": "hardlink",
+        "sha256": "85d14a2c7236bf5589eaba1d10ddcd069dd4e95771d53371a8a2dc02b15710f5",
+        "sha256_in_prefix": "85d14a2c7236bf5589eaba1d10ddcd069dd4e95771d53371a8a2dc02b15710f5",
+        "size_in_bytes": 8110
+      },
+      {
+        "_path": "lib/tk8.6/demos/bind.tcl",
+        "path_type": "hardlink",
+        "sha256": "26c8f3ba9ca50ae9e3a073f8ef1bfacf13a15541bc89c0e0c128a44ff0e09a1e",
+        "sha256_in_prefix": "26c8f3ba9ca50ae9e3a073f8ef1bfacf13a15541bc89c0e0c128a44ff0e09a1e",
+        "size_in_bytes": 3078
+      },
+      {
+        "_path": "lib/tk8.6/demos/bitmap.tcl",
+        "path_type": "hardlink",
+        "sha256": "e9b74c16ac87ed4be29af6d8411c5303faccf3785c37e39441d30aa72798d8c3",
+        "sha256_in_prefix": "e9b74c16ac87ed4be29af6d8411c5303faccf3785c37e39441d30aa72798d8c3",
+        "size_in_bytes": 1411
+      },
+      {
+        "_path": "lib/tk8.6/demos/browse",
+        "path_type": "hardlink",
+        "sha256": "9034326fa34cbd5f041ed8f8e7a340012a7b3420546d504bdb5397b4945baf29",
+        "sha256_in_prefix": "9034326fa34cbd5f041ed8f8e7a340012a7b3420546d504bdb5397b4945baf29",
+        "size_in_bytes": 1758
+      },
+      {
+        "_path": "lib/tk8.6/demos/button.tcl",
+        "path_type": "hardlink",
+        "sha256": "f48f7f11d71bf560fd64082d6b803c4d88288861dd41853a27a5af3f19f51d23",
+        "sha256_in_prefix": "f48f7f11d71bf560fd64082d6b803c4d88288861dd41853a27a5af3f19f51d23",
+        "size_in_bytes": 1504
+      },
+      {
+        "_path": "lib/tk8.6/demos/check.tcl",
+        "path_type": "hardlink",
+        "sha256": "22cbec6ca010492987f32e56ac9f0963f6c26c8a0eedb5f4d606cb7fe468a7c2",
+        "sha256_in_prefix": "22cbec6ca010492987f32e56ac9f0963f6c26c8a0eedb5f4d606cb7fe468a7c2",
+        "size_in_bytes": 2310
+      },
+      {
+        "_path": "lib/tk8.6/demos/clrpick.tcl",
+        "path_type": "hardlink",
+        "sha256": "e2dd2648db7e0edda8a4e64ed4bb24498371b9fa81b3d0886a84a4b7cc6b8052",
+        "sha256_in_prefix": "e2dd2648db7e0edda8a4e64ed4bb24498371b9fa81b3d0886a84a4b7cc6b8052",
+        "size_in_bytes": 1431
+      },
+      {
+        "_path": "lib/tk8.6/demos/colors.tcl",
+        "path_type": "hardlink",
+        "sha256": "fbc70c6fd23184de4d068a7410e60a69e2f43e3d854a2017c7938b5047d9e146",
+        "sha256_in_prefix": "fbc70c6fd23184de4d068a7410e60a69e2f43e3d854a2017c7938b5047d9e146",
+        "size_in_bytes": 5002
+      },
+      {
+        "_path": "lib/tk8.6/demos/combo.tcl",
+        "path_type": "hardlink",
+        "sha256": "ee5b329d98932b7493f4f9e830f1da21251a5ab7eda807c827ff6129e3c87101",
+        "sha256_in_prefix": "ee5b329d98932b7493f4f9e830f1da21251a5ab7eda807c827ff6129e3c87101",
+        "size_in_bytes": 1963
+      },
+      {
+        "_path": "lib/tk8.6/demos/cscroll.tcl",
+        "path_type": "hardlink",
+        "sha256": "f25a288b5b681cc890c097b7662db9b42a84b5f3dafad1009276510935325fdc",
+        "sha256_in_prefix": "f25a288b5b681cc890c097b7662db9b42a84b5f3dafad1009276510935325fdc",
+        "size_in_bytes": 5041
+      },
+      {
+        "_path": "lib/tk8.6/demos/ctext.tcl",
+        "path_type": "hardlink",
+        "sha256": "64944957a9ab6a8d217052824378609b3a1a957e0d6a39246cc48e38595d482d",
+        "sha256_in_prefix": "64944957a9ab6a8d217052824378609b3a1a957e0d6a39246cc48e38595d482d",
+        "size_in_bytes": 6205
+      },
+      {
+        "_path": "lib/tk8.6/demos/dialog1.tcl",
+        "path_type": "hardlink",
+        "sha256": "b47ede8c0a62275d80b324a751513c917a651573f5719dc08ace3c6c07774939",
+        "sha256_in_prefix": "b47ede8c0a62275d80b324a751513c917a651573f5719dc08ace3c6c07774939",
+        "size_in_bytes": 974
+      },
+      {
+        "_path": "lib/tk8.6/demos/dialog2.tcl",
+        "path_type": "hardlink",
+        "sha256": "bffd499e48895c06df3f337c2f0f6fc788ae28f5dea5640c3ad33e3fe792236b",
+        "sha256_in_prefix": "bffd499e48895c06df3f337c2f0f6fc788ae28f5dea5640c3ad33e3fe792236b",
+        "size_in_bytes": 828
+      },
+      {
+        "_path": "lib/tk8.6/demos/en.msg",
+        "path_type": "hardlink",
+        "sha256": "9ed968ce55283d06066d99e366a5a7cd1f3303235b5c6626c7828141ae5c0ec4",
+        "sha256_in_prefix": "9ed968ce55283d06066d99e366a5a7cd1f3303235b5c6626c7828141ae5c0ec4",
+        "size_in_bytes": 3867
+      },
+      {
+        "_path": "lib/tk8.6/demos/entry1.tcl",
+        "path_type": "hardlink",
+        "sha256": "8d97306a9b2c89fa311d0bee1879abf53a7d17bdf7601ba6343510a2bc7e1799",
+        "sha256_in_prefix": "8d97306a9b2c89fa311d0bee1879abf53a7d17bdf7601ba6343510a2bc7e1799",
+        "size_in_bytes": 1401
+      },
+      {
+        "_path": "lib/tk8.6/demos/entry2.tcl",
+        "path_type": "hardlink",
+        "sha256": "6350ccb20cfdfb155f78c747f258e8b0d929d97d6e67c8427fb67db125b328bc",
+        "sha256_in_prefix": "6350ccb20cfdfb155f78c747f258e8b0d929d97d6e67c8427fb67db125b328bc",
+        "size_in_bytes": 2106
+      },
+      {
+        "_path": "lib/tk8.6/demos/entry3.tcl",
+        "path_type": "hardlink",
+        "sha256": "92f08c1aefd0290c0de49eca1241ef6dd96cb45e0119da6f87b038b6e31e6443",
+        "sha256_in_prefix": "92f08c1aefd0290c0de49eca1241ef6dd96cb45e0119da6f87b038b6e31e6443",
+        "size_in_bytes": 6102
+      },
+      {
+        "_path": "lib/tk8.6/demos/filebox.tcl",
+        "path_type": "hardlink",
+        "sha256": "85e9f0a73d928e2fe0e833006929c2a3944b41a68c10b2c99b70d2188465c776",
+        "sha256_in_prefix": "85e9f0a73d928e2fe0e833006929c2a3944b41a68c10b2c99b70d2188465c776",
+        "size_in_bytes": 2351
+      },
+      {
+        "_path": "lib/tk8.6/demos/floor.tcl",
+        "path_type": "hardlink",
+        "sha256": "2d2feeeefc03f758f69342720fcfd742301a10b04c6c05eac8c4a3a8706b493b",
+        "sha256_in_prefix": "2d2feeeefc03f758f69342720fcfd742301a10b04c6c05eac8c4a3a8706b493b",
+        "size_in_bytes": 81000
+      },
+      {
+        "_path": "lib/tk8.6/demos/fontchoose.tcl",
+        "path_type": "hardlink",
+        "sha256": "88961c9116e7515d48e13264f1fc30f3b14040f345c06dd7605a9232d5dcb182",
+        "sha256_in_prefix": "88961c9116e7515d48e13264f1fc30f3b14040f345c06dd7605a9232d5dcb182",
+        "size_in_bytes": 1710
+      },
+      {
+        "_path": "lib/tk8.6/demos/form.tcl",
+        "path_type": "hardlink",
+        "sha256": "85b46fc163748dd38256a5f46675f862a0296f28221a71983edb8f917aa49065",
+        "sha256_in_prefix": "85b46fc163748dd38256a5f46675f862a0296f28221a71983edb8f917aa49065",
+        "size_in_bytes": 1046
+      },
+      {
+        "_path": "lib/tk8.6/demos/goldberg.tcl",
+        "path_type": "hardlink",
+        "sha256": "7c77c935fb47ace49ea8619e05b41e8b11cadfdc744f381b36efb39c1d317f8a",
+        "sha256_in_prefix": "7c77c935fb47ace49ea8619e05b41e8b11cadfdc744f381b36efb39c1d317f8a",
+        "size_in_bytes": 56666
+      },
+      {
+        "_path": "lib/tk8.6/demos/hello",
+        "path_type": "hardlink",
+        "sha256": "b8c8aa005fb7f5352617947f2190866dc1d1cbfc243722fa7d5ce7485fe6ed05",
+        "sha256_in_prefix": "b8c8aa005fb7f5352617947f2190866dc1d1cbfc243722fa7d5ce7485fe6ed05",
+        "size_in_bytes": 512
+      },
+      {
+        "_path": "lib/tk8.6/demos/hscale.tcl",
+        "path_type": "hardlink",
+        "sha256": "63b7ccd36df6390fcbade2e92f4cb03df7e0c953c720fd1fc6b227af64dd0d51",
+        "sha256_in_prefix": "63b7ccd36df6390fcbade2e92f4cb03df7e0c953c720fd1fc6b227af64dd0d51",
+        "size_in_bytes": 1497
+      },
+      {
+        "_path": "lib/tk8.6/demos/icon.tcl",
+        "path_type": "hardlink",
+        "sha256": "d7e3d2e8a558d2aa58064f4eb39f4689566dd8fee87a79267be5e42b9ffdccb4",
+        "sha256_in_prefix": "d7e3d2e8a558d2aa58064f4eb39f4689566dd8fee87a79267be5e42b9ffdccb4",
+        "size_in_bytes": 2063
+      },
+      {
+        "_path": "lib/tk8.6/demos/image1.tcl",
+        "path_type": "hardlink",
+        "sha256": "26eccbb1a9fed9a5e25ec9aad29a1de7034577c61d93e17bd0fb07eaaa06c5fe",
+        "sha256_in_prefix": "26eccbb1a9fed9a5e25ec9aad29a1de7034577c61d93e17bd0fb07eaaa06c5fe",
+        "size_in_bytes": 1002
+      },
+      {
+        "_path": "lib/tk8.6/demos/image2.tcl",
+        "path_type": "hardlink",
+        "sha256": "428d9aa831e284841cfcc0b65e064fcf703092099c42ec246ea271829195a28a",
+        "sha256_in_prefix": "428d9aa831e284841cfcc0b65e064fcf703092099c42ec246ea271829195a28a",
+        "size_in_bytes": 3359
+      },
+      {
+        "_path": "lib/tk8.6/demos/images/earth.gif",
+        "path_type": "hardlink",
+        "sha256": "bf29c94949f125a04fee6bdf93ba8f358f26e9e39aa7a4977466834b3133fcb7",
+        "sha256_in_prefix": "bf29c94949f125a04fee6bdf93ba8f358f26e9e39aa7a4977466834b3133fcb7",
+        "size_in_bytes": 51559
+      },
+      {
+        "_path": "lib/tk8.6/demos/images/earthmenu.png",
+        "path_type": "hardlink",
+        "sha256": "9bf8d96016039d7fdb2ffc506743724636a70ed5925199aab64ca20820963bde",
+        "sha256_in_prefix": "9bf8d96016039d7fdb2ffc506743724636a70ed5925199aab64ca20820963bde",
+        "size_in_bytes": 8157
+      },
+      {
+        "_path": "lib/tk8.6/demos/images/earthris.gif",
+        "path_type": "hardlink",
+        "sha256": "c2da473e55d8317bd1f983638adb729bff1461de590d76f99d8b3430c71e0f6e",
+        "sha256_in_prefix": "c2da473e55d8317bd1f983638adb729bff1461de590d76f99d8b3430c71e0f6e",
+        "size_in_bytes": 6343
+      },
+      {
+        "_path": "lib/tk8.6/demos/images/flagdown.xbm",
+        "path_type": "hardlink",
+        "sha256": "13ea2a1169bae3a517804c7dcc2f106ac3b29b0ade5197d6546a9c8cf486e967",
+        "sha256_in_prefix": "13ea2a1169bae3a517804c7dcc2f106ac3b29b0ade5197d6546a9c8cf486e967",
+        "size_in_bytes": 1886
+      },
+      {
+        "_path": "lib/tk8.6/demos/images/flagup.xbm",
+        "path_type": "hardlink",
+        "sha256": "6e31de3423ec63534c36adcbf1c9872fab21c5c2999511505f7321fc794cb7ec",
+        "sha256_in_prefix": "6e31de3423ec63534c36adcbf1c9872fab21c5c2999511505f7321fc794cb7ec",
+        "size_in_bytes": 1880
+      },
+      {
+        "_path": "lib/tk8.6/demos/images/gray25.xbm",
+        "path_type": "hardlink",
+        "sha256": "a1a6cf0ca4d94fea1e7db4c7f6fd40a58b312e1de34ccbd582038defcb3027e2",
+        "sha256_in_prefix": "a1a6cf0ca4d94fea1e7db4c7f6fd40a58b312e1de34ccbd582038defcb3027e2",
+        "size_in_bytes": 275
+      },
+      {
+        "_path": "lib/tk8.6/demos/images/letters.xbm",
+        "path_type": "hardlink",
+        "sha256": "73c825a802db366beedc038bbe944f61f8bbe540bab8720cb568306e4cee5195",
+        "sha256_in_prefix": "73c825a802db366beedc038bbe944f61f8bbe540bab8720cb568306e4cee5195",
+        "size_in_bytes": 1883
+      },
+      {
+        "_path": "lib/tk8.6/demos/images/noletter.xbm",
+        "path_type": "hardlink",
+        "sha256": "741c936c628f6b0dd9295fec63f8d3baec6d529a1e9dcd7398680aaa284755dd",
+        "sha256_in_prefix": "741c936c628f6b0dd9295fec63f8d3baec6d529a1e9dcd7398680aaa284755dd",
+        "size_in_bytes": 1889
+      },
+      {
+        "_path": "lib/tk8.6/demos/images/ouster.png",
+        "path_type": "hardlink",
+        "sha256": "a2fe354dfcb09b9eeb488128f4ac0b498766faf4a8becf65bbcd779bdb9c4c8f",
+        "sha256_in_prefix": "a2fe354dfcb09b9eeb488128f4ac0b498766faf4a8becf65bbcd779bdb9c4c8f",
+        "size_in_bytes": 54257
+      },
+      {
+        "_path": "lib/tk8.6/demos/images/pattern.xbm",
+        "path_type": "hardlink",
+        "sha256": "8006c9cdbb7aab7e1c0b48289fff41437e3e730f9822fc8e72acb22ef6bc5808",
+        "sha256_in_prefix": "8006c9cdbb7aab7e1c0b48289fff41437e3e730f9822fc8e72acb22ef6bc5808",
+        "size_in_bytes": 272
+      },
+      {
+        "_path": "lib/tk8.6/demos/images/tcllogo.gif",
+        "path_type": "hardlink",
+        "sha256": "72f6b34d3c8f424ff0a290a793fcfbf34fd5630a916cd02e0a5dda0144b5957f",
+        "sha256_in_prefix": "72f6b34d3c8f424ff0a290a793fcfbf34fd5630a916cd02e0a5dda0144b5957f",
+        "size_in_bytes": 2341
+      },
+      {
+        "_path": "lib/tk8.6/demos/images/teapot.ppm",
+        "path_type": "hardlink",
+        "sha256": "786f29b88771e439187dd2e86ad4d255dd185e0c1ea3f8c37d21770fd1df253a",
+        "sha256_in_prefix": "786f29b88771e439187dd2e86ad4d255dd185e0c1ea3f8c37d21770fd1df253a",
+        "size_in_bytes": 196623
+      },
+      {
+        "_path": "lib/tk8.6/demos/items.tcl",
+        "path_type": "hardlink",
+        "sha256": "379a46bf92770c64376483a99782d3d89339780eaf2b00ab48050fe2886163ac",
+        "sha256_in_prefix": "379a46bf92770c64376483a99782d3d89339780eaf2b00ab48050fe2886163ac",
+        "size_in_bytes": 10495
+      },
+      {
+        "_path": "lib/tk8.6/demos/ixset",
+        "path_type": "hardlink",
+        "sha256": "907db1641dc6f475b05de9d9d85ba75e02a145735f441cdac24b575c7a4796fa",
+        "sha256_in_prefix": "907db1641dc6f475b05de9d9d85ba75e02a145735f441cdac24b575c7a4796fa",
+        "size_in_bytes": 8075
+      },
+      {
+        "_path": "lib/tk8.6/demos/knightstour.tcl",
+        "path_type": "hardlink",
+        "sha256": "7c1e5f21e8833b85947ab52ab1ebeb7ecfb8cfcd1122fcee57c3ad96fed8d8cd",
+        "sha256_in_prefix": "7c1e5f21e8833b85947ab52ab1ebeb7ecfb8cfcd1122fcee57c3ad96fed8d8cd",
+        "size_in_bytes": 9123
+      },
+      {
+        "_path": "lib/tk8.6/demos/label.tcl",
+        "path_type": "hardlink",
+        "sha256": "215b536c0704e0e189c28ebc12d45e8ba64d1936f4b97c56cad42e6c9a4e8693",
+        "sha256_in_prefix": "215b536c0704e0e189c28ebc12d45e8ba64d1936f4b97c56cad42e6c9a4e8693",
+        "size_in_bytes": 1379
+      },
+      {
+        "_path": "lib/tk8.6/demos/labelframe.tcl",
+        "path_type": "hardlink",
+        "sha256": "a964cd6526509801cd0873a63fe23fafd6d959136fd046133f480af2c6359b24",
+        "sha256_in_prefix": "a964cd6526509801cd0873a63fe23fafd6d959136fd046133f480af2c6359b24",
+        "size_in_bytes": 1847
+      },
+      {
+        "_path": "lib/tk8.6/demos/license.terms",
+        "path_type": "hardlink",
+        "sha256": "2cde822b93ca16ae535c954b7dfe658b4ad10df2a193628d1b358f1765e8b198",
+        "sha256_in_prefix": "2cde822b93ca16ae535c954b7dfe658b4ad10df2a193628d1b358f1765e8b198",
+        "size_in_bytes": 2267
+      },
+      {
+        "_path": "lib/tk8.6/demos/mclist.tcl",
+        "path_type": "hardlink",
+        "sha256": "0571c9baffe1595e9432dbb63bac05eecbb9b07a07c5cef0c3b448486bc3fd74",
+        "sha256_in_prefix": "0571c9baffe1595e9432dbb63bac05eecbb9b07a07c5cef0c3b448486bc3fd74",
+        "size_in_bytes": 4357
+      },
+      {
+        "_path": "lib/tk8.6/demos/menu.tcl",
+        "path_type": "hardlink",
+        "sha256": "ac4b93895375f857745f0f80dd31d01c164c6e0e29bd0dbc7979b6508ec04a77",
+        "sha256_in_prefix": "ac4b93895375f857745f0f80dd31d01c164c6e0e29bd0dbc7979b6508ec04a77",
+        "size_in_bytes": 7292
+      },
+      {
+        "_path": "lib/tk8.6/demos/menubu.tcl",
+        "path_type": "hardlink",
+        "sha256": "e72a50f22a82c69dd54ed83d098a7b346c0a963e02efabb06c521b72955cfd07",
+        "sha256_in_prefix": "e72a50f22a82c69dd54ed83d098a7b346c0a963e02efabb06c521b72955cfd07",
+        "size_in_bytes": 4255
+      },
+      {
+        "_path": "lib/tk8.6/demos/msgbox.tcl",
+        "path_type": "hardlink",
+        "sha256": "aff7a31e5da170fd478bc45febce70b075329e8902e5efb58141d975d4f7f3e5",
+        "sha256_in_prefix": "aff7a31e5da170fd478bc45febce70b075329e8902e5efb58141d975d4f7f3e5",
+        "size_in_bytes": 1998
+      },
+      {
+        "_path": "lib/tk8.6/demos/nl.msg",
+        "path_type": "hardlink",
+        "sha256": "c03318f95cfcebacda5a58c0b03703b93dd938050fe08d95a63a240188c733ab",
+        "sha256_in_prefix": "c03318f95cfcebacda5a58c0b03703b93dd938050fe08d95a63a240188c733ab",
+        "size_in_bytes": 6750
+      },
+      {
+        "_path": "lib/tk8.6/demos/paned1.tcl",
+        "path_type": "hardlink",
+        "sha256": "24c41806bd1554d9a7c4a2f498fff51234745fb185ebbfa7cd2d426daf0b2d1f",
+        "sha256_in_prefix": "24c41806bd1554d9a7c4a2f498fff51234745fb185ebbfa7cd2d426daf0b2d1f",
+        "size_in_bytes": 1130
+      },
+      {
+        "_path": "lib/tk8.6/demos/paned2.tcl",
+        "path_type": "hardlink",
+        "sha256": "676b7316e0b981caf3e124b83152152774cab6b6964859382123cc846fe12549",
+        "sha256_in_prefix": "676b7316e0b981caf3e124b83152152774cab6b6964859382123cc846fe12549",
+        "size_in_bytes": 2244
+      },
+      {
+        "_path": "lib/tk8.6/demos/pendulum.tcl",
+        "path_type": "hardlink",
+        "sha256": "b1e488b9d4a28daaa95698ea50a5563413789b9cadf4a0c4e173019ce08c20df",
+        "sha256_in_prefix": "b1e488b9d4a28daaa95698ea50a5563413789b9cadf4a0c4e173019ce08c20df",
+        "size_in_bytes": 7649
+      },
+      {
+        "_path": "lib/tk8.6/demos/plot.tcl",
+        "path_type": "hardlink",
+        "sha256": "401f948ad86ede3660a3a105126858e4836c2e57dce9cc77927c97482eaa116a",
+        "sha256_in_prefix": "401f948ad86ede3660a3a105126858e4836c2e57dce9cc77927c97482eaa116a",
+        "size_in_bytes": 2757
+      },
+      {
+        "_path": "lib/tk8.6/demos/puzzle.tcl",
+        "path_type": "hardlink",
+        "sha256": "73ad36d12af2abe01b8a41abd451e84f1c21f172a3dda2d58a981f2f6e10cb23",
+        "sha256_in_prefix": "73ad36d12af2abe01b8a41abd451e84f1c21f172a3dda2d58a981f2f6e10cb23",
+        "size_in_bytes": 2603
+      },
+      {
+        "_path": "lib/tk8.6/demos/radio.tcl",
+        "path_type": "hardlink",
+        "sha256": "1aceadaa575b06d7679862503da6cfc38ddc771b2132caece3dd22b85c8b658c",
+        "sha256_in_prefix": "1aceadaa575b06d7679862503da6cfc38ddc771b2132caece3dd22b85c8b658c",
+        "size_in_bytes": 2752
+      },
+      {
+        "_path": "lib/tk8.6/demos/rmt",
+        "path_type": "hardlink",
+        "sha256": "a15f26315aa45434731bb3a53a586bce3aaf5a040c13063549ea30533434e01f",
+        "sha256_in_prefix": "a15f26315aa45434731bb3a53a586bce3aaf5a040c13063549ea30533434e01f",
+        "size_in_bytes": 5319
+      },
+      {
+        "_path": "lib/tk8.6/demos/rolodex",
+        "path_type": "hardlink",
+        "sha256": "376898a6a9a6cc43ebf6974ba0ee4a196ce18c501ee330dbc16b76614d733b99",
+        "sha256_in_prefix": "376898a6a9a6cc43ebf6974ba0ee4a196ce18c501ee330dbc16b76614d733b99",
+        "size_in_bytes": 8303
+      },
+      {
+        "_path": "lib/tk8.6/demos/ruler.tcl",
+        "path_type": "hardlink",
+        "sha256": "0fe61eaaecb6311f44dff90bbc58a3d8fe8d8a4c5bb6ca142151cd4747312bb5",
+        "sha256_in_prefix": "0fe61eaaecb6311f44dff90bbc58a3d8fe8d8a4c5bb6ca142151cd4747312bb5",
+        "size_in_bytes": 5333
+      },
+      {
+        "_path": "lib/tk8.6/demos/sayings.tcl",
+        "path_type": "hardlink",
+        "sha256": "1c7c16c3cc8ddeb30272ff3598505eef8aaa6ebf774cd4d42262d9c503d5032a",
+        "sha256_in_prefix": "1c7c16c3cc8ddeb30272ff3598505eef8aaa6ebf774cd4d42262d9c503d5032a",
+        "size_in_bytes": 2273
+      },
+      {
+        "_path": "lib/tk8.6/demos/search.tcl",
+        "path_type": "hardlink",
+        "sha256": "7716ea5f9fcf0ff244012666654e92578d1679bf5dd762a439b9f9a5be21467f",
+        "sha256_in_prefix": "7716ea5f9fcf0ff244012666654e92578d1679bf5dd762a439b9f9a5be21467f",
+        "size_in_bytes": 4403
+      },
+      {
+        "_path": "lib/tk8.6/demos/spin.tcl",
+        "path_type": "hardlink",
+        "sha256": "55d8b117627ee3cee165e245a8f0229038c76f55646581d227ff7c22bef3f3d4",
+        "sha256_in_prefix": "55d8b117627ee3cee165e245a8f0229038c76f55646581d227ff7c22bef3f3d4",
+        "size_in_bytes": 1820
+      },
+      {
+        "_path": "lib/tk8.6/demos/states.tcl",
+        "path_type": "hardlink",
+        "sha256": "f1c50496d28520fa388ceaff6802444423e9c84f5af156653a493e61ae424f6e",
+        "sha256_in_prefix": "f1c50496d28520fa388ceaff6802444423e9c84f5af156653a493e61ae424f6e",
+        "size_in_bytes": 2048
+      },
+      {
+        "_path": "lib/tk8.6/demos/style.tcl",
+        "path_type": "hardlink",
+        "sha256": "41e80dd275b5a4e2c432a9991e82a1bb3ca028535ae5d187bb51dc36c0d0e660",
+        "sha256_in_prefix": "41e80dd275b5a4e2c432a9991e82a1bb3ca028535ae5d187bb51dc36c0d0e660",
+        "size_in_bytes": 6943
+      },
+      {
+        "_path": "lib/tk8.6/demos/tclIndex",
+        "path_type": "hardlink",
+        "sha256": "2d94047383ace46913d01609ebc643523d3dd688d0025b9f397777cbe1e2a595",
+        "sha256_in_prefix": "2d94047383ace46913d01609ebc643523d3dd688d0025b9f397777cbe1e2a595",
+        "size_in_bytes": 5298
+      },
+      {
+        "_path": "lib/tk8.6/demos/tcolor",
+        "path_type": "hardlink",
+        "sha256": "6b73d255fa8a2c5a9c94837365acd3ed3df6e51cdebd37a0b335494fc0039c99",
+        "sha256_in_prefix": "6b73d255fa8a2c5a9c94837365acd3ed3df6e51cdebd37a0b335494fc0039c99",
+        "size_in_bytes": 11253
+      },
+      {
+        "_path": "lib/tk8.6/demos/text.tcl",
+        "path_type": "hardlink",
+        "sha256": "f305492b662144c9ab1290aba55f89d7a141ebf2095d4b44b03dcddedc0be646",
+        "sha256_in_prefix": "f305492b662144c9ab1290aba55f89d7a141ebf2095d4b44b03dcddedc0be646",
+        "size_in_bytes": 4291
+      },
+      {
+        "_path": "lib/tk8.6/demos/textpeer.tcl",
+        "path_type": "hardlink",
+        "sha256": "1b4f5c83a97cdd234d28784e109e0a4c3d73778a2e082599e23c239807513d0f",
+        "sha256_in_prefix": "1b4f5c83a97cdd234d28784e109e0a4c3d73778a2e082599e23c239807513d0f",
+        "size_in_bytes": 2188
+      },
+      {
+        "_path": "lib/tk8.6/demos/timer",
+        "path_type": "hardlink",
+        "sha256": "a4800affbe0ca9684cbba731e3dabbb823c0347506d62bdab31e4ac3e9f6d42a",
+        "sha256_in_prefix": "a4800affbe0ca9684cbba731e3dabbb823c0347506d62bdab31e4ac3e9f6d42a",
+        "size_in_bytes": 1095
+      },
+      {
+        "_path": "lib/tk8.6/demos/toolbar.tcl",
+        "path_type": "hardlink",
+        "sha256": "ba2f0dbe72afee7ee9e3354b2e5f4e1e8fa412bd0d46ad746a19276d74d7171e",
+        "sha256_in_prefix": "ba2f0dbe72afee7ee9e3354b2e5f4e1e8fa412bd0d46ad746a19276d74d7171e",
+        "size_in_bytes": 3272
+      },
+      {
+        "_path": "lib/tk8.6/demos/tree.tcl",
+        "path_type": "hardlink",
+        "sha256": "24c847bed65dfb581779e9cee5ce50d692aa4705e0243a19289b5d9000cb9493",
+        "sha256_in_prefix": "24c847bed65dfb581779e9cee5ce50d692aa4705e0243a19289b5d9000cb9493",
+        "size_in_bytes": 3178
+      },
+      {
+        "_path": "lib/tk8.6/demos/ttkbut.tcl",
+        "path_type": "hardlink",
+        "sha256": "e7f6a0df2d4b101f125514b43d117b12b061746668c667f431d1552947485c3d",
+        "sha256_in_prefix": "e7f6a0df2d4b101f125514b43d117b12b061746668c667f431d1552947485c3d",
+        "size_in_bytes": 3405
+      },
+      {
+        "_path": "lib/tk8.6/demos/ttkmenu.tcl",
+        "path_type": "hardlink",
+        "sha256": "064c0c5a812384deb8751898da757ca6696daa03c14cd3dcb303273e3879beec",
+        "sha256_in_prefix": "064c0c5a812384deb8751898da757ca6696daa03c14cd3dcb303273e3879beec",
+        "size_in_bytes": 2391
+      },
+      {
+        "_path": "lib/tk8.6/demos/ttknote.tcl",
+        "path_type": "hardlink",
+        "sha256": "f6f109a791e9ea4a279c0d9c980ae1cee36707c41e3eafac99c9d9e5fedddae9",
+        "sha256_in_prefix": "f6f109a791e9ea4a279c0d9c980ae1cee36707c41e3eafac99c9d9e5fedddae9",
+        "size_in_bytes": 2317
+      },
+      {
+        "_path": "lib/tk8.6/demos/ttkpane.tcl",
+        "path_type": "hardlink",
+        "sha256": "06539aac034cde1ba42acc1401fd615f521c2874306ac54869e5fe1d71be92c9",
+        "sha256_in_prefix": "06539aac034cde1ba42acc1401fd615f521c2874306ac54869e5fe1d71be92c9",
+        "size_in_bytes": 4177
+      },
+      {
+        "_path": "lib/tk8.6/demos/ttkprogress.tcl",
+        "path_type": "hardlink",
+        "sha256": "fd687aece96d25e14abae0249519c9a88b1ca8d9d1b8c79be3975731669d9c11",
+        "sha256_in_prefix": "fd687aece96d25e14abae0249519c9a88b1ca8d9d1b8c79be3975731669d9c11",
+        "size_in_bytes": 1536
+      },
+      {
+        "_path": "lib/tk8.6/demos/ttkscale.tcl",
+        "path_type": "hardlink",
+        "sha256": "e86d081331febfe401a13a44c68ba82b582b2e66b6e9366dd58025ddac9a1a26",
+        "sha256_in_prefix": "e86d081331febfe401a13a44c68ba82b582b2e66b6e9366dd58025ddac9a1a26",
+        "size_in_bytes": 1420
+      },
+      {
+        "_path": "lib/tk8.6/demos/twind.tcl",
+        "path_type": "hardlink",
+        "sha256": "b2ae8f53b0ef52eefa6a101ada7c22196716a38f75322d44ad44f869c0c7ed2f",
+        "sha256_in_prefix": "b2ae8f53b0ef52eefa6a101ada7c22196716a38f75322d44ad44f869c0c7ed2f",
+        "size_in_bytes": 11654
+      },
+      {
+        "_path": "lib/tk8.6/demos/unicodeout.tcl",
+        "path_type": "hardlink",
+        "sha256": "9cc51068807a95f87747e2751ab3edaf7d0958feabce4184493e486eb303c263",
+        "sha256_in_prefix": "9cc51068807a95f87747e2751ab3edaf7d0958feabce4184493e486eb303c263",
+        "size_in_bytes": 4706
+      },
+      {
+        "_path": "lib/tk8.6/demos/vscale.tcl",
+        "path_type": "hardlink",
+        "sha256": "550a3d317e78263a0933f5dbdba2e82af4e930dc502dc4df33c684f66fc84a02",
+        "sha256_in_prefix": "550a3d317e78263a0933f5dbdba2e82af4e930dc502dc4df33c684f66fc84a02",
+        "size_in_bytes": 1477
+      },
+      {
+        "_path": "lib/tk8.6/demos/widget",
+        "path_type": "hardlink",
+        "sha256": "032901bb6086f51aed6a89cbad910f6787cd55ec8cbbd03f37d0ba217adf9bf9",
+        "sha256_in_prefix": "032901bb6086f51aed6a89cbad910f6787cd55ec8cbbd03f37d0ba217adf9bf9",
+        "size_in_bytes": 24064
+      },
+      {
+        "_path": "lib/tk8.6/dialog.tcl",
+        "path_type": "hardlink",
+        "sha256": "d1b1dcca4628f61ea152a0fa6820175f613bc3d6e92b739d013281db486e625d",
+        "sha256_in_prefix": "d1b1dcca4628f61ea152a0fa6820175f613bc3d6e92b739d013281db486e625d",
+        "size_in_bytes": 5813
+      },
+      {
+        "_path": "lib/tk8.6/entry.tcl",
+        "path_type": "hardlink",
+        "sha256": "92fb2fe5b22cc697f9396d3681cf3d31c03598d7d8d1858b4b7ab976e9c80a5c",
+        "sha256_in_prefix": "92fb2fe5b22cc697f9396d3681cf3d31c03598d7d8d1858b4b7ab976e9c80a5c",
+        "size_in_bytes": 18243
+      },
+      {
+        "_path": "lib/tk8.6/focus.tcl",
+        "path_type": "hardlink",
+        "sha256": "40d4e101a64b75361f763479b01207ae71535337e79ce6e162265842f6471eed",
+        "sha256_in_prefix": "40d4e101a64b75361f763479b01207ae71535337e79ce6e162265842f6471eed",
+        "size_in_bytes": 4857
+      },
+      {
+        "_path": "lib/tk8.6/fontchooser.tcl",
+        "path_type": "hardlink",
+        "sha256": "8aa7cf078c26f396e1a421a03d0f3d05731e413fd448750e192dabfd3aab73c5",
+        "sha256_in_prefix": "8aa7cf078c26f396e1a421a03d0f3d05731e413fd448750e192dabfd3aab73c5",
+        "size_in_bytes": 17777
+      },
+      {
+        "_path": "lib/tk8.6/iconlist.tcl",
+        "path_type": "hardlink",
+        "sha256": "0b087e205260d5e254595a418ba2f09dbb55e9679fa0e8cfa9947a7921437efc",
+        "sha256_in_prefix": "0b087e205260d5e254595a418ba2f09dbb55e9679fa0e8cfa9947a7921437efc",
+        "size_in_bytes": 16741
+      },
+      {
+        "_path": "lib/tk8.6/icons.tcl",
+        "path_type": "hardlink",
+        "sha256": "4cab80ace4104a4169c9bd1fdb24d697889b984b91a290b69a481912c38a9fd4",
+        "sha256_in_prefix": "4cab80ace4104a4169c9bd1fdb24d697889b984b91a290b69a481912c38a9fd4",
+        "size_in_bytes": 10884
+      },
+      {
+        "_path": "lib/tk8.6/images/README",
+        "path_type": "hardlink",
+        "sha256": "2695adff8e900c31b4d86414d22b8a49d6dd865ca3dd99678fa355cdc46093a8",
+        "sha256_in_prefix": "2695adff8e900c31b4d86414d22b8a49d6dd865ca3dd99678fa355cdc46093a8",
+        "size_in_bytes": 322
+      },
+      {
+        "_path": "lib/tk8.6/images/logo.eps",
+        "path_type": "hardlink",
+        "sha256": "f3e77fd94198ec4783109355536638e9162f9c579475383074d024037d1797d3",
+        "sha256_in_prefix": "f3e77fd94198ec4783109355536638e9162f9c579475383074d024037d1797d3",
+        "size_in_bytes": 32900
+      },
+      {
+        "_path": "lib/tk8.6/images/logo100.gif",
+        "path_type": "hardlink",
+        "sha256": "72f6b34d3c8f424ff0a290a793fcfbf34fd5630a916cd02e0a5dda0144b5957f",
+        "sha256_in_prefix": "72f6b34d3c8f424ff0a290a793fcfbf34fd5630a916cd02e0a5dda0144b5957f",
+        "size_in_bytes": 2341
+      },
+      {
+        "_path": "lib/tk8.6/images/logo64.gif",
+        "path_type": "hardlink",
+        "sha256": "138c240382304f350383b02ed56c69103a9431c0544eb1ec5dcd7dec7a555dd9",
+        "sha256_in_prefix": "138c240382304f350383b02ed56c69103a9431c0544eb1ec5dcd7dec7a555dd9",
+        "size_in_bytes": 1670
+      },
+      {
+        "_path": "lib/tk8.6/images/logoLarge.gif",
+        "path_type": "hardlink",
+        "sha256": "0f404764d07a6ae2ef9e1e0e8eaac278b7d488d61cf1c084146f2f33b485f2ed",
+        "sha256_in_prefix": "0f404764d07a6ae2ef9e1e0e8eaac278b7d488d61cf1c084146f2f33b485f2ed",
+        "size_in_bytes": 11000
+      },
+      {
+        "_path": "lib/tk8.6/images/logoMed.gif",
+        "path_type": "hardlink",
+        "sha256": "4d0bd3228ab4cc3e5159f4337be969ec7b7334e265c99b7633e3daf3c3fcfb62",
+        "sha256_in_prefix": "4d0bd3228ab4cc3e5159f4337be969ec7b7334e265c99b7633e3daf3c3fcfb62",
+        "size_in_bytes": 3889
+      },
+      {
+        "_path": "lib/tk8.6/images/pwrdLogo.eps",
+        "path_type": "hardlink",
+        "sha256": "2944ebc4af1894951bf9f1250f4e6edf811c2183745950ea9a8a926715882cf7",
+        "sha256_in_prefix": "2944ebc4af1894951bf9f1250f4e6edf811c2183745950ea9a8a926715882cf7",
+        "size_in_bytes": 27809
+      },
+      {
+        "_path": "lib/tk8.6/images/pwrdLogo100.gif",
+        "path_type": "hardlink",
+        "sha256": "bcc0e6458249433e8cba6c58122b7c0efa9557cbc8fb5f9392eed5d2579fc70b",
+        "sha256_in_prefix": "bcc0e6458249433e8cba6c58122b7c0efa9557cbc8fb5f9392eed5d2579fc70b",
+        "size_in_bytes": 1615
+      },
+      {
+        "_path": "lib/tk8.6/images/pwrdLogo150.gif",
+        "path_type": "hardlink",
+        "sha256": "5fc25c30aee76477f1c4e922931cc806823df059525583ff5705705d9e913c1c",
+        "sha256_in_prefix": "5fc25c30aee76477f1c4e922931cc806823df059525583ff5705705d9e913c1c",
+        "size_in_bytes": 2489
+      },
+      {
+        "_path": "lib/tk8.6/images/pwrdLogo175.gif",
+        "path_type": "hardlink",
+        "sha256": "62866e95501c436b329a15432355743c6efd64a37cfb65bcece465ab63ecf240",
+        "sha256_in_prefix": "62866e95501c436b329a15432355743c6efd64a37cfb65bcece465ab63ecf240",
+        "size_in_bytes": 2981
+      },
+      {
+        "_path": "lib/tk8.6/images/pwrdLogo200.gif",
+        "path_type": "hardlink",
+        "sha256": "bad9116386343f4a4c394bdb87146e49f674f687d52bb847bd9e8198fda382cc",
+        "sha256_in_prefix": "bad9116386343f4a4c394bdb87146e49f674f687d52bb847bd9e8198fda382cc",
+        "size_in_bytes": 3491
+      },
+      {
+        "_path": "lib/tk8.6/images/pwrdLogo75.gif",
+        "path_type": "hardlink",
+        "sha256": "462a8ff8fd051a8100e8c6c086f497e4056ace5b20b44791f4aab964b010a448",
+        "sha256_in_prefix": "462a8ff8fd051a8100e8c6c086f497e4056ace5b20b44791f4aab964b010a448",
+        "size_in_bytes": 1171
+      },
+      {
+        "_path": "lib/tk8.6/images/tai-ku.gif",
+        "path_type": "hardlink",
+        "sha256": "e538f8f4934ca6e1ce29416d292171f28e67da6c72ed9d236ba42f37445ea41e",
+        "sha256_in_prefix": "e538f8f4934ca6e1ce29416d292171f28e67da6c72ed9d236ba42f37445ea41e",
+        "size_in_bytes": 5473
+      },
+      {
+        "_path": "lib/tk8.6/listbox.tcl",
+        "path_type": "hardlink",
+        "sha256": "fdfd4cf3102d83bad3556d0e0086b5f320f74484babf90421cf526fd8b9fbeb0",
+        "sha256_in_prefix": "fdfd4cf3102d83bad3556d0e0086b5f320f74484babf90421cf526fd8b9fbeb0",
+        "size_in_bytes": 14695
+      },
+      {
+        "_path": "lib/tk8.6/megawidget.tcl",
+        "path_type": "hardlink",
+        "sha256": "6554310415438f47722a6d789aa8a0ffccf4c5f699412c2d69c32cffe6d19cf4",
+        "sha256_in_prefix": "6554310415438f47722a6d789aa8a0ffccf4c5f699412c2d69c32cffe6d19cf4",
+        "size_in_bytes": 9565
+      },
+      {
+        "_path": "lib/tk8.6/menu.tcl",
+        "path_type": "hardlink",
+        "sha256": "39e93a2bd75b9156235f3271ea02fd7cac82b542ae56df733cd7bd62a2c4207e",
+        "sha256_in_prefix": "39e93a2bd75b9156235f3271ea02fd7cac82b542ae56df733cd7bd62a2c4207e",
+        "size_in_bytes": 38828
+      },
+      {
+        "_path": "lib/tk8.6/mkpsenc.tcl",
+        "path_type": "hardlink",
+        "sha256": "0ac9d11d4046ef4d8e6d219f6941bf69c6ae448c6a1c2f7fc382f84b5786f660",
+        "sha256_in_prefix": "0ac9d11d4046ef4d8e6d219f6941bf69c6ae448c6a1c2f7fc382f84b5786f660",
+        "size_in_bytes": 29352
+      },
+      {
+        "_path": "lib/tk8.6/msgbox.tcl",
+        "path_type": "hardlink",
+        "sha256": "9a6281fb0a1927d7b81fce9ebfc95235bd88df114ad8a87afea8ea6b0953338a",
+        "sha256_in_prefix": "9a6281fb0a1927d7b81fce9ebfc95235bd88df114ad8a87afea8ea6b0953338a",
+        "size_in_bytes": 16359
+      },
+      {
+        "_path": "lib/tk8.6/msgs/cs.msg",
+        "path_type": "hardlink",
+        "sha256": "d1b0fed0bea51b3faf08d8634034c7388be7148f9b807460b7d185706db8416f",
+        "sha256_in_prefix": "d1b0fed0bea51b3faf08d8634034c7388be7148f9b807460b7d185706db8416f",
+        "size_in_bytes": 4158
+      },
+      {
+        "_path": "lib/tk8.6/msgs/da.msg",
+        "path_type": "hardlink",
+        "sha256": "85e6cee6001927376725f91eaa55d17b3d9e38643e17755a42c05fe491c63bde",
+        "sha256_in_prefix": "85e6cee6001927376725f91eaa55d17b3d9e38643e17755a42c05fe491c63bde",
+        "size_in_bytes": 3909
+      },
+      {
+        "_path": "lib/tk8.6/msgs/de.msg",
+        "path_type": "hardlink",
+        "sha256": "06dd7572626df5cb0a8d3affbac9bb74cb12469076836d66fd19ae5b5fab42c7",
+        "sha256_in_prefix": "06dd7572626df5cb0a8d3affbac9bb74cb12469076836d66fd19ae5b5fab42c7",
+        "size_in_bytes": 4823
+      },
+      {
+        "_path": "lib/tk8.6/msgs/el.msg",
+        "path_type": "hardlink",
+        "sha256": "1d56d0a7c07d34bb8165cba47fa49351b8bc5a9db244290b9601c5885d16155c",
+        "sha256_in_prefix": "1d56d0a7c07d34bb8165cba47fa49351b8bc5a9db244290b9601c5885d16155c",
+        "size_in_bytes": 8698
+      },
+      {
+        "_path": "lib/tk8.6/msgs/en.msg",
+        "path_type": "hardlink",
+        "sha256": "673c76a48ada09a154cb038534bf90e3b9c0ba5fd6b1619db33507de65553362",
+        "sha256_in_prefix": "673c76a48ada09a154cb038534bf90e3b9c0ba5fd6b1619db33507de65553362",
+        "size_in_bytes": 3286
+      },
+      {
+        "_path": "lib/tk8.6/msgs/en_gb.msg",
+        "path_type": "hardlink",
+        "sha256": "fb93d455a9d9cf3f822c968dfb273ed931e433f2494d71d6b5f8d83dde7eacc2",
+        "sha256_in_prefix": "fb93d455a9d9cf3f822c968dfb273ed931e433f2494d71d6b5f8d83dde7eacc2",
+        "size_in_bytes": 63
+      },
+      {
+        "_path": "lib/tk8.6/msgs/eo.msg",
+        "path_type": "hardlink",
+        "sha256": "cb24ba95986671776a83dcf0256263809071d33edd9c06383b19f4c36f820933",
+        "sha256_in_prefix": "cb24ba95986671776a83dcf0256263809071d33edd9c06383b19f4c36f820933",
+        "size_in_bytes": 3960
+      },
+      {
+        "_path": "lib/tk8.6/msgs/es.msg",
+        "path_type": "hardlink",
+        "sha256": "91dc4718dc8566c36e4bcd0c292c01f467ca7661eff601b870abcdfe4a94ecbb",
+        "sha256_in_prefix": "91dc4718dc8566c36e4bcd0c292c01f467ca7661eff601b870abcdfe4a94ecbb",
+        "size_in_bytes": 3948
+      },
+      {
+        "_path": "lib/tk8.6/msgs/fi.msg",
+        "path_type": "hardlink",
+        "sha256": "f4a2c4da7a6779cb508b0abbc3df3c94acf7719b7b35edf555285adb8f8fcc5b",
+        "sha256_in_prefix": "f4a2c4da7a6779cb508b0abbc3df3c94acf7719b7b35edf555285adb8f8fcc5b",
+        "size_in_bytes": 4604
+      },
+      {
+        "_path": "lib/tk8.6/msgs/fr.msg",
+        "path_type": "hardlink",
+        "sha256": "0a8bbb4d1fd87bf7a90ddfa50f4724994c9ce78d1f3e91cf40c1177db7941dc5",
+        "sha256_in_prefix": "0a8bbb4d1fd87bf7a90ddfa50f4724994c9ce78d1f3e91cf40c1177db7941dc5",
+        "size_in_bytes": 3805
+      },
+      {
+        "_path": "lib/tk8.6/msgs/hu.msg",
+        "path_type": "hardlink",
+        "sha256": "c8134ead129e44e9c5043e1dad81a6a900f0de71db3468e2603840038687f1d8",
+        "sha256_in_prefix": "c8134ead129e44e9c5043e1dad81a6a900f0de71db3468e2603840038687f1d8",
+        "size_in_bytes": 4600
+      },
+      {
+        "_path": "lib/tk8.6/msgs/it.msg",
+        "path_type": "hardlink",
+        "sha256": "9f83dd0309ed621100f3187ffcdae50b75f5973bbe74af550a78ef0010495ded",
+        "sha256_in_prefix": "9f83dd0309ed621100f3187ffcdae50b75f5973bbe74af550a78ef0010495ded",
+        "size_in_bytes": 3692
+      },
+      {
+        "_path": "lib/tk8.6/msgs/nl.msg",
+        "path_type": "hardlink",
+        "sha256": "d3d07aad792c0e83f4704b304931ea549d12cbb3d99a573d9815e954a5710707",
+        "sha256_in_prefix": "d3d07aad792c0e83f4704b304931ea549d12cbb3d99a573d9815e954a5710707",
+        "size_in_bytes": 4466
+      },
+      {
+        "_path": "lib/tk8.6/msgs/pl.msg",
+        "path_type": "hardlink",
+        "sha256": "1993b4ec2dc009d2e6ca185d0bd565d3f33a4efa79baca39e4f97f574d63f305",
+        "sha256_in_prefix": "1993b4ec2dc009d2e6ca185d0bd565d3f33a4efa79baca39e4f97f574d63f305",
+        "size_in_bytes": 4841
+      },
+      {
+        "_path": "lib/tk8.6/msgs/pt.msg",
+        "path_type": "hardlink",
+        "sha256": "ad0e466131d3789de321d9d0588e19e4647ba82ede41eee6ebef464786f8bdbe",
+        "sha256_in_prefix": "ad0e466131d3789de321d9d0588e19e4647ba82ede41eee6ebef464786f8bdbe",
+        "size_in_bytes": 3913
+      },
+      {
+        "_path": "lib/tk8.6/msgs/ru.msg",
+        "path_type": "hardlink",
+        "sha256": "06190bf2462369f6ad4ccb8dee5f659f84856ceccf2806dddf9511e015390c23",
+        "sha256_in_prefix": "06190bf2462369f6ad4ccb8dee5f659f84856ceccf2806dddf9511e015390c23",
+        "size_in_bytes": 8527
+      },
+      {
+        "_path": "lib/tk8.6/msgs/sv.msg",
+        "path_type": "hardlink",
+        "sha256": "b76ebfa21bc1e937a04a04e5122be64b5cdee1f47c7058b71d8b923d70c3b17b",
+        "sha256_in_prefix": "b76ebfa21bc1e937a04a04e5122be64b5cdee1f47c7058b71d8b923d70c3b17b",
+        "size_in_bytes": 3832
+      },
+      {
+        "_path": "lib/tk8.6/msgs/zh_cn.msg",
+        "path_type": "hardlink",
+        "sha256": "4d5b3207b5a40729a17a29dab3cf7ee63e53f9c07dd0594abf0af83a2a01a178",
+        "sha256_in_prefix": "4d5b3207b5a40729a17a29dab3cf7ee63e53f9c07dd0594abf0af83a2a01a178",
+        "size_in_bytes": 4856
+      },
+      {
+        "_path": "lib/tk8.6/obsolete.tcl",
+        "path_type": "hardlink",
+        "sha256": "f6929a5e0d18bc4c6666206c63ac4aaa66edc4b9f456dfc083300cfa95a44bcd",
+        "sha256_in_prefix": "f6929a5e0d18bc4c6666206c63ac4aaa66edc4b9f456dfc083300cfa95a44bcd",
+        "size_in_bytes": 5594
+      },
+      {
+        "_path": "lib/tk8.6/optMenu.tcl",
+        "path_type": "hardlink",
+        "sha256": "76dbdbf9216678d48d1640f8fd1e278e7140482e1cac7680127a9a425cc61dee",
+        "sha256_in_prefix": "76dbdbf9216678d48d1640f8fd1e278e7140482e1cac7680127a9a425cc61dee",
+        "size_in_bytes": 1586
+      },
+      {
+        "_path": "lib/tk8.6/palette.tcl",
+        "path_type": "hardlink",
+        "sha256": "60b8579368bb3063f16d25f007385111e0ef8d97bb296b03656dc176e351e3ca",
+        "sha256_in_prefix": "60b8579368bb3063f16d25f007385111e0ef8d97bb296b03656dc176e351e3ca",
+        "size_in_bytes": 8174
+      },
+      {
+        "_path": "lib/tk8.6/panedwindow.tcl",
+        "path_type": "hardlink",
+        "sha256": "4adf738b17691489c71c4b9d9a64b12961ada8667b81856f7adbc61dffeadf29",
+        "sha256_in_prefix": "4adf738b17691489c71c4b9d9a64b12961ada8667b81856f7adbc61dffeadf29",
+        "size_in_bytes": 5176
+      },
+      {
+        "_path": "lib/tk8.6/pkgIndex.tcl",
+        "path_type": "hardlink",
+        "sha256": "0967e3885917164ae0777d00f496e08787cf8234a066e72dba54ecde40beda93",
+        "sha256_in_prefix": "0967e3885917164ae0777d00f496e08787cf8234a066e72dba54ecde40beda93",
+        "size_in_bytes": 150
+      },
+      {
+        "_path": "lib/tk8.6/safetk.tcl",
+        "path_type": "hardlink",
+        "sha256": "ddb0cd59c68fc0ac219900a04df0ccb576440dd8812c41bca20b974580860892",
+        "sha256_in_prefix": "ddb0cd59c68fc0ac219900a04df0ccb576440dd8812c41bca20b974580860892",
+        "size_in_bytes": 7370
+      },
+      {
+        "_path": "lib/tk8.6/scale.tcl",
+        "path_type": "hardlink",
+        "sha256": "423546933269faec913001f2bce30bbdbce3927dc9dd96fe74813e7ffb27cfb5",
+        "sha256_in_prefix": "423546933269faec913001f2bce30bbdbce3927dc9dd96fe74813e7ffb27cfb5",
+        "size_in_bytes": 8386
+      },
+      {
+        "_path": "lib/tk8.6/scrlbar.tcl",
+        "path_type": "hardlink",
+        "sha256": "189e7ee4b67861001c714a55880db34acf7d626a816e18b04b232af9e6e33e81",
+        "sha256_in_prefix": "189e7ee4b67861001c714a55880db34acf7d626a816e18b04b232af9e6e33e81",
+        "size_in_bytes": 12732
+      },
+      {
+        "_path": "lib/tk8.6/spinbox.tcl",
+        "path_type": "hardlink",
+        "sha256": "a804c83029e04e6bd34d335260f388890d7657deb544173858bd05018d73ab01",
+        "sha256_in_prefix": "a804c83029e04e6bd34d335260f388890d7657deb544173858bd05018d73ab01",
+        "size_in_bytes": 15949
+      },
+      {
+        "_path": "lib/tk8.6/tclIndex",
+        "path_type": "hardlink",
+        "sha256": "8e8ececfd6046fe413f37a91933eea086e31959b3fbeb127afdd05cd9141be9a",
+        "sha256_in_prefix": "8e8ececfd6046fe413f37a91933eea086e31959b3fbeb127afdd05cd9141be9a",
+        "size_in_bytes": 20270
+      },
+      {
+        "_path": "lib/tk8.6/tearoff.tcl",
+        "path_type": "hardlink",
+        "sha256": "7930c8781d6438c11e3a1f0f3d3c1d052e924bdfb7fde7fc17adfab9ce3e4102",
+        "sha256_in_prefix": "7930c8781d6438c11e3a1f0f3d3c1d052e924bdfb7fde7fc17adfab9ce3e4102",
+        "size_in_bytes": 4468
+      },
+      {
+        "_path": "lib/tk8.6/text.tcl",
+        "path_type": "hardlink",
+        "sha256": "fd12bca3c7dcedf3fc6640902af1c9f48bc5df27c9153edaec15413f1581e4a9",
+        "sha256_in_prefix": "fd12bca3c7dcedf3fc6640902af1c9f48bc5df27c9153edaec15413f1581e4a9",
+        "size_in_bytes": 33941
+      },
+      {
+        "_path": "lib/tk8.6/tk.tcl",
+        "path_type": "hardlink",
+        "sha256": "779ce7099675d1fcdaa8a53df58cf5b2da6d5f03cdbf7a8c318860bd01a6e46f",
+        "sha256_in_prefix": "779ce7099675d1fcdaa8a53df58cf5b2da6d5f03cdbf7a8c318860bd01a6e46f",
+        "size_in_bytes": 23614
+      },
+      {
+        "_path": "lib/tk8.6/tkAppInit.c",
+        "path_type": "hardlink",
+        "sha256": "d9d98bc99d99d0a9883ab5054ded519ab7fe471e0d1d2460a5437f235ac8c951",
+        "sha256_in_prefix": "d9d98bc99d99d0a9883ab5054ded519ab7fe471e0d1d2460a5437f235ac8c951",
+        "size_in_bytes": 4615
+      },
+      {
+        "_path": "lib/tk8.6/tkfbox.tcl",
+        "path_type": "hardlink",
+        "sha256": "b581f15230410bf8d8c6bdfa369a62670e89b5562a2217156b193b3ce4672153",
+        "sha256_in_prefix": "b581f15230410bf8d8c6bdfa369a62670e89b5562a2217156b193b3ce4672153",
+        "size_in_bytes": 38365
+      },
+      {
+        "_path": "lib/tk8.6/ttk/altTheme.tcl",
+        "path_type": "hardlink",
+        "sha256": "92b8be9d8934850b6d240b970603b0ad7c6dd4a45134545694fb52966d742861",
+        "sha256_in_prefix": "92b8be9d8934850b6d240b970603b0ad7c6dd4a45134545694fb52966d742861",
+        "size_in_bytes": 3604
+      },
+      {
+        "_path": "lib/tk8.6/ttk/aquaTheme.tcl",
+        "path_type": "hardlink",
+        "sha256": "bc31694396ecf98a6040d328868a483c1f677096406b50ea89d5b2f4258288d6",
+        "sha256_in_prefix": "bc31694396ecf98a6040d328868a483c1f677096406b50ea89d5b2f4258288d6",
+        "size_in_bytes": 3719
+      },
+      {
+        "_path": "lib/tk8.6/ttk/button.tcl",
+        "path_type": "hardlink",
+        "sha256": "684ed40a9609ca275ce6f3e547fbf2980e3c040faddaf0fd39b7cbd7d5987366",
+        "sha256_in_prefix": "684ed40a9609ca275ce6f3e547fbf2980e3c040faddaf0fd39b7cbd7d5987366",
+        "size_in_bytes": 2931
+      },
+      {
+        "_path": "lib/tk8.6/ttk/clamTheme.tcl",
+        "path_type": "hardlink",
+        "sha256": "19d49ade0fb873a86f80c569fbb17e2d667a6292045563fe1cf1449cd1b68d61",
+        "sha256_in_prefix": "19d49ade0fb873a86f80c569fbb17e2d667a6292045563fe1cf1449cd1b68d61",
+        "size_in_bytes": 4662
+      },
+      {
+        "_path": "lib/tk8.6/ttk/classicTheme.tcl",
+        "path_type": "hardlink",
+        "sha256": "c7b1f40d77820fbaf2195f2bb3f334b38fec653fe47653f9e30a01ad4ca63ba5",
+        "sha256_in_prefix": "c7b1f40d77820fbaf2195f2bb3f334b38fec653fe47653f9e30a01ad4ca63ba5",
+        "size_in_bytes": 3749
+      },
+      {
+        "_path": "lib/tk8.6/ttk/combobox.tcl",
+        "path_type": "hardlink",
+        "sha256": "ec585de283837d1f5992f82d632acaad2aa08b2ff19f0bdb19a2e5d3626ee177",
+        "sha256_in_prefix": "ec585de283837d1f5992f82d632acaad2aa08b2ff19f0bdb19a2e5d3626ee177",
+        "size_in_bytes": 12270
+      },
+      {
+        "_path": "lib/tk8.6/ttk/cursors.tcl",
+        "path_type": "hardlink",
+        "sha256": "c1db93eaf482bee1bf57cb423f28a8c6770ced9b37ebbb8c9fc86d61215fe8e8",
+        "sha256_in_prefix": "c1db93eaf482bee1bf57cb423f28a8c6770ced9b37ebbb8c9fc86d61215fe8e8",
+        "size_in_bytes": 4469
+      },
+      {
+        "_path": "lib/tk8.6/ttk/defaults.tcl",
+        "path_type": "hardlink",
+        "sha256": "925d8e7249e10cb9e3ae5a89fdddd28425c722d218715f37dbac13e933bd019f",
+        "sha256_in_prefix": "925d8e7249e10cb9e3ae5a89fdddd28425c722d218715f37dbac13e933bd019f",
+        "size_in_bytes": 4410
+      },
+      {
+        "_path": "lib/tk8.6/ttk/entry.tcl",
+        "path_type": "hardlink",
+        "sha256": "9c341735e179279766240dc89b83b6a9ebac60890065251fe5cf438f8b14d937",
+        "sha256_in_prefix": "9c341735e179279766240dc89b83b6a9ebac60890065251fe5cf438f8b14d937",
+        "size_in_bytes": 17365
+      },
+      {
+        "_path": "lib/tk8.6/ttk/fonts.tcl",
+        "path_type": "hardlink",
+        "sha256": "1f2d2965b2c72ae953c0829a227577ada8959d24502638b3186aa840b678cc3a",
+        "sha256_in_prefix": "1f2d2965b2c72ae953c0829a227577ada8959d24502638b3186aa840b678cc3a",
+        "size_in_bytes": 5485
+      },
+      {
+        "_path": "lib/tk8.6/ttk/menubutton.tcl",
+        "path_type": "hardlink",
+        "sha256": "a16dfb1eaf77b05a0ef92b4cc7d00f559fb6cf0b2f735c3afac50303c524a081",
+        "sha256_in_prefix": "a16dfb1eaf77b05a0ef92b4cc7d00f559fb6cf0b2f735c3afac50303c524a081",
+        "size_in_bytes": 6175
+      },
+      {
+        "_path": "lib/tk8.6/ttk/notebook.tcl",
+        "path_type": "hardlink",
+        "sha256": "8bef93353a7134434dc780eea77b52ef6dc853a193e8d81a132d0e24ed93234b",
+        "sha256_in_prefix": "8bef93353a7134434dc780eea77b52ef6dc853a193e8d81a132d0e24ed93234b",
+        "size_in_bytes": 5662
+      },
+      {
+        "_path": "lib/tk8.6/ttk/panedwindow.tcl",
+        "path_type": "hardlink",
+        "sha256": "e650b75e150678a69d8c05e7c915ed75db30716f40828ad75d19cd588fd90fe3",
+        "sha256_in_prefix": "e650b75e150678a69d8c05e7c915ed75db30716f40828ad75d19cd588fd90fe3",
+        "size_in_bytes": 2183
+      },
+      {
+        "_path": "lib/tk8.6/ttk/progress.tcl",
+        "path_type": "hardlink",
+        "sha256": "a9c34f595e547ce94ee65e27c415195d2b210653a9ffcfb39559c5e0fa9c06f8",
+        "sha256_in_prefix": "a9c34f595e547ce94ee65e27c415195d2b210653a9ffcfb39559c5e0fa9c06f8",
+        "size_in_bytes": 1089
+      },
+      {
+        "_path": "lib/tk8.6/ttk/scale.tcl",
+        "path_type": "hardlink",
+        "sha256": "6161c40bf5d6cfe9c836aab2370efc951bc3e14bc17dd9477455b86b5252d696",
+        "sha256_in_prefix": "6161c40bf5d6cfe9c836aab2370efc951bc3e14bc17dd9477455b86b5252d696",
+        "size_in_bytes": 2693
+      },
+      {
+        "_path": "lib/tk8.6/ttk/scrollbar.tcl",
+        "path_type": "hardlink",
+        "sha256": "ee5261fe0fc03e54f417abb032e5289185f8698d60ae74db69032fedeb2d12a9",
+        "sha256_in_prefix": "ee5261fe0fc03e54f417abb032e5289185f8698d60ae74db69032fedeb2d12a9",
+        "size_in_bytes": 3159
+      },
+      {
+        "_path": "lib/tk8.6/ttk/sizegrip.tcl",
+        "path_type": "hardlink",
+        "sha256": "0b3818df7cf0d6ff17b9c5889ab73083e67729c3a0d6b8fe0c06300fb6d2dc3e",
+        "sha256_in_prefix": "0b3818df7cf0d6ff17b9c5889ab73083e67729c3a0d6b8fe0c06300fb6d2dc3e",
+        "size_in_bytes": 2401
+      },
+      {
+        "_path": "lib/tk8.6/ttk/spinbox.tcl",
+        "path_type": "hardlink",
+        "sha256": "5132e39112916486c49018c1bffba70f30df607b103e22ae5d43c71dabe8cb40",
+        "sha256_in_prefix": "5132e39112916486c49018c1bffba70f30df607b103e22ae5d43c71dabe8cb40",
+        "size_in_bytes": 4811
+      },
+      {
+        "_path": "lib/tk8.6/ttk/treeview.tcl",
+        "path_type": "hardlink",
+        "sha256": "42fcb70306b8ad483fa2649d7c9b13891b2b841e26d294f53da322da488c6254",
+        "sha256_in_prefix": "42fcb70306b8ad483fa2649d7c9b13891b2b841e26d294f53da322da488c6254",
+        "size_in_bytes": 9797
+      },
+      {
+        "_path": "lib/tk8.6/ttk/ttk.tcl",
+        "path_type": "hardlink",
+        "sha256": "2d5892078ea331e7f967f46ab510f13e890c9ee185d597d9fb3bc4c29e400ecf",
+        "sha256_in_prefix": "2d5892078ea331e7f967f46ab510f13e890c9ee185d597d9fb3bc4c29e400ecf",
+        "size_in_bytes": 4817
+      },
+      {
+        "_path": "lib/tk8.6/ttk/utils.tcl",
+        "path_type": "hardlink",
+        "sha256": "d17c13d2d163a1bff6987f751220cf3dcf0d466cc6c52a8e2cc6219c21629e14",
+        "sha256_in_prefix": "d17c13d2d163a1bff6987f751220cf3dcf0d466cc6c52a8e2cc6219c21629e14",
+        "size_in_bytes": 8287
+      },
+      {
+        "_path": "lib/tk8.6/ttk/vistaTheme.tcl",
+        "path_type": "hardlink",
+        "sha256": "e24014c5779395e767be7d435022f6f169f50949bbbed7e79b2de6ae65e0c513",
+        "sha256_in_prefix": "e24014c5779395e767be7d435022f6f169f50949bbbed7e79b2de6ae65e0c513",
+        "size_in_bytes": 9481
+      },
+      {
+        "_path": "lib/tk8.6/ttk/winTheme.tcl",
+        "path_type": "hardlink",
+        "sha256": "05fad058280e7a8947a9f71122b442b92d7d578b4618b08bf0b71b6dac5aa22f",
+        "sha256_in_prefix": "05fad058280e7a8947a9f71122b442b92d7d578b4618b08bf0b71b6dac5aa22f",
+        "size_in_bytes": 2781
+      },
+      {
+        "_path": "lib/tk8.6/ttk/xpTheme.tcl",
+        "path_type": "hardlink",
+        "sha256": "8e4b4ce0b35845d986a93ad564cd1238a1e8a3902e9259003058f0aec00e30cb",
+        "sha256_in_prefix": "8e4b4ce0b35845d986a93ad564cd1238a1e8a3902e9259003058f0aec00e30cb",
+        "size_in_bytes": 2036
+      },
+      {
+        "_path": "lib/tk8.6/unsupported.tcl",
+        "path_type": "hardlink",
+        "sha256": "e34d828e740f151b96022934aaec7bb8343e23d040fb54c04641888f51767eb8",
+        "sha256_in_prefix": "e34d828e740f151b96022934aaec7bb8343e23d040fb54c04641888f51767eb8",
+        "size_in_bytes": 10252
+      },
+      {
+        "_path": "lib/tk8.6/xmfbox.tcl",
+        "path_type": "hardlink",
+        "sha256": "21d2594c8319f14c47a0f0bf3d2acabcc82c9ab8d84a64fa3cb608c7e75f59c3",
+        "sha256_in_prefix": "21d2594c8319f14c47a0f0bf3d2acabcc82c9ab8d84a64fa3cb608c7e75f59c3",
+        "size_in_bytes": 26002
+      },
+      {
+        "_path": "lib/tkConfig.sh",
+        "file_mode": "text",
+        "path_type": "hardlink",
+        "prefix_placeholder": "/croot/tk_1714770549989/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_plac",
+        "sha256": "cedaa299b41f9d83d102c1e0e1894f0cd9bea9fb83917843683999b2699a910f",
+        "sha256_in_prefix": "8161c561cb1602e22fe5ff5a1d29776e19c0f696951aad3566dea7cb753f4f29",
+        "size_in_bytes": 5661
+      }
+    ],
+    "paths_version": 1
+  },
+  "requested_spec": "None",
+  "sha256": "a390949ede5d6ff36a67e87c742099e5468f2fc0f33109fb3e0f39a3dcd4251e",
+  "size": 3584424,
+  "subdir": "linux-64",
+  "timestamp": 1714770676475,
+  "track_features": "",
+  "url": "https://repo.anaconda.com/pkgs/main/linux-64/tk-8.6.14-h39e8969_0.conda",
+  "version": "8.6.14"
+}

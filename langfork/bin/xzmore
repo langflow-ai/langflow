@@ -1,0 +1,79 @@
+#!/bin/sh
+
+# Copyright (C) 2001, 2002, 2007 Free Software Foundation
+# Copyright (C) 1992, 1993 Jean-loup Gailly
+
+# Modified for XZ Utils by Andrew Dudman and Lasse Collin.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+
+#SET_PATH - This line is a placeholder to ease patching this script.
+
+# Instead of unsetting XZ_OPT, just make sure that xz will use file format
+# autodetection. This way memory usage limit and thread limit can be
+# specified via XZ_OPT.
+xz='xz --format=auto'
+
+version='xzmore (XZ Utils) 5.4.6'
+
+usage="Usage: ${0##*/} [OPTION]... [FILE]...
+Like 'more', but operate on the uncompressed contents of xz compressed FILEs.
+
+Report bugs to <xz@tukaani.org>."
+
+case $1 in
+	--help)    printf '%s\n' "$usage" || exit 2; exit;;
+	--version) printf '%s\n' "$version" || exit 2; exit;;
+esac
+
+oldtty=`stty -g 2>/dev/null`
+if stty -cbreak 2>/dev/null; then
+	cb='cbreak'; ncb='-cbreak'
+else
+	# 'stty min 1' resets eof to ^a on both SunOS and SysV!
+	cb='min 1 -icanon'; ncb='icanon eof ^d'
+fi
+if test $? -eq 0 && test -n "$oldtty"; then
+	trap 'stty $oldtty 2>/dev/null; exit' 0 2 3 5 10 13 15
+else
+	trap 'stty $ncb echo 2>/dev/null; exit' 0 2 3 5 10 13 15
+fi
+
+if test $# = 0; then
+	if test -t 0; then
+		printf '%s\n' "$usage"; exit 1
+	else
+		$xz -cdfqQ | eval "${PAGER:-more}"
+	fi
+else
+	FIRST=1
+	for FILE; do
+		< "$FILE" || continue
+		if test $FIRST -eq 0; then
+			printf "%s--More--(Next file: %s)" "" "$FILE"
+			stty $cb -echo 2>/dev/null
+			ANS=`dd bs=1 count=1 2>/dev/null`
+			stty $ncb echo 2>/dev/null
+			echo " "
+			case "$ANS" in
+				[eq]) exit;;
+			esac
+		fi
+		if test "$ANS" != 's'; then
+			printf '%s\n' "------> $FILE <------"
+			$xz -cdfqQ -- "$FILE" | eval "${PAGER:-more}"
+		fi
+		if test -t 1; then
+			FIRST=0
+		fi
+	done
+fi

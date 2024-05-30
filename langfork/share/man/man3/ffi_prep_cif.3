@@ -1,0 +1,68 @@
+.Dd February 15, 2008
+.Dt ffi_prep_cif 3
+.Sh NAME
+.Nm ffi_prep_cif
+.Nd Prepare a
+.Nm ffi_cif
+structure for use with
+.Nm ffi_call 
+.
+.Sh SYNOPSIS
+.In ffi.h
+.Ft ffi_status
+.Fo ffi_prep_cif
+.Fa "ffi_cif *cif"
+.Fa "ffi_abi abi"
+.Fa "unsigned int nargs"
+.Fa "ffi_type *rtype"
+.Fa "ffi_type **atypes"
+.Fc
+.Sh DESCRIPTION
+The
+.Nm ffi_prep_cif
+function prepares a
+.Nm ffi_cif
+structure for use with 
+.Nm ffi_call
+.
+.Fa abi
+specifies a set of calling conventions to use.
+.Fa atypes
+is an array of
+.Fa nargs
+pointers to
+.Nm ffi_type
+structs that describe the data type, size and alignment of each argument.
+.Fa rtype
+points to an
+.Nm ffi_type
+that describes the data type, size and alignment of the
+return value. Note that to call a variadic function
+.Nm ffi_prep_cif_var
+must be used instead.
+.Sh RETURN VALUES
+Upon successful completion,
+.Nm ffi_prep_cif
+returns
+.Nm FFI_OK .
+It will return
+.Nm FFI_BAD_TYPEDEF
+if
+.Fa cif
+is
+.Nm NULL
+or
+.Fa atypes
+or
+.Fa rtype
+is malformed. If
+.Fa abi
+does not refer to a valid ABI,
+.Nm FFI_BAD_ABI
+will be returned. Available ABIs are
+defined in
+.Nm <ffitarget.h> .
+.Sh SEE ALSO
+.Xr ffi 3 ,
+.Xr ffi_call 3 ,
+.Xr ffi_prep_cif_var 3

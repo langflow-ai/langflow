@@ -1,0 +1,47 @@
+.\"
+.\" Authors: Andrew Dudman
+.\"          Lasse Collin
+.\"
+.\" This file has been put into the public domain.
+.\" You can do whatever you want with this file.
+.\"
+.\" (Note that this file is not based on gzip's zless.1.)
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH XZLESS 1 "27. September 2010" Tukaani XZ\-Dienstprogramme
+.SH BEZEICHNUNG
+xzless, lzless \- mit xz oder lzma komprimierte (Text\-)Dateien betrachten
+.SH ÜBERSICHT
+\fBxzless\fP [\fIDatei\fP …]
+.br
+\fBlzless\fP [\fIDatei\fP …]
+.SH BESCHREIBUNG
+\fBxzless\fP ist ein Filter, der Text aus komprimierten Dateien in einem
+Terminal anzeigt. Es funktioniert mit Dateien, die mit \fBxz\fP(1) oder
+\fBlzma\fP(1) komprimiert sind. Falls keine \fIfiles\fP angegeben sind, liest
+\fBxzless\fP aus der Standardeingabe.
+.PP
+\fBxzless\fP verwendet \fBless\fP(1) zur Darstellung der Ausgabe. Im Gegensatz zu
+\fBxzmore\fP können Sie das zu verwendende Textanzeigeprogramm nicht durch
+Setzen einer Umgebungsvariable ändern. Die Befehle basieren auf \fBmore\fP(1)
+und \fBvi\fP(1) und ermöglichen Vorwärts\- und Rückwärtssprünge sowie
+Suchvorgänge. In der Handbuchseite zu \fBless\fP(1) finden Sie weiter
+Information.
+.PP
+Der Befehl \fBlzless\fP dient der Abwärtskompatibilität zu den
+LZMA\-Dienstprogrammen.
+.SH UMGEBUNGSVARIABLEN
+.TP 
+\fBLESSMETACHARS\fP
+Dies enthält eine Zeichenliste mit Bezug zur Shell. Wenn diese Variable
+nicht bereits gesetzt ist, wird sie durch \fBxzless\fP gesetzt.
+.TP 
+\fBLESSOPEN\fP
+Dies ist auf die Befehlszeile zum Aufruf von \fBxz\fP(1) gesetzt, die zur
+Vorverarbeitung der Eingabedateien für \fBless\fP(1) nötig ist.
+.SH "SIEHE AUCH"
+\fBless\fP(1), \fBxz\fP(1), \fBxzmore\fP(1), \fBzless\fP(1)
