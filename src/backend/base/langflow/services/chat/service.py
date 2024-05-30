@@ -13,7 +13,7 @@ class ChatService(Service):
         self._cache_locks = defaultdict(asyncio.Lock)
         self.cache_service = get_cache_service()
 
-    async def set_cache(self, flow_id: str, data: Any, lock: Optional[asyncio.Lock] = None) -> bool:
+    async def set_cache(self, key: str, data: Any, lock: Optional[asyncio.Lock] = None) -> bool:
         """
         Set the cache for a client.
         """
@@ -23,17 +23,17 @@ class ChatService(Service):
             "result": data,
             "type": type(data),
         }
-        await self.cache_service.upsert(flow_id, result_dict, lock=lock or self._cache_locks[flow_id])
-        return flow_id in self.cache_service
+        await self.cache_service.upsert(key, result_dict, lock=lock or self._cache_locks[key])
+        return key in self.cache_service
 
-    async def get_cache(self, flow_id: str, lock: Optional[asyncio.Lock] = None) -> Any:
+    async def get_cache(self, key: str, lock: Optional[asyncio.Lock] = None) -> Any:
         """
         Get the cache for a client.
         """
-        return await self.cache_service.get(flow_id, lock=lock or self._cache_locks[flow_id])
+        return await self.cache_service.get(key, lock=lock or self._cache_locks[key])
 
-    async def clear_cache(self, flow_id: str, lock: Optional[asyncio.Lock] = None):
+    async def clear_cache(self, key: str, lock: Optional[asyncio.Lock] = None):
         """
         Clear the cache for a client.
         """
-        await self.cache_service.delete(flow_id, lock=lock or self._cache_locks[flow_id])
+        await self.cache_service.delete(key, lock=lock or self._cache_locks[key])

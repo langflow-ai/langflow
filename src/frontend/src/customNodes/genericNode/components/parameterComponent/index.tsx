@@ -238,7 +238,7 @@ export default function ParameterComponent({
             (left ? "" : " justify-end")
           }
         >
-          <Case condition={left && data.node?.frozen}>
+          <Case condition={!left && data.node?.frozen}>
             <div className="pr-1">
               <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
             </div>
@@ -547,9 +547,7 @@ export default function ParameterComponent({
               value={
                 !data.node!.template[name]?.value ||
                 data.node!.template[name]?.value?.toString() === "{}"
-                  ? {
-                      // yourkey: "value",
-                    }
+                  ? {}
                   : data.node!.template[name]?.value
               }
               onChange={handleOnNewValue}
