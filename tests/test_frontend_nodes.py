@@ -1,17 +1,17 @@
 import pytest
 
-from langflow.template.field.base import InputField
+from langflow.template.field.base import Input
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
 
 
 @pytest.fixture
-def sample_template_field() -> InputField:
-    return InputField(name="test_field", field_type="str")
+def sample_template_field() -> Input:
+    return Input(name="test_field", field_type="str")
 
 
 @pytest.fixture
-def sample_template(sample_template_field: InputField) -> Template:
+def sample_template(sample_template_field: Input) -> Template:
     return Template(type_name="test_template", fields=[sample_template_field])
 
 
@@ -25,7 +25,7 @@ def sample_frontend_node(sample_template: Template) -> FrontendNode:
     )
 
 
-def test_template_field_defaults(sample_template_field: InputField):
+def test_template_field_defaults(sample_template_field: Input):
     assert sample_template_field.field_type == "str"
     assert sample_template_field.required is False
     assert sample_template_field.placeholder == ""
@@ -39,7 +39,7 @@ def test_template_field_defaults(sample_template_field: InputField):
     assert sample_template_field.name == "test_field"
 
 
-def test_template_to_dict(sample_template: Template, sample_template_field: InputField):
+def test_template_to_dict(sample_template: Template, sample_template_field: Input):
     template_dict = sample_template.to_dict()
     assert template_dict["_type"] == "test_template"
     assert len(template_dict) == 2  # _type and test_field

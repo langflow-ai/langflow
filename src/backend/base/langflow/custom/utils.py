@@ -22,7 +22,7 @@ from langflow.custom.eval import eval_custom_component_code
 from langflow.custom.schema import MissingDefault
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.schema import dotdict
-from langflow.template.field.base import InputField
+from langflow.template.field.base import Input
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
@@ -169,7 +169,7 @@ def add_new_custom_field(
     required = field_config.pop("required", field_required)
     placeholder = field_config.pop("placeholder", "")
 
-    new_field = InputField(
+    new_field = Input(
         name=field_name,
         field_type=field_type,
         value=field_value,
@@ -231,9 +231,9 @@ def add_extra_fields(frontend_node, field_config, function_args):
             )
 
 
-def get_field_dict(field: Union[InputField, dict]):
-    """Get the field dictionary from a InputField or a dict"""
-    if isinstance(field, InputField):
+def get_field_dict(field: Union[Input, dict]):
+    """Get the field dictionary from a Input or a dict"""
+    if isinstance(field, Input):
         return dotdict(field.model_dump(by_alias=True, exclude_none=True))
     return field
 
@@ -266,8 +266,8 @@ def run_build_config(
         build_config: Dict = custom_instance.build_config()
 
         for field_name, field in build_config.copy().items():
-            # Allow user to build InputField as well
-            # as a dict with the same keys as InputField
+            # Allow user to build Input as well
+            # as a dict with the same keys as Input
             field_dict = get_field_dict(field)
             # Let's check if "rangeSpec" is a RangeSpec object
             if "rangeSpec" in field_dict and isinstance(field_dict["rangeSpec"], RangeSpec):
@@ -305,7 +305,7 @@ def build_frontend_node(template_config):
 
 
 def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code, field_config):
-    code_field = InputField(
+    code_field = Input(
         dynamic=True,
         required=True,
         placeholder="",
@@ -429,9 +429,9 @@ def update_field_dict(
     return build_config
 
 
-def sanitize_field_config(field_config: Union[Dict, InputField]):
+def sanitize_field_config(field_config: Union[Dict, Input]):
     # If any of the already existing keys are in field_config, remove them
-    if isinstance(field_config, InputField):
+    if isinstance(field_config, Input):
         field_dict = field_config.to_dict()
     else:
         field_dict = field_config
