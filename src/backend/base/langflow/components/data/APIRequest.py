@@ -130,6 +130,8 @@ class APIRequest(CustomComponent):
             headers_dict = {}
         elif isinstance(headers, Record):
             headers_dict = headers.data
+        else:
+            headers_dict = headers
 
         bodies = []
         if body:
