@@ -14,7 +14,7 @@ from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from langflow.api import router
-from langflow.initial_setup.setup import create_or_update_starter_projects
+from langflow.initial_setup.setup import create_or_update_starter_projects, initialize_super_user_if_needed
 from langflow.interface.utils import setup_llm_caching
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
@@ -53,6 +53,7 @@ def get_lifespan(fix_migration=False, socketio_server=None):
             initialize_services(fix_migration=fix_migration, socketio_server=socketio_server)
             setup_llm_caching()
             LangfuseInstance.update()
+            initialize_super_user_if_needed()
             create_or_update_starter_projects()
             yield
         except Exception as exc:
