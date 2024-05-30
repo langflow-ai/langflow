@@ -56,7 +56,7 @@ Then, run Langflow with:
 python -m langflow run
 ```
 
-You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview). [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true), to create your own Langflow workspace in minutes.
+You can also preview Langflow in [HuggingFace Spaces](https://huggingface.co/spaces/Langflow/Langflow-Preview). [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true) to create your own Langflow workspace in minutes.
 
 # 🎨 Create Flows
 
