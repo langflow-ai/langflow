@@ -27,7 +27,7 @@ export default function SwitchOutputView(nodeId): JSX.Element {
       </Case>
 
       <Case condition={node && checkType() === "object"}>
-        <TextOutputView left={false} flowPool={flowPool} node={node} />
+        <TextOutputView left={false} flowPool={flowPool} node={node} vaç />
       </Case>
 
       <Case condition={node && Array.isArray(results)}>

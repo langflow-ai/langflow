@@ -1,6 +1,6 @@
 import { Textarea } from "../../../components/ui/textarea";
 
-const TextOutputView = ({ left, node, flowPool }) => {
+const TextOutputView = ({ left, node, flowPool, value }) => {
   return (
     <>
       <Textarea
