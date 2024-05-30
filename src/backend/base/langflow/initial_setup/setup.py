@@ -235,31 +235,37 @@ def load_flows_from_directory():
             with open(os.path.join(flows_path, filename), "r", encoding="utf-8") as file:
                 flow = orjson.loads(file.read())
                 no_json_name = filename.replace(".json", "")
+                flow_endpoint_name = flow.get("endpoint_name")
                 if _is_valid_uuid(no_json_name):
                     flow["id"] = no_json_name
                 flow_id = flow.get("id")
-                if flow_id:
-                    stmt = select(Flow).where(Flow.id == flow_id)
-                    if existing := session.exec(stmt).first():
-                        logger.info(f"Updating existing flow: {flow_id}")
-                        for key, value in flow.items():
-                            if key == "user_id":
-                                continue
-                            if value is not None:
-                                setattr(existing, key, value)
-                        existing.updated_at = datetime.utcnow()
-                        existing.user_id = user_id
-                        session.add(existing)
-                        session.commit()
-                        continue
 
-                logger.info(f"Creating new flow: {flow_id}")
-                flow["user_id"] = user_id
-                flow = Flow.model_validate(flow, from_attributes=True)
-                flow.updated_at = datetime.utcnow()
-                session.add(flow)
+                existing = find_existing_flow(session, flow_id, flow_endpoint_name)
+                if existing:
+                    logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
+                    for key, value in flow.items():
+                        setattr(existing, key, value)
+                    existing.updated_at = datetime.utcnow()
+                    existing.user_id = user_id
+                    session.add(existing)
+                    session.commit()
+                else:
+                    logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
+                    flow["user_id"] = user_id
+                    flow = Flow.model_validate(flow, from_attributes=True)
+                    flow.updated_at = datetime.utcnow()
+                    session.add(flow)
                 session.commit()
 
+def find_existing_flow(session, flow_id, flow_endpoint_name):
+    if flow_endpoint_name:
+        stmt = select(Flow).where(Flow.endpoint_name == flow_endpoint_name)
+        if existing := session.exec(stmt).first():
+            return existing
+    stmt = select(Flow).where(Flow.id == flow_id)
+    if existing := session.exec(stmt).first():
+        return existing
+    return None
 def create_or_update_starter_projects():
     components_paths = get_settings_service().settings.components_path
     try:
