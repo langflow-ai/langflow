@@ -7,6 +7,7 @@ import { fileCardPropsType } from "../../../../../types/components";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { BACKEND_URL, BASE_URL_API } from "../../../../../constants/constants";
 import formatFileName from "../filePreviewChat/utils/format-file-name";
+import DownloadButton from "./components/downloadButton/downloadButton";
 
 const imgTypes = new Set(["png", "jpg"]);
 
@@ -62,21 +63,10 @@ export default function FileCard({
               alt="generated image"
               className="m-0  h-auto w-auto rounded-lg border border-border p-0 transition-all"
             />
-            {isHovered && (
-              <div
-                className={`absolute right-1 top-1 rounded-bl-lg bg-muted text-sm font-bold text-foreground `}
-              >
-                <button
-                  className="px-2 py-1 text-ring "
-                  onClick={handleDownload}
-                >
-                  <IconComponent
-                    name="DownloadCloud"
-                    className="h-5 w-5 text-current hover:scale-110"
-                  />
-                </button>
-              </div>
-            )}
+            <DownloadButton
+              isHovered={isHovered}
+              handleDownload={handleDownload}
+            />
           </div>
         </div>
       );
@@ -98,18 +88,7 @@ export default function FileCard({
             <span>File</span>
           </div>
         </div>
-        {isHovered && (
-          <div
-            className={`absolute right-0 top-1 rounded-bl-lg bg-muted px-1 text-sm font-bold text-foreground `}
-          >
-            <button className="px-2 py-1 text-ring " onClick={handleDownload}>
-              <IconComponent
-                name="DownloadCloud"
-                className="h-5 w-5 text-current hover:scale-110"
-              />
-            </button>
-          </div>
-        )}
+        <DownloadButton isHovered={isHovered} handleDownload={handleDownload} />
       </div>
     );
   }
