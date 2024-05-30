@@ -9,6 +9,7 @@ import { BACKEND_URL, BASE_URL_API } from "../../../../../constants/constants";
 import formatFileName from "../filePreviewChat/utils/format-file-name";
 import DownloadButton from "./components/downloadButton/downloadButton";
 import handleDownload from "./utils/handle-download";
+import getClasses from "./utils/get-classes";
 
 const imgTypes = new Set(["png", "jpg"]);
 
@@ -26,6 +27,8 @@ export default function FileCard({
   function handleMouseLeave(): void {
     setIsHovered(false);
   }
+
+  const fileWrapperClasses = getClasses(isHovered);
 
   const imgSrc = `${BACKEND_URL.slice(0, BACKEND_URL.length - 1)}${BASE_URL_API}files/images/${content}`;
 
@@ -55,9 +58,7 @@ export default function FileCard({
 
     return (
       <div
-        className={`relative ${false ? "h-20 w-20" : "h-20 w-80"} cursor-pointer rounded-lg border  border-ring bg-muted shadow transition duration-300 hover:drop-shadow-lg ${
-          isHovered ? "shadow-md" : ""
-        }`}
+        className={fileWrapperClasses}
         onClick={() => handleDownload({ fileName, content })}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
