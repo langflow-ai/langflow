@@ -12,6 +12,9 @@ export default function DictComponent({
   editNode = false,
   id = "",
 }: DictComponentType): JSX.Element {
+  // Create a reference to the value
+  const ref = useRef(value);
+
   useEffect(() => {
     if (disabled) {
       onChange({});
@@ -19,10 +22,9 @@ export default function DictComponent({
   }, [disabled]);
 
   useEffect(() => {
-    if (value) onChange(value);
+    // Update the reference value
+    ref.current = value;
   }, [value]);
-
-  const ref = useRef(value);
   return (
     <div
       className={classNames(

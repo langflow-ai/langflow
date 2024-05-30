@@ -10,7 +10,6 @@ import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
 import Xmark from "../../components/ui/xmark";
 import {
-  NATIVE_CATEGORIES,
   RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
@@ -28,9 +27,9 @@ import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn } from "../../utils/utils";
-import ParameterComponent from "./components/parameterComponent";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
+import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
   data,
@@ -56,14 +55,14 @@ export default function GenericNode({
   const [nodeName, setNodeName] = useState(data.node!.display_name);
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(
-    data.node?.description!,
+    data.node?.description!
   );
   const [isOutdated, setIsOutdated] = useState(false);
   const buildStatus = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.status,
+    (state) => state.flowBuildStatus[data.id]?.status
   );
   const lastRunTime = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.timestamp,
+    (state) => state.flowBuildStatus[data.id]?.timestamp
   );
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
@@ -77,18 +76,14 @@ export default function GenericNode({
     // This one should run only once
     // first check if data.type in NATIVE_CATEGORIES
     // if not return
-    if (
-      !NATIVE_CATEGORIES.includes(types[data.type]) ||
-      !data.node?.template?.code?.value
-    )
-      return;
+    if (!data.node?.template?.code?.value) return;
     const thisNodeTemplate = templates[data.type].template;
     // if the template does not have a code key
     // return
     if (!thisNodeTemplate.code) return;
     const currentCode = thisNodeTemplate.code?.value;
     const thisNodesCode = data.node!.template?.code?.value;
-    const componentsToIgnore = ["Custom Component", "Prompt"];
+    const componentsToIgnore = ["Custom Component"];
     if (
       currentCode !== thisNodesCode &&
       !componentsToIgnore.includes(data.node!.display_name)
@@ -120,7 +115,7 @@ export default function GenericNode({
 
       updateNodeInternals(data.id);
     },
-    [data.id, data.node, setNode, setIsOutdated],
+    [data.id, data.node, setNode, setIsOutdated]
   );
 
   if (!data.node!.template) {
@@ -260,7 +255,7 @@ export default function GenericNode({
   const isDark = useDarkStore((state) => state.dark);
   const renderIconStatus = (
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null,
+    validationStatus: validationStatusType | null
   ) => {
     if (buildStatus === BuildStatus.BUILDING) {
       return <Loading className="text-medium-indigo" />;
@@ -301,7 +296,7 @@ export default function GenericNode({
   };
   const getSpecificClassFromBuildStatus = (
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null,
+    validationStatus: validationStatusType | null
   ) => {
     let isInvalid = validationStatus && !validationStatus.valid;
 
@@ -325,25 +320,29 @@ export default function GenericNode({
     selected: boolean,
     showNode: boolean,
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null,
+    validationStatus: validationStatusType | null
   ) => {
     const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
       buildStatus,
-      validationStatus,
+      validationStatus
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
     const nodeSizeClass = getNodeSizeClass(showNode);
-    return classNames(
+    const names = classNames(
       baseBorderClass,
       nodeSizeClass,
       "generic-node-div",
-      specificClassFromBuildStatus,
+      specificClassFromBuildStatus
     );
+    return names;
   };
 
-  const getBaseBorderClass = (selected) =>
-    selected ? "border border-ring" : "border";
+  const getBaseBorderClass = (selected) => {
+    let className = selected ? "border border-ring" : "border";
+    let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
+    return data.node?.frozen ? frozenClass : className;
+  };
 
   const getNodeSizeClass = (showNode) =>
     showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full";
@@ -394,7 +393,7 @@ export default function GenericNode({
           selected,
           showNode,
           buildStatus,
-          validationStatus,
+          validationStatus
         )}
       >
         {data.node?.beta && showNode && (
@@ -539,7 +538,7 @@ export default function GenericNode({
                             }
                             title={getFieldTitle(
                               data.node?.template!,
-                              templateField,
+                              templateField
                             )}
                             info={data.node?.template[templateField].info}
                             name={templateField}
@@ -567,7 +566,7 @@ export default function GenericNode({
                             proxy={data.node?.template[templateField].proxy}
                             showNode={showNode}
                           />
-                        ),
+                        )
                     )}
                   <ParameterComponent
                     key={scapedJSONStringfy({
@@ -724,7 +723,7 @@ export default function GenericNode({
                       !data.node?.description) &&
                       nameEditable
                       ? "font-light italic"
-                      : "",
+                      : ""
                   )}
                   onDoubleClick={(e) => {
                     setInputDescription(true);
@@ -786,13 +785,13 @@ export default function GenericNode({
                         }
                         title={getFieldTitle(
                           data.node?.template!,
-                          templateField,
+                          templateField
                         )}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={
                           data.node?.template[templateField].input_types?.join(
-                            "\n",
+                            "\n"
                           ) ?? data.node?.template[templateField].type
                         }
                         required={data.node!.template[templateField].required}
@@ -819,7 +818,7 @@ export default function GenericNode({
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
-                  "flex-max-width justify-center",
+                  "flex-max-width justify-center"
                 )}
               >
                 {" "}

@@ -67,27 +67,30 @@ jobs:
           else
             make publish main=true
           fi
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist${{ inputs.release_type }}
+          path: ${{ inputs.release_type == 'base' && 'src/backend/base/dist' || 'dist' }}
 
   call_docker_build:
     name: Call Docker Build Workflow
-    runs-on: ubuntu-latest
     needs: release
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/workflows/docker-build.yml
-        with:
-          version: ${{ needs.release.outputs.version }}
-          release_type: ${{ inputs.release_type }}
+    uses: langflow-ai/langflow/.github/workflows/docker-build.yml@dev
+    with:
+      version: ${{ needs.release.outputs.version }}
+      release_type: ${{ inputs.release_type }}
+    secrets: inherit
 
   create_release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [call_docker_build, release]
+    needs: [release]
     if: ${{ inputs.release_type == 'main' }}
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: dist
+          name: dist${{ inputs.release_type }}
           path: dist
       - name: Create Release
         uses: ncipollo/release-action@v1

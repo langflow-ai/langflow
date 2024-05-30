@@ -91,7 +91,7 @@ const SideBarFoldersButtonsComponent = ({
     folders.map((obj) => ({ name: obj.name, edit: false }));
   }, [folders]);
 
-  console.log(folderId, folderIdDragging);
+
 
   return (
     <>
