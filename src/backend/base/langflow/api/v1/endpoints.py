@@ -111,19 +111,21 @@ async def simplified_run_flow(
     This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency, supporting a wide range of applications by allowing for dynamic input and output configuration along with performance optimizations through session management and caching.
     """
     session_id = input_request.session_id
-
+    endpoint_name = None
+    flow_id_str = None
     try:
-        flow_id = UUID(flow_id_or_name)
-    except ValueError:
-        endpoint_name = flow_id_or_name
-        flow = db.exec(
-            select(Flow).where(Flow.endpoint_name == endpoint_name).where(Flow.user_id == api_key_user.id)
-        ).first()
-        if flow is None:
-            raise ValueError(f"Flow with endpoint name {endpoint_name} not found")
-        flow_id = flow.id
+        try:
+            flow_id = UUID(flow_id_or_name)
 
-    try:
+        except ValueError:
+            endpoint_name = flow_id_or_name
+            flow = db.exec(
+                select(Flow).where(Flow.endpoint_name == endpoint_name).where(Flow.user_id == api_key_user.id)
+            ).first()
+            if flow is None:
+                raise ValueError(f"Flow with endpoint name {endpoint_name} not found")
+            flow_id = flow.id
+
         flow_id_str = str(flow_id)
         artifacts = {}
         if input_request.session_id:
@@ -183,13 +185,13 @@ async def simplified_run_flow(
             # This means the Flow ID is not a valid UUID which means it can't find the flow
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
-        if f"Flow {flow_id_str} not found" in str(exc):
+        if flow_id_str and f"Flow {flow_id_str} not found" in str(exc):
             logger.error(f"Flow {flow_id_str} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        elif f"Flow with endpoint name {endpoint_name} not found" in str(exc):
+        elif endpoint_name and f"Flow with endpoint name {endpoint_name} not found" in str(exc):
             logger.error(f"Flow with endpoint name {endpoint_name} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        elif f"Session {session_id} not found" in str(exc):
+        elif session_id and f"Session {session_id} not found" in str(exc):
             logger.error(f"Session {session_id} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
         else:

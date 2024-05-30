@@ -165,10 +165,17 @@ def update_flow(
             raise HTTPException(status_code=400, detail=str(e)) from e
         elif "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
-            column = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
+            columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
+            # UNIQUE constraint failed: flow.user_id, flow.name
+            # or UNIQUE constraint failed: flow.name
+            # if the column has id in it, we want the other column
+            column = columns.split(",")[1] if "id" in columns.split(",")[0] else columns.split(",")[0]
+
             raise HTTPException(
                 status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
             ) from e
+        elif isinstance(e, HTTPException):
+            raise e
         else:
             raise HTTPException(status_code=500, detail=str(e)) from e
 

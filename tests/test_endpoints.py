@@ -652,7 +652,7 @@ def test_invalid_flow_id(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = "invalid-flow-id"
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = UUID(int=0)
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
