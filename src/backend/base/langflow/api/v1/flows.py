@@ -135,30 +135,49 @@ def update_flow(
     settings_service=Depends(get_settings_service),
 ):
     """Update a flow."""
+    try:
+        db_flow = read_flow(
+            session=session,
+            flow_id=flow_id,
+            current_user=current_user,
+            settings_service=settings_service,
+        )
+        if not db_flow:
+            raise HTTPException(status_code=404, detail="Flow not found")
+        flow_data = flow.model_dump(exclude_unset=True)
+        if settings_service.settings.remove_api_keys:
+            flow_data = remove_api_keys(flow_data)
+        for key, value in flow_data.items():
+            if value is not None:
+                setattr(db_flow, key, value)
+        db_flow.updated_at = datetime.now(timezone.utc)
+        if db_flow.folder_id is None:
+            default_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
+            if default_folder:
+                db_flow.folder_id = default_folder.id
+        session.add(db_flow)
+        session.commit()
+        session.refresh(db_flow)
+        return db_flow
+    except Exception as e:
+        # If it is a validation error, return the error message
+        if hasattr(e, "errors"):
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        elif "UNIQUE constraint failed" in str(e):
+            # Get the name of the column that failed
+            columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
+            # UNIQUE constraint failed: flow.user_id, flow.name
+            # or UNIQUE constraint failed: flow.name
+            # if the column has id in it, we want the other column
+            column = columns.split(",")[1] if "id" in columns.split(",")[0] else columns.split(",")[0]
 
-    db_flow = read_flow(
-        session=session,
-        flow_id=flow_id,
-        current_user=current_user,
-        settings_service=settings_service,
-    )
-    if not db_flow:
-        raise HTTPException(status_code=404, detail="Flow not found")
-    flow_data = flow.model_dump(exclude_unset=True)
-    if settings_service.settings.remove_api_keys:
-        flow_data = remove_api_keys(flow_data)
-    for key, value in flow_data.items():
-        if value is not None:
-            setattr(db_flow, key, value)
-    db_flow.updated_at = datetime.now(timezone.utc)
-    if db_flow.folder_id is None:
-        default_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()
-        if default_folder:
-            db_flow.folder_id = default_folder.id
-    session.add(db_flow)
-    session.commit()
-    session.refresh(db_flow)
-    return db_flow
+            raise HTTPException(
+                status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
+            ) from e
+        elif isinstance(e, HTTPException):
+            raise e
+        else:
+            raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/{flow_id}", status_code=200)
