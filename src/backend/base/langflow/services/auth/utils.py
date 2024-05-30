@@ -211,15 +211,14 @@ def create_super_user(
 
 def create_user_longterm_token(db: Session = Depends(get_session)) -> tuple[UUID, dict]:
     settings_service = get_settings_service()
+
     username = settings_service.auth_settings.SUPERUSER
-    password = settings_service.auth_settings.SUPERUSER_PASSWORD
-    if not username or not password:
+    super_user = get_user_by_username(db, username)
+    if not super_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing first superuser credentials",
+            detail="Super user hasn't been created"
         )
-    super_user = create_super_user(db=db, username=username, password=password)
-
     access_token_expires_longterm = timedelta(days=365)
     access_token = create_token(
         data={"sub": str(super_user.id)},

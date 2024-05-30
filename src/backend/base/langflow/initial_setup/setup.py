@@ -13,10 +13,15 @@ from sqlmodel import select
 
 from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES
 from langflow.interface.types import get_all_components
+from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder, FolderCreate
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import get_settings_service, session_scope
+
+from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
+from langflow.services.deps import get_settings_service, session_scope, get_variable_service
+
 
 STARTER_FOLDER_NAME = "Starter Projects"
 STARTER_FOLDER_DESCRIPTION = "Starter projects to help you get started in Langflow."
@@ -310,3 +315,20 @@ def create_or_update_starter_projects():
                     project_icon_bg_color,
                     new_folder.id,
                 )
+
+
+def initialize_super_user_if_needed():
+    settings_service = get_settings_service()
+    if not settings_service.auth_settings.AUTO_LOGIN:
+        return
+    username = settings_service.auth_settings.SUPERUSER
+    password = settings_service.auth_settings.SUPERUSER_PASSWORD
+    if not username or not password:
+        raise ValueError("SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true.")
+
+    with session_scope() as session:
+        super_user = create_super_user(db=session, username=username, password=password)
+        get_variable_service().initialize_user_variables(super_user.id, session)
+        create_default_folder_if_it_doesnt_exist(session, super_user.id)
+        session.commit()
+        logger.info("Super user initialized")
