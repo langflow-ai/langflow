@@ -8,6 +8,7 @@ import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { BACKEND_URL, BASE_URL_API } from "../../../../../constants/constants";
 import formatFileName from "../filePreviewChat/utils/format-file-name";
 import DownloadButton from "./components/downloadButton/downloadButton";
+import handleDownload from "./utils/handle-download";
 
 const imgTypes = new Set(["png", "jpg"]);
 
@@ -17,26 +18,6 @@ export default function FileCard({
   fileType,
   showFile = true,
 }: fileCardPropsType): JSX.Element | undefined {
-  const handleDownload = async (): Promise<void> => {
-    try {
-      const response = await fetch(
-        `${BACKEND_URL.slice(0, BACKEND_URL.length - 1)}${BASE_URL_API}files/download/${content}`,
-      );
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", fileName); // Set the filename
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      URL.revokeObjectURL(url); // Clean up the URL object
-    } catch (error) {
-      console.error("Failed to download file:", error);
-    }
-  };
   const [isHovered, setIsHovered] = useState(false);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   function handleMouseEnter(): void {
@@ -65,7 +46,7 @@ export default function FileCard({
             />
             <DownloadButton
               isHovered={isHovered}
-              handleDownload={handleDownload}
+              handleDownload={() => handleDownload({ fileName, content })}
             />
           </div>
         </div>
@@ -77,7 +58,7 @@ export default function FileCard({
         className={`relative ${false ? "h-20 w-20" : "h-20 w-80"} cursor-pointer rounded-lg border  border-ring bg-muted shadow transition duration-300 hover:drop-shadow-lg ${
           isHovered ? "shadow-md" : ""
         }`}
-        onClick={handleDownload}
+        onClick={() => handleDownload({ fileName, content })}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -88,7 +69,10 @@ export default function FileCard({
             <span>File</span>
           </div>
         </div>
-        <DownloadButton isHovered={isHovered} handleDownload={handleDownload} />
+        <DownloadButton
+          isHovered={isHovered}
+          handleDownload={() => handleDownload({ fileName, content })}
+        />
       </div>
     );
   }
