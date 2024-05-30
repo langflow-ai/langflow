@@ -2857,6 +2857,21 @@ files = [
 ]
 
 [[package]]
+name = "uncurl"
+version = "0.0.11"
+description = "A library to convert curl requests to python-requests."
+optional = false
+python-versions = "*"
+files = [
+    {file = "uncurl-0.0.11-py3-none-any.whl", hash = "sha256:5961e93f07a5c9f2ef8ae4245bd92b0a6ce503c851de980f5b70080ae74cdc59"},
+    {file = "uncurl-0.0.11.tar.gz", hash = "sha256:530c9bbd4d118f4cde6194165ff484cc25b0661cd256f19e9d5fcb53fc077790"},
+]
+
+[package.dependencies]
+pyperclip = "*"
+six = "*"
+
+[[package]]
 name = "urllib3"
 version = "2.2.1"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
@@ -3250,4 +3265,4 @@ local = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "31d8e5ce045ef7d94e63058559b5f8181e6b51fc923c4904f45481443d59235d"
+content-hash = "1dc0dd442df5d174ea85c859208f5cfea9d4785c7b7a93f2c6bf8c92e93d8cad"
