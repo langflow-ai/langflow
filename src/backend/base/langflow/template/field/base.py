@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_valid
 from langflow.field_typing.range_spec import RangeSpec
 
 
-class InputField(BaseModel):
+class Input(BaseModel):
     model_config = ConfigDict()
 
     field_type: str = Field(default="str", serialization_alias="type")
@@ -130,8 +130,8 @@ class InputField(BaseModel):
         ]
 
 
-class OutputField(BaseModel):
-    types: list[str] = Field(default=[], serialization_alias="types")
+class Output(BaseModel):
+    type: list[str] = Field(default=[], serialization_alias="types")
     """List of output types for the field."""
 
     selected: Optional[str] = Field(default=None, serialization_alias="selected")

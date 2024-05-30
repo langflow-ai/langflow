@@ -1,9 +1,9 @@
 from typing import Optional
 
-from langflow.template.field.base import InputField
+from langflow.template.field.base import Input
 
 
-class DefaultPromptField(InputField):
+class DefaultPromptField(Input):
     name: str
     display_name: Optional[str] = None
     field_type: str = "str"

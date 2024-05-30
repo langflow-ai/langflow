@@ -4,7 +4,7 @@ from langflow.custom import CustomComponent
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
-from langflow.template.field.base import InputField
+from langflow.template.field.base import Input
 
 
 class CreateRecordComponent(CustomComponent):
@@ -35,7 +35,7 @@ class CreateRecordComponent(CustomComponent):
                     field = existing_fields[key]
                     build_config[key] = field
                 else:
-                    field = InputField(
+                    field = Input(
                         display_name=f"Field {i}",
                         name=key,
                         info=f"Key for field {i}.",

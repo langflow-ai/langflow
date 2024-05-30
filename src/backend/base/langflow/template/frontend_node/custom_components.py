@@ -1,6 +1,6 @@
 from typing import Optional
 
-from langflow.template.field.base import InputField
+from langflow.template.field.base import Input
 from langflow.template.frontend_node.base import FrontendNode
 from langflow.template.template.base import Template
 
@@ -52,7 +52,7 @@ class CustomComponentFrontendNode(FrontendNode):
     template: Template = Template(
         type_name="CustomComponent",
         fields=[
-            InputField(
+            Input(
                 field_type="code",
                 required=True,
                 placeholder="",

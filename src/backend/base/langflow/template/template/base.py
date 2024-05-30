@@ -2,13 +2,13 @@ from typing import Callable, Union
 
 from pydantic import BaseModel, model_serializer
 
-from langflow.template.field.base import InputField
+from langflow.template.field.base import Input
 from langflow.utils.constants import DIRECT_TYPES
 
 
 class Template(BaseModel):
     type_name: str
-    fields: list[InputField]
+    fields: list[Input]
 
     def process_fields(
         self,
@@ -38,17 +38,17 @@ class Template(BaseModel):
         self.sort_fields()
         return self.model_dump(by_alias=True, exclude_none=True, exclude={"fields"})
 
-    def add_field(self, field: InputField) -> None:
+    def add_field(self, field: Input) -> None:
         self.fields.append(field)
 
-    def get_field(self, field_name: str) -> InputField:
+    def get_field(self, field_name: str) -> Input:
         """Returns the field with the given name."""
         field = next((field for field in self.fields if field.name == field_name), None)
         if field is None:
             raise ValueError(f"Field {field_name} not found in template {self.type_name}")
         return field
 
-    def update_field(self, field_name: str, field: InputField) -> None:
+    def update_field(self, field_name: str, field: Input) -> None:
         """Updates the field with the given name."""
         for idx, template_field in enumerate(self.fields):
             if template_field.name == field_name:
@@ -56,7 +56,7 @@ class Template(BaseModel):
                 return
         raise ValueError(f"Field {field_name} not found in template {self.type_name}")
 
-    def upsert_field(self, field_name: str, field: InputField) -> None:
+    def upsert_field(self, field_name: str, field: Input) -> None:
         """Updates the field with the given name or adds it if it doesn't exist."""
         try:
             self.update_field(field_name, field)
