@@ -70,11 +70,20 @@ class UpstashVectorStoreComponent(CustomComponent):
                 index_token=index_token,
             )
         else:
-            upstash_vs = UpstashVectorStore.from_documents(
-                documents=documents,  # type: ignore
-                embedding=embedding or use_upstash_embedding,
-                text_key=text_key,
-                index_url=index_url,
-                index_token=index_token,
-            )
+            if use_upstash_embedding:
+                upstash_vs = UpstashVectorStore(
+                    embedding=use_upstash_embedding,
+                    text_key=text_key,
+                    index_url=index_url,
+                    index_token=index_token,
+                )
+                upstash_vs.add_documents(documents)
+            elif embedding:
+                upstash_vs = UpstashVectorStore.from_documents(
+                    documents=documents,  # type: ignore
+                    embedding=embedding,
+                    text_key=text_key,
+                    index_url=index_url,
+                    index_token=index_token,
+                )
         return upstash_vs
