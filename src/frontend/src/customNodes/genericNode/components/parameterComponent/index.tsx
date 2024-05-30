@@ -46,6 +46,7 @@ import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
 import TooltipRenderComponent from "../tooltipRenderComponent";
+import { TEXT_FIELD_TYPES } from "./constants";
 
 export default function ParameterComponent({
   left,
@@ -88,7 +89,6 @@ export default function ParameterComponent({
     debouncedHandleUpdateValues,
     setNode,
     renderTooltips,
-    isLoading,
     setIsLoading
   );
 
@@ -309,7 +309,7 @@ export default function ParameterComponent({
         <Case
           condition={
             left === true &&
-            type === "str" &&
+            TEXT_FIELD_TYPES.includes(type ?? "") &&
             !data.node?.template[name]?.options
           }
         >

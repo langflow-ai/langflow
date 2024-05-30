@@ -160,9 +160,9 @@ def add_new_custom_field(
         field_value = False
 
     if field_type == "SecretStr":
-        field_type = "str"
         field_config["password"] = True
         field_config["load_from_db"] = True
+        field_config["input_types"] = ["Text"]
 
     # If options is a list, then it's a dropdown
     # If options is None, then it's a list of strings
