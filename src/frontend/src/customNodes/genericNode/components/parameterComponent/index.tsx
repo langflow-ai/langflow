@@ -547,9 +547,7 @@ export default function ParameterComponent({
               value={
                 !data.node!.template[name]?.value ||
                 data.node!.template[name]?.value?.toString() === "{}"
-                  ? {
-                      // yourkey: "value",
-                    }
+                  ? {}
                   : data.node!.template[name]?.value
               }
               onChange={handleOnNewValue}
