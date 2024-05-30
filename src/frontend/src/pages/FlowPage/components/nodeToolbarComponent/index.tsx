@@ -29,7 +29,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { classNames } from "../../../../utils/utils";
+import { classNames, cn } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
 
 export default function NodeToolbarComponent({
@@ -68,7 +68,7 @@ export default function NodeToolbarComponent({
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
-  // const frozen = data.node?.frozen ?? false;
+  const frozen = data.node?.frozen ?? false;
   const paste = useFlowStore((state) => state.paste);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -271,7 +271,7 @@ export default function NodeToolbarComponent({
         selected &&
         (hasApiKey || hasStore) &&
         (event.ctrlKey || event.metaKey) &&
-        event.key === "u"
+        event.key.toUpperCase() === "U"
       ) {
         event.preventDefault();
         handleSelectChange("update");
@@ -280,7 +280,7 @@ export default function NodeToolbarComponent({
         selected &&
         isGroup &&
         (event.ctrlKey || event.metaKey) &&
-        event.key === "g"
+        event.key.toUpperCase() === "G"
       ) {
         event.preventDefault();
         handleSelectChange("ungroup");
@@ -290,7 +290,7 @@ export default function NodeToolbarComponent({
         (hasApiKey || hasStore) &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
-        event.key === "S"
+        event.key.toUpperCase() === "S"
       ) {
         event.preventDefault();
         setShowconfirmShare((state) => !state);
@@ -300,7 +300,7 @@ export default function NodeToolbarComponent({
         selected &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
-        event.key === "Q"
+        event.key.toUpperCase() === "Q"
       ) {
         event.preventDefault();
         if (isMinimal) {
@@ -317,7 +317,7 @@ export default function NodeToolbarComponent({
         selected &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
-        event.key === "U"
+        event.key.toUpperCase() === "U"
       ) {
         event.preventDefault();
         if (hasCode) return setOpenModal((state) => !state);
@@ -327,12 +327,16 @@ export default function NodeToolbarComponent({
         selected &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
-        event.key === "A"
+        event.key.toUpperCase() === "A"
       ) {
         event.preventDefault();
         setShowModalAdvanced((state) => !state);
       }
-      if (selected && (event.ctrlKey || event.metaKey) && event.key === "s") {
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toUpperCase() === "S"
+      ) {
         if (isSaved) {
           event.preventDefault();
           return setShowOverrideModal((state) => !state);
@@ -347,7 +351,7 @@ export default function NodeToolbarComponent({
         selected &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey &&
-        event.key === "D"
+        event.key.toUpperCase() === "D"
       ) {
         event.preventDefault();
         if (data.node?.documentation) {
@@ -357,7 +361,11 @@ export default function NodeToolbarComponent({
           title: `${data.id} docs is not available at the moment.`,
         });
       }
-      if (selected && (event.ctrlKey || event.metaKey) && event.key === "j") {
+      if (
+        selected &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toUpperCase() === "J"
+      ) {
         event.preventDefault();
         downloadNode(flowComponent!);
       }
@@ -422,7 +430,7 @@ export default function NodeToolbarComponent({
             </button>
           </ShadTooltip>
 
-          {/* <ShadTooltip content="Freeze" side="top">
+          <ShadTooltip content="Freeze" side="top">
             <button
               className={classNames(
                 "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
@@ -435,7 +443,7 @@ export default function NodeToolbarComponent({
                     ...old.data,
                     node: {
                       ...old.data.node,
-                      // frozen: old.data?.node?.frozen ? false : true,
+                      frozen: old.data?.node?.frozen ? false : true,
                     },
                   },
                 }));
@@ -450,7 +458,7 @@ export default function NodeToolbarComponent({
                 )}
               />
             </button>
-          </ShadTooltip> */}
+          </ShadTooltip>
 
           <Select onValueChange={handleSelectChange} value="">
             <ShadTooltip content="More" side="top">

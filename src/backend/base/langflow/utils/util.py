@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from docstring_parser import parse
+
+
 from langflow.schema.schema import Record
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
@@ -438,13 +440,13 @@ def update_settings(
         settings_service.settings.update_from_yaml(config, dev=dev)
     if remove_api_keys:
         logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
-        settings_service.settings.update_settings(REMOVE_API_KEYS=remove_api_keys)
+        settings_service.settings.update_settings(remove_api_keys=remove_api_keys)
     if cache:
         logger.debug(f"Setting cache to {cache}")
-        settings_service.settings.update_settings(CACHE=cache)
+        settings_service.settings.update_settings(cache=cache)
     if components_path:
         logger.debug(f"Adding component path {components_path}")
-        settings_service.settings.update_settings(COMPONENTS_PATH=components_path)
+        settings_service.settings.update_settings(components_path=components_path)
     if not store:
         logger.debug("Setting store to False")
-        settings_service.settings.update_settings(STORE=False)
+        settings_service.settings.update_settings(store=False)

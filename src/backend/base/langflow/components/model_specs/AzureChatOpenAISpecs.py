@@ -1,9 +1,10 @@
 from typing import Optional
 
-from langflow.interface.custom.custom_component import CustomComponent
 from langchain_core.language_models import BaseLanguageModel
 from langchain_openai import AzureChatOpenAI
 from pydantic.v1 import SecretStr
+
+from langflow.custom import CustomComponent
 
 
 class AzureChatOpenAISpecsComponent(CustomComponent):
@@ -65,11 +66,8 @@ class AzureChatOpenAISpecsComponent(CustomComponent):
             },
             "max_tokens": {
                 "display_name": "Max Tokens",
-                "value": 1000,
-                "required": False,
-                "field_type": "int",
                 "advanced": True,
-                "info": "Maximum number of tokens to generate.",
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             },
             "code": {"show": False},
         }
@@ -96,7 +94,7 @@ class AzureChatOpenAISpecsComponent(CustomComponent):
                 api_version=api_version,
                 api_key=azure_api_key,
                 temperature=temperature,
-                max_tokens=max_tokens,
+                max_tokens=max_tokens or None,
             )
         except Exception as e:
             raise ValueError("Could not connect to AzureOpenAI API.") from e

@@ -1,11 +1,12 @@
 import os
+from typing import Optional
 
 import yaml
+from loguru import logger
+
 from langflow.services.base import Service
 from langflow.services.settings.auth import AuthSettings
 from langflow.services.settings.base import Settings
-from loguru import logger
-
 
 class SettingsService(Service):
     name = "settings_service"
@@ -26,7 +27,6 @@ class SettingsService(Service):
 
         with open(file_path, "r") as f:
             settings_dict = yaml.safe_load(f)
-            settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 
             for key in settings_dict:
                 if key not in Settings.model_fields.keys():
@@ -34,10 +34,14 @@ class SettingsService(Service):
                 logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
         settings = Settings(**settings_dict)
-        if not settings.CONFIG_DIR:
+        if not settings.config_dir:
             raise ValueError("CONFIG_DIR must be set in settings")
 
         auth_settings = AuthSettings(
-            CONFIG_DIR=settings.CONFIG_DIR,
+            CONFIG_DIR=settings.config_dir,
         )
         return cls(settings, auth_settings)
+
+    def set(self, key, value):
+        setattr(self.settings, key, value)
+        return self.settings

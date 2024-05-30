@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.0a37"
+version = "1.0.0a42"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -84,6 +84,8 @@ langchain-mistralai = "^0.1.6"
 couchbase = "^4.2.1"
 youtube-transcript-api = "^0.6.2"
 markdown = "^3.6"
+langchain-chroma = "^0.1.1"
+upstash-vector = "^0.4.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -112,6 +114,7 @@ pytest-instafail = "^0.5.0"
 pytest-asyncio = "^0.23.0"
 pytest-profiling = "^1.7.0"
 pre-commit = "^3.7.0"
+vulture = "^2.11"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
