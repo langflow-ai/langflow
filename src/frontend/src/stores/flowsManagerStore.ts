@@ -230,7 +230,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         // addFlowToLocalState(newFlow);
         return;
       }
-      console.log("folder id", folder_id);
       const newFlow = createNewFlow(
         flowData!,
         flow!,
