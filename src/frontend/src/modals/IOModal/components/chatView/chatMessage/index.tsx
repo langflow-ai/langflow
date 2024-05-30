@@ -7,7 +7,9 @@ import remarkMath from "remark-math";
 import MaleTechnology from "../../../../../assets/male-technologist.png";
 import Robot from "../../../../../assets/robot.png";
 import CodeTabsComponent from "../../../../../components/codeTabsComponent";
-import IconComponent from "../../../../../components/genericIconComponent";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../../../components/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowStore from "../../../../../stores/flowStore";
@@ -22,6 +24,7 @@ export default function ChatMessage({
   updateChat,
   setLockChat,
 }: chatMessagePropsType): JSX.Element {
+  const [showFile, setShowFile] = useState<boolean>(true);
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const template = chat.template;
@@ -235,7 +238,7 @@ dark:prose-invert"
                                       },
                                     ]}
                                     activeTab={"0"}
-                                    setActiveTab={() => { }}
+                                    setActiveTab={() => {}}
                                   />
                                 ) : (
                                   <code className={className} {...props}>
@@ -277,65 +280,77 @@ dark:prose-invert"
                 <span className="prose text-primary word-break-break-word dark:prose-invert">
                   {promptOpen
                     ? template?.split("\n")?.map((line, index) => {
-                      const regex = /{([^}]+)}/g;
-                      let match;
-                      let parts: Array<JSX.Element | string> = [];
-                      let lastIndex = 0;
-                      while ((match = regex.exec(line)) !== null) {
-                        // Push text up to the match
-                        if (match.index !== lastIndex) {
-                          parts.push(line.substring(lastIndex, match.index));
-                        }
-                        // Push div with matched text
-                        if (chat.message[match[1]]) {
-                          parts.push(
-                            <span className="chat-message-highlight">
-                              {chat.message[match[1]]}
-                            </span>
-                          );
-                        }
+                        const regex = /{([^}]+)}/g;
+                        let match;
+                        let parts: Array<JSX.Element | string> = [];
+                        let lastIndex = 0;
+                        while ((match = regex.exec(line)) !== null) {
+                          // Push text up to the match
+                          if (match.index !== lastIndex) {
+                            parts.push(line.substring(lastIndex, match.index));
+                          }
+                          // Push div with matched text
+                          if (chat.message[match[1]]) {
+                            parts.push(
+                              <span className="chat-message-highlight">
+                                {chat.message[match[1]]}
+                              </span>,
+                            );
+                          }
 
-                        // Update last index
-                        lastIndex = regex.lastIndex;
-                      }
-                      // Push text after the last match
-                      if (lastIndex !== line.length) {
-                        parts.push(line.substring(lastIndex));
-                      }
-                      return <p>{parts}</p>;
-                    })
+                          // Update last index
+                          lastIndex = regex.lastIndex;
+                        }
+                        // Push text after the last match
+                        if (lastIndex !== line.length) {
+                          parts.push(line.substring(lastIndex));
+                        }
+                        return <p>{parts}</p>;
+                      })
                     : chatMessage}
                 </span>
               </>
             ) : (
-              <span
-                className="prose text-primary word-break-break-word dark:prose-invert"
-                data-testid={
-                  "chat-message-" + chat.sender_name + "-" + chatMessage
-                }
-              >
-                {chatMessage}
-              </span>
+              <div className="flex flex-col">
+                <span
+                  className="prose text-primary word-break-break-word dark:prose-invert"
+                  data-testid={
+                    "chat-message-" + chat.sender_name + "-" + chatMessage
+                  }
+                >
+                  {chatMessage}
+                </span>
+                {chat.files && (
+                  <div className="my-2">
+                    {chat.files.map((file, index) => {
+                      return (
+                        <div key={index} className="flex flex-col gap-2">
+                          <span
+                            onClick={() => setShowFile(!showFile)}
+                            className="flex cursor-pointer gap-2 text-sm text-muted-foreground"
+                          >
+                            {file.name}
+                            <ForwardedIconComponent
+                              name={showFile ? "ChevronDown" : "ChevronRight"}
+                            />
+                          </span>
+                          <FileCard
+                            showFile={showFile}
+                            fileName={file.name}
+                            fileType={file.type}
+                            content={file.path}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
       </div>
       <div id={lastMessage ? "last-chat-message" : ""}></div>
-      {chat.files && (
-        <div className="my-2 w-full">
-          {chat.files.map((file, index) => {
-            return (
-              <div key={index} className="my-2 w-full">
-                <FileCard
-                  fileName={file.name}
-                  fileType={file.type}
-                  content={file.path}
-                />
-              </div>
-            );
-          })}
-        </div>
-      )}
     </>
   );
 }
