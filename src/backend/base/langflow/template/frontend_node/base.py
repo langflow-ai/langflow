@@ -4,7 +4,7 @@ from typing import ClassVar, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field, field_serializer, model_serializer
 
-from langflow.template.field.base import InputField
+from langflow.template.field.base import InputField, OutputField
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.template.base import Template
@@ -77,6 +77,8 @@ class FrontendNode(BaseModel):
     """List of conditional paths for the frontend node."""
     frozen: bool = False
     """Whether the frontend node is frozen."""
+    outputs: List[OutputField] = []
+    """List of output fields for the frontend node."""
 
     field_order: list[str] = []
     """Order of the fields in the frontend node."""
@@ -113,6 +115,15 @@ class FrontendNode(BaseModel):
             format_func = self.format_field if self._format_template else None
             result["template"] = self.template.to_dict(format_func)
         name = result.pop("name")
+
+        # Migrate base classes to outputs
+        if "output_types" in result:
+            for base_class in result["output_types"]:
+                output = OutputField(
+                    name=base_class,
+                    types=[base_class],
+                )
+                result["outputs"].append(output.model_dump())
 
         return {name: result}
 
