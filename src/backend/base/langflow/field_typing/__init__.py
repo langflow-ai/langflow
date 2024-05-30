@@ -30,14 +30,14 @@ from .range_spec import RangeSpec
 
 
 def _import_template_field():
-    from langflow.template.field.base import TemplateField
+    from langflow.template.field.base import InputField
 
-    return TemplateField
+    return InputField
 
 
 def __getattr__(name: str) -> Any:
     # This is to avoid circular imports
-    if name == "TemplateField":
+    if name == "InputField":
         return _import_template_field()
     elif name == "RangeSpec":
         return RangeSpec
@@ -73,6 +73,6 @@ __all__ = [
     "ChatPromptTemplate",
     "Prompt",
     "RangeSpec",
-    "TemplateField",
+    "InputField",
     "Code",
 ]

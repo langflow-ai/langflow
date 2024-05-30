@@ -4,7 +4,7 @@ from typing import ClassVar, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field, field_serializer, model_serializer
 
-from langflow.template.field.base import TemplateField
+from langflow.template.field.base import InputField
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.template.frontend_node.formatter import field_formatters
 from langflow.template.template.base import Template
@@ -30,7 +30,7 @@ class FieldFormatters(BaseModel):
         "model_fields": field_formatters.ModelSpecificFieldFormatter(),
     }
 
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         for key, formatter in self.base_formatters.items():
             formatter.format(field, name)
 
@@ -145,7 +145,7 @@ class FrontendNode(BaseModel):
             self.output_types.extend(output_type)
 
     @staticmethod
-    def format_field(field: TemplateField, name: Optional[str] = None) -> None:
+    def format_field(field: InputField, name: Optional[str] = None) -> None:
         """Formats a given field based on its attributes and value."""
 
         FrontendNode.get_field_formatters().format(field, name)
@@ -184,7 +184,7 @@ class FrontendNode(BaseModel):
         return handler(field) if handler else _type
 
     @staticmethod
-    def handle_dict_type(field: TemplateField, _type: str) -> str:
+    def handle_dict_type(field: InputField, _type: str) -> str:
         """Handles 'dict' type by replacing it with 'code' or 'file' based on the field name."""
         if "dict" in _type.lower() and field.name == "dict_":
             field.field_type = "file"
@@ -194,13 +194,13 @@ class FrontendNode(BaseModel):
         return _type
 
     @staticmethod
-    def replace_default_value(field: TemplateField, value: dict) -> None:
+    def replace_default_value(field: InputField, value: dict) -> None:
         """Replaces default value with actual value if 'default' is present in value."""
         if "default" in value:
             field.value = value["default"]
 
     @staticmethod
-    def handle_specific_field_values(field: TemplateField, key: str, name: Optional[str] = None) -> None:
+    def handle_specific_field_values(field: InputField, key: str, name: Optional[str] = None) -> None:
         """Handles specific field values for certain fields."""
         if key == "headers":
             field.value = """{"Authorization": "Bearer <token>"}"""
@@ -208,7 +208,7 @@ class FrontendNode(BaseModel):
         FrontendNode._handle_api_key_specific_field_values(field, key, name)
 
     @staticmethod
-    def _handle_model_specific_field_values(field: TemplateField, key: str, name: Optional[str] = None) -> None:
+    def _handle_model_specific_field_values(field: InputField, key: str, name: Optional[str] = None) -> None:
         """Handles specific field values related to models."""
         model_dict = {
             "OpenAI": constants.OPENAI_MODELS,
@@ -221,7 +221,7 @@ class FrontendNode(BaseModel):
             field.is_list = True
 
     @staticmethod
-    def _handle_api_key_specific_field_values(field: TemplateField, key: str, name: Optional[str] = None) -> None:
+    def _handle_api_key_specific_field_values(field: InputField, key: str, name: Optional[str] = None) -> None:
         """Handles specific field values related to API keys."""
         if "api_key" in key and "OpenAI" in str(name):
             field.display_name = "OpenAI API Key"
@@ -230,7 +230,7 @@ class FrontendNode(BaseModel):
                 field.value = ""
 
     @staticmethod
-    def handle_kwargs_field(field: TemplateField) -> None:
+    def handle_kwargs_field(field: InputField) -> None:
         """Handles kwargs field by setting certain attributes."""
 
         if "kwargs" in (field.name or "").lower():
@@ -239,7 +239,7 @@ class FrontendNode(BaseModel):
             field.show = False
 
     @staticmethod
-    def handle_api_key_field(field: TemplateField, key: str) -> None:
+    def handle_api_key_field(field: InputField, key: str) -> None:
         """Handles api key field by setting certain attributes."""
         if "api" in key.lower() and "key" in key.lower():
             field.required = False
@@ -277,7 +277,7 @@ class FrontendNode(BaseModel):
         }
 
     @staticmethod
-    def set_field_default_value(field: TemplateField, value: dict, key: str) -> None:
+    def set_field_default_value(field: InputField, value: dict, key: str) -> None:
         """Sets the field value with the default value if present."""
         if "default" in value:
             field.value = value["default"]

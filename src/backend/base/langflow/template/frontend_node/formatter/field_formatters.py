@@ -1,14 +1,14 @@
 import re
 from typing import ClassVar, Dict, Optional
 
-from langflow.template.field.base import TemplateField
+from langflow.template.field.base import InputField
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.template.frontend_node.formatter.base import FieldFormatter
 from langflow.utils.constants import ANTHROPIC_MODELS, CHAT_OPENAI_MODELS, OPENAI_MODELS
 
 
 class OpenAIAPIKeyFormatter(FieldFormatter):
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         if field.name and "api_key" in field.name and "OpenAI" in str(name):
             field.display_name = "OpenAI API Key"
             field.required = False
@@ -24,14 +24,14 @@ class ModelSpecificFieldFormatter(FieldFormatter):
         "ChatAnthropic": ANTHROPIC_MODELS,
     }
 
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         if field.name and name in self.MODEL_DICT and field.name == "model_name":
             field.options = self.MODEL_DICT[name]
             field.is_list = True
 
 
 class KwargsFormatter(FieldFormatter):
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         if field.name and "kwargs" in field.name.lower():
             field.advanced = True
             field.required = False
@@ -39,7 +39,7 @@ class KwargsFormatter(FieldFormatter):
 
 
 class APIKeyFormatter(FieldFormatter):
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         if field.name and "api" in field.name.lower() and "key" in field.name.lower():
             field.required = False
             field.advanced = False
@@ -49,13 +49,13 @@ class APIKeyFormatter(FieldFormatter):
 
 
 class RemoveOptionalFormatter(FieldFormatter):
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         _type = field.field_type
         field.field_type = re.sub(r"Optional\[(.*)\]", r"\1", _type)
 
 
 class ListTypeFormatter(FieldFormatter):
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         _type = field.field_type
         is_list = "List" in _type or "Sequence" in _type
         if is_list:
@@ -65,14 +65,14 @@ class ListTypeFormatter(FieldFormatter):
 
 
 class DictTypeFormatter(FieldFormatter):
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         _type = field.field_type
         _type = _type.replace("Mapping", "dict")
         field.field_type = _type
 
 
 class UnionTypeFormatter(FieldFormatter):
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         _type = field.field_type
         if "Union" in _type:
             _type = _type.replace("Union[", "")[:-1]
@@ -87,13 +87,13 @@ class SpecialFieldFormatter(FieldFormatter):
         "max_value_length": lambda field: "int",
     }
 
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         handler = self.SPECIAL_FIELD_HANDLERS.get(field.name)
         field.field_type = handler(field) if handler else field.field_type
 
 
 class ShowFieldFormatter(FieldFormatter):
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         key = field.name or ""
         required = field.required
         field.show = (
@@ -105,7 +105,7 @@ class ShowFieldFormatter(FieldFormatter):
 
 
 class PasswordFieldFormatter(FieldFormatter):
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         key = field.name or ""
         show = field.show
         if any(text in key.lower() for text in {"password", "token", "api", "key"}) and show:
@@ -113,7 +113,7 @@ class PasswordFieldFormatter(FieldFormatter):
 
 
 class MultilineFieldFormatter(FieldFormatter):
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         key = field.name or ""
         if key in {
             "suffix",
@@ -128,21 +128,21 @@ class MultilineFieldFormatter(FieldFormatter):
 
 
 class DefaultValueFormatter(FieldFormatter):
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         value = field.model_dump(by_alias=True, exclude_none=True)
         if "default" in value:
             field.value = value["default"]
 
 
 class HeadersDefaultValueFormatter(FieldFormatter):
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         key = field.name
         if key == "headers":
             field.value = """{"Authorization": "Bearer <token>"}"""
 
 
 class DictCodeFileFormatter(FieldFormatter):
-    def format(self, field: TemplateField, name: Optional[str] = None) -> None:
+    def format(self, field: InputField, name: Optional[str] = None) -> None:
         key = field.name
         value = field.model_dump(by_alias=True, exclude_none=True)
         _type = value["type"]

@@ -1,7 +1,7 @@
 from langchain_core.prompts import PromptTemplate
 
 from langflow.custom import CustomComponent
-from langflow.field_typing import Prompt, TemplateField, Text
+from langflow.field_typing import InputField, Prompt, Text
 
 
 class PromptComponent(CustomComponent):
@@ -11,8 +11,8 @@ class PromptComponent(CustomComponent):
 
     def build_config(self):
         return {
-            "template": TemplateField(display_name="Template"),
-            "code": TemplateField(advanced=True),
+            "template": InputField(display_name="Template"),
+            "code": InputField(advanced=True),
         }
 
     def build(
