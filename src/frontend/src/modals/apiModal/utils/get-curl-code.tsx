@@ -8,13 +8,14 @@ export default function getCurlCode(
   flowId: string,
   isAuth: boolean,
   tweaksBuildedObject,
+  endpointName?: string
 ): string {
   const tweaksObject = tweaksBuildedObject[0];
-
+  // show the endpoint name in the curl command if it exists
   return `curl -X POST \\
-    ${window.location.protocol}//${
-      window.location.host
-    }/api/v1/run/${flowId}?stream=false \\
+    ${window.location.protocol}//${window.location.host}/api/v1/run/${
+    endpointName || flowId
+  }?stream=false \\
     -H 'Content-Type: application/json'\\${
       !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
     }
