@@ -77,7 +77,12 @@ runs:
         POETRY_VERSION: ${{ inputs.poetry-version }}
         PYTHON_VERSION: ${{ inputs.python-version }}
       # Install poetry using the python version installed by setup-python step.
-      run: pipx install "poetry==$POETRY_VERSION" --python '${{ steps.setup-python.outputs.python-path }}' --verbose
+      run: |
+        pipx install "poetry==$POETRY_VERSION" --python '${{ steps.setup-python.outputs.python-path }}' --verbose
+        pipx ensurepath
+        # Ensure the poetry binary is available in the PATH.
+        # Test that the poetry binary is available.
+        poetry --version
 
     - name: Restore pip and poetry cached dependencies
       uses: actions/cache@v4

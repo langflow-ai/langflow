@@ -71,6 +71,7 @@ class Settings(BaseSettings):
     remove_api_keys: bool = False
     components_path: List[str] = []
     langchain_cache: str = "InMemoryCache"
+    load_flows_path: Optional[str] = None
 
     # Redis
     redis_host: str = "localhost"

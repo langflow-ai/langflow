@@ -5,9 +5,7 @@ import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import DictComponent from "../../../../components/dictComponent";
 import Dropdown from "../../../../components/dropdownComponent";
 import FloatComponent from "../../../../components/floatComponent";
-import ForwardedIconComponent, {
-  default as IconComponent,
-} from "../../../../components/genericIconComponent";
+import { default as IconComponent } from "../../../../components/genericIconComponent";
 import InputFileComponent from "../../../../components/inputFileComponent";
 import InputGlobalComponent from "../../../../components/inputGlobalComponent";
 import InputListComponent from "../../../../components/inputListComponent";
@@ -18,19 +16,9 @@ import ShadTooltip from "../../../../components/shadTooltipComponent";
 import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../../../../components/ui/dropdown-menu";
 import { RefreshButton } from "../../../../components/ui/refreshButton";
-import {
-  LANGFLOW_SUPPORTED_TYPES,
-  TOOLTIP_EMPTY,
-} from "../../../../constants/constants";
+import { LANGFLOW_SUPPORTED_TYPES } from "../../../../constants/constants";
 import { Case } from "../../../../shared/components/caseComponent";
-import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useTypesStore } from "../../../../stores/typesStore";
@@ -48,12 +36,11 @@ import {
   scapedJSONStringfy,
 } from "../../../../utils/reactflowUtils";
 import { nodeColors } from "../../../../utils/styleUtils";
-import { classNames, cn, groupByFamily } from "../../../../utils/utils";
+import { classNames, groupByFamily } from "../../../../utils/utils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
-import TooltipRenderComponent from "../tooltipRenderComponent";
 import HandleTooltips from "../HandleTooltipComponent";
 import OutputComponent from "../OutputComponent";
 
@@ -92,7 +79,7 @@ export default function ParameterComponent({
     debouncedHandleUpdateValues,
     setNode,
     isLoading,
-    setIsLoading,
+    setIsLoading
   );
 
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
@@ -100,7 +87,7 @@ export default function ParameterComponent({
     name,
     takeSnapshot,
     setNode,
-    updateNodeInternals,
+    updateNodeInternals
   );
 
   const { handleRefreshButtonPress: handleRefreshButtonPressHook } =
@@ -109,7 +96,7 @@ export default function ParameterComponent({
   let disabled =
     edges.some(
       (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
+        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
     ) ?? false;
 
   const handleRefreshButtonPress = async (name, data) => {
@@ -120,7 +107,7 @@ export default function ParameterComponent({
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
-    skipSnapshot: boolean | undefined = false,
+    skipSnapshot: boolean | undefined = false
   ): Promise<void> => {
     handleOnNewValueHook(newValue, skipSnapshot);
   };
@@ -201,14 +188,14 @@ export default function ParameterComponent({
               className={classNames(
                 left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
                 "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : "",
+                !showNode ? "mt-0" : ""
               )}
               style={{
                 borderColor: color ?? nodeColors.unknown,
               }}
               onClick={() => {
                 setFilterEdge(
-                  groupByFamily(myData, tooltipTitle!, left, nodes!),
+                  groupByFamily(myData, tooltipTitle!, left, nodes!)
                 );
               }}
             ></Handle>
@@ -293,12 +280,12 @@ export default function ParameterComponent({
                   }
                   className={classNames(
                     left ? "-ml-0.5" : "-mr-0.5",
-                    "h-3 w-3 rounded-full border-2 bg-background",
+                    "h-3 w-3 rounded-full border-2 bg-background"
                   )}
                   style={{ borderColor: color ?? nodeColors.unknown }}
                   onClick={() => {
                     setFilterEdge(
-                      groupByFamily(myData, tooltipTitle!, left, nodes!),
+                      groupByFamily(myData, tooltipTitle!, left, nodes!)
                     );
                   }}
                 />
@@ -548,9 +535,7 @@ export default function ParameterComponent({
               value={
                 !data.node!.template[name]?.value ||
                 data.node!.template[name]?.value?.toString() === "{}"
-                  ? {
-                      // yourkey: "value",
-                    }
+                  ? {}
                   : data.node!.template[name]?.value
               }
               onChange={handleOnNewValue}
