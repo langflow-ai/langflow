@@ -6,13 +6,13 @@ import TableComponent from "../tableComponent";
 import { extractColumnsFromRows } from "../../utils/utils";
 
 function RecordsOutputComponent({
-  flowPool,
+  flowPoolObject,
   pagination,
 }: {
-  flowPool: FlowPoolObjectType;
+  flowPoolObject: FlowPoolObjectType;
   pagination: boolean;
 }) {
-  const rows = flowPool?.data?.artifacts?.records ?? [];
+  const rows = flowPoolObject?.data?.artifacts?.records ?? [];
   const columns = extractColumnsFromRows(rows, "union");
   const columnDefs = columns.map((col, idx) => ({
     ...col,
