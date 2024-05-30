@@ -16,7 +16,26 @@ export default function FileCard({
   fileType,
   showFile = true,
 }: fileCardPropsType): JSX.Element | undefined {
-  const handleDownload = (): void => {};
+  const handleDownload = async (): Promise<void> => {
+    try {
+      const response = await fetch(
+        `${BACKEND_URL.slice(0, BACKEND_URL.length - 1)}${BASE_URL_API}files/download/${content}`,
+      );
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName); // Set the filename
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(url); // Clean up the URL object
+    } catch (error) {
+      console.error("Failed to download file:", error);
+    }
+  };
   const [isHovered, setIsHovered] = useState(false);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   function handleMouseEnter(): void {
@@ -37,7 +56,7 @@ export default function FileCard({
           onMouseLeave={handleMouseLeave}
           style={{ display: "inline-block" }}
         >
-          <div className="relative w-[80%] rounded-lg border border-border">
+          <div className="relative w-[50%] rounded-lg border border-border">
             <img
               src={imgSrc}
               alt="generated image"
@@ -45,7 +64,7 @@ export default function FileCard({
             />
             {isHovered && (
               <div
-                className={`absolute right-0 top-0 rounded-bl-lg bg-muted px-1 text-sm font-bold text-foreground `}
+                className={`absolute right-1 top-1 rounded-bl-lg bg-muted text-sm font-bold text-foreground `}
               >
                 <button
                   className="px-2 py-1 text-ring "
@@ -69,6 +88,8 @@ export default function FileCard({
           isHovered ? "shadow-md" : ""
         }`}
         onClick={handleDownload}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         <div className="ml-3 flex h-full w-full items-center gap-2 text-sm">
           <ForwardedIconComponent name="File" className="h-8 w-8" />
@@ -77,10 +98,18 @@ export default function FileCard({
             <span>File</span>
           </div>
         </div>
-        <IconComponent
-          name="DownloadCloud"
-          className="absolute right-2 top-2 ml-auto h-6 w-6 text-current"
-        />
+        {isHovered && (
+          <div
+            className={`absolute right-0 top-1 rounded-bl-lg bg-muted px-1 text-sm font-bold text-foreground `}
+          >
+            <button className="px-2 py-1 text-ring " onClick={handleDownload}>
+              <IconComponent
+                name="DownloadCloud"
+                className="h-5 w-5 text-current hover:scale-110"
+              />
+            </button>
+          </div>
+        )}
       </div>
     );
   }

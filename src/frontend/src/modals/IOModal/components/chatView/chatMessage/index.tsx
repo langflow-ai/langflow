@@ -16,6 +16,7 @@ import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { classNames, cn } from "../../../../../utils/utils";
 import FileCard from "../fileComponent";
+import formatFileName from "../filePreviewChat/utils/format-file-name";
 
 export default function ChatMessage({
   chat,
@@ -329,7 +330,7 @@ dark:prose-invert"
                             onClick={() => setShowFile(!showFile)}
                             className="flex cursor-pointer gap-2 text-sm text-muted-foreground"
                           >
-                            {file.name}
+                            {formatFileName(file.name, 50)}
                             <ForwardedIconComponent
                               name={showFile ? "ChevronDown" : "ChevronRight"}
                             />
