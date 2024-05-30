@@ -1002,9 +1002,9 @@ export async function deleteFlowPool(
 export async function multipleDeleteFlowsComponents(
   flowIds: string[]
 ): Promise<AxiosResponse<any>> {
-  return await api.post(`${BASE_URL_API}flows/multiple_delete/`, {
-    flow_ids: flowIds,
-  });
+  const config = {};
+  config["params"] = { flow_ids: flowIds };
+  return await api.delete(`${BASE_URL_API}flows/`, config);
 }
 
 export async function getTransactionTable(

@@ -255,7 +255,7 @@ async def download_file(
     return FlowListRead(flows=flows)
 
 
-@router.post("/multiple_delete/")
+@router.delete("/")
 async def delete_multiple_flows(
     flow_ids: FlowListIds, user: User = Depends(get_current_active_user), db: Session = Depends(get_session)
 ):
