@@ -5,7 +5,7 @@ export type APIDataType = { [key: string]: APIKindType };
 export type APIObjectType = { [key: string]: APIKindType };
 export type APIKindType = { [key: string]: APIClassType };
 export type APITemplateType = {
-  [key: string]: TemplateVariableType;
+  [key: string]: InputFieldType;
 };
 
 export type CustomFieldsType = {
@@ -44,7 +44,7 @@ export type APIClassType = {
     | Array<{ types: Array<string>; selected?: string }>;
 };
 
-export type TemplateVariableType = {
+export type InputFieldType = {
   type: string;
   required: boolean;
   placeholder?: string;
@@ -63,6 +63,7 @@ export type TemplateVariableType = {
   refresh_button_text?: string;
   [key: string]: any;
 };
+
 export type sendAllProps = {
   nodes: Node[];
   edges: Edge[];

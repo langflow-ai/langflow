@@ -1,11 +1,11 @@
-import { TemplateVariableType } from "../../../types/api";
+import { InputFieldType } from "../../../types/api";
 import { NodeType } from "../../../types/flow";
 
 export const getValue = (
   value: string,
   node: NodeType,
-  template: TemplateVariableType,
-  tweak: Object[],
+  template: InputFieldType,
+  tweak: Object[]
 ) => {
   let returnValue = value ?? "";
 

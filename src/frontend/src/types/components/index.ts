@@ -1,7 +1,7 @@
 import { ReactElement, ReactNode, SetStateAction } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
-import { APIClassType, APITemplateType, TemplateVariableType } from "../api";
+import { APIClassType, APITemplateType, InputFieldType } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
@@ -669,13 +669,13 @@ export type codeTabsPropsType = {
     getValue?: (
       value: string,
       node: NodeType,
-      template: TemplateVariableType,
+      template: InputFieldType,
       tweak: tweakType
     ) => string;
     buildTweakObject?: (
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: TemplateVariableType
+      template: InputFieldType
     ) => Promise<string | void>;
   };
   activeTweaks?: boolean;
@@ -742,7 +742,7 @@ export type chatViewProps = {
 };
 
 export type IOFileInputProps = {
-  field: TemplateVariableType;
+  field: InputFieldType;
   updateValue: (e: any, type: string) => void;
 };
 
