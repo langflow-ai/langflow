@@ -1,3 +1,5 @@
+import os
+from typing import Optional, List
 from uuid import UUID, uuid4
 
 import orjson
@@ -11,6 +13,7 @@ from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from langflow.services.settings.base import Settings
 
 
 @pytest.fixture(scope="module")
@@ -252,3 +255,13 @@ def test_read_only_starter_projects(client: TestClient, active_user, logged_in_h
     starter_projects = load_starter_projects()
     assert response.status_code == 200
     assert len(response.json()) == len(starter_projects)
+
+
+@pytest.mark.load_flows
+def test_load_flows(client: TestClient, load_flows_dir):
+    client.get("/api/v1/auto_login")
+    response = client.get("api/v1/flows/c54f9130-f2fa-4a3e-b22a-3856d946351b")
+    assert response.status_code == 200
+    assert response.json()["name"] == "BasicExample"
+
+
