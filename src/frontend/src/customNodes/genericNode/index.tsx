@@ -453,7 +453,7 @@ export default function GenericNode({
                     <div className="group flex items-start gap-1.5">
                       <ShadTooltip content={data.node?.display_name}>
                         <div
-                          onDoubleClick={(event) => {
+                          onClick={(event) => {
                             if (nameEditable) {
                               setInputName(true);
                             }
@@ -467,21 +467,6 @@ export default function GenericNode({
                           {data.node?.display_name}
                         </div>
                       </ShadTooltip>
-                      {nameEditable && (
-                        <div
-                          onClick={(event) => {
-                            setInputName(true);
-                            takeSnapshot();
-                            event.stopPropagation();
-                            event.preventDefault();
-                          }}
-                        >
-                          <IconComponent
-                            name="PencilLine"
-                            className="hidden h-3 w-3 text-status-blue group-hover:block"
-                          />
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
