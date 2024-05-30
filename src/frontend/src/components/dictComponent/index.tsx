@@ -18,15 +18,6 @@ export default function DictComponent({
     }
   }, [disabled]);
 
-  useEffect(() => {
-    const hasPropsObject = Object.keys(value).length > 0;
-    if (hasPropsObject) onChange(value);
-  }, [value]);
-
-  useEffect(() => {
-    if (value) onChange(value);
-  }, []);
-
   const ref = useRef(value);
 
   return (
