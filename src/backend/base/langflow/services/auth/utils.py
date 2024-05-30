@@ -214,6 +214,11 @@ def create_user_longterm_token(db: Session = Depends(get_session)) -> tuple[UUID
 
     username = settings_service.auth_settings.SUPERUSER
     super_user = get_user_by_username(db, username)
+    if not super_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Super user hasn't been created"
+        )
     access_token_expires_longterm = timedelta(days=365)
     access_token = create_token(
         data={"sub": str(super_user.id)},
