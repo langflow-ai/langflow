@@ -10,6 +10,7 @@ import emoji
 from emoji import purely_emoji  # type: ignore
 from fastapi import HTTPException, status
 from pydantic import field_serializer, field_validator
+from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema.schema import Record
@@ -28,7 +29,7 @@ class FlowBase(SQLModel):
     is_component: Optional[bool] = Field(default=False, nullable=True)
     updated_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
     folder_id: Optional[UUID] = Field(default=None, nullable=True)
-    endpoint_name: Optional[str] = Field(default=None, nullable=True, unique=True, index=True)
+    endpoint_name: Optional[str] = Field(default=None, nullable=True, index=True)
 
     @field_validator("endpoint_name")
     @classmethod
@@ -147,6 +148,11 @@ class Flow(FlowBase, table=True):
         }
         record = Record(data=data)
         return record
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "name", name="unique_flow_name"),
+        UniqueConstraint("user_id", "endpoint_name", name="unique_flow_endpoint_name"),
+    )
 
 
 class FlowCreate(FlowBase):
