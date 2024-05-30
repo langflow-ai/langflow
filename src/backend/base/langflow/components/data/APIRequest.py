@@ -50,23 +50,26 @@ class APIRequest(CustomComponent):
         },
     }
 
+    def parse_curl(self, curl: str, build_config: dotdict) -> dotdict:
+        try:
+            parsed = parse_context(curl)
+            build_config["urls"]["value"] = [parsed.url]
+            build_config["method"]["value"] = parsed.method.upper()
+            build_config["headers"]["value"] = dict(parsed.headers)
+
+            try:
+                json_data = json.loads(parsed.data)
+                build_config["body"]["value"] = json_data
+            except json.JSONDecodeError as e:
+                print(e)
+        except Exception as exc:
+            logger.error(f"Error parsing curl: {exc}")
+            raise ValueError(f"Error parsing curl: {exc}")
+        return build_config
+
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "curl" and field_value is not None:
-            try:
-                curl = field_value
-                parsed = parse_context(curl)
-                build_config["urls"]["value"] = [parsed.url]
-                build_config["method"]["value"] = parsed.method.upper()
-                build_config["headers"]["value"] = parsed.headers
-
-                try:
-                    json_data = json.loads(parsed.data)
-                    build_config["body"]["value"] = json_data
-                except json.JSONDecodeError as e:
-                    print(e)
-            except Exception as exc:
-                logger.error(f"Error parsing curl: {exc}")
-                raise ValueError(f"Error parsing curl: {exc}")
+            build_config = self.parse_curl(field_value, build_config)
         return build_config
 
     async def make_request(
