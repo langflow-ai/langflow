@@ -3,7 +3,7 @@
 # [![Langflow](./docs/static/img/hero.png)](https://www.langflow.org)
 
 <p align="center"><strong>
-    A visual framework for building Gen-AI and RAG apps with LangChain
+    A visual framework for building multi-agent and RAG applications
 </strong></p>
 <p align="center" style="font-size: 12px;">
     Open-source, Python-powered, fully customizable, LLM and vector store agnostic
