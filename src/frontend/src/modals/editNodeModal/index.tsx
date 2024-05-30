@@ -43,19 +43,23 @@ import BaseModal from "../baseModal";
 const EditNodeModal = forwardRef(
   (
     {
-      data,
       nodeLength,
       open,
       setOpen,
+      data,
     }: {
-      data: NodeDataType;
       nodeLength: number;
       open: boolean;
       setOpen: (open: boolean) => void;
+      data: NodeDataType;
     },
     ref,
   ) => {
-    const [myData, setMyData] = useState(data);
+    const nodes = useFlowStore((state) => state.nodes);
+
+    const dataFromStore = nodes.find((node) => node.id === node.id)?.data;
+
+    const [myData, setMyData] = useState(dataFromStore ?? data);
 
     const edges = useFlowStore((state) => state.edges);
     const setNode = useFlowStore((state) => state.setNode);
@@ -297,9 +301,7 @@ const EditNodeModal = forwardRef(
                                         myData.node!.template[
                                           templateParam
                                         ]?.value?.toString() === "{}"
-                                          ? {
-                                              // yourkey: "value",
-                                            }
+                                          ? {}
                                           : myData.node!.template[templateParam]
                                               .value
                                       }
