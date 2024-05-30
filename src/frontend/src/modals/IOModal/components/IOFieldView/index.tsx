@@ -256,7 +256,7 @@ export default function IOFieldView({
             return (
               <div className={left ? "h-56" : "h-full"}>
                 <RecordsOutputComponent
-                  flowPool={flowPoolNode}
+                  flowPoolObject={flowPoolNode}
                   pagination={!left}
                 />
               </div>

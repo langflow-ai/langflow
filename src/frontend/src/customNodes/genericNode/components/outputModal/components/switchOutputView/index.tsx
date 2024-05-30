@@ -31,7 +31,10 @@ export default function SwitchOutputView(nodeId): JSX.Element {
       </Case>
 
       <Case condition={node && Array.isArray(results)}>
-        <RecordsOutputComponent flowPool={flowPoolNode} pagination={true} />
+        <RecordsOutputComponent
+          flowPoolObject={flowPoolNode}
+          pagination={true}
+        />
       </Case>
     </>
   );
