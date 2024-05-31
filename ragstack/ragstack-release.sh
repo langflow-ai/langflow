@@ -47,7 +47,7 @@ if [ "$package" == "ragstack-ai-langflow" ]; then
 fi
 
 git checkout ragstack-main
-git pull
+git pull $remote_name ragstack-main
 
 echo ":: Bumping version to $version for package $package"
 poetry version $version
