@@ -2,7 +2,6 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, List, Optional, Union
 from uuid import UUID
 
-from langflow.graph.schema import RunOutputs
 import sqlalchemy as sa
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from loguru import logger
@@ -23,6 +22,7 @@ from langflow.api.v1.schemas import (
 from langflow.custom import CustomComponent
 from langflow.custom.utils import build_custom_component_template
 from langflow.graph.graph.base import Graph
+from langflow.graph.schema import RunOutputs
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
 from langflow.services.auth.utils import api_key_security, get_current_active_user
@@ -57,74 +57,111 @@ def get_all(
 
 async def simple_run_flow(
     db: Session,
-    flow_id: str,
+    flow_id_or_name: str,
     input_request: SimplifiedAPIRequest,
     session_service: SessionService,
     stream: bool = False,
     api_key_user: Optional[User] = None,
     flow: Optional[Flow] = None,
 ):
-    task_result: List[RunOutputs] = []
-    artifacts = {}
-    user_id = None
-    if api_key_user:
-        user_id = api_key_user.id
-    elif flow:
-        user_id = flow.user_id
-    if input_request.session_id:
-        session_data = await session_service.load_session(input_request.session_id, flow_id=flow_id)
-        graph, artifacts = session_data if session_data else (None, None)
-        if graph is None:
-            raise ValueError(f"Session {input_request.session_id} not found")
-    else:
-        # Get the flow that matches the flow_id and belongs to the user
-        # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-        if flow is None:
-            flow = db.exec(select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)).first()
+    try:
+        task_result: List[RunOutputs] = []
+        artifacts = {}
+        user_id = None
+        endpoint_name = None
+        try:
+            flow_id = UUID(flow_id_or_name)
+            flow_id_str = str(flow_id)
+
+        except ValueError:
+            endpoint_name = flow_id_or_name
+            flow = db.exec(
+                select(Flow).where(Flow.endpoint_name == endpoint_name).where(Flow.user_id == api_key_user.id)
+            ).first()
             if flow is None:
-                raise ValueError(f"Flow {flow_id} not found")
+                raise ValueError(f"Flow with endpoint name {endpoint_name} not found")
+            flow_id = flow.id
+            flow_id_str = str(flow_id)
+        if api_key_user:
+            user_id = api_key_user.id
+        elif flow:
+            user_id = flow.user_id
+        if input_request.session_id:
+            session_data = await session_service.load_session(input_request.session_id, flow_id=flow_id_str)
+            graph, artifacts = session_data if session_data else (None, None)
+            if graph is None:
+                raise ValueError(f"Session {input_request.session_id} not found")
+        else:
+            # Get the flow that matches the flow_id and belongs to the user
+            # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
+            if flow is None:
+                flow = db.exec(select(Flow).where(Flow.id == flow_id).where(Flow.user_id == api_key_user.id)).first()
+                if flow is None:
+                    raise ValueError(f"Flow {flow_id_str} not found")
 
-        if flow.data is None:
-            raise ValueError(f"Flow {flow_id} has no data")
-        graph_data = flow.data
-        graph_data = process_tweaks(graph_data, input_request.tweaks or {})
-        graph = Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
-    inputs = [InputValueRequest(components=[], input_value=input_request.input_value, type=input_request.input_type)]
-    # outputs is a list of all components that should return output
-    # we need to get them by checking their type
-    # if the output type is debug, we return all outputs
-    # if the output type is any, we return all outputs that are either chat or text
-    # if the output type is chat or text, we return only the outputs that match the type
-    if input_request.output_component:
-        outputs = [input_request.output_component]
-    else:
-        outputs = [
-            vertex.id
-            for vertex in graph.vertices
-            if input_request.output_type == "debug"
-            or (
-                vertex.is_output
-                and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())
-            )
+            if flow.data is None:
+                raise ValueError(f"Flow {flow_id_str} has no data")
+            graph_data = flow.data
+            graph_data = process_tweaks(graph_data, input_request.tweaks or {})
+            graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=user_id)
+        inputs = [
+            InputValueRequest(components=[], input_value=input_request.input_value, type=input_request.input_type)
         ]
-    task_result, session_id = await run_graph_internal(
-        graph=graph,
-        flow_id=flow_id,
-        session_id=input_request.session_id,
-        inputs=inputs,
-        outputs=outputs,
-        artifacts=artifacts,
-        session_service=session_service,
-        stream=stream,
-    )
+        # outputs is a list of all components that should return output
+        # we need to get them by checking their type
+        # if the output type is debug, we return all outputs
+        # if the output type is any, we return all outputs that are either chat or text
+        # if the output type is chat or text, we return only the outputs that match the type
+        if input_request.output_component:
+            outputs = [input_request.output_component]
+        else:
+            outputs = [
+                vertex.id
+                for vertex in graph.vertices
+                if input_request.output_type == "debug"
+                or (
+                    vertex.is_output
+                    and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())
+                )
+            ]
+        task_result, session_id = await run_graph_internal(
+            graph=graph,
+            flow_id=flow_id,
+            session_id=input_request.session_id,
+            inputs=inputs,
+            outputs=outputs,
+            artifacts=artifacts,
+            session_service=session_service,
+            stream=stream,
+        )
 
-    return RunResponse(outputs=task_result, session_id=session_id)
+        return RunResponse(outputs=task_result, session_id=session_id)
+
+    except sa.exc.StatementError as exc:
+        # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
+        if "badly formed hexadecimal UUID string" in str(exc):
+            logger.error(f"Flow ID {flow_id_str} is not a valid UUID")
+            # This means the Flow ID is not a valid UUID which means it can't find the flow
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        if flow_id_str and f"Flow {flow_id_str} not found" in str(exc):
+            logger.error(f"Flow {flow_id_str} not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        elif endpoint_name and f"Flow with endpoint name {endpoint_name} not found" in str(exc):
+            logger.error(f"Flow with endpoint name {endpoint_name} not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        elif session_id and f"Session {session_id} not found" in str(exc):
+            logger.error(f"Session {session_id} not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        else:
+            logger.exception(exc)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
 @router.post("/run/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
 async def simplified_run_flow(
     db: Annotated[Session, Depends(get_session)],
-    flow_id: UUID,
+    flow_id_or_name: str,
     input_request: SimplifiedAPIRequest = SimplifiedAPIRequest(),
     stream: bool = False,
     api_key_user: User = Depends(api_key_security),
@@ -178,33 +215,16 @@ async def simplified_run_flow(
 
     This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency, supporting a wide range of applications by allowing for dynamic input and output configuration along with performance optimizations through session management and caching.
     """
-    session_id = input_request.session_id
-    flow_id_str = str(flow_id)
     try:
         return await simple_run_flow(
             db=db,
-            flow_id=flow_id_str,
+            flow_id_or_name=flow_id_or_name,
             input_request=input_request,
             session_service=session_service,
             stream=stream,
             api_key_user=api_key_user,
         )
-    except sa.exc.StatementError as exc:
-        # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
-        if "badly formed hexadecimal UUID string" in str(exc):
-            logger.error(f"Flow ID {flow_id_str} is not a valid UUID")
-            # This means the Flow ID is not a valid UUID which means it can't find the flow
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    except ValueError as exc:
-        if f"Flow {flow_id_str} not found" in str(exc):
-            logger.error(f"Flow {flow_id_str} not found")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        elif f"Session {session_id} not found" in str(exc):
-            logger.error(f"Session {session_id} not found")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        else:
-            logger.exception(exc)
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc

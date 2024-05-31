@@ -71,6 +71,7 @@ class Settings(BaseSettings):
     remove_api_keys: bool = False
     components_path: List[str] = []
     langchain_cache: str = "InMemoryCache"
+    load_flows_path: Optional[str] = None
 
     # Redis
     redis_host: str = "localhost"
@@ -146,7 +147,13 @@ class Settings(BaseSettings):
                 # if there is a database in that location
                 if not info.data["config_dir"]:
                     raise ValueError("config_dir not set, please set it or provide a database_url")
-                from langflow.version import is_pre_release  # type: ignore
+                try:
+                    from langflow.version import is_pre_release  # type: ignore
+                except ImportError:
+                    from importlib import metadata
+
+                    version = metadata.version("langflow-base")
+                    is_pre_release = "a" in version or "b" in version or "rc" in version
 
                 if info.data["save_db_in_config_dir"]:
                     database_dir = info.data["config_dir"]

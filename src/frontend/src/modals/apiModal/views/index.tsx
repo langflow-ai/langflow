@@ -18,7 +18,7 @@ import { buildContent } from "../utils/build-content";
 import { buildTweaks } from "../utils/build-tweaks";
 import { checkCanBuildTweakObject } from "../utils/check-can-build-tweak-object";
 import { getChangesType } from "../utils/get-changes-types";
-import getCurlRunCode, { getCurlWebhookCode } from "../utils/get-curl-code";
+import { getCurlRunCode, getCurlWebhookCode } from "../utils/get-curl-code";
 import { getNodesWithDefaultValue } from "../utils/get-nodes-with-default-value";
 import getPythonApiCode from "../utils/get-python-api-code";
 import getPythonCode from "../utils/get-python-code";
@@ -47,8 +47,17 @@ const ApiModal = forwardRef(
     const [open, setOpen] = useState(false);
     const [activeTab, setActiveTab] = useState("0");
     const pythonApiCode = getPythonApiCode(flow?.id, autoLogin, tweak);
-    const curl_run_code = getCurlRunCode(flow?.id, autoLogin, tweak);
-    const curl_webhook_code = getCurlWebhookCode(flow?.id, autoLogin);
+    const curl_run_code = getCurlRunCode(
+      flow?.id,
+      autoLogin,
+      tweak,
+      flow?.endpoint_name
+    );
+    const curl_webhook_code = getCurlWebhookCode(
+      flow?.id,
+      autoLogin,
+      flow?.endpoint_name
+    );
     const pythonCode = getPythonCode(flow?.name, tweak);
     const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
     console.log("flow", flow);
@@ -167,7 +176,12 @@ const ApiModal = forwardRef(
 
     const addCodes = (cloneTweak) => {
       const pythonApiCode = getPythonApiCode(flow?.id, autoLogin, cloneTweak);
-      const curl_code = getCurlRunCode(flow?.id, autoLogin, cloneTweak);
+      const curl_code = getCurlRunCode(
+        flow?.id,
+        autoLogin,
+        cloneTweak,
+        flow?.endpoint_name
+      );
       const pythonCode = getPythonCode(flow?.name, cloneTweak);
       const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
 

@@ -46,6 +46,7 @@ async def login_to_get_access_token(
             samesite=auth_settings.REFRESH_SAME_SITE,
             secure=auth_settings.REFRESH_SECURE,
             expires=auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS,
+            domain=auth_settings.COOKIE_DOMAIN,
         )
         response.set_cookie(
             "access_token_lf",
@@ -54,6 +55,7 @@ async def login_to_get_access_token(
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
             expires=auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
+            domain=auth_settings.COOKIE_DOMAIN,
         )
         variable_service.initialize_user_variables(user.id, db)
         # Create default folder for user if it doesn't exist
@@ -71,8 +73,7 @@ async def login_to_get_access_token(
 async def auto_login(
     response: Response,
     db: Session = Depends(get_session),
-    settings_service=Depends(get_settings_service),
-    variable_service: VariableService = Depends(get_variable_service),
+    settings_service=Depends(get_settings_service)
 ):
     auth_settings = settings_service.auth_settings
     if settings_service.auth_settings.AUTO_LOGIN:
@@ -84,9 +85,9 @@ async def auto_login(
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
             expires=None,  # Set to None to make it a session cookie
+            domain=auth_settings.COOKIE_DOMAIN,
         )
-        variable_service.initialize_user_variables(user_id, db)
-        create_default_folder_if_it_doesnt_exist(db, user_id)
+
         return tokens
 
     raise HTTPException(
@@ -117,6 +118,7 @@ async def refresh_token(
             samesite=auth_settings.REFRESH_SAME_SITE,
             secure=auth_settings.REFRESH_SECURE,
             expires=auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS,
+            domain=auth_settings.COOKIE_DOMAIN,
         )
         response.set_cookie(
             "access_token_lf",
@@ -125,6 +127,7 @@ async def refresh_token(
             samesite=auth_settings.ACCESS_SAME_SITE,
             secure=auth_settings.ACCESS_SECURE,
             expires=auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
+            domain=auth_settings.COOKIE_DOMAIN,
         )
         return tokens
     else:
