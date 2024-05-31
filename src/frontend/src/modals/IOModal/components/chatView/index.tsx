@@ -18,6 +18,12 @@ import { chatViewProps } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "../../../../components/ui/select";
 
 export default function ChatView({
   sendMessage,
@@ -118,10 +124,21 @@ export default function ChatView({
     if (lockChat) setLockChat(false);
   }
 
+  function handleSelectChange(event: string): void {
+    switch (event) {
+      case "builds":
+        clearChat();
+        break;
+      case "buildsNSession":
+        console.log("delete build and session");
+        break;
+    }
+  }
+
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) {
     // if (message === "") return;
     chat.message = message;
@@ -149,18 +166,44 @@ export default function ChatView({
     <div className="eraser-column-arrangement">
       <div className="eraser-size">
         <div className="eraser-position">
-          <button disabled={lockChat} onClick={() => clearChat()}>
-            <IconComponent
-              name="Eraser"
-              className={classNames(
-                "h-5 w-5",
-                lockChat
-                  ? "animate-pulse text-primary"
-                  : "text-primary hover:text-gray-600"
-              )}
-              aria-hidden="true"
-            />
-          </button>
+          <Select
+            onValueChange={handleSelectChange}
+            value=""
+            disabled={lockChat}
+          >
+            <SelectTrigger className="">
+              <button className="flex gap-1">
+                <IconComponent
+                  name="Eraser"
+                  className={classNames(
+                    "h-5 w-5 transition-all duration-100",
+                    lockChat ? "animate-pulse text-primary" : "text-primary",
+                  )}
+                  aria-hidden="true"
+                />
+              </button>
+            </SelectTrigger>
+            <SelectContent className="right-[9.5em]">
+              <SelectItem value="builds" className="cursor-pointer">
+                <div className="flex">
+                  <IconComponent
+                    name={"Trash2"}
+                    className={`relative top-0.5 mr-2 h-4 w-4`}
+                  />
+                  <span className="">Clear Builds</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="buildsNSession" className="cursor-pointer">
+                <div className="flex">
+                  <IconComponent
+                    name={"Trash2"}
+                    className={`relative top-0.5 mr-2 h-4 w-4`}
+                  />
+                  <span className="">Clear Builds & Session</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div ref={messagesRef} className="chat-message-div">
           {chatHistory?.length > 0 ? (
