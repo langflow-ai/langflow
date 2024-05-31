@@ -1,13 +1,14 @@
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Tuple, Type, Union, cast
 from uuid import UUID
 
+from fastapi import Depends
 from pydantic.v1 import BaseModel, Field, create_model
-from sqlmodel import select
+from sqlmodel import Session, select
 
 from langflow.graph.schema import RunOutputs
 from langflow.schema.schema import INPUT_FIELD_NAME, Record
-from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import session_scope
+from langflow.services.database.models.flow import Flow
+from langflow.services.deps import get_session, session_scope
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
@@ -235,3 +236,21 @@ def get_arg_names(inputs: List["Vertex"]) -> List[dict[str, str]]:
         {"component_name": input_.display_name, "arg_name": input_.display_name.lower().replace(" ", "_")}
         for input_ in inputs
     ]
+
+
+def get_flow_by_id_or_endpoint_name(
+    flow_id_or_name: str, db: Session = Depends(get_session), user_id: Optional[UUID] = None
+) -> Flow:
+    try:
+        flow_id = UUID(flow_id_or_name)
+        flow = db.get(Flow, flow_id)
+    except ValueError:
+        endpoint_name = flow_id_or_name
+        stmt = select(Flow).where(Flow.name == endpoint_name)
+        if user_id:
+            stmt = stmt.where(Flow.user_id == user_id)
+        flow = db.exec(stmt).first()
+    if flow is None:
+        raise ValueError(f"Flow with endpoint name {endpoint_name} not found")
+
+    return flow
