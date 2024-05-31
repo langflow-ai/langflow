@@ -196,11 +196,10 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     position?: XYPosition,
     fromDragAndDrop?: boolean
   ): Promise<string | undefined> => {
+    let flowData = flow
+      ? processDataFromFlow(flow)
+      : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
     if (newProject) {
-      let flowData = flow
-        ? processDataFromFlow(flow)
-        : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
-
       // Create a new flow with a default name if no flow is provided.
       const folder_id = useFolderStore.getState().folderUrl;
       const my_collection_id = useFolderStore.getState().myCollectionId;
@@ -268,7 +267,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       useFlowStore
         .getState()
         .paste(
-          { nodes: flow!.data!.nodes, edges: flow!.data!.edges },
+          { nodes: flowData?.nodes, edges: flowData?.edges },
           position ?? { x: 10, y: 10 }
         );
     }

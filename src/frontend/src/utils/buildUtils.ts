@@ -16,7 +16,7 @@ type BuildVerticesParams = {
   onBuildUpdate?: (
     data: VertexBuildTypeAPI,
     status: BuildStatus,
-    buildId: string
+    buildId: string,
   ) => void; // Replace any with the actual type if it's not any
   onBuildComplete?: (allNodesValid: boolean) => void;
   onBuildError?: (title, list, idList: VertexLayerElementType[]) => void;
@@ -53,7 +53,7 @@ export async function updateVerticesOrder(
   startNodeId?: string | null,
   stopNodeId?: string | null,
   nodes?: Node[],
-  edges?: Edge[]
+  edges?: Edge[],
 ): Promise<{
   verticesLayers: VertexLayerElementType[][];
   verticesIds: string[];
@@ -69,7 +69,7 @@ export async function updateVerticesOrder(
         startNodeId,
         stopNodeId,
         nodes,
-        edges
+        edges,
       );
     } catch (error: any) {
       setErrorData({
@@ -125,7 +125,7 @@ export async function buildVertices({
     startNodeId,
     stopNodeId,
     nodes,
-    edges
+    edges,
   );
   if (onValidateNodes) {
     try {
@@ -187,14 +187,14 @@ export async function buildVertices({
             onBuildUpdate(
               getInactiveVertexData(element.id),
               BuildStatus.INACTIVE,
-              runId
+              runId,
             );
           }
           if (element.reference) {
             onBuildUpdate(
               getInactiveVertexData(element.reference),
               BuildStatus.INACTIVE,
-              runId
+              runId,
             );
           }
           buildResults.push(false);
@@ -219,7 +219,7 @@ export async function buildVertices({
         if (stop) {
           return;
         }
-      })
+      }),
     );
     // Once the current layer is built, move to the next layer
     currentLayerIndex += 1;
@@ -262,7 +262,7 @@ async function buildVertex({
         onBuildError!(
           "Error Building Component",
           [buildData.params],
-          verticesIds.map((id) => ({ id }))
+          verticesIds.map((id) => ({ id })),
         );
         stopBuild();
       }
@@ -273,7 +273,7 @@ async function buildVertex({
     onBuildError!(
       "Error Building Component",
       [(error as AxiosError<any>).response?.data?.detail ?? "Unknown Error"],
-      verticesIds.map((id) => ({ id }))
+      verticesIds.map((id) => ({ id })),
     );
     stopBuild();
   }

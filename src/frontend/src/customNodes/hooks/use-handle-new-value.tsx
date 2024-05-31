@@ -9,7 +9,6 @@ const useHandleOnNewValue = (
   handleUpdateValues,
   debouncedHandleUpdateValues,
   setNode,
-  renderTooltips,
   setIsLoading
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -64,8 +63,6 @@ const useHandleOnNewValue = (
 
       return newNode;
     });
-
-    renderTooltips();
   };
 
   return { handleOnNewValue };

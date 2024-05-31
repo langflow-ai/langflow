@@ -17,12 +17,8 @@ import TextAreaComponent from "../../../../components/textAreaComponent";
 import ToggleShadComponent from "../../../../components/toggleShadComponent";
 import { Button } from "../../../../components/ui/button";
 import { RefreshButton } from "../../../../components/ui/refreshButton";
-import {
-  LANGFLOW_SUPPORTED_TYPES,
-  TOOLTIP_EMPTY,
-} from "../../../../constants/constants";
+import { LANGFLOW_SUPPORTED_TYPES } from "../../../../constants/constants";
 import { Case } from "../../../../shared/components/caseComponent";
-import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useTypesStore } from "../../../../stores/typesStore";
@@ -45,7 +41,8 @@ import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
-import TooltipRenderComponent from "../tooltipRenderComponent";
+import HandleTooltips from "../HandleTooltipComponent";
+import OutputComponent from "../OutputComponent";
 import { TEXT_FIELD_TYPES } from "./constants";
 
 export default function ParameterComponent({
@@ -62,13 +59,9 @@ export default function ParameterComponent({
   info = "",
   proxy,
   showNode,
-  index = "",
+  index,
 }: ParameterComponentType): JSX.Element {
-  const ref = useRef<HTMLDivElement>(null);
-  const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
@@ -77,8 +70,6 @@ export default function ParameterComponent({
   const [isLoading, setIsLoading] = useState(false);
   const updateNodeInternals = useUpdateNodeInternals();
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
-  const flow = currentFlow?.data?.nodes ?? null;
-  const groupedEdge = useRef(null);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
 
   const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue(
@@ -88,7 +79,7 @@ export default function ParameterComponent({
     handleUpdateValues,
     debouncedHandleUpdateValues,
     setNode,
-    renderTooltips,
+    isLoading,
     setIsLoading
   );
 
@@ -97,12 +88,11 @@ export default function ParameterComponent({
     name,
     takeSnapshot,
     setNode,
-    updateNodeInternals,
-    renderTooltips
+    updateNodeInternals
   );
 
   const { handleRefreshButtonPress: handleRefreshButtonPressHook } =
-    useHandleRefreshButtonPress(setIsLoading, setNode, renderTooltips);
+    useHandleRefreshButtonPress(setIsLoading, setNode);
 
   let disabled =
     edges.some(
@@ -114,14 +104,7 @@ export default function ParameterComponent({
     handleRefreshButtonPressHook(name, data);
   };
 
-  useFetchDataOnMount(
-    data,
-    name,
-    handleUpdateValues,
-    setNode,
-    renderTooltips,
-    setIsLoading
-  );
+  useFetchDataOnMount(data, name, handleUpdateValues, setNode, setIsLoading);
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
@@ -147,31 +130,24 @@ export default function ParameterComponent({
     );
   }, [info]);
 
-  function renderTooltips() {
-    let groupedObj: any = groupByFamily(myData, tooltipTitle!, left, flow!);
-    groupedEdge.current = groupedObj;
-
-    if (groupedObj && groupedObj.length > 0) {
-      //@ts-ignore
-      refHtml.current = groupedObj.map((item, index) => {
-        return <TooltipRenderComponent index={index} item={item} left={left} />;
-      });
-    } else {
-      //@ts-ignore
-      refHtml.current = (
-        <span data-testid={`empty-tooltip-filter`}>{TOOLTIP_EMPTY}</span>
-      );
-    }
+  function renderTitle() {
+    return !left ? (
+      <OutputComponent
+        idx={index}
+        types={type?.split("|") ?? []}
+        selected={title}
+        nodeId={data.id}
+        frozen={data.node?.frozen}
+      />
+    ) : (
+      <span>{title}</span>
+    );
   }
 
   // If optionalHandle is an empty list, then it is not an optional handle
   if (optionalHandle && optionalHandle.length === 0) {
     optionalHandle = null;
   }
-
-  useEffect(() => {
-    renderTooltips();
-  }, [tooltipTitle, flow]);
 
   return !showNode ? (
     left && LANGFLOW_SUPPORTED_TYPES.has(type ?? "") && !optionalHandle ? (
@@ -182,7 +158,13 @@ export default function ParameterComponent({
           <ShadTooltip
             styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
             delayDuration={1000}
-            content={refHtml.current}
+            content={
+              <HandleTooltips
+                left={left}
+                nodes={nodes}
+                tooltipTitle={tooltipTitle!}
+              />
+            }
             side={left ? "left" : "right"}
           >
             <Handle
@@ -213,7 +195,9 @@ export default function ParameterComponent({
                 borderColor: color ?? nodeColors.unknown,
               }}
               onClick={() => {
-                setFilterEdge(groupedEdge.current);
+                setFilterEdge(
+                  groupByFamily(myData, tooltipTitle!, left, nodes!)
+                );
               }}
             ></Handle>
           </ShadTooltip>
@@ -222,7 +206,6 @@ export default function ParameterComponent({
     )
   ) : (
     <div
-      ref={ref}
       className={
         "relative mt-1 flex w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
         ((name === "code" && type === "code") ||
@@ -246,14 +229,10 @@ export default function ParameterComponent({
 
           {proxy ? (
             <ShadTooltip content={<span>{proxy.id}</span>}>
-              <span className={!left && data.node?.frozen ? " text-ice" : ""}>
-                {title}
-              </span>
+              {renderTitle()}
             </ShadTooltip>
           ) : (
-            <span className={!left && data.node?.frozen ? " text-ice" : ""}>
-              {title}
-            </span>
+            renderTitle()
           )}
           <span className={(required ? "ml-2 " : "") + "text-status-red"}>
             {required ? "*" : ""}
@@ -280,7 +259,13 @@ export default function ParameterComponent({
               <ShadTooltip
                 styleClasses={"tooltip-fixed-width custom-scroll nowheel"}
                 delayDuration={1000}
-                content={refHtml.current}
+                content={
+                  <HandleTooltips
+                    left={left}
+                    nodes={nodes}
+                    tooltipTitle={tooltipTitle!}
+                  />
+                }
                 side={left ? "left" : "right"}
               >
                 <Handle
@@ -299,7 +284,11 @@ export default function ParameterComponent({
                     "h-3 w-3 rounded-full border-2 bg-background"
                   )}
                   style={{ borderColor: color ?? nodeColors.unknown }}
-                  onClick={() => setFilterEdge(groupedEdge.current)}
+                  onClick={() => {
+                    setFilterEdge(
+                      groupByFamily(myData, tooltipTitle!, left, nodes!)
+                    );
+                  }}
                 />
               </ShadTooltip>
             </div>

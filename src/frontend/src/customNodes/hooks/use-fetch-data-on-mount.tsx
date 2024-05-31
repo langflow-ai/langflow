@@ -8,7 +8,6 @@ const useFetchDataOnMount = (
   name,
   handleUpdateValues,
   setNode,
-  renderTooltips,
   setIsLoading
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -44,7 +43,6 @@ const useFetchDataOnMount = (
           });
         }
         setIsLoading(false);
-        renderTooltips();
       }
     }
     fetchData();
