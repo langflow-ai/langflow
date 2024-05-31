@@ -252,7 +252,6 @@ async def webhook_run_flow(
         background_tasks.add_task(
             simple_run_flow,
             db=db,
-            flow_id_or_name=str(flow.id),
             flow=flow,
             input_request=input_request,
             session_service=session_service,
