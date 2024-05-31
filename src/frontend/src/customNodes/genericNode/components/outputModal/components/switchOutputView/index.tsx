@@ -19,11 +19,9 @@ export default function SwitchOutputView(nodeId): JSX.Element {
   const resultType = results?.type;
   const resultMessage = results?.message;
 
-  console.log("results", resultMessage);
-
   return (
     <>
-      <Case condition={!flowPoolNode}>
+      <Case condition={!resultType || resultType === "unknown"}>
         <div>NO OUTPUT</div>
       </Case>
 
