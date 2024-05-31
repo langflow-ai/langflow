@@ -51,6 +51,16 @@ def build_and_validate_all_files(reader: DirectoryReader, file_list):
     return valid_components, invalid_components
 
 
+async def abuild_and_validate_all_files(reader: DirectoryReader, file_list):
+    """Build and validate all files"""
+    data = await reader.abuild_component_menu_list(file_list)
+
+    valid_components = reader.filter_loaded_components(data=data, with_errors=False)
+    invalid_components = reader.filter_loaded_components(data=data, with_errors=True)
+
+    return valid_components, invalid_components
+
+
 def load_files_from_path(path: str):
     """Load all files from a given path"""
     reader = DirectoryReader(path, False)
@@ -64,6 +74,19 @@ def build_custom_component_list_from_path(path: str):
     reader = DirectoryReader(path, False)
 
     valid_components, invalid_components = build_and_validate_all_files(reader, file_list)
+
+    valid_menu = build_valid_menu(valid_components)
+    invalid_menu = build_invalid_menu(invalid_components)
+
+    return merge_nested_dicts_with_renaming(valid_menu, invalid_menu)
+
+
+async def abuild_custom_component_list_from_path(path: str):
+    """Build a list of custom components for the langchain from a given path"""
+    file_list = load_files_from_path(path)
+    reader = DirectoryReader(path, False)
+
+    valid_components, invalid_components = await abuild_and_validate_all_files(reader, file_list)
 
     valid_menu = build_valid_menu(valid_components)
     invalid_menu = build_invalid_menu(invalid_components)

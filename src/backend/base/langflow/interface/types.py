@@ -1,4 +1,10 @@
-from langflow.custom.utils import build_custom_components
+from langflow.custom.utils import abuild_custom_components, build_custom_components
+
+
+async def aget_all_types_dict(components_paths):
+    """Get all types dictionary combining native and custom components."""
+    custom_components_from_file = await abuild_custom_components(components_paths=components_paths)
+    return custom_components_from_file
 
 
 def get_all_types_dict(components_paths):
