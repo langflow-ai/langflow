@@ -26,10 +26,14 @@ class WebhookComponent(CustomComponent):
         }
 
     def build(self, data: Optional[str] = "") -> Record:
+        message = ""
         try:
             body = json.loads(data)
         except json.JSONDecodeError:
-            raise ValueError("Invalid JSON data provided.")
+            body = {"payload": data}
+            message = f"Invalid JSON payload. Please check the format.\n\n{data}"
         record = Record(data=body)
-        self.status = record
+        if not message:
+            message = json.dumps(body, indent=2)
+        self.status = message
         return record
