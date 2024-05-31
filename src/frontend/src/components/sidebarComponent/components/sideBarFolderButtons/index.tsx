@@ -91,8 +91,6 @@ const SideBarFoldersButtonsComponent = ({
     folders.map((obj) => ({ name: obj.name, edit: false }));
   }, [folders]);
 
-  console.log(folderId, folderIdDragging);
-
   return (
     <>
       <div className="flex shrink-0 items-center justify-between">

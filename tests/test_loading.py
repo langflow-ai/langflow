@@ -2,7 +2,7 @@ import pytest
 from langflow.graph import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.initial_setup.setup import load_starter_projects
-from langflow.processing.load import load_flow_from_json, run_flow_from_json
+from langflow.load import load_flow_from_json, run_flow_from_json
 
 
 @pytest.mark.noclient

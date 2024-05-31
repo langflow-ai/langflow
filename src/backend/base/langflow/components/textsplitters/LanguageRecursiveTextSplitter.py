@@ -1,8 +1,9 @@
 from typing import List, Optional
 
-from langflow.interface.custom.custom_component import CustomComponent
-from langflow.schema.schema import Record
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
+
+from langflow.custom import CustomComponent
+from langflow.schema.schema import Record
 
 
 class LanguageRecursiveTextSplitterComponent(CustomComponent):

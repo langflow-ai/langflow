@@ -269,9 +269,11 @@ export type IconComponentProps = {
 export type InputProps = {
   name: string | null;
   description: string | null;
+  endpointName?: string;
   maxLength?: number;
   setName?: (name: string) => void;
   setDescription?: (description: string) => void;
+  setEndpointName?: (endpointName: string) => void;
   invalidNameList?: string[];
 };
 

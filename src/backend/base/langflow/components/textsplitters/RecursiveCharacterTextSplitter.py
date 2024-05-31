@@ -1,10 +1,11 @@
 from typing import Optional
-from langchain_core.documents import Document
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from langflow.custom import CustomComponent
 from langflow.schema import Record
 from langflow.utils.util import build_loader_repr_from_records, unescape_string
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 class RecursiveCharacterTextSplitterComponent(CustomComponent):

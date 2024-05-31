@@ -1,7 +1,8 @@
-from langflow.interface.custom.custom_component import CustomComponent
 from langchain_core.embeddings import Embeddings
 from langchain_openai import AzureOpenAIEmbeddings
 from pydantic.v1 import SecretStr
+
+from langflow.custom import CustomComponent
 
 
 class AzureOpenAIEmbeddingsComponent(CustomComponent):

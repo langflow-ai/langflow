@@ -18,17 +18,13 @@ repos:
     hooks:
       - id: check-case-conflict
       - id: end-of-file-fixer
+        # python, js and ts only
+        files: \.(py|js|ts)$
       - id: mixed-line-ending
+        files: \.(py|js|ts)$
         args:
           - --fix=lf
       - id: trailing-whitespace
-      - id: pretty-format-json
-        exclude: ^tsconfig.*.json
-        args:
-          - --autofix
-          - --indent=4
-          - --no-sort-keys
-      - id: check-merge-conflict
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
     rev: v0.4.2

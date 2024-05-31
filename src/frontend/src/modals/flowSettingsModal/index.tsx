@@ -3,6 +3,7 @@ import EditFlowSettings from "../../components/editFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
+import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
 import { FlowType } from "../../types/flow";
@@ -22,12 +23,23 @@ export default function FlowSettingsModal({
 
   const [name, setName] = useState(currentFlow!.name);
   const [description, setDescription] = useState(currentFlow!.description);
+  const [endpoint_name, setEndpointName] = useState(currentFlow!.endpoint_name);
 
   function handleClick(): void {
     currentFlow!.name = name;
     currentFlow!.description = description;
-    saveFlow(currentFlow!);
-    setOpen(false);
+    currentFlow!.endpoint_name = endpoint_name;
+    saveFlow(currentFlow!)
+      ?.then(() => {
+        setOpen(false);
+      })
+      .catch((err) => {
+        useAlertStore.getState().setErrorData({
+          title: "Error while saving changes",
+          list: [(err as AxiosError).response?.data.detail ?? ""],
+        });
+        console.error(err);
+      });
   }
 
   const [nameLists, setNameList] = useState<string[]>([]);
@@ -44,7 +56,7 @@ export default function FlowSettingsModal({
     <BaseModal
       open={open}
       setOpen={setOpen}
-      size="smaller"
+      size="smaller-h-full"
       onSubmit={handleClick}
     >
       <BaseModal.Header description={SETTINGS_DIALOG_SUBTITLE}>
@@ -56,8 +68,10 @@ export default function FlowSettingsModal({
           invalidNameList={nameLists}
           name={name}
           description={description}
+          endpointName={endpoint_name}
           setName={setName}
           setDescription={setDescription}
+          setEndpointName={setEndpointName}
         />
       </BaseModal.Content>
 

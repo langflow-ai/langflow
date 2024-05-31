@@ -1,12 +1,13 @@
 import json
 from typing import List
+
 from langchain.chains.query_constructor.base import AttributeInfo
 from langchain.retrievers.self_query.base import SelfQueryRetriever
-
-from langflow.interface.custom.custom_component import CustomComponent
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
+
+from langflow.custom import CustomComponent
 
 
 class VectaraSelfQueryRetriverComponent(CustomComponent):

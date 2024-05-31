@@ -1,8 +1,9 @@
 from typing import Optional
-from langchain_community.embeddings import BedrockEmbeddings
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langchain_community.embeddings import BedrockEmbeddings
 from langchain_core.embeddings import Embeddings
+
+from langflow.custom import CustomComponent
 
 
 class AmazonBedrockEmeddingsComponent(CustomComponent):

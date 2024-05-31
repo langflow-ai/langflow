@@ -10,7 +10,7 @@ from loguru import logger
 
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult
-from langflow.graph.vertex.utils import generate_result, log_transaction
+from langflow.graph.vertex.utils import log_transaction
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.schema import INPUT_FIELD_NAME
@@ -454,29 +454,6 @@ class Vertex:
         )
         self.set_result(result_dict)
 
-    async def _run(
-        self,
-        user_id: str,
-        inputs: Optional[dict] = None,
-        session_id: Optional[str] = None,
-    ):
-        # user_id is just for compatibility with the other build methods
-        inputs = inputs or {}
-        # inputs = {key: value or "" for key, value in inputs.items()}
-        # if hasattr(self._built_object, "input_keys"):
-        #     # test if all keys are in inputs
-        #     # and if not add them with empty string
-        #     # for key in self._built_object.input_keys:
-        #     #     if key not in inputs:
-        #     #         inputs[key] = ""
-        #     if inputs == {} and hasattr(self._built_object, "prompt"):
-        #         inputs = self._built_object.prompt.partial_variables
-        if isinstance(self._built_object, str):
-            self._built_result = self._built_object
-
-        result = await generate_result(self._built_object, inputs, self.has_external_output, session_id)
-        self._built_result = result
-
     async def _build_each_vertex_in_params_dict(self, user_id=None):
         """
         Iterates over each vertex in the params dictionary and builds it.
@@ -719,7 +696,8 @@ class Vertex:
 
             self._finalize_build()
 
-        return await self.get_requester_result(requester)
+        result = await self.get_requester_result(requester)
+        return result
 
     async def get_requester_result(self, requester: Optional["Vertex"]):
         # If the requester is None, this means that

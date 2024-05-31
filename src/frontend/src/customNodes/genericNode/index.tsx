@@ -10,7 +10,6 @@ import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
 import Xmark from "../../components/ui/xmark";
 import {
-  NATIVE_CATEGORIES,
   RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
@@ -28,9 +27,9 @@ import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn } from "../../utils/utils";
-import ParameterComponent from "./components/parameterComponent";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
+import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
   data,
@@ -77,18 +76,14 @@ export default function GenericNode({
     // This one should run only once
     // first check if data.type in NATIVE_CATEGORIES
     // if not return
-    if (
-      !NATIVE_CATEGORIES.includes(types[data.type]) ||
-      !data.node?.template?.code?.value
-    )
-      return;
+    if (!data.node?.template?.code?.value) return;
     const thisNodeTemplate = templates[data.type].template;
     // if the template does not have a code key
     // return
     if (!thisNodeTemplate.code) return;
     const currentCode = thisNodeTemplate.code?.value;
     const thisNodesCode = data.node!.template?.code?.value;
-    const componentsToIgnore = ["Custom Component", "Prompt"];
+    const componentsToIgnore = ["Custom Component"];
     if (
       currentCode !== thisNodesCode &&
       !componentsToIgnore.includes(data.node!.display_name)
@@ -334,16 +329,20 @@ export default function GenericNode({
 
     const baseBorderClass = getBaseBorderClass(selected);
     const nodeSizeClass = getNodeSizeClass(showNode);
-    return classNames(
+    const names = classNames(
       baseBorderClass,
       nodeSizeClass,
       "generic-node-div",
       specificClassFromBuildStatus,
     );
+    return names;
   };
 
-  const getBaseBorderClass = (selected) =>
-    selected ? "border border-ring" : "border";
+  const getBaseBorderClass = (selected) => {
+    let className = selected ? "border border-ring" : "border";
+    let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
+    return data.node?.frozen ? frozenClass : className;
+  };
 
   const getNodeSizeClass = (showNode) =>
     showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full";
