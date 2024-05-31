@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any, Union, Generator
 from enum import Enum
 
 from langchain_core.documents import Document
@@ -20,6 +20,7 @@ class ArtifactType(str, Enum):
     TEXT = "text"
     RECORD = "record"
     OBJECT = "object"
+    STREAM = "stream"
     UNKNOWN = "unknown"
 
 
@@ -61,8 +62,9 @@ def serialize_field(value):
     return value
 
 
-def get_artifact_type(value: Any) -> str:
+def get_artifact_type(custom_component, build_result) -> str:
     result = ArtifactType.UNKNOWN
+    value = custom_component.repr_value
     match value:
         case Record():
             result = ArtifactType.RECORD
@@ -72,5 +74,9 @@ def get_artifact_type(value: Any) -> str:
 
         case dict():
             result = ArtifactType.OBJECT
+
+    if result == ArtifactType.UNKNOWN:
+        if isinstance(build_result, Generator):
+            result = ArtifactType.STREAM
 
     return result.value

@@ -1,19 +1,14 @@
 import { useEffect, useState } from "react";
-import ShortUniqueId from "short-unique-id";
 import IconComponent from "../../../../../components/genericIconComponent";
 import { Textarea } from "../../../../../components/ui/textarea";
 import {
   CHAT_INPUT_PLACEHOLDER,
   CHAT_INPUT_PLACEHOLDER_SEND,
 } from "../../../../../constants/constants";
-import { uploadFile } from "../../../../../controllers/API";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
-import {
-  FilePreviewType,
-  chatInputType,
-} from "../../../../../types/components";
+import { chatInputType } from "../../../../../types/components";
 import { classNames } from "../../../../../utils/utils";
-import FilePreview from "../filePreviewChat";
+
 export default function ChatInput({
   lockChat,
   chatValue,
@@ -24,10 +19,6 @@ export default function ChatInput({
 }: chatInputType): JSX.Element {
   const [repeat, setRepeat] = useState(1);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const uid = new ShortUniqueId({ length: 3 });
-  const [files, setFiles] = useState<FilePreviewType[]>([]);
-
   useEffect(() => {
     if (!lockChat && inputRef.current) {
       inputRef.current.focus();
@@ -41,64 +32,8 @@ export default function ChatInput({
     }
   }, [chatValue]);
 
-  //listen to ctrl-v to paste images
-  useEffect(() => {
-    const handlePaste = (event: ClipboardEvent): void => {
-      const items = event.clipboardData?.items;
-      if (items) {
-        for (let i = 0; i < items.length; i++) {
-          if (items[i].type.indexOf("image") !== -1) {
-            const blob = items[i].getAsFile();
-            if (blob) {
-              const id = uid();
-              setFiles([
-                ...files,
-                { file: blob, loading: true, error: false, id },
-              ]);
-              uploadFile(blob, currentFlowId)
-                .then((res) => {
-                  setFiles((prev) => {
-                    const newFiles = [...prev];
-                    const updatedIndex = newFiles.findIndex(
-                      (file) => file.id === id
-                    );
-                    newFiles[updatedIndex].loading = false;
-                    newFiles[updatedIndex].path = res.data.file_path;
-                    return newFiles;
-                  });
-                })
-                .catch((err) => {
-                  setFiles((prev) => {
-                    const newFiles = [...prev];
-                    const updatedIndex = newFiles.findIndex(
-                      (file) => file.id === id
-                    );
-                    newFiles[updatedIndex].loading = false;
-                    newFiles[updatedIndex].error = true;
-                    return newFiles;
-                  });
-                });
-            }
-          }
-        }
-      }
-    };
-    document.addEventListener("paste", handlePaste);
-    return () => {
-      document.removeEventListener("paste", handlePaste);
-    };
-  }, []);
-
-  function send() {
-    sendMessage({
-      repeat,
-      files: files.map((file) => file.path ?? "").filter((file) => file !== ""),
-    });
-    setFiles([]);
-  }
-
   return (
-    <div className="flex w-full flex-col-reverse">
+    <div className="flex w-full gap-2">
       <div className="relative w-full">
         <Textarea
           onKeyDown={(event) => {
@@ -109,7 +44,7 @@ export default function ChatInput({
               !event.shiftKey &&
               !event.nativeEvent.isComposing
             ) {
-              send();
+              sendMessage(repeat);
             }
           }}
           rows={1}
@@ -155,7 +90,7 @@ export default function ChatInput({
                 : "bg-chat-send text-background"
             )}
             disabled={lockChat || saveLoading}
-            onClick={(): void => send()}
+            onClick={(): void => sendMessage(repeat)}
           >
             {lockChat || saveLoading ? (
               <IconComponent
@@ -179,21 +114,7 @@ export default function ChatInput({
           </button>
         </div>
       </div>
-      <div className="flex w-full gap-2 pb-2">
-        {files.map((file) => (
-          <FilePreview
-            error={file.error}
-            file={file.file}
-            loading={file.loading}
-            key={file.id}
-            onDelete={() => {
-              setFiles((prev) => prev.filter((f) => f.id !== file.id));
-              // TODO: delete file on backend
-            }}
-          />
-        ))}
-      </div>
-      {/*
+      {/* 
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="primary" className="h-13 px-4">

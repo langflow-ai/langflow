@@ -83,7 +83,6 @@ class InterfaceVertex(Vertex):
         sender = self.params.get("sender", None)
         sender_name = self.params.get("sender_name", None)
         message = self.params.get(INPUT_FIELD_NAME, None)
-        files = [{"path": file} if isinstance(file, str) else file for file in self.params.get("files", [])]
         if isinstance(message, str):
             message = unescape_string(message)
         stream_url = None
@@ -115,7 +114,6 @@ class InterfaceVertex(Vertex):
                 sender=sender,
                 sender_name=sender_name,
                 stream_url=stream_url,
-                files=files
             )
 
             self.will_stream = stream_url is not None
@@ -197,7 +195,6 @@ class InterfaceVertex(Vertex):
             message=complete_message,
             sender=self.params.get("sender", ""),
             sender_name=self.params.get("sender_name", ""),
-            files=[{"path": file} if isinstance(file, str) else file for file in self.params.get("files", [])],
         ).model_dump()
         self.params[INPUT_FIELD_NAME] = complete_message
         self._built_object = Record(text=complete_message, data=self.artifacts)
@@ -211,9 +208,9 @@ class InterfaceVertex(Vertex):
             flow_id=self.graph.flow_id,
             vertex_id=self.id,
             valid=True,
-            logs=self._built_object_repr(),
+            params=self._built_object_repr(),
             data=self.result,
-            messages=self.artifacts,
+            artifacts=self.artifacts,
         )
 
         self._validate_built_object()

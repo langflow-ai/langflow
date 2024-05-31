@@ -709,7 +709,6 @@ class Graph:
         chat_service: ChatService,
         vertex_id: str,
         inputs_dict: Optional[Dict[str, str]] = None,
-        files: Optional[list[str]] = None,
         user_id: Optional[str] = None,
         fallback_to_env_vars: bool = False,
     ):
@@ -757,13 +756,14 @@ class Graph:
                 params = f"{vertex._built_object_repr()}{params}"
                 valid = True
                 result_dict = vertex.result
+                artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
             set_cache_coro = partial(chat_service.set_cache, key=self.flow_id)
             next_runnable_vertices, top_level_vertices = await self.get_next_and_top_level_vertices(
                 lock, set_cache_coro, vertex
             )
-            return next_runnable_vertices, top_level_vertices, result_dict, params, valid, log_type, vertex
+            return next_runnable_vertices, top_level_vertices, result_dict, params, valid, artifacts, vertex
         except Exception as exc:
             logger.exception(f"Error building vertex: {exc}")
             raise exc

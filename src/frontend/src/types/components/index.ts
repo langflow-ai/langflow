@@ -76,15 +76,6 @@ export type InputListComponentType = {
   disabled: boolean;
   editNode?: boolean;
   componentName?: string;
-};
-
-export type InputGlobalComponentType = {
-  disabled: boolean;
-  onChange: (value: string) => void;
-  setDb: (value: boolean) => void;
-  name: string;
-  data: NodeDataType;
-  editNode?: boolean;
   playgroundDisabled?: boolean;
 };
 
@@ -195,14 +186,6 @@ export type FloatComponentType = {
   rangeSpec: RangeSpecType;
   editNode?: boolean;
   id?: string;
-};
-
-export type FilePreviewType = {
-  loading: boolean;
-  file: File;
-  error: boolean;
-  id: string;
-  path?: string;
 };
 
 export type TooltipComponentType = {
@@ -493,13 +476,7 @@ export type chatInputType = {
   };
   lockChat: boolean;
   noInput: boolean;
-  sendMessage: ({
-    repeat,
-    files,
-  }: {
-    repeat: number;
-    files?: string[];
-  }) => void;
+  sendMessage: (count?: number) => void;
   setChatValue: (value: string) => void;
 };
 
@@ -703,14 +680,10 @@ export type crashComponentPropsType = {
   resetErrorBoundary: (args) => void;
 };
 
-export type Log = {
-  message: string;
-};
-
 export type validationStatusType = {
   id: string;
   data: object | any;
-  logs: Log[];
+  params: string;
   progress?: number;
   valid: boolean;
   duration?: string;
@@ -750,13 +723,7 @@ export type IOFieldViewProps = {
 export type UndrawCardComponentProps = { flow: FlowType };
 
 export type chatViewProps = {
-  sendMessage: ({
-    repeat,
-    files,
-  }: {
-    repeat: number;
-    files?: string[];
-  }) => void;
+  sendMessage: (count?: number) => void;
   chatValue: string;
   setChatValue: (value: string) => void;
   lockChat: boolean;

@@ -1,7 +1,7 @@
-import ThemedImage from "@theme/ThemedImage";
-import useBaseUrl from "@docusaurus/useBaseUrl";
-import ZoomableImage from "/src/theme/ZoomableImage.js";
-import ReactPlayer from "react-player";
+import ThemedImage from '@theme/ThemedImage';
+import useBaseUrl from '@docusaurus/useBaseUrl';
+import ZoomableImage from '/src/theme/ZoomableImage.js';
+import ReactPlayer from 'react-player';
 
 # 🖥️ Flows, components, collections, and projects
 
@@ -21,78 +21,6 @@ For example, the **OpenAI LLM** is a **component** of the **Basic prompting** fl
 
 ## Component
 
-
-Components are the building blocks of flows. They consist of inputs, outputs, and parameters that define their functionality. These elements provide a convenient and straightforward way to compose LLM-based applications. Learn more about components and how they work in the LangChain [documentation](https://python.langchain.com/docs/integrations/components).
-
-<div style={{ marginBottom: "20px" }}>
-  During the flow creation process, you will notice handles (colored circles)
-  attached to one or both sides of a component. These handles represent the
-  availability to connect to other components. Hover over a handle to see
-  connection details.
-</div>
-
-<div style={{ marginBottom: "20px" }}>
-  For example, if you select a <code>ConversationChain</code> component, you
-  will see orange <span style={{ color: "orange" }}>o</span> and purple{" "}
-  <span style={{ color: "purple" }}>o</span> input handles. They indicate that
-  this component accepts an LLM and a Memory component as inputs. The red
-  asterisk <span style={{ color: "red" }}>*</span> means that at least one input
-  of that type is required.
-</div>
-
-{" "}
-
-<ZoomableImage
-  alt="Docusaurus themed image"
-  sources={{
-    light: useBaseUrl("img/single-component.png"),
-    dark: useBaseUrl("img/single-component.png"),
-  }}
-  style={{ width: "50%", maxWidth: "800px", margin: "20px auto" }}
-/>
-
-<div style={{ marginBottom: "20px" }}>
-In the top right corner of the component, you'll find the component status icon (![Status icon](/logos/playbutton.svg)).
-Build the flow by clicking the **![Playground icon](/logos/botmessage.svg)Playground** at the bottom right of the canvas.
-
-Once the validation is complete, the status of each validated component should turn green (![Status icon](/logos/greencheck.svg)).
-To debug, hover over the component status to see the outputs.
-
-</div>
-
----
-
-### Component Parameters
-
-Langflow components can be edited by clicking the component settings button. Hide parameters to reduce complexity and keep the canvas clean and intuitive for experimentation.
-
-<div
-  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
->
-  <ReactPlayer playing controls url="/videos/langflow_parameters.mp4" />
-</div>
-
-## Collection
-
-A collection is a snapshot of flows available in a database.
-
-Collections can be downloaded to local storage and uploaded for future use.
-
-<div
-  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
->
-  <ReactPlayer playing controls url="/videos/langflow_collection.mp4" />
-</div>
-
-## Project
-
-A **Project** can be a flow or a component. To view your saved projects, select **My Collection**.
-
-Your **Projects** are displayed.
-
-Click the **![Playground icon](/logos/botmessage.svg) Playground** button to run a flow from the **My Collection** screen.
-
-In the top left corner of the screen are options for **Download Collection**, **Upload Collection**, and **New Project**.
 
 
 

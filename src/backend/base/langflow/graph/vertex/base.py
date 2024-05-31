@@ -373,7 +373,7 @@ class Vertex:
         self.load_from_db_fields = load_from_db_fields
         self._raw_params = params.copy()
 
-    def update_raw_params(self, new_params: Dict[str, str | list[str]], overwrite: bool = False):
+    def update_raw_params(self, new_params: Dict[str, str], overwrite: bool = False):
         """
         Update the raw parameters of the vertex with the given new parameters.
 
@@ -428,7 +428,6 @@ class Vertex:
                     sender=artifacts.get("sender"),
                     sender_name=artifacts.get("sender_name"),
                     session_id=artifacts.get("session_id"),
-                    files=[{"path": file} if isinstance(file, str) else file for file in artifacts.get("files", [])],
                     component_id=self.id,
                 ).model_dump(exclude_none=True)
             ]
@@ -627,9 +626,8 @@ class Vertex:
                 self._built_object, self.artifacts = result
             elif len(result) == 3:
                 self._custom_component, self._built_object, self.artifacts = result
-                self.artifacts_raw = self.artifacts.get("raw")
-                self.artifacts_type = self.artifacts.get("type") or ArtifactType.UNKNOWN.value
-
+                self.artifacts_raw = self.artifacts.pop("raw", None)
+                self.artifacts_type = self.artifacts.pop("type", None) or ArtifactType.UNKNOWN.value
         else:
             self._built_object = result
 
@@ -670,7 +668,6 @@ class Vertex:
         self,
         user_id=None,
         inputs: Optional[Dict[str, Any]] = None,
-        files: Optional[list[str]] = None,
         requester: Optional["Vertex"] = None,
         **kwargs,
     ) -> Any:
@@ -688,14 +685,9 @@ class Vertex:
                 return await self.get_requester_result(requester)
             self._reset()
 
-            if self._is_chat_input() and (inputs or files):
-                chat_input = {}
-                if inputs:
-                    chat_input.update({"input_value": inputs.get(INPUT_FIELD_NAME, "")})
-                if files:
-                    chat_input.update({"files": files})
-
-                self.update_raw_params(chat_input, overwrite=True)
+            if self._is_chat_input() and inputs:
+                inputs = {"input_value": inputs.get(INPUT_FIELD_NAME, "")}
+                self.update_raw_params(inputs, overwrite=True)
 
             # Run steps
             for step in self.steps:

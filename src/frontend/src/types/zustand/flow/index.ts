@@ -9,11 +9,9 @@ import {
 } from "reactflow";
 import { BuildStatus } from "../../../constants/enums";
 import { FlowState } from "../../tabs";
-import { VertexBuildTypeAPI } from "../../api";
 
 export type chatInputType = {
   result: string;
-  files?: string[];
 };
 
 export type ChatOutputType = {
@@ -21,13 +19,12 @@ export type ChatOutputType = {
   sender: string;
   sender_name: string;
   stream_url?: string;
-  files?: string[];
 };
 
 export type FlowPoolObjectType = {
   timestamp: string;
   valid: boolean;
-  messages: Array<ChatOutputType | chatInputType> | [];
+  params: any;
   data: {
     artifacts: any | ChatOutputType | chatInputType;
     results: any | ChatOutputType | chatInputType;
@@ -38,30 +35,13 @@ export type FlowPoolObjectType = {
   buildId: string;
 };
 
-export type FlowPoolObjectTypeNew = {
-  //build
-  //1 - error->logs
-  //2 - success-> result
-  timestamp: string;
-  valid: boolean;
-  data: {
-    logs?: any | ChatOutputType | chatInputType;
-    results: any | ChatOutputType | chatInputType;
-  };
-  duration?: string;
-  progress?: number;
-  //retrieve component type from id
-  id: string;
-  buildId: string;
-};
-
 export type VertexLayerElementType = {
   id: string;
   reference?: string;
 };
 
 export type FlowPoolType = {
-  [key: string]: Array<VertexBuildTypeAPI>;
+  [key: string]: Array<FlowPoolObjectType>;
 };
 
 export type FlowStoreType = {
@@ -72,7 +52,7 @@ export type FlowStoreType = {
   outputs: Array<{ type: string; id: string; displayName: string }>;
   hasIO: boolean;
   setFlowPool: (flowPool: FlowPoolType) => void;
-  addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => void;
+  addDataToFlowPool: (data: FlowPoolObjectType, nodeId: string) => void;
   CleanFlowPool: () => void;
   isBuilding: boolean;
   isPending: boolean;
@@ -126,13 +106,11 @@ export type FlowStoreType = {
     startNodeId,
     stopNodeId,
     input_value,
-    files,
   }: {
     nodeId?: string;
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
-    files?: string[];
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
   updateVerticesBuild: (
@@ -158,8 +136,8 @@ export type FlowStoreType = {
   };
   updateFlowPool: (
     nodeId: string,
-    data: VertexBuildTypeAPI | ChatOutputType | chatInputType,
-    buildId?: string
+    data: FlowPoolObjectType | ChatOutputType | chatInputType,
+    buildId?: string,
   ) => void;
   getNodePosition: (nodeId: string) => { x: number; y: number };
 };

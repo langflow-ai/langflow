@@ -31,13 +31,6 @@ TEXT_FILE_TYPES = [
     "tsx",
 ]
 
-IMG_FILE_TYPES = [
-    "jpg",
-    "jpeg",
-    "png",
-    "bmp",
-]
-
 
 def is_hidden(path: Path) -> bool:
     return path.name.startswith(".")

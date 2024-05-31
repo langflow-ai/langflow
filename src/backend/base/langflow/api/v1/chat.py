@@ -124,7 +124,6 @@ async def build_vertex(
     vertex_id: str,
     background_tasks: BackgroundTasks,
     inputs: Annotated[Optional[InputValueRequest], Body(embed=True)] = None,
-    files: Optional[list[str]] = None,
     chat_service: "ChatService" = Depends(get_chat_service),
     current_user=Depends(get_current_active_user),
 ):
@@ -167,9 +166,9 @@ async def build_vertex(
                 next_runnable_vertices,
                 top_level_vertices,
                 result_dict,
-                log_message,
+                params,
                 valid,
-                log_type,
+                artifacts,
                 vertex,
             ) = await graph.build_vertex(
                 lock=lock,
@@ -177,23 +176,23 @@ async def build_vertex(
                 vertex_id=vertex_id,
                 user_id=current_user.id,
                 inputs_dict=inputs.model_dump() if inputs else {},
-                files=files,
             )
+
+            log_obj = Log(message=vertex.artifacts_raw, type=vertex.artifacts_type)
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
         except Exception as exc:
             logger.exception(f"Error building vertex: {exc}")
-            log_message = format_exception_message(exc)
-            log_type = type(exc).__name__
+            params = format_exception_message(exc)
             valid = False
+            log_obj = Log(message=params, type="error")
             result_data_response = ResultDataResponse(results={})
-
+            artifacts = {}
             # If there's an error building the vertex
             # we need to clear the cache
             await chat_service.clear_cache(flow_id_str)
 
-        log_object = Log(message=log_message, type=log_type)
-        result_data_response.logs.append(log_object)
+        result_data_response.logs.append(log_obj)
 
         # Log the vertex build
         if not vertex.will_stream:
@@ -202,21 +201,21 @@ async def build_vertex(
                 flow_id=flow_id_str,
                 vertex_id=vertex_id,
                 valid=valid,
-                logs=result_data_response.logs,
+                params=params,
                 data=result_data_response,
+                artifacts=artifacts,
             )
 
         timedelta = time.perf_counter() - start_time
         duration = format_elapsed_time(timedelta)
         result_data_response.duration = duration
         result_data_response.timedelta = timedelta
-        async with chat_service._cache_locks[flow_id] as lock:
-            vertex.add_build_time(timedelta)
-            inactivated_vertices = None
-            inactivated_vertices = list(graph.inactivated_vertices)
-            graph.reset_inactivated_vertices()
-            graph.reset_activated_vertices()
-            await chat_service.set_cache(flow_id=flow_id, data=graph, lock=lock)
+        vertex.add_build_time(timedelta)
+        inactivated_vertices = None
+        inactivated_vertices = list(graph.inactivated_vertices)
+        graph.reset_inactivated_vertices()
+        graph.reset_activated_vertices()
+        await chat_service.set_cache(flow_id_str, graph)
 
         # graph.stop_vertex tells us if the user asked
         # to stop the build of the graph at a certain vertex
@@ -230,6 +229,7 @@ async def build_vertex(
             next_vertices_ids=next_runnable_vertices,
             top_level_vertices=top_level_vertices,
             valid=valid,
+            params=params,
             id=vertex.id,
             data=result_data_response,
         )

@@ -64,7 +64,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setFlowPool: (flowPool) => {
     set({ flowPool });
   },
-  addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => {
+  addDataToFlowPool: (data: FlowPoolObjectType, nodeId: string) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
     if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
     else {
@@ -78,8 +78,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateFlowPool: (
     nodeId: string,
-    data: VertexBuildTypeAPI | ChatOutputType | chatInputType,
-    buildId?: string
+    data: FlowPoolObjectType | ChatOutputType | chatInputType,
+    buildId?: string,
   ) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
     if (!newFlowPool[nodeId]) {
@@ -90,12 +90,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         index = newFlowPool[nodeId].findIndex((flow) => flow.id === buildId);
       }
       //check if the data is a flowpool object
-      if ((data as VertexBuildTypeAPI).valid !== undefined) {
-        newFlowPool[nodeId][index] = data as VertexBuildTypeAPI;
+      if ((data as FlowPoolObjectType).data?.artifacts !== undefined) {
+        newFlowPool[nodeId][index] = data as FlowPoolObjectType;
       }
-      //update data results
+      //update data artifact
       else {
-        newFlowPool[nodeId][index].data.messages[0] = (data as ChatOutputType| chatInputType);
+        newFlowPool[nodeId][index].data.artifacts = data;
       }
     }
     get().setFlowPool(newFlowPool);
@@ -430,12 +430,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     startNodeId,
     stopNodeId,
     input_value,
-    files,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
-    files?: string[];
   }) => {
     get().setIsBuilding(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
@@ -516,8 +514,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       }
 
       get().addDataToFlowPool(
-        { ...vertexBuildData, run_id: runId },
-        vertexBuildData.id
+        { ...vertexBuildData, buildId: runId },
+        vertexBuildData.id,
       );
 
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
@@ -535,7 +533,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
     await buildVertices({
       input_value,
-      files,
       flowId: currentFlow!.id,
       startNodeId,
       stopNodeId,

@@ -2,10 +2,6 @@ import * as base64js from "base64-js";
 import { useState } from "react";
 import IconComponent from "../../../../../components/genericIconComponent";
 import { fileCardPropsType } from "../../../../../types/components";
-import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
-import { BACKEND_URL, BASE_URL_API } from "../../../../../constants/constants";
-
-const imgTypes = new Set(["png", "jpg"]);
 
 export default function FileCard({
   fileName,
@@ -13,10 +9,18 @@ export default function FileCard({
   fileType,
 }: fileCardPropsType): JSX.Element {
   const handleDownload = (): void => {
-    //TODO: update download function
+    const byteArray = new Uint8Array(base64js.toByteArray(content));
+    const blob = new Blob([byteArray], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName + ".png";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
   const [isHovered, setIsHovered] = useState(false);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   function handleMouseEnter(): void {
     setIsHovered(true);
   }
@@ -24,7 +28,7 @@ export default function FileCard({
     setIsHovered(false);
   }
 
-  if (imgTypes.has(fileType)) {
+  if (fileType === "image") {
     return (
       <div
         className="relative h-1/4 w-1/4"
@@ -32,8 +36,8 @@ export default function FileCard({
         onMouseLeave={handleMouseLeave}
       >
         <img
-            src={`${BACKEND_URL.slice(0,BACKEND_URL.length-1)}${BASE_URL_API}files/images/${content}`}
-            alt="generated image"
+          src={`data:image/png;base64,${content}`}
+          alt="generated image"
           className="h-full  w-full rounded-lg"
         />
         {isHovered && (
@@ -56,10 +60,10 @@ export default function FileCard({
   return (
     <button onClick={handleDownload} className="file-card-modal-button">
       <div className="file-card-modal-div">
-        {" "}
-        {imgTypes.has(fileType) ? (
+        ooooooooooooooo{" "}
+        {fileType === "image" ? (
           <img
-            src={`${BACKEND_URL.slice(0,BACKEND_URL.length-1)}${BASE_URL_API}files/images/${content}`}
+            src={`data:image/png;base64,${content}`}
             alt=""
             className="h-8 w-8"
           />

@@ -22,7 +22,7 @@ import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useTypesStore } from "../../stores/typesStore";
-import { APIClassType, VertexBuildTypeAPI } from "../../types/api";
+import { APIClassType } from "../../types/api";
 import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
@@ -66,7 +66,7 @@ export default function GenericNode({
     (state) => state.flowBuildStatus[data.id]?.timestamp
   );
   const [validationStatus, setValidationStatus] =
-    useState<VertexBuildTypeAPI | null>(null);
+    useState<validationStatusType | null>(null);
   const [handles, setHandles] = useState<number>(0);
 
   const [validationString, setValidationString] = useState<string>("");
@@ -175,7 +175,7 @@ export default function GenericNode({
 
   // should be empty string if no duration
   // else should be `Duration: ${duration}`
-  const getDurationString = (duration: number | undefined|string): string => {
+  const getDurationString = (duration: number | undefined): string => {
     if (duration === undefined) {
       return "";
     } else {
@@ -198,7 +198,6 @@ export default function GenericNode({
         ? flowPool[data.id][flowPool[data.id].length - 1]
         : null;
     if (relevantData) {
-      console.log(relevantData)
       // Extract validation information from relevantData and update the validationStatus state
       setValidationStatus(relevantData);
     } else {
@@ -207,21 +206,16 @@ export default function GenericNode({
   }, [flowPool[data.id], data.id]);
 
   useEffect(() => {
-    if (validationStatus?.data.logs) {
+    if (validationStatus?.params) {
       // if it is not a string turn it into a string
-      let newValidationString = "";
-      if (Array.isArray(validationStatus.data.logs)) {
-        newValidationString = validationStatus.data.logs
-          .map((log) => log.message)
-          .join("\n");
-      }
+      let newValidationString = validationStatus.params;
       if (typeof newValidationString !== "string") {
-        newValidationString = JSON.stringify(validationStatus.data.logs);
+        newValidationString = JSON.stringify(validationStatus.params);
       }
 
       setValidationString(newValidationString);
     }
-  }, [validationStatus, validationStatus?.data.logs]);
+  }, [validationStatus, validationStatus?.params]);
 
   const [showNode, setShowNode] = useState(data.showNode ?? true);
 

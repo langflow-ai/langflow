@@ -8,7 +8,7 @@ import { deleteFlowPool } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { VertexBuildTypeAPI, sendAllProps } from "../../../../types/api";
+import { sendAllProps } from "../../../../types/api";
 import {
   ChatMessageType,
   ChatOutputType,
@@ -46,7 +46,7 @@ export default function ChatView({
 
   //build chat history
   useEffect(() => {
-    const chatOutputResponses: VertexBuildTypeAPI[] = [];
+    const chatOutputResponses: FlowPoolObjectType[] = [];
     outputIds.forEach((outputId) => {
       if (outputId.includes("ChatOutput")) {
         if (flowPool[outputId] && flowPool[outputId].length > 0) {
@@ -64,11 +64,11 @@ export default function ChatView({
     const chatMessages: ChatMessageType[] = chatOutputResponses
       .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
       //
-      .filter((output) => output.data.messages && output.data.messages.length > 0)
+      .filter((output) => output.data.artifacts?.message !== null)
       .map((output, index) => {
         try {
-          const { sender, message, sender_name, stream_url,files } = output.data
-            .messages[0] as ChatOutputType;
+          const { sender, message, sender_name, stream_url } = output.data
+            .artifacts as ChatOutputType;
 
           const is_ai = sender === "Machine" || sender === null;
           return {
@@ -77,8 +77,6 @@ export default function ChatView({
             sender_name,
             componentId: output.id,
             stream_url: stream_url,
-            files
-            
           };
         } catch (e) {
           console.error(e);
@@ -204,9 +202,7 @@ export default function ChatView({
               chatValue={chatValue}
               noInput={!inputTypes.includes("ChatInput")}
               lockChat={lockChat}
-              sendMessage={({ repeat, files }) =>
-                sendMessage({ repeat, files })
-              }
+              sendMessage={(count) => sendMessage(count)}
               setChatValue={(value) => {
                 setChatValue(value);
               }}
