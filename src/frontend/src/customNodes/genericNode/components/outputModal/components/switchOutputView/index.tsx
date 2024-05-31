@@ -21,7 +21,11 @@ export default function SwitchOutputView(nodeId): JSX.Element {
 
   return (
     <>
-      <Case condition={!resultType || resultType === "unknown"}>
+      <Case
+        condition={
+          !resultType || resultType === "unknown" || resultType === "valueError"
+        }
+      >
         <div>NO OUTPUT</div>
       </Case>
 
