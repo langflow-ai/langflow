@@ -4,10 +4,10 @@ import SwitchOutputView from "./components/switchOutputView";
 
 export default function OutputModal({ open, setOpen, nodeId }): JSX.Element {
   return (
-    <BaseModal open={open} setOpen={setOpen} size="medium-log">
-      <BaseModal.Header description="Output Visualization">
+    <BaseModal open={open} setOpen={setOpen} size="medium">
+      <BaseModal.Header description="DESCRICAO RODRIGO">
         <div className="flex items-center">
-          <span className="pr-2">Output View</span>
+          <span className="pr-2">TITULO RODRIGO</span>
         </div>
       </BaseModal.Header>
       <BaseModal.Content>
