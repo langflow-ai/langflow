@@ -31,6 +31,9 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 
 RUN useradd ragstack -u 10000 -g 0 --no-create-home --home-dir /app/data
+RUN mkdir /data
+RUN chown -R 10000:0 /data
+
 USER 10000
 
 WORKDIR /app
