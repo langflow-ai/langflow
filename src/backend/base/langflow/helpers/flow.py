@@ -241,6 +241,7 @@ def get_arg_names(inputs: List["Vertex"]) -> List[dict[str, str]]:
 def get_flow_by_id_or_endpoint_name(
     flow_id_or_name: str, db: Session = Depends(get_session), user_id: Optional[UUID] = None
 ) -> Flow:
+    endpoint_name = None
     try:
         flow_id = UUID(flow_id_or_name)
         flow = db.get(Flow, flow_id)
@@ -251,6 +252,6 @@ def get_flow_by_id_or_endpoint_name(
             stmt = stmt.where(Flow.user_id == user_id)
         flow = db.exec(stmt).first()
     if flow is None:
-        raise ValueError(f"Flow with endpoint name {endpoint_name} not found")
+        raise ValueError(f"Flow identifier {flow_id_or_name} not found")
 
     return flow
