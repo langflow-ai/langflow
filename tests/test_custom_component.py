@@ -8,7 +8,16 @@ from langchain_core.documents import Document
 from langflow.custom import CustomComponent
 from langflow.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
 from langflow.custom.custom_component.component import Component, ComponentCodeNullError
+from langflow.custom.utils import build_custom_component_template
 from langflow.services.database.models.flow import Flow, FlowCreate
+
+
+@pytest.fixture
+def code_component_with_multiple_outputs():
+    with open("tests/data/component_multiple_outputs.py", "r") as f:
+        code = f.read()
+        return CustomComponent(code=code)
+
 
 code_default = """
 from langflow.field_typing import Prompt
@@ -517,3 +526,8 @@ def test_build_config_field_value_keys(component):
     config = component.build_config()
     field_values = config["fields"].values()
     assert all("type" in value for value in field_values)
+
+
+def test_custom_component_multiple_outputs(code_component_with_multiple_outputs, active_user):
+    frontnd_node_dict, _ = build_custom_component_template(code_component_with_multiple_outputs, active_user.id)
+    assert frontnd_node_dict["outputs"][0]["types"] == ["Text"]
