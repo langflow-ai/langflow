@@ -81,7 +81,11 @@ export default function ParameterComponent({
   const [openOutputModal, setOpenOutputModal] = useState(false);
   const flowPool = useFlowStore((state) => state.flowPool);
 
-  const displayOutputPreview = !!flowPool[data.id];
+  const displayOutputPreview = !!(
+    flowPool[data.id] &&
+    flowPool[data.id][flowPool[data.id].length - 1]?.data?.logs[0]?.type !==
+      "unknown"
+  );
 
   const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue(
     data,
@@ -272,9 +276,9 @@ export default function ParameterComponent({
                   >
                     <IconComponent
                       className={classNames(
-                        "h-5 w-5",
+                        "h-5 w-5 rounded-md",
                         displayOutputPreview
-                          ? ""
+                          ? " hover:bg-secondary-foreground/5 hover:text-medium-indigo"
                           : " cursor-not-allowed text-muted-foreground",
                       )}
                       name={"ScanEye"}

@@ -2,6 +2,7 @@ import RecordsOutputComponent from "../../../../../../components/recordsOutputCo
 import { Case } from "../../../../../../shared/components/caseComponent";
 import TextOutputView from "../../../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../../../stores/flowStore";
+import ErrorOutput from "./components";
 import { convertToTableRows } from "./helpers/convert-to-table-rows";
 
 export default function SwitchOutputView(nodeId): JSX.Element {
@@ -21,12 +22,11 @@ export default function SwitchOutputView(nodeId): JSX.Element {
 
   return (
     <>
-      <Case
-        condition={
-          !resultType || resultType === "unknown" || resultType === "valueError"
-        }
-      >
+      <Case condition={!resultType || resultType === "unknown"}>
         <div>NO OUTPUT</div>
+      </Case>
+      <Case condition={resultType === "ValueError"}>
+        <ErrorOutput value={resultMessage}></ErrorOutput>
       </Case>
 
       <Case condition={node && resultType === "text"}>
