@@ -2,6 +2,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from langflow.api.v1.schemas import MessageIds
 from langflow.services.deps import get_monitor_service
 from langflow.services.monitor.schema import (
     MessageModelRequest,
@@ -67,13 +68,13 @@ async def get_messages(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/messages", status_code=204)
+@router.post("/messages", status_code=204)
 async def delete_messages(
-    message_ids: List[int],
+    message_ids: MessageIds,
     monitor_service: MonitorService = Depends(get_monitor_service),
 ):
     try:
-        monitor_service.delete_messages(message_ids=message_ids)
+        monitor_service.delete_messages(message_ids=message_ids.ids)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

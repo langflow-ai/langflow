@@ -108,7 +108,7 @@ class MonitorService(Service):
         return self.exec_query(query)
 
     def delete_messages(self, message_ids: list[int]):
-        query = f"DELETE FROM messages WHERE id IN ({','.join(str(message_ids))})"
+        query = f"DELETE FROM messages WHERE index IN ({','.join(map(str, message_ids))})"
 
         return self.exec_query(query)
 

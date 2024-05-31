@@ -1,14 +1,14 @@
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
-import { ElementRef, forwardRef, useCallback } from "react";
+import { ElementRef, forwardRef } from "react";
 import {
   DEFAULT_TABLE_ALERT_MSG,
   DEFAULT_TABLE_ALERT_TITLE,
 } from "../../constants/constants";
 import { useDarkStore } from "../../stores/darkStore";
 import "../../style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
-import { cn } from "../../utils/utils";
+import { cn, toTitleCase } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
@@ -46,16 +46,21 @@ const TableComponent = forwardRef<
         </div>
       );
     }
+
     const colDef = props.columnDefs.map((col, index) => {
       if (props.onSelectionChanged && index === 0) {
         return {
           ...col,
+          headerName: toTitleCase(col.headerName),
           checkboxSelection: true,
           headerCheckboxSelection: true,
           headerCheckboxSelectionFilteredOnly: true,
         };
       } else {
-        return col;
+        return {
+          ...col,
+          headerName: toTitleCase(col.headerName),
+        };
       }
     });
 

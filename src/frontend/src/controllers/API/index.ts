@@ -1026,7 +1026,7 @@ export async function getMessagesTable(
   id?: string,
   excludedFields?: string[],
   params = {},
-): Promise<{ rows: Array<object>; columns: Array<ColDef | ColGroupDef> }> {
+): Promise<{ rows: Array<Message>; columns: Array<ColDef | ColGroupDef> }> {
   const config = {};
   if (id) {
     config["params"] = { flow_id: id };
@@ -1037,4 +1037,10 @@ export async function getMessagesTable(
   const rows = await api.get(`${BASE_URL_API}monitor/messages`, config);
   const columns = extractColumnsFromRows(rows.data, mode, excludedFields);
   return { rows: rows.data, columns };
+}
+
+export async function deleteMessagesFn(ids: number[]) {
+  return await api.post(`${BASE_URL_API}monitor/messages`, {
+    ids,
+  });
 }
