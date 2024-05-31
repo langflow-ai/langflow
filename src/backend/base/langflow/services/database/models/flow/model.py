@@ -113,7 +113,7 @@ class FlowBase(SQLModel):
         return v
 
     # updated_at can be serialized to JSON
-    @field_serializer("updated_at", "created_at")
+    @field_serializer("updated_at")
     def serialize_datetime(value):
         if isinstance(value, datetime):
             # I'm getting 2024-05-29T17:57:17.631346
