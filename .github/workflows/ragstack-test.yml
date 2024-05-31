@@ -4,17 +4,13 @@ on:
   pull_request:
     branches:
       - ragstack-main
-    paths:
-      - ".github/workflows/**"
-      - "ragstack/poetry.lock"
-      - "ragstack/pyproject.toml"
-      - "ragstack/tests/**"
 
 env:
   POETRY_VERSION: "1.8.2"
 
 jobs:
   build:
+    name: RAGStack tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,6 +52,7 @@ jobs:
           wait: false
 
   docker:
+    name: RAGStack docker image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
