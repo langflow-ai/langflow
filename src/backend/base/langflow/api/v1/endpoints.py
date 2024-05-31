@@ -39,14 +39,14 @@ router = APIRouter(tags=["Base"])
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
-def get_all(
+async def get_all(
     settings_service=Depends(get_settings_service),
 ):
-    from langflow.interface.types import get_all_types_dict
+    from langflow.interface.types import aget_all_types_dict
 
     logger.debug("Building langchain types dict")
     try:
-        all_types_dict = get_all_types_dict(settings_service.settings.components_path)
+        all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
         return all_types_dict
     except Exception as exc:
         logger.exception(exc)

@@ -11,9 +11,9 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.custom import CustomComponent
-from langflow.custom.attributes import ATTR_FUNC_MAPPING
 from langflow.custom.code_parser.utils import extract_inner_type
 from langflow.custom.directory_reader.utils import (
+    abuild_custom_component_list_from_path,
     build_custom_component_list_from_path,
     determine_component_name,
     merge_nested_dicts_with_renaming,
@@ -21,6 +21,7 @@ from langflow.custom.directory_reader.utils import (
 from langflow.custom.eval import eval_custom_component_code
 from langflow.custom.schema import MissingDefault
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.helpers.custom import format_type
 from langflow.schema import dotdict
 from langflow.template.field.base import Input
 from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
@@ -147,7 +148,11 @@ def add_new_custom_field(
     # Check field_config if any of the keys are in it
     # if it is, update the value
     display_name = field_config.pop("display_name", None)
-    field_type = field_config.pop("field_type", field_type)
+    if not field_type:
+        if "type" in field_config and field_config["type"] is not None:
+            field_type = field_config.pop("type")
+        elif "field_type" in field_config and field_config["field_type"] is not None:
+            field_type = field_config.pop("field_type")
     field_contains_list = "list" in field_type.lower()
     field_type = process_type(field_type)
     field_value = field_config.pop("value", field_value)
@@ -238,6 +243,15 @@ def get_field_dict(field: Union[Input, dict]):
     return field
 
 
+def run_build_inputs(custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None):
+    """Run the build inputs of a custom component."""
+    try:
+        return custom_component.build_inputs(user_id=user_id)
+    except Exception as exc:
+        logger.error(f"Error running build inputs: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 def run_build_config(
     custom_component: CustomComponent,
     user_id: Optional[Union[str, UUID]] = None,
@@ -284,26 +298,6 @@ def run_build_config(
         raise exc
 
 
-def sanitize_template_config(template_config):
-    """Sanitize the template config"""
-
-    for key in template_config.copy():
-        if key not in ATTR_FUNC_MAPPING.keys():
-            template_config.pop(key, None)
-
-    return template_config
-
-
-def build_frontend_node(template_config):
-    """Build a frontend node for a custom component"""
-    try:
-        sanitized_template_config = sanitize_template_config(template_config)
-        return CustomComponentFrontendNode(**sanitized_template_config)
-    except Exception as exc:
-        logger.error(f"Error while building base frontend node: {exc}")
-        raise exc
-
-
 def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code, field_config):
     code_field = Input(
         dynamic=True,
@@ -322,13 +316,34 @@ def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code, field_c
     return frontend_node
 
 
+def build_custom_component_template_from_inputs(
+    custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None
+):
+    # The List of Inputs fills the role of the build_config and the entrypoint_args
+    frontend_node = CustomComponentFrontendNode.from_inputs(**custom_component.template_config)
+    field_config = run_build_inputs(
+        custom_component,
+        user_id=user_id,
+    )
+    frontend_node = add_code_field(frontend_node, custom_component.code, field_config.get("code", {}))
+    # But we now need to calculate the return_type of the methods in the outputs
+    for output in frontend_node.outputs:
+        return_types = custom_component.get_method_return_type(output.method)
+        return_types = [format_type(return_type) for return_type in return_types]
+        output.add_types(return_types)
+
+    return frontend_node.to_dict(add_name=False), custom_component
+
+
 def build_custom_component_template(
     custom_component: CustomComponent,
     user_id: Optional[Union[str, UUID]] = None,
 ) -> Tuple[Dict[str, Any], CustomComponent]:
-    """Build a custom component template for the langchain"""
+    """Build a custom component template"""
     try:
-        frontend_node = build_frontend_node(custom_component.template_config)
+        if "inputs" in custom_component.template_config:
+            return build_custom_component_template_from_inputs(custom_component, user_id=user_id)
+        frontend_node = CustomComponentFrontendNode(**custom_component.template_config)
 
         field_config, custom_instance = run_build_config(
             custom_component,
@@ -398,6 +413,31 @@ def build_custom_components(components_paths: List[str]):
     return custom_components_from_file
 
 
+async def abuild_custom_components(components_paths: List[str]):
+    """Build custom components from the specified paths."""
+    if not components_paths:
+        return {}
+
+    logger.info(f"Building custom components from {components_paths}")
+    custom_components_from_file: dict = {}
+    processed_paths = set()
+    for path in components_paths:
+        path_str = str(path)
+        if path_str in processed_paths:
+            continue
+
+        custom_component_dict = await abuild_custom_component_list_from_path(path_str)
+        if custom_component_dict:
+            category = next(iter(custom_component_dict))
+            logger.info(f"Loading {len(custom_component_dict[category])} component(s) from category {category}")
+            custom_components_from_file = merge_nested_dicts_with_renaming(
+                custom_components_from_file, custom_component_dict
+            )
+        processed_paths.add(path_str)
+
+    return custom_components_from_file
+
+
 def update_field_dict(
     custom_component_instance: "CustomComponent",
     field_dict: Dict,
@@ -446,6 +486,11 @@ def sanitize_field_config(field_config: Union[Dict, Input]):
         "show",
     ]:
         field_dict.pop(key, None)
+
+    # Remove field_type and type because they were extracted already
+    field_dict.pop("field_type", None)
+    field_dict.pop("type", None)
+
     return field_dict
 
 
