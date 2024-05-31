@@ -1,0 +1,56 @@
+name: RAGStack docker release
+
+inputs:
+  version:
+    description: Docker tag version
+    required: true
+
+  gh-token:
+    description: Token
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: "Login to GitHub Container Registry"
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ inputs.gh-token }}
+
+    - name: Wait for PIP package to be available
+      shell: bash
+      run: |
+        v="${{ inputs.version }}"
+        while true; do
+            if pip install ragstack-ai-langflow==${v}; then
+                break
+            else
+                echo "Package not available yet, retrying in 30 seconds"
+                sleep 30
+            fi
+        done
+
+    - name: Build docker images
+      shell: bash
+      run: |
+        ./ragstack/docker/build-backend.sh
+        ./ragstack/docker/build-frontend.sh "${{ inputs.version }}"
+
+    - name: Deploy docker images
+      shell: bash
+      run: |
+        backend_full_name=ghcr.io/datastax/ragstack-ai-langflow-backend
+        frontend_full_name=ghcr.io/datastax/ragstack-ai-langflow-frontend
+        v="${{ inputs.version }}"
+
+        docker tag ragstack-ai-langflow-backend:latest $backend_full_name:$v
+        docker tag ragstack-ai-langflow-backend:latest $backend_full_name:latest
+        docker push $backend_full_name:$v
+        docker push $backend_full_name:latest
+
+
+        docker tag ragstack-ai-langflow-frontend:latest $frontend_full_name:$v
+        docker tag ragstack-ai-langflow-frontend:latest $frontend_full_name:latest
+        docker push $frontend_full_name:$v
+        docker push $frontend_full_name:latest

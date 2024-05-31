@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - "ragstack-ai-langflow-[0-9]*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release"
+        required: true
 
 env:
   POETRY_VERSION: "1.8.2"
