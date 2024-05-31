@@ -27,6 +27,8 @@ from langflow.interface.wrappers.base import wrapper_creator
 from langflow.schema.schema import Record
 from langflow.utils import validate
 from langflow.utils.util import unescape_string
+from langflow.graph.utils import get_artifact_type
+
 
 if TYPE_CHECKING:
     from langflow.custom import CustomComponent
@@ -199,7 +201,19 @@ async def instantiate_custom_component(params, user_id, vertex, fallback_to_env_
         custom_repr = build_result
     if not isinstance(custom_repr, str):
         custom_repr = str(custom_repr)
-    return custom_component, build_result, {"repr": custom_repr}
+
+    raw = custom_component.repr_value
+    if hasattr(raw, "data"):
+        raw = raw.data
+
+    elif hasattr(raw, "model_dump"):
+        raw = raw.model_dump()
+
+    else:
+        raw = repr(raw)
+
+    artifact = {"repr": custom_repr, "raw": raw, "type": get_artifact_type(custom_component, build_result)}
+    return custom_component, build_result, artifact
 
 
 def instantiate_wrapper(node_type, class_object, params):
