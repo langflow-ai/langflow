@@ -32,6 +32,10 @@ class MonitorService(Service):
         except Exception as e:
             logger.exception(f"Error initializing monitor service: {e}")
 
+    def exec_query(self, query: str):
+        with duckdb.connect(str(self.db_path)) as conn:
+            return conn.execute(query).df()
+
     def to_df(self, table_name):
         return self.load_table_as_dataframe(table_name)
 
@@ -98,11 +102,20 @@ class MonitorService(Service):
         with duckdb.connect(str(self.db_path)) as conn:
             conn.execute(query)
 
-    def delete_messages(self, session_id: str):
+    def delete_messages_session(self, session_id: str):
         query = f"DELETE FROM messages WHERE session_id = '{session_id}'"
 
-        with duckdb.connect(str(self.db_path)) as conn:
-            conn.execute(query)
+        return self.exec_query(query)
+
+    def delete_messages(self, message_ids: list[int]):
+        query = f"DELETE FROM messages WHERE id IN ({','.join(str(message_ids))})"
+
+        return self.exec_query(query)
+
+    def update_message(self, message_id: int, **kwargs):
+        query = f"UPDATE messages SET {', '.join(f'{k} = {v}' for k, v in kwargs.items())} WHERE id = {message_id}"
+
+        return self.exec_query(query)
 
     def add_message(self, message: MessageModel):
         self.add_row("messages", message)
