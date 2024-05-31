@@ -58,9 +58,9 @@ export type TweaksType = Array<
 export type sourceHandleType = {
   dataType: string;
   id: string;
-  baseClasses: string[];
+  output_types: string[];
   conditionalPath?: string | null;
-  idx: number;
+  name: string;
 };
 //left side
 export type targetHandleType = {
