@@ -13,8 +13,8 @@ This implies that every release of `ragstack-ai-langflow-base` will also need a 
 
 ## Release `ragstack-ai-langflow`
 
-- Update the `ragstack-ai-langflow-base` version under the `[ttol.poetry.dependencies]` in the `pyproject.toml` file.
-- Run `poetry lock` and open a PR to trigger the tests. Once merged, proceed with the next steps.
+- Update the `ragstack-ai-langflow-base` version under the `[tool.poetry.dependencies]` in the `pyproject.toml` file.
+- Run `poetry lock --no-update` and open a PR to trigger the tests. Once merged, proceed with the next steps.
 - Run the release script:
   ```shell
   ./ragstack/ragstack-release.sh 0.0.2 ragstack-ai-langflow
@@ -23,7 +23,7 @@ This implies that every release of `ragstack-ai-langflow-base` will also need a 
 
 ### Error
 
-You can re-run the the release job for this error. It's because the size of the package sometime cannot be uploaded properly.
+You can re-run the release job for this error. It's because the size of the package sometime cannot be uploaded properly.
 
 ```
  - Uploading ragstack_ai_langflow-0.0.5-py3-none-any.whl 100%
