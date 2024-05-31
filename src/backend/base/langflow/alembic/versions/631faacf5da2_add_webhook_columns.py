@@ -1,7 +1,7 @@
 """Add webhook columns
 
 Revision ID: 631faacf5da2
-Revises: 29fe8f1f806b
+Revises: 1c79524817ed
 Create Date: 2024-04-22 15:14:43.454784
 
 """
@@ -14,7 +14,7 @@ from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision: str = "631faacf5da2"
-down_revision: Union[str, None] = "29fe8f1f806b"
+down_revision: Union[str, None] = "1c79524817ed"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
