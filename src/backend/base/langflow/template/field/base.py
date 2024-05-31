@@ -3,12 +3,16 @@ from typing import Any, Callable, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.helpers.custom import format_type
 
 
 class Input(BaseModel):
     model_config = ConfigDict()
 
-    field_type: str = Field(default="str", serialization_alias="type")
+    field_type: str = Field(
+        default="str",
+        serialization_alias="type",
+    )
     """The type of field this is. Default is a string."""
 
     required: bool = False
@@ -102,6 +106,17 @@ class Input(BaseModel):
     def serialize_file_path(self, value):
         return value if self.field_type == "file" else ""
 
+    @field_validator("field_type", mode="before")
+    def validate_type(cls, v):
+        # If the user passes CustomComponent as a type insteado of "CustomComponent" we need to convert it to a string
+        # this should be done for all types
+        # How to check if v is a type?
+        if isinstance(v, type):
+            return format_type(v)
+        elif not isinstance(v, str):
+            raise ValueError(f"type must be a string or a type, not {type(v)}")
+        return v
+
     @field_serializer("field_type")
     def serialize_field_type(self, value, _info):
         if value == "float" and self.range_spec is None:
@@ -131,7 +146,7 @@ class Input(BaseModel):
 
 
 class Output(BaseModel):
-    type: list[str] = Field(default=[], serialization_alias="types")
+    types: Optional[list[str]] = Field(default=[], serialization_alias="types")
     """List of output types for the field."""
 
     selected: Optional[str] = Field(default=None, serialization_alias="selected")
@@ -140,5 +155,12 @@ class Output(BaseModel):
     name: str = Field(default="", serialization_alias="name")
     """The name of the field."""
 
+    method: Optional[str] = Field(default=None, serialization_alias="method")
+    """The method to use for the output."""
+
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)
+
+    def add_types(self, _type: list[Any]):
+        for type_ in _type:
+            self.types.append(type_)

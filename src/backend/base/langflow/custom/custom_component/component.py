@@ -84,6 +84,10 @@ class Component:
                 if value is not None:
                     template_config[attribute] = func(value=value)
 
+        for key in template_config.copy():
+            if key not in ATTR_FUNC_MAPPING.keys():
+                template_config.pop(key, None)
+
         return template_config
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
