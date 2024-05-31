@@ -446,11 +446,13 @@ export function updateNewOutput({ nodes, edges }: updateEdgesHandleIdsType) {
         ) {
           const outputTypes = sourceNode.data.node!.output_types;
           // create a new output field for each output type
-          sourceNode.data.node!.outputs = outputTypes?.map((type) => ({
-            types: [type],
-            selected: selected,
-            name: type,
-          }));
+          sourceNode.data.node!.outputs = [
+            {
+              types: outputTypes ?? [],
+              selected: selected,
+              name: outputTypes?.join(" | ") ?? "",
+            },
+          ];
         }
       }
       edge.sourceHandle = scapedJSONStringfy(newSourceHandle);
