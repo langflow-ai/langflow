@@ -118,7 +118,7 @@ class FlowBase(SQLModel):
         if isinstance(value, datetime):
             # I'm getting 2024-05-29T17:57:17.631346
             # and I want 2024-05-29T17:57:17-05:00
-            value.microsecond = 0
+            value = value.replace(microsecond=0)
             if value.tzinfo is None:
                 value = value.replace(tzinfo=timezone.utc)
             return value.isoformat()
