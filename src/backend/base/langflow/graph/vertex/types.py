@@ -24,6 +24,15 @@ class CustomComponentVertex(Vertex):
             return self.artifacts["repr"] or super()._built_object_repr()
 
 
+class ComponentVertex(Vertex):
+    def __init__(self, data: Dict, graph):
+        super().__init__(data, graph=graph, base_type="component")
+
+    def _built_object_repr(self):
+        if self.artifacts and "repr" in self.artifacts:
+            return self.artifacts["repr"] or super()._built_object_repr()
+
+
 class InterfaceVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="custom_components", is_task=True)

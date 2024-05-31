@@ -27,10 +27,25 @@ async def instantiate_class(
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
     logger.debug(f"Instantiating {vertex_type} of type {base_type}")
+
     if not base_type:
         raise ValueError("No base type provided for vertex")
+
+    params_copy = params.copy()
+    class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
+    custom_component: "CustomComponent" = class_object(
+        user_id=user_id,
+        parameters=params_copy,
+        vertex=vertex,
+        selected_output_type=vertex.selected_output_type,
+    )
+    params_copy = update_params_with_load_from_db_fields(
+        custom_component, params_copy, vertex.load_from_db_fields, fallback_to_env_vars
+    )
     if base_type == "custom_components":
-        return await instantiate_custom_component(params, user_id, vertex, fallback_to_env_vars=fallback_to_env_vars)
+        return await build_custom_component(params=params, custom_component=custom_component)
+    elif base_type == "component":
+        return await build_component(params=params, custom_component=custom_component)
     else:
         raise ValueError(f"Base type {base_type} not found.")
 
@@ -94,26 +109,37 @@ def update_params_with_load_from_db_fields(
     return params
 
 
-async def instantiate_custom_component(
-    params: dict, user_id: str, vertex: "Vertex", fallback_to_env_vars: bool = False
+async def build_component(
+    params: dict,
+    custom_component: "CustomComponent",
+    vertex: "Vertex",
 ):
-    params_copy = params.copy()
-    class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
-    custom_component: "CustomComponent" = class_object(
-        user_id=user_id,
-        parameters=params_copy,
-        vertex=vertex,
-        selected_output_type=vertex.selected_output_type,
-    )
-    params_copy = update_params_with_load_from_db_fields(
-        custom_component, params_copy, vertex.load_from_db_fields, fallback_to_env_vars
-    )
-
     # Now set the params as attributes of the custom_component
-    custom_component.set_attributes(params_copy)
+    custom_component.set_attributes(params)
 
-    if "retriever" in params_copy and hasattr(params_copy["retriever"], "as_retriever"):
-        params_copy["retriever"] = params_copy["retriever"].as_retriever()
+    build_result = {}
+    if hasattr(custom_component, "outputs"):
+        for output in custom_component.outputs:
+            # Build the output if it's connected to some other vertex
+            # or if it's not connected to any vertex
+            if not vertex.edges or output.name in vertex.edges:
+                method: Callable | Awaitable = getattr(custom_component, output.method)
+                result = method()
+                # If the method is asynchronous, we need to await it
+                if inspect.iscoroutinefunction(method):
+                    result = await result
+                build_result[output.name] = result
+    custom_repr = custom_component.custom_repr()
+    if custom_repr is None and isinstance(build_result, (dict, Record, str)):
+        custom_repr = build_result
+    if not isinstance(custom_repr, str):
+        custom_repr = str(custom_repr)
+    return custom_component, build_result, {"repr": custom_repr}
+
+
+async def build_custom_component(params: dict, custom_component: "CustomComponent"):
+    if "retriever" in params and hasattr(params["retriever"], "as_retriever"):
+        params["retriever"] = params["retriever"].as_retriever()
 
     # Determine if the build method is asynchronous
     is_async = inspect.iscoroutinefunction(custom_component.build)
@@ -124,22 +150,12 @@ async def instantiate_custom_component(
     # the methods don't require any params because they are already set in the custom_component
     # so we can just call them
 
-    if hasattr(custom_component, "outputs"):
-        for output in custom_component.outputs:
-            if output.name in vertex.edges:
-                method: Callable | Awaitable = getattr(custom_component, output.method)
-                result = method()
-                # If the method is asynchronous, we need to await it
-                if inspect.iscoroutinefunction(method):
-                    result = await result
-                vertex.add_result(output.name, result)
-
     if is_async:
         # Await the build method directly if it's async
-        build_result = await custom_component.build(**params_copy)
+        build_result = await custom_component.build(**params)
     else:
         # Call the build method directly if it's sync
-        build_result = custom_component.build(**params_copy)
+        build_result = custom_component.build(**params)
     custom_repr = custom_component.custom_repr()
     if custom_repr is None and isinstance(build_result, (dict, Record, str)):
         custom_repr = build_result
