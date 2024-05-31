@@ -43,6 +43,7 @@ import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
 import HandleTooltips from "../HandleTooltipComponent";
 import OutputComponent from "../OutputComponent";
+import { TEXT_FIELD_TYPES } from "./constants";
 
 export default function ParameterComponent({
   left,
@@ -80,7 +81,7 @@ export default function ParameterComponent({
     debouncedHandleUpdateValues,
     setNode,
     isLoading,
-    setIsLoading,
+    setIsLoading
   );
 
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
@@ -88,7 +89,7 @@ export default function ParameterComponent({
     name,
     takeSnapshot,
     setNode,
-    updateNodeInternals,
+    updateNodeInternals
   );
 
   const { handleRefreshButtonPress: handleRefreshButtonPressHook } =
@@ -97,7 +98,7 @@ export default function ParameterComponent({
   let disabled =
     edges.some(
       (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
+        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
     ) ?? false;
 
   const handleRefreshButtonPress = async (name, data) => {
@@ -108,7 +109,7 @@ export default function ParameterComponent({
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
-    skipSnapshot: boolean | undefined = false,
+    skipSnapshot: boolean | undefined = false
   ): Promise<void> => {
     handleOnNewValueHook(newValue, skipSnapshot);
   };
@@ -190,14 +191,14 @@ export default function ParameterComponent({
               className={classNames(
                 left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
                 "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : "",
+                !showNode ? "mt-0" : ""
               )}
               style={{
                 borderColor: color ?? nodeColors.unknown,
               }}
               onClick={() => {
                 setFilterEdge(
-                  groupByFamily(myData, tooltipTitle!, left, nodes!),
+                  groupByFamily(myData, tooltipTitle!, left, nodes!)
                 );
               }}
             ></Handle>
@@ -282,12 +283,12 @@ export default function ParameterComponent({
                   }
                   className={classNames(
                     left ? "-ml-0.5" : "-mr-0.5",
-                    "h-3 w-3 rounded-full border-2 bg-background",
+                    "h-3 w-3 rounded-full border-2 bg-background"
                   )}
                   style={{ borderColor: color ?? nodeColors.unknown }}
                   onClick={() => {
                     setFilterEdge(
-                      groupByFamily(myData, tooltipTitle!, left, nodes!),
+                      groupByFamily(myData, tooltipTitle!, left, nodes!)
                     );
                   }}
                 />
@@ -299,7 +300,7 @@ export default function ParameterComponent({
         <Case
           condition={
             left === true &&
-            type === "str" &&
+            TEXT_FIELD_TYPES.includes(type ?? "") &&
             !data.node?.template[name]?.options
           }
         >
@@ -345,8 +346,7 @@ export default function ParameterComponent({
                       name={name}
                       data={data}
                       button_text={
-                        data.node?.template[name]?.refresh_button_text ??
-                        "Refresh"
+                        data.node?.template[name].refresh_button_text
                       }
                       className="extra-side-bar-buttons mt-1"
                       handleUpdateValues={handleRefreshButtonPress}
@@ -394,8 +394,7 @@ export default function ParameterComponent({
                       name={name}
                       data={data}
                       button_text={
-                        data.node?.template[name]?.refresh_button_text ??
-                        "Refresh"
+                        data.node?.template[name].refresh_button_text
                       }
                       className="extra-side-bar-buttons ml-2 mt-1"
                       handleUpdateValues={handleRefreshButtonPress}

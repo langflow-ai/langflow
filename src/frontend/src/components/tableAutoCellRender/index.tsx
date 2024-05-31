@@ -5,7 +5,6 @@ import DateReader from "../dateReaderComponent";
 import NumberReader from "../numberReader";
 import ObjectRender from "../objectRender";
 import StringReader from "../stringReaderComponent";
-import { Label } from "../ui/label";
 import { Badge } from "../ui/badge";
 
 export default function TableAutoCellRender({
@@ -35,7 +34,7 @@ export default function TableAutoCellRender({
               variant="outline"
               size="sq"
               className={cn(
-                "min-w-min bg-success-background text-success-foreground hover:bg-success-background",
+                "min-w-min bg-success-background text-success-foreground hover:bg-success-background"
               )}
             >
               {value}
