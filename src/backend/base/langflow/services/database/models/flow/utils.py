@@ -8,7 +8,7 @@ from langflow.services.deps import get_session
 from .model import Flow
 
 
-def get_flow_by_id(session: Session = Depends(get_session), flow_id: Optional[str] = None) -> Flow:
+def get_flow_by_id(session: Session = Depends(get_session), flow_id: Optional[str] = None) -> Flow | None:
     """Get flow by id."""
 
     if flow_id is None:
@@ -26,7 +26,8 @@ def get_webhook_component_in_flow(flow_data: dict):
     return None
 
 
-def get_all_webhook_components_in_flow(flow_data: dict):
+def get_all_webhook_components_in_flow(flow_data: dict | None):
     """Get all webhook components in flow data."""
-
+    if not flow_data:
+        return []
     return [node for node in flow_data.get("nodes", []) if "Webhook" in node.get("id")]
