@@ -14,11 +14,13 @@ from langflow.graph.graph.state_manager import GraphStateManager
 from langflow.graph.graph.utils import process_flow
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.types import FileToolVertex, InterfaceVertex, LLMVertex, StateVertex, ToolkitVertex
-from langflow.interface.tools.constants import FILE_TOOLS
+from langflow.graph.vertex.types import InterfaceVertex, StateVertex
 from langflow.schema import Record
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
+from langflow.services.cache.utils import CacheMiss
+from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service
+from langflow.services.monitor.utils import log_transaction
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
@@ -687,16 +689,8 @@ class Graph:
 
     def _build_vertex_params(self) -> None:
         """Identifies and handles the LLM vertex within the graph."""
-        llm_vertex = None
         for vertex in self.vertices:
             vertex._build_params()
-            if isinstance(vertex, LLMVertex):
-                llm_vertex = vertex
-
-        if llm_vertex:
-            for vertex in self.vertices:
-                if isinstance(vertex, ToolkitVertex):
-                    vertex.params["llm"] = llm_vertex
 
     def _validate_vertex(self, vertex: Vertex) -> bool:
         """Validates a vertex."""
@@ -713,7 +707,7 @@ class Graph:
     async def build_vertex(
         self,
         lock: asyncio.Lock,
-        set_cache_coro: Callable[["Graph", asyncio.Lock], Coroutine],
+        chat_service: ChatService,
         vertex_id: str,
         inputs_dict: Optional[Dict[str, str]] = None,
         user_id: Optional[str] = None,
@@ -738,23 +732,43 @@ class Graph:
         """
         vertex = self.get_vertex(vertex_id)
         try:
-            if not vertex.frozen or not vertex._built:
+            params = ""
+            if vertex.frozen:
+                # Check the cache for the vertex
+                cached_result = await chat_service.get_cache(key=vertex.id)
+                if isinstance(cached_result, CacheMiss):
+                    await vertex.build(user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars)
+                    await chat_service.set_cache(key=vertex.id, data=vertex)
+                else:
+                    cached_vertex = cached_result["result"]
+                    # Now set update the vertex with the cached vertex
+                    vertex._built = cached_vertex._built
+                    vertex.result = cached_vertex.result
+                    vertex.artifacts = cached_vertex.artifacts
+                    vertex._built_object = cached_vertex._built_object
+                    vertex._custom_component = cached_vertex._custom_component
+                    if vertex.result is not None:
+                        vertex.result.used_frozen_result = True
+
+            else:
                 await vertex.build(user_id=user_id, inputs=inputs_dict, fallback_to_env_vars=fallback_to_env_vars)
 
             if vertex.result is not None:
-                params = vertex._built_object_repr()
+                params = f"{vertex._built_object_repr()}{params}"
                 valid = True
                 result_dict = vertex.result
                 artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
-
+            set_cache_coro = partial(chat_service.set_cache, key=self.flow_id)
             next_runnable_vertices, top_level_vertices = await self.get_next_and_top_level_vertices(
                 lock, set_cache_coro, vertex
             )
+            log_transaction(vertex, status="success")
             return next_runnable_vertices, top_level_vertices, result_dict, params, valid, artifacts, vertex
         except Exception as exc:
             logger.exception(f"Error building vertex: {exc}")
+            log_transaction(vertex, status="failure", error=str(exc))
             raise exc
 
     async def get_next_and_top_level_vertices(
@@ -819,11 +833,10 @@ class Graph:
             for vertex_id in current_batch:
                 vertex = self.get_vertex(vertex_id)
                 lock = chat_service._cache_locks[self.run_id]
-                set_cache_coro = partial(chat_service.set_cache, flow_id=self.run_id)
                 task = asyncio.create_task(
                     self.build_vertex(
                         lock=lock,
-                        set_cache_coro=set_cache_coro,
+                        chat_service=chat_service,
                         vertex_id=vertex_id,
                         user_id=self.user_id,
                         inputs_dict={},
@@ -1003,8 +1016,6 @@ class Graph:
         elif node_name in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_name]
 
-        if node_type in FILE_TOOLS:
-            return FileToolVertex
         if node_type in lazy_load_vertex_dict.VERTEX_TYPE_MAP:
             return lazy_load_vertex_dict.VERTEX_TYPE_MAP[node_type]
         return (

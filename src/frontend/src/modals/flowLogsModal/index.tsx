@@ -1,19 +1,16 @@
+import { ColDef, ColGroupDef } from "ag-grid-community";
+import { AxiosError } from "axios";
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
+import TableComponent from "../../components/tableComponent";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { getMessagesTable, getTransactionTable } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
+import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
 import { FlowType, NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
-import TableComponent from "../../components/tableComponent";
-import { getMessagesTable, getTransactionTable } from "../../controllers/API";
-import {
-  ColDef,
-  ColGroupDef,
-  SizeColumnsToFitGridStrategy,
-} from "ag-grid-community";
-import useAlertStore from "../../stores/alertStore";
-import useFlowStore from "../../stores/flowStore";
 
 export default function FlowLogsModal({
   open,
@@ -41,8 +38,17 @@ export default function FlowLogsModal({
   function handleClick(): void {
     currentFlow!.name = name;
     currentFlow!.description = description;
-    saveFlow(currentFlow!);
-    setOpen(false);
+    saveFlow(currentFlow!)
+      ?.then(() => {
+        setOpen(false);
+      })
+      .catch((err) => {
+        useAlertStore.getState().setErrorData({
+          title: "Error while saving changes",
+          list: [(err as AxiosError).response?.data.detail ?? ""],
+        });
+        console.error(err);
+      });
   }
 
   useEffect(() => {

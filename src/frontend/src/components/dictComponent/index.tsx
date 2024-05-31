@@ -12,6 +12,9 @@ export default function DictComponent({
   editNode = false,
   id = "",
 }: DictComponentType): JSX.Element {
+  // Create a reference to the value
+  const ref = useRef(value);
+
   useEffect(() => {
     if (disabled) {
       onChange({});
@@ -19,15 +22,14 @@ export default function DictComponent({
   }, [disabled]);
 
   useEffect(() => {
-    if (value) onChange(value);
+    // Update the reference value
+    ref.current = value;
   }, [value]);
-
-  const ref = useRef(value);
   return (
     <div
       className={classNames(
         value.length > 1 && editNode ? "my-1" : "",
-        "flex flex-col gap-3"
+        "flex flex-col gap-3",
       )}
     >
       {

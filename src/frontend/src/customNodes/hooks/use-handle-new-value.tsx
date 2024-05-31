@@ -10,7 +10,6 @@ const useHandleOnNewValue = (
   debouncedHandleUpdateValues,
   setNode,
   renderTooltips,
-  isLoading,
   setIsLoading,
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);

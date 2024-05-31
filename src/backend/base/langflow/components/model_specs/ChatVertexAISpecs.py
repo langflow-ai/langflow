@@ -1,10 +1,9 @@
-from typing import List, Optional
+from typing import Optional
 
 from langchain_community.chat_models.vertexai import ChatVertexAI
-from langchain_core.messages.base import BaseMessage
 
+from langflow.custom import CustomComponent
 from langflow.field_typing import BaseLanguageModel
-from langflow.interface.custom.custom_component import CustomComponent
 
 
 class ChatVertexAIComponent(CustomComponent):
@@ -65,7 +64,6 @@ class ChatVertexAIComponent(CustomComponent):
         self,
         credentials: Optional[str],
         project: str,
-        examples: Optional[List[BaseMessage]] = [],
         location: str = "us-central1",
         max_output_tokens: int = 128,
         model_name: str = "chat-bison",
@@ -76,7 +74,6 @@ class ChatVertexAIComponent(CustomComponent):
     ) -> BaseLanguageModel:
         return ChatVertexAI(
             credentials=credentials,
-            examples=examples,
             location=location,
             max_output_tokens=max_output_tokens,
             model_name=model_name,

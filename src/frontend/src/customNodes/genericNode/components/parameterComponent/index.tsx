@@ -46,6 +46,7 @@ import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
 import TooltipRenderComponent from "../tooltipRenderComponent";
+import { TEXT_FIELD_TYPES } from "./constants";
 
 export default function ParameterComponent({
   left,
@@ -88,7 +89,6 @@ export default function ParameterComponent({
     debouncedHandleUpdateValues,
     setNode,
     renderTooltips,
-    isLoading,
     setIsLoading,
   );
 
@@ -238,7 +238,7 @@ export default function ParameterComponent({
             (left ? "" : " justify-end")
           }
         >
-          <Case condition={left && data.node?.frozen}>
+          <Case condition={!left && data.node?.frozen}>
             <div className="pr-1">
               <IconComponent className="h-5 w-5 text-ice" name={"Snowflake"} />
             </div>
@@ -309,7 +309,7 @@ export default function ParameterComponent({
         <Case
           condition={
             left === true &&
-            type === "str" &&
+            TEXT_FIELD_TYPES.includes(type ?? "") &&
             !data.node?.template[name]?.options
           }
         >
@@ -355,8 +355,7 @@ export default function ParameterComponent({
                       name={name}
                       data={data}
                       button_text={
-                        data.node?.template[name]?.refresh_button_text ??
-                        "Refresh"
+                        data.node?.template[name].refresh_button_text
                       }
                       className="extra-side-bar-buttons mt-1"
                       handleUpdateValues={handleRefreshButtonPress}
@@ -404,8 +403,7 @@ export default function ParameterComponent({
                       name={name}
                       data={data}
                       button_text={
-                        data.node?.template[name]?.refresh_button_text ??
-                        "Refresh"
+                        data.node?.template[name].refresh_button_text
                       }
                       className="extra-side-bar-buttons ml-2 mt-1"
                       handleUpdateValues={handleRefreshButtonPress}
@@ -547,9 +545,7 @@ export default function ParameterComponent({
               value={
                 !data.node!.template[name]?.value ||
                 data.node!.template[name]?.value?.toString() === "{}"
-                  ? {
-                      // yourkey: "value",
-                    }
+                  ? {}
                   : data.node!.template[name]?.value
               }
               onChange={handleOnNewValue}
