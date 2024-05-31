@@ -8,7 +8,7 @@ const useFetchDataOnMount = (
   name,
   handleUpdateValues,
   setNode,
-  setIsLoading,
+  setIsLoading
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
