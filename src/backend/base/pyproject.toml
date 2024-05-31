@@ -1,24 +1,15 @@
 [tool.poetry]
-name = "langflow-base"
-version = "0.0.53"
-description = "A Python package with a built-in web application"
-authors = ["Langflow <contact@langflow.org>"]
-maintainers = [
-    "Carlos Coelho <carlos@langflow.org>",
-    "Cristhian Zanforlin <cristhian.lousa@gmail.com>",
-    "Gabriel Almeida <gabriel@langflow.org>",
-    "Igor Carvalho <igorr.ackerman@gmail.com>",
-    "Lucas Eduoli <lucaseduoli@gmail.com>",
-    "Otávio Anovazzi <otavio2204@gmail.com>",
-    "Rodrigo Nader <rodrigo@langflow.org>",
-]
-repository = "https://github.com/langflow-ai/langflow"
-license = "MIT"
+name = "ragstack-ai-langflow-base"
+version = "0.0.5"
+description = "RAGStack Langflow base"
+license = "BUSL-1.1"
+authors = ["DataStax"]
+repository = "https://github.com/datastax/ragstack-ai-langflow"
 readme = "README.md"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 packages = [{ include = "langflow" }, { include = "langflow/py.typed" }]
 include = ["pyproject.toml", "README.md", "langflow/**/*"]
-documentation = "https://docs.langflow.org"
+documentation = "https://docs.datastax.com/en/ragstack"
 
 
 [tool.poetry.scripts]
@@ -30,7 +21,7 @@ fastapi = "^0.111.0"
 httpx = "*"
 uvicorn = "^0.29.0"
 gunicorn = "^22.0.0"
-langchain = "~0.2.0"
+ragstack-ai-langchain = { version = "1.0.7", extras = ["google"] }
 langchainhub = "~0.1.15"
 sqlmodel = "^0.0.18"
 loguru = "^0.7.1"

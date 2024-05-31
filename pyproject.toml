@@ -1,24 +1,15 @@
 [tool.poetry]
-name = "langflow"
-version = "1.0.0a42"
-description = "A Python package with a built-in web application"
-authors = ["Langflow <contact@langflow.org>"]
-maintainers = [
-    "Carlos Coelho <carlos@langflow.org>",
-    "Cristhian Zanforlin <cristhian.lousa@gmail.com>",
-    "Gabriel Almeida <gabriel@langflow.org>",
-    "Igor Carvalho <igorr.ackerman@gmail.com>",
-    "Lucas Eduoli <lucaseduoli@gmail.com>",
-    "Otávio Anovazzi <otavio2204@gmail.com>",
-    "Rodrigo Nader <rodrigo@langflow.org>",
-]
-repository = "https://github.com/langflow-ai/langflow"
-license = "MIT"
+name = "ragstack-ai-langflow"
+version = "0.0.5"
+description = "RAGStack Langflow"
+license = "BUSL-1.1"
+authors = ["DataStax"]
+repository = "https://github.com/datastax/ragstack-ai-langflow"
 readme = "README.md"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 packages = [{ include = "langflow", from = "src/backend" }]
 include = ["src/backend/langflow/*", "src/backend/langflow/**/*"]
-documentation = "https://docs.langflow.org"
+documentation = "https://docs.datastax.com/en/ragstack"
 
 [tool.poetry.scripts]
 langflow = "langflow.__main__:main"
@@ -26,7 +17,7 @@ langflow = "langflow.__main__:main"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
-langflow-base = { path = "./src/backend/base", develop = true }
+ragstack-ai-langflow-base = "0.0.5"
 beautifulsoup4 = "^4.12.2"
 google-search-results = "^2.4.1"
 google-api-python-client = "^2.130.0"
@@ -65,7 +56,7 @@ numexpr = "^2.8.6"
 qianfan = "0.3.5"
 pgvector = "^0.2.3"
 pyautogen = "^0.2.0"
-langchain-google-genai = "^1.0.1"
+langchain-google-genai = "^0.0.11"
 langchain-cohere = "^0.1.0rc1"
 elasticsearch = "^8.12.0"
 pytube = "^15.0.0"
@@ -77,7 +68,7 @@ langchain-anthropic = "^0.1.6"
 langchain-astradb = "^0.3.0"
 langchain-openai = "^0.1.1"
 zep-python = { version = "^2.0.0rc5", allow-prereleases = true }
-langchain-google-vertexai = "^1.0.3"
+langchain-google-vertexai = "^1.0.1"
 langchain-groq = "^0.1.3"
 langchain-pinecone = "^0.1.0"
 langchain-mistralai = "^0.1.6"
@@ -89,6 +80,7 @@ upstash-vector = "^0.4.0"
 
 
 [tool.poetry.group.dev.dependencies]
+ragstack-ai-langflow-base = { path = "./src/backend/base", develop = true }
 types-redis = "^4.6.0.5"
 ipykernel = "^6.29.0"
 mypy = "^1.10.0"

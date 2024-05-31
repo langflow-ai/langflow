@@ -1,0 +1,47 @@
+name: Release RAGStack Langflow
+
+on:
+  push:
+    tags:
+      - "ragstack-ai-langflow-[0-9]*"
+
+env:
+  POETRY_VERSION: "1.8.2"
+
+jobs:
+  if_release:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install poetry
+        run: pipx install poetry==$POETRY_VERSION
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "poetry"
+      - name: Build project for distribution
+        run: |
+          make build main=true
+      - name: Check Version
+        id: check-version
+        run: |
+          echo version=$(poetry version --short) >> $GITHUB_OUTPUT
+      - name: Publish to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          poetry publish
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          generateReleaseNotes: true
+
+      - name: "Login to GitHub Container Registry"
+        uses: ./.github/actions/ragstack-docker-release
+        with:
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          version: ${{ steps.check-version.outputs.version }}

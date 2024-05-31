@@ -1,4 +1,4 @@
-# RAGStack Langflow base
+# RAGStack Langflow
 
 ## Documentation
 
