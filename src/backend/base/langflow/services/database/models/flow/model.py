@@ -28,6 +28,7 @@ class FlowBase(SQLModel):
     data: Optional[Dict] = Field(default=None, nullable=True)
     is_component: Optional[bool] = Field(default=False, nullable=True)
     updated_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
+    webhook: Optional[bool] = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
     folder_id: Optional[UUID] = Field(default=None, nullable=True)
     endpoint_name: Optional[str] = Field(default=None, nullable=True, index=True)
 

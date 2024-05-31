@@ -13,6 +13,7 @@ from langflow.api.v1.schemas import FlowListCreate, FlowListIds, FlowListRead
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
+from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
@@ -150,6 +151,8 @@ def update_flow(
         for key, value in flow_data.items():
             if value is not None:
                 setattr(db_flow, key, value)
+        webhook_component = get_webhook_component_in_flow(db_flow.data)
+        db_flow.webhook = webhook_component is not None
         db_flow.updated_at = datetime.now(timezone.utc)
         if db_flow.folder_id is None:
             default_folder = session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME)).first()

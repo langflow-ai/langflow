@@ -4,7 +4,6 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
-
 from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
 
@@ -685,7 +684,7 @@ def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created_api_k
     assert response.status_code == status.HTTP_404_NOT_FOUND
     data = response.json()
     assert "detail" in data
-    assert f"Flow {invalid_flow_id} not found" in data["detail"]
+    assert f"Flow identifier {invalid_flow_id} not found" in data["detail"]
 
 
 def test_run_flow_with_caching_invalid_input_format(client: TestClient, starter_project, created_api_key):
