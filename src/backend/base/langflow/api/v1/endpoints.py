@@ -69,6 +69,8 @@ async def simple_run_flow(
         artifacts = {}
         user_id = None
         endpoint_name = None
+        flow_id_str = None
+        flow_id = None
         try:
             flow_id = UUID(flow_id_or_name)
             flow_id_str = str(flow_id)
@@ -142,23 +144,10 @@ async def simple_run_flow(
         if "badly formed hexadecimal UUID string" in str(exc):
             logger.error(f"Flow ID {flow_id_str} is not a valid UUID")
             # This means the Flow ID is not a valid UUID which means it can't find the flow
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    except ValueError as exc:
-        if flow_id_str and f"Flow {flow_id_str} not found" in str(exc):
-            logger.error(f"Flow {flow_id_str} not found")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        elif endpoint_name and f"Flow with endpoint name {endpoint_name} not found" in str(exc):
-            logger.error(f"Flow with endpoint name {endpoint_name} not found")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        elif session_id and f"Session {session_id} not found" in str(exc):
-            logger.error(f"Session {session_id} not found")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-        else:
-            logger.exception(exc)
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+            raise ValueError(str(exc)) from exc
 
 
-@router.post("/run/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
+@router.post("/run/{flow_id_or_name}", response_model=RunResponse, response_model_exclude_none=True)
 async def simplified_run_flow(
     db: Annotated[Session, Depends(get_session)],
     flow_id_or_name: str,
@@ -172,7 +161,7 @@ async def simplified_run_flow(
 
     ### Parameters:
     - `db` (Session): Database session for executing queries.
-    - `flow_id` (str): Unique identifier of the flow to be executed.
+    - `flow_id_or_name` (str): ID or endpoint name of the flow to run.
     - `input_request` (SimplifiedAPIRequest): Request object containing input values, types, output selection, tweaks, and session ID.
     - `api_key_user` (User): User object derived from the provided API key, used for authentication.
     - `session_service` (SessionService): Service for managing flow sessions, essential for session reuse and caching.
@@ -225,6 +214,15 @@ async def simplified_run_flow(
             api_key_user=api_key_user,
         )
 
+    except ValueError as exc:
+        if "badly formed hexadecimal UUID string" in str(exc):
+            # This means the Flow ID is not a valid UUID which means it can't find the flow
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        if "not found" in str(exc):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        else:
+            logger.exception(exc)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
