@@ -4,7 +4,7 @@
  * @param {boolean} isAuth - If the API is authenticated
  * @returns {string} - The curl code
  */
-export default function getCurlRunCode(
+export function getCurlRunCode(
   flowId: string,
   isAuth: boolean,
   tweaksBuildedObject,
