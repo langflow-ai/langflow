@@ -169,7 +169,7 @@ async def build_vertex(
                 next_runnable_vertices,
                 top_level_vertices,
                 result_dict,
-                log_message,
+                params,
                 valid,
                 _,
                 vertex,
@@ -185,10 +185,10 @@ async def build_vertex(
 
         except Exception as exc:
             logger.exception(f"Error building vertex: {exc}")
-            log_message = format_exception_message(exc)
+            params = format_exception_message(exc)
             valid = False
             result_data_response = ResultDataResponse(results={})
-
+            artifacts = {}
             # If there's an error building the vertex
             # we need to clear the cache
             await chat_service.clear_cache(flow_id_str)
@@ -203,21 +203,21 @@ async def build_vertex(
                 flow_id=flow_id_str,
                 vertex_id=vertex_id,
                 valid=valid,
-                logs=result_data_response.logs,
+                params=params,
                 data=result_data_response,
+                artifacts=artifacts,
             )
 
         timedelta = time.perf_counter() - start_time
         duration = format_elapsed_time(timedelta)
         result_data_response.duration = duration
         result_data_response.timedelta = timedelta
-        async with chat_service._cache_locks[flow_id] as lock:
-            vertex.add_build_time(timedelta)
-            inactivated_vertices = None
-            inactivated_vertices = list(graph.inactivated_vertices)
-            graph.reset_inactivated_vertices()
-            graph.reset_activated_vertices()
-            await chat_service.set_cache(flow_id=flow_id, data=graph, lock=lock)
+        vertex.add_build_time(timedelta)
+        inactivated_vertices = None
+        inactivated_vertices = list(graph.inactivated_vertices)
+        graph.reset_inactivated_vertices()
+        graph.reset_activated_vertices()
+        await chat_service.set_cache(flow_id_str, graph)
 
         # graph.stop_vertex tells us if the user asked
         # to stop the build of the graph at a certain vertex
@@ -231,6 +231,7 @@ async def build_vertex(
             next_vertices_ids=next_runnable_vertices,
             top_level_vertices=top_level_vertices,
             valid=valid,
+            params=params,
             id=vertex.id,
             data=result_data_response,
         )
