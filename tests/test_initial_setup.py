@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 
+import pytest
 from sqlmodel import select
 
 from langflow.initial_setup.setup import (
@@ -41,7 +42,8 @@ def test_get_project_data():
         assert isinstance(project_icon_bg_color, str) or project_icon_bg_color is None
 
 
-def test_create_or_update_starter_projects(client):
+@pytest.mark.asyncio
+async def test_create_or_update_starter_projects(client):
     with session_scope() as session:
         # Run the function to create or update projects
         create_or_update_starter_projects()

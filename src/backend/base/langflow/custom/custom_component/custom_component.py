@@ -83,6 +83,23 @@ class CustomComponent(Component):
     inputs: Optional[List[Input]] = None
     outputs: Optional[List[Output]] = None
 
+    def build_inputs(self, user_id: Optional[Union[str, UUID]] = None):
+        """
+        Builds the inputs for the custom component.
+
+        Args:
+            user_id (Optional[Union[str, UUID]], optional): The user ID. Defaults to None.
+
+        Returns:
+            List[Input]: The list of inputs.
+        """
+        # This function is similar to build_config, but it will process the inputs
+        # and return them as a dict with keys being the Input.name and values being the Input.model_dump()
+        if not self.inputs:
+            return {}
+        build_config = {_input.name: _input.model_dump(by_alias=True, exclude_none=True) for _input in self.inputs}
+        return build_config
+
     def update_state(self, name: str, value: Any):
         if not self.vertex:
             raise ValueError("Vertex is not set")
@@ -275,7 +292,7 @@ class CustomComponent(Component):
         Returns:
             list: The arguments of the function entrypoint.
         """
-        build_method = self.get_build_method()
+        build_method = self.get_method(self.function_entrypoint_name)
         if not build_method:
             return []
 
@@ -287,7 +304,7 @@ class CustomComponent(Component):
         return args
 
     @cachedmethod(operator.attrgetter("cache"))
-    def get_build_method(self):
+    def get_method(self, method_name: str):
         """
         Gets the build method for the custom component.
 
@@ -303,9 +320,7 @@ class CustomComponent(Component):
 
         # Assume the first Component class is the one we're interested in
         component_class = component_classes[0]
-        build_methods = [
-            method for method in component_class["methods"] if method["name"] == self.function_entrypoint_name
-        ]
+        build_methods = [method for method in component_class["methods"] if method["name"] == (method_name)]
 
         return build_methods[0] if build_methods else {}
 
@@ -317,7 +332,10 @@ class CustomComponent(Component):
         Returns:
             List[Any]: The return type of the function entrypoint.
         """
-        build_method = self.get_build_method()
+        return self.get_method_return_type(self.function_entrypoint_name)
+
+    def get_method_return_type(self, method_name: str):
+        build_method = self.get_method(method_name)
         if not build_method or not build_method.get("has_return"):
             return []
         return_type = build_method["return_type"]
