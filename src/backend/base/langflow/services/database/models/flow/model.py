@@ -113,11 +113,16 @@ class FlowBase(SQLModel):
         return v
 
     # updated_at can be serialized to JSON
-    @field_serializer("updated_at")
-    def serialize_dt(self, dt: datetime, _info):
-        if dt is None:
-            return None
-        return dt.isoformat()
+    @field_serializer("updated_at", "created_at")
+    def serialize_datetime(value):
+        if isinstance(value, datetime):
+            # I'm getting 2024-05-29T17:57:17.631346
+            # and I want 2024-05-29T17:57:17-05:00
+            value.microsecond = 0
+            if value.tzinfo is None:
+                value = value.replace(tzinfo=timezone.utc)
+            return value.isoformat()
+        return value
 
     @field_validator("updated_at", mode="before")
     def validate_dt(cls, v):
