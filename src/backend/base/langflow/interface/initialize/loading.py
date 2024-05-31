@@ -1,7 +1,7 @@
 import inspect
 import json
 import os
-from typing import TYPE_CHECKING, Any, Type
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Type
 
 import orjson
 from loguru import logger
@@ -94,7 +94,9 @@ def update_params_with_load_from_db_fields(
     return params
 
 
-async def instantiate_custom_component(params, user_id, vertex, fallback_to_env_vars: bool = False):
+async def instantiate_custom_component(
+    params: dict, user_id: str, vertex: "Vertex", fallback_to_env_vars: bool = False
+):
     params_copy = params.copy()
     class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
     custom_component: "CustomComponent" = class_object(
@@ -107,11 +109,30 @@ async def instantiate_custom_component(params, user_id, vertex, fallback_to_env_
         custom_component, params_copy, vertex.load_from_db_fields, fallback_to_env_vars
     )
 
+    # Now set the params as attributes of the custom_component
+    custom_component.set_attributes(params_copy)
+
     if "retriever" in params_copy and hasattr(params_copy["retriever"], "as_retriever"):
         params_copy["retriever"] = params_copy["retriever"].as_retriever()
 
     # Determine if the build method is asynchronous
     is_async = inspect.iscoroutinefunction(custom_component.build)
+
+    # New feature: the component has a list of outputs and we have
+    # to check the vertex.edges to see which is connected (coulb be multiple)
+    # and then we'll get the output which has the name of the method we should call.
+    # the methods don't require any params because they are already set in the custom_component
+    # so we can just call them
+
+    if hasattr(custom_component, "outputs"):
+        for output in custom_component.outputs:
+            if output.name in vertex.edges:
+                method: Callable | Awaitable = getattr(custom_component, output.method)
+                result = method()
+                # If the method is asynchronous, we need to await it
+                if inspect.iscoroutinefunction(method):
+                    result = await result
+                vertex.add_result(output.name, result)
 
     if is_async:
         # Await the build method directly if it's async

@@ -100,6 +100,12 @@ class CustomComponent(Component):
         build_config = {_input.name: _input.model_dump(by_alias=True, exclude_none=True) for _input in self.inputs}
         return build_config
 
+    def set_attributes(self, params: dict):
+        for key, value in params.items():
+            if key in self.__dict__:
+                raise ValueError(f"Key {key} already exists in {self.__class__.__name__}")
+            setattr(self, key, value)
+
     def update_state(self, name: str, value: Any):
         if not self.vertex:
             raise ValueError("Vertex is not set")
