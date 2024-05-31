@@ -496,9 +496,9 @@ class InterfaceVertex(Vertex):
             flow_id=self.graph.flow_id,
             vertex_id=self.id,
             valid=True,
-            logs=self._built_object_repr(),
+            params=self._built_object_repr(),
             data=self.result,
-            messages=self.artifacts,
+            artifacts=self.artifacts,
         )
 
         self._validate_built_object()

@@ -90,9 +90,9 @@ async def build_vertex(
             flow_id=flow_id,
             vertex_id=vertex_id,
             valid=valid,
-            logs=params,
+            params=params,
             data=result_dict,
-            messages=artifacts,
+            artifacts=artifacts,
         )
 
         # Emit the vertex build response
