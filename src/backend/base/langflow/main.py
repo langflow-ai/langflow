@@ -14,7 +14,11 @@ from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from langflow.api import router
-from langflow.initial_setup.setup import create_or_update_starter_projects, initialize_super_user_if_needed, load_flows_from_directory
+from langflow.initial_setup.setup import (
+    create_or_update_starter_projects,
+    initialize_super_user_if_needed,
+    load_flows_from_directory,
+)
 from langflow.interface.utils import setup_llm_caching
 from langflow.services.plugins.langfuse_plugin import LangfuseInstance
 from langflow.services.utils import initialize_services, teardown_services
@@ -33,20 +37,13 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def get_lifespan(fix_migration=False, socketio_server=None):
-    try:
-        from langflow.version import __version__  # type: ignore
-    except ImportError:
-        from importlib.metadata import version
-
-        __version__ = version("langflow-base")
-
+def get_lifespan(fix_migration=False, socketio_server=None, version=None):
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         nest_asyncio.apply()
         # Startup message
-        if __version__:
-            rprint(f"[bold green]Starting Langflow v{__version__}...[/bold green]")
+        if version:
+            rprint(f"[bold green]Starting Langflow v{version}...[/bold green]")
         else:
             rprint("[bold green]Starting Langflow...[/bold green]")
         try:
@@ -70,11 +67,17 @@ def get_lifespan(fix_migration=False, socketio_server=None):
 
 def create_app():
     """Create the FastAPI app and include the router."""
+    try:
+        from langflow.version import __version__  # type: ignore
+    except ImportError:
+        from importlib.metadata import version
+
+        __version__ = version("langflow-base")
 
     configure()
     socketio_server = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*", logger=True)
-    lifespan = get_lifespan(socketio_server=socketio_server)
-    app = FastAPI(lifespan=lifespan)
+    lifespan = get_lifespan(socketio_server=socketio_server, version=__version__)
+    app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
     origins = ["*"]
 
     app.add_middleware(
