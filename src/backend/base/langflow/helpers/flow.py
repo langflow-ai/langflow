@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Tuple, Type, Union, cast
 from uuid import UUID
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import Session, select
 
@@ -252,6 +252,6 @@ def get_flow_by_id_or_endpoint_name(
             stmt = stmt.where(Flow.user_id == user_id)
         flow = db.exec(stmt).first()
     if flow is None:
-        raise ValueError(f"Flow identifier {flow_id_or_name} not found")
+        raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
 
     return flow
