@@ -58,6 +58,6 @@ jobs:
         #   There's a script in ./scripts/factory_reset_space.py that will reset the build
         # using the HUGGINGFACE_API_TOKEN secret
         run: |
-          python ./scripts/factory_reset_space.py
+          python ./scripts/factory_restart_space.py
         env:
           HUGGINGFACE_API_TOKEN: ${{ secrets.HUGGINGFACE_API_TOKEN }}
