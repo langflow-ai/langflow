@@ -5,6 +5,9 @@ CUSTOM_NODES: dict[str, dict[str, frontend_node.base.FrontendNode]] = {
     "custom_components": {
         "CustomComponent": frontend_node.custom_components.CustomComponentFrontendNode(),
     },
+    "component": {
+        "Component": frontend_node.custom_components.ComponentFrontendNode(),
+    },
 }
 
 

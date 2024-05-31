@@ -1,5 +1,6 @@
 from langflow.custom import CustomComponent
 from langflow.template.field.base import Input, Output
+from random import randint
 
 
 class MultipleOutputsComponent(CustomComponent):
@@ -12,8 +13,8 @@ class MultipleOutputsComponent(CustomComponent):
         Output(name="Other Output", method="other_output"),
     ]
 
-    def certain_output(self) -> str:
-        return f"This is my string input: {self.input}"
+    def certain_output(self) -> int:
+        return randint(0, self.number)
 
     def other_output(self) -> int:
-        return f"This is my int input multiplied by 2: {self.number * 2}"
+        return self.certain_output()
