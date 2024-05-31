@@ -73,6 +73,7 @@ class Vertex:
         self.parent_is_top_level = False
         self.layer = None
         self.result: Optional[ResultData] = None
+        self.results: Dict[str, Any] = {}
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
         except ValueError:
@@ -81,6 +82,9 @@ class Vertex:
         self.use_result = False
         self.build_times: List[float] = []
         self.state = VertexStates.ACTIVE
+
+    def add_result(self, name: str, result: Any):
+        self.results[name] = result
 
     def update_graph_state(self, key, new_state, append: bool):
         if append:
@@ -196,7 +200,7 @@ class Vertex:
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
-        self.output = self.data["node"]["base_classes"]
+        self.outputs = self.data["node"]["outputs"]
         self.display_name = self.data["node"].get("display_name", self.id.split("-")[0])
 
         self.description = self.data["node"].get("description", "")
@@ -224,7 +228,8 @@ class Vertex:
         template_dict = self.data["node"]["template"]
         self.vertex_type = (
             self.data["type"]
-            if "Tool" not in self.output or template_dict["_type"].islower()
+            if "Tool" not in [type_ for out in self.outputs for type_ in out["types"]]
+            or template_dict["_type"].islower()
             else template_dict["_type"]
         )
 
