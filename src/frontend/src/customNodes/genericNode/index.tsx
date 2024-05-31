@@ -892,7 +892,7 @@ export default function GenericNode({
                       nodeColors[types[data.type]] ??
                       nodeColors.unknown
                     }
-                    title={output.selected ?? output.types[0]}
+                    title={output.name}
                     tooltipTitle={output.selected ?? output.types[0]}
                     id={{
                       baseClasses: [output.selected ?? output.types[0]],
