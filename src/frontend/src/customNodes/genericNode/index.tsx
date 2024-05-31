@@ -55,14 +55,14 @@ export default function GenericNode({
   const [nodeName, setNodeName] = useState(data.node!.display_name);
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(
-    data.node?.description!
+    data.node?.description!,
   );
   const [isOutdated, setIsOutdated] = useState(false);
   const buildStatus = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.status
+    (state) => state.flowBuildStatus[data.id]?.status,
   );
   const lastRunTime = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.timestamp
+    (state) => state.flowBuildStatus[data.id]?.timestamp,
   );
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
@@ -115,7 +115,7 @@ export default function GenericNode({
 
       updateNodeInternals(data.id);
     },
-    [data.id, data.node, setNode, setIsOutdated]
+    [data.id, data.node, setNode, setIsOutdated],
   );
 
   if (!data.node!.template) {
@@ -252,60 +252,10 @@ export default function GenericNode({
     );
   };
 
-  const buildParameterComponent = ({
-    data,
-    conditionalPath,
-    showNode,
-    left,
-  }: {
-    data: NodeDataType;
-    conditionalPath: string | null;
-    showNode: boolean;
-    left: boolean;
-  }) => {
-    return (
-      <ParameterComponent
-        key={scapedJSONStringfy({
-          baseClasses: data.node!.base_classes,
-          id: data.id,
-          dataType: data.type,
-          conditionalPath: conditionalPath,
-        })}
-        data={data}
-        color={
-          (data.node?.output_types && data.node.output_types.length > 0
-            ? nodeColors[data.node.output_types[0]] ??
-              nodeColors[types[data.node.output_types[0]]]
-            : nodeColors[types[data.type]]) ?? nodeColors.unknown
-        }
-        title={
-          data.node?.output_types && data.node.output_types.length > 0
-            ? data.node.output_types.join(" | ")
-            : data.type
-        }
-        conditionPath={conditionalPath}
-        tooltipTitle={data.node?.base_classes.join("\n")}
-        id={{
-          baseClasses: data.node!.base_classes,
-          id: data.id,
-          dataType: data.type,
-          // First parameter component should be true
-          // Second should be false
-          conditionalPath: conditionalPath,
-        }}
-        // Type should be base_classes if it's not a conditional node
-        // else it should be true in the first parameter component
-        type={data.node?.base_classes.join("|")}
-        left={left}
-        showNode={showNode}
-      />
-    );
-  };
-
   const isDark = useDarkStore((state) => state.dark);
   const renderIconStatus = (
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null
+    validationStatus: validationStatusType | null,
   ) => {
     if (buildStatus === BuildStatus.BUILDING) {
       return <Loading className="text-medium-indigo" />;
@@ -346,7 +296,7 @@ export default function GenericNode({
   };
   const getSpecificClassFromBuildStatus = (
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null
+    validationStatus: validationStatusType | null,
   ) => {
     let isInvalid = validationStatus && !validationStatus.valid;
 
@@ -370,11 +320,11 @@ export default function GenericNode({
     selected: boolean,
     showNode: boolean,
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null
+    validationStatus: validationStatusType | null,
   ) => {
     const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
       buildStatus,
-      validationStatus
+      validationStatus,
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
@@ -383,7 +333,7 @@ export default function GenericNode({
       baseBorderClass,
       nodeSizeClass,
       "generic-node-div",
-      specificClassFromBuildStatus
+      specificClassFromBuildStatus,
     );
     return names;
   };
@@ -443,7 +393,7 @@ export default function GenericNode({
           selected,
           showNode,
           buildStatus,
-          validationStatus
+          validationStatus,
         )}
       >
         {data.node?.beta && showNode && (
@@ -588,7 +538,7 @@ export default function GenericNode({
                             }
                             title={getFieldTitle(
                               data.node?.template!,
-                              templateField
+                              templateField,
                             )}
                             info={data.node?.template[templateField].info}
                             name={templateField}
@@ -616,9 +566,9 @@ export default function GenericNode({
                             proxy={data.node?.template[templateField].proxy}
                             showNode={showNode}
                           />
-                        )
+                        ),
                     )}
-                  <ParameterComponent
+                  {/* <ParameterComponent
                     index={0}
                     key={scapedJSONStringfy({
                       baseClasses: data.node!.base_classes,
@@ -643,7 +593,7 @@ export default function GenericNode({
                     type={data.node?.base_classes.join("|")}
                     left={false}
                     showNode={showNode}
-                  />
+                  /> */}
                 </>
               )}
             </div>
@@ -775,7 +725,7 @@ export default function GenericNode({
                       !data.node?.description) &&
                       nameEditable
                       ? "font-light italic"
-                      : ""
+                      : "",
                   )}
                   onDoubleClick={(e) => {
                     setInputDescription(true);
@@ -837,13 +787,13 @@ export default function GenericNode({
                         }
                         title={getFieldTitle(
                           data.node?.template!,
-                          templateField
+                          templateField,
                         )}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={
                           data.node?.template[templateField].input_types?.join(
-                            "\n"
+                            "\n",
                           ) ?? data.node?.template[templateField].type
                         }
                         required={data.node!.template[templateField].required}
@@ -870,7 +820,7 @@ export default function GenericNode({
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
-                  "flex-max-width justify-center"
+                  "flex-max-width justify-center",
                 )}
               >
                 {" "}
@@ -881,7 +831,7 @@ export default function GenericNode({
                   <ParameterComponent
                     index={idx}
                     key={scapedJSONStringfy({
-                      baseClasses: [output.selected ?? output.types[0]],
+                      output_types: [output.selected ?? output.types[0]],
                       id: data.id,
                       dataType: data.type,
                     })}
@@ -892,17 +842,18 @@ export default function GenericNode({
                       nodeColors[types[data.type]] ??
                       nodeColors.unknown
                     }
-                    title={output.name}
+                    title={output.selected ?? output.types[0]}
                     tooltipTitle={output.selected ?? output.types[0]}
                     id={{
-                      baseClasses: [output.selected ?? output.types[0]],
+                      output_types: [output.selected ?? output.types[0]],
                       id: data.id,
                       dataType: data.type,
-                      idx: idx,
+                      name: output.name,
                     }}
                     type={output.types.join("|")}
                     left={false}
                     showNode={showNode}
+                    outputName={output.name}
                   />
                 ))}
             </>

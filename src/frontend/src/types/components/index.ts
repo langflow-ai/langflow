@@ -70,6 +70,7 @@ export type ParameterComponentType = {
   showNode?: boolean;
   index: number;
   onCloseModal?: (close: boolean) => void;
+  outputName?: string;
 };
 export type InputListComponentType = {
   value: string[];
@@ -118,6 +119,7 @@ export type outputComponentType = {
   nodeId: string;
   frozen?: boolean;
   idx: number;
+  name: string;
 };
 
 export type PromptAreaComponentType = {
@@ -528,7 +530,7 @@ export type nodeToolbarPropsType = {
   updateNodeCode?: (
     newNodeClass: APIClassType,
     code: string,
-    name: string
+    name: string,
   ) => void;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
   isOutdated?: boolean;
@@ -578,7 +580,7 @@ export type chatMessagePropsType = {
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) => void;
 };
 
@@ -670,12 +672,12 @@ export type codeTabsPropsType = {
       value: string,
       node: NodeType,
       template: InputFieldType,
-      tweak: tweakType
+      tweak: tweakType,
     ) => string;
     buildTweakObject?: (
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: InputFieldType
+      template: InputFieldType,
     ) => Promise<string | void>;
   };
   activeTweaks?: boolean;
