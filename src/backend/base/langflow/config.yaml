@@ -224,6 +224,20 @@ wrappers:
     documentation: ""
   SQLDatabase:
     documentation: ""
+assistants:
+  AssistantsCreateAssistant:
+    documentation: ""
+  AssistantsGetAssistantName:
+    documentation: ""
+  AssistantsListAssistants:
+    documentation: ""
+  AssistantsRun:
+    documentation: ""
+  Dotenv:
+    documentation:
+  GetEnvVar:
+    documentation: ""
+
 custom_components:
   CustomComponent:
     documentation: "https://docs.langflow.org/guidelines/custom-component"
