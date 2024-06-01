@@ -141,6 +141,9 @@ export default function NodeToolbarComponent({
         break;
       case "disabled":
         break;
+      case "unselect":
+        unselectAll();
+        break;
       case "ungroup":
         takeSnapshot();
         expandGroupNode(
@@ -275,6 +278,10 @@ export default function NodeToolbarComponent({
       ) {
         event.preventDefault();
         handleSelectChange("update");
+      }
+      if (selected && event.key.toUpperCase() === "ESCAPE") {
+        event.preventDefault();
+        handleSelectChange("unselect");
       }
       if (
         selected &&
