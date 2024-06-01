@@ -3,34 +3,34 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# DiscordGetImage Component in Langflow
+# Get Audio Message
 
-Langflow enhances its functionality with custom components like `DiscordGetImage`. This component retrieves recent image messages from a specified Discord channel.
+Langflow enhances its functionality with custom components like `DiscordGetAudioMessage`. This component retrieves the last audio message from a specified Discord channel.
 
 ## Component Functionality
 
 <Admonition type="tip" title="Component Functionality">
 
-The `DiscordGetImage` component allows you to:
+The `DiscordGetAudioMessage` component allows you to:
 
-- Retrieve recent image messages from a Discord channel.
+- Retrieve the n-last audio messages from a Discord channel.
 - Integrate Discord seamlessly into your Langflow workflow.
 
 </Admonition>
 
 ## Component Usage
 
-To incorporate the `DiscordGetImage` component into a Langflow flow:
+To incorporate the `DiscordGetAudioMessage` component into a Langflow flow:
 
-1. **Add the `DiscordGetImage` component** to your flow.
+1. **Add the `DiscordGetAudioMessage` component** to your flow.
 2. **Configure the component** by providing:
    - `Token`: The Discord Application Token (available from the Discord Developers App page).
-   - `ChannelId`: The ID of the channel from which you want to retrieve image messages.
-   - `Limit`: The limit of images you want to retrieve.
+   - `ChannelId`: The ID of the channel from which you want to retrieve audio messages.
+   - `Limit`: The limit of audio messages you want to retrieve, 0 means limitless.
 3. **Connect the component** to other nodes in your flow as needed.
-4. **Initiate the flow** to begin retrieving image messages from a Discord channel.
+4. **Initiate the flow** to begin retrieving audio messages from a Discord channel.
 
-## Code Block for the `DiscordGetImage` Component
+## Code Block for the `DiscordGetAudioMessage` Component
 
 ```python
 from typing import Optional, Any
@@ -49,9 +49,9 @@ def install(package):
 
 install("requests")
 
-class DiscordGetImage(CustomComponent):
-    display_name = "DiscordGetImage"
-    description = "get the image from discord's channel"
+class DiscordGetChannelMessages(CustomComponent):
+    display_name = "DiscordGetChannelMessages"
+    description = "get the messages of discord's channel"
     field_order = ["token", "channel_id", "limit"]
     icon = "Discord"
 
@@ -75,16 +75,15 @@ class DiscordGetImage(CustomComponent):
             }
         }
 
+
     def build(self, token: str, channel_id: int,  limit: int) -> Record:
         import requests
-        body = {"token": token, "limit": limit, "content_type": ["png", "jpg", "jpeg"]}
+        body = {"token": token, "limit": limit, "content_type": ["ogg"]}
         resp = requests.post(f"http://discord:7880/api/v1/channels/{channel_id}/get_messages/last", json=body)
         if resp.status_code == 200:
             file = loads(resp.content)
-            print(file.keys())
-            tmp_file = NamedTemporaryFile(delete=False, suffix=".png")
+            tmp_file = NamedTemporaryFile(delete=False, suffix=".ogg")
             resolved_path = self.resolve_path(tmp_file.name)
-            print(tmp_file.name, type(tmp_file.name), type(file))
             with open(tmp_file.name, 'wb') as f:  # Open the file in binary mode
                 f.write(base64.b64decode(file["content"]))
             return Record(data={"file_path": resolved_path, "text": file["content"]})
@@ -96,18 +95,18 @@ class DiscordGetImage(CustomComponent):
 
 <Admonition type="info" title="Example Usage">
 
-Example of using the `DiscordGetImage` component in a Langflow flow with the specified `ChannelId`, `Token`, and `Limit`:
+Example of using the `DiscordGetAudioMessage` component in a Langflow flow with the specified `channelId`, `Token`, and `Limit`:
 
 <ZoomableImage
-  alt="Discord Get Image Message Flow"
+  alt="Discord Get Audio Message Flow"
   sources={{
-    light: "img/discord/DiscordGetImage_flow_example.png",
-    dark: "img/discord/DiscordGetImage_flow_example_dark.png",
+    light: "img/discord/DiscordGetAudioMessage_flow_example.png",
+    dark: "img/discord/DiscordGetAudioMessage_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />
 
-In this example, the `DiscordGetImage` component connects to a text output node to display image messages. Ensure you have the correct `ChannelId` and `Token` for successful operation.
+In this example, the `DiscordGetAudioMessage` component is connected to an `AssemblyAITranscriber` component, which transcribes an audio message received from Discord and displays it in a text output. Ensure you have the correct `channelId` and `Token` for successful operation.
 
 </Admonition>
 
@@ -115,11 +114,11 @@ In this example, the `DiscordGetImage` component connects to a text output node 
 
 <Admonition type="tip" title="Best Practices">
 
-When using the `DiscordGetImage` component:
+When using the `DiscordGetAudioMessage` component:
 
 - Ensure the bot has the necessary permissions as outlined on the Discord APP Developers Page.
 - Verify the `Token` is correct.
-- Ensure the `ChannelId` used is correct and accessible by the bot.
+- Ensure the `channelId` used is correct and accessible by the bot.
 - Keep your Discord integration token secure.
 - Test the setup in a private channel before production deployment.
 
@@ -129,10 +128,10 @@ When using the `DiscordGetImage` component:
 
 <Admonition type="caution" title="Troubleshooting">
 
-If you encounter any issues while using the `DiscordGetImage` component, consider the following:
+If you encounter any issues while using the `DiscordGetAudioMessage` component, consider the following:
 
 - Verify the Discord integration token’s validity and permissions.
 - Consult the Discord Developers APP Page for documentation updates.
-- Ensure the `ChannelId` is correct.
+- Ensure the `channelId` is correct.
 
 </Admonition>

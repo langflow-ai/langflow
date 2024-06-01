@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# DiscordTextMessageListener Component in Langflow
+# Text Message Listener
 
 Langflow enhances its functionality with custom components like `DiscordTextMessageListener`. This component listens for messages within a specified Discord channel for up to 5 minutes or until a message is received.
 

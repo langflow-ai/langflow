@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# DiscordMentionResponse Component in Langflow
+# Mention Response
 
 Langflow enhances its functionality with custom components like `DiscordMentionResponse`. This component responds to messages where the bot is mentioned.
 

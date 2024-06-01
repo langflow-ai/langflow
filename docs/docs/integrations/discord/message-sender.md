@@ -3,7 +3,7 @@
   import useBaseUrl from "@docusaurus/useBaseUrl";
   import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-  # DiscordMessageSender Component in Langflow
+  # Message Sender
 
   Langflow enhances its functionality with custom components like `DiscordMessageSender`. This component sends text messages to a specified Discord channel or thread.
 

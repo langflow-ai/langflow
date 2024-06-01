@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# DiscordGetGuildUsers Component in Langflow
+# Get Guild Users
 
 Langflow enhances its functionality with custom components like `DiscordGetGuildUsers`. This component retrieves information about users in a specified Discord guild.
 

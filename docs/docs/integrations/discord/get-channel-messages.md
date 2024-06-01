@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# DiscordGetChannelMessages Component in Langflow
+# Get Channel Messages
 
 Langflow enhances its functionality with custom components like `DiscordGetChannelMessages`. This component retrieves message history from a specified Discord channel.
 

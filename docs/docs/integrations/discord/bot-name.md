@@ -3,7 +3,7 @@
   import useBaseUrl from "@docusaurus/useBaseUrl";
   import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-  # DiscordBotName Component in Langflow
+  # Bot Name
 
   Langflow enhances its functionality with custom components like `DiscordBotName`. This component retrieves the name of a Discord bot using the specified token.
 

@@ -3,7 +3,7 @@
   import useBaseUrl from "@docusaurus/useBaseUrl";
   import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-  # DiscordFileSender Component in Langflow
+  # File Sender
 
   Langflow enhances its functionality with custom components like `DiscordFileSender`. This component sends files to a specified Discord channel or thread.
 

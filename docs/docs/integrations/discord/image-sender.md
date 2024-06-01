@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# DiscordImageSender Component in Langflow
+# Image Sender
 
 Langflow enhances its functionality with custom components like `DiscordImageSender`. This component sends images to a specified Discord channel or thread.
 

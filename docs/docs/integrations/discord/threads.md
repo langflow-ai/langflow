@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# DiscordThreads Component in Langflow
+# Threads
 
 Langflow enhances its functionality with custom components like `DiscordThreads`. This component interacts with threads within a specified Discord channel.
 

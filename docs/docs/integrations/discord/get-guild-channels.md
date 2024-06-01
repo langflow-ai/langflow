@@ -3,7 +3,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# DiscordGetGuildChannels Component in Langflow
+# Get Guild Channels
 
 Langflow enhances its functionality with custom components like `DiscordGetGuildChannels`. This component retrieves information about channels in a specified Discord server.
 
