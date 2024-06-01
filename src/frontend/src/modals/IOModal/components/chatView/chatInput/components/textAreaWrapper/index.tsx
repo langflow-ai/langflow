@@ -42,8 +42,8 @@ const TextAreaWrapper = ({
 
   const fileClass =
     files.length > 0
-      ? "rounded-b-lg rounded-t-none border-t-0 border-border focus:border-t-0 focus:border-ring"
-      : "rounded-md border-t-2 border-border focus:border-ring";
+      ? "rounded-b-lg ring-0 focus:ring-0 focus:border-2 rounded-t-none border-t-0 border-border focus:border-t-0 focus:border-ring"
+      : "rounded-md border-t border-border focus:ring-0 focus:border-2 focus:border-ring";
 
   const additionalClassNames = "form-modal-lockchat pl-14";
 
