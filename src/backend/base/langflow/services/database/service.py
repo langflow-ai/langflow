@@ -10,7 +10,7 @@ from loguru import logger
 from sqlalchemy import inspect
 from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, SQLModel, create_engine, select, text
-
+import os
 from langflow.services.base import Service
 from langflow.services.database import models  # noqa
 from langflow.services.database.models.user.crud import get_user_by_username
@@ -41,7 +41,14 @@ class DatabaseService(Service):
             connect_args = {"check_same_thread": False}
         else:
             connect_args = {}
-        return create_engine(self.database_url, connect_args=connect_args)
+        if os.environ.get("LANGFLOW_DATABASE_POOL_SIZE") and os.environ.get("LANGFLOW_DATABASE_MAX_OVERFLOW"):
+            pool_size = int(os.environ.get("LANGFLOW_DATABASE_POOL_SIZE"), 5)
+            max_overflow = int(os.environ.get("LANGFLOW_DATABASE_MAX_OVERFLOW"), 10)
+            return create_engine(
+                self.database_url, connect_args=connect_args, pool_size=pool_size, max_overflow=max_overflow
+            )
+        else:
+            return create_engine(self.database_url, connect_args=connect_args)
 
     def __enter__(self):
         self._session = Session(self.engine)
