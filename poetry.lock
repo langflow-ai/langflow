@@ -283,6 +283,24 @@ websockets = ">=11.0"
 extras = ["pyaudio (>=0.2.13)"]
 
 [[package]]
+name = "astra-assistants"
+version = "2.0.2"
+description = "Astra Assistants API - drop in replacement for OpenAI Assistants, powered by AstraDB"
+optional = false
+python-versions = "<4.0,>=3.10"
+files = [
+    {file = "astra_assistants-2.0.2-py3-none-any.whl", hash = "sha256:de35a2f244e4df9e41f46ce22bb84712f33b9bd579e31d16dc2c50de56543c34"},
+    {file = "astra_assistants-2.0.2.tar.gz", hash = "sha256:1a8b0925ba019afd062d977c3201f425fb7767bc9fb9029b3fccf79ca774523f"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.9.4,<4.0.0"
+boto3 = ">=1.34.31,<2.0.0"
+httpx = ">=0.26.0,<0.27.0"
+litellm = ">=1.36.0,<2.0.0"
+openai = ">=1.20.0,<2.0.0"
+
+[[package]]
 name = "astrapy"
 version = "1.4.0"
 description = "AstraPy is a Pythonic SDK for DataStax Astra and its Data API"
@@ -3749,13 +3767,13 @@ test = ["Cython (>=0.29.24,<0.30.0)"]
 
 [[package]]
 name = "httpx"
-version = "0.27.0"
+version = "0.26.0"
 description = "The next generation HTTP client."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "httpx-0.27.0-py3-none-any.whl", hash = "sha256:71d5465162c13681bff01ad59b2cc68dd838ea1f10e51574bac27103f00c91a5"},
-    {file = "httpx-0.27.0.tar.gz", hash = "sha256:a0cb88a46f32dc874e04ee956e4c2764aba2aa228f650b06788ba6bda2962ab5"},
+    {file = "httpx-0.26.0-py3-none-any.whl", hash = "sha256:8915f5a3627c4d47b73e8202457cb28f1266982d1159bd5779d86a80c0eab1cd"},
+    {file = "httpx-0.26.0.tar.gz", hash = "sha256:451b55c30d5185ea6b23c2c793abf9bb237d2a7dfb901ced6ff69ad37ec1dfaf"},
 ]
 
 [package.dependencies]
@@ -11977,4 +11995,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "1c676440f3d6e74df8460f61ce3106255cc6b5158fcf798de368e4e7d623f19a"
+content-hash = "7c3e8e8348608a5c19348bd6fa3e91ebbff890efa360d3621cd6595aa84699fa"
