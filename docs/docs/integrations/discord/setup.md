@@ -1,4 +1,6 @@
-# Setting up a Discord Integration with Langflow
+import Admonition from "@theme/Admonition";
+
+# Setting up a Discord App
 
 This guide will walk you through the process of integrating a Discord bot with Langflow, allowing you to leverage Langflow's features within your Discord server.
 
@@ -14,14 +16,22 @@ This guide will walk you through the process of integrating a Discord bot with L
 3. Choose a name for your bot application and agree to Discord's Developer Terms of Service.
 4. Click "Create."
 
-## Step 2: Configuring Bot User Permissions
+## Step 2: Get Application Token
+
+1. Navigate to the [Discord Developer Portal](https://discord.com/developers/applications).
+2. Select your application.
+3. Click on "Bot" section.
+4. In the "Token" section, click on "Reset Token" and confirm the action.  
+5. Copy and store the provided token in a safe place.
+
+## Step 3: Configuring Bot User Permissions
 
 1. In the navigation menu, go to the "Bot" section.
 2. Under "Privileged Gateway Intents," enable the intents required for your desired Langflow components. Refer to the Langflow component documentation for specific intent requirements.
 3. In the "Authorization Methods" section, select "Discord Provided Link."
 4. In "Default Install Settings," add the "bot" option and grant the necessary permissions for your bot's functionality.
 
-## Step 3: Adding the Bot to Your Discord Server
+## Step 4: Adding the Bot to Your Discord Server
 
 1. In the navigation menu, go to the "OAuth2" section, then the "URL Generator" tab.
 2. Under "SCOPES," check the "bot" option.
@@ -45,11 +55,13 @@ Langflow offers a variety of Discord components to enhance your bot's capabiliti
 * **DiscordGetImage:** Retrieves the last n-image messages.
 * **DiscordFileSender:** Sends files to a channel.
 * **DiscordGetAudioMessage:** Retrieves the last audio message from a channel.
+* **DiscordAudioSender:** Sends audio files to a channel.
 
 ### Server and Channel Information
 * **DiscordGetGuildChannels:** Gets information about channels in a server.
 * **DiscordGetGuildUsers:** Gets information about users in a server.
 * **DiscordGetChannelMessages:** Retrieves message history from a channel.
+* **DiscordBotName:** Retrieves the name of bot account.
 
 ### Reactions
 * **DiscordAddEmojiReaction:** Adds an emoji reaction to a message.
@@ -57,7 +69,10 @@ Langflow offers a variety of Discord components to enhance your bot's capabiliti
 
 Refer to the Langflow documentation for detailed instructions on using each component.
 
+</Admonition>
 <Admonition type="info" title="Additional Resources">
 
 - [Discord API Documentation](https://discord.com/developers/docs/quick-start/getting-started)
 - [Understanding Discord Resources](https://discord.com/developers/docs/resources/application)
+
+</Admonition>
