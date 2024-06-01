@@ -18,7 +18,7 @@ const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
     const version = useDarkStore((state) => state.version);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
-    const [checked, setChecked] = useState(true);
+    const [checked, setChecked] = useState(false);
     const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
     useEffect(() => {
       setName(currentFlow!.name);
