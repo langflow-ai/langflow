@@ -1,3 +1,5 @@
+import { Message } from "../../messages";
+
 export type MessagesStoreType = {
   messages: Message[];
   setMessages: (messages: Message[]) => void;
@@ -5,5 +7,5 @@ export type MessagesStoreType = {
   removeMessage: (message: Message) => void;
   updateMessage: (message: Message) => void;
   clearMessages: () => void;
-  removeMessages: (ids: number[]) => Promise<Message[]>;
+  removeMessages: (ids: number[]) => void;
 };
