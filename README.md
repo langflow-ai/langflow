@@ -100,6 +100,12 @@ Or this one to deploy Langflow 0.6.x:
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
 </a>
 
+## Deploy on RepoCloud
+
+<a href="https://repocloud.io/details/?app_id=289">
+<img src="https://d16t0pc4846x52.cloudfront.net/deploylobe.svg" alt="Deploy to RepoCloud" />
+</a>
+
 # 🖥️ Command Line Interface (CLI)
 
 Langflow provides a command-line interface (CLI) for easy management and configuration.
