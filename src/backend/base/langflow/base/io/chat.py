@@ -1,13 +1,13 @@
 from typing import Optional, Union
 
-from langflow.custom import CustomComponent
+from langflow.custom import Component
 from langflow.field_typing import Text
 from langflow.helpers.record import records_to_text
 from langflow.memory import store_message
 from langflow.schema import Record
 
 
-class ChatComponent(CustomComponent):
+class ChatComponent(Component):
     display_name = "Chat Component"
     description = "Use as base for chat components."
 

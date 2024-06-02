@@ -11,10 +11,11 @@ if TYPE_CHECKING:
 
 
 class SourceHandle(BaseModel):
-    baseClasses: List[str] = Field(..., description="List of base classes for the source handle.")
+    baseClasses: Optional[List[str]] = Field(None, description="List of base classes for the source handle.")
     dataType: str = Field(..., description="Data type for the source handle.")
     id: str = Field(..., description="Unique identifier for the source handle.")
-    conditionalPath: Optional[bool] = Field(None, description="Conditional path for the source handle.")
+    name: str = Field(..., description="Name of the source handle.")
+    output_types: List[str] = Field(..., description="List of output types for the source handle.")
 
 
 class TargetHandle(BaseModel):
@@ -49,11 +50,11 @@ class Edge:
 
     def validate_handles(self, source, target) -> None:
         if self.target_handle.inputTypes is None:
-            self.valid_handles = self.target_handle.type in self.source_handle.baseClasses
+            self.valid_handles = self.target_handle.type in self.source_handle.output_types
         else:
             self.valid_handles = (
-                any(baseClass in self.target_handle.inputTypes for baseClass in self.source_handle.baseClasses)
-                or self.target_handle.type in self.source_handle.baseClasses
+                any(output_type in self.target_handle.inputTypes for output_type in self.source_handle.output_types)
+                or self.target_handle.type in self.source_handle.output_types
             )
         if not self.valid_handles:
             logger.debug(self.source_handle)
@@ -70,16 +71,29 @@ class Edge:
     def validate_edge(self, source, target) -> None:
         # Validate that the outputs of the source node are valid inputs
         # for the target node
-        self.source_types = source.output
+        # .outputs is a list of Output objects as dictionaries
+        # meaning: check for "types" key in each dictionary
+        self.source_types = [output for output in source.outputs if output["name"] == self.source_handle.name]
         self.target_reqs = target.required_inputs + target.optional_inputs
         # Both lists contain strings and sometimes a string contains the value we are
         # looking for e.g. comgin_out=["Chain"] and target_reqs=["LLMChain"]
         # so we need to check if any of the strings in source_types is in target_reqs
-        self.valid = any(output in target_req for output in self.source_types for target_req in self.target_reqs)
+        self.valid = any(
+            any(output_type in target_req for output_type in output["types"])
+            for output in self.source_types
+            for target_req in self.target_reqs
+        )
         # Get what type of input the target node is expecting
 
+        # Update the matched type to be the first found match
         self.matched_type = next(
-            (output for output in self.source_types if output in self.target_reqs),
+            (
+                output_type
+                for output in self.source_types
+                for output_type in output["types"]
+                for target_req in self.target_reqs
+                if output_type in target_req
+            ),
             None,
         )
         no_matched_type = self.matched_type is None

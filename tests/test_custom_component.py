@@ -4,10 +4,9 @@ from uuid import uuid4
 
 import pytest
 from langchain_core.documents import Document
-
 from langflow.custom import CustomComponent
 from langflow.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
-from langflow.custom.custom_component.component import Component, ComponentCodeNullError
+from langflow.custom.custom_component.base_component import BaseComponent, ComponentCodeNullError
 from langflow.custom.utils import build_custom_component_template
 from langflow.services.database.models.flow import Flow, FlowCreate
 
@@ -77,7 +76,7 @@ def test_component_init():
     """
     Test the initialization of the Component class.
     """
-    component = Component(code=code_default, function_entrypoint_name="build")
+    component = BaseComponent(code=code_default, function_entrypoint_name="build")
     assert component.code == code_default
     assert component.function_entrypoint_name == "build"
 
@@ -86,7 +85,7 @@ def test_component_get_code_tree():
     """
     Test the get_code_tree method of the Component class.
     """
-    component = Component(code=code_default, function_entrypoint_name="build")
+    component = BaseComponent(code=code_default, function_entrypoint_name="build")
     tree = component.get_code_tree(component.code)
     assert "imports" in tree
 
@@ -96,7 +95,7 @@ def test_component_code_null_error():
     Test the get_function method raises the
     ComponentCodeNullError when the code is empty.
     """
-    component = Component(code="", function_entrypoint_name="")
+    component = BaseComponent(code="", function_entrypoint_name="")
     with pytest.raises(ComponentCodeNullError):
         component.get_function()
 
@@ -200,7 +199,7 @@ def test_component_get_function_valid():
     Test the get_function method of the Component
     class with valid code and function_entrypoint_name.
     """
-    component = Component(code="def build(): pass", function_entrypoint_name="build")
+    component = BaseComponent(code="def build(): pass", function_entrypoint_name="build")
     my_function = component.get_function()
     assert callable(my_function)
 
@@ -357,7 +356,7 @@ def test_component_get_code_tree_syntax_error():
     Test the get_code_tree method of the Component class
     raises the CodeSyntaxError when given incorrect syntax.
     """
-    component = Component(code="import os as", function_entrypoint_name="build")
+    component = BaseComponent(code="import os as", function_entrypoint_name="build")
     with pytest.raises(CodeSyntaxError):
         component.get_code_tree(component.code)
 
