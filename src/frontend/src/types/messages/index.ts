@@ -9,3 +9,5 @@ type Message = {
   timestamp: string;
   id: string;
 };
+
+export type { Message };

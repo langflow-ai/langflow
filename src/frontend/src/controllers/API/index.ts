@@ -28,6 +28,7 @@ import {
   UploadFileTypeAPI,
   errorsTypeAPI,
 } from "./../../types/api/index";
+import { Message } from "../../types/messages";
 
 /**
  * Fetches all objects from the API endpoint.
@@ -1043,4 +1044,8 @@ export async function deleteMessagesFn(ids: number[]) {
   return await api.post(`${BASE_URL_API}monitor/messages`, {
     ids,
   });
+}
+
+export async function updateMessageApi(data: Message) {
+  return await api.post(`${BASE_URL_API}monitor/messages/${data.index}`, data);
 }

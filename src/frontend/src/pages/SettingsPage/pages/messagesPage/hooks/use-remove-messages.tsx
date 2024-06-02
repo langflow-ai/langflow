@@ -2,7 +2,6 @@ import { deleteMessagesFn } from "../../../../../controllers/API";
 import { useMessagesStore } from "../../../../../stores/messagesStore";
 
 const useRemoveMessages = (
-  setRows,
   setSelectedRows,
   setSuccessData,
   setErrorData,
@@ -16,8 +15,7 @@ const useRemoveMessages = (
       await deleteMessagesFn(selectedRows);
 
       // Assuming deleteMessages is a separate function that updates state after deletion
-      const res = await deleteMessages(selectedRows);
-      setRows(res);
+      deleteMessages(selectedRows);
 
       // Clear the selected rows
       setSelectedRows([]);

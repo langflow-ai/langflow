@@ -61,7 +61,6 @@ const TableComponent = forwardRef<
           headerCheckboxSelectionFilteredOnly: true,
         };
       }
-      console.log(props.editable, col.headerName);
       if (
         (typeof props.editable === "boolean" && props.editable) ||
         (Array.isArray(props.editable) &&
