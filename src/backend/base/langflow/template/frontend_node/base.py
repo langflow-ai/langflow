@@ -101,6 +101,9 @@ class FrontendNode(BaseModel):
     def add_extra_base_classes(self) -> None:
         pass
 
+    def get_base_classes_from_outputs(self) -> list[str]:
+        self.base_classes = [output_type for output in self.outputs for output_type in output.types]
+
     def add_base_class(self, base_class: Union[str, List[str]]) -> None:
         """Adds a base class to the frontend node."""
         if isinstance(base_class, str):

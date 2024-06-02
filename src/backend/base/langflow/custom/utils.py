@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from langflow.custom import CustomComponent
 from langflow.custom.code_parser.utils import extract_inner_type
+from langflow.custom.custom_component.component import Component
 from langflow.custom.directory_reader.utils import (
     abuild_custom_component_list_from_path,
     build_custom_component_list_from_path,
@@ -24,7 +25,7 @@ from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.custom import format_type
 from langflow.schema import dotdict
 from langflow.template.field.base import Input
-from langflow.template.frontend_node.custom_components import CustomComponentFrontendNode
+from langflow.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
 from langflow.utils import validate
 from langflow.utils.util import get_base_classes
 
@@ -325,7 +326,7 @@ def build_custom_component_template_from_inputs(
     custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None
 ):
     # The List of Inputs fills the role of the build_config and the entrypoint_args
-    frontend_node = CustomComponentFrontendNode.from_inputs(**custom_component.template_config)
+    frontend_node = ComponentFrontendNode.from_inputs(**custom_component.template_config)
     field_config = run_build_inputs(
         custom_component,
         user_id=user_id,
@@ -336,6 +337,8 @@ def build_custom_component_template_from_inputs(
         return_types = custom_component.get_method_return_type(output.method)
         return_types = [format_type(return_type) for return_type in return_types]
         output.add_types(return_types)
+    # ! This should be removed when we have a better way to handle this
+    frontend_node.get_base_classes_from_outputs()
 
     return frontend_node.to_dict(add_name=False), custom_component
 
@@ -384,7 +387,7 @@ def create_component_template(component):
     component_code = component["code"]
     component_output_types = component["output_types"]
 
-    component_extractor = CustomComponent(code=component_code)
+    component_extractor = Component(code=component_code)
 
     component_template, _ = build_custom_component_template(component_extractor)
     if not component_template["output_types"] and component_output_types:

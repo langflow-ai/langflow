@@ -62,6 +62,8 @@ export default function ParameterComponent({
   index,
   outputName,
 }: ParameterComponentType): JSX.Element {
+  console.log("title", title);
+  console.log("data", data);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -72,7 +74,6 @@ export default function ParameterComponent({
   const updateNodeInternals = useUpdateNodeInternals();
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
-
   const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue(
     data,
     name,

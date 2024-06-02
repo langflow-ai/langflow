@@ -20,6 +20,7 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 from langflow.custom import CustomComponent
+from langflow.custom.custom_component.component import Component
 from langflow.custom.utils import build_custom_component_template
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
@@ -475,7 +476,7 @@ async def custom_component(
     raw_code: CustomComponentRequest,
     user: User = Depends(get_current_active_user),
 ):
-    component = CustomComponent(code=raw_code.code)
+    component = Component(code=raw_code.code)
 
     built_frontend_node, _ = build_custom_component_template(component, user_id=user.id)
 

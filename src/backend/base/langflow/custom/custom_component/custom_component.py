@@ -12,13 +12,12 @@ from langflow.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
 )
-from langflow.custom.custom_component.component import Component
+from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
-from langflow.template.field.base import Input, Output
 from langflow.utils import validate
 
 if TYPE_CHECKING:
@@ -27,7 +26,7 @@ if TYPE_CHECKING:
     from langflow.services.storage.service import StorageService
 
 
-class CustomComponent(Component):
+class CustomComponent(BaseComponent):
     """
     Represents a custom component in Langflow.
 
@@ -80,9 +79,6 @@ class CustomComponent(Component):
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_records: Optional[List[Record]] = None
 
-    inputs: Optional[List[Input]] = None
-    outputs: Optional[List[Output]] = None
-
     def build_inputs(self, user_id: Optional[Union[str, UUID]] = None):
         """
         Builds the inputs for the custom component.
@@ -99,12 +95,6 @@ class CustomComponent(Component):
             return {}
         build_config = {_input.name: _input.model_dump(by_alias=True, exclude_none=True) for _input in self.inputs}
         return build_config
-
-    def set_attributes(self, params: dict):
-        for key, value in params.items():
-            if key in self.__dict__:
-                raise ValueError(f"Key {key} already exists in {self.__class__.__name__}")
-            setattr(self, key, value)
 
     def update_state(self, name: str, value: Any):
         if not self.vertex:
@@ -492,5 +482,4 @@ class CustomComponent(Component):
         Returns:
             Any: The result of the build process.
         """
-        raise NotImplementedError
         raise NotImplementedError
