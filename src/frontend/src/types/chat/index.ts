@@ -23,7 +23,11 @@ export type ChatOutputType = {
 };
 
 export type chatInputType = {
-  result: string;
+  message: string;
+  sender: string;
+  sender_name: string;
+  stream_url?: string;
+  files?: Array<{ path: string; type: string; name: string }>;
 };
 
 export type FlowPoolObjectType = {

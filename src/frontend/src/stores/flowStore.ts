@@ -23,11 +23,9 @@ import {
   targetHandleType,
 } from "../types/flow";
 import {
-  ChatOutputType,
   FlowPoolObjectType,
   FlowStoreType,
   VertexLayerElementType,
-  chatInputType,
 } from "../types/zustand/flow";
 import { buildVertices } from "../utils/buildUtils";
 import {
@@ -44,6 +42,7 @@ import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
+import { ChatOutputType, chatInputType } from "../types/chat";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
@@ -79,7 +78,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateFlowPool: (
     nodeId: string,
     data: VertexBuildTypeAPI | ChatOutputType | chatInputType,
-    buildId?: string
+    buildId?: string,
   ) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
     if (!newFlowPool[nodeId]) {
@@ -95,7 +94,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       }
       //update data results
       else {
-        newFlowPool[nodeId][index].data.messages[0] = (data as ChatOutputType| chatInputType);
+        newFlowPool[nodeId][index].data.message = data as
+          | ChatOutputType
+          | chatInputType;
       }
     }
     get().setFlowPool(newFlowPool);
@@ -517,7 +518,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
       get().addDataToFlowPool(
         { ...vertexBuildData, run_id: runId },
-        vertexBuildData.id
+        vertexBuildData.id,
       );
 
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);

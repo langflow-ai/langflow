@@ -10,19 +10,7 @@ import {
 import { BuildStatus } from "../../../constants/enums";
 import { FlowState } from "../../tabs";
 import { VertexBuildTypeAPI } from "../../api";
-
-export type chatInputType = {
-  result: string;
-  files?: string[];
-};
-
-export type ChatOutputType = {
-  message: string;
-  sender: string;
-  sender_name: string;
-  stream_url?: string;
-  files?: string[];
-};
+import { ChatOutputType, chatInputType } from "../../chat";
 
 export type FlowPoolObjectType = {
   timestamp: string;
@@ -159,7 +147,7 @@ export type FlowStoreType = {
   updateFlowPool: (
     nodeId: string,
     data: VertexBuildTypeAPI | ChatOutputType | chatInputType,
-    buildId?: string
+    buildId?: string,
   ) => void;
   getNodePosition: (nodeId: string) => { x: number; y: number };
 };
