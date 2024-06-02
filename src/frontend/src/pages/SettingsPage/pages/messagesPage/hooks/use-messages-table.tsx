@@ -7,7 +7,7 @@ const useMessagesTable = (setColumns, setRows, setMessages) => {
       try {
         const data = await getMessagesTable("union", undefined, ["index"]);
         const { columns, rows } = data;
-        setColumns(columns.map((col) => ({ ...col, editable: true })));
+        setColumns(columns);
         setRows(rows);
         setMessages(rows);
       } catch (error) {
