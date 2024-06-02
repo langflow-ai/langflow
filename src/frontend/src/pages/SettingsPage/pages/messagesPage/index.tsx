@@ -40,6 +40,7 @@ export default function MessagesPage() {
         <Card x-chunk="dashboard-04-chunk-2" className="h-full pt-4">
           <CardContent className="h-full">
             <TableComponent
+              editable={["Sender", "Sender Name", "Message"]}
               overlayNoRowsTemplate="No data available"
               onSelectionChanged={(event: SelectionChangedEvent) => {
                 setSelectedRows(
