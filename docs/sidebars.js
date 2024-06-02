@@ -150,6 +150,18 @@ module.exports = {
             "integrations/notion/page-content-viewer",
           ],
         },
+        {
+          type: "category",
+          label: "Streamlit",
+          items: [
+            "integrations/streamlit/intro",
+            "integrations/streamlit/chat-template",
+            "integrations/streamlit/get-last-session",
+            "integrations/streamlit/get-session-messages",
+            "integrations/streamlit/listen-chat-message",
+            "integrations/streamlit/send-chat-message",
+          ],
+        },
       ],
     },
   ],
