@@ -113,6 +113,9 @@ export default function IOModal({
 
   useEffect(() => {
     setSelectedViewField(startView());
+    if (haveChat) {
+      //TODO: fetch avaliable Sessions
+    }
   }, [open]);
 
   return (
@@ -159,6 +162,9 @@ export default function IOModal({
                       )}
                       {outputs.length > 0 && (
                         <TabsTrigger value={"2"}>Outputs</TabsTrigger>
+                      )}
+                      {haveChat && (
+                        <TabsTrigger value={"3"}>History</TabsTrigger>
                       )}
                     </TabsList>
                   </div>
