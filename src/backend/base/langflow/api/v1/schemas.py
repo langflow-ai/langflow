@@ -322,5 +322,3 @@ class FlowDataRequest(BaseModel):
 class ConfigResponse(BaseModel):
     frontend_timeout: int
 
-class MessageIds(BaseModel):
-    ids: List[int]
