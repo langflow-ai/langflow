@@ -221,6 +221,7 @@ export type AccordionComponentType = {
   children?: ReactElement;
   open?: string[];
   trigger?: string | ReactElement;
+  disabled?: boolean;
   keyValue?: string;
   openDisc?: boolean;
   sideBar?: boolean;
