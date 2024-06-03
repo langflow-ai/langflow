@@ -29,12 +29,11 @@ class ChatInput(ChatComponent):
     def record_response(self) -> Record:
         record = Record(
             data={
-                "message": self.input_value,
+                "text": self.input_value,
                 "sender": self.sender,
                 "sender_name": self.sender_name,
                 "session_id": self.session_id,
             },
-            text_key="message",
         )
         if self.session_id and isinstance(record, (Record, str)):
             self.store_message(record, self.session_id, self.sender, self.sender_name)
