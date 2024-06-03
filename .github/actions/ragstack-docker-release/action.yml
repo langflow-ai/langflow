@@ -41,6 +41,7 @@ runs:
       shell: bash
       run: |
         backend_full_name=ghcr.io/datastax/ragstack-ai-langflow-backend
+        backend_ep_full_name=ghcr.io/datastax/ragstack-ai-langflow-backend-ep
         frontend_full_name=ghcr.io/datastax/ragstack-ai-langflow-frontend
         v="${{ inputs.version }}"
 
@@ -49,6 +50,10 @@ runs:
         docker push $backend_full_name:$v
         docker push $backend_full_name:latest
 
+        docker tag ragstack-ai-langflow-backend-ep:latest $backend_ep_full_name:$v
+        docker tag ragstack-ai-langflow-backend-ep:latest $backend_ep_full_name:latest
+        docker push $backend_ep_full_name:$v
+        docker push $backend_ep_full_name:latest
 
         docker tag ragstack-ai-langflow-frontend:latest $frontend_full_name:$v
         docker tag ragstack-ai-langflow-frontend:latest $frontend_full_name:latest
