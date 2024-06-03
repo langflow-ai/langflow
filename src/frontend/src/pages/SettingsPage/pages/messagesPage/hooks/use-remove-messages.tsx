@@ -2,19 +2,17 @@ import { deleteMessagesFn } from "../../../../../controllers/API";
 import { useMessagesStore } from "../../../../../stores/messagesStore";
 
 const useRemoveMessages = (
-  setRows,
   setSelectedRows,
   setSuccessData,
   setErrorData,
-  selectedRows,
+  selectedRows
 ) => {
   const deleteMessages = useMessagesStore((state) => state.removeMessages);
 
   const handleRemoveMessages = async () => {
     try {
       await deleteMessagesFn(selectedRows);
-      const res = await deleteMessages(selectedRows);
-      setRows(res);
+      deleteMessages(selectedRows);
       setSelectedRows([]);
       setSuccessData({
         title: "Messages deleted successfully.",
