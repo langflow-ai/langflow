@@ -78,16 +78,11 @@ async def simple_run_flow(
             if flow.data is None:
                 raise ValueError(f"Flow {flow_id_str} has no data")
             graph_data = flow.data
-            graph_data = process_tweaks(graph_data, input_request.tweaks or {})
+            graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
             graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id))
         inputs = [
             InputValueRequest(components=[], input_value=input_request.input_value, type=input_request.input_type)
         ]
-        # outputs is a list of all components that should return output
-        # we need to get them by checking their type
-        # if the output type is debug, we return all outputs
-        # if the output type is any, we return all outputs that are either chat or text
-        # if the output type is chat or text, we return only the outputs that match the type
         if input_request.output_component:
             outputs = [input_request.output_component]
         else:
