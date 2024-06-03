@@ -30,4 +30,4 @@ class TextInput(TextComponent):
     ]
 
     def text_response(self) -> Text:
-        return self.input_value if self.input_value else ""
+        return self.build(input_value=self.input_value, record_template=self.record_template)

@@ -40,7 +40,6 @@ async def instantiate_class(
         user_id=user_id,
         parameters=params_copy,
         vertex=vertex,
-        selected_output_type=vertex.selected_output_type,
     )
     params_copy = update_params_with_load_from_db_fields(
         custom_component, params_copy, vertex.load_from_db_fields, fallback_to_env_vars

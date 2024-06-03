@@ -86,7 +86,8 @@ class ComponentVertex(Vertex):
         edge = self.get_edge_with_target(requester.id)
         if edge is None:
             raise ValueError(f"Edge not found between {self.display_name} and {requester.display_name}")
-
+        if edge.source_handle.name not in self.results:
+            raise ValueError(f"Result not found for {edge.source_handle.name}. Results: {self.results}")
         result = self.results[edge.source_handle.name]
 
         log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="success")

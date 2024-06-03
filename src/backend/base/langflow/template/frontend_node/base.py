@@ -72,8 +72,7 @@ class FrontendNode(BaseModel):
     def serialize_model(self, handler):
         result = handler(self)
         if hasattr(self, "template") and hasattr(self.template, "to_dict"):
-            format_func = self.format_field if self._format_template else None
-            result["template"] = self.template.to_dict(format_func)
+            result["template"] = self.template.to_dict()
         name = result.pop("name")
 
         # Migrate base classes to outputs
