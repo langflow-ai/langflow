@@ -75,6 +75,7 @@ export default function FlowSettingsModal({
           disabled={nameLists.includes(name) && name !== currentFlow!.name}
           onClick={handleClick}
           type="submit"
+          data-testid="save-flow-settings-button"
         >
           Save
         </Button>
