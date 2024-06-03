@@ -95,14 +95,6 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
         api_endpoint: str,
         namespace: Optional[str] = None,
     ) -> Record:
-        try:
-            pass
-        except ImportError:
-            raise ImportError(
-                "Could not import langchain Astra DB integration package. "
-                "Please install it with `pip install langchain-astradb`."
-            )
-
         memory = AstraDBChatMessageHistory(
             session_id=session_id,
             collection_name=collection_name,
