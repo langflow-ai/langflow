@@ -79,15 +79,21 @@ export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
       const output = sourceNode.data.node!.outputs?.find(
         (output) => output.name === name,
       );
-      const outputTypes = [output?.selected ?? ""];
-      const id: sourceHandleType = {
-        id: sourceNode.data.id,
-        name: name,
-        output_types: outputTypes,
-        dataType: sourceNode.data.type,
-      };
-      if (scapedJSONStringfy(id) !== sourceHandle) {
-        newEdges = newEdges.filter((e) => e.id !== edge.id);
+      if (output) {
+        const outputTypes =
+          output!.types.length === 1 ? output!.types : [output!.selected!];
+
+        const id: sourceHandleType = {
+          id: sourceNode.data.id,
+          name: name,
+          output_types: outputTypes,
+          dataType: sourceNode.data.type,
+        };
+        console.log("id", id);
+        console.log("sourceHandle", scapeJSONParse(sourceHandle));
+        if (scapedJSONStringfy(id) !== sourceHandle) {
+          newEdges = newEdges.filter((e) => e.id !== edge.id);
+        }
       }
     }
   });
