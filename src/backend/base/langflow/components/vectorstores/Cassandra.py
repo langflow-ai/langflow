@@ -74,7 +74,7 @@ class CassandraVectorStoreComponent(CustomComponent):
         ttl_seconds: Optional[int] = None,
         batch_size: int = 16,
         body_index_options: Optional[List[Tuple[str, Any]]] = None,
-        setup_mode: str = "Sync",
+        setup_mode: SetupMode = SetupMode.SYNC,
     ) -> Union[VectorStore, object]:
         cassio.init(
             database_id=database_id,
@@ -91,7 +91,6 @@ class CassandraVectorStoreComponent(CustomComponent):
                 ttl_seconds=ttl_seconds,
                 batch_size=batch_size,
                 body_index_options=body_index_options,
-                session=None,
             )
         else:
             table = Cassandra(
@@ -99,9 +98,8 @@ class CassandraVectorStoreComponent(CustomComponent):
                 table_name=table_name,
                 keyspace=keyspace,
                 ttl_seconds=ttl_seconds,
-                setup_mode=setup_mode,
                 body_index_options=body_index_options,
-                session=None,
+                setup_mode=setup_mode,
             )
 
         return table

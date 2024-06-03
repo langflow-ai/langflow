@@ -1,4 +1,5 @@
 from .AstraDBSearch import AstraDBSearchComponent
+from .CassandraSearch import CassandraSearchComponent
 from .ChromaSearch import ChromaSearchComponent
 from .FAISSSearch import FAISSSearchComponent
 from .MongoDBAtlasVectorSearch import MongoDBAtlasSearchComponent
@@ -13,6 +14,7 @@ from .Couchbase import CouchbaseSearchComponent  # type: ignore
 
 __all__ = [
     "AstraDBSearchComponent",
+    "CassandraSearchComponent",
     "ChromaSearchComponent",
     "CouchbaseSearchComponent",
     "FAISSSearchComponent",
