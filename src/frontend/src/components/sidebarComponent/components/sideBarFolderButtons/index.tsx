@@ -93,24 +93,23 @@ const SideBarFoldersButtonsComponent = ({
 
   return (
     <>
-      <div className="flex shrink-0 items-center justify-between">
-        <Button variant="primary" onClick={addNewFolder}>
-          <ForwardedIconComponent
-            name="Plus"
-            className="main-page-nav-button"
-          />
-          New Folder
+      <div className="flex shrink-0 items-center justify-between gap-2">
+        <div className="flex-1 self-start text-lg font-semibold">Folders</div>
+        <Button
+          variant="primary"
+          size="icon"
+          className="px-2"
+          onClick={addNewFolder}
+        >
+          <ForwardedIconComponent name="FolderPlus" className="w-4" />
         </Button>
         <Button
           variant="primary"
-          className="px-7"
+          size="icon"
+          className="px-2"
           onClick={handleUploadFlowsToFolder}
         >
-          <ForwardedIconComponent
-            name="Upload"
-            className="main-page-nav-button"
-          />
-          Upload
+          <ForwardedIconComponent name="Upload" className="w-4" />
         </Button>
       </div>
 
