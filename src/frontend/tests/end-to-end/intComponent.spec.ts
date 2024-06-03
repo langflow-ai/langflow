@@ -39,6 +39,12 @@ test("IntComponent", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
+
+  await page.getByTestId("more-options-modal").click();
+  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("showmax_tokens").click();
+
+  await page.getByText("Save Changes", { exact: true }).click();
   await page.getByTestId("int-input-max_tokens").click();
   await page
     .getByTestId("int-input-max_tokens")

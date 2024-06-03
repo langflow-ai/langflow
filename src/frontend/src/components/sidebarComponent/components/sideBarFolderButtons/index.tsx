@@ -261,6 +261,7 @@ const SideBarFoldersButtonsComponent = ({
                         }}
                         value={foldersNames[item.name]}
                         id={`input-folder-${item.name}`}
+                        data-testid={`input-folder`}
                       />
                     </div>
                   ) : (

@@ -90,3 +90,57 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
       .isVisible(),
   );
 });
+
+test("user must be able to see output inspection", async ({ page }) => {
+  if (!process.env.CI) {
+    dotenv.config();
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
+  await page.goto("/");
+
+  await page.waitForTimeout(1000);
+
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
+    }
+  } catch (error) {
+    modalCount = 0;
+  }
+
+  while (modalCount === 0) {
+    await page.getByText("New Project", { exact: true }).click();
+    await page.waitForTimeout(5000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
+
+  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+  await page.waitForTimeout(1000);
+
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+
+  if (!process.env.OPENAI_API_KEY) {
+    //You must set the OPENAI_API_KEY on .env file to run this test
+    expect(false).toBe(true);
+  }
+
+  await page
+    .getByTestId("popover-anchor-input-openai_api_key")
+    .fill(process.env.OPENAI_API_KEY ?? "");
+
+  await page.getByTestId("button_run_chat output").last().click();
+
+  await page.waitForTimeout(2000);
+
+  await page.getByTestId("icon-ScanEye").last().click();
+
+  const textAreaOutputValue = await page.getByPlaceholder("Empty").inputValue();
+  expect(textAreaOutputValue).not.toBe("");
+  expect(textAreaOutputValue).not.toBe(null);
+});

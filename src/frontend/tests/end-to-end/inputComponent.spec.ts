@@ -73,9 +73,9 @@ test("InputComponent", async ({ page }) => {
     await page.locator('//*[@id="showchroma_server_host"]').isChecked(),
   ).toBeTruthy();
 
-  await page.locator('//*[@id="showchroma_server_port"]').click();
+  await page.locator('//*[@id="showchroma_server_http_port"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_port"]').isChecked(),
+    await page.locator('//*[@id="showchroma_server_http_port"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showchroma_server_ssl_enabled"]').click();
@@ -110,9 +110,9 @@ test("InputComponent", async ({ page }) => {
     await page.locator('//*[@id="showchroma_server_host"]').isChecked(),
   ).toBeFalsy();
 
-  await page.locator('//*[@id="showchroma_server_port"]').click();
+  await page.locator('//*[@id="showchroma_server_http_port"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_port"]').isChecked(),
+    await page.locator('//*[@id="showchroma_server_http_port"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showchroma_server_ssl_enabled"]').click();

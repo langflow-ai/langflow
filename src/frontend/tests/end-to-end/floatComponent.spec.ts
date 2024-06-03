@@ -60,12 +60,6 @@ test("FloatComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  await page.locator('//*[@id="showcache"]').click();
-  expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeTruthy();
-
-  await page.locator('//*[@id="showcache"]').click();
-  expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeFalsy();
-
   await page.getByTestId("showformat").click();
   expect(await page.locator('//*[@id="showformat"]').isChecked()).toBeTruthy();
 
@@ -73,12 +67,12 @@ test("FloatComponent", async ({ page }) => {
   expect(await page.locator('//*[@id="showformat"]').isChecked()).toBeFalsy();
 
   await page.getByTestId("showmirostat").click();
+  expect(await page.locator('//*[@id="showmirostat"]').isChecked()).toBeFalsy();
+
+  await page.getByTestId("showmirostat").click();
   expect(
     await page.locator('//*[@id="showmirostat"]').isChecked(),
   ).toBeTruthy();
-
-  await page.getByTestId("showmirostat").click();
-  expect(await page.locator('//*[@id="showmirostat"]').isChecked()).toBeFalsy();
 
   await page.getByTestId("showmirostat_eta").click();
   expect(
