@@ -109,7 +109,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
       {setEndpointName && (
         <Label>
           <div className="edit-flow-arrangement mt-3">
-            <span className="font-medium">Endpoint name:</span>
+            <span className="font-medium">Endpoint Name</span>
             {!isEndpointNameValid && (
               <span className="edit-flow-span">
                 Invalid endpoint name. Use only letters, numbers, hyphens, and
