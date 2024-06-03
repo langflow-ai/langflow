@@ -78,7 +78,7 @@ class OpenAIModelComponent(LCModelComponent):
         self,
         input_value: Text,
         openai_api_key: str,
-        temperature: Optional[float] = 0.1,
+        temperature: float = 0.1,
         model_name: str = "gpt-4o",
         max_tokens: Optional[int] = 256,
         model_kwargs: NestedDict = {},

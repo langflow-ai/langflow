@@ -21,12 +21,17 @@ from langflow.services.utils import teardown_superuser
 if TYPE_CHECKING:
     from sqlalchemy.engine import Engine
 
+    from langflow.services.settings.service import SettingsService
+
 
 class DatabaseService(Service):
     name = "database_service"
 
-    def __init__(self, database_url: str):
-        self.database_url = database_url
+    def __init__(self, settings_service: "SettingsService"):
+        self.settings_service = settings_service
+        if settings_service.settings.database_url is None:
+            raise ValueError("No database URL provided")
+        self.database_url: str = settings_service.settings.database_url
         # This file is in langflow.services.database.manager.py
         # the ini is in langflow
         langflow_dir = Path(__file__).parent.parent.parent
@@ -41,7 +46,12 @@ class DatabaseService(Service):
             connect_args = {"check_same_thread": False}
         else:
             connect_args = {}
-        return create_engine(self.database_url, connect_args=connect_args)
+        return create_engine(
+            self.database_url,
+            connect_args=connect_args,
+            pool_size=self.settings_service.settings.pool_size,
+            max_overflow=self.settings_service.settings.max_overflow,
+        )
 
     def __enter__(self):
         self._session = Session(self.engine)
@@ -266,4 +276,5 @@ class DatabaseService(Service):
         except Exception as exc:
             logger.error(f"Error tearing down database: {exc}")
 
+        self.engine.dispose()
         self.engine.dispose()
