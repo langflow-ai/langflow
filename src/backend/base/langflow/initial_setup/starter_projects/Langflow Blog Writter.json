@@ -161,7 +161,17 @@
             "frozen": false,
             "field_order": [],
             "beta": false,
-            "error": null
+            "error": null,
+            "outputs": [
+              {
+                "types": [
+                  "Text"
+                ],
+                "selected": null,
+                "name": "Text",
+                "method": null
+              }
+            ]
           },
           "id": "Prompt-Rse03",
           "description": "Create a prompt template with dynamic variables.",
@@ -247,7 +257,17 @@
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "Record"
+                ],
+                "selected": null,
+                "name": "Record",
+                "method": null
+              }
+            ]
           },
           "id": "URL-HYPkR"
         },
@@ -278,7 +298,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
-                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n        record_template: Optional[str] = \"{text}\",\n    ) -> Union[Text, Record]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n            record_template=record_template or \"\",\n        )\n",
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        Input(name=\"input_value\", type=str, display_name=\"Message\", multiline=True),\n        Input(name=\"sender\", type=str, display_name=\"Sender Type\", options=[\"Machine\", \"AI\"]),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\"),\n        Input(name=\"session_id\", type=str, display_name=\"Session ID\"),\n        Input(name=\"record_template\", type=str, display_name=\"Record Template\", default=\"{text}\"),\n    ]\n    outputs = [\n        Output(name=\"Message\", method=\"text_response\"),\n        Output(name=\"Record\", method=\"record_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self) -> Record:\n        record = Record(\n            data={\n                \"message\": self.input_value,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n                \"template\": self.record_template or \"\",\n            }\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -296,19 +316,20 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
+                "value": "",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
                 "name": "input_value",
                 "display_name": "Message",
                 "advanced": false,
-                "input_types": [
-                  "Text"
-                ],
                 "dynamic": false,
                 "info": "",
                 "load_from_db": false,
-                "title_case": false
+                "title_case": false,
+                "input_types": [
+                  "Text"
+                ]
               },
               "record_template": {
                 "type": "str",
@@ -316,59 +337,40 @@
                 "placeholder": "",
                 "list": false,
                 "show": true,
-                "multiline": true,
-                "value": "{text}",
+                "multiline": false,
+                "value": "",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
                 "name": "record_template",
                 "display_name": "Record Template",
-                "advanced": true,
+                "advanced": false,
                 "dynamic": false,
-                "info": "In case of Message being a Record, this template will be used to convert it to text.",
+                "info": "",
                 "load_from_db": false,
                 "title_case": false,
                 "input_types": [
                   "Text"
                 ]
               },
-              "return_record": {
-                "type": "bool",
+              "sender": {
+                "type": "str",
                 "required": false,
                 "placeholder": "",
                 "list": false,
                 "show": true,
                 "multiline": false,
-                "value": false,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "return_record",
-                "display_name": "Return Record",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "sender": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": true,
-                "show": true,
-                "multiline": false,
-                "value": "Machine",
+                "value": "",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
                 "options": [
                   "Machine",
-                  "User"
+                  "AI"
                 ],
                 "name": "sender",
                 "display_name": "Sender Type",
-                "advanced": true,
+                "advanced": false,
                 "dynamic": false,
                 "info": "",
                 "load_from_db": false,
@@ -384,7 +386,7 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
-                "value": "AI",
+                "value": "",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -406,21 +408,22 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
+                "value": "",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
                 "name": "session_id",
                 "display_name": "Session ID",
-                "advanced": true,
+                "advanced": false,
                 "dynamic": false,
-                "info": "If provided, the message will be stored in the memory.",
+                "info": "",
                 "load_from_db": false,
                 "title_case": false,
                 "input_types": [
                   "Text"
                 ]
               },
-              "_type": "CustomComponent"
+              "_type": "Component"
             },
             "description": "Display a chat message in the Playground.",
             "icon": "ChatOutput",
@@ -447,7 +450,23 @@
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "Text"
+                ],
+                "name": "Message",
+                "method": "text_response"
+              },
+              {
+                "types": [
+                  "Record"
+                ],
+                "name": "Record",
+                "method": "record_response"
+              }
+            ]
           },
           "id": "ChatOutput-JPlxl"
         },
@@ -718,7 +737,17 @@
               "system_message",
               "stream"
             ],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "Text"
+                ],
+                "selected": null,
+                "name": "Text",
+                "method": null
+              }
+            ]
           },
           "id": "OpenAIModel-gi29P"
         },
@@ -802,7 +831,17 @@
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "Record"
+                ],
+                "selected": null,
+                "name": "Record",
+                "method": null
+              }
+            ]
           },
           "id": "URL-2cX90"
         },
@@ -910,7 +949,16 @@
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "Text"
+                ],
+                "selected": "Text",
+                "name": "Text"
+              }
+            ]
           },
           "id": "TextInput-og8Or"
         },
@@ -928,7 +976,7 @@
       {
         "source": "URL-HYPkR",
         "target": "Prompt-Rse03",
-        "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-HYPkRœ}",
+        "sourceHandle": "{\"dataType\": \"URL\", \"id\": \"URL-HYPkR\", \"output_types\": [\"Record\"], \"name\": \"Record\"}",
         "targetHandle": "{œfieldNameœ:œreference_2œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "id": "reactflow__edge-URL-HYPkR{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-HYPkRœ}-Prompt-Rse03{œfieldNameœ:œreference_2œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
@@ -944,11 +992,12 @@
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": [
+            "dataType": "URL",
+            "id": "URL-HYPkR",
+            "output_types": [
               "Record"
             ],
-            "dataType": "URL",
-            "id": "URL-HYPkR"
+            "name": "Record"
           }
         },
         "style": {
@@ -959,7 +1008,7 @@
       },
       {
         "source": "OpenAIModel-gi29P",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gi29Pœ}",
+        "sourceHandle": "{\"dataType\": \"OpenAIModel\", \"id\": \"OpenAIModel-gi29P\", \"output_types\": [\"Text\"], \"name\": \"Text\"}",
         "target": "ChatOutput-JPlxl",
         "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JPlxlœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
@@ -972,13 +1021,12 @@
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": [
-              "str",
-              "Text",
-              "object"
-            ],
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-gi29P"
+            "id": "OpenAIModel-gi29P",
+            "output_types": [
+              "Text"
+            ],
+            "name": "Text"
           }
         },
         "style": {
@@ -989,7 +1037,7 @@
       },
       {
         "source": "URL-2cX90",
-        "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-2cX90œ}",
+        "sourceHandle": "{\"dataType\": \"URL\", \"id\": \"URL-2cX90\", \"output_types\": [\"Record\"], \"name\": \"Record\"}",
         "target": "Prompt-Rse03",
         "targetHandle": "{œfieldNameœ:œreference_1œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
@@ -1005,11 +1053,12 @@
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": [
+            "dataType": "URL",
+            "id": "URL-2cX90",
+            "output_types": [
               "Record"
             ],
-            "dataType": "URL",
-            "id": "URL-2cX90"
+            "name": "Record"
           }
         },
         "style": {
@@ -1020,7 +1069,7 @@
       },
       {
         "source": "TextInput-og8Or",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-og8Orœ}",
+        "sourceHandle": "{\"dataType\": \"TextInput\", \"id\": \"TextInput-og8Or\", \"output_types\": [\"Text\"], \"name\": \"Text\"}",
         "target": "Prompt-Rse03",
         "targetHandle": "{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
@@ -1036,13 +1085,12 @@
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "str"
-            ],
             "dataType": "TextInput",
-            "id": "TextInput-og8Or"
+            "id": "TextInput-og8Or",
+            "output_types": [
+              "Text"
+            ],
+            "name": "Text"
           }
         },
         "style": {
@@ -1053,7 +1101,7 @@
       },
       {
         "source": "Prompt-Rse03",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-Rse03œ}",
+        "sourceHandle": "{\"dataType\": \"Prompt\", \"id\": \"Prompt-Rse03\", \"output_types\": [\"Text\"], \"name\": \"Text\"}",
         "target": "OpenAIModel-gi29P",
         "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-gi29Pœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
@@ -1066,13 +1114,12 @@
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "str"
-            ],
             "dataType": "Prompt",
-            "id": "Prompt-Rse03"
+            "id": "Prompt-Rse03",
+            "output_types": [
+              "Text"
+            ],
+            "name": "Text"
           }
         },
         "style": {
