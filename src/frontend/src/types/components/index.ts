@@ -241,6 +241,7 @@ export type ShadToolTipType = {
   asChild?: boolean;
   children?: ReactElement;
   delayDuration?: number;
+  portal?: boolean;
   styleClasses?: string;
 };
 

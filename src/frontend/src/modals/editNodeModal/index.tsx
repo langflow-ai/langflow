@@ -143,6 +143,7 @@ const EditNodeModal = forwardRef(
                     <TableHeader className="edit-node-modal-table-header">
                       <TableRow className="">
                         <TableHead className="h-7 text-center">PARAM</TableHead>
+                        <TableHead className="h-7 text-center">DESC</TableHead>
                         <TableHead className="h-7 p-0 text-center">
                           VALUE
                         </TableHead>
@@ -197,11 +198,17 @@ const EditNodeModal = forwardRef(
                             >
                               <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
                                 <ShadTooltip
+                                  portal={false}
                                   content={
                                     myData.node?.template[templateParam].proxy
                                       ? myData.node?.template[templateParam]
                                           .proxy?.id
-                                      : null
+                                      : myData.node?.template[templateParam]
+                                            .display_name
+                                        ? myData.node!.template[templateParam]
+                                            .display_name
+                                        : myData.node?.template[templateParam]
+                                            .name
                                   }
                                 >
                                   <span>
@@ -211,6 +218,20 @@ const EditNodeModal = forwardRef(
                                           .display_name
                                       : myData.node?.template[templateParam]
                                           .name}
+                                  </span>
+                                </ShadTooltip>
+                              </TableCell>
+                              <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
+                                <ShadTooltip
+                                  portal={false}
+                                  content={
+                                    data.node?.template[templateParam]?.info ??
+                                    null
+                                  }
+                                >
+                                  <span>
+                                    {data.node?.template[templateParam]?.info ??
+                                      ""}
                                   </span>
                                 </ShadTooltip>
                               </TableCell>
