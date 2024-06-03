@@ -65,8 +65,6 @@ class CustomComponent(BaseComponent):
     """The default frozen state of the component. Defaults to False."""
     build_parameters: Optional[dict] = None
     """The build parameters of the component. Defaults to None."""
-    selected_output_type: Optional[str] = None
-    """The selected output type of the component. Defaults to None."""
     vertex: Optional["Vertex"] = None
     """The edge target parameter of the component. Defaults to None."""
     code_class_base_inheritance: ClassVar[str] = "CustomComponent"

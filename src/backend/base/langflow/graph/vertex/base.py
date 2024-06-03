@@ -212,14 +212,18 @@ class Vertex:
 
     def _parse_data(self) -> None:
         self.data = self._data["data"]
-        self.outputs = self.data["node"]["outputs"]
+        if self.data["node"]["template"]["_type"] == "Component":
+            if "outputs" not in self.data["node"]:
+                raise ValueError(f"Outputs not found for {self.display_name}")
+            self.outputs = self.data["node"]["outputs"]
+        else:
+            self.outputs = self.data["node"]["outputs"]
+            self.output = self.data["node"]["base_classes"]
         self.display_name = self.data["node"].get("display_name", self.id.split("-")[0])
 
         self.description = self.data["node"].get("description", "")
         self.frozen = self.data["node"].get("frozen", False)
-        self.selected_output_type = (
-            str(self.data.get("selected_output_type")).strip() if self.data.get("selected_output_type") else None
-        )
+
         self.is_input = self.data["node"].get("is_input") or self.is_input
         self.is_output = self.data["node"].get("is_output") or self.is_output
         template_dicts = {key: value for key, value in self.data["node"]["template"].items() if isinstance(value, dict)}

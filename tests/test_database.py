@@ -1,5 +1,3 @@
-import os
-from typing import Optional, List
 from uuid import UUID, uuid4
 
 import orjson
@@ -13,7 +11,6 @@ from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
-from langflow.services.settings.base import Settings
 
 
 @pytest.fixture(scope="module")
@@ -263,5 +260,3 @@ def test_load_flows(client: TestClient, load_flows_dir):
     response = client.get("api/v1/flows/c54f9130-f2fa-4a3e-b22a-3856d946351b")
     assert response.status_code == 200
     assert response.json()["name"] == "BasicExample"
-
-

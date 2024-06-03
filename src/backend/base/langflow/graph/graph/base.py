@@ -20,7 +20,6 @@ from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service
-from langflow.services.monitor.utils import log_transaction
 
 if TYPE_CHECKING:
     from langflow.graph.schema import ResultData
@@ -526,6 +525,7 @@ class Graph:
                 raise ValueError(
                     f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
                 ) from exc
+
             raise ValueError(f"Error while creating graph from payload: {exc}") from exc
 
     def __eq__(self, other: object) -> bool:
@@ -764,11 +764,9 @@ class Graph:
             next_runnable_vertices, top_level_vertices = await self.get_next_and_top_level_vertices(
                 lock, set_cache_coro, vertex
             )
-            log_transaction(vertex, status="success")
             return next_runnable_vertices, top_level_vertices, result_dict, params, valid, artifacts, vertex
         except Exception as exc:
             logger.exception(f"Error building vertex: {exc}")
-            log_transaction(vertex, status="failure", error=str(exc))
             raise exc
 
     async def get_next_and_top_level_vertices(

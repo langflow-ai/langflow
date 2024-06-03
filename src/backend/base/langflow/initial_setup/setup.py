@@ -1,3 +1,5 @@
+import copy
+import json
 import logging
 import os
 from collections import defaultdict
@@ -42,37 +44,127 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             latest_template = latest_node.get("template")
             node_data["template"]["code"] = latest_template["code"]
 
-            for attr in NODE_FORMAT_ATTRIBUTES:
-                if attr in latest_node:
-                    # Check if it needs to be updated
-                    if latest_node[attr] != node_data.get(attr):
-                        node_changes_log[node_data["display_name"]].append(
-                            {
-                                "attr": attr,
-                                "old_value": node_data.get(attr),
-                                "new_value": latest_node[attr],
-                            }
-                        )
-                        node_data[attr] = latest_node[attr]
-
-            for field_name, field_dict in latest_template.items():
-                if field_name not in node_data["template"]:
-                    continue
-                # The idea here is to update some attributes of the field
-                for attr in FIELD_FORMAT_ATTRIBUTES:
-                    if attr in field_dict and attr in node_data["template"].get(field_name):
+            if "outputs" in latest_node:
+                node_data["outputs"] = latest_node["outputs"]
+            if node_data["template"]["_type"] != latest_template["_type"]:
+                node_data["template"] = latest_template
+            else:
+                for attr in NODE_FORMAT_ATTRIBUTES:
+                    if attr in latest_node:
                         # Check if it needs to be updated
-                        if field_dict[attr] != node_data["template"][field_name][attr]:
+                        if latest_node[attr] != node_data.get(attr):
                             node_changes_log[node_data["display_name"]].append(
                                 {
-                                    "attr": f"{field_name}.{attr}",
-                                    "old_value": node_data["template"][field_name][attr],
-                                    "new_value": field_dict[attr],
+                                    "attr": attr,
+                                    "old_value": node_data.get(attr),
+                                    "new_value": latest_node[attr],
                                 }
                             )
-                            node_data["template"][field_name][attr] = field_dict[attr]
+                            node_data[attr] = latest_node[attr]
+
+                for field_name, field_dict in latest_template.items():
+                    if field_name not in node_data["template"]:
+                        continue
+                    # The idea here is to update some attributes of the field
+                    for attr in FIELD_FORMAT_ATTRIBUTES:
+                        if attr in field_dict and attr in node_data["template"].get(field_name):
+                            # Check if it needs to be updated
+                            if field_dict[attr] != node_data["template"][field_name][attr]:
+                                node_changes_log[node_data["display_name"]].append(
+                                    {
+                                        "attr": f"{field_name}.{attr}",
+                                        "old_value": node_data["template"][field_name][attr],
+                                        "new_value": field_dict[attr],
+                                    }
+                                )
+                                node_data["template"][field_name][attr] = field_dict[attr]
+    project_data_copy = update_new_output(project_data_copy)
     log_node_changes(node_changes_log)
     return project_data_copy
+
+
+def scape_json_parse(json_string: str) -> dict:
+    parsed_string = json_string.replace("œ", '"')
+    return json.loads(parsed_string)
+
+
+def update_new_output(data):
+    nodes = copy.deepcopy(data["nodes"])
+    edges = copy.deepcopy(data["edges"])
+
+    for edge in edges:
+        if "sourceHandle" in edge and "targetHandle" in edge:
+            new_source_handle = scape_json_parse(edge["sourceHandle"])
+            new_target_handle = scape_json_parse(edge["targetHandle"])
+            _id = new_source_handle["id"]
+            source_node_index = next((index for (index, d) in enumerate(nodes) if d["id"] == _id), -1)
+            source_node = nodes[source_node_index] if source_node_index != -1 else None
+
+            if "baseClasses" in new_source_handle:
+                if "output_types" not in new_source_handle:
+                    if source_node and "node" in source_node["data"] and "output_types" in source_node["data"]["node"]:
+                        new_source_handle["output_types"] = source_node["data"]["node"]["output_types"]
+                    else:
+                        new_source_handle["output_types"] = new_source_handle["baseClasses"]
+                del new_source_handle["baseClasses"]
+
+            if "inputTypes" in new_target_handle and new_target_handle["inputTypes"]:
+                intersection = [
+                    type_ for type_ in new_source_handle["output_types"] if type_ in new_target_handle["inputTypes"]
+                ]
+            else:
+                intersection = [
+                    type_ for type_ in new_source_handle["output_types"] if type_ == new_target_handle["type"]
+                ]
+
+            selected = intersection[0] if intersection else None
+            if "name" not in new_source_handle:
+                new_source_handle["name"] = " | ".join(new_source_handle["output_types"])
+            new_source_handle["output_types"] = [selected] if selected else []
+
+            if source_node and not source_node["data"]["node"].get("outputs"):
+                if "outputs" not in source_node["data"]["node"]:
+                    source_node["data"]["node"]["outputs"] = []
+                types = source_node["data"]["node"].get(
+                    "output_types", source_node["data"]["node"].get("base_classes", [])
+                )
+                if not any(output.get("selected") == selected for output in source_node["data"]["node"]["outputs"]):
+                    source_node["data"]["node"]["outputs"].append(
+                        {
+                            "types": types,
+                            "selected": selected,
+                            "name": " | ".join(types),
+                        }
+                    )
+            deduplicated_outputs = []
+            for output in source_node["data"]["node"]["outputs"]:
+                if output["name"] not in [d["name"] for d in deduplicated_outputs]:
+                    deduplicated_outputs.append(output)
+            source_node["data"]["node"]["outputs"] = deduplicated_outputs
+
+            edge["sourceHandle"] = json.dumps(new_source_handle)
+            edge["data"]["sourceHandle"] = new_source_handle
+            edge["data"]["targetHandle"] = new_target_handle
+    # The above sets the edges but some of the sourceHandles do not have valid name
+    # which can be found in the nodes. We need to update the sourceHandle with the
+    # name from node['data']['node']['outputs']
+    for node in nodes:
+        if "outputs" in node["data"]["node"]:
+            for output in node["data"]["node"]["outputs"]:
+                for edge in edges:
+                    if node["id"] != edge["source"] or output.get("method") is None:
+                        continue
+                    source_handle = scape_json_parse(edge["sourceHandle"])
+                    if source_handle["output_types"] == output.get("types") and source_handle["name"] != output["name"]:
+                        source_handle["name"] = output["name"]
+
+                        edge["sourceHandle"] = json.dumps(source_handle)
+                        edge["data"]["sourceHandle"] = source_handle
+
+    data_copy = copy.deepcopy(data)
+    data_copy["nodes"] = nodes
+    data_copy["edges"] = edges
+    return data_copy
 
 
 def log_node_changes(node_changes_log):
