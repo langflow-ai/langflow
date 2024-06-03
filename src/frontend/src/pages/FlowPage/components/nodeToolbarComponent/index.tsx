@@ -491,16 +491,6 @@ export default function NodeToolbarComponent({
                   />
                 </SelectItem>
               )}
-              {/* <SelectItem value={"duplicate"}>
-                <ToolbarSelectItem
-                  keyboardKey="D"
-                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                  shift={false}
-                  value={"Duplicate"}
-                  icon={"Copy"}
-                  dataTestId="duplicate-button-modal"
-                />
-              </SelectItem> */}
               <SelectItem value={"copy"}>
                 <ToolbarSelectItem
                   keyboardKey="C"
