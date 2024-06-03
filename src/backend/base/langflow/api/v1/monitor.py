@@ -86,9 +86,10 @@ async def update_message(
 ):
     try:
         message_dict = message.model_dump(exclude_none=True)
-        df = monitor_service.update_message(message_id=message_id, **message_dict)
-        dicts = df.to_dict(orient="records")
-        return [MessageModelResponse(**d) for d in dicts]
+        message_dict.pop("index", None)
+        monitor_service.update_message(message_id=message_id, **message_dict)
+        return MessageModelResponse(index=message_id, **message_dict)
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

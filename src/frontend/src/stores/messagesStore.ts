@@ -17,7 +17,7 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
   updateMessage: (message) => {
     set(() => ({
       messages: get().messages.map((msg) =>
-        msg.id === message.id ? message : msg,
+        msg.index === message.index ? message : msg,
       ),
     }));
   },
