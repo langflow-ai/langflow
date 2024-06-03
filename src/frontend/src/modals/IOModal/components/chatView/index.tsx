@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../../../components/genericIconComponent";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "../../../../components/ui/select";
+import {
   CHAT_FIRST_INITIAL_TEXT,
   CHAT_SECOND_INITIAL_TEXT,
 } from "../../../../constants/constants";
@@ -18,12 +24,6 @@ import { chatViewProps } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "../../../../components/ui/select";
 
 export default function ChatView({
   sendMessage,
