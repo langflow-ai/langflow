@@ -26,9 +26,9 @@ if TYPE_CHECKING:
 class DatabaseService(Service):
     name = "database_service"
 
-    def __init__(self, database_url: str, settings_service: "SettingsService"):
+    def __init__(self, settings_service: "SettingsService"):
         self.settings_service = settings_service
-        self.database_url = database_url
+        self.database_url = settings_service.settings.database_url
         # This file is in langflow.services.database.manager.py
         # the ini is in langflow
         langflow_dir = Path(__file__).parent.parent.parent
