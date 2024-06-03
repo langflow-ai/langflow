@@ -47,6 +47,9 @@ class AuthSettings(BaseSettings):
     ACCESS_HTTPONLY: bool = False
     """The HttpOnly attribute of the access token cookie."""
 
+    COOKIE_DOMAIN: str | None = None
+    """The domain attribute of the cookies. If None, the domain is not set."""
+
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     class Config:

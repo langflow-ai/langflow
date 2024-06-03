@@ -1,5 +1,4 @@
 from typing import List
-from uuid import UUID
 
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
@@ -88,7 +87,7 @@ def read_folders(
 def read_folder(
     *,
     session: Session = Depends(get_session),
-    folder_id: UUID,
+    folder_id: str,
     current_user: User = Depends(get_current_active_user),
 ):
     try:
@@ -106,7 +105,7 @@ def read_folder(
 def update_folder(
     *,
     session: Session = Depends(get_session),
-    folder_id: UUID,
+    folder_id: str,
     folder: FolderUpdate,  # Assuming FolderUpdate is a Pydantic model defining updatable fields
     current_user: User = Depends(get_current_active_user),
 ):
@@ -155,7 +154,7 @@ def update_folder(
 def delete_folder(
     *,
     session: Session = Depends(get_session),
-    folder_id: UUID,
+    folder_id: str,
     current_user: User = Depends(get_current_active_user),
 ):
     try:
@@ -177,7 +176,7 @@ def delete_folder(
 async def download_file(
     *,
     session: Session = Depends(get_session),
-    folder_id: UUID,
+    folder_id: str,
     current_user: User = Depends(get_current_active_user),
 ):
     """Download all flows from folder."""

@@ -120,7 +120,6 @@ export default function App() {
           await getFoldersApi();
           await getTypes();
           await refreshFlows();
-          console.log(axios.defaults);
           const res = await getGlobalVariables();
           setGlobalVariables(res);
           checkHasStore();

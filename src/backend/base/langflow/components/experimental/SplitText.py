@@ -43,7 +43,7 @@ class SplitTextComponent(CustomComponent):
                 chunks = [chunk[:truncate_size] for chunk in chunks]
 
             for chunk in chunks:
-                outputs.append(Record(text=chunk, data={"parent": text}))
+                outputs.append(Record(data={"parent": text, "text": chunk}))
 
         self.status = outputs
         return outputs

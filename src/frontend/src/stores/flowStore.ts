@@ -466,7 +466,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       status: BuildStatus,
       runId: string,
     ) {
-      console.log("handleBuildUpdate", vertexBuildData, status, runId);
       if (vertexBuildData && vertexBuildData.inactivated_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
         get().updateBuildStatus(
