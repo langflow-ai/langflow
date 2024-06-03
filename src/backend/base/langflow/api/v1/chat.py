@@ -210,13 +210,12 @@ async def build_vertex(
         duration = format_elapsed_time(timedelta)
         result_data_response.duration = duration
         result_data_response.timedelta = timedelta
-        async with chat_service._cache_locks[flow_id] as lock:
-            vertex.add_build_time(timedelta)
-            inactivated_vertices = None
-            inactivated_vertices = list(graph.inactivated_vertices)
-            graph.reset_inactivated_vertices()
-            graph.reset_activated_vertices()
-            await chat_service.set_cache(flow_id=flow_id, data=graph, lock=lock)
+        vertex.add_build_time(timedelta)
+        inactivated_vertices = None
+        inactivated_vertices = list(graph.inactivated_vertices)
+        graph.reset_inactivated_vertices()
+        graph.reset_activated_vertices()
+        await chat_service.set_cache(flow_id_str, graph)
 
         # graph.stop_vertex tells us if the user asked
         # to stop the build of the graph at a certain vertex
