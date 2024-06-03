@@ -35,6 +35,7 @@ const TableComponent = forwardRef<
     },
     ref,
   ) => {
+    document.querySelector(".ag-paging-page-size")!.style.display = "none";
     const gridRef = useRef(null);
     const realRef = ref?.current ? ref : gridRef;
     const dark = useDarkStore((state) => state.dark);
