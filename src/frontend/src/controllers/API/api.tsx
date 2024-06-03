@@ -91,7 +91,8 @@ function ApiInterceptor() {
         if (
           config?.url === lastUrl &&
           !isContained &&
-          lastMethodCalled === config.method
+          lastMethodCalled === config.method &&
+          lastMethodCalled === "get"
         ) {
           return Promise.reject("Duplicate request");
         }

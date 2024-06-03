@@ -44,8 +44,8 @@ import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
-import TooltipRenderComponent from "../tooltipRenderComponent";
 import OutputModal from "../outputModal";
+import TooltipRenderComponent from "../tooltipRenderComponent";
 
 export default function ParameterComponent({
   left,
@@ -273,6 +273,7 @@ export default function ParameterComponent({
                   <button
                     disabled={!displayOutputPreview}
                     onClick={() => setOpenOutputModal(true)}
+                    data-testid={`output-inspection-${title.toLowerCase()}`}
                   >
                     <IconComponent
                       className={classNames(

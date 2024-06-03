@@ -21,7 +21,7 @@ export default defineConfig({
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: 1,
+  workers: 10,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   timeout: 120 * 1000,
   // reporter: [
@@ -45,6 +45,9 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
+        launchOptions: {
+          headless: false,
+        },
         contextOptions: {
           // chromium-specific permissions
           permissions: ["clipboard-read", "clipboard-write"],
@@ -57,6 +60,7 @@ export default defineConfig({
       use: {
         ...devices["Desktop Firefox"],
         launchOptions: {
+          headless: false,
           firefoxUserPrefs: {
             "dom.events.asyncClipboard.readText": true,
             "dom.events.testing.asyncClipboard": true,

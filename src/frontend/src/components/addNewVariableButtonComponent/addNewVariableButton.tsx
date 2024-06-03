@@ -65,7 +65,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
         let responseError = error as ResponseErrorDetailAPI;
         setErrorData({
           title: "Error creating variable",
-          list: [responseError.response.data.detail ?? "Unknown error"],
+          list: [responseError?.response?.data?.detail ?? "Unknown error"],
         });
       });
   }
@@ -138,7 +138,9 @@ export default function AddNewVariableButton({ children }): JSX.Element {
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>
-        <Button onClick={handleSaveVariable}>Save Variable</Button>
+        <Button data-testid="save-variable-button" onClick={handleSaveVariable}>
+          Save Variable
+        </Button>
       </BaseModal.Footer>
     </BaseModal>
   );
