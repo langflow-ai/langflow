@@ -114,7 +114,7 @@ class MonitorService(Service):
 
     def update_message(self, message_id: int, **kwargs):
         query = f"""UPDATE messages SET {', '.join(f"{k} = '{v}'" for k, v in kwargs.items())} WHERE index = {message_id}"""
-        
+
         return self.exec_query(query)
 
     def add_message(self, message: MessageModel):
