@@ -198,7 +198,7 @@ const EditNodeModal = forwardRef(
                             >
                               <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
                                 <ShadTooltip
-                                  portal={false}
+                                  styleClasses="z-50"
                                   content={
                                     myData.node?.template[templateParam].proxy
                                       ? myData.node?.template[templateParam]
@@ -223,7 +223,7 @@ const EditNodeModal = forwardRef(
                               </TableCell>
                               <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
                                 <ShadTooltip
-                                  portal={false}
+                                  styleClasses="z-50"
                                   content={
                                     data.node?.template[templateParam]?.info ??
                                     null
