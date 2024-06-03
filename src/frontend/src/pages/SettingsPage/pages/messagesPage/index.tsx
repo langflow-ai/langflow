@@ -1,4 +1,9 @@
-import { ColDef, ColGroupDef, SelectionChangedEvent } from "ag-grid-community";
+import {
+  CellEditRequestEvent,
+  ColDef,
+  ColGroupDef,
+  SelectionChangedEvent,
+} from "ag-grid-community";
 import { useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
 import { Card, CardContent } from "../../../../components/ui/card";
@@ -7,12 +12,11 @@ import { useMessagesStore } from "../../../../stores/messagesStore";
 import HeaderMessagesComponent from "./components/headerMessages";
 import useMessagesTable from "./hooks/use-messages-table";
 import useRemoveMessages from "./hooks/use-remove-messages";
+import useUpdateMessage from "./hooks/use-updateMessage";
 
 export default function MessagesPage() {
-  const setMessages = useMessagesStore((state) => state.setMessages);
-
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
-  const [rows, setRows] = useState<any>([]);
+  const messages = useMessagesStore((state) => state.messages);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -20,14 +24,26 @@ export default function MessagesPage() {
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
 
   const { handleRemoveMessages } = useRemoveMessages(
-    setRows,
     setSelectedRows,
     setSuccessData,
     setErrorData,
     selectedRows,
   );
 
-  useMessagesTable(setColumns, setRows, setMessages);
+  const { handleUpdate } = useUpdateMessage(setSuccessData, setErrorData);
+
+  useMessagesTable(setColumns);
+
+  function handleUpdateMessage(event: CellEditRequestEvent<any, string>) {
+    const newValue = event.newValue;
+    const field = event.column.getColId();
+    const row = event.data;
+    const data = {
+      ...row,
+      [field]: newValue,
+    };
+    handleUpdate(data);
+  }
 
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">
@@ -40,6 +56,10 @@ export default function MessagesPage() {
         <Card x-chunk="dashboard-04-chunk-2" className="h-full pt-4">
           <CardContent className="h-full">
             <TableComponent
+              readOnlyEdit
+              onCellEditRequest={(event) => {
+                handleUpdateMessage(event);
+              }}
               editable={["Sender", "Sender Name", "Message"]}
               overlayNoRowsTemplate="No data available"
               onSelectionChanged={(event: SelectionChangedEvent) => {
@@ -51,7 +71,7 @@ export default function MessagesPage() {
               suppressRowClickSelection={true}
               pagination={true}
               columnDefs={columns}
-              rowData={rows}
+              rowData={messages}
             />
           </CardContent>
         </Card>
