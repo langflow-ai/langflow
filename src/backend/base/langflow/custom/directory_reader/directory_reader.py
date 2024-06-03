@@ -301,8 +301,6 @@ class DirectoryReader:
             return False, "Empty file"
         elif not self.validate_code(file_content):
             return False, "Syntax error"
-        elif not self.validate_build(file_content):
-            return False, "Missing build function"
         elif self._is_type_hint_used_in_args("Optional", file_content) and not self._is_type_hint_imported(
             "Optional", file_content
         ):

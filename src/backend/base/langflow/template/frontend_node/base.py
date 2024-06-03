@@ -124,6 +124,6 @@ class FrontendNode(BaseModel):
         if "inputs" not in kwargs:
             raise ValueError("Missing 'inputs' argument.")
         inputs = kwargs.pop("inputs")
-        template = Template(type_name="CustomComponent", fields=inputs)
+        template = Template(type_name="Component", fields=inputs)
         kwargs["template"] = template
         return cls(**kwargs)

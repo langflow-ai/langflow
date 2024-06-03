@@ -1,7 +1,6 @@
-from typing import Optional
-
 from langflow.base.io.text import TextComponent
 from langflow.field_typing import Text
+from langflow.template import Input, Output
 
 
 class TextOutput(TextComponent):
@@ -9,20 +8,26 @@ class TextOutput(TextComponent):
     description = "Display a text output in the Playground."
     icon = "type"
 
-    def build_config(self):
-        return {
-            "input_value": {
-                "display_name": "Value",
-                "input_types": ["Record", "Text"],
-                "info": "Text or Record to be passed as output.",
-            },
-            "record_template": {
-                "display_name": "Record Template",
-                "multiline": True,
-                "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
-                "advanced": True,
-            },
-        }
+    inputs = [
+        Input(
+            name="input_value",
+            type=str,
+            display_name="Value",
+            info="Text or Record to be passed as output.",
+            input_types=["Record", "Text"],
+        ),
+        Input(
+            name="record_template",
+            type=str,
+            display_name="Record Template",
+            multiline=True,
+            info="Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
+            advanced=True,
+        ),
+    ]
+    outputs = [
+        Output(name="Text", method="text_response"),
+    ]
 
-    def build(self, input_value: Optional[Text] = "", record_template: Optional[str] = "") -> Text:
-        return super().build(input_value=input_value, record_template=record_template)
+    def text_response(self) -> Text:
+        return self.input_value if self.input_value else ""

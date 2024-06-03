@@ -137,6 +137,18 @@ class Vertex:
         return self.graph.get_vertex_edges(self.id)
 
     @property
+    def outgoing_edges(self) -> List["ContractEdge"]:
+        return [edge for edge in self.edges if edge.source_id == self.id]
+
+    @property
+    def incoming_edges(self) -> List["ContractEdge"]:
+        return [edge for edge in self.edges if edge.target_id == self.id]
+
+    @property
+    def edges_source_names(self) -> List[str]:
+        return {edge.source_handle.name for edge in self.edges}
+
+    @property
     def predecessors(self) -> List["Vertex"]:
         return self.graph.get_predecessors(self)
 

@@ -1,18 +1,23 @@
 import json
-from typing import AsyncIterator, Dict, Iterator, List
+from typing import Any, AsyncIterator, Dict, Iterator, List
 
 import yaml
+from git import TYPE_CHECKING
 from langchain_core.messages import AIMessage
 from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes
 from langflow.graph.utils import UnbuiltObject, serialize_field
 from langflow.graph.vertex.base import Vertex
+from langflow.graph.vertex.utils import log_transaction
 from langflow.schema import Record
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.monitor.utils import log_vertex_build
 from langflow.utils.schemas import ChatOutputResponse, RecordOutputResponse
 from langflow.utils.util import unescape_string
+
+if TYPE_CHECKING:
+    from langflow.graph.edge.base import ContractEdge
 
 
 class CustomComponentVertex(Vertex):
@@ -32,10 +37,65 @@ class ComponentVertex(Vertex):
         if self.artifacts and "repr" in self.artifacts:
             return self.artifacts["repr"] or super()._built_object_repr()
 
+    def _update_built_object_and_artifacts(self, result):
+        """
+        Updates the built object and its artifacts.
+        """
+        if isinstance(result, tuple):
+            if len(result) == 2:
+                self._built_object, self.artifacts = result
+            elif len(result) == 3:
+                self._custom_component, self._built_object, self.artifacts = result
+        else:
+            self._built_object = result
 
-class InterfaceVertex(Vertex):
+        for key, value in self._built_object.items():
+            self.add_result(key, value)
+
+    def get_edge_with_target(self, target_id: str) -> "ContractEdge":
+        """
+        Get the edge with the target id.
+
+        Args:
+            target_id: The target id of the edge.
+
+        Returns:
+            The edge with the target id.
+        """
+        for edge in self.edges:
+            if edge.target_id == target_id:
+                return edge
+        return None
+
+    async def _get_result(self, requester: "Vertex") -> Any:
+        """
+        Retrieves the result of the built component.
+
+        If the component has not been built yet, a ValueError is raised.
+
+        Returns:
+            The built result if use_result is True, else the built object.
+        """
+        if not self._built:
+            log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="error")
+            raise ValueError(f"Component {self.display_name} has not been built yet")
+
+        if requester is None:
+            raise ValueError("Requester Vertex is None")
+
+        edge = self.get_edge_with_target(requester.id)
+        if edge is None:
+            raise ValueError(f"Edge not found between {self.display_name} and {requester.display_name}")
+
+        result = self.results[edge.source_handle.name]
+
+        log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="success")
+        return result
+
+
+class InterfaceVertex(ComponentVertex):
     def __init__(self, data: Dict, graph):
-        super().__init__(data, graph=graph, base_type="custom_components", is_task=True)
+        super().__init__(data, graph=graph)
         self.steps = [self._build, self._run]
 
     def build_stream_url(self):
