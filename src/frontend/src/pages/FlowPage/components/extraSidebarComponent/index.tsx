@@ -283,7 +283,7 @@ export default function ExtraSidebar(): JSX.Element {
       <div className="side-bar-components-div-arrangement">
         <div className="parent-disclosure-arrangement">
           <div className="flex items-center gap-4 align-middle">
-            <span className="parent-disclosure-title">Core Components</span>
+            <span className="parent-disclosure-title">Basic Components</span>
           </div>
         </div>
         {Object.keys(dataFilter)
@@ -360,9 +360,9 @@ export default function ExtraSidebar(): JSX.Element {
           )}{" "}
         <ParentDisclosureComponent
           openDisc={false}
-          key={"Extended"}
+          key={"Advanced"}
           button={{
-            title: "Extended",
+            title: "Advanced",
             Icon: nodeIconsLucide.unknown,
           }}
           testId="extended-disclosure"

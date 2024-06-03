@@ -10,8 +10,8 @@ The Notion integration in Langflow enables seamless connectivity with Notion dat
 <ZoomableImage
 alt="Notion Components in Langflow"
 sources={{
-    light: "img/notion/notion_components_bundle.png",
-    dark: "img/notion/notion_components_bundle_dark.png",
+    light: "img/notion/notion_bundle.jpg",
+    dark: "img/notion/notion_bundle.jpg",
   }}
 style={{ width: "100%", margin: "20px 0" }}
 />

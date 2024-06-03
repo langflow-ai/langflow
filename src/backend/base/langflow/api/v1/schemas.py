@@ -256,6 +256,7 @@ class ResultDataResponse(BaseModel):
     messages: List[ChatOutputResponse | None] = Field(default_factory=list)
     timedelta: Optional[float] = None
     duration: Optional[str] = None
+    used_frozen_result: Optional[bool] = False
 
 
 class VertexBuildResponse(BaseModel):

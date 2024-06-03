@@ -1,11 +1,15 @@
 import asyncio
 import json
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import httpx
+from loguru import logger
 
+from langflow.base.curl.parse import parse_context
 from langflow.custom import CustomComponent
+from langflow.field_typing import NestedDict
 from langflow.schema import Record
+from langflow.schema.dotdict import dotdict
 
 
 class APIRequest(CustomComponent):
@@ -17,10 +21,15 @@ class APIRequest(CustomComponent):
 
     field_config = {
         "urls": {"display_name": "URLs", "info": "URLs to make requests to."},
+        "curl": {
+            "display_name": "Curl",
+            "info": "Paste a curl command to populate the fields.",
+            "refresh_button": True,
+            "refresh_button_text": "",
+        },
         "method": {
             "display_name": "Method",
             "info": "The HTTP method to use.",
-            "field_type": "str",
             "options": ["GET", "POST", "PATCH", "PUT"],
             "value": "GET",
         },
@@ -36,11 +45,32 @@ class APIRequest(CustomComponent):
         },
         "timeout": {
             "display_name": "Timeout",
-            "field_type": "int",
             "info": "The timeout to use for the request.",
             "value": 5,
         },
     }
+
+    def parse_curl(self, curl: str, build_config: dotdict) -> dotdict:
+        try:
+            parsed = parse_context(curl)
+            build_config["urls"]["value"] = [parsed.url]
+            build_config["method"]["value"] = parsed.method.upper()
+            build_config["headers"]["value"] = dict(parsed.headers)
+
+            try:
+                json_data = json.loads(parsed.data)
+                build_config["body"]["value"] = json_data
+            except json.JSONDecodeError as e:
+                print(e)
+        except Exception as exc:
+            logger.error(f"Error parsing curl: {exc}")
+            raise ValueError(f"Error parsing curl: {exc}")
+        return build_config
+
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+        if field_name == "curl" and field_value is not None:
+            build_config = self.parse_curl(field_value, build_config)
+        return build_config
 
     async def make_request(
         self,
@@ -94,21 +124,25 @@ class APIRequest(CustomComponent):
         self,
         method: str,
         urls: List[str],
-        headers: Optional[Record] = None,
-        body: Optional[Record] = None,
+        curl: Optional[str] = None,
+        headers: Optional[NestedDict] = {},
+        body: Optional[NestedDict] = {},
         timeout: int = 5,
     ) -> List[Record]:
         if headers is None:
             headers_dict = {}
-        else:
+        elif isinstance(headers, Record):
             headers_dict = headers.data
+        else:
+            headers_dict = headers
 
         bodies = []
         if body:
-            if isinstance(body, list):
-                bodies = [b.data for b in body]
+            if not isinstance(body, list):
+                bodies = [body]
             else:
-                bodies = [body.data]
+                bodies = body
+            bodies = [b.data if isinstance(b, Record) else b for b in bodies]  # type: ignore
 
         if len(urls) != len(bodies):
             # add bodies with None

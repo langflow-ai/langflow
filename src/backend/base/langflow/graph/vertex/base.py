@@ -708,7 +708,8 @@ class Vertex:
 
             self._finalize_build()
 
-        return await self.get_requester_result(requester)
+        result = await self.get_requester_result(requester)
+        return result
 
     async def get_requester_result(self, requester: Optional["Vertex"]):
         # If the requester is None, this means that

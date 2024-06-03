@@ -66,10 +66,8 @@ export default function InputFileComponent({
         uploadFile(file, currentFlowId)
           .then((res) => res.data)
           .then((data) => {
-            console.log(CONSOLE_SUCCESS_MSG);
             // Get the file name from the response
             const { file_path } = data;
-            console.log("File name:", file_path);
 
             // sets the value that goes to the backend
             onFileChange(file_path);
@@ -106,8 +104,8 @@ export default function InputFileComponent({
             editNode
               ? "input-edit-node input-dialog text-muted-foreground"
               : disabled
-                ? "input-disable input-dialog primary-input"
-                : "input-dialog primary-input text-muted-foreground"
+              ? "input-disable input-dialog primary-input"
+              : "input-dialog primary-input text-muted-foreground"
           }
         >
           {myValue !== "" ? myValue : "No file"}
