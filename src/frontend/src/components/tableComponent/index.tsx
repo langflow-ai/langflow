@@ -17,6 +17,7 @@ interface TableComponentProps extends AgGridReactProps {
   rowData: NonNullable<AgGridReactProps["rowData"]>;
   alertTitle?: string;
   alertDescription?: string;
+  editable?: boolean | string[];
 }
 
 const TableComponent = forwardRef<
@@ -48,20 +49,29 @@ const TableComponent = forwardRef<
     }
 
     const colDef = props.columnDefs.map((col, index) => {
+      let newCol = {
+        ...col,
+        headerName: toTitleCase(col.headerName),
+      };
       if (props.onSelectionChanged && index === 0) {
-        return {
-          ...col,
-          headerName: toTitleCase(col.headerName),
+        newCol = {
+          ...newCol,
           checkboxSelection: true,
           headerCheckboxSelection: true,
           headerCheckboxSelectionFilteredOnly: true,
         };
-      } else {
-        return {
-          ...col,
-          headerName: toTitleCase(col.headerName),
+      }
+      if (
+        (typeof props.editable === "boolean" && props.editable) ||
+        (Array.isArray(props.editable) &&
+          props.editable.includes(newCol.headerName ?? ""))
+      ) {
+        newCol = {
+          ...newCol,
+          editable: true,
         };
       }
+      return newCol;
     });
 
     return (
