@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Check and create the .env file if it does not exist
+if [ ! -f .env ]; then
+    touch .env
+    echo ".env file created."
+fi
+
 # Define the services and their corresponding docker compose service names
 declare -A services
 services=(
@@ -22,7 +28,6 @@ run_services() {
     for service in "${@}"; do
         chosen_services+=("${services[$service]}")
     done
-    # Remove duplicates and run the chosen services
     IFS=" " read -r -a unique_services <<< "$(echo "${chosen_services[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
     docker compose up ${unique_services[@]}
 }
