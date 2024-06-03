@@ -60,7 +60,7 @@ export default function MessagesPage() {
               onCellEditRequest={(event) => {
                 handleUpdateMessage(event);
               }}
-              editable={["Sender", "Sender Name", "Message"]}
+              editable={["Sender Name", "Message"]}
               overlayNoRowsTemplate="No data available"
               onSelectionChanged={(event: SelectionChangedEvent) => {
                 setSelectedRows(
