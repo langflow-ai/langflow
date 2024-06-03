@@ -4,13 +4,15 @@ import os
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Type
 
 import orjson
+import yaml
 from loguru import logger
+from pydantic import BaseModel
 
 from langflow.custom.eval import eval_custom_component_code
 from langflow.schema.schema import Record
 
 if TYPE_CHECKING:
-    from langflow.custom import CustomComponent
+    from langflow.custom import Component, CustomComponent
     from langflow.graph.vertex.base import Vertex
 
 
@@ -32,6 +34,7 @@ async def instantiate_class(
         raise ValueError("No base type provided for vertex")
 
     params_copy = params.copy()
+    # Remove code from params
     class_object: Type["CustomComponent"] = eval_custom_component_code(params_copy.pop("code"))
     custom_component: "CustomComponent" = class_object(
         user_id=user_id,
@@ -43,9 +46,9 @@ async def instantiate_class(
         custom_component, params_copy, vertex.load_from_db_fields, fallback_to_env_vars
     )
     if base_type == "custom_components":
-        return await build_custom_component(params=params, custom_component=custom_component)
+        return await build_custom_component(params=params_copy, custom_component=custom_component)
     elif base_type == "component":
-        return await build_component(params=params, custom_component=custom_component)
+        return await build_component(params=params_copy, custom_component=custom_component, vertex=vertex)
     else:
         raise ValueError(f"Base type {base_type} not found.")
 
@@ -111,7 +114,7 @@ def update_params_with_load_from_db_fields(
 
 async def build_component(
     params: dict,
-    custom_component: "CustomComponent",
+    custom_component: "Component",
     vertex: "Vertex",
 ):
     # Now set the params as attributes of the custom_component
@@ -122,7 +125,7 @@ async def build_component(
         for output in custom_component.outputs:
             # Build the output if it's connected to some other vertex
             # or if it's not connected to any vertex
-            if not vertex.edges or output.name in vertex.edges:
+            if not vertex.outgoing_edges or output.name in vertex.edges_source_names:
                 method: Callable | Awaitable = getattr(custom_component, output.method)
                 result = method()
                 # If the method is asynchronous, we need to await it
@@ -130,6 +133,15 @@ async def build_component(
                     result = await result
                 build_result[output.name] = result
     custom_repr = custom_component.custom_repr()
+
+    # ! Temporary REPR
+    # Since all are dict, yaml.dump them
+    if isinstance(build_result, dict):
+        _build_result = {
+            key: value.model_dump() if isinstance(value, BaseModel) else value for key, value in build_result.items()
+        }
+        custom_repr = yaml.dump(_build_result)
+
     if custom_repr is None and isinstance(build_result, (dict, Record, str)):
         custom_repr = build_result
     if not isinstance(custom_repr, str):

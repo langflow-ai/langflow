@@ -1,10 +1,9 @@
-import operator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Optional, Sequence, Union
 from uuid import UUID
 
 import yaml
-from cachetools import TTLCache, cachedmethod
+from cachetools import TTLCache
 from langchain_core.documents import Document
 from pydantic import BaseModel
 
@@ -299,7 +298,6 @@ class CustomComponent(BaseComponent):
                 arg["type"] = "Data"
         return args
 
-    @cachedmethod(operator.attrgetter("cache"))
     def get_method(self, method_name: str):
         """
         Gets the build method for the custom component.
@@ -310,7 +308,9 @@ class CustomComponent(BaseComponent):
         if not self.code:
             return {}
 
-        component_classes = [cls for cls in self.tree["classes"] if self.code_class_base_inheritance in cls["bases"]]
+        component_classes = [
+            cls for cls in self.tree["classes"] if "Component" in cls["bases"] or "CustomComponent" in cls["bases"]
+        ]
         if not component_classes:
             return {}
 

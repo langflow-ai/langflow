@@ -21,7 +21,7 @@ class ChatInput(ChatComponent):
     ]
 
     def text_response(self) -> Text:
-        result = self.message
+        result = self.input_value
         if self.session_id and isinstance(result, (Record, str)):
             self.store_message(result, self.session_id, self.sender, self.sender_name)
         return result
@@ -29,11 +29,12 @@ class ChatInput(ChatComponent):
     def record_response(self) -> Record:
         record = Record(
             data={
-                "message": self.message,
+                "message": self.input_value,
                 "sender": self.sender,
                 "sender_name": self.sender_name,
                 "session_id": self.session_id,
-            }
+            },
+            text_key="message",
         )
         if self.session_id and isinstance(record, (Record, str)):
             self.store_message(record, self.session_id, self.sender, self.sender_name)
