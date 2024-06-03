@@ -1040,6 +1040,19 @@ export async function getMessagesTable(
   return { rows: rows.data, columns };
 }
 
+export async function getSessions(id?: string): Promise<Array<string>> {
+  const config = {};
+  if (id) {
+    config["params"] = { flow_id: id };
+  }
+  const rows = await api.get(`${BASE_URL_API}monitor/messages`, config);
+  const sessions = new Set<string>();
+  rows.data.forEach((row) => {
+    sessions.add(row.session_id);
+  });
+  return Array.from(sessions);
+}
+
 export async function deleteMessagesFn(ids: number[]) {
   try {
     return await api.delete(`${BASE_URL_API}monitor/messages`, {
