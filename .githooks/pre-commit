@@ -1,0 +1,18 @@
+#!/bin/sh
+
+added_files=$(git diff --name-only --cached --diff-filter=d)
+
+# Sort the imports
+git diff --name-only --cached | grep '\.py$' | xargs -r poetry run ruff check --select I --fix
+
+# Run the formatter
+make format
+
+exit_code=$?
+
+if [ $exit_code -ne 0 ]; then
+    echo "make format command failed with exit code $exit_code"
+    exit $exit_code
+fi
+
+git add ${added_files}
