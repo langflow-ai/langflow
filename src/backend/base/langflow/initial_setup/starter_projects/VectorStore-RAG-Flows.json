@@ -20,7 +20,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
-                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        Input(name=\"input_value\", type=str, display_name=\"Message\", multiline=True, input_types=[]),\n        Input(name=\"sender\", type=str, display_name=\"Sender Type\", options=[\"Machine\", \"User\"]),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\"),\n        Input(name=\"session_id\", type=str, display_name=\"Session ID\"),\n    ]\n    outputs = [\n        Output(name=\"Message\", method=\"text_response\"),\n        Output(name=\"Record\", method=\"record_response\"),\n    ]\n\n    def build_config(self):\n        build_config = super().build_config()\n        build_config[\"input_value\"] = {\n            \"input_types\": [],\n            \"display_name\": \"Message\",\n            \"multiline\": True,\n        }\n\n        return build_config\n\n    def text_response(self):\n        result = self.message\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self):\n        record = Record(\n            data={\n                \"message\": self.message,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n            }\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n    ) -> Union[Text, Record]:\n        return super().build_no_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n        )\n",
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        Input(name=\"input_value\", type=str, display_name=\"Message\", multiline=True, input_types=[]),\n        Input(name=\"sender\", type=str, display_name=\"Sender Type\", options=[\"Machine\", \"User\"]),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\"),\n        Input(name=\"session_id\", type=str, display_name=\"Session ID\"),\n    ]\n    outputs = [\n        Output(name=\"Message\", method=\"text_response\"),\n        Output(name=\"Record\", method=\"record_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self) -> Record:\n        record = Record(\n            data={\n                \"text\": self.input_value,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n            },\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -38,6 +38,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
+                "value": "",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -48,26 +49,6 @@
                 "dynamic": false,
                 "info": "",
                 "load_from_db": false,
-                "title_case": false,
-                "value": "what is a line"
-              },
-              "return_record": {
-                "type": "bool",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": false,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "return_record",
-                "display_name": "Return Record",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
-                "load_from_db": false,
                 "title_case": false
               },
               "sender": {
@@ -77,7 +58,7 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
-                "value": "User",
+                "value": "",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -87,7 +68,7 @@
                 ],
                 "name": "sender",
                 "display_name": "Sender Type",
-                "advanced": true,
+                "advanced": false,
                 "dynamic": false,
                 "info": "",
                 "load_from_db": false,
@@ -103,7 +84,7 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
-                "value": "User",
+                "value": "",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -125,12 +106,13 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
+                "value": "",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
                 "name": "session_id",
                 "display_name": "Session ID",
-                "advanced": true,
+                "advanced": false,
                 "dynamic": false,
                 "info": "",
                 "load_from_db": false,
@@ -139,7 +121,7 @@
                   "Text"
                 ]
               },
-              "_type": "CustomComponent"
+              "_type": "Component"
             },
             "description": "Get chat inputs from the Playground.",
             "icon": "ChatInput",
@@ -165,7 +147,23 @@
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "Text"
+                ],
+                "name": "Message",
+                "method": "text_response"
+              },
+              {
+                "types": [
+                  "Record"
+                ],
+                "name": "Record",
+                "method": "record_response"
+              }
+            ]
           },
           "id": "ChatInput-yxMKE"
         },
@@ -268,7 +266,16 @@
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "Text"
+                ],
+                "selected": "Text",
+                "name": "Text"
+              }
+            ]
           },
           "id": "TextOutput-BDknO"
         },
@@ -803,7 +810,17 @@
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "Embeddings"
+                ],
+                "selected": null,
+                "name": "Embeddings",
+                "method": null
+              }
+            ]
           },
           "id": "OpenAIEmbeddings-ZlOk1"
         },
@@ -1075,7 +1092,17 @@
               "system_message",
               "stream"
             ],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "Text"
+                ],
+                "selected": null,
+                "name": "Text",
+                "method": null
+              }
+            ]
           },
           "id": "OpenAIModel-EjXlN"
         },
@@ -1220,7 +1247,17 @@
             "frozen": false,
             "field_order": [],
             "beta": false,
-            "error": null
+            "error": null,
+            "outputs": [
+              {
+                "types": [
+                  "Text"
+                ],
+                "selected": null,
+                "name": "Text",
+                "method": null
+              }
+            ]
           },
           "id": "Prompt-xeI6K",
           "description": "Create a prompt template with dynamic variables.",
@@ -1253,7 +1290,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
-                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n        record_template: Optional[str] = \"{text}\",\n    ) -> Union[Text, Record]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n            record_template=record_template or \"\",\n        )\n",
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        Input(name=\"input_value\", type=str, display_name=\"Message\", multiline=True),\n        Input(name=\"sender\", type=str, display_name=\"Sender Type\", options=[\"Machine\", \"AI\"]),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\"),\n        Input(name=\"session_id\", type=str, display_name=\"Session ID\"),\n        Input(name=\"record_template\", type=str, display_name=\"Record Template\", default=\"{text}\"),\n    ]\n    outputs = [\n        Output(name=\"Message\", method=\"text_response\"),\n        Output(name=\"Record\", method=\"record_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self) -> Record:\n        record = Record(\n            data={\n                \"message\": self.input_value,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n                \"template\": self.record_template or \"\",\n            }\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -1271,19 +1308,20 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
+                "value": "",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
                 "name": "input_value",
                 "display_name": "Message",
                 "advanced": false,
-                "input_types": [
-                  "Text"
-                ],
                 "dynamic": false,
                 "info": "",
                 "load_from_db": false,
-                "title_case": false
+                "title_case": false,
+                "input_types": [
+                  "Text"
+                ]
               },
               "record_template": {
                 "type": "str",
@@ -1291,59 +1329,40 @@
                 "placeholder": "",
                 "list": false,
                 "show": true,
-                "multiline": true,
-                "value": "{text}",
+                "multiline": false,
+                "value": "",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
                 "name": "record_template",
                 "display_name": "Record Template",
-                "advanced": true,
+                "advanced": false,
                 "dynamic": false,
-                "info": "In case of Message being a Record, this template will be used to convert it to text.",
+                "info": "",
                 "load_from_db": false,
                 "title_case": false,
                 "input_types": [
                   "Text"
                 ]
               },
-              "return_record": {
-                "type": "bool",
+              "sender": {
+                "type": "str",
                 "required": false,
                 "placeholder": "",
                 "list": false,
                 "show": true,
                 "multiline": false,
-                "value": false,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "return_record",
-                "display_name": "Return Record",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "sender": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": true,
-                "show": true,
-                "multiline": false,
-                "value": "Machine",
+                "value": "",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
                 "options": [
                   "Machine",
-                  "User"
+                  "AI"
                 ],
                 "name": "sender",
                 "display_name": "Sender Type",
-                "advanced": true,
+                "advanced": false,
                 "dynamic": false,
                 "info": "",
                 "load_from_db": false,
@@ -1359,7 +1378,7 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
-                "value": "AI",
+                "value": "",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -1381,21 +1400,22 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
+                "value": "",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
                 "name": "session_id",
                 "display_name": "Session ID",
-                "advanced": true,
+                "advanced": false,
                 "dynamic": false,
-                "info": "If provided, the message will be stored in the memory.",
+                "info": "",
                 "load_from_db": false,
                 "title_case": false,
                 "input_types": [
                   "Text"
                 ]
               },
-              "_type": "CustomComponent"
+              "_type": "Component"
             },
             "description": "Display a chat message in the Playground.",
             "icon": "ChatOutput",
@@ -1422,7 +1442,23 @@
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "Text"
+                ],
+                "name": "Message",
+                "method": "text_response"
+              },
+              {
+                "types": [
+                  "Record"
+                ],
+                "name": "Record",
+                "method": "record_response"
+              }
+            ]
           },
           "id": "ChatOutput-Q39I8"
         },
@@ -1540,7 +1576,17 @@
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "Record"
+                ],
+                "selected": null,
+                "name": "Record",
+                "method": null
+              }
+            ]
           },
           "id": "File-t0a6a"
         },
@@ -1686,7 +1732,17 @@
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "Record"
+                ],
+                "selected": null,
+                "name": "Record",
+                "method": null
+              }
+            ]
           },
           "id": "RecursiveCharacterTextSplitter-tR9QM"
         },
@@ -2139,7 +2195,17 @@
               "input_value",
               "embedding"
             ],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "Record"
+                ],
+                "selected": null,
+                "name": "Record",
+                "method": null
+              }
+            ]
           },
           "id": "AstraDBSearch-41nRz"
         },
@@ -2542,7 +2608,25 @@
               "inputs",
               "embedding"
             ],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "VectorStore"
+                ],
+                "selected": null,
+                "name": "VectorStore",
+                "method": null
+              },
+              {
+                "types": [
+                  "BaseRetriever"
+                ],
+                "selected": null,
+                "name": "BaseRetriever",
+                "method": null
+              }
+            ]
           },
           "id": "AstraDB-eUCSS"
         },
@@ -3077,7 +3161,17 @@
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
-            "beta": false
+            "beta": false,
+            "outputs": [
+              {
+                "types": [
+                  "Embeddings"
+                ],
+                "selected": null,
+                "name": "Embeddings",
+                "method": null
+              }
+            ]
           },
           "id": "OpenAIEmbeddings-9TPjc"
         },
@@ -3095,7 +3189,7 @@
       {
         "source": "TextOutput-BDknO",
         "target": "Prompt-xeI6K",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextOutputœ,œidœ:œTextOutput-BDknOœ}",
+        "sourceHandle": "{\"dataType\": \"TextOutput\", \"id\": \"TextOutput-BDknO\", \"output_types\": [\"Text\"], \"name\": \"Text\"}",
         "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-xeI6Kœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "id": "reactflow__edge-TextOutput-BDknO{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextOutputœ,œidœ:œTextOutput-BDknOœ}-Prompt-xeI6K{œfieldNameœ:œcontextœ,œidœ:œPrompt-xeI6Kœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
@@ -3111,13 +3205,12 @@
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "str"
-            ],
             "dataType": "TextOutput",
-            "id": "TextOutput-BDknO"
+            "id": "TextOutput-BDknO",
+            "output_types": [
+              "Text"
+            ],
+            "name": "Text"
           }
         },
         "style": {
@@ -3129,7 +3222,7 @@
       {
         "source": "ChatInput-yxMKE",
         "target": "Prompt-xeI6K",
-        "sourceHandle": "{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ,œRecordœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-yxMKEœ}",
+        "sourceHandle": "{\"dataType\": \"ChatInput\", \"id\": \"ChatInput-yxMKE\", \"output_types\": [\"Text\"], \"name\": \"Message\"}",
         "targetHandle": "{œfieldNameœ:œquestionœ,œidœ:œPrompt-xeI6Kœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "id": "reactflow__edge-ChatInput-yxMKE{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ,œRecordœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-yxMKEœ}-Prompt-xeI6K{œfieldNameœ:œquestionœ,œidœ:œPrompt-xeI6Kœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
@@ -3145,14 +3238,12 @@
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": [
-              "Text",
-              "str",
-              "object",
-              "Record"
-            ],
             "dataType": "ChatInput",
-            "id": "ChatInput-yxMKE"
+            "id": "ChatInput-yxMKE",
+            "output_types": [
+              "Text"
+            ],
+            "name": "Message"
           }
         },
         "style": {
@@ -3164,7 +3255,7 @@
       {
         "source": "Prompt-xeI6K",
         "target": "OpenAIModel-EjXlN",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-xeI6Kœ}",
+        "sourceHandle": "{\"dataType\": \"Prompt\", \"id\": \"Prompt-xeI6K\", \"output_types\": [\"Text\"], \"name\": \"Text\"}",
         "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-EjXlNœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "id": "reactflow__edge-Prompt-xeI6K{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-xeI6Kœ}-OpenAIModel-EjXlN{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-EjXlNœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
@@ -3177,13 +3268,12 @@
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "str"
-            ],
             "dataType": "Prompt",
-            "id": "Prompt-xeI6K"
+            "id": "Prompt-xeI6K",
+            "output_types": [
+              "Text"
+            ],
+            "name": "Text"
           }
         },
         "style": {
@@ -3195,7 +3285,7 @@
       {
         "source": "OpenAIModel-EjXlN",
         "target": "ChatOutput-Q39I8",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-EjXlNœ}",
+        "sourceHandle": "{\"dataType\": \"OpenAIModel\", \"id\": \"OpenAIModel-EjXlN\", \"output_types\": [\"Text\"], \"name\": \"Text\"}",
         "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Q39I8œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "id": "reactflow__edge-OpenAIModel-EjXlN{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-EjXlNœ}-ChatOutput-Q39I8{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Q39I8œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
@@ -3208,13 +3298,12 @@
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": [
-              "object",
-              "Text",
-              "str"
-            ],
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-EjXlN"
+            "id": "OpenAIModel-EjXlN",
+            "output_types": [
+              "Text"
+            ],
+            "name": "Text"
           }
         },
         "style": {
@@ -3226,7 +3315,7 @@
       {
         "source": "File-t0a6a",
         "target": "RecursiveCharacterTextSplitter-tR9QM",
-        "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œFileœ,œidœ:œFile-t0a6aœ}",
+        "sourceHandle": "{\"dataType\": \"File\", \"id\": \"File-t0a6a\", \"output_types\": [\"Record\"], \"name\": \"Record\"}",
         "targetHandle": "{œfieldNameœ:œinputsœ,œidœ:œRecursiveCharacterTextSplitter-tR9QMœ,œinputTypesœ:[œDocumentœ,œRecordœ],œtypeœ:œDocumentœ}",
         "id": "reactflow__edge-File-t0a6a{œbaseClassesœ:[œRecordœ],œdataTypeœ:œFileœ,œidœ:œFile-t0a6aœ}-RecursiveCharacterTextSplitter-tR9QM{œfieldNameœ:œinputsœ,œidœ:œRecursiveCharacterTextSplitter-tR9QMœ,œinputTypesœ:[œDocumentœ,œRecordœ],œtypeœ:œDocumentœ}",
         "data": {
@@ -3240,11 +3329,12 @@
             "type": "Document"
           },
           "sourceHandle": {
-            "baseClasses": [
+            "dataType": "File",
+            "id": "File-t0a6a",
+            "output_types": [
               "Record"
             ],
-            "dataType": "File",
-            "id": "File-t0a6a"
+            "name": "Record"
           }
         },
         "style": {
@@ -3255,7 +3345,7 @@
       },
       {
         "source": "OpenAIEmbeddings-ZlOk1",
-        "sourceHandle": "{œbaseClassesœ:[œEmbeddingsœ],œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-ZlOk1œ}",
+        "sourceHandle": "{\"dataType\": \"OpenAIEmbeddings\", \"id\": \"OpenAIEmbeddings-ZlOk1\", \"output_types\": [\"Embeddings\"], \"name\": \"Embeddings\"}",
         "target": "AstraDBSearch-41nRz",
         "targetHandle": "{œfieldNameœ:œembeddingœ,œidœ:œAstraDBSearch-41nRzœ,œinputTypesœ:null,œtypeœ:œEmbeddingsœ}",
         "data": {
@@ -3266,11 +3356,12 @@
             "type": "Embeddings"
           },
           "sourceHandle": {
-            "baseClasses": [
+            "dataType": "OpenAIEmbeddings",
+            "id": "OpenAIEmbeddings-ZlOk1",
+            "output_types": [
               "Embeddings"
             ],
-            "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-ZlOk1"
+            "name": "Embeddings"
           }
         },
         "style": {
@@ -3281,7 +3372,7 @@
       },
       {
         "source": "ChatInput-yxMKE",
-        "sourceHandle": "{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ,œRecordœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-yxMKEœ}",
+        "sourceHandle": "{\"dataType\": \"ChatInput\", \"id\": \"ChatInput-yxMKE\", \"output_types\": [\"Text\"], \"name\": \"Message\"}",
         "target": "AstraDBSearch-41nRz",
         "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAstraDBSearch-41nRzœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
@@ -3294,14 +3385,12 @@
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": [
-              "Text",
-              "str",
-              "object",
-              "Record"
-            ],
             "dataType": "ChatInput",
-            "id": "ChatInput-yxMKE"
+            "id": "ChatInput-yxMKE",
+            "output_types": [
+              "Text"
+            ],
+            "name": "Message"
           }
         },
         "style": {
@@ -3312,7 +3401,7 @@
       },
       {
         "source": "RecursiveCharacterTextSplitter-tR9QM",
-        "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œRecursiveCharacterTextSplitterœ,œidœ:œRecursiveCharacterTextSplitter-tR9QMœ}",
+        "sourceHandle": "{\"dataType\": \"RecursiveCharacterTextSplitter\", \"id\": \"RecursiveCharacterTextSplitter-tR9QM\", \"output_types\": [\"Record\"], \"name\": \"Record\"}",
         "target": "AstraDB-eUCSS",
         "targetHandle": "{œfieldNameœ:œinputsœ,œidœ:œAstraDB-eUCSSœ,œinputTypesœ:null,œtypeœ:œRecordœ}",
         "data": {
@@ -3323,11 +3412,12 @@
             "type": "Record"
           },
           "sourceHandle": {
-            "baseClasses": [
+            "dataType": "RecursiveCharacterTextSplitter",
+            "id": "RecursiveCharacterTextSplitter-tR9QM",
+            "output_types": [
               "Record"
             ],
-            "dataType": "RecursiveCharacterTextSplitter",
-            "id": "RecursiveCharacterTextSplitter-tR9QM"
+            "name": "Record"
           }
         },
         "style": {
@@ -3339,7 +3429,7 @@
       },
       {
         "source": "OpenAIEmbeddings-9TPjc",
-        "sourceHandle": "{œbaseClassesœ:[œEmbeddingsœ],œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-9TPjcœ}",
+        "sourceHandle": "{\"dataType\": \"OpenAIEmbeddings\", \"id\": \"OpenAIEmbeddings-9TPjc\", \"output_types\": [\"Embeddings\"], \"name\": \"Embeddings\"}",
         "target": "AstraDB-eUCSS",
         "targetHandle": "{œfieldNameœ:œembeddingœ,œidœ:œAstraDB-eUCSSœ,œinputTypesœ:null,œtypeœ:œEmbeddingsœ}",
         "data": {
@@ -3350,11 +3440,12 @@
             "type": "Embeddings"
           },
           "sourceHandle": {
-            "baseClasses": [
+            "dataType": "OpenAIEmbeddings",
+            "id": "OpenAIEmbeddings-9TPjc",
+            "output_types": [
               "Embeddings"
             ],
-            "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-9TPjc"
+            "name": "Embeddings"
           }
         },
         "style": {
@@ -3366,7 +3457,7 @@
       },
       {
         "source": "AstraDBSearch-41nRz",
-        "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œAstraDBSearchœ,œidœ:œAstraDBSearch-41nRzœ}",
+        "sourceHandle": "{\"dataType\": \"AstraDBSearch\", \"id\": \"AstraDBSearch-41nRz\", \"output_types\": [\"Record\"], \"name\": \"Record\"}",
         "target": "TextOutput-BDknO",
         "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-BDknOœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
@@ -3380,11 +3471,12 @@
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": [
+            "dataType": "AstraDBSearch",
+            "id": "AstraDBSearch-41nRz",
+            "output_types": [
               "Record"
             ],
-            "dataType": "AstraDBSearch",
-            "id": "AstraDBSearch-41nRz"
+            "name": "Record"
           }
         },
         "style": {
