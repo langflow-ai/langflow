@@ -1,4 +1,5 @@
 from .AstraDB import AstraDBVectorStoreComponent
+from .Cassandra import CassandraVectorStoreComponent
 from .Chroma import ChromaComponent
 from .FAISS import FAISSComponent
 from .MongoDBAtlasVector import MongoDBAtlasComponent
@@ -13,6 +14,7 @@ from .Couchbase import CouchbaseComponent
 
 __all__ = [
     "AstraDBVectorStoreComponent",
+    "CassandraVectorStoreComponent",
     "ChromaComponent",
     "CouchbaseComponent",
     "FAISSComponent",

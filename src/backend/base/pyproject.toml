@@ -63,6 +63,7 @@ cryptography = "^42.0.5"
 asyncer = "^0.0.5"
 pyperclip = "^1.8.2"
 uncurl = "^0.0.11"
+cassio = "^0.1.7"
 
 
 [tool.poetry.extras]
