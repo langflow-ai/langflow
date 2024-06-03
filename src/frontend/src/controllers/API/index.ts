@@ -1040,7 +1040,12 @@ export async function getMessagesTable(
 }
 
 export async function deleteMessagesFn(ids: number[]) {
-  return await api.post(`${BASE_URL_API}monitor/messages`, {
-    ids,
-  });
+  try {
+    return await api.delete(`${BASE_URL_API}monitor/messages`, {
+      data: ids,
+    });
+  } catch (error) {
+    console.error("Error deleting flows:", error);
+    throw error;
+  }
 }
