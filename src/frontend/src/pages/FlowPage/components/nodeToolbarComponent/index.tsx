@@ -387,7 +387,7 @@ export default function NodeToolbarComponent({
 
   return (
     <>
-      <div className="w-26 h-10">
+      <div className="w-26 nocopy nowheel nopan nodelete nodrag noundo h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
           {hasCode && (
             <ShadTooltip content="Code" side="top">
