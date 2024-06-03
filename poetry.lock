@@ -7641,7 +7641,7 @@ nvidia = ["langchain-nvidia-ai-endpoints (==0.0.9)"]
 
 [[package]]
 name = "ragstack-ai-langflow-base"
-version = "0.0.8"
+version = "0.0.9"
 description = "RAGStack Langflow base"
 optional = false
 python-versions = ">=3.10,<3.13"
@@ -10448,4 +10448,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "193906f574683ab2ffe3ab60dbd3cbf21818a36f76b9e7725c789d5dc19fa2c5"
+content-hash = "384522cef9bf5331e4fb1e318dfe56393ea9042ae11b22678ae29e8e883521dc"
