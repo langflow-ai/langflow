@@ -1,6 +1,6 @@
 import cassio
 
-from typing import Any, List, Optional, Union, Tuple
+from typing import Any, List, Optional, Tuple
 from langchain_community.vectorstores import Cassandra
 from langchain_community.utilities.cassandra import SetupMode
 
@@ -75,7 +75,7 @@ class CassandraVectorStoreComponent(CustomComponent):
         batch_size: int = 16,
         body_index_options: Optional[List[Tuple[str, Any]]] = None,
         setup_mode: SetupMode = SetupMode.SYNC,
-    ) -> Union[VectorStore, object]:
+    ) -> VectorStore:
         cassio.init(
             database_id=database_id,
             token=token,
