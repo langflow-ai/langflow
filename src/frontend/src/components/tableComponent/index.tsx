@@ -1,7 +1,7 @@
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
-import { ElementRef, forwardRef, useEffect, useRef, useState } from "react";
+import { ElementRef, forwardRef, useRef } from "react";
 import {
   DEFAULT_TABLE_ALERT_MSG,
   DEFAULT_TABLE_ALERT_TITLE,
@@ -11,11 +11,7 @@ import "../../style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import { cn, toTitleCase } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { Select, SelectContent, SelectTrigger } from "../ui/select";
-import { SelectItem } from "@radix-ui/react-select";
-import { Button } from "../ui/button";
 import { Toggle } from "../ui/toggle";
-import TableToolbar from "./components/tableToolbar.tsx";
 import ShadTooltip from "../shadTooltipComponent";
 import resetGrid from "./utils/reset-grid-columns";
 
