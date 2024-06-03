@@ -73,7 +73,7 @@ class MonitorService(Service):
         valid: Optional[bool] = None,
         order_by: Optional[str] = "timestamp",
     ):
-        query = "SELECT index,flow_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
+        query = "SELECT id, index,flow_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
         conditions = []
         if flow_id:
             conditions.append(f"flow_id = '{flow_id}'")
@@ -91,6 +91,8 @@ class MonitorService(Service):
 
         with duckdb.connect(str(self.db_path)) as conn:
             df = conn.execute(query).df()
+
+        print(query)
 
         return df.to_dict(orient="records")
 
