@@ -253,6 +253,10 @@ export default function IOModal({
                             key={index}
                           >
                             <AccordionComponent
+                              disabled={
+                                node.data.node!.template["input_value"]
+                                  ?.value === ""
+                              }
                               trigger={
                                 <div className="file-component-badge-div">
                                   <ShadTooltip
