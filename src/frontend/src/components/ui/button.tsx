@@ -23,6 +23,7 @@ const buttonVariants = cva(
           "border border-muted bg-muted text-secondary-foreground hover:bg-secondary-foreground/5",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "underline-offset-4 hover:underline text-primary",
+        none: "",
       },
       size: {
         default: "h-10 py-2 px-4",
@@ -30,6 +31,7 @@ const buttonVariants = cva(
         xs: "py-0.5 px-3 rounded-md",
         lg: "h-11 px-8 rounded-md",
         icon: "py-1 px-1 rounded-md",
+        none: "",
       },
     },
     defaultVariants: {
@@ -64,7 +66,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       newChildren = toTitleCase(children);
     }
     return (
-      <Comp className={buttonVariants({ variant, size })} ref={ref} {...props}>
+      <Comp
+        className={buttonVariants({ variant, size: "none" })}
+        ref={ref}
+        {...props}
+      >
         <div
           className={cn(
             loading ? "opacity-100" : "opacity-0",
@@ -76,7 +82,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         <div
           className={cn(
             loading ? "opacity-0" : "opacity-100",
-            cn(buttonChildrenClasses, className),
+            buttonVariants({
+              variant: "none",
+              size,
+              className: cn(buttonChildrenClasses, className),
+            }),
           )}
         >
           {newChildren}
