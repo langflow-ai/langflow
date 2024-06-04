@@ -166,7 +166,20 @@ export default function ChatView({
     <div className="eraser-column-arrangement">
       <div className="eraser-size">
         <div className="eraser-position">
-          <Select
+          <button
+            className="flex gap-1"
+            onClick={() => handleSelectChange("builds")}
+          >
+            <IconComponent
+              name="Eraser"
+              className={classNames(
+                "h-5 w-5 transition-all duration-100",
+                lockChat ? "animate-pulse text-primary" : "text-primary",
+              )}
+              aria-hidden="true"
+            />
+          </button>
+          {/* <Select
             onValueChange={handleSelectChange}
             value=""
             disabled={lockChat}
@@ -203,7 +216,7 @@ export default function ChatView({
                 </div>
               </SelectItem>
             </SelectContent>
-          </Select>
+          </Select> */}
         </div>
         <div ref={messagesRef} className="chat-message-div">
           {chatHistory?.length > 0 ? (
