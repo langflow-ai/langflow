@@ -21,7 +21,7 @@ const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
             data-testid={`sidebar-nav-${item.title}`}
             className={cn(
               buttonVariants({ variant: "ghost" }),
-              "!w-[200px] cursor-pointer justify-start gap-2 border border-transparent hover:border-border hover:bg-transparent",
+              "!w-[200px] cursor-pointer justify-start gap-2 border border-transparent hover:border-border hover:bg-transparent"
             )}
           >
             {item.title}

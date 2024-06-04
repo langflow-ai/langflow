@@ -67,6 +67,11 @@ class Settings(BaseSettings):
 
     dev: bool = False
     database_url: Optional[str] = None
+    """Database URL for Langflow. If not provided, Langflow will use a SQLite database."""
+    pool_size: int = 10
+    """The number of connections to keep open in the connection pool. If not provided, the default is 10."""
+    max_overflow: int = 10
+    """The number of connections to allow that can be opened beyond the pool size. If not provided, the default is 10."""
     cache_type: str = "async"
     remove_api_keys: bool = False
     components_path: List[str] = []

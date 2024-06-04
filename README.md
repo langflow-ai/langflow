@@ -10,9 +10,9 @@
 </p>
 
 <p align="center" style="font-size: 12px;">
-    <a href="https://docs.langflow.org" style="text-decoration: underline;">Docs</a> - 
-    <a href="https://discord.com/invite/EqksyE2EX9" style="text-decoration: underline;">Join our Discord</a> - 
-    <a href="https://twitter.com/langflow_ai" style="text-decoration: underline;">Follow us on X</a> - 
+    <a href="https://docs.langflow.org" style="text-decoration: underline;">Docs</a> -
+    <a href="https://discord.com/invite/EqksyE2EX9" style="text-decoration: underline;">Join our Discord</a> -
+    <a href="https://twitter.com/langflow_ai" style="text-decoration: underline;">Follow us on X</a> -
     <a href="https://huggingface.co/spaces/Langflow/Langflow-Preview" style="text-decoration: underline;">Live demo</a>
 </p>
 
@@ -31,18 +31,27 @@
 
 # 📝 Content
 
-- [Get Started](#-get-started)
-- [Create Flows](#-create-flows)
+- [](#)
+- [📝 Content](#-content)
+- [📦 Get Started](#-get-started)
+- [🎨 Create Flows](#-create-flows)
 - [Deploy](#deploy)
-- [Command Line Interface (CLI)](#️-command-line-interface-cli)
-- [Contribute](#-contribute)
+  - [Deploy Langflow on Google Cloud Platform](#deploy-langflow-on-google-cloud-platform)
+  - [Deploy on Railway](#deploy-on-railway)
+  - [Deploy on Render](#deploy-on-render)
+- [🖥️ Command Line Interface (CLI)](#️-command-line-interface-cli)
+  - [Usage](#usage)
+    - [Environment Variables](#environment-variables)
+- [👋 Contribute](#-contribute)
+- [🌟 Contributors](#-contributors)
+- [📄 License](#-license)
 
 # 📦 Get Started
 
 You can install Langflow with pip:
 
 ```shell
-# Make sure you have Python 3.10 or greater installed on your system.
+# Make sure you have >=Python 3.10 installed on your system.
 # Install the pre-release version (recommended for the latest updates)
 python -m pip install langflow --pre --force-reinstall
 
@@ -96,7 +105,7 @@ Or this one to deploy Langflow 0.6.x:
 
 ## Deploy on Render
 
-<a href="https://render.com/deploy?repo=https://github.com/langflow-ai/langflow/tree/main">
+<a href="https://render.com/deploy?repo=https://github.com/langflow-ai/langflow/tree/dev">
 <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" />
 </a>
 
