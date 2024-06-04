@@ -1,9 +1,9 @@
-from langflow.custom import CustomComponent
+from langflow.custom import Component
 from langflow.template.field.base import Input, Output
 from random import randint
 
 
-class MultipleOutputsComponent(CustomComponent):
+class MultipleOutputsComponent(Component):
     inputs = [
         Input(display_name="Input", name="input", field_type=str),
         Input(display_name="Number", name="number", field_type=int),

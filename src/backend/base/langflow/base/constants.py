@@ -26,4 +26,5 @@ FIELD_FORMAT_ATTRIBUTES = [
     "refresh_button",
     "refresh_button_text",
     "options",
+    "advanced",
 ]

@@ -3,7 +3,7 @@ from typing import Any, AsyncIterator, Dict, Iterator, List
 
 import yaml
 from git import TYPE_CHECKING
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes
@@ -156,28 +156,32 @@ class InterfaceVertex(ComponentVertex):
         if isinstance(message, str):
             message = unescape_string(message)
         stream_url = None
-        if isinstance(self._built_object, AIMessage):
+        text_output = self.results["Message"]
+        if isinstance(text_output, (AIMessage, AIMessageChunk)):
             artifacts = ChatOutputResponse.from_message(
-                self._built_object,
+                text_output,
                 sender=sender,
                 sender_name=sender_name,
             )
-        elif not isinstance(self._built_object, UnbuiltObject):
-            if isinstance(self._built_object, dict):
+        elif not isinstance(text_output, UnbuiltObject):
+            if isinstance(text_output, dict):
                 # Turn the dict into a pleasing to
                 # read JSON inside a code block
-                message = dict_to_codeblock(self._built_object)
-            elif isinstance(self._built_object, Record):
-                message = self._built_object.text
+                message = dict_to_codeblock(text_output)
+            elif isinstance(text_output, Record):
+                message = text_output.text
             elif isinstance(message, (AsyncIterator, Iterator)):
                 stream_url = self.build_stream_url()
                 message = ""
-            elif not isinstance(self._built_object, str):
-                message = str(self._built_object)
+                self.results["Message"] = message
+                self.results["Record"].message = message
+                self._built_object = self.results
+            elif not isinstance(text_output, str):
+                message = str(text_output)
             # if the message is a generator or iterator
             # it means that it is a stream of messages
             else:
-                message = self._built_object
+                message = text_output
 
             artifacts = ChatOutputResponse(
                 message=message,

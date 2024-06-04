@@ -10,11 +10,30 @@ class ChatOutput(ChatComponent):
     icon = "ChatOutput"
 
     inputs = [
-        Input(name="input_value", type=str, display_name="Message", multiline=True),
-        Input(name="sender", type=str, display_name="Sender Type", options=["Machine", "AI"]),
-        Input(name="sender_name", type=str, display_name="Sender Name"),
-        Input(name="session_id", type=str, display_name="Session ID"),
-        Input(name="record_template", type=str, display_name="Record Template", default="{text}"),
+        Input(
+            name="input_value", type=str, display_name="Message", multiline=True, info="Message to be passed as output."
+        ),
+        Input(
+            name="sender",
+            type=str,
+            display_name="Sender Type",
+            options=["Machine", "User"],
+            value="Machine",
+            advanced=True,
+            info="Type of sender.",
+        ),
+        Input(name="sender_name", type=str, display_name="Sender Name", info="Name of the sender.", value="AI"),
+        Input(
+            name="session_id", type=str, display_name="Session ID", info="Session ID for the message.", advanced=True
+        ),
+        Input(
+            name="record_template",
+            type=str,
+            display_name="Record Template",
+            value="{text}",
+            advanced=True,
+            info="Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
+        ),
     ]
     outputs = [
         Output(name="Message", method="text_response"),

@@ -10,10 +10,27 @@ class ChatInput(ChatComponent):
     icon = "ChatInput"
 
     inputs = [
-        Input(name="input_value", type=str, display_name="Message", multiline=True, input_types=[]),
-        Input(name="sender", type=str, display_name="Sender Type", options=["Machine", "User"]),
-        Input(name="sender_name", type=str, display_name="Sender Name"),
-        Input(name="session_id", type=str, display_name="Session ID"),
+        Input(
+            name="input_value",
+            type=str,
+            display_name="Message",
+            multiline=True,
+            input_types=[],
+            info="Message to be passed as input.",
+        ),
+        Input(
+            name="sender",
+            type=str,
+            display_name="Sender Type",
+            options=["Machine", "User"],
+            value="User",
+            info="Type of sender.",
+            advanced=True,
+        ),
+        Input(name="sender_name", type=str, display_name="Sender Name", info="Name of the sender.", value="User"),
+        Input(
+            name="session_id", type=str, display_name="Session ID", info="Session ID for the message.", advanced=True
+        ),
     ]
     outputs = [
         Output(name="Message", method="text_response"),
