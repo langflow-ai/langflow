@@ -1,6 +1,7 @@
 from typing import Optional, cast
 
 
+import cassio
 from langchain_community.chat_message_histories import CassandraChatMessageHistory
 
 from langflow.base.memory.memory import BaseMemoryComponent
@@ -67,11 +68,10 @@ class CassandraMessageReaderComponent(BaseMemoryComponent):
         database_id: str,
         keyspace: Optional[str] = None,
     ) -> list[Record]:
+        cassio.init(token=token, database_id=database_id)
         memory = CassandraChatMessageHistory(
             session_id=session_id,
             table_name=table_name,
-            token=token,
-            database_id=database_id,
             keyspace=keyspace,
         )
 
