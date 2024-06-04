@@ -1,6 +1,5 @@
 import * as Form from "@radix-ui/react-form";
-import { cloneDeep } from "lodash";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import GradientChooserComponent from "../../../../components/gradientChooserComponent";
@@ -15,14 +14,6 @@ import {
   CardTitle,
 } from "../../../../components/ui/card";
 import {
-  API_ERROR_ALERT,
-  API_SUCCESS_ALERT,
-  EDIT_PASSWORD_ALERT_LIST,
-  EDIT_PASSWORD_ERROR_ALERT,
-  SAVE_ERROR_ALERT,
-  SAVE_SUCCESS_ALERT,
-} from "../../../../constants/alerts_constants";
-import {
   CONTROL_PATCH_USER_STATE,
   CREATE_API_KEY,
   INSERT_API_KEY,
@@ -30,11 +21,6 @@ import {
   NO_API_KEY,
 } from "../../../../constants/constants";
 import { AuthContext } from "../../../../contexts/authContext";
-import {
-  addApiKeyStore,
-  resetPassword,
-  updateUser,
-} from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../../stores/storeStore";
@@ -43,6 +29,10 @@ import {
   patchUserInputStateType,
 } from "../../../../types/components";
 import { gradients } from "../../../../utils/styleUtils";
+import usePatchGradient from "../hooks/use-patch-gradient";
+import usePatchPassword from "../hooks/use-patch-password";
+import useSaveKey from "../hooks/use-save-key";
+import useScrollToElement from "../hooks/use-scroll-to-element";
 
 export default function GeneralPage() {
   const setCurrentFlowId = useFlowsManagerStore(
@@ -51,29 +41,16 @@ export default function GeneralPage() {
 
   const { scrollId } = useParams();
 
-  useEffect(() => {
-    const element = document.getElementById(scrollId ?? "null");
-    if (element) {
-      // 👇 Will scroll smoothly to the top of the next section
-      element.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [scrollId]);
-
   const [inputState, setInputState] = useState<patchUserInputStateType>(
     CONTROL_PATCH_USER_STATE
   );
 
   const { autoLogin } = useContext(AuthContext);
 
-  // set null id
-  useEffect(() => {
-    setCurrentFlowId("");
-  }, []);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);
   const hasStore = useStoreStore((state) => state.hasStore);
-  const { storeApiKey } = useContext(AuthContext);
 
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -83,71 +60,28 @@ export default function GeneralPage() {
   const setLoadingApiKey = useStoreStore((state) => state.updateLoadingApiKey);
   const { password, cnfPassword, gradient, apikey } = inputState;
 
-  async function handlePatchPassword() {
-    if (password !== cnfPassword) {
-      setErrorData({
-        title: EDIT_PASSWORD_ERROR_ALERT,
-        list: [EDIT_PASSWORD_ALERT_LIST],
-      });
-      return;
-    }
-    try {
-      if (password !== "") await resetPassword(userData!.id, { password });
-      handleInput({ target: { name: "password", value: "" } });
-      handleInput({ target: { name: "cnfPassword", value: "" } });
-      setSuccessData({ title: SAVE_SUCCESS_ALERT });
-    } catch (error) {
-      setErrorData({
-        title: SAVE_ERROR_ALERT,
-        list: [(error as any).response.data.detail],
-      });
-    }
-  }
+  const { handlePatchPassword } = usePatchPassword(
+    userData,
+    setSuccessData,
+    setErrorData
+  );
 
-  async function handlePatchGradient() {
-    try {
-      if (gradient !== "")
-        await updateUser(userData!.id, { profile_image: gradient });
-      if (gradient !== "") {
-        let newUserData = cloneDeep(userData);
-        newUserData!.profile_image = gradient;
+  const { handlePatchGradient } = usePatchGradient(
+    setSuccessData,
+    setErrorData,
+    userData,
+    setUserData
+  );
 
-        setUserData(newUserData);
-      }
-      setSuccessData({ title: SAVE_SUCCESS_ALERT });
-    } catch (error) {
-      setErrorData({
-        title: SAVE_ERROR_ALERT,
-        list: [(error as any).response.data.detail],
-      });
-    }
-  }
+  useScrollToElement(scrollId, setCurrentFlowId);
 
-  const handleSaveKey = () => {
-    if (apikey) {
-      addApiKeyStore(apikey).then(
-        () => {
-          setSuccessData({
-            title: API_SUCCESS_ALERT,
-          });
-          storeApiKey(apikey);
-          setHasApiKey(true);
-          setValidApiKey(true);
-          setLoadingApiKey(false);
-          handleInput({ target: { name: "apikey", value: "" } });
-        },
-        (error) => {
-          setErrorData({
-            title: API_ERROR_ALERT,
-            list: [error["response"]["data"]["detail"]],
-          });
-          setHasApiKey(false);
-          setValidApiKey(false);
-          setLoadingApiKey(false);
-        }
-      );
-    }
-  };
+  const { handleSaveKey } = useSaveKey(
+    setSuccessData,
+    setErrorData,
+    setHasApiKey,
+    setValidApiKey,
+    setLoadingApiKey
+  );
 
   function handleInput({
     target: { name, value },
@@ -175,7 +109,7 @@ export default function GeneralPage() {
       <div className="grid gap-6">
         <Form.Root
           onSubmit={(event) => {
-            handlePatchGradient();
+            handlePatchGradient(gradient);
             event.preventDefault();
           }}
         >
@@ -213,7 +147,7 @@ export default function GeneralPage() {
         {!autoLogin && (
           <Form.Root
             onSubmit={(event) => {
-              handlePatchPassword();
+              handlePatchPassword(password, cnfPassword, handleInput);
               event.preventDefault();
             }}
           >
@@ -281,7 +215,7 @@ export default function GeneralPage() {
           <Form.Root
             onSubmit={(event) => {
               event.preventDefault();
-              handleSaveKey();
+              handleSaveKey(apikey, handleInput);
             }}
           >
             <Card x-chunk="dashboard-04-chunk-2" id="api">
