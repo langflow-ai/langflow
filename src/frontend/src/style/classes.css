@@ -15,6 +15,10 @@ pre {
   font-family: inherit;
 }
 
+.ag-paging-page-size {
+  display: none;
+}
+
 .react-flow__pane {
   cursor: default;
 }
