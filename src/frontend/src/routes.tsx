@@ -56,7 +56,7 @@ const Router = () => {
       >
         <Route index element={<Navigate replace to={"general"} />} />
         <Route path="global-variables" element={<GlobalVariablesPage />} />
-        <Route path="general" element={<GeneralPage />} />
+        <Route path="general/:scrollId?" element={<GeneralPage />} />
         <Route path="shortcuts" element={<ShortcutsPage />} />
       </Route>
       <Route
@@ -80,17 +80,14 @@ const Router = () => {
         }
       />
       <Route path="/playground/:id/">
-        element=
-        {
-          <Route
-            path=""
-            element={
-              <ProtectedRoute>
-                <PlaygroundPage />
-              </ProtectedRoute>
-            }
-          />
-        }
+        <Route
+          path=""
+          element={
+            <ProtectedRoute>
+              <PlaygroundPage />
+            </ProtectedRoute>
+          }
+        />
       </Route>
       <Route path="/flow/:id/">
         <Route
