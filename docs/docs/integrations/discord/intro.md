@@ -10,8 +10,8 @@ The Discord integration in Langflow enables seamless connectivity with Discord s
 <ZoomableImage
   alt="Discord Components in Langflow"
   sources={{
-    light: "img/discord/discord_components_bundle.png",
-    dark: "img/discord/discord_components_bundle_dark.png",
+    light: "img/discord/discord_bundle.jpg",
+    dark: "img/discord/discord_bundle.jpg",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />
