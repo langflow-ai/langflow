@@ -81,9 +81,9 @@ test("KeypairListComponent", async ({ page }) => {
   expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeFalsy();
   await page.locator('//*[@id="showcredentials_profile_name"]').click();
   expect(
-    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
+    await page.locator('//*[@id="showcredentials_profile_name"]').isChecked()
   ).toBeFalsy();
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   const plusButtonLocator = page.locator('//*[@id="plusbtn0"]');
   const elementCount = await plusButtonLocator?.count();
@@ -96,7 +96,7 @@ test("KeypairListComponent", async ({ page }) => {
 
     await page.locator('//*[@id="showcredentials_profile_name"]').click();
     expect(
-      await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
+      await page.locator('//*[@id="showcredentials_profile_name"]').isChecked()
     ).toBeTruthy();
     await page.locator('//*[@id="showcache"]').click();
     expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeTruthy();
@@ -108,7 +108,7 @@ test("KeypairListComponent", async ({ page }) => {
     const elementKeyCount = await keyPairVerification?.count();
 
     if (elementKeyCount === 1) {
-      await page.locator('//*[@id="saveChangesBtn"]').click();
+      await page.getByText("Save Changes", { exact: true }).click();
 
       await page.getByTestId("div-generic-node").click();
 

@@ -71,6 +71,7 @@ const Footer: React.FC<{
     icon?: ReactNode;
     loading?: boolean;
     disabled?: boolean;
+    dataTestId?: string;
   };
 }> = ({ children, submit }) => {
   return submit ? (
@@ -83,6 +84,7 @@ const Footer: React.FC<{
           </Button>
         </DialogClose>
         <Button
+          data-testid={submit.dataTestId}
           type="submit"
           disabled={submit.loading || submit.disabled}
           className="relative"
@@ -90,7 +92,7 @@ const Footer: React.FC<{
           <div
             className={cn(
               submit.loading ? "opacity-100" : "opacity-0",
-              "absolute self-center",
+              "absolute self-center"
             )}
           >
             <ForwardedIconComponent
@@ -114,7 +116,7 @@ interface BaseModalProps {
     React.ReactElement<ContentProps>,
     React.ReactElement<HeaderProps>,
     React.ReactElement<TriggerProps>?,
-    React.ReactElement<FooterProps>?,
+    React.ReactElement<FooterProps>?
   ];
   open?: boolean;
   setOpen?: (open: boolean) => void;
@@ -148,16 +150,16 @@ function BaseModal({
   onSubmit,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Header,
+    (child) => (child as React.ReactElement).type === Header
   );
   const triggerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Trigger,
+    (child) => (child as React.ReactElement).type === Trigger
   );
   const ContentChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Content,
+    (child) => (child as React.ReactElement).type === Content
   );
   const ContentFooter = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Footer,
+    (child) => (child as React.ReactElement).type === Footer
   );
 
   let minWidth: string;
