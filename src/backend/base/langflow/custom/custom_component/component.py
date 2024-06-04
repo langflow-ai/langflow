@@ -1,5 +1,17 @@
 import inspect
-from typing import TYPE_CHECKING, AsyncIterator, Awaitable, Callable, ClassVar, Generator, Iterator, List, Optional
+from typing import (
+    TYPE_CHECKING,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    ClassVar,
+    Generator,
+    Iterator,
+    List,
+    Optional,
+    Union,
+)
+from uuid import UUID
 
 import yaml
 from loguru import logger
@@ -30,6 +42,7 @@ def recursive_serialize_or_str(obj):
             # return f"{obj}" this generates '<generator object BaseChatModel.stream at 0x33e9ec770>'
             # it is not useful
             return "Unconsumed Stream"
+        return str(obj)
     except Exception:
         return str(obj)
 
@@ -78,3 +91,24 @@ class Component(CustomComponent):
         if not isinstance(custom_repr, str):
             custom_repr = str(custom_repr)
         return custom_repr
+
+    def build_inputs(self, user_id: Optional[Union[str, UUID]] = None):
+        """
+        Builds the inputs for the custom component.
+
+        Args:
+            user_id (Optional[Union[str, UUID]], optional): The user ID. Defaults to None.
+
+        Returns:
+            List[Input]: The list of inputs.
+        """
+        # This function is similar to build_config, but it will process the inputs
+        # and return them as a dict with keys being the Input.name and values being the Input.model_dump()
+        if not self.inputs:
+            return {}
+        build_config = {_input.name: _input.model_dump(by_alias=True, exclude_none=True) for _input in self.inputs}
+        return build_config
+
+    def _get_field_order(self):
+        inputs = self.template_config["inputs"]
+        return [field.name for field in inputs]
