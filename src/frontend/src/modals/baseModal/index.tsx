@@ -20,6 +20,7 @@ import ForwardedIconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
+import * as Form from "@radix-ui/react-form";
 
 type ContentProps = { children: ReactNode };
 type HeaderProps = { children: ReactNode; description: string };
@@ -260,7 +261,7 @@ function BaseModal({
               {headerChild}
             </div>
             {onSubmit ? (
-              <form
+              <Form.Root
                 onSubmit={(event) => {
                   event.preventDefault();
                   onSubmit();
@@ -275,7 +276,7 @@ function BaseModal({
                 {ContentFooter && (
                   <div className="flex flex-row-reverse">{ContentFooter}</div>
                 )}
-              </form>
+              </Form.Root>
             ) : (
               <>
                 <div
