@@ -81,6 +81,8 @@ def create_app():
 
     @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
+        from datetime import datetime
+        print(f"{datetime.now():%Y-%m-%d %H:%M:%S} {request.method:^8} {request.url.path}")
         flattened: list[tuple[str, str]] = []
         for key, value in request.query_params.multi_items():
             flattened.extend((key, entry) for entry in value.split(","))
