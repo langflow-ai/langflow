@@ -1,3 +1,4 @@
+from asyncio import Lock
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, List, Optional, Union
 from uuid import UUID
@@ -32,11 +33,18 @@ from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow, get_flow_by_id
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_session, get_session_service, get_settings_service, get_task_service
+from langflow.services.deps import (
+    get_cache_service,
+    get_session,
+    get_session_service,
+    get_settings_service,
+    get_task_service,
+)
 from langflow.services.session.service import SessionService
 from langflow.services.task.service import TaskService
 
 if TYPE_CHECKING:
+    from langflow.services.cache.base import CacheService
     from langflow.services.settings.manager import SettingsService
 
 router = APIRouter(tags=["Base"])
@@ -45,13 +53,19 @@ router = APIRouter(tags=["Base"])
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all(
     settings_service=Depends(get_settings_service),
+    cache_service: "CacheService" = Depends(dependency=get_cache_service),
+    force_refresh: bool = False,
 ):
     from langflow.interface.types import aget_all_types_dict
 
     logger.debug("Building langchain types dict")
     try:
-        all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
-        return all_types_dict
+        async with Lock() as lock:
+            all_types_dict = await cache_service.get(key="all_types_dict", lock=lock)
+            if not all_types_dict or force_refresh:
+                all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
+            await cache_service.set(key="all_types_dict", value=all_types_dict, lock=lock)
+            return all_types_dict
     except Exception as exc:
         logger.exception(exc)
         raise HTTPException(status_code=500, detail=str(exc)) from exc

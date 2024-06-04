@@ -46,7 +46,7 @@ def test_get_project_data():
 async def test_create_or_update_starter_projects(client):
     with session_scope() as session:
         # Run the function to create or update projects
-        create_or_update_starter_projects()
+        await create_or_update_starter_projects()
 
         # Get the number of projects returned by load_starter_projects
         num_projects = len(load_starter_projects())

@@ -16,6 +16,7 @@ import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useTypesStore } from "../../../../stores/typesStore";
 import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import ShadTooltip from "../../../shadTooltipComponent";
@@ -34,6 +35,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
+  const getTypes = useTypesStore((state) => state.getTypes);
 
   function handleAddFlow(duplicate?: boolean) {
     try {
@@ -53,6 +55,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
     } catch (err) {
       setErrorData(err as { title: string; list?: Array<string> });
     }
+  }
+
+  function handleReloadComponents() {
+    getTypes(true).then(() => {
+      setSuccessData({ title: "Components reloaded successfully" });
+    });
   }
 
   function printByBuildStatus() {
@@ -187,6 +195,18 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 </span>
               )}
               <span className="absolute right-2 top-[0.4em]">Y</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                handleReloadComponents();
+              }}
+              className="cursor-pointer"
+            >
+              <IconComponent
+                name="RefreshCcw"
+                className="header-menu-options"
+              />
+              Reload Components
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
