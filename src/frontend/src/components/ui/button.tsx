@@ -81,7 +81,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         >
           {loading ? (
             <span className="relative">
-              <span className="hidden">{newChildren}</span>
+              <span className="invisible">{newChildren}</span>
               <span className="absolute inset-0 flex items-center justify-center">
                 <ForwardedIconComponent
                   name={"Loader2"}
