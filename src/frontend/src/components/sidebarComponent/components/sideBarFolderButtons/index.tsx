@@ -304,7 +304,8 @@ const SideBarFoldersButtonsComponent = ({
                       e.stopPropagation();
                       e.preventDefault();
                     }}
-                    variant={"ghost"}
+                    size="none"
+                    variant="none"
                   >
                     <IconComponent
                       name={"Download"}
