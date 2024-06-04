@@ -167,9 +167,9 @@ export default function IOModal({
                       {outputs.length > 0 && (
                         <TabsTrigger value={"2"}>Outputs</TabsTrigger>
                       )}
-                      {haveChat && (
+                      {/* {haveChat && (
                         <TabsTrigger value={"3"}>History</TabsTrigger>
-                      )}
+                      )} */}
                     </TabsList>
                   </div>
 
