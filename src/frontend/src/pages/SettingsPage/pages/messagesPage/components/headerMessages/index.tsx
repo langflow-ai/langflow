@@ -21,7 +21,10 @@ const HeaderMessagesComponent = ({
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
-          <p className="text-sm text-muted-foreground">@Rodrigo</p>
+          <p className="text-sm text-muted-foreground">
+            Inspect, edit and remove messages to explore and refine model
+            behaviors.
+          </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
           <Button
