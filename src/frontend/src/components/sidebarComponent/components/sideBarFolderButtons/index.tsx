@@ -265,7 +265,6 @@ const SideBarFoldersButtonsComponent = ({
                       {item.name}
                     </span>
                   )}
-                  <div className="flex-1" />
                   {index > 0 && (
                     <Button
                       className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
