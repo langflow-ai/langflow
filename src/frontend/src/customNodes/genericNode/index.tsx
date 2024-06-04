@@ -831,7 +831,8 @@ export default function GenericNode({
                   <ParameterComponent
                     index={idx}
                     key={scapedJSONStringfy({
-                      output_types: [output.selected ?? output.types[0]],
+                      output_types: output.types,
+                      name: output.name,
                       id: data.id,
                       dataType: data.type,
                     })}
