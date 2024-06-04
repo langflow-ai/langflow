@@ -60,7 +60,6 @@ const ApiModal = forwardRef(
     );
     const pythonCode = getPythonCode(flow?.name, tweak);
     const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
-    console.log("flow", flow);
     const includeWebhook = flow.webhook;
     const tweaksCode = buildTweaks(flow);
     const codesArray = [
