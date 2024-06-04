@@ -217,7 +217,7 @@ class Vertex:
                 raise ValueError(f"Outputs not found for {self.display_name}")
             self.outputs = self.data["node"]["outputs"]
         else:
-            self.outputs = self.data["node"]["outputs"]
+            self.outputs = self.data["node"].get("outputs", [])
             self.output = self.data["node"]["base_classes"]
         self.display_name = self.data["node"].get("display_name", self.id.split("-")[0])
 
