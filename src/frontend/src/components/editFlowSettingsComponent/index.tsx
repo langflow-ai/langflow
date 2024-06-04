@@ -123,7 +123,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             type="text"
             name="endpoint_name"
             value={endpointName ?? ""}
-            placeholder="An alternative name for the run endpoint"
+            placeholder="An alternative name to run the endpoint"
             maxLength={maxLength}
             id="endpoint_name"
             onDoubleClickCapture={(event) => {
