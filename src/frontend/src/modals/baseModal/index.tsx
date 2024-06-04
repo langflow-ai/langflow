@@ -53,10 +53,10 @@ const Trigger: React.FC<TriggerProps> = ({
   );
 };
 
-const Header: React.FC<{ children: ReactNode; description: string | null }> = ({
-  children,
-  description,
-}: modalHeaderType): JSX.Element => {
+const Header: React.FC<{
+  children: ReactNode;
+  description: string | JSX.Element | null;
+}> = ({ children, description }: modalHeaderType): JSX.Element => {
   return (
     <DialogHeader>
       <DialogTitle className="flex items-center">{children}</DialogTitle>
