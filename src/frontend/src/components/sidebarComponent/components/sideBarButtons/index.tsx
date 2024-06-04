@@ -11,7 +11,10 @@ type SideBarButtonsComponentProps = {
   pathname: string;
   handleOpenNewFolderModal?: () => void;
 };
-const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
+const SideBarButtonsComponent = ({
+  items,
+  pathname,
+}: SideBarButtonsComponentProps) => {
   return (
     <>
       {items.map((item) => (
@@ -21,7 +24,10 @@ const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
             data-testid={`sidebar-nav-${item.title}`}
             className={cn(
               buttonVariants({ variant: "ghost" }),
-              "!w-[200px] cursor-pointer justify-start gap-2 border border-transparent hover:border-border hover:bg-transparent",
+              pathname === item.href
+                ? "border border-border bg-muted hover:bg-muted"
+                : "border border-transparent hover:border-border hover:bg-transparent",
+              "w-full justify-start gap-2",
             )}
           >
             {item.title}
