@@ -41,16 +41,20 @@ export default function SidebarNav({
   return (
     <nav className={cn(className)} {...props}>
       <HorizontalScrollFadeComponent>
-        <SideBarButtonsComponent items={items} pathname={pathname} />
-
-        {!loadingFolders && folders?.length > 0 && isFolderPath && (
-          <SideBarFoldersButtonsComponent
-            folders={folders}
-            pathname={pathname}
-            handleChangeFolder={handleChangeFolder}
-            handleEditFolder={handleEditFolder}
-            handleDeleteFolder={handleDeleteFolder}
-          />
+        {items.length > 0 ? (
+          <SideBarButtonsComponent items={items} pathname={pathname} />
+        ) : (
+          !loadingFolders &&
+          folders?.length > 0 &&
+          isFolderPath && (
+            <SideBarFoldersButtonsComponent
+              folders={folders}
+              pathname={pathname}
+              handleChangeFolder={handleChangeFolder}
+              handleEditFolder={handleEditFolder}
+              handleDeleteFolder={handleDeleteFolder}
+            />
+          )
         )}
       </HorizontalScrollFadeComponent>
     </nav>
