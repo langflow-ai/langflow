@@ -590,6 +590,7 @@ export const CONTROL_PATCH_USER_STATE = {
   password: "",
   cnfPassword: "",
   gradient: "",
+  apikey: "",
 };
 
 export const CONTROL_LOGIN_STATE = {
