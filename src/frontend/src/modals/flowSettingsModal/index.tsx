@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
-import { Button } from "../../components/ui/button";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -36,7 +35,7 @@ export default function FlowSettingsModal({
       .catch((err) => {
         useAlertStore.getState().setErrorData({
           title: "Error while saving changes",
-          list: [(err as AxiosError).response?.data.detail ?? ""],
+          list: [err?.response?.data.detail ?? ""],
         });
         console.error(err);
       });
@@ -79,6 +78,7 @@ export default function FlowSettingsModal({
         submit={{
           label: "Save",
           disabled: nameLists.includes(name) && name !== currentFlow!.name,
+          dataTestId: "save-flow-settings",
         }}
       />
     </BaseModal>

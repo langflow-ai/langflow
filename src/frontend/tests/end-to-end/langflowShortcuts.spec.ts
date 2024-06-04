@@ -47,11 +47,11 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
-  await page.getByTestId("title-Ollama").click();
+  await page.getByTestId("generic-node-title-arrangement").click();
   await page.keyboard.press(`${control}+Shift+A`);
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
-  await page.getByTestId("title-Ollama").click();
+  await page.getByTestId("generic-node-title-arrangement").click();
   await page.keyboard.press(`${control}+d`);
 
   let numberOfNodes = await page.getByTestId("title-Ollama")?.count();
@@ -61,7 +61,7 @@ test("LangflowShortcuts", async ({ page }) => {
 
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div[2]/div/div[1]/div/div[1]/div/div/div[1]',
+      '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div[2]/div/div[1]/div/div[1]/div/div/div[1]'
     )
     .click();
   await page.keyboard.press("Backspace");
@@ -71,7 +71,7 @@ test("LangflowShortcuts", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("title-Ollama").click();
+  await page.getByTestId("generic-node-title-arrangement").click();
   await page.keyboard.press(`${control}+c`);
 
   await page.getByTestId("title-Ollama").click();
@@ -84,7 +84,7 @@ test("LangflowShortcuts", async ({ page }) => {
 
   await page
     .locator(
-      '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div[2]/div/div[1]/div/div[1]/div/div/div[1]',
+      '//*[@id="react-flow-id"]/div[1]/div[1]/div[1]/div/div[2]/div[2]/div/div[1]/div/div[1]/div/div/div[1]'
     )
     .click();
   await page.keyboard.press("Backspace");

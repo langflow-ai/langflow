@@ -1,6 +1,7 @@
 import * as Form from "@radix-ui/react-form";
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import GradientChooserComponent from "../../../../components/gradientChooserComponent";
 import InputComponent from "../../../../components/inputComponent";
@@ -35,17 +36,16 @@ import {
 } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useStoreStore } from "../../../../stores/storeStore";
 import {
   inputHandlerEventType,
   patchUserInputStateType,
 } from "../../../../types/components";
 import { gradients } from "../../../../utils/styleUtils";
-import { useStoreStore } from "../../../../stores/storeStore";
-import { useParams } from "react-router-dom";
 
 export default function GeneralPage() {
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
+    (state) => state.setCurrentFlowId
   );
 
   const { scrollId } = useParams();
@@ -59,7 +59,7 @@ export default function GeneralPage() {
   }, [scrollId]);
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
-    CONTROL_PATCH_USER_STATE,
+    CONTROL_PATCH_USER_STATE
   );
 
   const { autoLogin } = useContext(AuthContext);
@@ -143,7 +143,7 @@ export default function GeneralPage() {
           setHasApiKey(false);
           setValidApiKey(false);
           setLoadingApiKey(false);
-        },
+        }
       );
     }
   };
@@ -290,8 +290,8 @@ export default function GeneralPage() {
                   {(hasApiKey && !validApiKey
                     ? INVALID_API_KEY
                     : !hasApiKey
-                      ? NO_API_KEY
-                      : "") + INSERT_API_KEY}
+                    ? NO_API_KEY
+                    : "") + INSERT_API_KEY}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -319,7 +319,11 @@ export default function GeneralPage() {
               </CardContent>
               <CardFooter className="border-t px-6 py-4">
                 <Form.Submit asChild>
-                  <Button loading={loadingApiKey} type="submit">
+                  <Button
+                    loading={loadingApiKey}
+                    type="submit"
+                    data-testid="api-key-save-button-store"
+                  >
                     Save
                   </Button>
                 </Form.Submit>
