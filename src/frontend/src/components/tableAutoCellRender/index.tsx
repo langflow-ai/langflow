@@ -24,6 +24,7 @@ export default function TableAutoCellRender({
         }
         break;
       case "string":
+        console.log(isTimeStampString(value), value);
         if (isTimeStampString(value)) {
           return <DateReader date={value} />;
         }
