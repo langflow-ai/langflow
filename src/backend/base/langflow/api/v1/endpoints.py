@@ -58,11 +58,11 @@ async def get_all(
 ):
     from langflow.interface.types import aget_all_types_dict
 
-    logger.debug("Building langchain types dict")
     try:
         async with Lock() as lock:
             all_types_dict = await cache_service.get(key="all_types_dict", lock=lock)
             if not all_types_dict or force_refresh:
+                logger.debug("Building langchain types dict")
                 all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
             await cache_service.set(key="all_types_dict", value=all_types_dict, lock=lock)
             return all_types_dict
