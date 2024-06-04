@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useContext, useEffect, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
@@ -6,7 +7,7 @@ import "./App.css";
 import ErrorAlert from "./alerts/error";
 import NoticeAlert from "./alerts/notice";
 import SuccessAlert from "./alerts/success";
-import CrashErrorComponent from "./components/CrashErrorComponent";
+import CrashErrorComponent from "./components/crashErrorComponent";
 import FetchErrorComponent from "./components/fetchErrorComponent";
 import LoadingComponent from "./components/loadingComponent";
 import {
@@ -15,15 +16,19 @@ import {
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
 import { autoLogin, getGlobalVariables, getHealth } from "./controllers/API";
+import { setupAxiosDefaults } from "./controllers/API/utils";
+import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
 import useFlowsManagerStore from "./stores/flowsManagerStore";
-import { useGlobalVariablesStore } from "./stores/globalVariables";
+import { useFolderStore } from "./stores/foldersStore";
+import { useGlobalVariablesStore } from "./stores/globalVariablesStore/globalVariables";
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
-
 export default function App() {
+  useTrackLastVisitedPath();
+
   const removeFromTempNotificationList = useAlertStore(
     (state) => state.removeFromTempNotificationList
   );
@@ -52,6 +57,9 @@ export default function App() {
   const navigate = useNavigate();
   const dark = useDarkStore((state) => state.dark);
 
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+  const loadingFolders = useFolderStore((state) => state.loading);
+
   const [isLoadingHealth, setIsLoadingHealth] = useState(false);
 
   useEffect(() => {
@@ -74,7 +82,7 @@ export default function App() {
           setUserData(user);
           setAutoLogin(true);
           setLoading(false);
-          await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+          fetchAllData();
         }
       })
       .catch(async (error) => {
@@ -82,7 +90,7 @@ export default function App() {
           setAutoLogin(false);
           if (isAuthenticated && !isLoginPage) {
             getUser();
-            await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+            fetchAllData();
           } else {
             setLoading(false);
             useFlowsManagerStore.setState({ isLoading: false });
@@ -90,18 +98,26 @@ export default function App() {
         }
       });
 
-    /* 
-      Abort the request as it isn't needed anymore, the component being 
+    /*
+      Abort the request as it isn't needed anymore, the component being
       unmounted. It helps avoid, among other things, the well-known "can't
       perform a React state update on an unmounted component" warning.
     */
     return () => abortController.abort();
   }, []);
 
+  const fetchAllData = async () => {
+    setTimeout(async () => {
+      await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
+    }, 1000);
+  };
+
   const fetchData = async () => {
     return new Promise<void>(async (resolve, reject) => {
       if (isAuthenticated) {
         try {
+          await setupAxiosDefaults();
+          await getFoldersApi();
           await getTypes();
           await refreshFlows();
           const res = await getGlobalVariables();
@@ -155,7 +171,7 @@ export default function App() {
     setFetchError(false);
     //This condition is necessary to avoid infinite loop on starter page when the application is not healthy
     if (isLoading === true && window.location.pathname === "/") {
-      navigate("/flows");
+      navigate("/all");
       window.location.reload();
     }
   };
@@ -182,7 +198,7 @@ export default function App() {
             ></FetchErrorComponent>
           }
 
-          {isLoading ? (
+          {isLoading || loadingFolders ? (
             <div className="loading-page-panel">
               <LoadingComponent remSize={50} />
             </div>
@@ -198,7 +214,7 @@ export default function App() {
         <div className="flex flex-col-reverse" style={{ zIndex: 999 }}>
           {tempNotificationList.map((alert) => (
             <div key={alert.id}>
-              {alert.type === "error" && (
+              {alert.type === "error" ? (
                 <ErrorAlert
                   key={alert.id}
                   title={alert.title}
@@ -206,6 +222,16 @@ export default function App() {
                   id={alert.id}
                   removeAlert={removeAlert}
                 />
+              ) : (
+                alert.type === "notice" && (
+                  <NoticeAlert
+                    key={alert.id}
+                    title={alert.title}
+                    link={alert.link}
+                    id={alert.id}
+                    removeAlert={removeAlert}
+                  />
+                )
               )}
             </div>
           ))}
@@ -213,23 +239,13 @@ export default function App() {
         <div className="z-40 flex flex-col-reverse">
           {tempNotificationList.map((alert) => (
             <div key={alert.id}>
-              {alert.type === "notice" ? (
-                <NoticeAlert
+              {alert.type === "success" && (
+                <SuccessAlert
                   key={alert.id}
                   title={alert.title}
-                  link={alert.link}
                   id={alert.id}
                   removeAlert={removeAlert}
                 />
-              ) : (
-                alert.type === "success" && (
-                  <SuccessAlert
-                    key={alert.id}
-                    title={alert.title}
-                    id={alert.id}
-                    removeAlert={removeAlert}
-                  />
-                )
               )}
             </div>
           ))}

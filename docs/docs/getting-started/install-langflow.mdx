@@ -6,27 +6,17 @@ import Admonition from "@theme/Admonition";
 # 📦 Install Langflow
 
 <Admonition type="info">
-  Langflow v1.0 is also available in a [HuggingFace Preview Space](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true) if you'd rather try it out before installing locally.
+  Langflow v1.0 alpha is also available in HuggingFace Spaces. [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true), to create your own Langflow workspace in minutes.
 </Admonition>
 
-## Prerequisites
+Langflow requires [Python >=3.10](https://www.python.org/downloads/release/python-3100/) and [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/) to be installed on your system.
 
-Langflow requires the following programs installed on your system.
-
-* [Python 3.10](https://www.python.org/downloads/release/python-3100/)
-
-* [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/)
-
-## Install Langflow
-
-To install Langflow:
-
-pip:
+Install Langflow with pip:
 ```bash
 python -m pip install langflow -U
 ```
 
-pipx:
+Install Langflow with pipx:
 ```bash
 pipx install langflow --python python3.10 --fetch-missing-python
 ```
@@ -34,8 +24,6 @@ Pipx can fetch the missing Python version for you with `--fetch-missing-python`,
 
 
 ## Install Langflow pre-release
-
-Use `--force-reinstall` to ensure you have the latest version of Langflow and its dependencies.
 
 To install a pre-release version of Langflow:
 
@@ -49,9 +37,11 @@ pipx:
 pipx install langflow --python python3.10 --fetch-missing-python --pip-args="--pre --force-reinstall"
 ```
 
+Use `--force-reinstall` to ensure you have the latest version of Langflow and its dependencies.
+
 ## Having a problem?
 
-If you encounter a problem, see [Possible Installation Issues](/migration/possible-installation-issues).
+If you encounter a problem, see [Common Installation Issues](/migration/possible-installation-issues).
 
 To get help in the Langflow CLI:
 
@@ -66,7 +56,7 @@ python -m langflow --help
 python -m langflow run
 ```
 
-2. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in your browser.
+2. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
 ```bash
 │ Welcome to ⛓ Langflow                             │
 │                                                   │
@@ -75,3 +65,22 @@ python -m langflow run
 ```
 
 3. Continue on to the [Quickstart](./quickstart.mdx).
+
+## HuggingFace Spaces
+
+HuggingFace provides a great alternative for running Langflow in their Spaces environment. This means you can run Langflow without any local installation required.
+
+In a Chromium-based browser, go to the [Langflow Space](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) or [Langflow v1.0 alpha Preview Space](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true).
+
+You'll be presented with the following screen:
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/duplicate-space.png",
+    dark: "img/duplicate-space.png",
+  }}
+  style={{ width: "100%", margin: "20px auto" }}
+/>
+
+Name your Space, define the visibility (Public or Private), and click on **Duplicate Space** to start the installation process. When installation is finished, you'll be redirected to the Space's main page to start using Langflow right away!

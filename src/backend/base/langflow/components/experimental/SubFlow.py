@@ -2,9 +2,10 @@ from typing import Any, List, Optional
 
 from loguru import logger
 
+from langflow.base.flow_processing.utils import build_records_from_result_data
 from langflow.custom import CustomComponent
 from langflow.graph.graph.base import Graph
-from langflow.graph.schema import ResultData, RunOutputs
+from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
 from langflow.schema import Record
@@ -35,7 +36,7 @@ class SubFlowComponent(CustomComponent):
             build_config["flow_name"]["options"] = self.get_flow_names()
         # Clean up the build config
         for key in list(build_config.keys()):
-            if key not in self.field_order + ["code", "_type"]:
+            if key not in self.field_order + ["code", "_type", "get_final_results_only"]:
                 del build_config[key]
         if field_value is not None and field_name == "flow_name":
             try:
@@ -85,20 +86,14 @@ class SubFlowComponent(CustomComponent):
                 "display_name": "Tweaks",
                 "info": "Tweaks to apply to the flow.",
             },
+            "get_final_results_only": {
+                "display_name": "Get Final Results Only",
+                "info": "If False, the output will contain all outputs from the flow.",
+                "advanced": True,
+            },
         }
 
-    def build_records_from_result_data(self, result_data: ResultData) -> List[Record]:
-        messages = result_data.messages
-        if not messages:
-            return []
-        records = []
-        for message in messages:
-            message_dict = message if isinstance(message, dict) else message.model_dump()
-            record = Record(data={"result": result_data.model_dump(), "message": message_dict.get("message", "")})
-            records.append(record)
-        return records
-
-    async def build(self, flow_name: str, **kwargs) -> List[Record]:
+    async def build(self, flow_name: str, get_final_results_only: bool = True, **kwargs) -> List[Record]:
         tweaks = {key: {"input_value": value} for key, value in kwargs.items()}
         run_outputs: List[Optional[RunOutputs]] = await self.run_flow(
             tweaks=tweaks,
@@ -112,7 +107,7 @@ class SubFlowComponent(CustomComponent):
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    records.extend(self.build_records_from_result_data(output))
+                    records.extend(build_records_from_result_data(output, get_final_results_only))
 
         self.status = records
         logger.debug(records)

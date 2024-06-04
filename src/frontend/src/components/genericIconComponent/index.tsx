@@ -7,7 +7,7 @@ import Loading from "../ui/loading";
 
 import { useEffect, useState } from "react";
 
-const ForwardedIconComponent = memo(
+export const ForwardedIconComponent = memo(
   forwardRef(
     (
       {

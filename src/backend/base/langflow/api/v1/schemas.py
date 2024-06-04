@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -139,8 +139,18 @@ class FlowListCreate(BaseModel):
     flows: List[FlowCreate]
 
 
+class FlowListIds(BaseModel):
+    flow_ids: List[str]
+
+
 class FlowListRead(BaseModel):
     flows: List[FlowRead]
+
+
+class FlowListReadWithFolderName(BaseModel):
+    flows: List[FlowRead]
+    name: str
+    description: str
 
 
 class InitResponse(BaseModel):
@@ -238,6 +248,7 @@ class ResultDataResponse(BaseModel):
     artifacts: Optional[Any] = Field(default_factory=dict)
     timedelta: Optional[float] = None
     duration: Optional[str] = None
+    used_frozen_result: Optional[bool] = False
 
 
 class VertexBuildResponse(BaseModel):
@@ -250,7 +261,7 @@ class VertexBuildResponse(BaseModel):
     """JSON string of the params."""
     data: ResultDataResponse
     """Mapping of vertex ids to result dict containing the param name and result value."""
-    timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    timestamp: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
     """Timestamp of the build."""
 
 
@@ -294,3 +305,19 @@ class SimplifiedAPIRequest(BaseModel):
     )
     tweaks: Optional[Tweaks] = Field(default=None, description="The tweaks")
     session_id: Optional[str] = Field(default=None, description="The session id")
+
+
+# (alias) type ReactFlowJsonObject<NodeData = any, EdgeData = any> = {
+#     nodes: Node<NodeData>[];
+#     edges: Edge<EdgeData>[];
+#     viewport: Viewport;
+# }
+# import ReactFlowJsonObject
+class FlowDataRequest(BaseModel):
+    nodes: List[dict]
+    edges: List[dict]
+    viewport: Optional[dict] = None
+
+
+class ConfigResponse(BaseModel):
+    frontend_timeout: int

@@ -140,7 +140,10 @@ def get_file_path_value(file_path):
     # If the path is not in the cache dir, return empty string
     # This is to prevent access to files outside the cache dir
     # If the path is not a file, return empty string
-    if not path.exists() or not str(path).startswith(user_cache_dir("langflow", "langflow")):
+    if not str(path).startswith(user_cache_dir("langflow", "langflow")):
+        return ""
+
+    if not path.exists():
         return ""
     return file_path
 
@@ -201,21 +204,27 @@ def format_elapsed_time(elapsed_time: float) -> str:
         return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def build_and_cache_graph(
+async def build_and_cache_graph_from_db(
     flow_id: str,
     session: Session,
     chat_service: "ChatService",
-    graph: Optional[Graph] = None,
 ):
     """Build and cache the graph."""
     flow: Optional[Flow] = session.get(Flow, flow_id)
     if not flow or not flow.data:
         raise ValueError("Invalid flow ID")
-    other_graph = Graph.from_payload(flow.data, flow_id)
-    if graph is None:
-        graph = other_graph
-    else:
-        graph = graph.update(other_graph)
+    graph = Graph.from_payload(flow.data, flow_id)
+    await chat_service.set_cache(flow_id, graph)
+    return graph
+
+
+async def build_and_cache_graph_from_data(
+    flow_id: str,
+    chat_service: "ChatService",
+    graph_data: dict,
+):  # -> Graph | Any:
+    """Build and cache the graph."""
+    graph = Graph.from_payload(graph_data, flow_id)
     await chat_service.set_cache(flow_id, graph)
     return graph
 
@@ -277,7 +286,7 @@ async def get_next_runnable_vertices(
         for v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
             graph.vertices_to_run.remove(v_id)
             graph.remove_from_predecessors(v_id)
-        await chat_service.set_cache(flow_id=flow_id, data=graph, lock=lock)
+        await chat_service.set_cache(key=flow_id, data=graph, lock=lock)
     return next_runnable_vertices
 
 

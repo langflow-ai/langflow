@@ -78,7 +78,7 @@ jobs:
         with:
           context: .
           push: true
-          file: ./build_and_push.Dockerfile
+          file: ./docker/build_and_push.Dockerfile
           tags: |
             langflowai/langflow:${{ needs.release.outputs.version }}
             langflowai/langflow:1.0-alpha

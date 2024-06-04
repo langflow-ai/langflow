@@ -7,6 +7,7 @@ port ?= 7860
 env ?= .env
 open_browser ?= true
 path = src/backend/base/langflow/frontend
+workers ?= 1
 
 codespell:
 	@poetry install --with spelling
@@ -135,18 +136,19 @@ frontendc:
 install_backend:
 	@echo 'Installing backend dependencies'
 	@poetry install
+	@poetry run pre-commit install
 
 backend:
 	@echo 'Setting up the environment'
 	@make setup_env
 	make install_backend
-	@-kill -9 `lsof -t -i:7860`
+	@-kill -9 $(lsof -t -i:7860)
 ifdef login
 	@echo "Running backend autologin is $(login)";
-	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio
+	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio --workers $(workers)
 else
 	@echo "Running backend respecting the .env file";
-	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env  --loop asyncio
+	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env  --loop asyncio --workers $(workers)
 endif
 
 build_and_run:

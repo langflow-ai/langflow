@@ -4,9 +4,7 @@ module.exports = {
       type: "category",
       label: "What's New?",
       collapsed: false,
-      items: [
-        "whats-new/a-new-chapter-langflow"
-      ],
+      items: ["whats-new/a-new-chapter-langflow"],
     },
     {
       type: "category",
@@ -16,8 +14,9 @@ module.exports = {
         "index",
         "getting-started/install-langflow",
         "getting-started/quickstart",
-        "getting-started/huggingface-spaces",
-        "getting-started/new-to-llms"
+        "getting-started/canvas",
+        "migration/possible-installation-issues",
+        "getting-started/new-to-llms",
       ],
     },
     {
@@ -28,7 +27,8 @@ module.exports = {
         "starter-projects/basic-prompting",
         "starter-projects/blog-writer",
         "starter-projects/document-qa",
-        "starter-projects/memory-chatbot"
+        "starter-projects/memory-chatbot",
+        "starter-projects/vector-store-rag",
       ],
     },
     {
@@ -36,13 +36,12 @@ module.exports = {
       label: "Administration",
       collapsed: false,
       items: [
-        "administration/login",
         "administration/api",
+        "administration/login",
         "administration/cli",
-        "administration/components",
-        "administration/collection",
-        "administration/prompt-customization",
-        "administration/langfuse_integration"
+        "administration/playground",
+        "administration/global-env",
+        "administration/chat-widget",
       ],
     },
     {
@@ -57,7 +56,7 @@ module.exports = {
         "components/helpers",
         "components/vector-stores",
         "components/embeddings",
-        "components/custom"
+        "components/custom",
       ],
     },
     {
@@ -73,7 +72,7 @@ module.exports = {
         "components/retrievers",
         "components/text-splitters",
         "components/toolkits",
-        "components/tools"
+        "components/tools",
       ],
     },
     {
@@ -81,13 +80,13 @@ module.exports = {
       label: "Example Components",
       collapsed: true,
       items: [
-        "examples/flow-runner",
-        "examples/conversation-chain",
-        "examples/buffer-memory",
-        "examples/csv-loader",
-        "examples/searchapi-tool",
-        "examples/serp-api-tool",
-        "examples/python-function"
+        "examples/chat-memory",
+        "examples/combine-text",
+        "examples/create-record",
+        "examples/pass",
+        "examples/store-message",
+        "examples/sub-flow",
+        "examples/text-operator",
       ],
     },
     {
@@ -100,8 +99,8 @@ module.exports = {
         "migration/inputs-and-outputs",
         "migration/text-and-record",
         "migration/compatibility",
-        "migration/global-variables"
-      ]
+        "migration/global-variables",
+      ],
     },
     {
       type: "category",
@@ -110,16 +109,14 @@ module.exports = {
       items: [
         "tutorials/chatprompttemplate_guide",
         "tutorials/loading_document",
-        "tutorials/rag-with-astradb"
+        "tutorials/rag-with-astradb",
       ],
     },
     {
       type: "category",
       label: "Deployment",
       collapsed: true,
-      items: [
-        "deployment/gcp-deployment"
-      ],
+      items: ["deployment/gcp-deployment"],
     },
     {
       type: "category",
@@ -128,7 +125,31 @@ module.exports = {
       items: [
         "contributing/how-contribute",
         "contributing/github-issues",
-        "contributing/community"
+        "contributing/community",
+        "contributing/contribute-component",
+      ],
+    },
+    {
+      type: "category",
+      label: "Integrations",
+      collapsed: false,
+      items: [
+        {
+          type: "category",
+          label: "Notion",
+          items: [
+            "integrations/notion/intro",
+            "integrations/notion/setup",
+            "integrations/notion/search",
+            "integrations/notion/list-database-properties",
+            "integrations/notion/list-pages",
+            "integrations/notion/list-users",
+            "integrations/notion/page-create",
+            "integrations/notion/add-content-to-page",
+            "integrations/notion/page-update",
+            "integrations/notion/page-content-viewer",
+          ],
+        },
       ],
     },
   ],

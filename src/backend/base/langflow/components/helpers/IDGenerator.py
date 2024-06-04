@@ -1,7 +1,7 @@
 import uuid
 from typing import Any, Optional
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 
 
 class UUIDGeneratorComponent(CustomComponent):
@@ -23,7 +23,7 @@ class UUIDGeneratorComponent(CustomComponent):
         return {
             "unique_id": {
                 "display_name": "Value",
-                "real_time_refresh": True,
+                "refresh_button": True,
             }
         }
 

@@ -2,17 +2,18 @@ from typing import Callable, Dict, Text, Union
 
 from langchain.agents.agent import AgentExecutor
 from langchain.chains.base import Chain
-from langchain.document_loaders.base import BaseLoader
-from langchain.llms.base import BaseLLM
 from langchain.memory.chat_memory import BaseChatMemory
-from langchain.prompts import BasePromptTemplate, ChatPromptTemplate, PromptTemplate
-from langchain.schema import BaseOutputParser, BaseRetriever, Document
-from langchain.schema.embeddings import Embeddings
-from langchain.schema.language_model import BaseLanguageModel
-from langchain.schema.memory import BaseMemory
-from langchain.text_splitter import TextSplitter
-from langchain.tools import Tool
-from langchain_community.vectorstores import VectorStore
+from langchain_core.document_loaders import BaseLoader
+from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
+from langchain_core.language_models import BaseLLM, BaseLanguageModel
+from langchain_core.memory import BaseMemory
+from langchain_core.output_parsers import BaseOutputParser
+from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate, PromptTemplate
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.tools import Tool
+from langchain_core.vectorstores import VectorStore
+from langchain_text_splitters import TextSplitter
 
 # Type alias for more complex dicts
 NestedDict = Dict[str, Union[str, Dict]]

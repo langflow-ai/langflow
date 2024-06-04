@@ -5,6 +5,11 @@ import plugin from "tailwindcss/plugin";
 
 // ! Check if removing the other module.exports made sense
 module.exports = {
+  variants: {
+    extend: {
+      display: ["group-hover"],
+    },
+  },
   darkMode: ["class"],
   content: [
     "app/**/*.{ts,tsx}",
@@ -36,8 +41,11 @@ module.exports = {
       },
       animation: {
         wiggle: "wiggle 150ms ease-in-out 1",
+        "slow-wiggle": "wiggle 500ms ease-in-out 1",
       },
       colors: {
+        "frozen-blue": "rgba(128, 190, 219, 0.86)", // Custom blue color for the frozen effect
+        "frosted-glass": "rgba(255, 255, 255, 0.8)", // Custom frosted glass effect
         "component-icon": "var(--component-icon)",
         "flow-icon": "var(--flow-icon)",
         "low-indigo": "var(--low-indigo)",
@@ -88,6 +96,7 @@ module.exports = {
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
         ice: "var(--ice)",
+        selected: "var(--selected)",
         hover: "var(--hover)",
         white: "var(--white)",
         border: "hsl(var(--border))",
@@ -131,6 +140,13 @@ module.exports = {
       },
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
+      },
+      boxShadow: {
+        "frozen-ring": "0 0 10px 2px rgba(128, 190, 230, 0.5)",
+        "frosted-ring": "0 0 10px 2px rgba(128, 190, 230, 0.7)",
+      },
+      backdropBlur: {
+        xs: "2px",
       },
     },
   },

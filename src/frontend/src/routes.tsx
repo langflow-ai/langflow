@@ -7,15 +7,19 @@ import { StoreGuard } from "./components/storeGuard";
 import AdminPage from "./pages/AdminPage";
 import LoginAdminPage from "./pages/AdminPage/LoginPage";
 import ApiKeysPage from "./pages/ApiKeysPage";
+import DeleteAccountPage from "./pages/DeleteAccountPage";
 import FlowPage from "./pages/FlowPage";
-import HomePage from "./pages/MainPage";
-import ComponentsComponent from "./pages/MainPage/components/components";
-import ProfileSettingsPage from "./pages/ProfileSettingsPage";
+import LoginPage from "./pages/LoginPage";
+import MyCollectionComponent from "./pages/MainPage/components/myCollectionComponent";
+import HomePage from "./pages/MainPage/pages/mainPage";
+import PlaygroundPage from "./pages/Playground";
+import SettingsPage from "./pages/SettingsPage";
+import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
+import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
+import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
+import SignUp from "./pages/SignUpPage";
 import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
-import DeleteAccountPage from "./pages/deleteAccountPage";
-import LoginPage from "./pages/loginPage";
-import SignUp from "./pages/signUpPage";
 
 const Router = () => {
   return (
@@ -28,15 +32,32 @@ const Router = () => {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate replace to={"flows"} />} />
+        <Route index element={<Navigate replace to={"all"} />} />
         <Route
-          path="flows"
-          element={<ComponentsComponent key="flows" is_component={false} />}
+          path="flows/*"
+          element={<MyCollectionComponent key="flows" type="flow" />}
         />
         <Route
-          path="components"
-          element={<ComponentsComponent key="components" />}
+          path="components/*"
+          element={<MyCollectionComponent key="components" type="component" />}
         />
+        <Route
+          path="all/*"
+          element={<MyCollectionComponent key="all" type="all" />}
+        />
+      </Route>
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate replace to={"general"} />} />
+        <Route path="global-variables" element={<GlobalVariablesPage />} />
+        <Route path="general" element={<GeneralPage />} />
+        <Route path="shortcuts" element={<ShortcutsPage />} />
       </Route>
       <Route
         path="/store"
@@ -58,8 +79,28 @@ const Router = () => {
           </ProtectedRoute>
         }
       />
-
+      <Route path="/playground/:id/">
+        element=
+        {
+          <Route
+            path=""
+            element={
+              <ProtectedRoute>
+                <PlaygroundPage />
+              </ProtectedRoute>
+            }
+          />
+        }
+      </Route>
       <Route path="/flow/:id/">
+        <Route
+          path="*"
+          element={
+            <ProtectedRoute>
+              <FlowPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path=""
           element={
@@ -121,14 +162,6 @@ const Router = () => {
       />
 
       <Route path="/account">
-        <Route
-          path="settings"
-          element={
-            <ProtectedRoute>
-              <ProfileSettingsPage />
-            </ProtectedRoute>
-          }
-        />
         <Route
           path="delete"
           element={

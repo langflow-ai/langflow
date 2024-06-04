@@ -23,7 +23,7 @@ export default function CodeAreaComponent({
   useEffect(() => {
     if (disabled && myValue !== "") {
       setMyValue("");
-      onChange("");
+      onChange("", true);
     }
   }, [disabled]);
 

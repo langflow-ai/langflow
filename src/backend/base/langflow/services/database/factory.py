@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING
 
-
 from langflow.services.database.service import DatabaseService
 from langflow.services.factory import ServiceFactory
 
@@ -14,6 +13,6 @@ class DatabaseServiceFactory(ServiceFactory):
 
     def create(self, settings_service: "SettingsService"):
         # Here you would have logic to create and configure a DatabaseService
-        if not settings_service.settings.DATABASE_URL:
+        if not settings_service.settings.database_url:
             raise ValueError("No database URL provided")
-        return DatabaseService(settings_service.settings.DATABASE_URL)
+        return DatabaseService(settings_service)

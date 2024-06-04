@@ -1,5 +1,6 @@
-import { AxiosResponse } from "axios";
-import { ReactFlowJsonObject } from "reactflow";
+import { ColDef, ColGroupDef } from "ag-grid-community";
+import { AxiosRequestConfig, AxiosResponse } from "axios";
+import { Edge, Node, ReactFlowJsonObject } from "reactflow";
 import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
@@ -18,6 +19,7 @@ import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
 import { StoreComponentResponse } from "../../types/store";
 import { FlowPoolType } from "../../types/zustand/flow";
+import { extractColumnsFromRows } from "../../utils/utils";
 import {
   APIClassType,
   BuildStatusTypeAPI,
@@ -119,6 +121,7 @@ export async function saveFlowToDatabase(newFlow: {
   description: string;
   style?: FlowStyleType;
   is_component?: boolean;
+  folder_id?: string;
 }): Promise<FlowType> {
   try {
     const response = await api.post(`${BASE_URL_API}flows/`, {
@@ -126,6 +129,7 @@ export async function saveFlowToDatabase(newFlow: {
       data: newFlow.data,
       description: newFlow.description,
       is_component: newFlow.is_component,
+      folder_id: newFlow.folder_id === "" ? null : newFlow.folder_id,
     });
 
     if (response.status !== 201) {
@@ -152,6 +156,8 @@ export async function updateFlowInDatabase(
       name: updatedFlow.name,
       data: updatedFlow.data,
       description: updatedFlow.description,
+      folder_id: updatedFlow.folder_id === "" ? null : updatedFlow.folder_id,
+      endpoint_name: updatedFlow.endpoint_name,
     });
 
     if (response?.status !== 200) {
@@ -862,13 +868,14 @@ export async function requestLogout() {
 }
 
 export async function getGlobalVariables(): Promise<{
-  [key: string]: { id: string; type: string };
+  [key: string]: { id: string; type: string; default_fields: string[] };
 }> {
   const globalVariables = {};
   (await api.get(`${BASE_URL_API}variables/`)).data.forEach((element) => {
     globalVariables[element.name] = {
       id: element.id,
       type: element.type,
+      default_fields: element.default_fields,
     };
   });
   return globalVariables;
@@ -878,20 +885,33 @@ export async function registerGlobalVariable({
   name,
   value,
   type,
+  default_fields = [],
 }: {
   name: string;
   value: string;
   type?: string;
+  default_fields?: string[];
 }): Promise<AxiosResponse<{ name: string; id: string; type: string }>> {
-  return await api.post(`${BASE_URL_API}variables/`, {
-    name,
-    value,
-    type,
-  });
+  try {
+    const response = await api.post(`${BASE_URL_API}variables/`, {
+      name,
+      value,
+      type,
+      default_fields: default_fields,
+    });
+    return response;
+  } catch (error) {
+    throw error;
+  }
 }
 
 export async function deleteGlobalVariable(id: string) {
-  api.delete(`${BASE_URL_API}variables/${id}`);
+  try {
+    const response = await api.delete(`${BASE_URL_API}variables/${id}`);
+    return response;
+  } catch (error) {
+    throw error;
+  }
 }
 
 export async function updateGlobalVariable(
@@ -899,26 +919,45 @@ export async function updateGlobalVariable(
   value: string,
   id: string
 ) {
-  api.patch(`${BASE_URL_API}variables/${id}`, {
-    name,
-    value,
-  });
+  try {
+    const response = api.patch(`${BASE_URL_API}variables/${id}`, {
+      name,
+      value,
+    });
+
+    return response;
+  } catch (error) {
+    throw error;
+  }
 }
 
 export async function getVerticesOrder(
   flowId: string,
   startNodeId?: string | null,
-  stopNodeId?: string | null
+  stopNodeId?: string | null,
+  nodes?: Node[],
+  Edges?: Edge[]
 ): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
   // nodeId is optional and is a query parameter
   // if nodeId is not provided, the API will return all vertices
-  const config = {};
+  const config: AxiosRequestConfig<any> = {};
   if (stopNodeId) {
     config["params"] = { stop_component_id: stopNodeId };
   } else if (startNodeId) {
     config["params"] = { start_component_id: startNodeId };
   }
-  return await api.get(`${BASE_URL_API}build/${flowId}/vertices`, config);
+  const data = {
+    data: {},
+  };
+  if (nodes && Edges) {
+    data["data"]["nodes"] = nodes;
+    data["data"]["edges"] = Edges;
+  }
+  return await api.post(
+    `${BASE_URL_API}build/${flowId}/vertices`,
+    data,
+    config
+  );
 }
 
 export async function postBuildVertex(
@@ -958,4 +997,42 @@ export async function deleteFlowPool(
   const config = {};
   config["params"] = { flow_id: flowId };
   return await api.delete(`${BASE_URL_API}monitor/builds`, config);
+}
+
+export async function multipleDeleteFlowsComponents(
+  flowIds: string[]
+): Promise<AxiosResponse<any>> {
+  return await api.post(`${BASE_URL_API}flows/multiple_delete/`, {
+    flow_ids: flowIds,
+  });
+}
+
+export async function getTransactionTable(
+  id: string,
+  mode: "intersection" | "union",
+  params = {}
+): Promise<{ rows: Array<object>; columns: Array<ColDef | ColGroupDef> }> {
+  const config = {};
+  config["params"] = { flow_id: id };
+  if (params) {
+    config["params"] = { ...config["params"], ...params };
+  }
+  const rows = await api.get(`${BASE_URL_API}monitor/transactions`, config);
+  const columns = extractColumnsFromRows(rows.data, mode);
+  return { rows: rows.data, columns };
+}
+
+export async function getMessagesTable(
+  id: string,
+  mode: "intersection" | "union",
+  params = {}
+): Promise<{ rows: Array<object>; columns: Array<ColDef | ColGroupDef> }> {
+  const config = {};
+  config["params"] = { flow_id: id };
+  if (params) {
+    config["params"] = { ...config["params"], ...params };
+  }
+  const rows = await api.get(`${BASE_URL_API}monitor/messages`, config);
+  const columns = extractColumnsFromRows(rows.data, mode);
+  return { rows: rows.data, columns };
 }

@@ -1,21 +1,20 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Coroutine, Optional, Union
 from uuid import UUID
+import warnings
 
 from cryptography.fernet import Fernet
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
+
+
 from jose import JWTError, jwt
 from sqlmodel import Session
 from starlette.websockets import WebSocket
 
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.api_key.model import ApiKey
-from langflow.services.database.models.user.crud import (
-    get_user_by_id,
-    get_user_by_username,
-    update_user_last_login_at,
-)
+from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_session, get_settings_service
 
@@ -77,11 +76,6 @@ async def get_current_user(
     if token:
         return await get_current_user_by_jwt(token, db)
     else:
-        if not query_param and not header_param:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="An API key as query or header, or a JWT token must be passed",
-            )
         user = await api_key_security(query_param, header_param, db)
         if user:
             return user
@@ -111,11 +105,15 @@ async def get_current_user_by_jwt(
         raise credentials_exception
 
     try:
-        payload = jwt.decode(
-            token,
-            settings_service.auth_settings.SECRET_KEY.get_secret_value(),
-            algorithms=[settings_service.auth_settings.ALGORITHM],
-        )
+        # Ignore warning about datetime.utcnow
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+
+            payload = jwt.decode(
+                token,
+                settings_service.auth_settings.SECRET_KEY.get_secret_value(),
+                algorithms=[settings_service.auth_settings.ALGORITHM],
+            )
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore
         if expires := payload.get("exp", None):
@@ -213,15 +211,14 @@ def create_super_user(
 
 def create_user_longterm_token(db: Session = Depends(get_session)) -> tuple[UUID, dict]:
     settings_service = get_settings_service()
+
     username = settings_service.auth_settings.SUPERUSER
-    password = settings_service.auth_settings.SUPERUSER_PASSWORD
-    if not username or not password:
+    super_user = get_user_by_username(db, username)
+    if not super_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing first superuser credentials",
+            detail="Super user hasn't been created"
         )
-    super_user = create_super_user(db=db, username=username, password=password)
-
     access_token_expires_longterm = timedelta(days=365)
     access_token = create_token(
         data={"sub": str(super_user.id)},
@@ -285,11 +282,14 @@ def create_refresh_token(refresh_token: str, db: Session = Depends(get_session))
     settings_service = get_settings_service()
 
     try:
-        payload = jwt.decode(
-            refresh_token,
-            settings_service.auth_settings.SECRET_KEY.get_secret_value(),
-            algorithms=[settings_service.auth_settings.ALGORITHM],
-        )
+        # Ignore warning about datetime.utcnow
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            payload = jwt.decode(
+                refresh_token,
+                settings_service.auth_settings.SECRET_KEY.get_secret_value(),
+                algorithms=[settings_service.auth_settings.ALGORITHM],
+            )
         user_id: UUID = payload.get("sub")  # type: ignore
         token_type: str = payload.get("type")  # type: ignore
 
@@ -348,4 +348,5 @@ def decrypt_api_key(encrypted_api_key: str, settings_service=Depends(get_setting
     else:
         encoded_bytes = encrypted_api_key
     decrypted_key = fernet.decrypt(encoded_bytes).decode()
+    return decrypted_key
     return decrypted_key

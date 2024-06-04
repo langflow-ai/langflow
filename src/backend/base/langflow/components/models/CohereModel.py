@@ -1,10 +1,10 @@
 from typing import Optional
 
-from langchain_community.chat_models.cohere import ChatCohere
 from pydantic.v1 import SecretStr
 from langflow.field_typing import Text
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
+from langchain_cohere import ChatCohere
 
 
 class CohereComponent(LCModelComponent):
@@ -34,9 +34,7 @@ class CohereComponent(LCModelComponent):
             "max_tokens": {
                 "display_name": "Max Tokens",
                 "advanced": True,
-                "default": 256,
-                "type": "int",
-                "show": True,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             },
             "temperature": {
                 "display_name": "Temperature",

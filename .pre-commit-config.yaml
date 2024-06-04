@@ -1,0 +1,40 @@
+fail_fast: true
+repos:
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: "v9.1.1"
+    hooks:
+      - id: eslint
+        files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
+        types: [file]
+        args: ["--fix", "--no-warn-ignored"]
+        additional_dependencies:
+          - eslint@9.1.1
+          - eslint-plugin-prettier
+          - eslint-config-prettier
+          - prettier
+          - eslint-plugin-react@latest
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.1.0
+    hooks:
+      - id: check-case-conflict
+      - id: end-of-file-fixer
+        # python, js and ts only
+        files: \.(py|js|ts)$
+      - id: mixed-line-ending
+        files: \.(py|js|ts)$
+        args:
+          - --fix=lf
+      - id: trailing-whitespace
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.4.2
+    hooks:
+      # Run the linter.
+      - id: ruff
+        # Python
+        files: \.py$
+        types: [file]
+      # Run the formatter.
+      - id: ruff-format
+        files: \.py$
+        types: [file]

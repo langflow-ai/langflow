@@ -1,8 +1,8 @@
 from typing import Optional
 
-from langchain.llms.baidu_qianfan_endpoint import QianfanLLMEndpoint
+from langchain_community.llms.baidu_qianfan_endpoint import QianfanLLMEndpoint
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 from langflow.field_typing import BaseLanguageModel
 
 

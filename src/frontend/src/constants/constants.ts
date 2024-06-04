@@ -96,6 +96,12 @@ export const EXPORT_DIALOG_SUBTITLE = "Export flow as JSON file.";
 export const SETTINGS_DIALOG_SUBTITLE = "Edit details about your project.";
 
 /**
+ * The base text for subtitle of Flow Logs (Menubar)
+ * @constant
+ */
+export const LOGS_DIALOG_SUBTITLE = "Check out information about your flow.";
+
+/**
  * The base text for subtitle of Code Dialog (Toolbar)
  * @constant
  */
@@ -125,7 +131,6 @@ export const CODE_PROMPT_DIALOG_SUBTITLE =
 
 export const CODE_DICT_DIALOG_SUBTITLE =
   "Edit your dictionary. This dialog allows you to create your own customized dictionary. You can add as many key-value pairs as you want. While in edit mode, you can enter ({}) or ([]), and this will result in adding a new object or array.";
-
 /**
  * The base text for subtitle of Prompt Dialog
  * @constant
@@ -533,6 +538,8 @@ export const NOUNS: string[] = [
  */
 export const USER_PROJECTS_HEADER = "My Collection";
 
+export const DEFAULT_FOLDER = "My Projects";
+
 /**
  * Header text for admin page
  * @constant
@@ -599,84 +606,6 @@ export const CONTROL_NEW_USER = {
 
 export const tabsCode = [];
 
-export function tabsArray(codes: string[], method: number) {
-  if (!method) return;
-  if (method === 0) {
-    return [
-      {
-        name: "cURL",
-        mode: "bash",
-        image: "https://curl.se/logo/curl-symbol-transparent.png",
-        language: "sh",
-        code: codes[0],
-      },
-      {
-        name: "Python API",
-        mode: "python",
-        image:
-          "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
-        language: "py",
-        code: codes[1],
-      },
-      {
-        name: "Python Code",
-        mode: "python",
-        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-        language: "py",
-        code: codes[2],
-      },
-      {
-        name: "Chat Widget HTML",
-        description:
-          "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
-        mode: "html",
-        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-        language: "py",
-        code: codes[3],
-      },
-    ];
-  }
-  return [
-    {
-      name: "cURL",
-      mode: "bash",
-      image: "https://curl.se/logo/curl-symbol-transparent.png",
-      language: "sh",
-      code: codes[0],
-    },
-    {
-      name: "Python API",
-      mode: "python",
-      image:
-        "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
-      language: "py",
-      code: codes[1],
-    },
-    {
-      name: "Python Code",
-      mode: "python",
-      language: "py",
-      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-      code: codes[2],
-    },
-    {
-      name: "Chat Widget HTML",
-      description:
-        "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
-      mode: "html",
-      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-      language: "py",
-      code: codes[3],
-    },
-    {
-      name: "Tweaks",
-      mode: "python",
-      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-      language: "py",
-      code: codes[4],
-    },
-  ];
-}
 export const FETCH_ERROR_MESSAGE = "Couldn't establish a connection.";
 export const FETCH_ERROR_DESCRIPION =
   "Check if everything is working properly and try again.";
@@ -711,13 +640,24 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
 
 export const priorityFields = new Set(["code", "template"]);
 
-export const INPUT_TYPES = new Set(["ChatInput", "TextInput", "KeyPairInput"]);
+export const INPUT_TYPES = new Set([
+  "ChatInput",
+  "TextInput",
+  "KeyPairInput",
+  "JsonInput",
+  "StringListInput",
+]);
 export const OUTPUT_TYPES = new Set([
   "ChatOutput",
   "TextOutput",
   "PDFOutput",
   "ImageOutput",
   "CSVOutput",
+  "JsonOutput",
+  "KeyPairOutput",
+  "StringListOutput",
+  "RecordsOutput",
+  "TableOutput",
 ]);
 
 export const CHAT_FIRST_INITIAL_TEXT =
@@ -737,8 +677,8 @@ export const EDIT_TEXT_MODAL_TITLE = "Edit Text";
 export const EDIT_TEXT_PLACEHOLDER = "Type message here.";
 export const INPUT_HANDLER_HOVER = "Avaliable input components:";
 export const OUTPUT_HANDLER_HOVER = "Avaliable output components:";
-export const TEXT_INPUT_MODAL_TITLE = "Text Inputs";
-export const OUTPUTS_MODAL_TITLE = "Text Outputs";
+export const TEXT_INPUT_MODAL_TITLE = "Inputs";
+export const OUTPUTS_MODAL_TITLE = "Outputs";
 export const LANGFLOW_CHAT_TITLE = "Langflow Chat";
 export const CHAT_INPUT_PLACEHOLDER =
   "No chat input variables found. Click to run your flow.";
@@ -782,4 +722,19 @@ export const NATIVE_CATEGORIES = [
   "agents",
 ];
 
+export const AUTHORIZED_DUPLICATE_REQUESTS = [
+  "/health",
+  "/flows",
+  "/logout",
+  "/refresh",
+  "/login",
+  "/auto_login",
+];
+
 export const SAVE_DEBOUNCE_TIME = 300;
+
+export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
+
+export const DEFAULT_TABLE_ALERT_TITLE = "No Data Available";
+
+export const LOCATIONS_TO_RETURN = ["/flow/", "/settings/"];

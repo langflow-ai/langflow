@@ -15,6 +15,7 @@ class ResultData(BaseModel):
     duration: Optional[str] = None
     component_display_name: Optional[str] = None
     component_id: Optional[str] = None
+    used_frozen_result: Optional[bool] = False
 
     @field_serializer("results")
     def serialize_results(self, value):
@@ -30,6 +31,7 @@ class InterfaceComponentTypes(str, Enum, metaclass=ContainsEnumMeta):
     ChatOutput = "ChatOutput"
     TextInput = "TextInput"
     TextOutput = "TextOutput"
+    RecordsOutput = "RecordsOutput"
 
     def __contains__(cls, item):
         try:
@@ -40,6 +42,8 @@ class InterfaceComponentTypes(str, Enum, metaclass=ContainsEnumMeta):
             return True
 
 
+CHAT_COMPONENTS = [InterfaceComponentTypes.ChatInput, InterfaceComponentTypes.ChatOutput]
+RECORDS_COMPONENTS = [InterfaceComponentTypes.RecordsOutput]
 INPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatInput,
     InterfaceComponentTypes.TextInput,

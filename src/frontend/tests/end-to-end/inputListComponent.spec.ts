@@ -15,7 +15,7 @@ test("InputListComponent", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.locator('//*[@id="new-project-btn"]').click();
+    await page.getByText("New Project", { exact: true }).click();
     await page.waitForTimeout(5000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -28,7 +28,7 @@ test("InputListComponent", async ({ page }) => {
 
   await page.waitForTimeout(1000);
   await page
-    .getByTestId("vectorsearchAstra DB Search")
+    .getByTestId("vectorstoresAstra DB")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
