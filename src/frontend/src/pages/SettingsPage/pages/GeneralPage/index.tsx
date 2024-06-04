@@ -14,14 +14,25 @@ import {
   CardTitle,
 } from "../../../../components/ui/card";
 import {
+  API_ERROR_ALERT,
+  API_SUCCESS_ALERT,
   EDIT_PASSWORD_ALERT_LIST,
   EDIT_PASSWORD_ERROR_ALERT,
   SAVE_ERROR_ALERT,
   SAVE_SUCCESS_ALERT,
 } from "../../../../constants/alerts_constants";
-import { CONTROL_PATCH_USER_STATE } from "../../../../constants/constants";
+import {
+  CONTROL_PATCH_USER_STATE,
+  INSERT_API_KEY,
+  INVALID_API_KEY,
+  NO_API_KEY,
+} from "../../../../constants/constants";
 import { AuthContext } from "../../../../contexts/authContext";
-import { resetPassword, updateUser } from "../../../../controllers/API";
+import {
+  addApiKeyStore,
+  resetPassword,
+  updateUser,
+} from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import {
@@ -29,6 +40,7 @@ import {
   patchUserInputStateType,
 } from "../../../../types/components";
 import { gradients } from "../../../../utils/styleUtils";
+import { useStoreStore } from "../../../../stores/storeStore";
 
 export default function GeneralPage() {
   const setCurrentFlowId = useFlowsManagerStore(
@@ -48,7 +60,16 @@ export default function GeneralPage() {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);
-  const { password, cnfPassword, gradient } = inputState;
+  const hasStore = useStoreStore((state) => state.hasStore);
+  const { storeApiKey } = useContext(AuthContext);
+
+  const validApiKey = useStoreStore((state) => state.validApiKey);
+  const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const setHasApiKey = useStoreStore((state) => state.updateHasApiKey);
+  const loadingApiKey = useStoreStore((state) => state.loadingApiKey);
+  const setValidApiKey = useStoreStore((state) => state.updateValidApiKey);
+  const setLoadingApiKey = useStoreStore((state) => state.updateLoadingApiKey);
+  const { password, cnfPassword, gradient, apikey } = inputState;
 
   async function handlePatchPassword() {
     if (password !== cnfPassword) {
@@ -90,11 +111,38 @@ export default function GeneralPage() {
     }
   }
 
+  const handleSaveKey = () => {
+    if (apikey) {
+      addApiKeyStore(apikey).then(
+        () => {
+          setSuccessData({
+            title: API_SUCCESS_ALERT,
+          });
+          storeApiKey(apikey);
+          setHasApiKey(true);
+          setValidApiKey(true);
+          setLoadingApiKey(false);
+          handleInput({ target: { name: "apikey", value: "" } });
+        },
+        (error) => {
+          setErrorData({
+            title: API_ERROR_ALERT,
+            list: [error["response"]["data"]["detail"]],
+          });
+          setHasApiKey(false);
+          setValidApiKey(false);
+          setLoadingApiKey(false);
+        },
+      );
+    }
+  };
+
   function handleInput({
     target: { name, value },
   }: inputHandlerEventType): void {
     setInputState((prev) => ({ ...prev, [name]: value }));
   }
+
   return (
     <div className="flex h-full w-full flex-col gap-6">
       <div className="flex w-full items-center justify-between gap-4 space-y-0.5">
@@ -212,6 +260,57 @@ export default function GeneralPage() {
               <CardFooter className="border-t px-6 py-4">
                 <Form.Submit asChild>
                   <Button type="submit">Save</Button>
+                </Form.Submit>
+              </CardFooter>
+            </Card>
+          </Form.Root>
+        )}
+        {hasStore && (
+          <Form.Root
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleSaveKey();
+            }}
+          >
+            <Card x-chunk="dashboard-04-chunk-2">
+              <CardHeader>
+                <CardTitle>API Key</CardTitle>
+                <CardDescription>
+                  {(hasApiKey && !validApiKey
+                    ? INVALID_API_KEY
+                    : !hasApiKey
+                      ? NO_API_KEY
+                      : "") + INSERT_API_KEY}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex w-full gap-4">
+                  <Form.Field name="apikey" className="w-full">
+                    <InputComponent
+                      id="apikey"
+                      onChange={(value) => {
+                        handleInput({ target: { name: "apikey", value } });
+                      }}
+                      value={apikey}
+                      isForm
+                      password={true}
+                      placeholder="Insert your API Key"
+                      className="w-full"
+                    />
+                    <Form.Message
+                      match="valueMissing"
+                      className="field-invalid"
+                    >
+                      Please enter your API Key
+                    </Form.Message>
+                  </Form.Field>
+                </div>
+              </CardContent>
+              <CardFooter className="border-t px-6 py-4">
+                <Form.Submit asChild>
+                  <Button loading={loadingApiKey} type="submit">
+                    Save
+                  </Button>
                 </Form.Submit>
               </CardFooter>
             </Card>

@@ -379,6 +379,7 @@ export type patchUserInputStateType = {
   password: string;
   cnfPassword: string;
   gradient: string;
+  apikey: string;
 };
 
 export type UserInputType = {
