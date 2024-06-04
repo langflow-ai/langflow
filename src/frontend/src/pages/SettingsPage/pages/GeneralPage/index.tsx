@@ -23,6 +23,7 @@ import {
 } from "../../../../constants/alerts_constants";
 import {
   CONTROL_PATCH_USER_STATE,
+  CREATE_API_KEY,
   INSERT_API_KEY,
   INVALID_API_KEY,
   NO_API_KEY,
@@ -295,26 +296,38 @@ export default function GeneralPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex w-full gap-4">
-                  <Form.Field name="apikey" className="w-full">
-                    <InputComponent
-                      id="apikey"
-                      onChange={(value) => {
-                        handleInput({ target: { name: "apikey", value } });
-                      }}
-                      value={apikey}
-                      isForm
-                      password={true}
-                      placeholder="Insert your API Key"
-                      className="w-full"
-                    />
-                    <Form.Message
-                      match="valueMissing"
-                      className="field-invalid"
+                <div className="flex w-full flex-col gap-3">
+                  <div className="flex w-full gap-4">
+                    <Form.Field name="apikey" className="w-full">
+                      <InputComponent
+                        id="apikey"
+                        onChange={(value) => {
+                          handleInput({ target: { name: "apikey", value } });
+                        }}
+                        value={apikey}
+                        isForm
+                        password={true}
+                        placeholder="Insert your API Key"
+                        className="w-full"
+                      />
+                      <Form.Message
+                        match="valueMissing"
+                        className="field-invalid"
+                      >
+                        Please enter your API Key
+                      </Form.Message>
+                    </Form.Field>
+                  </div>
+                  <span className="pr-1 text-xs text-muted-foreground">
+                    {CREATE_API_KEY}{" "}
+                    <a
+                      className="text-high-indigo underline"
+                      href="https://langflow.store/"
+                      target="_blank"
                     >
-                      Please enter your API Key
-                    </Form.Message>
-                  </Form.Field>
+                      langflow.store
+                    </a>
+                  </span>
                 </div>
               </CardContent>
               <CardFooter className="border-t px-6 py-4">
