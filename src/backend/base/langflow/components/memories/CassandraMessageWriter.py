@@ -29,7 +29,7 @@ class CassandraMessageWriterComponent(BaseMemoryComponent):
             },
             "table_name": {
                 "display_name": "Table Name",
-                "info": "The name of the table where vectors will be stored.",
+                "info": "The name of the table where messages will be stored.",
             },
             "token": {
                 "display_name": "Token",

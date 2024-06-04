@@ -3,7 +3,6 @@ from typing import Optional, cast
 from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
 
 from langflow.base.memory.memory import BaseMemoryComponent
-from langflow.field_typing import Text
 from langflow.schema.schema import Record
 
 
@@ -63,7 +62,7 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
 
     def build(
         self,
-        session_id: Text,
+        session_id: str,
         collection_name: str,
         token: str,
         api_endpoint: str,
