@@ -190,14 +190,6 @@ const Router = () => {
               </ProtectedRoute>
             }
           ></Route>
-          <Route
-            path="api-keys"
-            element={
-              <ProtectedRoute>
-                <ApiKeysPage />
-              </ProtectedRoute>
-            }
-          ></Route>
         </Route>
       </Routes>
     </Suspense>
