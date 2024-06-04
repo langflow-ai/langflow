@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 from langchain_core.documents import Document
-from langflow.custom import CustomComponent
+from langflow.custom import CustomComponent, Component
 from langflow.custom.code_parser.code_parser import CodeParser, CodeSyntaxError
 from langflow.custom.custom_component.base_component import BaseComponent, ComponentCodeNullError
 from langflow.custom.utils import build_custom_component_template
@@ -15,7 +15,7 @@ from langflow.services.database.models.flow import Flow, FlowCreate
 def code_component_with_multiple_outputs():
     with open("tests/data/component_multiple_outputs.py", "r") as f:
         code = f.read()
-        return CustomComponent(code=code)
+        return Component(code=code)
 
 
 code_default = """
