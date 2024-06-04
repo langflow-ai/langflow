@@ -53,7 +53,7 @@ export default function SettingsPage(): JSX.Element {
         <aside className="flex h-full flex-col space-y-6 lg:w-1/5">
           <SidebarNav items={sidebarNavItems} />
         </aside>
-        <div className="h-full w-full flex-1">
+        <div className="h-full w-full flex-1 pb-8">
           <Outlet />
         </div>
       </div>
