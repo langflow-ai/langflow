@@ -66,30 +66,31 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       newChildren = toTitleCase(children);
     }
     return (
-      <Comp
-        className={buttonVariants({ variant, size: "none" })}
-        ref={ref}
-        {...props}
-      >
-        <div
-          className={cn(
-            loading ? "opacity-100" : "opacity-0",
-            "absolute self-center",
-          )}
-        >
-          <ForwardedIconComponent name={"Loader2"} className={"animate-spin"} />
-        </div>
-        <div
-          className={cn(
-            loading ? "opacity-0" : "opacity-100",
-            buttonVariants({
-              variant: "none",
-              size,
-              className: cn(buttonChildrenClasses, className),
-            }),
-          )}
-        >
-          {newChildren}
+      <Comp ref={ref} {...props}>
+        <div className={buttonVariants({ variant, size: "none" })}>
+          <div
+            className={cn(
+              loading ? "opacity-100" : "opacity-0",
+              "absolute self-center",
+            )}
+          >
+            <ForwardedIconComponent
+              name={"Loader2"}
+              className={"animate-spin"}
+            />
+          </div>
+          <div
+            className={cn(
+              loading ? "opacity-0" : "opacity-100",
+              buttonVariants({
+                variant: "none",
+                size,
+                className: cn(buttonChildrenClasses, className),
+              }),
+            )}
+          >
+            {newChildren}
+          </div>
         </div>
       </Comp>
     );
