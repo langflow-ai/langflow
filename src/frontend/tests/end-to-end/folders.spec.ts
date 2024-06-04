@@ -39,7 +39,7 @@ test("CRUD folders", async ({ page }) => {
   await page.getByText("Save Folder").click();
 
   await page.waitForTimeout(1000);
-  await page.getByText("Folder created succefully").isVisible();
+  await page.getByText("Folder created successfully").isVisible();
   await page.getByText("test").last().isVisible();
   await page
     .getByText("test")
@@ -66,7 +66,7 @@ test("CRUD folders", async ({ page }) => {
 
   await page.getByText("Delete").last().click();
   await page.waitForTimeout(1000);
-  await page.getByText("Folder deleted succefully").isVisible();
+  await page.getByText("Folder deleted successfully").isVisible();
 });
 
 test("add folder by drag and drop", async ({ page }) => {
@@ -75,7 +75,7 @@ test("add folder by drag and drop", async ({ page }) => {
 
   const jsonContent = readFileSync(
     "tests/end-to-end/assets/collection.json",
-    "utf-8",
+    "utf-8"
   );
 
   // Create the DataTransfer and File
@@ -95,7 +95,7 @@ test("add folder by drag and drop", async ({ page }) => {
     "drop",
     {
       dataTransfer,
-    },
+    }
   );
 
   await page.getByText("Getting Started").first().isVisible();
@@ -140,7 +140,7 @@ test("change flow folder", async ({ page }) => {
   await page.getByText("Save Folder").click();
 
   await page.waitForTimeout(1000);
-  await page.getByText("Folder created succefully").isVisible();
+  await page.getByText("Folder created successfully").isVisible();
   await page.getByText("test").last().isVisible();
 
   await page.getByText("My Projects").last().click();

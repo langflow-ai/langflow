@@ -48,7 +48,7 @@ coverage:
 
 # allow passing arguments to pytest
 tests:
-	poetry run pytest tests --instafail $(args)
+	poetry run pytest tests --instafail -ra -n auto $(args)
 # Use like:
 
 format:

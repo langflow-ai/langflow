@@ -125,17 +125,16 @@ local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 optional = true
 
 [tool.poetry.group.spelling.dependencies]
-codespell = "^2.2.6"
+codespell = "^2.3.0"
 
 [tool.codespell]
-skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig'
+skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig.,**/node_modules/**,./stuff/*,*.csv'
 # Ignore latin etc
 ignore-regex = '.*(Stati Uniti|Tense=Pres).*'
 
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -n auto"
 testpaths = ["tests", "integration"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning"]

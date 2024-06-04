@@ -56,7 +56,8 @@ Components are the building blocks of flows. They consist of inputs, outputs, an
 <div style={{ marginBottom: "20px" }}>
   During the flow creation process, you will notice handles (colored circles)
   attached to one or both sides of a component. These handles represent the
-  availability to connect to other components. Hover over a handle to see connection details.
+  availability to connect to other components. Hover over a handle to see
+  connection details.
 </div>
 
 <div style={{ marginBottom: "20px" }}>
@@ -85,6 +86,7 @@ Build the flow by clicking the **![Playground icon](/logos/botmessage.svg)Playgr
 
 Once the validation is complete, the status of each validated component should turn green (![Status icon](/logos/greencheck.svg)).
 To debug, hover over the component status to see the outputs.
+
 </div>
 
 ---
@@ -120,7 +122,7 @@ You can modify the code and save it.
 
 #### Save
 
-Save your component to the **Saved** components folder for re-use.
+Save your component to the **Saved** components folder for reuse.
 
 #### Duplicate
 
@@ -146,13 +148,13 @@ Duplicate your component in the canvas.
 
 ### Group multiple components
 
-Components without input or output nodes can be grouped into a single component for re-use.
+Components without input or output nodes can be grouped into a single component for reuse.
 This is useful for combining large flows into single components (like RAG with a vector database, for example) and saves space in the canvas.
 
 1. Hold **Shift** and drag to select the **Prompt** and **OpenAI** components.
 2. Select **Group**.
 3. The components merge into a single component.
-4. To save the new component, select **Save**. It can now be re-used from the **Saved** components folder.
+4. To save the new component, select **Save**. It can now be reused from the **Saved** components folder.
 
 ## Playground
 
@@ -196,6 +198,7 @@ curl -X POST \
 ```
 
 Result:
+
 ```
 {"session_id":"f2eefd80-bb91-4190-9279-0d6ffafeaac4:53856a772b8e1cfcb3dd2e71576b5215399e95bae318d3c02101c81b7c252da3","outputs":[{"inputs":{"input_value":"is anybody there?"},"outputs":[{"results":{"result":"Arrr, me hearties! Aye, this be Captain [Your Name] speakin'. What be ye needin', matey?"},"artifacts":{"message":"Arrr, me hearties! Aye, this be Captain [Your Name] speakin'. What be ye needin', matey?","sender":"Machine","sender_name":"AI"},"messages":[{"message":"Arrr, me hearties! Aye, this be Captain [Your Name] speakin'. What be ye needin', matey?","sender":"Machine","sender_name":"AI","component_id":"ChatOutput-njtka"}],"component_display_name":"Chat Output","component_id":"ChatOutput-njtka"}]}]}%
 ```
@@ -231,9 +234,10 @@ A collection is a snapshot of flows available in a database.
 
 Collections can be downloaded to local storage and uploaded for future use.
 
-<div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
-<ReactPlayer playing controls url='/videos/langflow_collection.mp4'
-  />
+<div
+  style={{ marginBottom: "20px", display: "flex", justifyContent: "center" }}
+>
+  <ReactPlayer playing controls url="/videos/langflow_collection.mp4" />
 </div>
 
 ## Project
@@ -277,8 +281,8 @@ To see options for your project, in the upper left corner of the canvas, select 
 
 **Undo** or **Redo** - Undo or redo your last action.
 
-
-
-
-
-
+import ThemedImage from "@theme/ThemedImage";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import ReactPlayer from "react-player";
+import Admonition from "@theme/Admonition";
