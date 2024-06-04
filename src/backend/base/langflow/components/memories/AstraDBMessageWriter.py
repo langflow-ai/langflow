@@ -1,7 +1,6 @@
 from typing import Optional
 
 from langflow.base.memory.memory import BaseMemoryComponent
-from langflow.field_typing import Text
 from langflow.schema.schema import Record
 
 from langchain_core.messages import BaseMessage
@@ -50,7 +49,7 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
         self,
         sender: str,
         sender_name: str,
-        text: Text,
+        text: str,
         session_id: str,
         metadata: Optional[dict] = None,
         **kwargs,
@@ -59,12 +58,14 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
         Adds a message to the AstraDBChatMessageHistory memory.
 
         Args:
-            sender (Text): The type of the message sender. Valid values are "Machine" or "User".
-            sender_name (Text): The name of the message sender.
-            text (Text): The content of the message.
-            session_id (Text): The session ID associated with the message.
+            sender (str): The type of the message sender. Typically "ai" or "human".
+            sender_name (str): The name of the message sender.
+            text (str): The content of the message.
+            session_id (str): The session ID associated with the message.
             metadata (dict | None, optional): Additional metadata for the message. Defaults to None.
-            **kwargs: Additional keyword arguments.
+            **kwargs: Additional keyword arguments, including:
+                memory (AstraDBChatMessageHistory | None): The memory instance to add the message to.
+
 
         Raises:
             ValueError: If the AstraDBChatMessageHistory instance is not provided.
@@ -89,7 +90,7 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
     def build(
         self,
         input_value: Record,
-        session_id: Text,
+        session_id: str,
         collection_name: str,
         token: str,
         api_endpoint: str,
