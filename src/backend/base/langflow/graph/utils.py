@@ -72,7 +72,7 @@ def get_artifact_type(custom_component, build_result) -> str:
         case str():
             result = ArtifactType.TEXT
 
-        case dict():
+        case dict() | list():
             result = ArtifactType.OBJECT
 
     if result == ArtifactType.UNKNOWN:

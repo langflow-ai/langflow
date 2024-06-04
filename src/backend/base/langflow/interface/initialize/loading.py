@@ -134,5 +134,5 @@ async def instantiate_custom_component(params, user_id, vertex, fallback_to_env_
     elif hasattr(raw, "model_dump"):
         raw = raw.model_dump()
 
-    artifact = {"repr": custom_repr, "raw": raw, "type": get_artifact_type(custom_component.repr_value)}
+    artifact = {"repr": custom_repr, "raw": raw, "type": get_artifact_type(custom_component, build_result)}
     return custom_component, build_result, artifact
