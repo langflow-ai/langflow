@@ -138,7 +138,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) {
     // if (message === "") return;
     chat.message = message;
@@ -177,7 +177,7 @@ export default function ChatView({
                   name="Eraser"
                   className={classNames(
                     "h-5 w-5 transition-all duration-100",
-                    lockChat ? "animate-pulse text-primary" : "text-primary"
+                    lockChat ? "animate-pulse text-primary" : "text-primary",
                   )}
                   aria-hidden="true"
                 />
