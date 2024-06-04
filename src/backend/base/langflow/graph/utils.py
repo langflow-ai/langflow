@@ -20,6 +20,7 @@ class ArtifactType(str, Enum):
     TEXT = "text"
     RECORD = "record"
     OBJECT = "object"
+    ARRAY = "array"
     STREAM = "stream"
     UNKNOWN = "unknown"
 
@@ -72,8 +73,12 @@ def get_artifact_type(custom_component, build_result) -> str:
         case str():
             result = ArtifactType.TEXT
 
-        case dict() | list():
+        case dict():
             result = ArtifactType.OBJECT
+
+        case list():
+            result = ArtifactType.ARRAY
+
 
     if result == ArtifactType.UNKNOWN:
         if isinstance(build_result, Generator):
