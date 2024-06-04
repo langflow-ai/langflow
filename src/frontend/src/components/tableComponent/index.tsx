@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Toggle } from "../ui/toggle";
 import ShadTooltip from "../shadTooltipComponent";
 import resetGrid from "./utils/reset-grid-columns";
+import ResetColumns from "./components/ResetColumns";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
@@ -36,6 +37,7 @@ const TableComponent = forwardRef<
     ref,
   ) => {
     const gridRef = useRef(null);
+    // @ts-ignore
     const realRef = ref?.current ? ref : gridRef;
     const dark = useDarkStore((state) => state.dark);
 
@@ -47,6 +49,7 @@ const TableComponent = forwardRef<
     };
 
     const onGridReady = (params) => {
+      // @ts-ignore
       realRef.current = params;
       const updatedColumnDefs = makeLastColumnNonResizable([
         ...props.columnDefs,
@@ -70,7 +73,7 @@ const TableComponent = forwardRef<
       };
       if (index === props.columnDefs.length - 1) {
         newCol = {
-          ...col,
+          ...newCol,
           resizable: false,
         };
       }
@@ -131,35 +134,7 @@ const TableComponent = forwardRef<
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
         />
-        {/*<div className="absolute left-2 bottom-1 cursor-pointer">
-          <div
-            className="flex h-10 items-center justify-center px-2 pl-3 rounded-md border border-ring/60 text-sm text-[#bccadc] ring-offset-background placeholder:text-muted-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={() => setShow(!show)}
-          >
-            <ForwardedIconComponent name="Settings"></ForwardedIconComponent>
-            <ForwardedIconComponent name={show ? "ChevronLeft" : "ChevronRight"} className="transition-all"></ForwardedIconComponent>
-          </div>
-        </div>*/}
-        <div
-          className={cn(
-            "absolute bottom-1 left-2 rounded-md border border-border transition-all",
-          )}
-        >
-          <ShadTooltip content={"Reset Columns"} styleClasses="z-50">
-            <Toggle
-              className="h-10 w-10"
-              onClick={() => {
-                resetGrid(realRef);
-              }}
-            >
-              <ForwardedIconComponent
-                name="RotateCcw"
-                strokeWidth={2}
-                className="h-8 w-8 text-[#bccadc]"
-              ></ForwardedIconComponent>
-            </Toggle>
-          </ShadTooltip>
-        </div>
+        <ResetColumns resetGrid={() => resetGrid(realRef)} />
       </div>
     );
   },
