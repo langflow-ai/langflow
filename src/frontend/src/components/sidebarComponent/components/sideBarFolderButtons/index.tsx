@@ -175,11 +175,11 @@ const SideBarFoldersButtonsComponent = ({
                     event.stopPropagation();
                     event.preventDefault();
                   }}
-                  className="flex w-full items-center gap-2"
+                  className="flex w-full items-center gap-4"
                 >
                   <IconComponent
                     name={"folder"}
-                    className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
+                    className="w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
                   />
                   {editFolderName?.edit ? (
                     <div>
