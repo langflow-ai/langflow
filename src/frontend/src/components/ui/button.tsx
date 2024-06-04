@@ -60,14 +60,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     if (typeof children === "string") {
       newChildren = toTitleCase(children);
     }
-    const [width, setWidth] = React.useState<number | null>(null);
-    const hiddenRef = React.useRef<HTMLDivElement>(null);
-
-    React.useEffect(() => {
-      if (hiddenRef.current) {
-        setWidth(hiddenRef.current.offsetWidth);
-      }
-    }, [children, hiddenRef]);
     return (
       <>
         <Comp
@@ -75,29 +67,15 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           ref={ref}
           {...props}
         >
-          <>
-            {loading ? (
-              <div style={{ width: loading && width ? `${width}px` : "auto" }}>
-                <ForwardedIconComponent
-                  name={"Loader2"}
-                  className={"animate-spin"}
-                />
-              </div>
-            ) : (
-              children
-            )}
-          </>
+          {loading ? (
+            <ForwardedIconComponent
+              name={"Loader2"}
+              className={"animate-spin"}
+            />
+          ) : (
+            newChildren
+          )}
         </Comp>
-        <div
-          ref={hiddenRef}
-          style={{
-            visibility: "hidden",
-            position: "absolute",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {children}
-        </div>
       </>
     );
   },
