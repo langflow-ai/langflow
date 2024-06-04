@@ -1,0 +1,107 @@
+{{- if .Values.langflow.frontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "langflow.fullname" . }}-frontend
+  labels:
+    {{- include "langflow.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.langflow.frontend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "langflow.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.langflow.frontend.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "langflow.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "langflow.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.langflow.podSecurityContext | nindent 8 }}
+      volumes:
+        {{- if .Values.enableTls }}
+        - name: certs
+          secret:
+            secretName: "{{ .Values.tlsSecretName }}"
+        {{- end }}
+        {{- if .Values.secretProvider.enabled }}
+        - name: secrets-store-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "{{- .Values.secretProvider.name }}"
+        {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.langflow.securityContext | nindent 12 }}
+          image: "{{ .Values.langflow.frontend.image.repository }}:{{ .Values.langflow.frontend.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.langflow.frontend.image.pullPolicy }}
+          {{- if .Values.langflow.frontend.command }}
+          command:
+            {{- toYaml .Values.langflow.frontend.command | nindent 12 }}
+          {{- end }}
+          {{- if .Values.langflow.frontend.args }}
+          args:
+            {{- toYaml .Values.langflow.frontend.args | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.langflow.frontend.port | default 8080 }}
+              protocol: TCP
+          volumeMounts:
+            {{- if .Values.enableTls }}
+            - name: certs
+              readOnly: true
+              mountPath: /certs
+            {{- end }}
+            {{- if .Values.secretProvider.enabled }}
+            - name: secrets-store-inline
+              mountPath: "/mnt/secrets"
+              readOnly: true
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /index
+              port: {{ .Values.langflow.frontend.port | default 8080 }}
+            initialDelaySeconds: {{ .Values.langflow.frontend.initialDelaySeconds | default 60 }}
+            periodSeconds: {{ .Values.langflow.frontend.periodSeconds | default 15 }}
+            timeoutSeconds: {{ .Values.langflow.frontend.timeoutSeconds | default 5 }}
+            failureThreshold: {{ .Values.langflow.frontend.failureThreshold | default 2 }}
+          readinessProbe:
+            httpGet:
+              path: /index
+              port: {{ .Values.langflow.frontend.port | default 8080 }}
+            initialDelaySeconds: {{ .Values.langflow.frontend.initialDelaySeconds | default 45 }}
+            periodSeconds: {{ .Values.langflow.frontend.periodSeconds | default 15 }}
+            timeoutSeconds: {{ .Values.langflow.frontend.timeoutSeconds | default 5 }}
+            failureThreshold: {{ .Values.langflow.frontend.failureThreshold | default 2 }}
+          env:
+            - name: ENVIRONMENT 
+              value: "{{ .Values.environment | default "dev" }}"
+            - name: BACKEND_URL
+              value: "http://{{ template "langflow.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.langflow.backend.port | default 7860 }}"
+          resources:
+            {{- toYaml .Values.langflow.frontend.resources | nindent 12 }}
+      {{- with .Values.langflow.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.langflow.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.langflow.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -31,7 +31,7 @@ services:
     environment:
       BACKEND_URL: http://backend:7860
     ports:
-      - "80:80"
+      - "8080:8080"
     restart: on-failure
     networks:
       - langflow
