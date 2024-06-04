@@ -1,7 +1,5 @@
 from typing import Optional, cast
 
-
-import cassio
 from langchain_community.chat_message_histories import CassandraChatMessageHistory
 
 from langflow.base.memory.memory import BaseMemoryComponent
@@ -50,7 +48,9 @@ class CassandraMessageReaderComponent(BaseMemoryComponent):
         Returns:
             list[Record]: A list of Record objects representing the search results.
         """
-        memory: CassandraChatMessageHistory = cast(CassandraChatMessageHistory, kwargs.get("memory"))
+        memory: CassandraChatMessageHistory = cast(
+            CassandraChatMessageHistory, kwargs.get("memory")
+        )
         if not memory:
             raise ValueError("CassandraChatMessageHistory instance is required.")
 
@@ -68,6 +68,14 @@ class CassandraMessageReaderComponent(BaseMemoryComponent):
         database_id: str,
         keyspace: Optional[str] = None,
     ) -> list[Record]:
+        try:
+            import cassio
+        except ImportError:
+            raise ImportError(
+                "Could not import cassio integration package. "
+                "Please install it with `pip install cassio`."
+            )
+
         cassio.init(token=token, database_id=database_id)
         memory = CassandraChatMessageHistory(
             session_id=session_id,

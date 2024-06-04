@@ -1,6 +1,5 @@
 from typing import Optional, cast
 
-from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
 
 from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.schema.schema import Record
@@ -50,6 +49,14 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
         Returns:
             list[Record]: A list of Record objects representing the search results.
         """
+        try:
+            from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
+        except ImportError:
+            raise ImportError(
+                "Could not import langchain Astra DB integration package. "
+                "Please install it with `pip install langchain-astradb`."
+            )
+
         memory: AstraDBChatMessageHistory = cast(AstraDBChatMessageHistory, kwargs.get("memory"))
         if not memory:
             raise ValueError("AstraDBChatMessageHistory instance is required.")
@@ -68,6 +75,14 @@ class AstraDBMessageReaderComponent(BaseMemoryComponent):
         api_endpoint: str,
         namespace: Optional[str] = None,
     ) -> list[Record]:
+        try:
+            from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
+        except ImportError:
+            raise ImportError(
+                "Could not import langchain Astra DB integration package. "
+                "Please install it with `pip install langchain-astradb`."
+            )
+
         memory = AstraDBChatMessageHistory(
             session_id=session_id,
             collection_name=collection_name,

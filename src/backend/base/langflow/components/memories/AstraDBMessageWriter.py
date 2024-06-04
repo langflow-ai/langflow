@@ -4,7 +4,6 @@ from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.schema.schema import Record
 
 from langchain_core.messages import BaseMessage
-from langchain_astradb import AstraDBChatMessageHistory
 
 
 class AstraDBMessageWriterComponent(BaseMemoryComponent):
@@ -71,6 +70,14 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
             ValueError: If the AstraDBChatMessageHistory instance is not provided.
 
         """
+        try:
+            from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
+        except ImportError:
+            raise ImportError(
+                "Could not import langchain Astra DB integration package. "
+                "Please install it with `pip install langchain-astradb`."
+            )
+
         memory: AstraDBChatMessageHistory | None = kwargs.pop("memory", None)
         if memory is None:
             raise ValueError("AstraDBChatMessageHistory instance is required.")
@@ -96,6 +103,14 @@ class AstraDBMessageWriterComponent(BaseMemoryComponent):
         api_endpoint: str,
         namespace: Optional[str] = None,
     ) -> Record:
+        try:
+            from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
+        except ImportError:
+            raise ImportError(
+                "Could not import langchain Astra DB integration package. "
+                "Please install it with `pip install langchain-astradb`."
+            )
+
         memory = AstraDBChatMessageHistory(
             session_id=session_id,
             collection_name=collection_name,

@@ -1,5 +1,3 @@
-import cassio
-
 from typing import Any, List, Optional, Tuple
 from langchain_community.vectorstores import Cassandra
 from langchain_community.utilities.cassandra import SetupMode
@@ -76,6 +74,14 @@ class CassandraVectorStoreComponent(CustomComponent):
         body_index_options: Optional[List[Tuple[str, Any]]] = None,
         setup_mode: SetupMode = SetupMode.SYNC,
     ) -> VectorStore:
+        try:
+            import cassio
+        except ImportError:
+            raise ImportError(
+                "Could not import cassio integration package. "
+                "Please install it with `pip install cassio`."
+            )
+
         cassio.init(
             database_id=database_id,
             token=token,

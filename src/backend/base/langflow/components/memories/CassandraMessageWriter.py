@@ -1,6 +1,5 @@
 from typing import Optional
 
-import cassio
 from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.schema.schema import Record
 
@@ -102,6 +101,14 @@ class CassandraMessageWriterComponent(BaseMemoryComponent):
         keyspace: Optional[str] = None,
         ttl_seconds: Optional[int] = None,
     ) -> Record:
+        try:
+            import cassio
+        except ImportError:
+            raise ImportError(
+                "Could not import cassio integration package. "
+                "Please install it with `pip install cassio`."
+            )
+
         cassio.init(token=token, database_id=database_id)
         memory = CassandraChatMessageHistory(
             session_id=session_id,
