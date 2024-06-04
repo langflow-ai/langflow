@@ -53,6 +53,7 @@ export default function ApiKeysPage() {
         .then((keys: [ApiKey]) => {
           keysList.current = keys["api_keys"].map((apikey: ApiKey) => ({
             ...apikey,
+            name: apikey.name && apikey.name !== "" ? apikey.name : "Untitled",
             last_used_at: apikey.last_used_at ?? "Never",
           }));
           setUserId(keys["user_id"]);
@@ -166,14 +167,7 @@ export default function ApiKeysPage() {
               )}
             />
           </Button>
-          <SecretKeyModal
-            title="Create new secret key"
-            cancelText="Cancel"
-            confirmationText="Create secret key"
-            icon={"Key"}
-            data={userId}
-            onCloseModal={getKeys}
-          >
+          <SecretKeyModal data={userId} onCloseModal={getKeys}>
             <Button data-testid="api-key-button-store" variant="primary">
               <IconComponent name="Plus" className="mr-2 w-4" />
               Add New
