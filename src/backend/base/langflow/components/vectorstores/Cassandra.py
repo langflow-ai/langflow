@@ -78,8 +78,7 @@ class CassandraVectorStoreComponent(CustomComponent):
             import cassio
         except ImportError:
             raise ImportError(
-                "Could not import cassio integration package. "
-                "Please install it with `pip install cassio`."
+                "Could not import cassio integration package. " "Please install it with `pip install cassio`."
             )
 
         cassio.init(
