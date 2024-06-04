@@ -22,8 +22,7 @@ import {
   DEL_KEY_SUCCESS_ALERT,
 } from "../../constants/alerts_constants";
 import {
-  API_PAGE_PARAGRAPH_1,
-  API_PAGE_PARAGRAPH_2,
+  API_PAGE_PARAGRAPH,
   API_PAGE_USER_KEYS,
   LAST_USED_SPAN_1,
   LAST_USED_SPAN_2,
@@ -128,9 +127,7 @@ export default function ApiKeysPage() {
                       API keys
                     </h2>
                     <p className="text-muted-foreground">
-                      {API_PAGE_PARAGRAPH_1}
-                      <br />
-                      {API_PAGE_PARAGRAPH_2}
+                      {API_PAGE_PARAGRAPH}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2"></div>
