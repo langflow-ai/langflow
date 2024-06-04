@@ -6,7 +6,6 @@ import { CatchAllRoute } from "./components/catchAllRoutes";
 import { StoreGuard } from "./components/storeGuard";
 import AdminPage from "./pages/AdminPage";
 import LoginAdminPage from "./pages/AdminPage/LoginPage";
-import ApiKeysPage from "./pages/ApiKeysPage";
 import DeleteAccountPage from "./pages/DeleteAccountPage";
 import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
@@ -16,6 +15,7 @@ import PlaygroundPage from "./pages/Playground";
 import SettingsPage from "./pages/SettingsPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
+import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import SignUp from "./pages/SignUpPage";
 import StorePage from "./pages/StorePage";
@@ -56,6 +56,7 @@ const Router = () => {
       >
         <Route index element={<Navigate replace to={"general"} />} />
         <Route path="global-variables" element={<GlobalVariablesPage />} />
+        <Route path="api-keys" element={<ApiKeysPage />} />
         <Route path="general/:scrollId?" element={<GeneralPage />} />
         <Route path="shortcuts" element={<ShortcutsPage />} />
       </Route>
