@@ -7,12 +7,12 @@ import TableComponent from "../tableComponent";
 function RecordsOutputComponent({
   pagination,
   rows,
-  columnMode,
+  columnMode = "union",
   columnDefsRow,
 }: {
   pagination: boolean;
   rows: any;
-  columnMode: "intersection" | "union" | "all";
+  columnMode?: "intersection" | "union";
   columnDefsRow?: Array<Object>;
 }) {
   const columns = extractColumnsFromRows(columnDefsRow ?? rows, columnMode);
