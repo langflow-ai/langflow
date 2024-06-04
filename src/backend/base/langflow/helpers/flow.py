@@ -7,7 +7,7 @@ from sqlmodel import select
 from langflow.graph.schema import RunOutputs
 from langflow.schema.schema import INPUT_FIELD_NAME, Record
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import session_scope
+from langflow.services.deps import session_scope, get_settings_service
 
 if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
@@ -87,7 +87,9 @@ async def run_flow(
         inputs_components.append(input_dict.get("components", []))
         types.append(input_dict.get("type", "chat"))
 
-    return await graph.arun(inputs_list, inputs_components=inputs_components, types=types)
+    fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
+
+    return await graph.arun(inputs_list, inputs_components=inputs_components, types=types, fallback_to_env_vars=fallback_to_env_vars)
 
 
 def generate_function_for_flow(
