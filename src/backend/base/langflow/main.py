@@ -51,7 +51,7 @@ def get_lifespan(fix_migration=False, socketio_server=None, version=None):
             setup_llm_caching()
             LangfuseInstance.update()
             initialize_super_user_if_needed()
-            create_or_update_starter_projects()
+            await create_or_update_starter_projects()
             load_flows_from_directory()
             yield
         except Exception as exc:

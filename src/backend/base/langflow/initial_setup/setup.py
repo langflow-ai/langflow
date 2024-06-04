@@ -14,7 +14,7 @@ from loguru import logger
 from sqlmodel import select
 
 from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES
-from langflow.interface.types import get_all_components
+from langflow.interface.types import aget_all_components
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder, FolderCreate
@@ -364,10 +364,10 @@ def find_existing_flow(session, flow_id, flow_endpoint_name):
     return None
 
 
-def create_or_update_starter_projects():
+async def create_or_update_starter_projects():
     components_paths = get_settings_service().settings.components_path
     try:
-        all_types_dict = get_all_components(components_paths, as_dict=True)
+        all_types_dict = await aget_all_components(components_paths, as_dict=True)
     except Exception as e:
         logger.exception(f"Error loading components: {e}")
         raise e
