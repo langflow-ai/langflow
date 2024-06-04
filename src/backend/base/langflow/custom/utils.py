@@ -249,7 +249,7 @@ def get_field_dict(field: Union[Input, dict]):
     return field
 
 
-def run_build_inputs(custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None):
+def run_build_inputs(custom_component: Component, user_id: Optional[Union[str, UUID]] = None):
     """Run the build inputs of a custom component."""
     try:
         return custom_component.build_inputs(user_id=user_id)
@@ -323,7 +323,7 @@ def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code, field_c
 
 
 def build_custom_component_template_from_inputs(
-    custom_component: CustomComponent, user_id: Optional[Union[str, UUID]] = None
+    custom_component: Component, user_id: Optional[Union[str, UUID]] = None
 ):
     # The List of Inputs fills the role of the build_config and the entrypoint_args
     frontend_node = ComponentFrontendNode.from_inputs(**custom_component.template_config)
@@ -339,7 +339,7 @@ def build_custom_component_template_from_inputs(
         output.add_types(return_types)
     # ! This should be removed when we have a better way to handle this
     frontend_node.get_base_classes_from_outputs()
-
+    reorder_fields(frontend_node, custom_component._get_field_order())
     return frontend_node.to_dict(add_name=False), custom_component
 
 

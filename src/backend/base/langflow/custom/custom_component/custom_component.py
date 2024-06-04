@@ -76,23 +76,6 @@ class CustomComponent(BaseComponent):
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_records: Optional[List[Record]] = None
 
-    def build_inputs(self, user_id: Optional[Union[str, UUID]] = None):
-        """
-        Builds the inputs for the custom component.
-
-        Args:
-            user_id (Optional[Union[str, UUID]], optional): The user ID. Defaults to None.
-
-        Returns:
-            List[Input]: The list of inputs.
-        """
-        # This function is similar to build_config, but it will process the inputs
-        # and return them as a dict with keys being the Input.name and values being the Input.model_dump()
-        if not self.inputs:
-            return {}
-        build_config = {_input.name: _input.model_dump(by_alias=True, exclude_none=True) for _input in self.inputs}
-        return build_config
-
     def update_state(self, name: str, value: Any):
         if not self.vertex:
             raise ValueError("Vertex is not set")
