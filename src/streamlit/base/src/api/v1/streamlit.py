@@ -105,6 +105,9 @@ async def get_last_session():
         return Response(dumps(sessions[-1]), status_code=200)
     return Response(None, status_code=204)
 
+@router.get("/sessions")
+async def get_sessions():
+    return Response(dumps(list(chat.keys())), status_code=200)
 
 @router.post("/chats")
 async def create_chat(model: ChatModel):
