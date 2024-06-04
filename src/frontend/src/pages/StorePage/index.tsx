@@ -29,7 +29,6 @@ import {
 import { STORE_DESC, STORE_TITLE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { getStoreComponents, getStoreTags } from "../../controllers/API";
-import StoreApiKeyModal from "../../modals/storeApiKeyModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
