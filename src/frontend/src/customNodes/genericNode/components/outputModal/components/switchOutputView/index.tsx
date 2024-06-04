@@ -48,13 +48,19 @@ export default function SwitchOutputView(nodeId): JSX.Element {
           columnMode="union"
         />
       </Case>
-      <Case condition={resultType === "array"}>
-        <RecordsOutputComponent
-          rows={resultMessage}
-          pagination={true}
-          columnMode="union"
-        />
-      </Case>
+      {Array.isArray(resultMessage) && (
+        <Case condition={resultType === "array"}>
+          <RecordsOutputComponent
+            rows={
+              (resultMessage as Array<any>).every((item) => item.data)
+                ? (resultMessage as Array<any>).map((item) => item.data)
+                : resultMessage
+            }
+            pagination={true}
+            columnMode="union"
+          />
+        </Case>
+      )}
     </>
   );
 }
