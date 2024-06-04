@@ -266,3 +266,5 @@ stuff/*
 src/frontend/playwright-report/index.html
 *.bak
 prof/*
+
+src/frontend/temp
