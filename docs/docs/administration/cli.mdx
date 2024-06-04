@@ -12,6 +12,16 @@ python -m langflow run --help
 python -m langflow run
 ```
 
+The available commands are below. Navigate to their individual sections of this page to see the parameters.
+
+langflow run
+langflow superuser
+langflow migration
+
+langflow copy-db
+
+## langflow run
+
 Each option for `run` command are detailed below:
 
 - `--help`: Displays all available options.
@@ -35,7 +45,13 @@ Each option for `run` command are detailed below:
 
 These parameters are important for users who need to customize the behavior of Langflow, especially in development or specialized deployment scenarios.
 
-### API Key Command
+### Environment Variables
+
+You can configure many of the CLI options using environment variables. These can be exported in your operating system or added to a `.env` file and loaded using the `--env-file` option.
+
+A sample `.env` file named `.env.example` is included with the project. Copy this file to a new file named `.env` and replace the example values with your actual settings. If you're setting values in both your OS and the `.env` file, the `.env` settings will take precedence.
+
+### langflow api-key
 
 The `api-key` command allows you to create an API key for accessing Langflow's API when `LANGFLOW_AUTO_LOGIN` is set to `True`.
 
@@ -70,8 +86,20 @@ python -m langflow api-key
 ╰─────────────────────────────────────────────────────────────────────╯
 ```
 
-### Environment Variables
 
-You can configure many of the CLI options using environment variables. These can be exported in your operating system or added to a `.env` file and loaded using the `--env-file` option.
 
-A sample `.env` file named `.env.example` is included with the project. Copy this file to a new file named `.env` and replace the example values with your actual settings. If you're setting values in both your OS and the `.env` file, the `.env` settings will take precedence.
+### Copy db to current directory
+
+### langflow migration
+
+Options:
+* `--test, --no-test`: Run migrations in test mode. [default: test]
+* `--fix, --no-fix`: Fix migrations. This is a destructive operation, and should only be used if you know what you are doing. [default: no-fix]
+* `--help`: Show this message and exit.
+
+### langflow superuser
+
+Options:
+*  `--username`: Username for the superuser. [default: None] [required]
+*  `--password`: Password for the superuser. [default: None] [required]
+*  `--log-level`: Logging level. [env var: LANGFLOW_LOG_LEVEL] [default: error]
