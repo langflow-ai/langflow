@@ -1,0 +1,11 @@
+image:
+  repository: "langflow-just-chat"
+  tag: latest
+
+downloadFlows:
+  path: /app/flows
+  flows:
+    - url: https://raw.githubusercontent.com/langflow-ai/langflow/dev/tests/data/BasicChatwithPromptandHistory.json
+      basicAuth: "myuser:cc"
+      headers:
+        X-test: "Bearer my"
