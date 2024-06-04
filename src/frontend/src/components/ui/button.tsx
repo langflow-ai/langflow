@@ -5,7 +5,7 @@ import { cn } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none  ring-offset-background",
+  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none  ring-offset-background",
   {
     variants: {
       variant: {
@@ -54,7 +54,16 @@ function toTitleCase(text: string) {
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    { className, variant, size, loading, asChild = false, children, ...props },
+    {
+      className,
+      variant,
+      size,
+      loading,
+      disabled,
+      asChild = false,
+      children,
+      ...props
+    },
     ref,
   ) => {
     const Comp = asChild ? Slot : "button";
@@ -66,14 +75,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <>
         <Comp
           className={cn(buttonVariants({ variant, size, className }))}
+          disabled={loading || disabled}
           ref={ref}
           {...props}
         >
           {loading ? (
-            <span className={cn("relative")}>
-              <span className={loading ? "invisible" : "hidden"}>
-                {newChildren}
-              </span>
+            <span className="relative">
+              <span className="invisible">{newChildren}</span>
               <span className="absolute inset-0 flex items-center justify-center">
                 <ForwardedIconComponent
                   name={"Loader2"}

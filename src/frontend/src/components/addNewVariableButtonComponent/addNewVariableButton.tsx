@@ -7,7 +7,6 @@ import { useTypesStore } from "../../stores/typesStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
-import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
@@ -65,7 +64,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
         let responseError = error as ResponseErrorDetailAPI;
         setErrorData({
           title: "Error creating variable",
-          list: [responseError.response.data.detail ?? "Unknown error"],
+          list: [responseError?.response?.data?.detail ?? "Unknown error"],
         });
       });
   }
@@ -142,7 +141,9 @@ export default function AddNewVariableButton({ children }): JSX.Element {
           ></InputComponent>
         </div>
       </BaseModal.Content>
-      <BaseModal.Footer submit={{ label: "Save Variable" }} />
+      <BaseModal.Footer
+        submit={{ label: "Save Variable", dataTestId: "save-variable-btn" }}
+      />
     </BaseModal>
   );
 }

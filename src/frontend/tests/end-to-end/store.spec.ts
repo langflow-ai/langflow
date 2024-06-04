@@ -141,7 +141,6 @@ test("should add API-KEY", async ({ page }) => {
   await page.waitForTimeout(2000);
   await page.getByText("API Key Error").isVisible();
 
-  await page.getByTestId("api-key-button-store").click();
   await page
     .getByPlaceholder("Insert your API Key")
     .fill(process.env.STORE_API_KEY ?? "");
@@ -174,6 +173,9 @@ test("should like and add components and flows", async ({ page }) => {
   await page.waitForTimeout(2000);
   await page.getByText("API Key Error").isHidden();
 
+  await page.waitForTimeout(2000);
+
+  await page.getByTestId("button-store").click();
   await page.waitForTimeout(5000);
 
   const likedValue = await page

@@ -72,6 +72,7 @@ const Footer: React.FC<{
     icon?: ReactNode;
     loading?: boolean;
     disabled?: boolean;
+    dataTestId?: string;
   };
 }> = ({ children, submit }) => {
   return submit ? (
@@ -84,25 +85,12 @@ const Footer: React.FC<{
           </Button>
         </DialogClose>
         <Button
+          data-testid={submit.dataTestId}
           type="submit"
-          disabled={submit.loading || submit.disabled}
-          className="relative"
+          loading={submit.loading}
         >
-          <div
-            className={cn(
-              submit.loading ? "opacity-100" : "opacity-0",
-              "absolute self-center",
-            )}
-          >
-            <ForwardedIconComponent
-              name={"Loader2"}
-              className={"animate-spin"}
-            />
-          </div>
-          <div className={cn(submit.loading ? "opacity-0" : "opacity-100")}>
-            {submit.icon && submit.icon}
-            {submit.label}
-          </div>
+          {submit.icon && submit.icon}
+          {submit.label}
         </Button>
       </div>
     </div>

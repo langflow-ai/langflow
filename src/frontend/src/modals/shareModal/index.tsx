@@ -263,9 +263,7 @@ export default function ShareModal({
 
         <BaseModal.Footer
           submit={{
-            label: `Share ${
-              !loadingNames && (!is_component ? " Flow" : " Component")
-            }`,
+            label: `Share ${is_component ? " Component" : " Flow"}`,
             loading: loadingNames,
           }}
         >

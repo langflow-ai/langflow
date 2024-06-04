@@ -44,7 +44,9 @@ const useHandleOnNewValue = (
         let responseError = error as ResponseErrorTypeAPI;
         setErrorData({
           title: "Error while updating the Component",
-          list: [responseError.response.data.detail.error ?? "Unknown error"],
+          list: [
+            responseError?.response?.data?.detail.error ?? "Unknown error",
+          ],
         });
       }
       setIsLoading(false);

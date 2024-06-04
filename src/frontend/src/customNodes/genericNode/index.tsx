@@ -77,10 +77,10 @@ export default function GenericNode({
     // first check if data.type in NATIVE_CATEGORIES
     // if not return
     if (!data.node?.template?.code?.value) return;
-    const thisNodeTemplate = templates[data.type].template;
+    const thisNodeTemplate = templates[data.type]?.template;
     // if the template does not have a code key
     // return
-    if (!thisNodeTemplate.code) return;
+    if (!thisNodeTemplate?.code) return;
     const currentCode = thisNodeTemplate.code?.value;
     const thisNodesCode = data.node!.template?.code?.value;
     const componentsToIgnore = ["Custom Component"];
@@ -416,6 +416,7 @@ export default function GenericNode({
                 "generic-node-title-arrangement rounded-full" +
                 (!showNode && " justify-center ")
               }
+              data-testid="generic-node-title-arrangement"
             >
               {iconNodeRender()}
               {showNode && (

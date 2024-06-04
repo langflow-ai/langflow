@@ -100,6 +100,7 @@ const SideBarFoldersButtonsComponent = ({
           size="icon"
           className="px-2"
           onClick={addNewFolder}
+          data-testid="add-folder-button"
         >
           <ForwardedIconComponent name="FolderPlus" className="w-4" />
         </Button>
@@ -108,6 +109,7 @@ const SideBarFoldersButtonsComponent = ({
           size="icon"
           className="px-2"
           onClick={handleUploadFlowsToFolder}
+          data-testid="upload-folder-button"
         >
           <ForwardedIconComponent name="Upload" className="w-4" />
         </Button>
@@ -258,6 +260,7 @@ const SideBarFoldersButtonsComponent = ({
                         }}
                         value={foldersNames[item.name]}
                         id={`input-folder-${item.name}`}
+                        data-testid={`input-folder`}
                       />
                     </div>
                   ) : (

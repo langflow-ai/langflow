@@ -183,10 +183,10 @@ export default function NodeToolbarComponent({
       case "update":
         takeSnapshot();
         // to update we must get the code from the templates in useTypesStore
-        const thisNodeTemplate = templates[data.type].template;
+        const thisNodeTemplate = templates[data.type]?.template;
         // if the template does not have a code key
         // return
-        if (!thisNodeTemplate.code) return;
+        if (!thisNodeTemplate?.code) return;
 
         const currentCode = thisNodeTemplate.code.value;
         if (data.node) {
