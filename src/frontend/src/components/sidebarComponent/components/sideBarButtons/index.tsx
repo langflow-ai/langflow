@@ -17,7 +17,7 @@ const SideBarButtonsComponent = ({
   pathname,
 }: SideBarButtonsComponentProps) => {
   return (
-    <>
+    <div className="flex gap-2 overflow-auto lg:h-[70vh] lg:flex-col">
       {items.map((item) => (
         <Link to={item.href!}>
           <div
@@ -28,15 +28,17 @@ const SideBarButtonsComponent = ({
               pathname === item.href
                 ? "border border-border bg-muted hover:bg-muted"
                 : "border border-transparent hover:border-border hover:bg-transparent",
-              "w-full justify-start gap-3",
+              "flex w-full shrink-0 justify-start gap-4",
             )}
           >
             {item.icon}
-            {item.title}
+            <span className="block max-w-full truncate opacity-100">
+              {item.title}
+            </span>
           </div>
         </Link>
       ))}
-    </>
+    </div>
   );
 };
 export default SideBarButtonsComponent;
