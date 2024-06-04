@@ -264,7 +264,7 @@ const SideBarFoldersButtonsComponent = ({
                       />
                     </div>
                   ) : (
-                    <span className="block max-w-full truncate opacity-100">
+                    <span className="block w-full truncate opacity-100">
                       {item.name}
                     </span>
                   )}
@@ -284,21 +284,6 @@ const SideBarFoldersButtonsComponent = ({
                       />
                     </Button>
                   )}
-                  {/* {index > 0 && (
-                    <Button
-                      className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      variant={"ghost"}
-                    >
-                      <IconComponent
-                        name={"pencil"}
-                        className="  w-4 stroke-[1.5] text-white  "
-                      />
-                    </Button>
-                  )} */}
                   <Button
                     className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
                     onClick={(e) => {
