@@ -4,8 +4,11 @@ import * as React from "react";
 import { cn } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 
+const buttonChildrenClasses =
+  "inline-flex items-center justify-center text-sm font-medium";
+
 const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none  ring-offset-background",
+  "inline-flex items-center justify-center text-sm font-medium relative rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background",
   {
     variants: {
       variant: {
@@ -61,7 +64,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       newChildren = toTitleCase(children);
     }
     return (
-      <Comp className={"relative"} ref={ref} {...props}>
+      <Comp className={buttonVariants({ variant, size })} ref={ref} {...props}>
         <div
           className={cn(
             loading ? "opacity-100" : "opacity-0",
@@ -73,7 +76,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         <div
           className={cn(
             loading ? "opacity-0" : "opacity-100",
-            buttonVariants({ variant, size, className }),
+            cn(buttonChildrenClasses, className),
           )}
         >
           {newChildren}
