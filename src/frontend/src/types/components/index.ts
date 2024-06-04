@@ -393,11 +393,7 @@ export type UserInputType = {
 };
 
 export type ApiKeyType = {
-  title: string;
-  cancelText: string;
-  confirmationText: string;
   children: ReactElement;
-  icon: string;
   data?: any;
   onCloseModal: () => void;
 };
@@ -547,7 +543,7 @@ export type iconsType = {
 
 export type modalHeaderType = {
   children: ReactNode;
-  description: string | null;
+  description: string | JSX.Element | null;
 };
 
 export type codeAreaModalPropsType = {
