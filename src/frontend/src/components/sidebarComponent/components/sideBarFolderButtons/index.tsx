@@ -175,11 +175,11 @@ const SideBarFoldersButtonsComponent = ({
                     event.stopPropagation();
                     event.preventDefault();
                   }}
-                  className="flex w-full items-center gap-2"
+                  className="flex w-full items-center gap-4"
                 >
                   <IconComponent
                     name={"folder"}
-                    className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
+                    className="w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
                   />
                   {editFolderName?.edit ? (
                     <div>
@@ -265,7 +265,6 @@ const SideBarFoldersButtonsComponent = ({
                       {item.name}
                     </span>
                   )}
-                  <div className="flex-1" />
                   {index > 0 && (
                     <Button
                       className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
@@ -304,7 +303,8 @@ const SideBarFoldersButtonsComponent = ({
                       e.stopPropagation();
                       e.preventDefault();
                     }}
-                    variant={"ghost"}
+                    size="none"
+                    variant="none"
                   >
                     <IconComponent
                       name={"Download"}

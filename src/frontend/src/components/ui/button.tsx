@@ -20,6 +20,7 @@ const buttonVariants = cva(
           "border border-muted bg-muted text-secondary-foreground hover:bg-secondary-foreground/5",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "underline-offset-4 hover:underline text-primary",
+        none: "",
       },
       size: {
         default: "h-10 py-2 px-4",
@@ -27,6 +28,7 @@ const buttonVariants = cva(
         xs: "py-0.5 px-3 rounded-md",
         lg: "h-11 px-8 rounded-md",
         icon: "py-1 px-1 rounded-md",
+        none: "",
       },
     },
     defaultVariants: {
@@ -61,24 +63,29 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       newChildren = toTitleCase(children);
     }
     return (
-      <Comp className={"relative"} ref={ref} {...props}>
-        <div
-          className={cn(
-            loading ? "opacity-100" : "opacity-0",
-            "absolute self-center",
-          )}
+      <>
+        <Comp
+          className={cn(buttonVariants({ variant, size, className }))}
+          ref={ref}
+          {...props}
         >
-          <ForwardedIconComponent name={"Loader2"} className={"animate-spin"} />
-        </div>
-        <div
-          className={cn(
-            loading ? "opacity-0" : "opacity-100",
-            buttonVariants({ variant, size, className }),
+          {loading ? (
+            <span className={cn("relative")}>
+              <span className={loading ? "invisible" : "hidden"}>
+                {newChildren}
+              </span>
+              <span className="absolute inset-0 flex items-center justify-center">
+                <ForwardedIconComponent
+                  name={"Loader2"}
+                  className={"animate-spin"}
+                />
+              </span>
+            </span>
+          ) : (
+            newChildren
           )}
-        >
-          {newChildren}
-        </div>
-      </Comp>
+        </Comp>
+      </>
     );
   },
 );

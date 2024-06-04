@@ -41,11 +41,22 @@ import {
 } from "../../../../types/components";
 import { gradients } from "../../../../utils/styleUtils";
 import { useStoreStore } from "../../../../stores/storeStore";
+import { useParams } from "react-router-dom";
 
 export default function GeneralPage() {
   const setCurrentFlowId = useFlowsManagerStore(
     (state) => state.setCurrentFlowId,
   );
+
+  const { scrollId } = useParams();
+
+  useEffect(() => {
+    const element = document.getElementById(scrollId ?? "null");
+    if (element) {
+      // 👇 Will scroll smoothly to the top of the next section
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [scrollId]);
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
     CONTROL_PATCH_USER_STATE,
@@ -272,9 +283,9 @@ export default function GeneralPage() {
               handleSaveKey();
             }}
           >
-            <Card x-chunk="dashboard-04-chunk-2">
+            <Card x-chunk="dashboard-04-chunk-2" id="api">
               <CardHeader>
-                <CardTitle>API Key</CardTitle>
+                <CardTitle>Store API Key</CardTitle>
                 <CardDescription>
                   {(hasApiKey && !validApiKey
                     ? INVALID_API_KEY
