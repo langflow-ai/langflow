@@ -8,14 +8,12 @@ function RecordsOutputComponent({
   pagination,
   rows,
   columnMode = "union",
-  columnDefsRow,
 }: {
   pagination: boolean;
   rows: any;
   columnMode?: "intersection" | "union";
-  columnDefsRow?: Array<Object>;
 }) {
-  const columns = extractColumnsFromRows(columnDefsRow ?? rows, columnMode);
+  const columns = extractColumnsFromRows(rows, columnMode);
 
   const columnDefs = columns.map((col, idx) => ({
     ...col,

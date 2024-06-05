@@ -1,4 +1,10 @@
+import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
 import RecordsOutputComponent from "../../../../../../components/recordsOutputComponent";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "../../../../../../components/ui/alert";
 import { Case } from "../../../../../../shared/components/caseComponent";
 import TextOutputView from "../../../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../../../stores/flowStore";
@@ -17,7 +23,10 @@ export default function SwitchOutputView(nodeId): JSX.Element {
 
   const results = flowPoolNode?.data?.logs[0] ?? "";
   const resultType = results?.type;
-  const resultMessage = results?.message;
+  let resultMessage = results?.message;
+  if (resultMessage.raw) {
+    resultMessage = resultMessage.raw;
+  }
   console.log("resultType", results);
   return (
     <>
@@ -60,6 +69,22 @@ export default function SwitchOutputView(nodeId): JSX.Element {
           />
         </Case>
       )}
+      <Case condition={resultType === "stream"}>
+        <div className="flex h-full w-full items-center justify-center align-middle">
+          <Alert variant={"default"} className="w-fit">
+            <ForwardedIconComponent
+              name="AlertCircle"
+              className="h-5 w-5 text-primary"
+            />
+            <AlertTitle>{"Streaming is not supported"}</AlertTitle>
+            <AlertDescription>
+              {
+                "Use the playground to interact with components that stream data"
+              }
+            </AlertDescription>
+          </Alert>
+        </div>
+      </Case>
     </>
   );
 }
