@@ -31,33 +31,16 @@ test("CRUD folders", async ({ page }) => {
   await page.getByText("All").first().isVisible();
   await page.getByText("Select All").isVisible();
 
-  await page.getByText("New Folder", { exact: true }).last().click();
-  await page.getByPlaceholder("Insert a name for the folder").fill("test");
-  await page
-    .getByPlaceholder("Insert a description for the folder")
-    .fill("test");
-  await page.getByText("Save Folder").click();
-
+  await page.getByTestId("add-folder-button").click();
+  await page.getByText("New Folder").last().isVisible();
   await page.waitForTimeout(1000);
-  await page.getByText("Folder created succefully").isVisible();
-  await page.getByText("test").last().isVisible();
-  await page
-    .getByText("test")
-    .last()
-    .hover()
-    .then(async () => {
-      await page.getByTestId("icon-pencil").last().click();
-    });
-
-  await page.getByPlaceholder("Insert a name for the folder").fill("test edit");
-  await page
-    .getByPlaceholder("Insert a description for the folder")
-    .fill("test edit");
-  await page.getByText("Edit Folder").last().click();
-  await page.getByText("test edit").last().isVisible();
+  await page.getByText("New Folder").last().dblclick();
+  await page.getByTestId("input-folder").fill("new folder test name");
+  await page.keyboard.press("Enter");
+  await page.getByText("new folder test name").last().isVisible();
 
   await page
-    .getByText("test edit")
+    .getByText("new folder test name")
     .last()
     .hover()
     .then(async () => {
@@ -74,8 +57,8 @@ test("add folder by drag and drop", async ({ page }) => {
   await page.waitForTimeout(2000);
 
   const jsonContent = readFileSync(
-    "tests/end-to-end/assets/collection.json",
-    "utf-8",
+    "src/frontend/tests/end-to-end/assets/collection.json",
+    "utf-8"
   );
 
   // Create the DataTransfer and File
@@ -95,7 +78,7 @@ test("add folder by drag and drop", async ({ page }) => {
     "drop",
     {
       dataTransfer,
-    },
+    }
   );
 
   await page.getByText("Getting Started").first().isVisible();
@@ -131,17 +114,13 @@ test("change flow folder", async ({ page }) => {
   await page.getByText("All").first().isVisible();
   await page.getByText("Select All").isVisible();
 
-  await page.getByText("New Folder", { exact: true }).last().click();
-  await page.getByPlaceholder("Insert a name for the folder").fill("test");
-  await page
-    .getByPlaceholder("Insert a description for the folder")
-    .fill("test");
-
-  await page.getByText("Save Folder").click();
-
+  await page.getByTestId("add-folder-button").click();
+  await page.getByText("New Folder").last().isVisible();
   await page.waitForTimeout(1000);
-  await page.getByText("Folder created succefully").isVisible();
-  await page.getByText("test").last().isVisible();
+  await page.getByText("New Folder").last().dblclick();
+  await page.getByTestId("input-folder").fill("new folder test name");
+  await page.keyboard.press("Enter");
+  await page.getByText("new folder test name").last().isVisible();
 
   await page.getByText("My Projects").last().click();
   await page.getByText("Basic Prompting").first().hover();

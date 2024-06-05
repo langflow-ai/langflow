@@ -96,27 +96,29 @@ test("should filter by type", async ({ page }) => {
   await page.getByText("Website Content QA").isVisible();
 
   await page.getByTestId("flows-button-store").click();
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(8000);
 
   let iconGroup = await page.getByTestId("icon-Group")?.count();
   expect(iconGroup).not.toBe(0);
 
-  await page.getByText("icon-ToyBrick").isHidden();
+  await page.getByText("icon-ToyBrick").last().isHidden();
 
   await page.getByTestId("components-button-store").click();
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(8000);
 
-  await page.getByTestId("icon-Group").isHidden();
+  await page.getByTestId("icon-Group").last().isHidden();
   let toyBrick = await page.getByTestId("icon-ToyBrick")?.count();
   expect(toyBrick).not.toBe(0);
 
   await page.getByTestId("all-button-store").click();
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(8000);
 
-  iconGroup = await page.getByTestId("icon-Group")?.count();
-  toyBrick = await page.getByTestId("icon-ToyBrick")?.count();
+  let iconGroupAllCount = await page.getByTestId("icon-Group")?.count();
+  await page.waitForTimeout(2000);
+  let toyBrickAllCount = await page.getByTestId("icon-ToyBrick")?.count();
+  await page.waitForTimeout(2000);
 
-  if (iconGroup === 0 || toyBrick === 0) {
+  if (iconGroupAllCount === 0 || toyBrickAllCount === 0) {
     expect(false).toBe(true);
   }
 });
@@ -141,7 +143,6 @@ test("should add API-KEY", async ({ page }) => {
   await page.waitForTimeout(2000);
   await page.getByText("API Key Error").isVisible();
 
-  await page.getByTestId("api-key-button-store").click();
   await page
     .getByPlaceholder("Insert your API Key")
     .fill(process.env.STORE_API_KEY ?? "");
@@ -174,6 +175,9 @@ test("should like and add components and flows", async ({ page }) => {
   await page.waitForTimeout(2000);
   await page.getByText("API Key Error").isHidden();
 
+  await page.waitForTimeout(2000);
+
+  await page.getByTestId("button-store").click();
   await page.waitForTimeout(5000);
 
   const likedValue = await page
@@ -250,6 +254,7 @@ test("should share component with share button", async ({ page }) => {
     .getByPlaceholder("Flow description")
     .inputValue();
   await page.getByText("Save").last().click();
+  await page.getByText("Close").last().click();
 
   await page.getByTestId("icon-Share3").first().click();
   await page.getByText("Name:").isVisible();
@@ -257,7 +262,7 @@ test("should share component with share button", async ({ page }) => {
   await page.getByText("Set workflow status to public").isVisible();
   await page
     .getByText(
-      "Attention: API keys in specified fields are automatically removed upon sharing.",
+      "Attention: API keys in specified fields are automatically removed upon sharing."
     )
     .isVisible();
   await page.getByText("Export").first().isVisible();

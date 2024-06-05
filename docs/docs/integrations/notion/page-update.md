@@ -109,12 +109,12 @@ Let's break down the key parts of this component:
 Here's an example of how to use the `NotionPageUpdate` component in a Langflow flow using:
 
 <ZoomableImage
-  alt="NotionPageUpdate Flow Example"
-  sources={{
+alt="NotionPageUpdate Flow Example"
+sources={{
     light: "img/notion/NotionPageUpdate_flow_example.png",
     dark: "img/notion/NotionPageUpdate_flow_example_dark.png",
   }}
-  style={{ width: "100%", margin: "20px 0" }}
+style={{ width: "100%", margin: "20px 0" }}
 />
 </Admonition>
 
@@ -127,7 +127,6 @@ When using the `NotionPageUpdate` component, consider the following best practic
 - We recommend using an LLM to generate the inputs for this component, to allow flexibilty
 
 By leveraging the `NotionPageUpdate` component in Langflow, you can easily integrate updating Notion page properties into your language model workflows and build powerful applications that extend Langflow's capabilities.
-
 
 ## Troubleshooting
 

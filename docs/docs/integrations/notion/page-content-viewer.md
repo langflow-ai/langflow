@@ -11,7 +11,7 @@ The `NotionPageContent` component retrieves the content of a Notion page as plai
 
 <Admonition type="tip" title="Component Functionality">
 
- The `NotionPageContent` component enables you to:
+The `NotionPageContent` component enables you to:
 
 - Retrieve the content of a Notion page as plain text
 - Extract text from various block types, including paragraphs, headings, lists, and more
@@ -114,18 +114,18 @@ class NotionPageContent(CustomComponent):
 Here's an example of how you can use the `NotionPageContent` component in a Langflow flow:
 
 <ZoomableImage
-    alt="NotionPageContent Flow Example"
-    sources={{
+alt="NotionPageContent Flow Example"
+sources={{
         light: "img/notion/NotionPageContent_flow_example.png",
         dark: "img/notion/NotionPageContent_flow_example_dark.png",
     }}
-    style={{ width: "100%", margin: "20px 0" }}
+style={{ width: "100%", margin: "20px 0" }}
 />
 </Admonition>
 
 ## Best Practices
 
- When using the `NotionPageContent` component, consider the following best practices:
+When using the `NotionPageContent` component, consider the following best practices:
 
 - Ensure that you have the necessary permissions to access the Notion page you want to retrieve.
 - Keep your Notion integration token secure and avoid sharing it publicly.
@@ -135,7 +135,7 @@ The `NotionPageContent` component provides a seamless way to integrate Notion pa
 
 ## Troubleshooting
 
- If you encounter any issues while using the `NotionPageContent` component, consider the following:
+If you encounter any issues while using the `NotionPageContent` component, consider the following:
 
 - Double-check that you have provided the correct Notion page ID.
 - Verify that your Notion integration token is valid and has the necessary permissions.

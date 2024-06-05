@@ -21,7 +21,7 @@ export default function SettingsPage(): JSX.Element {
       icon: (
         <ForwardedIconComponent
           name="SlidersHorizontal"
-          className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),
     },
@@ -32,7 +32,7 @@ export default function SettingsPage(): JSX.Element {
       icon: (
         <ForwardedIconComponent
           name="Globe"
-          className="mx-[0.08rem] w-[1.1rem] stroke-[1.5]"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),
     },
@@ -40,7 +40,10 @@ export default function SettingsPage(): JSX.Element {
       title: "Shortcuts",
       href: "/settings/shortcuts",
       icon: (
-        <ForwardedIconComponent name="Keyboard" className="w-5 stroke-[1.5]" />
+        <ForwardedIconComponent
+          name="Keyboard"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
       ),
     },
   ];
@@ -50,10 +53,10 @@ export default function SettingsPage(): JSX.Element {
       description="Manage the general settings for Langflow."
     >
       <div className="flex h-full w-full space-y-8 lg:flex-row lg:space-x-8 lg:space-y-0">
-        <aside className="flex h-full flex-col space-y-6 lg:w-1/5">
+        <aside className="flex h-full shrink-0 flex-col space-y-6 lg:w-[20vw]">
           <SidebarNav items={sidebarNavItems} />
         </aside>
-        <div className="h-full w-full flex-1">
+        <div className="h-full w-full flex-1 pb-8">
           <Outlet />
         </div>
       </div>
