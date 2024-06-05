@@ -141,6 +141,9 @@ export default function NodeToolbarComponent({
         break;
       case "disabled":
         break;
+      case "unselect":
+        unselectAll();
+        break;
       case "ungroup":
         takeSnapshot();
         expandGroupNode(
@@ -180,10 +183,10 @@ export default function NodeToolbarComponent({
       case "update":
         takeSnapshot();
         // to update we must get the code from the templates in useTypesStore
-        const thisNodeTemplate = templates[data.type].template;
+        const thisNodeTemplate = templates[data.type]?.template;
         // if the template does not have a code key
         // return
-        if (!thisNodeTemplate.code) return;
+        if (!thisNodeTemplate?.code) return;
 
         const currentCode = thisNodeTemplate.code.value;
         if (data.node) {
@@ -275,6 +278,10 @@ export default function NodeToolbarComponent({
       ) {
         event.preventDefault();
         handleSelectChange("update");
+      }
+      if (selected && event.key.toUpperCase() === "ESCAPE") {
+        event.preventDefault();
+        handleSelectChange("unselect");
       }
       if (
         selected &&
@@ -380,7 +387,7 @@ export default function NodeToolbarComponent({
 
   return (
     <>
-      <div className="w-26 h-10">
+      <div className="w-26 nocopy nowheel nopan nodelete nodrag noundo h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
           {hasCode && (
             <ShadTooltip content="Code" side="top">
@@ -433,7 +440,7 @@ export default function NodeToolbarComponent({
           <ShadTooltip content="Freeze" side="top">
             <button
               className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -454,7 +461,7 @@ export default function NodeToolbarComponent({
                 className={cn(
                   "h-4 w-4 transition-all",
                   // TODO UPDATE THIS COLOR TO BE A VARIABLE
-                  frozen ? "animate-wiggle text-ice" : ""
+                  frozen ? "animate-wiggle text-ice" : "",
                 )}
               />
             </button>
