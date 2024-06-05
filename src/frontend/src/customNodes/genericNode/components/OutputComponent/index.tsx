@@ -11,6 +11,7 @@ import useFlowStore from "../../../../stores/flowStore";
 import { outputComponentType } from "../../../../types/components";
 import { NodeDataType } from "../../../../types/flow";
 import { cn } from "../../../../utils/utils";
+import { Button } from "../../../../components/ui/button";
 
 export default function OutputComponent({
   selected,
@@ -28,16 +29,21 @@ export default function OutputComponent({
   }
 
   return (
-    <div className="nocopy nopan nodelete nodrag noundo flex gap-2 ">
-      <span>{name}</span>
+    <div className="nocopy nopan nodelete nodrag noundo flex items-center gap-2 ">
       <DropdownMenu>
-        <DropdownMenuTrigger>
-          <span
-            className={cn(frozen ? " text-ice" : "", "flex items-center gap-1")}
+        <DropdownMenuTrigger asChild>
+          <Button
+            disabled={frozen}
+            variant="primary"
+            size="xs"
+            className={cn(
+              frozen ? "text-ice" : "",
+              "items-center gap-1 pl-2 pr-1.5 align-middle text-xs font-normal",
+            )}
           >
-            {selected}
-            <ForwardedIconComponent name="ChevronDown" className="h-4 w-4" />
-          </span>
+            <span className="pb-px">{selected}</span>
+            <ForwardedIconComponent name="ChevronDown" className="h-3 w-3" />
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           {types.map((type) => (
@@ -58,6 +64,7 @@ export default function OutputComponent({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
+      <span>{name}</span>
     </div>
   );
 }
