@@ -23,14 +23,16 @@ export default function FlowSettingsModal({
   const [name, setName] = useState(currentFlow!.name);
   const [description, setDescription] = useState(currentFlow!.description);
   const [endpoint_name, setEndpointName] = useState(currentFlow!.endpoint_name);
-
+  const [isSaving, setIsSaving] = useState(false);
   function handleClick(): void {
+    setIsSaving(true);
     currentFlow!.name = name;
     currentFlow!.description = description;
     currentFlow!.endpoint_name = endpoint_name;
     saveFlow(currentFlow!)
       ?.then(() => {
         setOpen(false);
+        setIsSaving(false);
       })
       .catch((err) => {
         useAlertStore.getState().setErrorData({
@@ -79,6 +81,7 @@ export default function FlowSettingsModal({
           label: "Save",
           disabled: nameLists.includes(name) && name !== currentFlow!.name,
           dataTestId: "save-flow-settings",
+          loading: isSaving,
         }}
       />
     </BaseModal>
