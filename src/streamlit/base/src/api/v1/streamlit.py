@@ -105,6 +105,9 @@ async def get_last_session():
         return Response(dumps(sessions[-1]), status_code=200)
     return Response(None, status_code=204)
 
+@router.get("/sessions")
+async def get_sessions():
+    return Response(dumps(list(chat.keys())), status_code=200)
 
 @router.post("/chats")
 async def create_chat(model: ChatModel):
@@ -179,8 +182,12 @@ sleep(2);st.rerun();
 
 """
     try:
-        with open(base_chat["script_filename"], "w") as f:
-            f.write(streamlit_code)
+        changed = False
+        with open(base_chat["script_filename"], "r") as f:
+            changed = f.read() != streamlit_code
+        if changed:
+            with open(base_chat["script_filename"], "w") as f:
+                f.write(streamlit_code)
     
         return Response(None, headers={"Content-Type": "application/json"})
     except TimeoutError as err:
