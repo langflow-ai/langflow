@@ -99,6 +99,7 @@ const EditNodeModal = forwardRef(
         headerName: "Description",
         field: "info",
         cellRenderer: TableAutoCellRender,
+        autoHeight: true,
         flex: 2,
         resizable: false,
       },

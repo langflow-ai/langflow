@@ -44,7 +44,6 @@ export default function TableAutoCellRender({
         } else {
           return <StringReader string={value} />;
         }
-        break;
       case "number":
         return <NumberReader number={value} />;
       default:
