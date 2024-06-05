@@ -106,11 +106,12 @@ export type FlowStoreType = {
     startNodeId,
     stopNodeId,
     input_value,
+    silent,
   }: {
-    nodeId?: string;
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
+    silent?: boolean;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
   updateVerticesBuild: (

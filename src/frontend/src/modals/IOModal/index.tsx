@@ -91,6 +91,7 @@ export default function IOModal({
       await buildFlow({
         input_value: chatValue,
         startNodeId: chatInput?.id,
+        silent: true,
       }).catch((err) => {
         console.error(err);
         setLockChat(false);
