@@ -18,7 +18,7 @@ if not space:
     print("Please provide a space to restart.")
     exit()
 
-if not parsed_args.api_token:
+if not parsed_args.token:
     print("Please provide an API token.")
     exit()
 
