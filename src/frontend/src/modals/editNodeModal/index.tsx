@@ -14,7 +14,8 @@ import TableComponent from "../../components/tableComponent";
 import TableAutoCellRender from "../../components/tableAutoCellRender";
 import { TemplateVariableType } from "../../types/api";
 import TableNodeCellRender from "../../components/tableNodeCellRender";
-import { ValueGetterParams } from "ag-grid-community";
+import { ColDef, ValueGetterParams } from "ag-grid-community";
+import TableTooltipRender from "../../components/tableTooltipRender";
 
 const EditNodeModal = forwardRef(
   (
@@ -79,7 +80,7 @@ const EditNodeModal = forwardRef(
         };
       });
 
-    const columnDefs = [
+    const columnDefs: ColDef[] = [
       {
         headerName: "Name",
         field: "display_name",
@@ -98,6 +99,8 @@ const EditNodeModal = forwardRef(
       {
         headerName: "Description",
         field: "info",
+        tooltipField: "info",
+        tooltipComponent: TableTooltipRender,
         cellRenderer: TableAutoCellRender,
         autoHeight: true,
         flex: 2,
@@ -180,7 +183,12 @@ const EditNodeModal = forwardRef(
             {nodeLength > 0 && (
               <div className="edit-node-modal-table">
                 <div className="h-96">
-                  <TableComponent columnDefs={columnDefs} rowData={rowData} />
+                  <TableComponent
+                    tooltipShowMode="whenTruncated"
+                    tooltipShowDelay={0.5}
+                    columnDefs={columnDefs}
+                    rowData={rowData}
+                  />
                 </div>
               </div>
             )}
