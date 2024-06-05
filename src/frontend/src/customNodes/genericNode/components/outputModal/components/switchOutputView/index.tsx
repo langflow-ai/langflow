@@ -3,7 +3,6 @@ import { Case } from "../../../../../../shared/components/caseComponent";
 import TextOutputView from "../../../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../../../stores/flowStore";
 import ErrorOutput from "./components";
-import { convertToTableRows } from "./helpers/convert-to-table-rows";
 
 export default function SwitchOutputView(nodeId): JSX.Element {
   const nodeIdentity = nodeId.nodeId;
@@ -19,7 +18,7 @@ export default function SwitchOutputView(nodeId): JSX.Element {
   const results = flowPoolNode?.data?.logs[0] ?? "";
   const resultType = results?.type;
   const resultMessage = results?.message;
-
+  console.log("resultType", results);
   return (
     <>
       <Case condition={!resultType || resultType === "unknown"}>
@@ -43,7 +42,7 @@ export default function SwitchOutputView(nodeId): JSX.Element {
 
       <Case condition={resultType === "object"}>
         <RecordsOutputComponent
-          rows={convertToTableRows(resultMessage)}
+          rows={[resultMessage]}
           pagination={true}
           columnMode="union"
         />
