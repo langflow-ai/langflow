@@ -122,6 +122,13 @@ class MessageModelResponse(MessageModel):
         return v
 
 
+class MessageModelRequest(MessageModel):
+    message: str = Field(default="")
+    sender: str = Field(default="")
+    sender_name: str = Field(default="")
+    session_id: str = Field(default="")
+
+
 class VertexBuildModel(BaseModel):
     index: Optional[int] = Field(default=None, alias="index", exclude=True)
     id: Optional[str] = Field(default=None, alias="id")

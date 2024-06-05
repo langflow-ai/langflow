@@ -17,7 +17,6 @@ Global Variables are a useful feature of Langflow, allowing you to define reusab
 - All Credential Global Variables are encrypted and accessible only by you.
 - Set _`LANGFLOW_STORE_ENVIRONMENT_VARIABLES`_ to _`true`_ in your `.env` file to add all variables in _`LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`_ to your user's Global Variables.
 
-
 ## Creating and Adding a Global Variable
 
 To create and add a global variable, click the 🌐 button in a Text field, and then click **+ Add New Variable**.
@@ -25,18 +24,20 @@ To create and add a global variable, click the 🌐 button in a Text field, and 
 Text fields are where you write text without opening a Text area, and are identified with the 🌐 icon.
 
 For example, to create an environment variable for the **OpenAI** component:
-   1. In the **OpenAI API Key** text field, click the 🌐 button, then **Add New Variable**.
-   2. Enter `openai_api_key` in the **Variable Name** field.
-   3. Paste your OpenAI API Key (`sk-...`) in the **Value** field.
-   4. Select **Credential** for the **Type**.
-   5. Choose **OpenAI API Key** in the **Apply to Fields** field to apply this variable to all fields named **OpenAI API Key**.
-   6. Click **Save Variable**.
+
+1.  In the **OpenAI API Key** text field, click the 🌐 button, then **Add New Variable**.
+2.  Enter `openai_api_key` in the **Variable Name** field.
+3.  Paste your OpenAI API Key (`sk-...`) in the **Value** field.
+4.  Select **Credential** for the **Type**.
+5.  Choose **OpenAI API Key** in the **Apply to Fields** field to apply this variable to all fields named **OpenAI API Key**.
+6.  Click **Save Variable**.
 
 You now have a `openai_api_key` global environment variable for your Langflow project.
 Subsequently, clicking the 🌐 button in a Text field will display the new variable in the dropdown.
 
 <Admonition type="tip">
-  You can also create global variables in **Settings** > **Variables and Secrets**.
+  You can also create global variables in **Settings** > **Variables and
+  Secrets**.
 </Admonition>
 
 <ZoomableImage
@@ -65,7 +66,8 @@ Setting `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `true` in your `.env` file (de
 These variables are accessible like any other Global Variable.
 
 <Admonition type="tip">
-  To prevent this behavior, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to `false` in your `.env` file.
+  To prevent this behavior, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES` to
+  `false` in your `.env` file.
 </Admonition>
 
 You can specify variables to get from the environment by listing them in `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`.
