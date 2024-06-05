@@ -309,6 +309,10 @@ class StateVertex(Vertex):
         successors = self.graph.successor_map.get(self.id, [])
         return successors + self.graph.activated_vertices
 
+    def _built_object_repr(self):
+        if self.artifacts and "repr" in self.artifacts:
+            return self.artifacts["repr"] or super()._built_object_repr()
+
 
 def dict_to_codeblock(d: dict) -> str:
     serialized = {key: serialize_field(val) for key, val in d.items()}

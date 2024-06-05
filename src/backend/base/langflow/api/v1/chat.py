@@ -209,6 +209,7 @@ async def build_vertex(
         inactivated_vertices = list(graph.inactivated_vertices)
         graph.reset_inactivated_vertices()
         graph.reset_activated_vertices()
+
         await chat_service.set_cache(flow_id_str, graph)
 
         # graph.stop_vertex tells us if the user asked

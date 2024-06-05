@@ -457,6 +457,8 @@ class Graph:
         """
         Resets the inactivated vertices in the graph.
         """
+        for vertex_id in self.inactivated_vertices.copy():
+            self.mark_vertex(vertex_id, "ACTIVE")
         self.inactivated_vertices = []
         self.inactivated_vertices = set()
 
@@ -470,7 +472,7 @@ class Graph:
         vertex = self.get_vertex(vertex_id)
         vertex.set_state(state)
 
-    def mark_branch(self, vertex_id: str, state: str, visited: Optional[set] = None):
+    def mark_branch(self, vertex_id: str, state: str, visited: Optional[set] = None, output_name: Optional[str] = None):
         """Marks a branch of the graph."""
         if visited is None:
             visited = set()
@@ -481,7 +483,20 @@ class Graph:
         self.mark_vertex(vertex_id, state)
 
         for child_id in self.parent_child_map[vertex_id]:
+            # Only child_id that have an edge with the vertex_id through the output_name
+            # should be marked
+            if output_name:
+                edge = self.get_edge(vertex_id, child_id)
+                if edge.source_handle.name != output_name:
+                    continue
             self.mark_branch(child_id, state)
+
+    def get_edge(self, source_id: str, target_id: str) -> Optional[ContractEdge]:
+        """Returns the edge between two vertices."""
+        for edge in self.edges:
+            if edge.source_id == source_id and edge.target_id == target_id:
+                return edge
+        return None
 
     def build_parent_child_map(self, vertices: List[Vertex]):
         parent_child_map = defaultdict(list)
@@ -1132,6 +1147,7 @@ class Graph:
         )
         layers: List[List[str]] = []
         visited = set(queue)
+
         current_layer = 0
         while queue:
             layers.append([])  # Start a new layer

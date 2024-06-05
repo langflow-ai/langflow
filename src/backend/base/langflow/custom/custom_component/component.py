@@ -58,36 +58,41 @@ class Component(CustomComponent):
                 raise ValueError(f"Key {key} already exists in {self.__class__.__name__}")
             setattr(self, key, value)
 
+    def _set_outputs(self, outputs: List[dict]):
+        self.outputs = [Output(**output) for output in outputs]
+
     async def build_results(self, vertex: "Vertex"):
-        build_results = {}
+        _results = {}
 
         if hasattr(self, "outputs"):
+            self._set_outputs(vertex.outputs)
             for output in self.outputs:
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
+                self.output = output
                 if not vertex.outgoing_edges or output.name in vertex.edges_source_names:
                     method: Callable | Awaitable = getattr(self, output.method)
                     result = method()
                     # If the method is asynchronous, we need to await it
                     if inspect.iscoroutinefunction(method):
                         result = await result
-                    build_results[output.name] = result
-        self.build_results = build_results
-        return build_results
+                    _results[output.name] = result
+        self._results = _results
+        return _results
 
     def custom_repr(self):
         # ! Temporary REPR
         # Since all are dict, yaml.dump them
-        if isinstance(self.build_results, dict):
-            _build_results = recursive_serialize_or_str(self.build_results)
+        if isinstance(self._results, dict):
+            _build_results = recursive_serialize_or_str(self._results)
             try:
                 custom_repr = yaml.dump(_build_results)
             except Exception as e:
                 logger.error(f"Error while dumping build_result: {e}")
-                custom_repr = str(self.build_results)
+                custom_repr = str(self._results)
 
-        if custom_repr is None and isinstance(self.build_results, (dict, Record, str)):
-            custom_repr = self.build_results
+        if custom_repr is None and isinstance(self._results, (dict, Record, str)):
+            custom_repr = self._results
         if not isinstance(custom_repr, str):
             custom_repr = str(custom_repr)
         return custom_repr
