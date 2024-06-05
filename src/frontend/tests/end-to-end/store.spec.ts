@@ -250,6 +250,7 @@ test("should share component with share button", async ({ page }) => {
     .getByPlaceholder("Flow description")
     .inputValue();
   await page.getByText("Save").last().click();
+  await page.getByText("Close").last().click();
 
   await page.getByTestId("icon-Share3").first().click();
   await page.getByText("Name:").isVisible();
