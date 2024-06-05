@@ -15,7 +15,6 @@ import ShadTooltip from "../../components/shadTooltipComponent";
 import TextAreaComponent from "../../components/textAreaComponent";
 import ToggleShadComponent from "../../components/toggleShadComponent";
 import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
 import {
   Table,
   TableBody,
@@ -43,19 +42,23 @@ import BaseModal from "../baseModal";
 const EditNodeModal = forwardRef(
   (
     {
-      data,
       nodeLength,
       open,
       setOpen,
+      data,
     }: {
-      data: NodeDataType;
       nodeLength: number;
       open: boolean;
       setOpen: (open: boolean) => void;
+      data: NodeDataType;
     },
     ref,
   ) => {
-    const [myData, setMyData] = useState(data);
+    const nodes = useFlowStore((state) => state.nodes);
+
+    const dataFromStore = nodes.find((node) => node.id === node.id)?.data;
+
+    const [myData, setMyData] = useState(dataFromStore ?? data);
 
     const edges = useFlowStore((state) => state.edges);
     const setNode = useFlowStore((state) => state.setNode);
@@ -98,6 +101,16 @@ const EditNodeModal = forwardRef(
         onChangeOpenModal={(open) => {
           setMyData(data);
         }}
+        onSubmit={() => {
+          setNode(data.id, (old) => ({
+            ...old,
+            data: {
+              ...old.data,
+              node: myData.node,
+            },
+          }));
+          setOpen(false);
+        }}
       >
         <BaseModal.Trigger>
           <></>
@@ -130,6 +143,7 @@ const EditNodeModal = forwardRef(
                     <TableHeader className="edit-node-modal-table-header">
                       <TableRow className="">
                         <TableHead className="h-7 text-center">PARAM</TableHead>
+                        <TableHead className="h-7 text-center">DESC</TableHead>
                         <TableHead className="h-7 p-0 text-center">
                           VALUE
                         </TableHead>
@@ -184,11 +198,17 @@ const EditNodeModal = forwardRef(
                             >
                               <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
                                 <ShadTooltip
+                                  styleClasses="z-50"
                                   content={
                                     myData.node?.template[templateParam].proxy
                                       ? myData.node?.template[templateParam]
                                           .proxy?.id
-                                      : null
+                                      : myData.node?.template[templateParam]
+                                            .display_name
+                                        ? myData.node!.template[templateParam]
+                                            .display_name
+                                        : myData.node?.template[templateParam]
+                                            .name
                                   }
                                 >
                                   <span>
@@ -198,6 +218,20 @@ const EditNodeModal = forwardRef(
                                           .display_name
                                       : myData.node?.template[templateParam]
                                           .name}
+                                  </span>
+                                </ShadTooltip>
+                              </TableCell>
+                              <TableCell className="truncate p-0 text-center text-sm text-foreground sm:px-3">
+                                <ShadTooltip
+                                  styleClasses="z-50"
+                                  content={
+                                    data.node?.template[templateParam]?.info ??
+                                    null
+                                  }
+                                >
+                                  <span>
+                                    {data.node?.template[templateParam]?.info ??
+                                      ""}
                                   </span>
                                 </ShadTooltip>
                               </TableCell>
@@ -297,9 +331,7 @@ const EditNodeModal = forwardRef(
                                         myData.node!.template[
                                           templateParam
                                         ]?.value?.toString() === "{}"
-                                          ? {
-                                              // yourkey: "value",
-                                            }
+                                          ? {}
                                           : myData.node!.template[templateParam]
                                               .value
                                       }
@@ -608,26 +640,7 @@ const EditNodeModal = forwardRef(
           </div>
         </BaseModal.Content>
 
-        <BaseModal.Footer>
-          <Button
-            data-test-id="saveChangesBtn"
-            id={"saveChangesBtn"}
-            className="mt-3"
-            onClick={() => {
-              setNode(data.id, (old) => ({
-                ...old,
-                data: {
-                  ...old.data,
-                  node: myData.node,
-                },
-              }));
-              setOpen(false);
-            }}
-            type="submit"
-          >
-            Save Changes
-          </Button>
-        </BaseModal.Footer>
+        <BaseModal.Footer submit={{ label: "Save Changes" }} />
       </BaseModal>
     );
   },

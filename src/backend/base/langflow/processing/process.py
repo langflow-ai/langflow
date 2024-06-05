@@ -8,6 +8,7 @@ from langflow.graph.schema import RunOutputs
 from langflow.graph.vertex.base import Vertex
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
+from langflow.services.deps import get_settings_service
 from langflow.services.session.service import SessionService
 
 if TYPE_CHECKING:
@@ -49,6 +50,8 @@ async def run_graph_internal(
         inputs_list.append({INPUT_FIELD_NAME: input_value_request.input_value})
         types.append(input_value_request.type)
 
+    fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
+
     run_outputs = await graph.arun(
         inputs_list,
         components,
@@ -56,6 +59,7 @@ async def run_graph_internal(
         outputs or [],
         stream=stream,
         session_id=session_id_str or "",
+        fallback_to_env_vars=fallback_to_env_vars
     )
     if session_id_str and session_service:
         await session_service.update_session(session_id_str, (graph, artifacts))

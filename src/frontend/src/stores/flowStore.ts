@@ -430,10 +430,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     startNodeId,
     stopNodeId,
     input_value,
+    silent,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
+    silent?: boolean;
   }) => {
     get().setIsBuilding(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
@@ -464,7 +466,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       status: BuildStatus,
       runId: string,
     ) {
-      console.log("handleBuildUpdate", vertexBuildData, status, runId);
       if (vertexBuildData && vertexBuildData.inactivated_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
         get().updateBuildStatus(
@@ -537,19 +538,23 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       startNodeId,
       stopNodeId,
       onGetOrderSuccess: () => {
-        setNoticeData({ title: "Running components" });
+        if (!silent) {
+          setNoticeData({ title: "Running components" });
+        }
       },
       onBuildComplete: (allNodesValid) => {
         const nodeId = startNodeId || stopNodeId;
-        if (nodeId && allNodesValid) {
-          setSuccessData({
-            title: `${
-              get().nodes.find((node) => node.id === nodeId)?.data.node
-                ?.display_name
-            } built successfully`,
-          });
-        } else {
-          setSuccessData({ title: FLOW_BUILD_SUCCESS_ALERT });
+        if (!silent) {
+          if (nodeId && allNodesValid) {
+            setSuccessData({
+              title: `${
+                get().nodes.find((node) => node.id === nodeId)?.data.node
+                  ?.display_name
+              } built successfully`,
+            });
+          } else {
+            setSuccessData({ title: FLOW_BUILD_SUCCESS_ALERT });
+          }
         }
         get().setIsBuilding(false);
       },

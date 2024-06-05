@@ -69,7 +69,6 @@ test("GlobalVariables", async ({ page }) => {
   await page.getByText("Save Variable", { exact: true }).click();
   expect(page.getByText(credentialName, { exact: true })).not.toBeNull();
   await page.getByText(credentialName, { exact: true }).isVisible();
-  await page.getByText("Save Variable", { exact: true }).click();
   await page.waitForTimeout(2000);
 
   await page

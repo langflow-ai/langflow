@@ -10,7 +10,6 @@ import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
 import Xmark from "../../components/ui/xmark";
 import {
-  NATIVE_CATEGORIES,
   RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
@@ -56,14 +55,14 @@ export default function GenericNode({
   const [nodeName, setNodeName] = useState(data.node!.display_name);
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(
-    data.node?.description!
+    data.node?.description!,
   );
   const [isOutdated, setIsOutdated] = useState(false);
   const buildStatus = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.status
+    (state) => state.flowBuildStatus[data.id]?.status,
   );
   const lastRunTime = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.timestamp
+    (state) => state.flowBuildStatus[data.id]?.timestamp,
   );
   const [validationStatus, setValidationStatus] =
     useState<validationStatusType | null>(null);
@@ -77,18 +76,14 @@ export default function GenericNode({
     // This one should run only once
     // first check if data.type in NATIVE_CATEGORIES
     // if not return
-    if (
-      !NATIVE_CATEGORIES.includes(types[data.type]) ||
-      !data.node?.template?.code?.value
-    )
-      return;
-    const thisNodeTemplate = templates[data.type].template;
+    if (!data.node?.template?.code?.value) return;
+    const thisNodeTemplate = templates[data.type]?.template;
     // if the template does not have a code key
     // return
-    if (!thisNodeTemplate.code) return;
+    if (!thisNodeTemplate?.code) return;
     const currentCode = thisNodeTemplate.code?.value;
     const thisNodesCode = data.node!.template?.code?.value;
-    const componentsToIgnore = ["Custom Component", "Prompt"];
+    const componentsToIgnore = ["Custom Component"];
     if (
       currentCode !== thisNodesCode &&
       !componentsToIgnore.includes(data.node!.display_name)
@@ -120,7 +115,7 @@ export default function GenericNode({
 
       updateNodeInternals(data.id);
     },
-    [data.id, data.node, setNode, setIsOutdated]
+    [data.id, data.node, setNode, setIsOutdated],
   );
 
   if (!data.node!.template) {
@@ -260,7 +255,7 @@ export default function GenericNode({
   const isDark = useDarkStore((state) => state.dark);
   const renderIconStatus = (
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null
+    validationStatus: validationStatusType | null,
   ) => {
     if (buildStatus === BuildStatus.BUILDING) {
       return <Loading className="text-medium-indigo" />;
@@ -301,7 +296,7 @@ export default function GenericNode({
   };
   const getSpecificClassFromBuildStatus = (
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null
+    validationStatus: validationStatusType | null,
   ) => {
     let isInvalid = validationStatus && !validationStatus.valid;
 
@@ -325,11 +320,11 @@ export default function GenericNode({
     selected: boolean,
     showNode: boolean,
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null
+    validationStatus: validationStatusType | null,
   ) => {
     const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
       buildStatus,
-      validationStatus
+      validationStatus,
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
@@ -338,14 +333,12 @@ export default function GenericNode({
       baseBorderClass,
       nodeSizeClass,
       "generic-node-div",
-      specificClassFromBuildStatus
+      specificClassFromBuildStatus,
     );
-    console.log("names", names);
     return names;
   };
 
   const getBaseBorderClass = (selected) => {
-    console.log("data.node?.frozen", data.node?.frozen);
     let className = selected ? "border border-ring" : "border";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     return data.node?.frozen ? frozenClass : className;
@@ -400,7 +393,7 @@ export default function GenericNode({
           selected,
           showNode,
           buildStatus,
-          validationStatus
+          validationStatus,
         )}
       >
         {data.node?.beta && showNode && (
@@ -423,6 +416,7 @@ export default function GenericNode({
                 "generic-node-title-arrangement rounded-full" +
                 (!showNode && " justify-center ")
               }
+              data-testid="generic-node-title-arrangement"
             >
               {iconNodeRender()}
               {showNode && (
@@ -459,7 +453,7 @@ export default function GenericNode({
                     <div className="group flex items-start gap-1.5">
                       <ShadTooltip content={data.node?.display_name}>
                         <div
-                          onDoubleClick={(event) => {
+                          onClick={(event) => {
                             if (nameEditable) {
                               setInputName(true);
                             }
@@ -473,21 +467,6 @@ export default function GenericNode({
                           {data.node?.display_name}
                         </div>
                       </ShadTooltip>
-                      {nameEditable && (
-                        <div
-                          onClick={(event) => {
-                            setInputName(true);
-                            takeSnapshot();
-                            event.stopPropagation();
-                            event.preventDefault();
-                          }}
-                        >
-                          <IconComponent
-                            name="PencilLine"
-                            className="hidden h-3 w-3 text-status-blue group-hover:block"
-                          />
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -545,7 +524,7 @@ export default function GenericNode({
                             }
                             title={getFieldTitle(
                               data.node?.template!,
-                              templateField
+                              templateField,
                             )}
                             info={data.node?.template[templateField].info}
                             name={templateField}
@@ -573,7 +552,7 @@ export default function GenericNode({
                             proxy={data.node?.template[templateField].proxy}
                             showNode={showNode}
                           />
-                        )
+                        ),
                     )}
                   <ParameterComponent
                     key={scapedJSONStringfy({
@@ -725,14 +704,14 @@ export default function GenericNode({
               ) : (
                 <div
                   className={cn(
-                    "generic-node-desc-text truncate-multiline word-break-break-word",
+                    "generic-node-desc-text cursor-text truncate-multiline word-break-break-word",
                     (data.node?.description === "" ||
                       !data.node?.description) &&
                       nameEditable
                       ? "font-light italic"
-                      : ""
+                      : "",
                   )}
-                  onDoubleClick={(e) => {
+                  onClick={(e) => {
                     setInputDescription(true);
                     takeSnapshot();
                   }}
@@ -792,13 +771,13 @@ export default function GenericNode({
                         }
                         title={getFieldTitle(
                           data.node?.template!,
-                          templateField
+                          templateField,
                         )}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={
                           data.node?.template[templateField].input_types?.join(
-                            "\n"
+                            "\n",
                           ) ?? data.node?.template[templateField].type
                         }
                         required={data.node!.template[templateField].required}
@@ -825,7 +804,7 @@ export default function GenericNode({
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
-                  "flex-max-width justify-center"
+                  "flex-max-width justify-center",
                 )}
               >
                 {" "}

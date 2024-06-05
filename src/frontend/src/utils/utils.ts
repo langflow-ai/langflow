@@ -2,8 +2,6 @@ import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import TableAutoCellRender from "../components/tableAutoCellRender";
-import { priorityFields } from "../constants/constants";
-import { ADJECTIVES, DESCRIPTIONS, NOUNS } from "../flow_constants";
 import { APIDataType, TemplateVariableType } from "../types/api";
 import {
   groupedObjType,
