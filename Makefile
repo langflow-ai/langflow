@@ -48,8 +48,8 @@ coverage:
 
 # allow passing arguments to pytest
 tests:
-	poetry run pytest tests --instafail -ra -n auto $(args)
-# Use like:
+	poetry run pytest tests --instafail -ra -n auto -m "not api_key_required" $(args)
+
 
 format:
 	poetry run ruff check . --fix
