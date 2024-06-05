@@ -155,6 +155,7 @@ module.exports = {
           label: "Streamlit",
           items: [
             "integrations/streamlit/intro",
+            "integrations/streamlit/setup",
             "integrations/streamlit/chat-template",
             "integrations/streamlit/get-last-session",
             "integrations/streamlit/get-session-messages",
