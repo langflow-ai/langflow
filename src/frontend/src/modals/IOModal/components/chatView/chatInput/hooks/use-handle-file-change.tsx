@@ -5,9 +5,10 @@ export const useHandleFileChange = (setFiles, currentFlowId) => {
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const file = event.target.files?.[0];
+    const fileInput = event.target;
+    const file = fileInput.files?.[0];
     if (file) {
-      const uid = new ShortUniqueId({ length: 3 });
+      const uid = new ShortUniqueId({ length: 10 }); // Increase the length to ensure uniqueness
       const id = uid();
       const type = file.type.split("/")[0];
       const blob = file;
@@ -19,6 +20,9 @@ export const useHandleFileChange = (setFiles, currentFlowId) => {
 
       useFileUpload(blob, currentFlowId, setFiles, id);
     }
+
+    // Clear the file input value to ensure the change event is triggered even for the same file
+    fileInput.value = "";
   };
 
   return {
