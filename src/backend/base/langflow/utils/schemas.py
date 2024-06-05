@@ -26,6 +26,7 @@ class ChatOutputResponse(BaseModel):
     stream_url: Optional[str] = None
     component_id: Optional[str] = None
     files: List[File] = []
+    type: str
 
     @field_validator("files", mode="before")
     def validate_files(cls, files):
