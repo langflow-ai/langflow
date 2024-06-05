@@ -19,7 +19,7 @@ import { InputOutput } from "../../constants/enums";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { IOModalPropsType } from "../../types/components";
-import { NodeType } from "../../types/flow";
+import { NodeDataType, NodeType } from "../../types/flow";
 import { updateVerticesOrder } from "../../utils/buildUtils";
 import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
@@ -113,13 +113,17 @@ export default function IOModal({
     setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
   }, [allNodes.length]);
 
+  const flow_sessions = allNodes
+    .map((node) => (node.data as NodeDataType).node?.template["session_id"])
+    .filter((session) => session !== undefined);
+
   useEffect(() => {
     setSelectedViewField(startView());
-    // if (haveChat) {
-    //   getSessions().then((sessions) => {
-    //     setSessions(sessions);
-    //   });
-    // }
+    if (haveChat) {
+      getSessions().then((sessions) => {
+        setSessions(sessions);
+      });
+    }
   }, [open]);
 
   return (
@@ -144,175 +148,180 @@ export default function IOModal({
       <BaseModal.Content>
         <div className="flex h-full flex-col ">
           <div className="flex-max-width h-full">
-            {selectedTab !== 0 && (
-              <div
-                className={cn(
-                  "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start transition-all duration-300",
-                )}
+            <div
+              className={cn(
+                "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start transition-all duration-300",
+              )}
+            >
+              <Tabs
+                value={selectedTab.toString()}
+                className={
+                  "flex h-full flex-col overflow-y-auto rounded-md border bg-muted text-center custom-scroll"
+                }
+                onValueChange={(value) => {
+                  setSelectedTab(Number(value));
+                }}
               >
-                <Tabs
-                  value={selectedTab.toString()}
-                  className={
-                    "flex h-full flex-col overflow-y-auto rounded-md border bg-muted text-center custom-scroll"
-                  }
-                  onValueChange={(value) => {
-                    setSelectedTab(Number(value));
-                  }}
-                >
-                  <div className="api-modal-tablist-div">
-                    <TabsList>
-                      {inputs.length > 0 && (
-                        <TabsTrigger value={"1"}>Inputs</TabsTrigger>
-                      )}
-                      {outputs.length > 0 && (
-                        <TabsTrigger value={"2"}>Outputs</TabsTrigger>
-                      )}
-                      {/* {haveChat && (
-                        <TabsTrigger value={"3"}>History</TabsTrigger>
-                      )} */}
-                    </TabsList>
-                  </div>
+                <div className="api-modal-tablist-div">
+                  <TabsList>
+                    {inputs.length > 0 && (
+                      <TabsTrigger value={"1"}>Inputs</TabsTrigger>
+                    )}
+                    {outputs.length > 0 && (
+                      <TabsTrigger value={"2"}>Outputs</TabsTrigger>
+                    )}
+                    {haveChat && <TabsTrigger value={"0"}>History</TabsTrigger>}
+                  </TabsList>
+                </div>
 
-                  <TabsContent
-                    value={"1"}
-                    className="api-modal-tabs-content mt-4"
-                  >
-                    <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
-                      <IconComponent className="h-4 w-4" name={"Type"} />
-                      {TEXT_INPUT_MODAL_TITLE}
-                    </div>
-                    {nodes
-                      .filter((node) =>
-                        inputs.some((input) => input.id === node.id),
-                      )
-                      .map((node, index) => {
-                        const input = inputs.find(
-                          (input) => input.id === node.id,
-                        )!;
-                        return (
-                          <div
-                            className="file-component-accordion-div"
-                            key={index}
-                          >
-                            <AccordionComponent
-                              trigger={
-                                <div className="file-component-badge-div">
-                                  <ShadTooltip
-                                    content={input.id}
-                                    styleClasses="z-50"
-                                  >
-                                    <div>
-                                      <Badge variant="gray" size="md">
-                                        {node.data.node.display_name}
-                                      </Badge>
-                                    </div>
-                                  </ShadTooltip>
-                                  <div
-                                    className="-mb-1 pr-4"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      setSelectedViewField(input);
-                                    }}
-                                  >
-                                    <IconComponent
-                                      className="h-4 w-4"
-                                      name="ExternalLink"
-                                    ></IconComponent>
+                <TabsContent value={"1"} className="api-modal-tabs-content">
+                  {nodes
+                    .filter((node) =>
+                      inputs.some((input) => input.id === node.id),
+                    )
+                    .map((node, index) => {
+                      const input = inputs.find(
+                        (input) => input.id === node.id,
+                      )!;
+                      return (
+                        <div
+                          className="file-component-accordion-div"
+                          key={index}
+                        >
+                          <AccordionComponent
+                            trigger={
+                              <div className="file-component-badge-div">
+                                <ShadTooltip
+                                  content={input.id}
+                                  styleClasses="z-50"
+                                >
+                                  <div>
+                                    <Badge variant="gray" size="md">
+                                      {node.data.node.display_name}
+                                    </Badge>
                                   </div>
-                                </div>
-                              }
-                              key={index}
-                              keyValue={input.id}
-                            >
-                              <div className="file-component-tab-column">
-                                <div className="">
-                                  {input && (
-                                    <IOFieldView
-                                      type={InputOutput.INPUT}
-                                      left={true}
-                                      fieldType={input.type}
-                                      fieldId={input.id}
-                                    />
-                                  )}
+                                </ShadTooltip>
+                                <div
+                                  className="-mb-1 pr-4"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setSelectedViewField(input);
+                                  }}
+                                >
+                                  <IconComponent
+                                    className="h-4 w-4"
+                                    name="ExternalLink"
+                                  ></IconComponent>
                                 </div>
                               </div>
-                            </AccordionComponent>
-                          </div>
-                        );
-                      })}
-                  </TabsContent>
-                  <TabsContent
-                    value={"2"}
-                    className="api-modal-tabs-content mt-4"
-                  >
-                    <div className="mx-2 mb-2 flex items-center gap-2 text-sm font-bold">
-                      <IconComponent className="h-4 w-4" name={"Type"} />
-                      {OUTPUTS_MODAL_TITLE}
-                    </div>
-                    {nodes
-                      .filter((node) =>
-                        outputs.some((output) => output.id === node.id),
-                      )
-                      .map((node, index) => {
-                        const output = outputs.find(
-                          (output) => output.id === node.id,
-                        )!;
-                        return (
-                          <div
-                            className="file-component-accordion-div"
+                            }
                             key={index}
+                            keyValue={input.id}
                           >
-                            <AccordionComponent
-                              trigger={
-                                <div className="file-component-badge-div">
-                                  <ShadTooltip
-                                    content={output.id}
-                                    styleClasses="z-50"
-                                  >
-                                    <div>
-                                      <Badge variant="gray" size="md">
-                                        {node.data.node.display_name}
-                                      </Badge>
-                                    </div>
-                                  </ShadTooltip>
-                                  <div
-                                    className="-mb-1 pr-4"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      setSelectedViewField(output);
-                                    }}
-                                  >
-                                    <IconComponent
-                                      className="h-4 w-4"
-                                      name="ExternalLink"
-                                    ></IconComponent>
+                            <div className="file-component-tab-column">
+                              <div className="">
+                                {input && (
+                                  <IOFieldView
+                                    type={InputOutput.INPUT}
+                                    left={true}
+                                    fieldType={input.type}
+                                    fieldId={input.id}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </AccordionComponent>
+                        </div>
+                      );
+                    })}
+                </TabsContent>
+                <TabsContent value={"2"} className="api-modal-tabs-content">
+                  {nodes
+                    .filter((node) =>
+                      outputs.some((output) => output.id === node.id),
+                    )
+                    .map((node, index) => {
+                      const output = outputs.find(
+                        (output) => output.id === node.id,
+                      )!;
+                      return (
+                        <div
+                          className="file-component-accordion-div"
+                          key={index}
+                        >
+                          <AccordionComponent
+                            trigger={
+                              <div className="file-component-badge-div">
+                                <ShadTooltip
+                                  content={output.id}
+                                  styleClasses="z-50"
+                                >
+                                  <div>
+                                    <Badge variant="gray" size="md">
+                                      {node.data.node.display_name}
+                                    </Badge>
                                   </div>
-                                </div>
-                              }
-                              key={index}
-                              keyValue={output.id}
-                            >
-                              <div className="file-component-tab-column">
-                                <div className="">
-                                  {output && (
-                                    <IOFieldView
-                                      type={InputOutput.OUTPUT}
-                                      left={true}
-                                      fieldType={output.type}
-                                      fieldId={output.id}
-                                    />
-                                  )}
+                                </ShadTooltip>
+                                <div
+                                  className="-mb-1 pr-4"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setSelectedViewField(output);
+                                  }}
+                                >
+                                  <IconComponent
+                                    className="h-4 w-4"
+                                    name="ExternalLink"
+                                  ></IconComponent>
                                 </div>
                               </div>
-                            </AccordionComponent>
+                            }
+                            key={index}
+                            keyValue={output.id}
+                          >
+                            <div className="file-component-tab-column">
+                              <div className="">
+                                {output && (
+                                  <IOFieldView
+                                    type={InputOutput.OUTPUT}
+                                    left={true}
+                                    fieldType={output.type}
+                                    fieldId={output.id}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </AccordionComponent>
+                        </div>
+                      );
+                    })}
+                </TabsContent>
+                <TabsContent value={"0"} className="api-modal-tabs-content">
+                  {sessions.map((session, index) => {
+                    return (
+                      <div className="flex items-center justify-between border-b px-2 align-middle">
+                        {session}
+                        <div className="flex items-center justify-center gap-2 align-middle">
+                          <Button variant="ghost" onClick={() => {}}>
+                            <ShadTooltip content={"delete"}>
+                              <IconComponent
+                                name="Trash2"
+                                className="h-4 w-4"
+                              ></IconComponent>
+                            </ShadTooltip>
+                          </Button>
+                          <div>
+                            <ShadTooltip content>
+                              <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                            </ShadTooltip>
                           </div>
-                        );
-                      })}
-                  </TabsContent>
-                </Tabs>
-              </div>
-            )}
-
+                        </div>
+                      </div>
+                    );
+                  })}
+                </TabsContent>
+              </Tabs>
+            </div>
             <div className="flex h-full min-w-96 flex-grow">
               {selectedViewField && (
                 <div
