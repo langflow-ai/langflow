@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import { forwardRef, useEffect, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { Badge } from "../../components/ui/badge";
 import {
@@ -35,36 +35,28 @@ const EditNodeModal = forwardRef(
 
     const dataFromStore = nodes.find((node) => node.id === node.id)?.data;
 
-    const [myData, setMyData] = useState(dataFromStore ?? data);
+    const myData = useRef(dataFromStore ?? data);
 
     const setNode = useFlowStore((state) => state.setNode);
 
     function changeAdvanced(n) {
-      setMyData((old) => {
-        let newData = cloneDeep(old);
-        newData.node!.template[n].advanced =
-          !newData.node!.template[n].advanced;
-        return newData;
-      });
+      myData.current.node!.template[n].advanced =
+        !myData.current.node!.template[n].advanced;
     }
 
     const handleOnNewValue = (newValue: any, name) => {
-      setMyData((old) => {
-        let newData = cloneDeep(old);
-        newData.node!.template[name].value = newValue;
-        return newData;
-      });
+      myData.current.node!.template[name].value = newValue;
     };
 
     useEffect(() => {
       if (open) {
-        setMyData(data); // reset data to what it is on node when opening modal
+        myData.current = data; // reset data to what it is on node when opening modal
       }
     }, [open]);
 
-    const rowData = Object.keys(myData.node!.template)
+    const rowData = Object.keys(myData.current.node!.template)
       .filter((key: string) => {
-        const templateParam = myData.node!.template[
+        const templateParam = myData.current.node!.template[
           key
         ] as TemplateVariableType;
         return (
@@ -78,7 +70,7 @@ const EditNodeModal = forwardRef(
         );
       })
       .map((key: string) => {
-        const templateParam = myData.node!.template[
+        const templateParam = myData.current.node!.template[
           key
         ] as TemplateVariableType;
         return {
@@ -115,21 +107,16 @@ const EditNodeModal = forwardRef(
         field: "value",
         cellRenderer: TableNodeCellRender,
         valueGetter: (params: ValueGetterParams) => {
-          console.log("params", params);
           return {
             value: params.data.value,
-            nodeClass: myData.node,
+            nodeClass: myData.current.node,
             handleOnNewValue: handleOnNewValue,
             handleOnChangeDb: (value, key) => {
-              setMyData((oldData) => {
-                let newData = cloneDeep(oldData);
-                newData.node!.template[key].load_from_db = value;
-                return newData;
-              });
+              myData.current.node!.template[key].load_from_db = value;
             },
           };
         },
-        minWidth: 300,
+        minWidth: 330,
         flex: 1,
         resizable: false,
       },
@@ -159,14 +146,14 @@ const EditNodeModal = forwardRef(
         open={open}
         setOpen={setOpen}
         onChangeOpenModal={(open) => {
-          setMyData(data);
+          myData.current = data;
         }}
         onSubmit={() => {
           setNode(data.id, (old) => ({
             ...old,
             data: {
               ...old.data,
-              node: myData.node,
+              node: myData.current.node,
             },
           }));
           setOpen(false);
@@ -175,9 +162,9 @@ const EditNodeModal = forwardRef(
         <BaseModal.Trigger>
           <></>
         </BaseModal.Trigger>
-        <BaseModal.Header description={myData.node?.description!}>
-          <span className="pr-2">{myData.type}</span>
-          <Badge variant="secondary">ID: {myData.id}</Badge>
+        <BaseModal.Header description={myData.current.node?.description!}>
+          <span className="pr-2">{myData.current.type}</span>
+          <Badge variant="secondary">ID: {myData.current.id}</Badge>
         </BaseModal.Header>
         <BaseModal.Content>
           <div className="flex pb-2">
