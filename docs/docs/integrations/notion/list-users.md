@@ -9,13 +9,11 @@ The `NotionUserList` component retrieves users from Notion. It provides a conven
 
 [Notion Reference](https://developers.notion.com/reference/get-users)
 
-<Admonition type="tip" title="Component Functionality">
  The `NotionUserList` component enables you to:
 
 - Retrieve user data from Notion
 - Access user information such as ID, type, name, and avatar URL
 - Integrate Notion user data seamlessly into your Langflow workflows
-  </Admonition>
 
 ## Component Usage
 
@@ -95,7 +93,6 @@ class NotionUserList(CustomComponent):
 
 ## Example Usage
 
-<Admonition type="info" title="Example Usage">
 Here's an example of how you can use the `NotionUserList` component in a Langflow flow and passing the outputs to the Prompt component:
 
 <ZoomableImage
@@ -106,8 +103,6 @@ sources={{
   }}
 style={{ width: "100%", margin: "20px 0" }}
 />
-
-</Admonition>
 
 ## Best Practices
 
