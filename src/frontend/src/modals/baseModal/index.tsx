@@ -112,6 +112,7 @@ interface BaseModalProps {
     | "smaller"
     | "small"
     | "medium"
+    | "medium-tall"
     | "large"
     | "three-cards"
     | "large-thin"
@@ -180,7 +181,9 @@ function BaseModal({
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <DialogContent className={cn(minWidth, "duration-300")}>
+          <DialogContent
+            className={cn(minWidth, height, "flex flex-col duration-300")}
+          >
             <div className="truncate-doubleline word-break-break-word">
               {headerChild}
             </div>
@@ -190,10 +193,10 @@ function BaseModal({
                   event.preventDefault();
                   onSubmit();
                 }}
-                className="flex flex-col gap-6"
+                className="flex flex-1 flex-col gap-6"
               >
                 <div
-                  className={`flex flex-col ${height} w-full transition-all duration-300`}
+                  className={`flex w-full flex-1 flex-col transition-all duration-300`}
                 >
                   {ContentChild}
                 </div>
@@ -204,7 +207,7 @@ function BaseModal({
             ) : (
               <>
                 <div
-                  className={`flex flex-col ${height} w-full transition-all duration-300`}
+                  className={`flex w-full flex-1 flex-col transition-all duration-300`}
                 >
                   {ContentChild}
                 </div>
