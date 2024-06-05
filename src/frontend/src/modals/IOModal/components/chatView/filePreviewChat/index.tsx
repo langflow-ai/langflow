@@ -62,7 +62,7 @@ export default function FilePreview({
         <div>Error...</div>
       ) : (
         <div
-          className={`relative ${isImage ? "h-20 w-20" : "h-20 w-80"} cursor-pointer rounded-lg border  border-ring bg-background transition duration-300 ${
+          className={`relative mt-2 ${isImage ? "h-20 w-20" : "h-20 w-80"} cursor-pointer rounded-lg border  border-ring bg-background transition duration-300 ${
             isHovered ? "shadow-md" : ""
           }`}
           onMouseEnter={() => setIsHovered(true)}
