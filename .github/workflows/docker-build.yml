@@ -54,6 +54,18 @@ jobs:
           tags: ${{ env.TAGS }}
       - name: Wait for Docker Hub to propagate
         run: sleep 120
+      - name: Build and push (backend)
+        if: ${{ inputs.release_type == 'main' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          file: ./docker/build_and_push_backend.Dockerfile
+          build-args: |
+            LANGFLOW_IMAGE=langflowai/langflow:${{ inputs.version }}
+          tags: |
+            langflowai/langflow-backend:${{ inputs.version }}
+            langflowai/langflow-backend:1.0-alpha
 
   restart-space:
     runs-on: ubuntu-latest

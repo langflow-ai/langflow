@@ -54,6 +54,19 @@ jobs:
           tags: |
             langflowai/langflow:${{ steps.check-version.outputs.version }}
             langflowai/langflow:latest
+      - name: Wait for Docker Hub to propagate
+        run: sleep 120
+      - name: Build and push (backend)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          file: ./docker/build_and_push_backend.Dockerfile
+          build-args: |
+            LANGFLOW_IMAGE=langflowai/langflow:${{ steps.check-version.outputs.version }}
+          tags: |
+            langflowai/langflow-backend:${{ steps.check-version.outputs.version }}
+            langflowai/langflow-backend:latest
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
