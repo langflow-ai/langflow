@@ -60,7 +60,7 @@ RUN $POETRY_HOME/bin/poetry lock --no-update \
 ################################
 FROM python:3.12-slim as runtime
 
-LABEL org.opencontainers.image.title=langflow-backend
+LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']
 LABEL org.opencontainers.image.licenses=MIT
 LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
