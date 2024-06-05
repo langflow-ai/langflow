@@ -24,7 +24,10 @@ const useColumnDefs = (
               : templateParam.name) ?? params.data.key
           );
         },
-        cellRenderer: TableAutoCellRender,
+        tooltipField: "display_name",
+        tooltipComponent: TableTooltipRender,
+        cellRenderer: TableMultilineCellRender,
+        autoHeight: true,
         flex: 1,
         resizable: false,
         cellClass: "no-border",
