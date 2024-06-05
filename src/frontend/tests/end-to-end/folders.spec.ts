@@ -31,7 +31,7 @@ test("CRUD folders", async ({ page }) => {
   await page.getByText("All").first().isVisible();
   await page.getByText("Select All").isVisible();
 
-  await page.getByText("New Folder", { exact: true }).first().click();
+  await page.getByTestId("add-folder-button").click();
   await page.getByText("New Folder").last().isVisible();
   await page.waitForTimeout(1000);
   await page.getByText("New Folder").last().dblclick();
@@ -114,7 +114,7 @@ test("change flow folder", async ({ page }) => {
   await page.getByText("All").first().isVisible();
   await page.getByText("Select All").isVisible();
 
-  await page.getByText("New Folder", { exact: true }).first().click();
+  await page.getByTestId("add-folder-button").click();
   await page.getByText("New Folder").last().isVisible();
   await page.waitForTimeout(1000);
   await page.getByText("New Folder").last().dblclick();

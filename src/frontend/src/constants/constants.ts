@@ -590,6 +590,7 @@ export const CONTROL_PATCH_USER_STATE = {
   password: "",
   cnfPassword: "",
   gradient: "",
+  apikey: "",
 };
 
 export const CONTROL_LOGIN_STATE = {
@@ -738,3 +739,5 @@ export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to displa
 export const DEFAULT_TABLE_ALERT_TITLE = "No Data Available";
 
 export const LOCATIONS_TO_RETURN = ["/flow/", "/settings/"];
+
+export const MAX_BATCH_SIZE = 50;

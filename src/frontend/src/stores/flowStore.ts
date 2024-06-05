@@ -79,7 +79,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateFlowPool: (
     nodeId: string,
     data: VertexBuildTypeAPI | ChatOutputType | chatInputType,
-    buildId?: string
+    buildId?: string,
   ) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
     if (!newFlowPool[nodeId]) {
@@ -95,7 +95,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       }
       //update data results
       else {
-        newFlowPool[nodeId][index].data.messages[0] = (data as ChatOutputType| chatInputType);
+        newFlowPool[nodeId][index].data.messages[0] = data as
+          | ChatOutputType
+          | chatInputType;
       }
     }
     get().setFlowPool(newFlowPool);
@@ -431,11 +433,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     stopNodeId,
     input_value,
     files,
+    silent,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
     files?: string[];
+    silent?: boolean;
   }) => {
     get().setIsBuilding(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
@@ -516,7 +520,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
       get().addDataToFlowPool(
         { ...vertexBuildData, run_id: runId },
-        vertexBuildData.id
+        vertexBuildData.id,
       );
 
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
@@ -539,19 +543,23 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       startNodeId,
       stopNodeId,
       onGetOrderSuccess: () => {
-        setNoticeData({ title: "Running components" });
+        if (!silent) {
+          setNoticeData({ title: "Running components" });
+        }
       },
       onBuildComplete: (allNodesValid) => {
         const nodeId = startNodeId || stopNodeId;
-        if (nodeId && allNodesValid) {
-          setSuccessData({
-            title: `${
-              get().nodes.find((node) => node.id === nodeId)?.data.node
-                ?.display_name
-            } built successfully`,
-          });
-        } else {
-          setSuccessData({ title: FLOW_BUILD_SUCCESS_ALERT });
+        if (!silent) {
+          if (nodeId && allNodesValid) {
+            setSuccessData({
+              title: `${
+                get().nodes.find((node) => node.id === nodeId)?.data.node
+                  ?.display_name
+              } built successfully`,
+            });
+          } else {
+            setSuccessData({ title: FLOW_BUILD_SUCCESS_ALERT });
+          }
         }
         get().setIsBuilding(false);
       },

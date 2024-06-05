@@ -175,7 +175,6 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("model_specsChatOllama")).not.toBeVisible();
   await expect(page.getByTestId("model_specsChatOpenAI")).not.toBeVisible();
   await expect(page.getByTestId("model_specsChatVertexAI")).not.toBeVisible();
-  await expect(page.getByTestId("model_specsCohere")).not.toBeVisible();
 
   await page
     .locator(

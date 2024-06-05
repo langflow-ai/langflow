@@ -78,9 +78,6 @@ export default function GlobalVariablesPage() {
   // Column Definitions: Defines the columns to be displayed.
   const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
     {
-      headerCheckboxSelection: true,
-      checkboxSelection: true,
-      showDisabledCheckboxes: true,
       headerName: "Variable Name",
       field: "name",
       flex: 2,
@@ -170,7 +167,7 @@ export default function GlobalVariablesPage() {
         </div>
       </div>
 
-      <div className="flex h-full w-full flex-col justify-between pb-8">
+      <div className="flex h-full w-full flex-col justify-between">
         <Card x-chunk="dashboard-04-chunk-2" className="h-full pt-4">
           <CardContent className="h-full">
             <TableComponent

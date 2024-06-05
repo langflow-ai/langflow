@@ -239,6 +239,7 @@ export type AccordionComponentType = {
   children?: ReactElement;
   open?: string[];
   trigger?: string | ReactElement;
+  disabled?: boolean;
   keyValue?: string;
   openDisc?: boolean;
   sideBar?: boolean;
@@ -396,6 +397,7 @@ export type patchUserInputStateType = {
   password: string;
   cnfPassword: string;
   gradient: string;
+  apikey: string;
 };
 
 export type UserInputType = {
@@ -543,7 +545,7 @@ export type nodeToolbarPropsType = {
   updateNodeCode?: (
     newNodeClass: APIClassType,
     code: string,
-    name: string
+    name: string,
   ) => void;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
   isOutdated?: boolean;
@@ -593,7 +595,7 @@ export type chatMessagePropsType = {
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) => void;
 };
 
@@ -685,12 +687,12 @@ export type codeTabsPropsType = {
       value: string,
       node: NodeType,
       template: TemplateVariableType,
-      tweak: tweakType
+      tweak: tweakType,
     ) => string;
     buildTweakObject?: (
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: TemplateVariableType
+      template: TemplateVariableType,
     ) => Promise<string | void>;
   };
   activeTweaks?: boolean;
@@ -787,4 +789,18 @@ export type toolbarSelectItemProps = {
   };
   dataTestId: string;
   ping?: boolean;
+};
+
+export type clearChatPropsType = {
+  lockChat: boolean;
+  setLockChat: (lock: boolean) => void;
+  setChatHistory: (chatHistory: ChatMessageType) => void;
+  method: string;
+};
+
+export type handleSelectPropsType = {
+  event: string;
+  lockChat: boolean;
+  setLockChat: (lock: boolean) => void;
+  setChatHistory: (chatHistory: ChatMessageType) => void;
 };

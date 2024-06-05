@@ -132,7 +132,7 @@ test("FloatComponent", async ({ page }) => {
     await page.locator('//*[@id="showrepeat_last_n"]').isChecked(),
   ).toBeFalsy();
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   const plusButtonLocator = page.locator('//*[@id="float-input"]');
   const elementCount = await plusButtonLocator?.count();
@@ -148,7 +148,7 @@ test("FloatComponent", async ({ page }) => {
       await page.locator('//*[@id="showtemperature"]').isChecked(),
     ).toBeTruthy();
 
-    await page.locator('//*[@id="saveChangesBtn"]').click();
+    await page.getByText("Save Changes", { exact: true }).click();
     await page.locator('//*[@id="float-input"]').click();
     await page.locator('//*[@id="float-input"]').fill("3");
 
