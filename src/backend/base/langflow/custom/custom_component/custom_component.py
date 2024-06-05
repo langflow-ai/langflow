@@ -84,11 +84,11 @@ class CustomComponent(BaseComponent):
         except Exception as e:
             raise ValueError(f"Error updating state: {e}")
 
-    def stop(self):
+    def stop(self, output_name: str):
         if not self.vertex:
             raise ValueError("Vertex is not set")
         try:
-            self.graph.mark_branch(self.vertex.id, "INACTIVE")
+            self.graph.mark_branch(vertex_id=self.vertex.id, output_name=output_name, state="INACTIVE")
         except Exception as e:
             raise ValueError(f"Error stopping {self.display_name}: {e}")
 

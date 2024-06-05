@@ -48,9 +48,11 @@ class TextOperatorComponent(Component):
     ]
 
     def true_response(self) -> Union[Text, Record]:
+        self.stop("False Result")
         return self.true_output if self.true_output else self.input_text
 
     def false_response(self) -> Union[Text, Record]:
+        self.stop("True Result")
         return self.false_output if self.false_output else self.input_text
 
     def result_response(self) -> Union[Text, Record]:
@@ -79,8 +81,10 @@ class TextOperatorComponent(Component):
             result = input_text.endswith(match_text)
 
         if result:
-            self.status = self.true_response()
-            return self.true_response()
+            response = self.true_response()
+            self.status = response
+            return response
         else:
-            self.status = self.false_response()
-            return self.false_response()
+            response = self.false_response()
+            self.status = response
+            return response
