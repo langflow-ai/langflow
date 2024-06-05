@@ -1,4 +1,5 @@
 import { ColDef } from "ag-grid-community";
+import { cloneDeep } from "lodash";
 import { forwardRef, useEffect, useRef } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import TableComponent from "../../components/tableComponent";
@@ -22,7 +23,7 @@ const EditNodeModal = forwardRef(
       setOpen: (open: boolean) => void;
       data: NodeDataType;
     },
-    ref
+    ref,
   ) => {
     const nodes = useFlowStore((state) => state.nodes);
 
@@ -43,16 +44,17 @@ const EditNodeModal = forwardRef(
 
     useEffect(() => {
       if (open) {
-        myData.current = data;
+        const cloneData = cloneDeep(dataFromStore ?? data);
+        myData.current = cloneData;
       }
     }, [open]);
 
-    const rowData = useRowData(myData);
+    const rowData = useRowData(myData, open);
 
     const columnDefs: ColDef[] = useColumnDefs(
       myData,
       handleOnNewValue,
-      changeAdvanced
+      changeAdvanced,
     );
 
     return (
@@ -110,7 +112,7 @@ const EditNodeModal = forwardRef(
         <BaseModal.Footer submit={{ label: "Save Changes" }} />
       </BaseModal>
     );
-  }
+  },
 );
 
 export default EditNodeModal;
