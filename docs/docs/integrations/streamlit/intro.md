@@ -34,8 +34,9 @@ The Streamlit integration in Langflow enables seamless connectivity with Streaml
 
 ### Getting Started with Streamlit Integration in Langflow
 
-1. **Connect Components**: Integrate Streamlit components with other Langflow components to build your workflow.
-2. **Test and Refine**: Ensure your Langflow flow operates as intended by testing and refining it.
-3. **Deploy and Run**: Deploy your Langflow flow to automate Streamlit-related tasks and processes.
+1. **Setting up a Streamlit App**: Follow the guide [Setting up a Streamlit App](./setup) to set up a Streamlit application in your workspace.
+2. **Connect Components**: Integrate Streamlit components with other Langflow components to build your workflow.
+3. **Test and Refine**: Ensure your Langflow flow operates as intended by testing and refining it.
+4. **Deploy and Run**: Deploy your Langflow flow to automate Streamlit-related tasks and processes.
 
 The Streamlit integration in Langflow enhances your workflow by providing tools for session data retrieval and message management. With components like StreamlitGetSessionMessages, you can efficiently extract and utilize session messages from your Streamlit applications, making it easier to monitor and analyze interactions within your projects.
