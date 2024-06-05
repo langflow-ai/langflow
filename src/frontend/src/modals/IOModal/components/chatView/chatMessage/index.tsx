@@ -322,7 +322,7 @@ dark:prose-invert"
                   {chatMessage}
                 </span>
                 {chat.files && (
-                  <div className="my-2">
+                  <div className="my-2 flex  flex-col gap-5">
                     {chat.files.map((file, index) => {
                       return (
                         <div key={index} className="flex flex-col gap-2">
