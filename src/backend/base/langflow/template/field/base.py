@@ -152,7 +152,10 @@ class Output(BaseModel):
     selected: Optional[str] = Field(default=None, serialization_alias="selected")
     """The selected output type for the field."""
 
-    name: str = Field(default="", serialization_alias="name")
+    display_name: Optional[str] = Field(default=None, serialization_alias="name")
+    """The display name of the field."""
+
+    name: str = Field(default=None, serialization_alias="name")
     """The name of the field."""
 
     method: Optional[str] = Field(default=None, serialization_alias="method")
@@ -168,3 +171,12 @@ class Output(BaseModel):
     def set_selected(self):
         if not self.selected:
             self.selected = self.types[0]
+
+    @field_validator("display_name", mode="before")
+    def validate_display_name(cls, v, info):
+        if not v:
+            if info.data.get("name"):
+                return info.data["name"]
+            else:
+                raise ValueError("If display_name is not set, name must be set")
+        return v

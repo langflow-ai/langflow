@@ -8,8 +8,8 @@ class MultipleOutputsComponent(Component):
         Input(display_name="Number", name="number", field_type=int),
     ]
     outputs = [
-        Output(name="Certain Output", method="certain_output"),
-        Output(name="Other Output", method="other_output"),
+        Output(display_name="Certain Output", name="certain_output", method="certain_output"),
+        Output(display_name="Other Output", name="other_output", method="other_output"),
     ]
 
     def certain_output(self) -> str:

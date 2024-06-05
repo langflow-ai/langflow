@@ -43,8 +43,8 @@ class TextOperatorComponent(Component):
         ),
     ]
     outputs = [
-        Output(name="True Result", method="result_response"),
-        Output(name="False Result", method="result_response"),
+        Output(display_name="True Result", name="true_result", method="result_response"),
+        Output(display_name="False Result", name="false_result", method="result_response"),
     ]
 
     def true_response(self) -> Union[Text, Record]:
