@@ -16,13 +16,15 @@ import ShadTooltip from "../../../../components/shadTooltipComponent";
 type HeaderComponentProps = {
   handleSelectAll: (select) => void;
   handleDelete: () => void;
-  disableDelete: boolean;
+  handleDuplicate: () => void;
+  disableFunctions: boolean;
 };
 
 const HeaderComponent = ({
   handleSelectAll,
   handleDelete,
-  disableDelete,
+  handleDuplicate,
+  disableFunctions,
 }: HeaderComponentProps) => {
   const [shouldSelectAll, setShouldSelectAll] = useState(true);
 
@@ -55,23 +57,41 @@ const HeaderComponent = ({
             </div>
           </a>
         </div>
-        <div className="col-span-2 grid-cols-1 justify-self-end">
+        <div className="col-span-2 flex grid-cols-1 gap-2 justify-self-end">
           <div>
             <ShadTooltip
               content={
-                disableDelete ? (
+                disableFunctions ? (
+                  <span>Select items to duplicate</span>
+                ) : (
+                  <span>Duplicate selected items</span>
+                )
+              }
+            >
+              <button onClick={handleDuplicate} disabled={disableFunctions}>
+                <IconComponent
+                  name="Copy"
+                  className={cn("h-5 w-5 text-primary transition-all")}
+                />
+              </button>
+            </ShadTooltip>
+          </div>
+          <div>
+            <ShadTooltip
+              content={
+                disableFunctions ? (
                   <span>Select items to delete</span>
                 ) : (
                   <span>Delete selected items</span>
                 )
               }
             >
-              <button onClick={handleDelete} disabled={disableDelete}>
+              <button onClick={handleDelete} disabled={disableFunctions}>
                 <IconComponent
                   name="Trash2"
                   className={cn(
                     "h-5 w-5 text-primary transition-all",
-                    disableDelete ? "" : "hover:text-destructive",
+                    disableFunctions ? "" : "hover:text-destructive",
                   )}
                 />
               </button>

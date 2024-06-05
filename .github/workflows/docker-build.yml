@@ -19,6 +19,8 @@ on:
         options:
           - base
           - main
+env:
+  POETRY_VERSION: "1.8.2"
 
 jobs:
   docker_build:
@@ -54,10 +56,50 @@ jobs:
           tags: ${{ env.TAGS }}
       - name: Wait for Docker Hub to propagate
         run: sleep 120
-      - name: Restart HuggingFace Spaces Build
-        #   There's a script in ./scripts/factory_reset_space.py that will reset the build
-        # using the HUGGINGFACE_API_TOKEN secret
+      - name: Build and push (backend)
+        if: ${{ inputs.release_type == 'main' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          file: ./docker/build_and_push_backend.Dockerfile
+          build-args: |
+            LANGFLOW_IMAGE=langflowai/langflow:${{ inputs.version }}
+          tags: |
+            langflowai/langflow-backend:${{ inputs.version }}
+            langflowai/langflow-backend:1.0-alpha
+      - name: Build and push (frontend)
+        if: ${{ inputs.release_type == 'main' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          file: ./docker/frontend/build_and_push_frontend.Dockerfile
+          tags: |
+            langflowai/langflow-frontend:${{ inputs.version }}
+            langflowai/langflow-frontend:1.0-alpha
+
+  restart-space:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - "3.12"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }} + Poetry ${{ env.POETRY_VERSION }}
+        uses: "./.github/actions/poetry_caching"
+        with:
+          python-version: ${{ matrix.python-version }}
+          poetry-version: ${{ env.POETRY_VERSION }}
+          cache-key: ${{ runner.os }}-poetry-${{ env.POETRY_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install Python dependencies
         run: |
-          python ./scripts/factory_reset_space.py
+          poetry env use ${{ matrix.python-version }}
+          poetry install
+
+      - name: Restart HuggingFace Spaces Build
+        run: |
+          poetry run python ./scripts/factory_restart_space.py
         env:
           HUGGINGFACE_API_TOKEN: ${{ secrets.HUGGINGFACE_API_TOKEN }}
