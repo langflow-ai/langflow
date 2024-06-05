@@ -1,7 +1,7 @@
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
-import { ElementRef, forwardRef, useCallback } from "react";
+import { ElementRef, forwardRef } from "react";
 import {
   DEFAULT_TABLE_ALERT_MSG,
   DEFAULT_TABLE_ALERT_TITLE,
@@ -46,7 +46,6 @@ const TableComponent = forwardRef<
         </div>
       );
     }
-
     return (
       <div
         className={cn(
@@ -61,6 +60,11 @@ const TableComponent = forwardRef<
             minWidth: 100,
           }}
           ref={ref}
+          getRowId={(params) => {
+            console.log(params);
+
+            return params.data.id;
+          }}
         />
       </div>
     );

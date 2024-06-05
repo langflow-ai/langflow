@@ -1,21 +1,17 @@
-import { cloneDeep } from "lodash";
-import { forwardRef, useEffect, useRef, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
-import { Badge } from "../../components/ui/badge";
-import {
-  LANGFLOW_SUPPORTED_TYPES,
-  limitScrollFieldsModal,
-} from "../../constants/constants";
-import useFlowStore from "../../stores/flowStore";
-import { NodeDataType } from "../../types/flow";
-import { classNames } from "../../utils/utils";
-import BaseModal from "../baseModal";
-import TableComponent from "../../components/tableComponent";
-import TableAutoCellRender from "../../components/tableAutoCellRender";
-import { TemplateVariableType } from "../../types/api";
-import TableNodeCellRender from "../../components/tableNodeCellRender";
 import { ColDef, ValueGetterParams } from "ag-grid-community";
+import { forwardRef, useEffect, useRef } from "react";
+import IconComponent from "../../components/genericIconComponent";
+import TableAutoCellRender from "../../components/tableAutoCellRender";
+import TableComponent from "../../components/tableComponent";
+import TableNodeCellRender from "../../components/tableNodeCellRender";
 import TableTooltipRender from "../../components/tableTooltipRender";
+import ToggleShadComponent from "../../components/toggleShadComponent";
+import { Badge } from "../../components/ui/badge";
+import { LANGFLOW_SUPPORTED_TYPES } from "../../constants/constants";
+import useFlowStore from "../../stores/flowStore";
+import { TemplateVariableType } from "../../types/api";
+import { NodeDataType } from "../../types/flow";
+import BaseModal from "../baseModal";
 
 const EditNodeModal = forwardRef(
   (
@@ -42,7 +38,7 @@ const EditNodeModal = forwardRef(
 
     function changeAdvanced(n) {
       myData.current.node!.template[n].advanced =
-        !myData.current.node!.template[n].advanced;
+        !myData.current.node!.template[n]?.advanced;
     }
 
     const handleOnNewValue = (newValue: any, name) => {
@@ -51,7 +47,7 @@ const EditNodeModal = forwardRef(
 
     useEffect(() => {
       if (open) {
-        myData.current = data; // reset data to what it is on node when opening modal
+        myData.current = data;
       }
     }, [open]);
 
@@ -77,6 +73,7 @@ const EditNodeModal = forwardRef(
         return {
           ...templateParam,
           key: key,
+          id: key,
         };
       });
 
@@ -127,18 +124,25 @@ const EditNodeModal = forwardRef(
       {
         headerName: "Show",
         field: "advanced",
-        cellRenderer: "agCheckboxCellRenderer",
-        cellEditor: "agCheckboxCellEditor",
-        valueGetter: (params) => {
-          return !params.data.advanced;
+        cellRenderer: (params) => {
+          const templateParam = params.data;
+          return (
+            <>
+              <ToggleShadComponent
+                id={"show" + templateParam?.name}
+                enabled={!templateParam?.advanced}
+                setEnabled={() => {
+                  changeAdvanced(params.data.key);
+                }}
+                size="small"
+                editNode={true}
+              />
+            </>
+          );
         },
-        valueSetter: (params) => {
-          changeAdvanced(params.data.key);
-          return true;
-        },
-        editable: true,
-        flex: 1,
-        maxWidth: 70,
+
+        editable: false,
+        maxWidth: 80,
         resizable: false,
       },
     ];
