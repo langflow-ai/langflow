@@ -2,8 +2,8 @@ import { ColDef, ColGroupDef } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-balham.css"; // Optional Theme applied to the grid
 import { FlowPoolObjectType } from "../../types/chat";
-import TableComponent from "../tableComponent";
 import { extractColumnsFromRows } from "../../utils/utils";
+import TableComponent from "../tableComponent";
 
 function RecordsOutputComponent({
   flowPool,

@@ -633,6 +633,7 @@ def test_successful_run_with_input_type_any(client, starter_project, created_api
     assert all([output.get("results").get("result") == "value1" for output in any_input_outputs]), any_input_outputs
 
 
+@pytest.mark.api_key_required
 def test_run_with_inputs_and_outputs(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
@@ -652,7 +653,7 @@ def test_invalid_flow_id(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = "invalid-flow-id"
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = UUID(int=0)
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
@@ -660,6 +661,7 @@ def test_invalid_flow_id(client, created_api_key):
     # Check if the error detail is as expected
 
 
+@pytest.mark.api_key_required
 def test_run_flow_with_caching_success(client: TestClient, starter_project, created_api_key):
     flow_id = starter_project["id"]
     headers = {"x-api-key": created_api_key.api_key}
@@ -677,6 +679,7 @@ def test_run_flow_with_caching_success(client: TestClient, starter_project, crea
     assert "session_id" in data
 
 
+@pytest.mark.api_key_required
 def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created_api_key):
     invalid_flow_id = uuid4()
     headers = {"x-api-key": created_api_key.api_key}
@@ -685,9 +688,10 @@ def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created_api_k
     assert response.status_code == status.HTTP_404_NOT_FOUND
     data = response.json()
     assert "detail" in data
-    assert f"Flow {invalid_flow_id} not found" in data["detail"]
+    assert f"Flow identifier {invalid_flow_id} not found" in data["detail"]
 
 
+@pytest.mark.api_key_required
 def test_run_flow_with_caching_invalid_input_format(client: TestClient, starter_project, created_api_key):
     flow_id = starter_project["id"]
     headers = {"x-api-key": created_api_key.api_key}
@@ -696,6 +700,7 @@ def test_run_flow_with_caching_invalid_input_format(client: TestClient, starter_
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
+@pytest.mark.api_key_required
 def test_run_flow_with_session_id(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
@@ -727,6 +732,7 @@ def test_run_flow_with_invalid_session_id(client, starter_project, created_api_k
     assert f"Session {payload['session_id']} not found" in data["detail"]
 
 
+@pytest.mark.api_key_required
 def test_run_flow_with_invalid_tweaks(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]

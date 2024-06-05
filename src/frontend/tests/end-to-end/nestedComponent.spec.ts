@@ -189,5 +189,5 @@ test("NestedComponent", async ({ page }) => {
     await page.locator('//*[@id="showtext_key"]').isChecked(),
   ).toBeTruthy();
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 });

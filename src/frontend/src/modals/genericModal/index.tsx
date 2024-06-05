@@ -166,7 +166,6 @@ export default function GenericModal({
         }
       })
       .catch((error) => {
-        console.log(error);
         setIsEdit(true);
         return setErrorData({
           title: PROMPT_ERROR_ALERT,
