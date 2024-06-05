@@ -14,7 +14,7 @@ on:
       - "docker/**"
       - "poetry.lock"
       - "pyproject.toml"
-      - "src/backend/**"
+      - "src/**"
 
 env:
   POETRY_VERSION: "1.8.2"
@@ -54,3 +54,8 @@ jobs:
               echo "Actual version: $version"
               exit 1
           fi
+      - name: Build frontend image
+        run: |
+          docker build -t langflowai/langflow-frontend:latest-dev \
+            -f docker/frontend/build_and_push_frontend.Dockerfile \
+            .

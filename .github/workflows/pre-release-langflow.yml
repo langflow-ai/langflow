@@ -82,7 +82,16 @@ jobs:
           tags: |
             langflowai/langflow:${{ needs.release.outputs.version }}
             langflowai/langflow:1.0-alpha
-            - name: Wait for Docker Hub to propagate
+      - name: Build and push (frontend)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          file: ./docker/frontend/build_and_push_frontend.Dockerfile
+          tags: |
+            langflowai/langflow-backend:${{ needs.release.outputs.version }}
+            langflowai/langflow-backend:1.0-alpha
+      - name: Wait for Docker Hub to propagate
         run: sleep 120
       - name: Build and push (backend)
         uses: docker/build-push-action@v5
