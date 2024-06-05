@@ -63,8 +63,7 @@ def upload_file(file_path, host, flow_id, components, tweaks={}):
 
 
 def get_flow(url: str, flow_id: str):
-    """
-    Get the details of a flow from Langflow.
+    """Get the details of a flow from Langflow.
 
     Args:
         url (str): The host URL of Langflow.
