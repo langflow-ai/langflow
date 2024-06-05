@@ -120,7 +120,7 @@ export default function TableNodeCellRender({
               onSelect={(value) => handleOnNewValue(value, templateData.key)}
               value={templateValue ?? "Choose an option"}
               id={"dropdown-edit-" + templateData.name}
-            ></Dropdown>
+            />
           );
         }
 
