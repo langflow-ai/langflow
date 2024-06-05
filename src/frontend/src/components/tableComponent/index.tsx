@@ -36,38 +36,6 @@ const TableComponent = forwardRef<
     },
     ref,
   ) => {
-    const gridRef = useRef(null);
-    // @ts-ignore
-    const realRef = ref?.current ? ref : gridRef;
-    const dark = useDarkStore((state) => state.dark);
-    const initialColumnDefs = useRef(props.columnDefs);
-
-    const makeLastColumnNonResizable = (columnDefs) => {
-      columnDefs.forEach((colDef, index) => {
-        colDef.resizable = index !== columnDefs.length - 1;
-      });
-      return columnDefs;
-    };
-
-    const onGridReady = (params) => {
-      // @ts-ignore
-      realRef.current = params;
-      const updatedColumnDefs = makeLastColumnNonResizable([
-        ...props.columnDefs,
-      ]);
-      params.api.setColumnDefs(updatedColumnDefs);
-      initialColumnDefs.current = params.api.getColumnDefs();
-      if (props.onGridReady) props.onGridReady(params);
-    };
-
-    const onColumnMoved = (params) => {
-      const updatedColumnDefs = makeLastColumnNonResizable(
-        params.columnApi.getAllGridColumns().map((col) => col.getColDef()),
-      );
-      params.api.setColumnDefs(updatedColumnDefs);
-      if (props.onColumnMoved) props.onColumnMoved(params);
-    };
-
     let colDef = props.columnDefs.map((col, index) => {
       let newCol = {
         ...col,
@@ -99,7 +67,35 @@ const TableComponent = forwardRef<
       }
       return newCol;
     });
-    let rowDef = props.rowData;
+    const gridRef = useRef(null);
+    // @ts-ignore
+    const realRef = ref?.current ? ref : gridRef;
+    const dark = useDarkStore((state) => state.dark);
+    const initialColumnDefs = useRef(colDef);
+
+    const makeLastColumnNonResizable = (columnDefs) => {
+      columnDefs.forEach((colDef, index) => {
+        colDef.resizable = index !== columnDefs.length - 1;
+      });
+      return columnDefs;
+    };
+
+    const onGridReady = (params) => {
+      // @ts-ignore
+      realRef.current = params;
+      const updatedColumnDefs = makeLastColumnNonResizable([...colDef]);
+      params.api.setColumnDefs(updatedColumnDefs);
+      initialColumnDefs.current = params.api.getColumnDefs();
+      if (props.onGridReady) props.onGridReady(params);
+    };
+
+    const onColumnMoved = (params) => {
+      const updatedColumnDefs = makeLastColumnNonResizable(
+        params.columnApi.getAllGridColumns().map((col) => col.getColDef()),
+      );
+      params.api.setColumnDefs(updatedColumnDefs);
+      if (props.onColumnMoved) props.onColumnMoved(params);
+    };
 
     if (props.rowData.length === 0) {
       return (
@@ -130,7 +126,6 @@ const TableComponent = forwardRef<
             minWidth: 100,
           }}
           columnDefs={colDef}
-          rowData={rowDef}
           ref={realRef}
           pagination={true}
           onGridReady={onGridReady}
