@@ -1,33 +1,26 @@
-import { CustomCellEditorProps, CustomCellRendererProps } from "ag-grid-react";
-import { classNames, cn, isTimeStampString } from "../../utils/utils";
-import ArrayReader from "../arrayReaderComponent";
-import DateReader from "../dateReaderComponent";
-import NumberReader from "../numberReader";
-import ObjectRender from "../objectRender";
-import StringReader from "../stringReaderComponent";
-import { Badge } from "../ui/badge";
+import { CustomCellRendererProps } from "ag-grid-react";
 import { cloneDeep } from "lodash";
-import { type } from "os";
+import { useState } from "react";
+import CodeAreaComponent from "../../../../components/codeAreaComponent";
+import DictComponent from "../../../../components/dictComponent";
+import Dropdown from "../../../../components/dropdownComponent";
+import FloatComponent from "../../../../components/floatComponent";
+import InputFileComponent from "../../../../components/inputFileComponent";
+import InputGlobalComponent from "../../../../components/inputGlobalComponent";
+import InputListComponent from "../../../../components/inputListComponent";
+import IntComponent from "../../../../components/intComponent";
+import KeypairListComponent from "../../../../components/keypairListComponent";
+import PromptAreaComponent from "../../../../components/promptComponent";
+import TextAreaComponent from "../../../../components/textAreaComponent";
+import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import useFlowStore from "../../../../stores/flowStore";
 import {
   convertObjToArray,
   convertValuesToNumbers,
   hasDuplicateKeys,
   scapedJSONStringfy,
-} from "../../utils/reactflowUtils";
-import CodeAreaComponent from "../codeAreaComponent";
-import DictComponent from "../dictComponent";
-import Dropdown from "../dropdownComponent";
-import FloatComponent from "../floatComponent";
-import InputFileComponent from "../inputFileComponent";
-import InputGlobalComponent from "../inputGlobalComponent";
-import InputListComponent from "../inputListComponent";
-import IntComponent from "../intComponent";
-import KeypairListComponent from "../keypairListComponent";
-import PromptAreaComponent from "../promptComponent";
-import TextAreaComponent from "../textAreaComponent";
-import ToggleShadComponent from "../toggleShadComponent";
-import { useState } from "react";
-import useFlowStore from "../../stores/flowStore";
+} from "../../../../utils/reactflowUtils";
+import { classNames } from "../../../../utils/utils";
 
 export default function TableNodeCellRender({
   node: { data },
@@ -70,8 +63,8 @@ export default function TableNodeCellRender({
                 ...id,
                 proxy: templateData.proxy,
               }
-            : id,
-        ),
+            : id
+        )
     ) ?? false;
   function getCellType() {
     switch (templateData.type) {
@@ -142,7 +135,7 @@ export default function TableNodeCellRender({
           <div
             className={classNames(
               "max-h-48 w-full overflow-auto custom-scroll",
-              templateValue?.length > 1 ? "my-3" : "",
+              templateValue?.length > 1 ? "my-3" : ""
             )}
           >
             <KeypairListComponent

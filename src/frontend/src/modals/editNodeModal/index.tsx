@@ -1,18 +1,13 @@
-import { ColDef, ValueGetterParams } from "ag-grid-community";
+import { ColDef } from "ag-grid-community";
 import { forwardRef, useEffect, useRef } from "react";
 import IconComponent from "../../components/genericIconComponent";
-import TableAutoCellRender from "../../components/tableAutoCellRender";
 import TableComponent from "../../components/tableComponent";
-import TableNodeCellRender from "../../components/tableNodeCellRender";
-import TableTooltipRender from "../../components/tableTooltipRender";
-import ToggleShadComponent from "../../components/toggleShadComponent";
 import { Badge } from "../../components/ui/badge";
-import { LANGFLOW_SUPPORTED_TYPES } from "../../constants/constants";
 import useFlowStore from "../../stores/flowStore";
-import { TemplateVariableType } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
-import TableToggleCellRender from "../../components/tableToggleCellRender";
+import useColumnDefs from "./hooks/use-column-defs";
+import useRowData from "./hooks/use-row-data";
 
 const EditNodeModal = forwardRef(
   (
@@ -27,7 +22,7 @@ const EditNodeModal = forwardRef(
       setOpen: (open: boolean) => void;
       data: NodeDataType;
     },
-    ref,
+    ref
   ) => {
     const nodes = useFlowStore((state) => state.nodes);
 
@@ -52,98 +47,13 @@ const EditNodeModal = forwardRef(
       }
     }, [open]);
 
-    const rowData = Object.keys(myData.current.node!.template)
-      .filter((key: string) => {
-        const templateParam = myData.current.node!.template[
-          key
-        ] as TemplateVariableType;
-        return (
-          key.charAt(0) !== "_" &&
-          templateParam.show &&
-          LANGFLOW_SUPPORTED_TYPES.has(templateParam.type) &&
-          !(
-            (key === "code" && templateParam.type === "code") ||
-            (key.includes("code") && templateParam.proxy)
-          )
-        );
-      })
-      .map((key: string) => {
-        const templateParam = myData.current.node!.template[
-          key
-        ] as TemplateVariableType;
-        return {
-          ...templateParam,
-          key: key,
-          id: key,
-        };
-      });
+    const rowData = useRowData(myData);
 
-    const columnDefs: ColDef[] = [
-      {
-        headerName: "Name",
-        field: "display_name",
-        valueGetter: (params) => {
-          const templateParam = params.data;
-          return (
-            (templateParam.display_name
-              ? templateParam.display_name
-              : templateParam.name) ?? params.data.key
-          );
-        },
-        cellRenderer: TableAutoCellRender,
-        flex: 1,
-        resizable: false,
-        cellClass: "no-border",
-      },
-      {
-        headerName: "Description",
-        field: "info",
-        tooltipField: "info",
-        tooltipComponent: TableTooltipRender,
-        cellRenderer: TableAutoCellRender,
-        autoHeight: true,
-        flex: 2,
-        resizable: false,
-        cellClass: "no-border",
-      },
-      {
-        headerName: "Value",
-        field: "value",
-        cellRenderer: TableNodeCellRender,
-        valueGetter: (params: ValueGetterParams) => {
-          return {
-            value: params.data.value,
-            nodeClass: myData.current.node,
-            handleOnNewValue: handleOnNewValue,
-            handleOnChangeDb: (value, key) => {
-              myData.current.node!.template[key].load_from_db = value;
-            },
-          };
-        },
-        minWidth: 330,
-        flex: 1,
-        resizable: false,
-        cellClass: "no-border",
-      },
-      {
-        headerName: "Show",
-        field: "advanced",
-        cellRenderer: TableToggleCellRender,
-        valueGetter: (params: ValueGetterParams) => {
-          return {
-            name: params.data.name,
-            enabled: !params.data.advanced,
-            setEnabled: () => {
-              changeAdvanced(params.data.key);
-            },
-          };
-        },
-        editable: false,
-        maxWidth: 80,
-        resizable: false,
-        cellClass: "no-border",
-      },
-    ];
+    const columnDefs: ColDef[] = useColumnDefs(
+      myData,
+      handleOnNewValue,
+      changeAdvanced
+    );
 
     return (
       <BaseModal
@@ -200,7 +110,7 @@ const EditNodeModal = forwardRef(
         <BaseModal.Footer submit={{ label: "Save Changes" }} />
       </BaseModal>
     );
-  },
+  }
 );
 
 export default EditNodeModal;
