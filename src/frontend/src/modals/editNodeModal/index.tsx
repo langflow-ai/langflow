@@ -12,6 +12,7 @@ import useFlowStore from "../../stores/flowStore";
 import { TemplateVariableType } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
+import TableToggleCellRender from "../../components/tableToggleCellRender";
 
 const EditNodeModal = forwardRef(
   (
@@ -127,21 +128,15 @@ const EditNodeModal = forwardRef(
       {
         headerName: "Show",
         field: "advanced",
-        cellRenderer: (params) => {
-          const templateParam = params.data;
-          return (
-            <>
-              <ToggleShadComponent
-                id={"show" + templateParam?.name}
-                enabled={!templateParam?.advanced}
-                setEnabled={() => {
-                  changeAdvanced(params.data.key);
-                }}
-                size="small"
-                editNode={true}
-              />
-            </>
-          );
+        cellRenderer: TableToggleCellRender,
+        valueGetter: (params: ValueGetterParams) => {
+          return {
+            name: params.data.name,
+            enabled: !params.data.advanced,
+            setEnabled: () => {
+              changeAdvanced(params.data.key);
+            },
+          };
         },
         editable: false,
         maxWidth: 80,
