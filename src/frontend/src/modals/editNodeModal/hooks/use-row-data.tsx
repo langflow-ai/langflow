@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../../constants/constants";
 import { TemplateVariableType } from "../../../types/api";
 
-const useRowData = (myData) => {
+const useRowData = (myData, open) => {
   const rowData = useMemo(() => {
     return Object.keys(myData.current.node!.template)
       .filter((key: string) => {
@@ -29,7 +29,7 @@ const useRowData = (myData) => {
           id: key,
         };
       });
-  }, [myData.current.node!.template]);
+  }, [open]);
 
   return rowData;
 };

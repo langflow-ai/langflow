@@ -62,6 +62,8 @@ test("dropDownComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
+  await page.waitForTimeout(1000);
+
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 

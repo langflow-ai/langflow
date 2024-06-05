@@ -61,8 +61,6 @@ const TableComponent = forwardRef<
           }}
           ref={ref}
           getRowId={(params) => {
-            console.log(params);
-
             return params.data.id;
           }}
         />
