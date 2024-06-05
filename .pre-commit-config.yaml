@@ -25,13 +25,6 @@ repos:
         args:
           - --fix=lf
       - id: trailing-whitespace
-      - id: pretty-format-json
-        exclude: ^tsconfig.*.json
-        args:
-          - --autofix
-          - --indent=4
-          - --no-sort-keys
-      - id: check-merge-conflict
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
     rev: v0.4.2

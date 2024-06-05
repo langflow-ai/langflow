@@ -181,7 +181,7 @@ export default function Header(): JSX.Element {
               />
             </div>
           </AlertDropdown>
-          {!autoLogin && (
+          {autoLogin && (
             <button
               onClick={() => {
                 navigate("/account/api-keys");

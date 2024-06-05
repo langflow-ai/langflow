@@ -11,10 +11,10 @@ export default function getPythonCode(
   const tweaksObject = tweaksBuildedObject[0];
 
   return `from langflow.load import run_flow_from_json
-  TWEAKS = ${JSON.stringify(tweaksObject, null, 2)}
+TWEAKS = ${JSON.stringify(tweaksObject, null, 2)}
 
-  result = run_flow_from_json(flow="${flowName}.json",
-                              input_value="message",
-                              fallback_to_env_vars=True, # False by default
-                              tweaks=TWEAKS)`;
+result = run_flow_from_json(flow="${flowName}.json",
+                            input_value="message",
+                            fallback_to_env_vars=True, # False by default
+                            tweaks=TWEAKS)`;
 }

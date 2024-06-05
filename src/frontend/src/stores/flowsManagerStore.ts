@@ -1,5 +1,5 @@
-import { AxiosError } from "axios";
-import { cloneDeep, debounce } from "lodash";
+import { cloneDeep } from "lodash";
+import * as debounce from "debounce-promise";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
 import { SAVE_DEBOUNCE_TIME } from "../constants/constants";
@@ -155,11 +155,9 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           }
         })
         .catch((err) => {
-          useAlertStore.getState().setErrorData({
-            title: "Error while saving changes",
-            list: [(err as AxiosError).message],
-          });
           reject(err);
+          set({ saveLoading: false });
+          throw err;
         });
     });
   }, SAVE_DEBOUNCE_TIME),
@@ -233,7 +231,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         // addFlowToLocalState(newFlow);
         return;
       }
-      console.log("folder id", folder_id);
       const newFlow = createNewFlow(
         flowData!,
         flow!,
