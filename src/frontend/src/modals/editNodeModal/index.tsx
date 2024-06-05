@@ -38,6 +38,9 @@ import {
 } from "../../utils/reactflowUtils";
 import { classNames } from "../../utils/utils";
 import BaseModal from "../baseModal";
+import TableComponent from "../../components/tableComponent";
+import TableAutoCellRender from "../../components/tableAutoCellRender";
+import { TemplateVariableType } from "../../types/api";
 
 const EditNodeModal = forwardRef(
   (
@@ -92,6 +95,71 @@ const EditNodeModal = forwardRef(
       return myData.node?.template[templateParam].type;
     };
 
+    const rowData = Object.keys(myData.node!.template)
+      .filter((key: string) => {
+        const templateParam = myData.node!.template[
+          key
+        ] as TemplateVariableType;
+        return (
+          key.charAt(0) !== "_" &&
+          templateParam.show &&
+          LANGFLOW_SUPPORTED_TYPES.has(templateParam.type)
+        );
+      })
+      .map((key: string) => {
+        const templateParam = myData.node!.template[
+          key
+        ] as TemplateVariableType;
+        return {
+          param:
+            (templateParam.display_name
+              ? templateParam.display_name
+              : templateParam.name) ?? key,
+          desc: templateParam.info ?? "",
+          value: templateParam.value ?? "",
+          show: !templateParam.advanced ?? "",
+          key: key,
+        };
+      });
+
+    const columnDefs = [
+      {
+        headerName: "Parameter",
+        field: "param",
+        cellRenderer: TableAutoCellRender,
+        flex: 1,
+        resizable: false,
+      },
+      {
+        headerName: "Description",
+        field: "desc",
+        cellRenderer: TableAutoCellRender,
+        flex: 1,
+        resizable: false,
+      },
+      {
+        headerName: "Value",
+        field: "value",
+        cellRenderer: TableAutoCellRender,
+        flex: 2,
+        resizable: false,
+      },
+      {
+        headerName: "Show",
+        field: "show",
+        cellRenderer: "agCheckboxCellRenderer",
+        cellEditor: "agCheckboxCellEditor",
+        valueSetter: (params) => {
+          changeAdvanced(params.data.key);
+          return true;
+        },
+        editable: true,
+        flex: 1,
+        maxWidth: 70,
+        resizable: false,
+      },
+    ];
+
     return (
       <BaseModal
         key={data.id}
@@ -139,6 +207,9 @@ const EditNodeModal = forwardRef(
             >
               {nodeLength > 0 && (
                 <div className="edit-node-modal-table">
+                  <div className="h-32">
+                    <TableComponent columnDefs={columnDefs} rowData={rowData} />
+                  </div>
                   <Table className="table-fixed bg-muted outline-1">
                     <TableHeader className="edit-node-modal-table-header">
                       <TableRow className="">
