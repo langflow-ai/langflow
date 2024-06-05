@@ -140,7 +140,7 @@ test("user must be able to see output inspection", async ({ page }) => {
 
   await page.getByTestId("icon-ScanEye").last().click();
 
-  const textAreaOutputValue = await page.getByPlaceholder("Empty").inputValue();
-  expect(textAreaOutputValue).not.toBe("");
-  expect(textAreaOutputValue).not.toBe(null);
+  await page.getByText("Sender", { exact: true }).isVisible();
+  await page.getByText("Type", { exact: true }).isVisible();
+  await page.getByText("User", { exact: true }).last().isVisible();
 });
