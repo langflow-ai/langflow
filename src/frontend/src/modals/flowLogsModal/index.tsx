@@ -16,40 +16,14 @@ export default function FlowLogsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
-  const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
   const nodes = useFlowStore((state) => state.nodes);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const flows = useFlowsManagerStore((state) => state.flows);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
 
-  useEffect(() => {
-    setName(currentFlow!.name);
-    setDescription(currentFlow!.description);
-  }, [currentFlow!.name, currentFlow!.description, open]);
-
-  const [name, setName] = useState(currentFlow!.name);
-  const [description, setDescription] = useState(currentFlow!.description);
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
   const [activeTab, setActiveTab] = useState("Executions");
   const noticed = useRef(false);
-
-  function handleClick(): void {
-    currentFlow!.name = name;
-    currentFlow!.description = description;
-    saveFlow(currentFlow!)
-      ?.then(() => {
-        setOpen(false);
-      })
-      .catch((err) => {
-        useAlertStore.getState().setErrorData({
-          title: "Error while saving changes",
-          list: [(err as AxiosError).response?.data.detail ?? ""],
-        });
-        console.error(err);
-      });
-  }
 
   useEffect(() => {
     if (activeTab === "Executions") {
@@ -85,16 +59,6 @@ export default function FlowLogsModal({
       noticed.current = false;
     }
   }, [open, activeTab]);
-
-  const [nameLists, setNameList] = useState<string[]>([]);
-
-  useEffect(() => {
-    const tempNameList: string[] = [];
-    flows.forEach((flow: FlowType) => {
-      if ((flow.is_component ?? false) === false) tempNameList.push(flow.name);
-    });
-    setNameList(tempNameList.filter((name) => name !== currentFlow!.name));
-  }, [flows]);
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="large">
