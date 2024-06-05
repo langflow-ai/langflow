@@ -113,9 +113,15 @@ export default function IOModal({
     setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
   }, [allNodes.length]);
 
-  const flow_sessions = allNodes
-    .map((node) => (node.data as NodeDataType).node?.template["session_id"])
-    .filter((session) => session !== undefined);
+  const flow_sessions = allNodes.map((node) => {
+    if ((node.data as NodeDataType).node?.template["session_id"]) {
+      return {
+        id: node.id,
+        session_id: (node.data as NodeDataType).node?.template["session_id"]
+          .value,
+      };
+    }
+  });
 
   useEffect(() => {
     setSelectedViewField(startView());
@@ -311,8 +317,18 @@ export default function IOModal({
                             </ShadTooltip>
                           </Button>
                           <div>
-                            <ShadTooltip content>
-                              <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                            <ShadTooltip content={"hello"}>
+                              <div
+                                className={cn(
+                                  "h-2 w-2 rounded-full",
+                                  flow_sessions.some(
+                                    (f_session) =>
+                                      f_session?.session_id === session,
+                                  )
+                                    ? "bg-status-green"
+                                    : "bg-slate-500",
+                                )}
+                              ></div>
                             </ShadTooltip>
                           </div>
                         </div>
