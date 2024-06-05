@@ -60,7 +60,7 @@ const EditNodeModal = forwardRef(
     return (
       <BaseModal
         key={data.id}
-        size="large-h-full"
+        size="medium-tall"
         open={open}
         setOpen={setOpen}
         onChangeOpenModal={(open) => {
@@ -85,27 +85,24 @@ const EditNodeModal = forwardRef(
           <Badge variant="secondary">ID: {myData.current.id}</Badge>
         </BaseModal.Header>
         <BaseModal.Content>
-          <div className="flex pb-2">
-            <IconComponent
-              name="Variable"
-              className="edit-node-modal-variable "
-            />
-            <span className="edit-node-modal-span">Parameters</span>
-          </div>
+          <div className="flex h-full flex-col">
+            <div className="flex pb-2">
+              <IconComponent
+                name="Variable"
+                className="edit-node-modal-variable "
+              />
+              <span className="edit-node-modal-span">Parameters</span>
+            </div>
 
-          <div className="w-full">
-            {nodeLength > 0 && (
-              <div className="edit-node-modal-table">
-                <div className="h-96">
-                  <TableComponent
-                    tooltipShowMode="whenTruncated"
-                    tooltipShowDelay={0.5}
-                    columnDefs={columnDefs}
-                    rowData={rowData}
-                  />
-                </div>
-              </div>
-            )}
+            <div className="h-full">
+              {nodeLength > 0 && (
+                <TableComponent
+                  tooltipShowDelay={0.5}
+                  columnDefs={columnDefs}
+                  rowData={rowData}
+                />
+              )}
+            </div>
           </div>
         </BaseModal.Content>
 
