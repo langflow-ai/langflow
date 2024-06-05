@@ -1,4 +1,5 @@
-import { cloneDeep, debounce } from "lodash";
+import { cloneDeep } from "lodash";
+import * as debounce from "debounce-promise";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
 import { SAVE_DEBOUNCE_TIME } from "../constants/constants";
