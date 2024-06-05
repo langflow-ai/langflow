@@ -1,7 +1,7 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import TableAutoCellRender from "../components/tableAutoCellRender";
+import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
 import { APIDataType, TemplateVariableType } from "../types/api";
 import {
   groupedObjType,
