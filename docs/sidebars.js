@@ -116,7 +116,10 @@ module.exports = {
       type: "category",
       label: "Deployment",
       collapsed: true,
-      items: ["deployment/gcp-deployment"],
+      items: ["deployment/gcp-deployment",
+        "deployment/docker",
+        "deployment/backend-only"
+      ],
     },
     {
       type: "category",
