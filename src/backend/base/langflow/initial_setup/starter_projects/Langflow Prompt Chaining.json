@@ -434,6 +434,7 @@
                 "types": [
                   "Text"
                 ],
+                "selected": "Text",
                 "name": "Message",
                 "method": "text_response"
               },
@@ -441,6 +442,7 @@
                 "types": [
                   "Record"
                 ],
+                "selected": "Record",
                 "name": "Record",
                 "method": "record_response"
               }
@@ -629,6 +631,7 @@
                 "types": [
                   "Text"
                 ],
+                "selected": "Text",
                 "name": "Message",
                 "method": "text_response"
               },
@@ -636,6 +639,7 @@
                 "types": [
                   "Record"
                 ],
+                "selected": "Record",
                 "name": "Record",
                 "method": "record_response"
               }
@@ -748,6 +752,7 @@
                 "types": [
                   "Text"
                 ],
+                "selected": "Text",
                 "name": "Text",
                 "method": "text_response"
               }
