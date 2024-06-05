@@ -92,6 +92,7 @@ const EditNodeModal = forwardRef(
         cellRenderer: TableAutoCellRender,
         flex: 1,
         resizable: false,
+        cellClass: "no-border",
       },
       {
         headerName: "Description",
@@ -102,6 +103,7 @@ const EditNodeModal = forwardRef(
         autoHeight: true,
         flex: 2,
         resizable: false,
+        cellClass: "no-border",
       },
       {
         headerName: "Value",
@@ -120,6 +122,7 @@ const EditNodeModal = forwardRef(
         minWidth: 330,
         flex: 1,
         resizable: false,
+        cellClass: "no-border",
       },
       {
         headerName: "Show",
@@ -140,10 +143,10 @@ const EditNodeModal = forwardRef(
             </>
           );
         },
-
         editable: false,
         maxWidth: 80,
         resizable: false,
+        cellClass: "no-border",
       },
     ];
 
