@@ -392,7 +392,7 @@ export default function ParameterComponent({
                       });
                     }}
                     name={name}
-                    data={data}
+                    data={data.node?.template[name]}
                   />
                 </div>
                 {data.node?.template[name]?.refresh_button && (
