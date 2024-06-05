@@ -1,14 +1,15 @@
 import httpx
 
+from langflow.services.database.models.flow.model import FlowBase
 
-def upload(file_path, host, port, flow_id):
+
+def upload(file_path, host, flow_id):
     """
-    Upload a file to the storage service and return the file path.
+    Upload a file to Langflow and return the file path.
 
     Args:
         file_path (str): The path to the file to be uploaded.
-        host (str): The host URL of the storage service.
-        port (int): The port number of the storage service.
+        host (str): The host URL of Langflow.
         flow_id (UUID): The ID of the flow to which the file belongs.
 
     Returns:
@@ -18,7 +19,7 @@ def upload(file_path, host, port, flow_id):
         Exception: If an error occurs during the upload process.
     """
     try:
-        url = f"{host}:{port}/api/v1/upload/{flow_id}"
+        url = f"{host}/api/v1/upload/{flow_id}"
         response = httpx.post(url, files={"file": open(file_path, "rb")})
         if response.status_code == 200:
             return response.json()
@@ -28,14 +29,14 @@ def upload(file_path, host, port, flow_id):
         raise Exception(f"Error uploading file: {e}")
 
 
-def upload_file(file_path, host, port, flow_id, components, tweaks={}):
+def upload_file(file_path, host, flow_id, components, tweaks={}):
     """
-    Upload a file to the storage service and return the file path.
+    Upload a file to Langflow and return the file path.
 
     Args:
         file_path (str): The path to the file to be uploaded.
-        host (str): The host URL of the storage service.
-        port (int): The port number of the storage service.
+        host (str): The host URL of Langflow.
+        port (int): The port number of Langflow.
         flow_id (UUID): The ID of the flow to which the file belongs.
         components (str): List of component IDs or names that need the file.
         tweaks (dict): A dictionary of tweaks to be applied to the file.
@@ -47,7 +48,7 @@ def upload_file(file_path, host, port, flow_id, components, tweaks={}):
         Exception: If an error occurs during the upload process.
     """
     try:
-        response = upload(file_path, host, port, flow_id)
+        response = upload(file_path, host, flow_id)
         if response["file_path"]:
             for component in components:
                 if isinstance(component, str):
@@ -59,3 +60,31 @@ def upload_file(file_path, host, port, flow_id, components, tweaks={}):
             raise ValueError("Error uploading file")
     except Exception as e:
         raise ValueError(f"Error uploading file: {e}")
+
+
+def get_flow(url: str, flow_id: str):
+    """
+    Get the details of a flow from Langflow.
+
+    Args:
+        url (str): The host URL of Langflow.
+        port (int): The port number of Langflow.
+        flow_id (UUID): The ID of the flow to retrieve.
+
+    Returns:
+        dict: A dictionary containing the details of the flow.
+
+    Raises:
+        Exception: If an error occurs during the retrieval process.
+    """
+    try:
+        flow_url = f"{url}/api/v1/flows/{flow_id}"
+        response = httpx.get(flow_url)
+        if response.status_code == 200:
+            json_response = response.json()
+            flow = FlowBase(**json_response).model_dump()
+            return flow
+        else:
+            raise Exception(f"Error retrieving flow: {response.status_code}")
+    except Exception as e:
+        raise Exception(f"Error retrieving flow: {e}")
