@@ -1,7 +1,6 @@
 import { ReactNode, forwardRef, useEffect, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
-import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { API_WARNING_NOTICE_ALERT } from "../../constants/alerts_constants";
 import {
@@ -19,7 +18,7 @@ const ExportModal = forwardRef(
   (props: { children: ReactNode }, ref): JSX.Element => {
     const version = useDarkStore((state) => state.version);
     const setNoticeData = useAlertStore((state) => state.setNoticeData);
-    const [checked, setChecked] = useState(true);
+    const [checked, setChecked] = useState(false);
     const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
     useEffect(() => {
       setName(currentFlow!.name);
@@ -30,7 +29,43 @@ const ExportModal = forwardRef(
     const [open, setOpen] = useState(false);
 
     return (
-      <BaseModal size="smaller-h-full" open={open} setOpen={setOpen}>
+      <BaseModal
+        size="smaller-h-full"
+        open={open}
+        setOpen={setOpen}
+        onSubmit={() => {
+          if (checked) {
+            downloadFlow(
+              {
+                id: currentFlow!.id,
+                data: currentFlow!.data!,
+                description,
+                name,
+                last_tested_version: version,
+                is_component: false,
+              },
+              name!,
+              description,
+            );
+            setNoticeData({
+              title: API_WARNING_NOTICE_ALERT,
+            });
+          } else
+            downloadFlow(
+              removeApiKeys({
+                id: currentFlow!.id,
+                data: currentFlow!.data!,
+                description,
+                name,
+                last_tested_version: version,
+                is_component: false,
+              }),
+              name!,
+              description,
+            );
+          setOpen(false);
+        }}
+      >
         <BaseModal.Trigger asChild>{props.children}</BaseModal.Trigger>
         <BaseModal.Header description={EXPORT_DIALOG_SUBTITLE}>
           <span className="pr-2">Export</span>
@@ -64,47 +99,9 @@ const ExportModal = forwardRef(
           </span>
         </BaseModal.Content>
 
-        <BaseModal.Footer>
-          <Button
-            onClick={() => {
-              if (checked) {
-                downloadFlow(
-                  {
-                    id: currentFlow!.id,
-                    data: currentFlow!.data!,
-                    description,
-                    name,
-                    last_tested_version: version,
-                    is_component: false,
-                  },
-                  name!,
-                  description
-                );
-                setNoticeData({
-                  title: API_WARNING_NOTICE_ALERT,
-                });
-              } else
-                downloadFlow(
-                  removeApiKeys({
-                    id: currentFlow!.id,
-                    data: currentFlow!.data!,
-                    description,
-                    name,
-                    last_tested_version: version,
-                    is_component: false,
-                  }),
-                  name!,
-                  description
-                );
-              setOpen(false);
-            }}
-            type="submit"
-          >
-            Download Flow
-          </Button>
-        </BaseModal.Footer>
+        <BaseModal.Footer submit={{ label: "Download Flow" }} />
       </BaseModal>
     );
-  }
+  },
 );
 export default ExportModal;

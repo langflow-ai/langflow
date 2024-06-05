@@ -76,7 +76,7 @@ const Router = () => {
         >
           <Route index element={<Navigate replace to={"general"} />} />
           <Route path="global-variables" element={<GlobalVariablesPage />} />
-          <Route path="general" element={<GeneralPage />} />
+          <Route path="general/:scrollId?" element={<GeneralPage />} />
           <Route path="shortcuts" element={<ShortcutsPage />} />
         </Route>
         <Route

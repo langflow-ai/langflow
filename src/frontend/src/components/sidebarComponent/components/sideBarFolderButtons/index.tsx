@@ -93,24 +93,25 @@ const SideBarFoldersButtonsComponent = ({
 
   return (
     <>
-      <div className="flex shrink-0 items-center justify-between">
-        <Button variant="primary" onClick={addNewFolder}>
-          <ForwardedIconComponent
-            name="Plus"
-            className="main-page-nav-button"
-          />
-          New Folder
+      <div className="flex shrink-0 items-center justify-between gap-2">
+        <div className="flex-1 self-start text-lg font-semibold">Folders</div>
+        <Button
+          variant="primary"
+          size="icon"
+          className="px-2"
+          onClick={addNewFolder}
+          data-testid="add-folder-button"
+        >
+          <ForwardedIconComponent name="FolderPlus" className="w-4" />
         </Button>
         <Button
           variant="primary"
-          className="px-7"
+          size="icon"
+          className="px-2"
           onClick={handleUploadFlowsToFolder}
+          data-testid="upload-folder-button"
         >
-          <ForwardedIconComponent
-            name="Upload"
-            className="main-page-nav-button"
-          />
-          Upload
+          <ForwardedIconComponent name="Upload" className="w-4" />
         </Button>
       </div>
 
@@ -176,11 +177,11 @@ const SideBarFoldersButtonsComponent = ({
                     event.stopPropagation();
                     event.preventDefault();
                   }}
-                  className="flex w-full items-center gap-2"
+                  className="flex w-full items-center gap-4"
                 >
                   <IconComponent
                     name={"folder"}
-                    className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
+                    className="w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
                   />
                   {editFolderName?.edit ? (
                     <div>
@@ -259,14 +260,14 @@ const SideBarFoldersButtonsComponent = ({
                         }}
                         value={foldersNames[item.name]}
                         id={`input-folder-${item.name}`}
+                        data-testid={`input-folder`}
                       />
                     </div>
                   ) : (
-                    <span className="block max-w-full truncate opacity-100">
+                    <span className="block w-full truncate opacity-100">
                       {item.name}
                     </span>
                   )}
-                  <div className="flex-1" />
                   {index > 0 && (
                     <Button
                       className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
@@ -283,21 +284,6 @@ const SideBarFoldersButtonsComponent = ({
                       />
                     </Button>
                   )}
-                  {/* {index > 0 && (
-                    <Button
-                      className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }}
-                      variant={"ghost"}
-                    >
-                      <IconComponent
-                        name={"pencil"}
-                        className="  w-4 stroke-[1.5] text-white  "
-                      />
-                    </Button>
-                  )} */}
                   <Button
                     className="hidden p-0 hover:bg-white group-hover:block hover:dark:bg-[#0c101a00]"
                     onClick={(e) => {
@@ -305,7 +291,8 @@ const SideBarFoldersButtonsComponent = ({
                       e.stopPropagation();
                       e.preventDefault();
                     }}
-                    variant={"ghost"}
+                    size="none"
+                    variant="none"
                   >
                     <IconComponent
                       name={"Download"}

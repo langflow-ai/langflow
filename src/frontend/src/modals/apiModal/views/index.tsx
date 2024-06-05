@@ -35,7 +35,7 @@ const ApiModal = forwardRef(
       flow: FlowType;
       children: ReactNode;
     },
-    ref
+    ref,
   ) => {
     const tweak = useTweaksStore((state) => state.tweak);
     const addTweaks = useTweaksStore((state) => state.setTweak);
@@ -51,12 +51,12 @@ const ApiModal = forwardRef(
       flow?.id,
       autoLogin,
       tweak,
-      flow?.endpoint_name
+      flow?.endpoint_name,
     );
     const curl_webhook_code = getCurlWebhookCode(
       flow?.id,
       autoLogin,
-      flow?.endpoint_name
+      flow?.endpoint_name,
     );
     const pythonCode = getPythonCode(flow?.name, tweak);
     const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
@@ -72,7 +72,7 @@ const ApiModal = forwardRef(
       pythonCode,
     ];
     const [tabs, setTabs] = useState(
-      createTabsArray(codesArray, includeWebhook)
+      createTabsArray(codesArray, includeWebhook),
     );
 
     const canShowTweaks =
@@ -121,7 +121,7 @@ const ApiModal = forwardRef(
               buildTweakObject(
                 nodeId,
                 element.data.node.template[templateField].value,
-                element.data.node.template[templateField]
+                element.data.node.template[templateField],
               );
             }
           });
@@ -138,7 +138,7 @@ const ApiModal = forwardRef(
     async function buildTweakObject(
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: TemplateVariableType
+      template: TemplateVariableType,
     ) {
       changes = getChangesType(changes, template);
 
@@ -180,7 +180,7 @@ const ApiModal = forwardRef(
         flow?.id,
         autoLogin,
         cloneTweak,
-        flow?.endpoint_name
+        flow?.endpoint_name,
       );
       const pythonCode = getPythonCode(flow?.name, cloneTweak);
       const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
@@ -224,7 +224,7 @@ const ApiModal = forwardRef(
         </BaseModal.Content>
       </BaseModal>
     );
-  }
+  },
 );
 
 export default ApiModal;

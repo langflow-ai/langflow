@@ -8,7 +8,7 @@
 export default function getPythonApiCode(
   flowId: string,
   isAuth: boolean,
-  tweaksBuildedObject
+  tweaksBuildedObject,
 ): string {
   const tweaksObject = tweaksBuildedObject[0];
   return `import requests

@@ -8,12 +8,12 @@ import ZoomableImage from "/src/theme/ZoomableImage.js";
 The Notion integration in Langflow enables seamless connectivity with Notion databases, pages, and users, facilitating automation and improving productivity.
 
 <ZoomableImage
-  alt="Notion Components in Langflow"
-  sources={{
+alt="Notion Components in Langflow"
+sources={{
     light: "img/notion/notion_bundle.jpg",
     dark: "img/notion/notion_bundle.jpg",
   }}
-  style={{ width: "100%", margin: "20px 0" }}
+style={{ width: "100%", margin: "20px 0" }}
 />
 
 #### <a target="\_blank" href="json_files/Notion_Components_bundle.json" download>Download Notion Components Bundle</a>
