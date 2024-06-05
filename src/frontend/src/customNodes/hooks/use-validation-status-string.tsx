@@ -7,7 +7,7 @@ const useValidationStatusString = (validationStatus, setValidationString) => {
       let newValidationString = "";
       if (Array.isArray(validationStatus.data.logs)) {
         newValidationString = validationStatus.data.logs
-          .map((log) => log.message)
+          .map((log) => (log?.message ? log.message : JSON.stringify(log)))
           .join("\n");
       }
       if (typeof newValidationString !== "string") {
