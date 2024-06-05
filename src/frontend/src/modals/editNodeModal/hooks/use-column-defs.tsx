@@ -10,6 +10,7 @@ const useColumnDefs = (
   myData: any,
   handleOnNewValue: (newValue: any, name: string) => void,
   changeAdvanced: (n: string) => void,
+  open: boolean,
 ) => {
   const columnDefs: ColDef[] = useMemo(
     () => [
@@ -81,7 +82,7 @@ const useColumnDefs = (
         cellClass: "no-border",
       },
     ],
-    [],
+    [open],
   );
 
   return columnDefs;
