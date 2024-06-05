@@ -114,7 +114,7 @@ export default function ShortcutsPage() {
           </p>
         </div>
       </div>
-      <div className="grid gap-6 pb-8">
+      <div className="grid gap-6">
         <Card x-chunk="dashboard-04-chunk-2" className="h-full pt-4">
           <CardContent className="h-full">
             <TableComponent

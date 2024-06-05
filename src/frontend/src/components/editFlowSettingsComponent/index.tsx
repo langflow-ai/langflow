@@ -99,7 +99,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           <span
             className={cn(
               "font-normal text-muted-foreground word-break-break-word",
-              description === "" ? "font-light italic" : ""
+              description === "" ? "font-light italic" : "",
             )}
           >
             {description === "" ? "No description" : description}
@@ -109,7 +109,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
       {setEndpointName && (
         <Label>
           <div className="edit-flow-arrangement mt-3">
-            <span className="font-medium">Endpoint name:</span>
+            <span className="font-medium">Endpoint Name</span>
             {!isEndpointNameValid && (
               <span className="edit-flow-span">
                 Invalid endpoint name. Use only letters, numbers, hyphens, and
@@ -123,7 +123,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             type="text"
             name="endpoint_name"
             value={endpointName ?? ""}
-            placeholder="An alternative name for the run endpoint"
+            placeholder="An alternative name to run the endpoint"
             maxLength={maxLength}
             id="endpoint_name"
             onDoubleClickCapture={(event) => {
