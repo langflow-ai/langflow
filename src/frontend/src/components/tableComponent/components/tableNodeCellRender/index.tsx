@@ -1,18 +1,18 @@
 import { CustomCellRendererProps } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useState } from "react";
-import CodeAreaComponent from "../../../../components/codeAreaComponent";
-import DictComponent from "../../../../components/dictComponent";
-import Dropdown from "../../../../components/dropdownComponent";
-import FloatComponent from "../../../../components/floatComponent";
-import InputFileComponent from "../../../../components/inputFileComponent";
-import InputGlobalComponent from "../../../../components/inputGlobalComponent";
-import InputListComponent from "../../../../components/inputListComponent";
-import IntComponent from "../../../../components/intComponent";
-import KeypairListComponent from "../../../../components/keypairListComponent";
-import PromptAreaComponent from "../../../../components/promptComponent";
-import TextAreaComponent from "../../../../components/textAreaComponent";
-import ToggleShadComponent from "../../../../components/toggleShadComponent";
+import CodeAreaComponent from "../../../codeAreaComponent";
+import DictComponent from "../../../dictComponent";
+import Dropdown from "../../../dropdownComponent";
+import FloatComponent from "../../../floatComponent";
+import InputFileComponent from "../../../inputFileComponent";
+import InputGlobalComponent from "../../../inputGlobalComponent";
+import InputListComponent from "../../../inputListComponent";
+import IntComponent from "../../../intComponent";
+import KeypairListComponent from "../../../keypairListComponent";
+import PromptAreaComponent from "../../../promptComponent";
+import TextAreaComponent from "../../../textAreaComponent";
+import ToggleShadComponent from "../../../toggleShadComponent";
 import useFlowStore from "../../../../stores/flowStore";
 import {
   convertObjToArray,
@@ -63,8 +63,8 @@ export default function TableNodeCellRender({
                 ...id,
                 proxy: templateData.proxy,
               }
-            : id
-        )
+            : id,
+        ),
     ) ?? false;
   function getCellType() {
     switch (templateData.type) {
@@ -135,7 +135,7 @@ export default function TableNodeCellRender({
           <div
             className={classNames(
               "max-h-48 w-full overflow-auto custom-scroll",
-              templateValue?.length > 1 ? "my-3" : ""
+              templateValue?.length > 1 ? "my-3" : "",
             )}
           >
             <KeypairListComponent
