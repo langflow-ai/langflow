@@ -360,8 +360,8 @@ export default function ExtraSidebar(): JSX.Element {
             )
           )}{" "}
         <ParentDisclosureComponent
-          defaultOpen={search.length !== 0}
-          key={`${search.length !== 0}-Advanced`}
+          defaultOpen={search.length !== 0 || getFilterEdge.length !== 0}
+          key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Advanced`}
           button={{
             title: "Advanced",
             Icon: nodeIconsLucide.unknown,
