@@ -339,9 +339,7 @@ export default function GenericNode({
   };
 
   const getBaseBorderClass = (selected) => {
-    let className = selected
-      ? "border border-ring shadow-node"
-      : "border hover:shadow-node";
+    let className = selected ? "border border-ring" : "border";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     return data.node?.frozen ? frozenClass : className;
   };
