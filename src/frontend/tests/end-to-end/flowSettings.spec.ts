@@ -45,7 +45,8 @@ test("flowSettings", async ({ page }) => {
     );
 
   await page.getByTestId("save-flow-settings").click();
-  await page.getByTestId("save-flow-settings").click();
+
+  await page.getByText("Close").last().click();
 
   await page.waitForTimeout(1000);
 
