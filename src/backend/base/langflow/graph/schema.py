@@ -15,6 +15,7 @@ class ResultData(BaseModel):
     duration: Optional[str] = None
     component_display_name: Optional[str] = None
     component_id: Optional[str] = None
+    used_frozen_result: Optional[bool] = False
 
     @field_serializer("results")
     def serialize_results(self, value):

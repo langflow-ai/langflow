@@ -7,6 +7,7 @@ export type FlowType = {
   id: string;
   data: ReactFlowJsonObject | null;
   description: string;
+  endpoint_name?: string;
   style?: FlowStyleType;
   is_component?: boolean;
   last_tested_version?: string;
@@ -18,6 +19,7 @@ export type FlowType = {
   icon?: string;
   icon_bg_color?: string;
   folder_id?: string;
+  webhook?: boolean;
 };
 
 export type NodeType = {

@@ -31,7 +31,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { classNames } from "../../../../utils/utils";
+import { classNames, cn } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
 
 export default function NodeToolbarComponent({
@@ -70,6 +70,7 @@ export default function NodeToolbarComponent({
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
+  const unselectAll = useFlowStore((state) => state.unselectAll);
 
   function handleMinimizeWShortcut(e: KeyboardEvent) {
     e.preventDefault();
@@ -171,7 +172,7 @@ export default function NodeToolbarComponent({
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
 
-  // const frozen = data.node?.frozen ?? false;
+  const frozen = data.node?.frozen ?? false;
   const paste = useFlowStore((state) => state.paste);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -256,6 +257,9 @@ export default function NodeToolbarComponent({
         break;
       case "disabled":
         break;
+      case "unselect":
+        unselectAll();
+        break;
       case "ungroup":
         takeSnapshot();
         expandGroupNode(
@@ -295,10 +299,10 @@ export default function NodeToolbarComponent({
       case "update":
         takeSnapshot();
         // to update we must get the code from the templates in useTypesStore
-        const thisNodeTemplate = templates[data.type].template;
+        const thisNodeTemplate = templates[data.type]?.template;
         // if the template does not have a code key
         // return
-        if (!thisNodeTemplate.code) return;
+        if (!thisNodeTemplate?.code) return;
 
         const currentCode = thisNodeTemplate.code.value;
         if (data.node) {
@@ -382,7 +386,7 @@ export default function NodeToolbarComponent({
 
   return (
     <>
-      <div className="w-26 h-10">
+      <div className="w-26 nocopy nowheel nopan nodelete nodrag noundo h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
           {hasCode && (
             <ShadTooltip content="Code" side="top">
@@ -432,10 +436,10 @@ export default function NodeToolbarComponent({
             </button>
           </ShadTooltip>
 
-          {/* <ShadTooltip content="Freeze" side="top">
+          <ShadTooltip content="Freeze" side="top">
             <button
               className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -445,7 +449,7 @@ export default function NodeToolbarComponent({
                     ...old.data,
                     node: {
                       ...old.data.node,
-                      // frozen: old.data?.node?.frozen ? false : true,
+                      frozen: old.data?.node?.frozen ? false : true,
                     },
                   },
                 }));
@@ -456,11 +460,11 @@ export default function NodeToolbarComponent({
                 className={cn(
                   "h-4 w-4 transition-all",
                   // TODO UPDATE THIS COLOR TO BE A VARIABLE
-                  frozen ? "animate-wiggle text-ice" : ""
+                  frozen ? "animate-wiggle text-ice" : "",
                 )}
               />
             </button>
-          </ShadTooltip> */}
+          </ShadTooltip>
 
           <Select onValueChange={handleSelectChange} value="">
             <ShadTooltip content="More" side="top">

@@ -5,7 +5,6 @@ import DateReader from "../dateReaderComponent";
 import NumberReader from "../numberReader";
 import ObjectRender from "../objectRender";
 import StringReader from "../stringReaderComponent";
-import { Label } from "../ui/label";
 import { Badge } from "../ui/badge";
 
 export default function TableAutoCellRender({

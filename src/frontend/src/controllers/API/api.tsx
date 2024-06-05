@@ -2,11 +2,11 @@ import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { renewAccessToken } from ".";
-import { AUTHORIZED_DUPLICATE_REQUESTS } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
+import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -81,27 +81,11 @@ function ApiInterceptor() {
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
-        const lastUrl = localStorage.getItem("lastUrlCalled");
-        const lastMethodCalled = localStorage.getItem("lastMethodCalled");
+        const checkRequest = checkDuplicateRequestAndStoreRequest(config);
 
-        const isContained = AUTHORIZED_DUPLICATE_REQUESTS.some((request) =>
-          config?.url!.includes(request),
-        );
-
-        if (
-          config?.url === lastUrl &&
-          !isContained &&
-          lastMethodCalled === config.method
-        ) {
-          return Promise.reject("Duplicate request");
+        if (!checkRequest) {
+          return Promise.reject("Duplicate request.");
         }
-
-        localStorage.setItem("lastUrlCalled", config.url ?? "");
-        localStorage.setItem("lastMethodCalled", config.method ?? "");
-        localStorage.setItem(
-          "lastRequestData",
-          JSON.stringify(config.data) ?? "",
-        );
 
         const accessToken = cookies.get("access_token_lf");
         if (accessToken && !isAuthorizedURL(config?.url)) {

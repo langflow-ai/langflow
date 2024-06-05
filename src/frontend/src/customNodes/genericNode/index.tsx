@@ -10,7 +10,6 @@ import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
 import Xmark from "../../components/ui/xmark";
 import {
-  NATIVE_CATEGORIES,
   RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
@@ -28,10 +27,10 @@ import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn } from "../../utils/utils";
-import ParameterComponent from "./components/parameterComponent";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
+import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
   data,
@@ -78,18 +77,14 @@ export default function GenericNode({
     // This one should run only once
     // first check if data.type in NATIVE_CATEGORIES
     // if not return
-    if (
-      !NATIVE_CATEGORIES.includes(types[data.type]) ||
-      !data.node?.template?.code?.value
-    )
-      return;
-    const thisNodeTemplate = templates[data.type].template;
+    if (!data.node?.template?.code?.value) return;
+    const thisNodeTemplate = templates[data.type]?.template;
     // if the template does not have a code key
     // return
-    if (!thisNodeTemplate.code) return;
+    if (!thisNodeTemplate?.code) return;
     const currentCode = thisNodeTemplate.code?.value;
     const thisNodesCode = data.node!.template?.code?.value;
-    const componentsToIgnore = ["Custom Component", "Prompt"];
+    const componentsToIgnore = ["Custom Component"];
     if (
       currentCode !== thisNodesCode &&
       !componentsToIgnore.includes(data.node!.display_name)
@@ -335,18 +330,22 @@ export default function GenericNode({
 
     const baseBorderClass = getBaseBorderClass(selected);
     const nodeSizeClass = getNodeSizeClass(showNode);
-    return classNames(
+    const names = classNames(
       baseBorderClass,
       nodeSizeClass,
       "generic-node-div",
       specificClassFromBuildStatus,
     );
+    return names;
   };
 
   const [openWDoubleCLick, setOpenWDoubleCLick] = useState(false);
 
-  const getBaseBorderClass = (selected) =>
-    selected ? "border border-ring" : "border";
+  const getBaseBorderClass = (selected) => {
+    let className = selected ? "border border-ring" : "border";
+    let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
+    return data.node?.frozen ? frozenClass : className;
+  };
 
   const getNodeSizeClass = (showNode) =>
     showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full";
@@ -428,6 +427,7 @@ export default function GenericNode({
                 "generic-node-title-arrangement rounded-full" +
                 (!showNode && " justify-center ")
               }
+              data-testid="generic-node-title-arrangement"
             >
               {iconNodeRender()}
               {showNode && (
@@ -464,7 +464,7 @@ export default function GenericNode({
                     <div className="group flex items-start gap-1.5">
                       <ShadTooltip content={data.node?.display_name}>
                         <div
-                          onDoubleClick={(event) => {
+                          onClick={(event) => {
                             if (nameEditable) {
                               setInputName(true);
                             }
@@ -478,21 +478,6 @@ export default function GenericNode({
                           {data.node?.display_name}
                         </div>
                       </ShadTooltip>
-                      {nameEditable && (
-                        <div
-                          onClick={(event) => {
-                            setInputName(true);
-                            takeSnapshot();
-                            event.stopPropagation();
-                            event.preventDefault();
-                          }}
-                        >
-                          <IconComponent
-                            name="PencilLine"
-                            className="hidden h-3 w-3 text-status-blue group-hover:block"
-                          />
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -730,14 +715,14 @@ export default function GenericNode({
               ) : (
                 <div
                   className={cn(
-                    "nodoubleclick generic-node-desc-text truncate-multiline word-break-break-word",
+                    "nodoubleclick generic-node-desc-text cursor-text truncate-multiline word-break-break-word",
                     (data.node?.description === "" ||
                       !data.node?.description) &&
                       nameEditable
                       ? "font-light italic"
                       : "",
                   )}
-                  onDoubleClick={(e) => {
+                  onClick={(e) => {
                     setInputDescription(true);
                     takeSnapshot();
                   }}

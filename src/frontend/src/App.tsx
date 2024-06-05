@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useContext, useEffect, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +16,7 @@ import {
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
 import { autoLogin, getGlobalVariables, getHealth } from "./controllers/API";
+import { setupAxiosDefaults } from "./controllers/API/utils";
 import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
@@ -114,6 +116,7 @@ export default function App() {
     return new Promise<void>(async (resolve, reject) => {
       if (isAuthenticated) {
         try {
+          await setupAxiosDefaults();
           await getFoldersApi();
           await getTypes();
           await refreshFlows();
@@ -219,30 +222,23 @@ export default function App() {
                   id={alert.id}
                   removeAlert={removeAlert}
                 />
+              ) : alert.type === "notice" ? (
+                <NoticeAlert
+                  key={alert.id}
+                  title={alert.title}
+                  link={alert.link}
+                  id={alert.id}
+                  removeAlert={removeAlert}
+                />
               ) : (
-                alert.type === "notice" && (
-                  <NoticeAlert
+                alert.type === "success" && (
+                  <SuccessAlert
                     key={alert.id}
                     title={alert.title}
-                    link={alert.link}
                     id={alert.id}
                     removeAlert={removeAlert}
                   />
                 )
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="z-40 flex flex-col-reverse">
-          {tempNotificationList.map((alert) => (
-            <div key={alert.id}>
-              {alert.type === "success" && (
-                <SuccessAlert
-                  key={alert.id}
-                  title={alert.title}
-                  id={alert.id}
-                  removeAlert={removeAlert}
-                />
               )}
             </div>
           ))}

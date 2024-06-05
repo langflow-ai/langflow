@@ -67,10 +67,17 @@ class Settings(BaseSettings):
 
     dev: bool = False
     database_url: Optional[str] = None
+    """Database URL for Langflow. If not provided, Langflow will use a SQLite database."""
+    pool_size: int = 10
+    """The number of connections to keep open in the connection pool. If not provided, the default is 10."""
+    max_overflow: int = 10
+    """The number of connections to allow that can be opened beyond the pool size. If not provided, the default is 10."""
     cache_type: str = "async"
     remove_api_keys: bool = False
     components_path: List[str] = []
     langchain_cache: str = "InMemoryCache"
+    load_flows_path: Optional[str] = None
+
 
     # Redis
     redis_host: str = "localhost"
@@ -104,6 +111,10 @@ class Settings(BaseSettings):
     """Whether to store environment variables as Global Variables in the database."""
     variables_to_get_from_environment: list[str] = VARIABLES_TO_GET_FROM_ENVIRONMENT
     """List of environment variables to get from the environment and store in the database."""
+    worker_timeout: int = 300
+    """Timeout for the API calls in seconds."""
+    frontend_timeout: int = 0
+    """Timeout for the frontend API calls in seconds."""
 
     @field_validator("config_dir", mode="before")
     def set_langflow_dir(cls, value):
@@ -142,7 +153,13 @@ class Settings(BaseSettings):
                 # if there is a database in that location
                 if not info.data["config_dir"]:
                     raise ValueError("config_dir not set, please set it or provide a database_url")
-                from langflow.version import is_pre_release  # type: ignore
+                try:
+                    from langflow.version import is_pre_release  # type: ignore
+                except ImportError:
+                    from importlib import metadata
+
+                    version = metadata.version("langflow-base")
+                    is_pre_release = "a" in version or "b" in version or "rc" in version
 
                 if info.data["save_db_in_config_dir"]:
                     database_dir = info.data["config_dir"]
