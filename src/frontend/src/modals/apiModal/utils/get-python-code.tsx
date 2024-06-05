@@ -6,7 +6,7 @@
  */
 export default function getPythonCode(
   flowName: string,
-  tweaksBuildedObject
+  tweaksBuildedObject,
 ): string {
   const tweaksObject = tweaksBuildedObject[0];
 

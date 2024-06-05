@@ -146,16 +146,17 @@ class NotionSearch(CustomComponent):
 ```
 
 ## Example Usage
+
 <Admonition type="info" title="Example Usage">
 Here's an example of how you can use the `NotionSearch` component in a Langflow flow:
 
 <ZoomableImage
-    alt="NotionSearch Flow Example"
-    sources={{
+alt="NotionSearch Flow Example"
+sources={{
     light: "img/notion/NotionSearch_flow_example.png",
     dark: "img/notion/NotionSearch_flow_example_dark.png",
     }}
-    style={{ width: "100%", margin: "20px 0" }}
+style={{ width: "100%", margin: "20px 0" }}
 />
 
 In this example, the `NotionSearch` component is used to search for pages and databases in Notion based on the provided query and filter criteria. The retrieved data can then be processed further in the subsequent components of the flow.

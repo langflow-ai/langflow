@@ -66,6 +66,7 @@ export default function ComponentsComponent({
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const setFolderUrl = useFolderStore((state) => state.setFolderUrl);
+  const addFlow = useFlowsManagerStore((state) => state.addFlow);
 
   useEffect(() => {
     setFolderUrl(folderId ?? "");
@@ -115,7 +116,7 @@ export default function ComponentsComponent({
     });
   };
 
-  const handleSelectOptionsChange = () => {
+  const handleSelectOptionsChange = (action: string) => {
     const hasSelected = selectedFlowsComponentsCards?.length > 0;
     if (!hasSelected) {
       setErrorData({
@@ -124,7 +125,31 @@ export default function ComponentsComponent({
       });
       return;
     }
-    setOpenDelete(true);
+    if (action === "delete") {
+      setOpenDelete(true);
+    } else if (action === "duplicate") {
+      handleDuplicate();
+    }
+  };
+
+  const handleDuplicate = () => {
+    Promise.all(
+      selectedFlowsComponentsCards.map((selectedFlow) =>
+        addFlow(
+          true,
+          allFlows.find((flow) => flow.id === selectedFlow),
+        ),
+      ),
+    ).then(() => {
+      resetFilter();
+      getFoldersApi(true);
+      if (!folderId || folderId === myCollectionId) {
+        getFolderById(folderId ? folderId : myCollectionId);
+      }
+      setSelectedFlowsComponentsCards([]);
+
+      setSuccessData({ title: "Flows duplicated successfully" });
+    });
   };
 
   const handleDeleteMultiple = () => {
@@ -198,9 +223,10 @@ export default function ComponentsComponent({
     <>
       {allFlows?.length > 0 && (
         <HeaderComponent
-          handleDelete={handleSelectOptionsChange}
+          handleDelete={() => handleSelectOptionsChange("delete")}
           handleSelectAll={handleSelectAll}
-          disableDelete={!(selectedFlowsComponentsCards?.length > 0)}
+          handleDuplicate={() => handleSelectOptionsChange("duplicate")}
+          disableFunctions={!(selectedFlowsComponentsCards?.length > 0)}
         />
       )}
 

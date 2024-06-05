@@ -26,8 +26,8 @@ test.describe("save component tests", () => {
 
     // Read your file into a buffer.
     const jsonContent = readFileSync(
-      "tests/end-to-end/assets/flow_group_test.json",
-      "utf-8",
+      "src/frontend/tests/end-to-end/assets/flow_group_test.json",
+      "utf-8"
     );
 
     // Create the DataTransfer and File
@@ -49,7 +49,7 @@ test.describe("save component tests", () => {
       "drop",
       {
         dataTransfer,
-      },
+      }
     );
 
     const genericNoda = page.getByTestId("div-generic-node");

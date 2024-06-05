@@ -97,16 +97,17 @@ class NotionPageCreator(CustomComponent):
 ```
 
 ## Example Usage
+
 <Admonition type="info" title="Example Usage">
 Here's an example of how to use the `NotionPageCreator` component in a Langflow flow:
 
 <ZoomableImage
-  alt="NotionPageCreator Flow Example"
-  sources={{
+alt="NotionPageCreator Flow Example"
+sources={{
     light: "img/notion/NotionPageCreator_flow_example.png",
     dark: "img/notion/NotionPageCreator_flow_example_dark.png",
   }}
-  style={{ width: "100%", margin: "20px 0" }}
+style={{ width: "100%", margin: "20px 0" }}
 />
 </Admonition>
 
@@ -124,6 +125,7 @@ The `NotionPageCreator` component simplifies the process of creating pages in a 
 ## Troubleshooting
 
 If you encounter any issues while using the `NotionPageCreator` component, consider the following:
+
 - Double-check that the `database_id` and `notion_secret` inputs are correct and valid.
 - Verify that the `properties` input is properly formatted as a JSON string and matches the structure of your Notion database.
 - Check the Notion API documentation for any updates or changes that may affect the component's functionality.

@@ -74,7 +74,7 @@ runs:
       if: steps.cache-bin-poetry.outputs.cache-hit != 'true'
       shell: bash
       env:
-        POETRY_VERSION: ${{ inputs.poetry-version }}
+        POETRY_VERSION: ${{ inputs.poetry-version || env.POETRY_VERSION }}
         PYTHON_VERSION: ${{ inputs.python-version }}
       # Install poetry using the python version installed by setup-python step.
       run: |
