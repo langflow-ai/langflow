@@ -963,15 +963,16 @@ export async function postBuildVertex(
   flowId: string,
   vertexId: string,
   input_value: string,
-  files?: string[]
+  files?: string[],
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
   // input_value is optional and is a query parameter
-  const data = input_value ? { inputs: { input_value: input_value } } : undefined
+  const data = { inputs: { input_value: input_value ?? "" } };
   if (data && files) {
     data["files"] = files;
   }
   return await api.post(
-    `${BASE_URL_API}build/${flowId}/vertices/${vertexId}`, data
+    `${BASE_URL_API}build/${flowId}/vertices/${vertexId}`,
+    data,
   );
 }
 
