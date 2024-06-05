@@ -1,11 +1,11 @@
-from typing import Any, Union, Generator
 from enum import Enum
+from typing import Any, Generator, Union
 
 from langchain_core.documents import Document
-from langflow.schema.schema import Record
 from pydantic import BaseModel
 
 from langflow.interface.utils import extract_input_variables_from_prompt
+from langflow.schema.schema import Record
 
 
 class UnbuiltObject:
@@ -79,9 +79,15 @@ def get_artifact_type(custom_component, build_result) -> str:
         case list():
             result = ArtifactType.ARRAY
 
-
     if result == ArtifactType.UNKNOWN:
         if isinstance(build_result, Generator):
             result = ArtifactType.STREAM
 
     return result.value
+
+
+def post_process_raw(raw, artifact_type: str):
+    if artifact_type == ArtifactType.STREAM.value:
+        raw = ""
+
+    return raw

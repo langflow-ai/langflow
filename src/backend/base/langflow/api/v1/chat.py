@@ -17,12 +17,12 @@ from langflow.api.utils import (
 from langflow.api.v1.schemas import (
     FlowDataRequest,
     InputValueRequest,
-    Log,
     ResultDataResponse,
     StreamData,
     VertexBuildResponse,
     VerticesOrderResponse,
 )
+from langflow.schema.schema import Log
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session, get_session_service
@@ -161,6 +161,7 @@ async def build_vertex(
         else:
             graph = cache.get("result")
         vertex = graph.get_vertex(vertex_id)
+        log_object = None
         try:
             lock = chat_service._cache_locks[flow_id_str]
             (
@@ -179,6 +180,7 @@ async def build_vertex(
                 inputs_dict=inputs.model_dump() if inputs else {},
                 files=files,
             )
+
             result_data_response = ResultDataResponse(**result_dict.model_dump())
 
         except Exception as exc:
@@ -187,12 +189,12 @@ async def build_vertex(
             log_type = type(exc).__name__
             valid = False
             result_data_response = ResultDataResponse(results={})
+            log_object = Log(message=log_message, type=log_type)
 
             # If there's an error building the vertex
             # we need to clear the cache
             await chat_service.clear_cache(flow_id_str)
 
-        log_object = Log(message=log_message, type=log_type)
         result_data_response.logs.append(log_object)
 
         # Log the vertex build
