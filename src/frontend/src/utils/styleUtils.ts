@@ -143,6 +143,8 @@ import {
   X,
   XCircle,
   Zap,
+  RotateCcw,
+  Settings,
 } from "lucide-react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -527,5 +529,7 @@ export const nodeIconsLucide: iconsType = {
   FolderPlusIcon,
   FolderIcon,
   Discord: FaDiscord,
+  RotateCcw,
+  Settings,
   Streamlit,
 };
