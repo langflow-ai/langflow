@@ -164,3 +164,7 @@ class Output(BaseModel):
     def add_types(self, _type: list[Any]):
         for type_ in _type:
             self.types.append(type_)
+
+    def set_selected(self):
+        if not self.selected:
+            self.selected = self.types[0]
