@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, 
 from loguru import logger
 
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, UnbuiltResult, ArtifactType
+from langflow.graph.utils import ArtifactType, UnbuiltObject, UnbuiltResult
 from langflow.graph.vertex.utils import log_transaction
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
@@ -428,8 +428,10 @@ class Vertex:
                     sender=artifacts.get("sender"),
                     sender_name=artifacts.get("sender_name"),
                     session_id=artifacts.get("session_id"),
+                    stream_url=artifacts.get("stream_url"),
                     files=[{"path": file} if isinstance(file, str) else file for file in artifacts.get("files", [])],
                     component_id=self.id,
+                    type=self.artifacts_type,
                 ).model_dump(exclude_none=True)
             ]
         except KeyError:
@@ -447,7 +449,6 @@ class Vertex:
             messages = self.extract_messages_from_artifacts(artifacts)
         else:
             messages = []
-
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,

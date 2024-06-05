@@ -17,7 +17,6 @@ from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.types import InterfaceVertex, StateVertex
 from langflow.schema import Record
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
-from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service
 from langflow.services.monitor.utils import log_transaction
@@ -734,7 +733,9 @@ class Graph:
         vertex = self.get_vertex(vertex_id)
         try:
             if not vertex.frozen or not vertex._built:
-                await vertex.build(user_id=user_id, inputs=inputs_dict,files=files, fallback_to_env_vars=fallback_to_env_vars)
+                await vertex.build(
+                    user_id=user_id, inputs=inputs_dict, files=files, fallback_to_env_vars=fallback_to_env_vars
+                )
 
             if vertex.result is not None:
                 params = vertex.artifacts_raw
