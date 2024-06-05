@@ -138,7 +138,7 @@ test("InputComponent", async ({ page }) => {
     .getByTestId("popover-anchor-input-collection_name-edit")
     .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   const plusButtonLocator = page.getByTestId("input-collection_name");
   const elementCount = await plusButtonLocator?.count();
@@ -155,7 +155,7 @@ test("InputComponent", async ({ page }) => {
       await page.locator('//*[@id="showcollection_name"]').isChecked(),
     ).toBeTruthy();
 
-    await page.locator('//*[@id="saveChangesBtn"]').click();
+    await page.getByText("Save Changes", { exact: true }).click();
 
     let value = await page
       .getByTestId("popover-anchor-input-collection_name")

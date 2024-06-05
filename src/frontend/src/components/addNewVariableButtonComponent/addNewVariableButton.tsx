@@ -7,7 +7,6 @@ import { useTypesStore } from "../../stores/typesStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
-import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
@@ -70,7 +69,12 @@ export default function AddNewVariableButton({ children }): JSX.Element {
       });
   }
   return (
-    <BaseModal open={open} setOpen={setOpen} size="x-small">
+    <BaseModal
+      open={open}
+      setOpen={setOpen}
+      size="x-small"
+      onSubmit={handleSaveVariable}
+    >
       <BaseModal.Header
         description={
           "This variable will be encrypted and will be available for you to use in any of your projects."
@@ -137,11 +141,9 @@ export default function AddNewVariableButton({ children }): JSX.Element {
           ></InputComponent>
         </div>
       </BaseModal.Content>
-      <BaseModal.Footer>
-        <Button data-testid="save-variable-button" onClick={handleSaveVariable}>
-          Save Variable
-        </Button>
-      </BaseModal.Footer>
+      <BaseModal.Footer
+        submit={{ label: "Save Variable", dataTestId: "save-variable-btn" }}
+      />
     </BaseModal>
   );
 }
