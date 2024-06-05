@@ -4322,7 +4322,7 @@ types-requests = ">=2.31.0.2,<3.0.0.0"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.55"
+version = "0.0.56"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
