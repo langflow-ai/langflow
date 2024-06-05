@@ -89,3 +89,26 @@ test("should see shortcuts", async ({ page }) => {
   await page.getByText("Undo", { exact: true }).isVisible();
   await page.getByText("Redo", { exact: true }).isVisible();
 });
+
+test("should interact with API Keys", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForTimeout(2000);
+  await page.getByTestId("user-profile-settings").click();
+  await page.getByText("Settings").click();
+  await page.getByText("API Keys").click();
+  await page.getByText("API Keys", { exact: true }).nth(1).isVisible();
+  await page.getByText("Add New").click();
+  await page.getByPlaceholder("Insert a name for your API Key").isVisible();
+
+  const randomName = Math.random().toString(36).substring(2);
+
+  await page
+    .getByPlaceholder("Insert a name for your API Key")
+    .fill(randomName);
+  await page.getByText("Create Secret Key", { exact: true }).click();
+  await page.getByText("Please save").isVisible();
+  await page.getByTestId("icon-Copy").click();
+  await page.waitForTimeout(1000);
+  await page.getByText("Api Key Copied!").isVisible();
+  await page.getByText(randomName).isVisible();
+});
