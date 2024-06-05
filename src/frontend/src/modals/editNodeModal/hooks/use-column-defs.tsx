@@ -4,6 +4,7 @@ import TableAutoCellRender from "../../../components/tableComponent/components/t
 import TableNodeCellRender from "../../../components/tableComponent/components/tableNodeCellRender";
 import TableToggleCellRender from "../../../components/tableComponent/components/tableToggleCellRender";
 import TableTooltipRender from "../../../components/tableComponent/components/tableTooltipRender";
+import TableMultilineCellRender from "../../../components/tableComponent/components/tableMultilineCellRender";
 
 const useColumnDefs = (
   myData: any,
@@ -33,7 +34,7 @@ const useColumnDefs = (
         field: "info",
         tooltipField: "info",
         tooltipComponent: TableTooltipRender,
-        cellRenderer: TableAutoCellRender,
+        cellRenderer: TableMultilineCellRender,
         autoHeight: true,
         flex: 2,
         resizable: false,
