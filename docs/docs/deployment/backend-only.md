@@ -1,5 +1,4 @@
-# Backend-only Deployment
-
+# Backend-only
 You can run Langflow in `--backend-only` mode to expose your Langflow app as an API, without running the frontend UI.
 
 Start langflow in backend-only mode with `python3 -m langflow run --backend-only`.
