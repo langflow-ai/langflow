@@ -125,6 +125,9 @@ const TableComponent = forwardRef<
           }}
           columnDefs={colDef}
           ref={realRef}
+          getRowId={(params) => {
+            return params.data.id;
+          }}
           pagination={true}
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
