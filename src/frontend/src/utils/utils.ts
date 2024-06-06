@@ -1,7 +1,7 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import TableAutoCellRender from "../components/tableAutoCellRender";
+import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
 import { APIDataType, TemplateVariableType } from "../types/api";
 import {
   groupedObjType,
@@ -345,8 +345,10 @@ export function freezeObject(obj: any) {
   return JSON.parse(JSON.stringify(obj));
 }
 export function isTimeStampString(str: string): boolean {
-  const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?$/;
-  return timestampRegex.test(str);
+  const timestampRegexA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3}Z)?$/;
+  const timestampRegexB = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{6})?$/;
+
+  return timestampRegexA.test(str) || timestampRegexB.test(str);
 }
 
 export function extractColumnsFromRows(

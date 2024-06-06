@@ -39,6 +39,7 @@
     "debounce-promise": "^3.1.2",
     "dompurify": "^3.0.5",
     "dotenv": "^16.4.5",
+    "emoji-regex": "^10.3.0",
     "esbuild": "^0.17.19",
     "file-saver": "^2.0.5",
     "framer-motion": "^11.0.6",

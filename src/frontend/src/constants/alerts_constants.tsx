@@ -23,6 +23,7 @@ export const USER_EDIT_ERROR_ALERT = "Error on edit user";
 export const USER_ADD_ERROR_ALERT = "Error when adding new user";
 export const SIGNIN_ERROR_ALERT = "Error signing in";
 export const DEL_KEY_ERROR_ALERT = "Error on delete key";
+export const DEL_KEY_ERROR_ALERT_PLURAL = "Error on delete keys";
 export const UPLOAD_ERROR_ALERT = "Error uploading file";
 export const WRONG_FILE_ERROR_ALERT = "Invalid file type";
 export const UPLOAD_ALERT_LIST = "Please upload a JSON file";
@@ -54,6 +55,7 @@ export const USER_DEL_SUCCESS_ALERT = "Success! User deleted!";
 export const USER_EDIT_SUCCESS_ALERT = "Success! User edited!";
 export const USER_ADD_SUCCESS_ALERT = "Success! New user added!";
 export const DEL_KEY_SUCCESS_ALERT = "Success! Key deleted!";
+export const DEL_KEY_SUCCESS_ALERT_PLURAL = "Success! Keys deleted!";
 export const FLOW_BUILD_SUCCESS_ALERT = `Flow built successfully`;
 export const SAVE_SUCCESS_ALERT = "Changes saved successfully!";
 

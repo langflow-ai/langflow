@@ -108,6 +108,7 @@ export default function InputComponent({
               setSelectedOptions={setSelectedOptions}
               options={objectOptions}
               value={value}
+              editNode={editNode}
               autoFocus={autoFocus}
               disabled={disabled}
               setShowOptions={setShowOptions}
