@@ -259,7 +259,7 @@ export default function TableNodeCellRender({
   }
 
   return (
-    <div className="group flex h-full w-[300px] items-center justify-center">
+    <div className="group flex h-full w-[300px] items-center justify-center py-2.5">
       {getCellType()}
     </div>
   );
