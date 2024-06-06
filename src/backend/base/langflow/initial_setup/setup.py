@@ -20,7 +20,7 @@ from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import get_settings_service, session_scope
 
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
-from langflow.services.deps import get_settings_service, session_scope, get_variable_service
+from langflow.services.deps import get_variable_service
 
 
 STARTER_FOLDER_NAME = "Starter Projects"
@@ -221,6 +221,7 @@ def _is_valid_uuid(val):
         return False
     return str(uuid_obj) == val
 
+
 def load_flows_from_directory():
     settings_service = get_settings_service()
     flows_path = settings_service.settings.load_flows_path
@@ -262,6 +263,7 @@ def load_flows_from_directory():
                     session.add(flow)
                 session.commit()
 
+
 def find_existing_flow(session, flow_id, flow_endpoint_name):
     if flow_endpoint_name:
         stmt = select(Flow).where(Flow.endpoint_name == flow_endpoint_name)
@@ -271,6 +273,8 @@ def find_existing_flow(session, flow_id, flow_endpoint_name):
     if existing := session.exec(stmt).first():
         return existing
     return None
+
+
 def create_or_update_starter_projects():
     components_paths = get_settings_service().settings.components_path
     try:

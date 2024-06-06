@@ -1,7 +1,7 @@
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
-import { ElementRef, forwardRef, useEffect, useRef } from "react";
+import { ElementRef, forwardRef, useRef } from "react";
 import {
   DEFAULT_TABLE_ALERT_MSG,
   DEFAULT_TABLE_ALERT_TITLE,
@@ -11,10 +11,8 @@ import "../../style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import { cn, toTitleCase } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { Toggle } from "../ui/toggle";
-import ShadTooltip from "../shadTooltipComponent";
-import resetGrid from "./utils/reset-grid-columns";
 import ResetColumns from "./components/ResetColumns";
+import resetGrid from "./utils/reset-grid-columns";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;

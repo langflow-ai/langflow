@@ -155,7 +155,11 @@ export type FlowStoreType = {
   };
   updateFlowPool: (
     nodeId: string,
+<<<<<<< HEAD
     data: VertexBuildTypeAPI | ChatOutputType | chatInputType,
+=======
+    data: FlowPoolObjectType | ChatOutputType | chatInputType,
+>>>>>>> dev
     buildId?: string
   ) => void;
   getNodePosition: (nodeId: string) => { x: number; y: number };

@@ -33,7 +33,7 @@ const useFolderSubmit = (setOpen, folderToEdit) => {
             getFoldersApi(true);
             setOpen(false);
           }
-        },
+        }
       );
     } else {
       addFolder(data).then(
@@ -49,7 +49,7 @@ const useFolderSubmit = (setOpen, folderToEdit) => {
           setErrorData({
             title: `Error creating folder.`,
           });
-        },
+        }
       );
     }
   };
