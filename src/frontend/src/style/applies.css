@@ -115,6 +115,57 @@
   .button-disable {
     @apply pointer-events-none;
   }
+  /* Frozen state border */
+  .border-ring-frozen {
+    position: relative;
+    @apply rounded-md  border shadow-frozen-ring;
+  }
+  .border-ring-frozen::before {
+    content: "";
+    position: absolute;
+    top: -2px; /* Adjust based on desired border width */
+    bottom: -2px;
+    left: -2px;
+    right: -2px;
+    /* use the frozen-blue color from tailwind */
+    border-radius: inherit;
+    pointer-events: none;
+    @apply border-2 border-frozen-blue;
+  }
+  .border-frozen {
+    @apply border shadow-frozen-ring;
+  }
+  .frosted {
+    @apply rounded-md bg-frozen-blue backdrop-blur-xs;
+  }
+  .frozen {
+    position: relative;
+    overflow: hidden;
+  }
+  .frozen::before,
+  .frozen::after {
+    content: "";
+    position: absolute;
+    top: -10px;
+    bottom: -10px;
+    left: -10px;
+    right: -10px;
+    background: rgba(
+      255,
+      255,
+      255,
+      0.5
+    ); /* Reduced opacity for better readability */
+    border-radius: 10px;
+    pointer-events: none;
+  }
+  .frozen::before {
+    filter: blur(5px); /* Less blur for better readability */
+  }
+  .frozen::after {
+    filter: blur(10px); /* Less blur for better readability */
+    opacity: 0.2; /* Reduced opacity */
+  }
   .extra-side-bar-buttons {
     @apply relative inline-flex w-full items-center justify-center rounded-md bg-background px-2 py-2 text-foreground transition-all duration-500 ease-in-out;
   }

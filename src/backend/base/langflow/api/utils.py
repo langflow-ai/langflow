@@ -1,4 +1,3 @@
-import os
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
@@ -287,7 +286,7 @@ async def get_next_runnable_vertices(
         for v_id in set(next_runnable_vertices):  # Use set to avoid duplicates
             graph.vertices_to_run.remove(v_id)
             graph.remove_from_predecessors(v_id)
-        await chat_service.set_cache(flow_id=flow_id, data=graph, lock=lock)
+        await chat_service.set_cache(key=flow_id, data=graph, lock=lock)
     return next_runnable_vertices
 
 

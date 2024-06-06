@@ -1,7 +1,7 @@
 from langchain_core.prompts import PromptTemplate
 
+from langflow.custom import CustomComponent
 from langflow.field_typing import Prompt, TemplateField, Text
-from langflow.interface.custom.custom_component import CustomComponent
 
 
 class PromptComponent(CustomComponent):

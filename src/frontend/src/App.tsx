@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useContext, useEffect, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +16,8 @@ import {
 } from "./constants/constants";
 import { AuthContext } from "./contexts/authContext";
 import { autoLogin, getGlobalVariables, getHealth } from "./controllers/API";
+import { setupAxiosDefaults } from "./controllers/API/utils";
+import useTrackLastVisitedPath from "./hooks/use-track-last-visited-path";
 import Router from "./routes";
 import useAlertStore from "./stores/alertStore";
 import { useDarkStore } from "./stores/darkStore";
@@ -24,6 +27,8 @@ import { useGlobalVariablesStore } from "./stores/globalVariablesStore/globalVar
 import { useStoreStore } from "./stores/storeStore";
 import { useTypesStore } from "./stores/typesStore";
 export default function App() {
+  useTrackLastVisitedPath();
+
   const removeFromTempNotificationList = useAlertStore(
     (state) => state.removeFromTempNotificationList,
   );
@@ -104,7 +109,6 @@ export default function App() {
   const fetchAllData = async () => {
     setTimeout(async () => {
       await Promise.all([refreshStars(), refreshVersion(), fetchData()]);
-      getFoldersApi();
     }, 1000);
   };
 
@@ -112,6 +116,8 @@ export default function App() {
     return new Promise<void>(async (resolve, reject) => {
       if (isAuthenticated) {
         try {
+          await setupAxiosDefaults();
+          await getFoldersApi();
           await getTypes();
           await refreshFlows();
           const res = await getGlobalVariables();
@@ -208,7 +214,7 @@ export default function App() {
         <div className="flex flex-col-reverse" style={{ zIndex: 999 }}>
           {tempNotificationList.map((alert) => (
             <div key={alert.id}>
-              {alert.type === "error" && (
+              {alert.type === "error" ? (
                 <ErrorAlert
                   key={alert.id}
                   title={alert.title}
@@ -216,14 +222,7 @@ export default function App() {
                   id={alert.id}
                   removeAlert={removeAlert}
                 />
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="z-40 flex flex-col-reverse">
-          {tempNotificationList.map((alert) => (
-            <div key={alert.id}>
-              {alert.type === "notice" ? (
+              ) : alert.type === "notice" ? (
                 <NoticeAlert
                   key={alert.id}
                   title={alert.title}

@@ -8,7 +8,6 @@ import {
 } from "../../../ui/dropdown-menu";
 
 import { useNavigate } from "react-router-dom";
-import { Node } from "reactflow";
 import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import { SAVED_HOVER } from "../../../../constants/constants";
 import ExportModal from "../../../../modals/exportModal";
@@ -22,11 +21,7 @@ import IconComponent from "../../../genericIconComponent";
 import ShadTooltip from "../../../shadTooltipComponent";
 import { Button } from "../../../ui/button";
 
-export const MenuBar = ({
-  removeFunction,
-}: {
-  removeFunction: (nodes: Node[]) => void;
-}): JSX.Element => {
+export const MenuBar = ({}: {}): JSX.Element => {
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -36,26 +31,15 @@ export const MenuBar = ({
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const [openSettings, setOpenSettings] = useState(false);
   const [openLogs, setOpenLogs] = useState(false);
-  const nodes = useFlowStore((state) => state.nodes);
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
-  function handleAddFlow(duplicate?: boolean) {
+  function handleAddFlow() {
     try {
-      if (duplicate) {
-        if (!currentFlow) {
-          throw new Error("No flow to duplicate");
-        }
-        addFlow(true, currentFlow).then((id) => {
-          setSuccessData({ title: "Flow duplicated successfully" });
-          navigate("/flow/" + id);
-        });
-      } else {
-        addFlow(true).then((id) => {
-          navigate("/flow/" + id);
-        });
-      }
+      addFlow(true).then((id) => {
+        navigate("/flow/" + id);
+      });
     } catch (err) {
       setErrorData(err as { title: string; list?: Array<string> });
     }
@@ -72,14 +56,6 @@ export const MenuBar = ({
 
   return currentFlow ? (
     <div className="round-button-div">
-      <button
-        onClick={() => {
-          removeFunction(nodes);
-          navigate("/");
-        }}
-      >
-        <IconComponent name="ChevronLeft" className="w-4" />
-      </button>
       <div className="header-menu-bar">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -102,15 +78,6 @@ export const MenuBar = ({
             >
               <IconComponent name="Plus" className="header-menu-options" />
               New
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                handleAddFlow(true);
-              }}
-              className="cursor-pointer"
-            >
-              <IconComponent name="Copy" className="header-menu-options" />
-              Duplicate
             </DropdownMenuItem>
 
             <DropdownMenuItem

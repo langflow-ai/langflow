@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 from concurrent import futures
 from pathlib import Path
 from typing import Callable, List, Optional, Text
-
+import chardet
 import yaml
 
 from langflow.schema.schema import Record
@@ -96,7 +96,12 @@ def retrieve_file_paths(
 
 
 def read_text_file(file_path: str) -> str:
-    with open(file_path, "r") as f:
+    with open(file_path, "rb") as f:
+        raw_data = f.read()
+        result = chardet.detect(raw_data)
+        encoding = result["encoding"]
+
+    with open(file_path, "r", encoding=encoding) as f:
         return f.read()
 
 

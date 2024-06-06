@@ -3,14 +3,17 @@ import { FaDiscord, FaGithub } from "react-icons/fa";
 import { RiTwitterXFill } from "react-icons/ri";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
-import { USER_PROJECTS_HEADER } from "../../constants/constants";
+import {
+  LOCATIONS_TO_RETURN,
+  USER_PROJECTS_HEADER,
+} from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 
-import { Node } from "reactflow";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useLocationStore } from "../../stores/locationStore";
 import { useStoreStore } from "../../stores/storeStore";
 import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
@@ -29,6 +32,7 @@ import MenuBar from "./components/menuBar";
 export default function Header(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
   const location = useLocation();
+
   const { logout, autoLogin, isAdmin, userData } = useContext(AuthContext);
   const navigate = useNavigate();
   const removeFlow = useFlowsManagerStore((store) => store.removeFlow);
@@ -40,20 +44,56 @@ export default function Header(): JSX.Element {
   const setDark = useDarkStore((state) => state.setDark);
   const stars = useDarkStore((state) => state.stars);
 
-  async function checkForChanges(nodes: Node[]): Promise<void> {
+  const routeHistory = useLocationStore((state) => state.routeHistory);
+
+  async function checkForChanges(): Promise<void> {
     if (nodes.length === 0) {
       await removeFlow(id!);
     }
   }
 
+  const redirectToLastLocation = () => {
+    const lastFlowVisitedIndex = routeHistory
+      .reverse()
+      .findIndex(
+        (path) => path.includes("/flow/") && path !== location.pathname,
+      );
+
+    const lastFlowVisited = routeHistory[lastFlowVisitedIndex];
+    lastFlowVisited && !location.pathname.includes("/flow")
+      ? navigate(lastFlowVisited)
+      : navigate("/all");
+  };
+
+  const visitedFlowPathBefore = () => {
+    const lastThreeVisitedPaths = routeHistory.slice(-3);
+    return lastThreeVisitedPaths.some((path) => path.includes("/flow/"));
+  };
+
+  const showArrowReturnIcon =
+    LOCATIONS_TO_RETURN.some((path) => location.pathname.includes(path)) &&
+    visitedFlowPathBefore();
+
   return (
     <div className="header-arrangement">
       <div className="header-start-display lg:w-[30%]">
-        <Link to="/" onClick={() => checkForChanges(nodes)}>
+        <Link to="/all" className="cursor-pointer" onClick={checkForChanges}>
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
-        <MenuBar removeFunction={checkForChanges} />
+        {showArrowReturnIcon && (
+          <button
+            onClick={() => {
+              checkForChanges();
+              redirectToLastLocation();
+            }}
+          >
+            <IconComponent name="ChevronLeft" className="w-4" />
+          </button>
+        )}
+
+        <MenuBar />
       </div>
+
       <div className="round-button-div">
         <Link to="/">
           <Button
@@ -65,9 +105,7 @@ export default function Header(): JSX.Element {
                 : "secondary"
             }
             size="sm"
-            onClick={() => {
-              checkForChanges(nodes);
-            }}
+            onClick={checkForChanges}
           >
             <IconComponent name="Home" className="h-4 w-4" />
             <div className="hidden flex-1 md:block">{USER_PROJECTS_HEADER}</div>
@@ -80,9 +118,7 @@ export default function Header(): JSX.Element {
               className="gap-2"
               variant={location.pathname === "/store" ? "primary" : "secondary"}
               size="sm"
-              onClick={() => {
-                checkForChanges(nodes);
-              }}
+              onClick={checkForChanges}
               data-testid="button-store"
             >
               <IconComponent name="Store" className="h-4 w-4" />
@@ -145,7 +181,7 @@ export default function Header(): JSX.Element {
               />
             </div>
           </AlertDropdown>
-          {!autoLogin && (
+          {autoLogin && (
             <button
               onClick={() => {
                 navigate("/account/api-keys");

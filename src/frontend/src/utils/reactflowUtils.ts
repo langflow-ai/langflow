@@ -16,6 +16,8 @@ import {
   specialCharsRegex,
 } from "../constants/constants";
 import { downloadFlowsFromDatabase } from "../controllers/API";
+import getFieldTitle from "../customNodes/utils/get-field-title";
+import { DESCRIPTIONS } from "../flow_constants";
 import {
   APIClassType,
   APIKindType,
@@ -37,8 +39,6 @@ import {
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
 import { createRandomKey, toTitleCase } from "./utils";
-import { DESCRIPTIONS } from "../flow_constants";
-import getFieldTitle from "../customNodes/utils/get-field-title";
 const uid = new ShortUniqueId({ length: 5 });
 
 export function checkChatInput(nodes: Node[]) {
@@ -1297,6 +1297,7 @@ export function getRandomDescription(): string {
 export const createNewFlow = (
   flowData: ReactFlowJsonObject,
   flow: FlowType,
+  folderId: string,
 ) => {
   return {
     description: flow?.description ?? getRandomDescription(),
@@ -1304,7 +1305,7 @@ export const createNewFlow = (
     data: flowData,
     id: "",
     is_component: flow?.is_component ?? false,
-    folder_id: "",
+    folder_id: folderId,
   };
 };
 

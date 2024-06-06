@@ -1,5 +1,5 @@
-import { AxiosError } from "axios";
-import { cloneDeep, debounce } from "lodash";
+import { cloneDeep } from "lodash";
+import * as debounce from "debounce-promise";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
 import { SAVE_DEBOUNCE_TIME } from "../constants/constants";
@@ -11,7 +11,6 @@ import {
   updateFlowInDatabase,
   uploadFlowsToDatabase,
 } from "../controllers/API";
-import { getStarterProjects } from "../pages/MainPage/services";
 import { FlowType, NodeDataType } from "../types/flow";
 import {
   FlowsManagerStoreType,
@@ -81,38 +80,40 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     return new Promise<void>((resolve, reject) => {
       set({ isLoading: true });
 
-      getStarterProjects().then((starterProjects) => {
-        get().setExamples(starterProjects?.flows!);
+      const starterFolderId = useFolderStore.getState().starterProjectId;
 
-        readFlowsFromDatabase()
-          .then((dbData) => {
-            if (dbData) {
-              const { data, flows } = processFlows(dbData, false);
-              const starterProjectsIds = starterProjects.flows!.map(
-                (flow) => flow.id,
-              );
-              get().setFlows(
-                flows.filter((f) => !starterProjectsIds.includes(f.id)),
-              );
-              useTypesStore.setState((state) => ({
-                data: { ...state.data, ["saved_components"]: data },
-                ComponentFields: extractFieldsFromComponenents({
-                  ...state.data,
-                  ["saved_components"]: data,
-                }),
-              }));
-              set({ isLoading: false });
-              resolve();
-            }
-          })
-          .catch((e) => {
+      readFlowsFromDatabase()
+        .then((dbData) => {
+          if (dbData) {
+            const { data, flows } = processFlows(dbData, false);
+            const examples = flows.filter(
+              (flow) => flow.folder_id === starterFolderId,
+            );
+            get().setExamples(examples);
+
+            const flowsWithoutStarterFolder = flows.filter(
+              (flow) => flow.folder_id !== starterFolderId,
+            );
+
+            get().setFlows(flowsWithoutStarterFolder);
+            useTypesStore.setState((state) => ({
+              data: { ...state.data, ["saved_components"]: data },
+              ComponentFields: extractFieldsFromComponenents({
+                ...state.data,
+                ["saved_components"]: data,
+              }),
+            }));
             set({ isLoading: false });
-            useAlertStore.getState().setErrorData({
-              title: "Could not load flows from database",
-            });
-            reject(e);
+            resolve();
+          }
+        })
+        .catch((e) => {
+          set({ isLoading: false });
+          useAlertStore.getState().setErrorData({
+            title: "Could not load flows from database",
           });
-      });
+          reject(e);
+        });
     });
   },
   autoSaveCurrentFlow: (nodes: Node[], edges: Edge[], viewport: Viewport) => {
@@ -154,11 +155,9 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
           }
         })
         .catch((err) => {
-          useAlertStore.getState().setErrorData({
-            title: "Error while saving changes",
-            list: [(err as AxiosError).message],
-          });
           reject(err);
+          set({ saveLoading: false });
+          throw err;
         });
     });
   }, SAVE_DEBOUNCE_TIME),
@@ -204,11 +203,16 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
 
       // Create a new flow with a default name if no flow is provided.
+      const folder_id = useFolderStore.getState().folderUrl;
+      const my_collection_id = useFolderStore.getState().myCollectionId;
 
       if (override) {
         get().deleteComponent(flow!.name);
-        const newFlow = createNewFlow(flowData!, flow!);
-        newFlow.folder_id = useFolderStore.getState().folderUrl;
+        const newFlow = createNewFlow(
+          flowData!,
+          flow!,
+          folder_id || my_collection_id!,
+        );
         const { id } = await saveFlowToDatabase(newFlow);
         newFlow.id = id;
         //setTimeout  to prevent update state with wrong state
@@ -227,8 +231,11 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
         // addFlowToLocalState(newFlow);
         return;
       }
-
-      const newFlow = createNewFlow(flowData!, flow!);
+      const newFlow = createNewFlow(
+        flowData!,
+        flow!,
+        folder_id || my_collection_id!,
+      );
 
       const newName = addVersionToDuplicates(newFlow, get().flows);
 
