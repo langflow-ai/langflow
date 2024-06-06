@@ -37,11 +37,11 @@ Note the flow ID of `ef7e0554-69e5-4e3e-ab29-ee83bcd8d9ef`. You can find this ID
 
 ## Start Langflow in backend-only mode
 
-3. Stop Langflow with Ctrl+C.
-4. Start langflow in backend-only mode with `python3 -m langflow run --backend-only`.
+1. Stop Langflow with Ctrl+C.
+2. Start langflow in backend-only mode with `python3 -m langflow run --backend-only`.
 The terminal prints `  Welcome to ⛓ Langflow  `, and a blank window opens at `http://127.0.0.1:7864/all`.
 Langflow will now serve requests to its API.
-5. Run the curl code you copied from the UI.
+3. Run the curl code you copied from the UI.
 You should get a result like this:
 ```bash
 {"session_id":"ef7e0554-69e5-4e3e-ab29-ee83bcd8d9ef:bf81d898868ac87e1b4edbd96c131c5dee801ea2971122cc91352d144a45b880","outputs":[{"inputs":{"input_value":"hi, are you there?"},"outputs":[{"results":{"result":"Arrr, ahoy matey! Aye, I be here. What be ye needin', me hearty?"},"artifacts":{"message":"Arrr, ahoy matey! Aye, I be here. What be ye needin', me hearty?","sender":"Machine","sender_name":"AI"},"messages":[{"message":"Arrr, ahoy matey! Aye, I be here. What be ye needin', me hearty?","sender":"Machine","sender_name":"AI","component_id":"ChatOutput-ktwdw"}],"component_display_name":"Chat Output","component_id":"ChatOutput-ktwdw","used_frozen_result":false}]}]}%
