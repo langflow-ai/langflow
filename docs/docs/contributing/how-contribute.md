@@ -15,7 +15,7 @@ Please do not try to push directly to this repo unless you are a maintainer.
 
 You can develop Langflow using docker compose, or locally.
 
-We provide a .vscode/launch.json file for debugging the backend in VSCode, which is a lot faster than using docker compose.
+We provide a `.vscode/launch.json` file for debugging the backend in VSCode, which is a lot faster than using docker compose.
 
 Setting up hooks:
 
