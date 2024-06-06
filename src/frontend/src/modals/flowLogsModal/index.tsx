@@ -1,5 +1,4 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
-import { AxiosError } from "axios";
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import TableComponent from "../../components/tableComponent";
@@ -9,7 +8,7 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
-import { FlowType, NodeDataType } from "../../types/flow";
+import { NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
 
 export default function FlowLogsModal({
@@ -38,7 +37,7 @@ export default function FlowLogsModal({
           const { columns, rows } = data;
           setColumns(columns.map((col) => ({ ...col, editable: true })));
           setRows(rows);
-        },
+        }
       );
     }
 
@@ -48,7 +47,7 @@ export default function FlowLogsModal({
         .some((template) => template["stream"] && template["stream"].value);
       console.log(
         haStream,
-        nodes.map((nodes) => (nodes.data as NodeDataType).node!.template),
+        nodes.map((nodes) => (nodes.data as NodeDataType).node!.template)
       );
       if (haStream) {
         setNoticeData({

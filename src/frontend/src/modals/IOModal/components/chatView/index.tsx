@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../../../components/genericIconComponent";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "../../../../components/ui/select";
+import { Button } from "../../../../components/ui/button";
 import {
   CHAT_FIRST_INITIAL_TEXT,
   CHAT_SECOND_INITIAL_TEXT,
@@ -24,7 +19,6 @@ import { chatViewProps } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
-import { Button } from "../../../../components/ui/button";
 
 export default function ChatView({
   sendMessage,
@@ -139,7 +133,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string,
+    stream_url?: string
   ) {
     // if (message === "") return;
     chat.message = message;
@@ -177,7 +171,7 @@ export default function ChatView({
               name="Eraser"
               className={classNames(
                 "h-5 w-5 transition-all duration-100",
-                lockChat ? "animate-pulse text-primary" : "text-primary",
+                lockChat ? "animate-pulse text-primary" : "text-primary"
               )}
               aria-hidden="true"
             />

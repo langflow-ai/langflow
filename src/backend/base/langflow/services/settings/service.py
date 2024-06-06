@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 
 import yaml
 from loguru import logger
@@ -7,6 +6,7 @@ from loguru import logger
 from langflow.services.base import Service
 from langflow.services.settings.auth import AuthSettings
 from langflow.services.settings.base import Settings
+
 
 class SettingsService(Service):
     name = "settings_service"
