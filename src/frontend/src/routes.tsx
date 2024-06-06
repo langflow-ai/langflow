@@ -10,7 +10,9 @@ import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
-const ApiKeysPage = lazy(() => import("./pages/ApiKeysPage"));
+const ApiKeysPage = lazy(
+  () => import("./pages/SettingsPage/pages/ApiKeysPage"),
+);
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 const FlowPage = lazy(() => import("./pages/FlowPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -77,6 +79,7 @@ const Router = () => {
         >
           <Route index element={<Navigate replace to={"general"} />} />
           <Route path="global-variables" element={<GlobalVariablesPage />} />
+          <Route path="api-keys" element={<ApiKeysPage />} />
           <Route path="general/:scrollId?" element={<GeneralPage />} />
           <Route path="shortcuts" element={<ShortcutsPage />} />
           <Route path="messages" element={<MessagesPage />} />
@@ -186,14 +189,6 @@ const Router = () => {
             element={
               <ProtectedRoute>
                 <DeleteAccountPage />
-              </ProtectedRoute>
-            }
-          ></Route>
-          <Route
-            path="api-keys"
-            element={
-              <ProtectedRoute>
-                <ApiKeysPage />
               </ProtectedRoute>
             }
           ></Route>
