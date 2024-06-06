@@ -8,6 +8,7 @@ type HeaderComponentProps = {
   handleSelectAll: (select) => void;
   handleDelete: () => void;
   handleDuplicate: () => void;
+  handleExport: () => void;
   disableFunctions: boolean;
 };
 
@@ -15,6 +16,7 @@ const HeaderComponent = ({
   handleSelectAll,
   handleDelete,
   handleDuplicate,
+  handleExport,
   disableFunctions,
 }: HeaderComponentProps) => {
   const [shouldSelectAll, setShouldSelectAll] = useState(true);
@@ -53,6 +55,24 @@ const HeaderComponent = ({
             <ShadTooltip
               content={
                 disableFunctions ? (
+                  <span>Select items to export</span>
+                ) : (
+                  <span>Export selected items</span>
+                )
+              }
+            >
+              <button onClick={handleExport} disabled={disableFunctions}>
+                <IconComponent
+                  name="FileDown"
+                  className={cn("h-5 w-5 text-primary transition-all")}
+                />
+              </button>
+            </ShadTooltip>
+          </div>
+          <div>
+            <ShadTooltip
+              content={
+                disableFunctions ? (
                   <span>Select items to duplicate</span>
                 ) : (
                   <span>Duplicate selected items</span>
@@ -82,7 +102,7 @@ const HeaderComponent = ({
                   name="Trash2"
                   className={cn(
                     "h-5 w-5 text-primary transition-all",
-                    disableFunctions ? "" : "hover:text-destructive"
+                    disableFunctions ? "" : "hover:text-destructive",
                   )}
                 />
               </button>
