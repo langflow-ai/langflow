@@ -59,6 +59,7 @@ const useColumnDefs = (
           };
         },
         minWidth: 330,
+        autoHeight: true,
         flex: 1,
         resizable: false,
         cellClass: "no-border",
