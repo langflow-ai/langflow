@@ -131,7 +131,7 @@ export default function ComponentsComponent({
       setOpenDelete(true);
     } else if (action === "duplicate") {
       handleDuplicate();
-    } else if (action === "exprot") {
+    } else if (action === "export") {
       handleExport();
     }
   };
@@ -174,6 +174,7 @@ export default function ComponentsComponent({
         selectedFlow!.description,
       );
     });
+    setSuccessData({ title: "Flows exported successfully" });
   };
 
   const handleDeleteMultiple = () => {
@@ -185,7 +186,7 @@ export default function ComponentsComponent({
           getFolderById(folderId ? folderId : myCollectionId);
         }
         setSuccessData({
-          title: "Selected items deleted successfully!",
+          title: "Selected items deleted successfully",
         });
       })
       .catch(() => {
