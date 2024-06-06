@@ -297,7 +297,7 @@ class CodeParser:
             bases = self.execute_and_inspect_classes(self.code)
         except Exception as e:
             # If the code cannot be executed, return an empty list
-            logger.exception(e)
+            logger.debug(e)
             bases = []
             raise e
         return bases
