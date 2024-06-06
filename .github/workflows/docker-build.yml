@@ -100,6 +100,4 @@ jobs:
 
       - name: Restart HuggingFace Spaces Build
         run: |
-          poetry run python ./scripts/factory_restart_space.py
-        env:
-          HUGGINGFACE_API_TOKEN: ${{ secrets.HUGGINGFACE_API_TOKEN }}
+          poetry run python ./scripts/factory_restart_space.py --space "Langflow/Langflow-Preview" --token ${{ secrets.HUGGINGFACE_API_TOKEN }}

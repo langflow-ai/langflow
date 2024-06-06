@@ -9,14 +9,11 @@ The `AddContentToPage` component converts markdown text to Notion blocks and app
 
 [Notion Reference](https://developers.notion.com/reference/patch-block-children)
 
-<Admonition type="tip" title="Component Functionality">
-
 The `AddContentToPage` component enables you to:
 
 - Convert markdown text to Notion blocks.
 - Append the converted blocks to a specified Notion page.
 - Seamlessly integrate Notion content creation into Langflow workflows.
-  </Admonition>
 
 ## Component Usage
 
@@ -100,8 +97,6 @@ class NotionPageCreator(CustomComponent):
 
 ## Example Usage
 
-<Admonition type="info" title="Example Usage">
-
 Example of using the `AddContentToPage` component in a Langflow flow using Markdown as input:
 
 <ZoomableImage
@@ -114,8 +109,6 @@ style={{ width: "100%", margin: "20px 0" }}
 />
 
 In this example, the `AddContentToPage` component connects to a `MarkdownLoader` component to provide the markdown text input. The converted Notion blocks are appended to the specified Notion page using the provided `block_id` and `notion_secret`.
-
-</Admonition>
 
 ## Best Practices
 
