@@ -48,8 +48,16 @@ export type FlowStoreType = {
   onFlowPage: boolean;
   setOnFlowPage: (onFlowPage: boolean) => void;
   flowPool: FlowPoolType;
-  inputs: Array<{ type: string; id: string; displayName: string }>;
-  outputs: Array<{ type: string; id: string; displayName: string }>;
+  inputs: Array<{
+    type: string;
+    id: string;
+    displayName: string;
+  }>;
+  outputs: Array<{
+    type: string;
+    id: string;
+    displayName: string;
+  }>;
   hasIO: boolean;
   setFlowPool: (flowPool: FlowPoolType) => void;
   addDataToFlowPool: (data: FlowPoolObjectType, nodeId: string) => void;
@@ -106,11 +114,12 @@ export type FlowStoreType = {
     startNodeId,
     stopNodeId,
     input_value,
+    silent,
   }: {
-    nodeId?: string;
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
+    silent?: boolean;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
   updateVerticesBuild: (
