@@ -47,7 +47,7 @@ const HeaderComponent = ({
             </div>
           </Button>
         </div>
-        <div className="col-span-2 flex grid-cols-1 gap-2 justify-self-end">
+        <div className="col-span-2 flex grid-cols-1 items-center gap-2 justify-self-end">
           <div>
             <ShadTooltip
               content={
