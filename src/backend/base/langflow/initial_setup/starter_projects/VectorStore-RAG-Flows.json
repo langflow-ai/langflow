@@ -154,6 +154,7 @@
                   "Text"
                 ],
                 "selected": "Text",
+                "display_name": "Message",
                 "name": "message",
                 "method": "text_response"
               },
@@ -162,6 +163,7 @@
                   "Record"
                 ],
                 "selected": "Record",
+                "display_name": "Record",
                 "name": "record",
                 "method": "record_response"
               }
@@ -1454,6 +1456,7 @@
                   "Text"
                 ],
                 "selected": "Text",
+                "display_name": "Message",
                 "name": "message",
                 "method": "text_response"
               },
@@ -1462,6 +1465,7 @@
                   "Record"
                 ],
                 "selected": "Record",
+                "display_name": "Record",
                 "name": "record",
                 "method": "record_response"
               }
