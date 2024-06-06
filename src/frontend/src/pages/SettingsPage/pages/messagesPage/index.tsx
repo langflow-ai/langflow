@@ -53,28 +53,24 @@ export default function MessagesPage() {
       />
 
       <div className="flex h-full w-full flex-col justify-between">
-        <Card x-chunk="dashboard-04-chunk-2" className="h-full pt-4">
-          <CardContent className="h-full">
-            <TableComponent
-              readOnlyEdit
-              onCellEditRequest={(event) => {
-                handleUpdateMessage(event);
-              }}
-              editable={["Sender Name", "Message"]}
-              overlayNoRowsTemplate="No data available"
-              onSelectionChanged={(event: SelectionChangedEvent) => {
-                setSelectedRows(
-                  event.api.getSelectedRows().map((row) => row.index),
-                );
-              }}
-              rowSelection="multiple"
-              suppressRowClickSelection={true}
-              pagination={true}
-              columnDefs={columns}
-              rowData={messages}
-            />
-          </CardContent>
-        </Card>
+        <TableComponent
+          readOnlyEdit
+          onCellEditRequest={(event) => {
+            handleUpdateMessage(event);
+          }}
+          editable={["Sender Name", "Message"]}
+          overlayNoRowsTemplate="No data available"
+          onSelectionChanged={(event: SelectionChangedEvent) => {
+            setSelectedRows(
+              event.api.getSelectedRows().map((row) => row.index),
+            );
+          }}
+          rowSelection="multiple"
+          suppressRowClickSelection={true}
+          pagination={true}
+          columnDefs={columns}
+          rowData={messages}
+        />
       </div>
     </div>
   );
