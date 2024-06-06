@@ -150,7 +150,7 @@ class Output(BaseModel):
     selected: Optional[str] = Field(default=None, serialization_alias="selected")
     """The selected output type for the field."""
 
-    display_name: Optional[str] = Field(default=None, serialization_alias="name")
+    display_name: Optional[str] = Field(default=None)
     """The display name of the field."""
 
     name: str = Field(default=None, serialization_alias="name")
