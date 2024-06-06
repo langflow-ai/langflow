@@ -33,8 +33,8 @@ class ChatInput(ChatComponent):
         ),
     ]
     outputs = [
-        Output(name="Message", method="text_response"),
-        Output(name="Record", method="record_response"),
+        Output(display_name="Message", name="message", method="text_response"),
+        Output(display_name="Record", name="record", method="record_response"),
     ]
 
     def text_response(self) -> Text:

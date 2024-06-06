@@ -60,6 +60,8 @@ class Component(CustomComponent):
 
     def _set_outputs(self, outputs: List[dict]):
         self.outputs = [Output(**output) for output in outputs]
+        for output in self.outputs:
+            setattr(self, output.name, output)
 
     async def build_results(self, vertex: "Vertex"):
         _results = {}
@@ -69,14 +71,13 @@ class Component(CustomComponent):
             for output in self.outputs:
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
-                self.output = output
-                if not vertex.outgoing_edges or output.name in vertex.edges_source_names:
+                if not vertex.outgoing_edges or output.display_name in vertex.edges_source_names:
                     method: Callable | Awaitable = getattr(self, output.method)
                     result = method()
                     # If the method is asynchronous, we need to await it
                     if inspect.iscoroutinefunction(method):
                         result = await result
-                    _results[output.name] = result
+                    _results[output.display_name] = result
         self._results = _results
         return _results
 
@@ -109,6 +110,7 @@ class Component(CustomComponent):
         """
         # This function is similar to build_config, but it will process the inputs
         # and return them as a dict with keys being the Input.name and values being the Input.model_dump()
+        self.inputs = self.template_config.get("inputs", [])
         if not self.inputs:
             return {}
         build_config = {_input.name: _input.model_dump(by_alias=True, exclude_none=True) for _input in self.inputs}
