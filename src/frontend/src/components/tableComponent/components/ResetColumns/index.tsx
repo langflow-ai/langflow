@@ -1,6 +1,4 @@
 import { cn } from "../../../../utils/utils";
-import ShadTooltip from "../../../shadTooltipComponent";
-import { Toggle } from "../../../ui/toggle";
 
 export default function ResetColumns({
   resetGrid,
