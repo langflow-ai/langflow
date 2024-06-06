@@ -59,6 +59,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       variant,
       size,
       loading,
+      type,
       disabled,
       asChild = false,
       children,
@@ -76,6 +77,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         <Comp
           className={cn(buttonVariants({ variant, size, className }))}
           disabled={loading || disabled}
+          {...(asChild ? {} : { type: type || "button" })}
           ref={ref}
           {...props}
         >
