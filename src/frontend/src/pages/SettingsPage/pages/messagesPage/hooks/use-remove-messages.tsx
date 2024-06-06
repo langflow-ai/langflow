@@ -5,7 +5,7 @@ const useRemoveMessages = (
   setSelectedRows,
   setSuccessData,
   setErrorData,
-  selectedRows,
+  selectedRows
 ) => {
   const deleteMessages = useMessagesStore((state) => state.removeMessages);
 

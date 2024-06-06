@@ -9,7 +9,7 @@ export default function getPythonApiCode(
   flowId: string,
   isAuth: boolean,
   tweaksBuildedObject,
-  endpointName?: string,
+  endpointName?: string
 ): string {
   const tweaksObject = tweaksBuildedObject[0];
   return `import argparse
