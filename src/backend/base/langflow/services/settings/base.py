@@ -78,7 +78,6 @@ class Settings(BaseSettings):
     langchain_cache: str = "InMemoryCache"
     load_flows_path: Optional[str] = None
 
-
     # Redis
     redis_host: str = "localhost"
     redis_port: int = 6379

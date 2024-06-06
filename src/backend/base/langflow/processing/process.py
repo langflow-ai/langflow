@@ -59,7 +59,7 @@ async def run_graph_internal(
         outputs or [],
         stream=stream,
         session_id=session_id_str or "",
-        fallback_to_env_vars=fallback_to_env_vars
+        fallback_to_env_vars=fallback_to_env_vars,
     )
     if session_id_str and session_service:
         await session_service.update_session(session_id_str, (graph, artifacts))
