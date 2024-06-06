@@ -3,7 +3,6 @@ import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
 import {
   Tabs,
   TabsContent,
@@ -25,6 +24,7 @@ import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
 import ChatView from "./components/chatView";
+import { getSessions } from "../../controllers/API";
 
 export default function IOModal({
   children,
@@ -78,6 +78,7 @@ export default function IOModal({
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setNode = useFlowStore((state) => state.setNode);
+  const [sessions, setSessions] = useState<string[]>([]);
 
   async function updateVertices() {
     return updateVerticesOrder(currentFlow!.id, null);
@@ -92,6 +93,7 @@ export default function IOModal({
       await buildFlow({
         input_value: chatValue,
         startNodeId: chatInput?.id,
+        silent: true,
       }).catch((err) => {
         console.error(err);
         setLockChat(false);
@@ -113,6 +115,11 @@ export default function IOModal({
 
   useEffect(() => {
     setSelectedViewField(startView());
+    // if (haveChat) {
+    //   getSessions().then((sessions) => {
+    //     setSessions(sessions);
+    //   });
+    // }
   }, [open]);
 
   return (
@@ -121,6 +128,7 @@ export default function IOModal({
       open={open}
       setOpen={setOpen}
       disable={disable}
+      onSubmit={() => sendMessage(1)}
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
@@ -160,6 +168,9 @@ export default function IOModal({
                       {outputs.length > 0 && (
                         <TabsTrigger value={"2"}>Outputs</TabsTrigger>
                       )}
+                      {/* {haveChat && (
+                        <TabsTrigger value={"3"}>History</TabsTrigger>
+                      )} */}
                     </TabsList>
                   </div>
 
@@ -253,6 +264,10 @@ export default function IOModal({
                             key={index}
                           >
                             <AccordionComponent
+                              disabled={
+                                node.data.node!.template["input_value"]
+                                  ?.value === ""
+                              }
                               trigger={
                                 <div className="file-component-badge-div">
                                   <ShadTooltip
@@ -371,13 +386,10 @@ export default function IOModal({
         </div>
       </BaseModal.Content>
       {!haveChat ? (
-        <BaseModal.Footer>
-          <div className="flex w-full justify-end  pt-2">
-            <Button
-              variant={"outline"}
-              className="flex gap-2 px-3"
-              onClick={() => sendMessage(1)}
-            >
+        <BaseModal.Footer
+          submit={{
+            label: "Run Flow",
+            icon: (
               <IconComponent
                 name={isBuilding ? "Loader2" : "Zap"}
                 className={cn(
@@ -387,10 +399,9 @@ export default function IOModal({
                     : "fill-current text-medium-indigo",
                 )}
               />
-              Run Flow
-            </Button>
-          </div>
-        </BaseModal.Footer>
+            ),
+          }}
+        />
       ) : (
         <></>
       )}

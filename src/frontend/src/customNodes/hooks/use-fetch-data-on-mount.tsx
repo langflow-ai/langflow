@@ -9,7 +9,7 @@ const useFetchDataOnMount = (
   handleUpdateValues,
   setNode,
   renderTooltips,
-  setIsLoading
+  setIsLoading,
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -40,7 +40,7 @@ const useFetchDataOnMount = (
 
           setErrorData({
             title: "Error while updating the Component",
-            list: [responseError.response.data.detail ?? "Unknown error"],
+            list: [responseError?.response?.data?.detail ?? "Unknown error"],
           });
         }
         setIsLoading(false);

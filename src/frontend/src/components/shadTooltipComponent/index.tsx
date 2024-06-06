@@ -13,7 +13,6 @@ export default function ShadTooltip({
   return (
     <Tooltip delayDuration={delayDuration}>
       <TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
-
       <TooltipContent
         className={cn(styleClasses, "max-w-96")}
         side={side}

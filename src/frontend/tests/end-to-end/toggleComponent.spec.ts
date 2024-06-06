@@ -48,7 +48,7 @@ test("ToggleComponent", async ({ page }) => {
     await page.locator('//*[@id="showload_hidden"]').isChecked(),
   ).toBeTruthy();
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   await page.getByTitle("fit view").click();
 
@@ -130,7 +130,7 @@ test("ToggleComponent", async ({ page }) => {
     await page.locator('//*[@id="showuse_multithreading"]').isChecked(),
   ).toBeFalsy();
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   const plusButtonLocator = page.getByTestId("toggle-load_hidden");
   const elementCount = await plusButtonLocator?.count();
@@ -151,7 +151,7 @@ test("ToggleComponent", async ({ page }) => {
       await page.getByTestId("toggle-edit-load_hidden").isChecked(),
     ).toBeTruthy();
 
-    await page.locator('//*[@id="saveChangesBtn"]').click();
+    await page.getByText("Save Changes", { exact: true }).click();
 
     await page.getByTestId("toggle-load_hidden").click();
     expect(

@@ -16,6 +16,8 @@ import {
   specialCharsRegex,
 } from "../constants/constants";
 import { downloadFlowsFromDatabase } from "../controllers/API";
+import getFieldTitle from "../customNodes/utils/get-field-title";
+import { DESCRIPTIONS } from "../flow_constants";
 import {
   APIClassType,
   APIKindType,
@@ -37,8 +39,6 @@ import {
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
 import { createRandomKey, toTitleCase } from "./utils";
-import { DESCRIPTIONS } from "../flow_constants";
-import getFieldTitle from "../customNodes/utils/get-field-title";
 const uid = new ShortUniqueId({ length: 5 });
 
 export function checkChatInput(nodes: Node[]) {
@@ -350,12 +350,7 @@ export function updateEdges(edges: Edge[]) {
 }
 
 export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
-  console.log("flow", flow);
-  console.log("flows", flows);
-  const existingNames = flows
-    .filter((f) => f.folder_id === flow.folder_id)
-    .map((item) => item.name);
-  console.log("existingNames", existingNames);
+  const existingNames = flows.map((item) => item.name);
   let newName = flow.name;
   let count = 1;
 

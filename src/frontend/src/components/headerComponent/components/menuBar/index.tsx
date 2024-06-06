@@ -35,21 +35,11 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const navigate = useNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
-  function handleAddFlow(duplicate?: boolean) {
+  function handleAddFlow() {
     try {
-      if (duplicate) {
-        if (!currentFlow) {
-          throw new Error("No flow to duplicate");
-        }
-        addFlow(true, currentFlow).then((id) => {
-          setSuccessData({ title: "Flow duplicated successfully" });
-          navigate("/flow/" + id);
-        });
-      } else {
-        addFlow(true).then((id) => {
-          navigate("/flow/" + id);
-        });
-      }
+      addFlow(true).then((id) => {
+        navigate("/flow/" + id);
+      });
     } catch (err) {
       setErrorData(err as { title: string; list?: Array<string> });
     }
@@ -89,15 +79,6 @@ export const MenuBar = ({}: {}): JSX.Element => {
               <IconComponent name="Plus" className="header-menu-options" />
               New
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                handleAddFlow(true);
-              }}
-              className="cursor-pointer"
-            >
-              <IconComponent name="Copy" className="header-menu-options" />
-              Duplicate
-            </DropdownMenuItem>
 
             <DropdownMenuItem
               onClick={() => {
@@ -132,7 +113,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                       title: UPLOAD_ERROR_ALERT,
                       list: [error],
                     });
-                  }
+                  },
                 );
               }}
             >
@@ -214,7 +195,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
               className={cn(
                 "h-4 w-4",
-                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle"
+                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
               )}
             />
             {printByBuildStatus()}

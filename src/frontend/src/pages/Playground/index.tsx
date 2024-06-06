@@ -11,7 +11,7 @@ export default function PlaygroundPage() {
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const getFlowById = useFlowsManagerStore((state) => state.getFlowById);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
