@@ -83,7 +83,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "name": "sender",
                 "display_name": "Sender Type",
                 "advanced": true,
@@ -91,7 +94,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "sender_name": {
                 "type": "str",
@@ -111,7 +116,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "session_id": {
                 "type": "str",
@@ -130,14 +137,21 @@
                 "info": "If provided, the message will be stored in the memory.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "value": "MySessionID"
               },
               "_type": "CustomComponent"
             },
             "description": "Get chat inputs from the Playground.",
             "icon": "ChatInput",
-            "base_classes": ["Text", "object", "Record", "str"],
+            "base_classes": [
+              "Text",
+              "object",
+              "Record",
+              "str"
+            ],
             "display_name": "Chat Input",
             "documentation": "",
             "custom_fields": {
@@ -147,7 +161,10 @@
               "session_id": null,
               "return_record": null
             },
-            "output_types": ["Text", "Record"],
+            "output_types": [
+              "Text",
+              "Record"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
@@ -206,7 +223,9 @@
                 "name": "input_value",
                 "display_name": "Message",
                 "advanced": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "dynamic": false,
                 "info": "",
                 "load_from_db": false,
@@ -242,7 +261,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "name": "sender",
                 "display_name": "Sender Type",
                 "advanced": true,
@@ -250,7 +272,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "sender_name": {
                 "type": "str",
@@ -270,7 +294,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "session_id": {
                 "type": "str",
@@ -289,14 +315,21 @@
                 "info": "If provided, the message will be stored in the memory.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "value": "MySessionID"
               },
               "_type": "CustomComponent"
             },
             "description": "Display a chat message in the Playground.",
             "icon": "ChatOutput",
-            "base_classes": ["Text", "object", "Record", "str"],
+            "base_classes": [
+              "Text",
+              "object",
+              "Record",
+              "str"
+            ],
             "display_name": "Chat Output",
             "documentation": "",
             "custom_fields": {
@@ -306,7 +339,10 @@
               "session_id": null,
               "return_record": null
             },
-            "output_types": ["Text", "Record"],
+            "output_types": [
+              "Text",
+              "Record"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
@@ -382,7 +418,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
                 "name": "order",
                 "display_name": "Order",
                 "advanced": true,
@@ -390,7 +429,9 @@
                 "info": "Order of the messages.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "record_template": {
                 "type": "str",
@@ -410,7 +451,9 @@
                 "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "sender": {
                 "type": "str",
@@ -423,7 +466,11 @@
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
                 "name": "sender",
                 "display_name": "Sender Type",
                 "advanced": false,
@@ -431,7 +478,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "sender_name": {
                 "type": "str",
@@ -450,7 +499,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "session_id": {
                 "type": "str",
@@ -465,7 +516,9 @@
                 "name": "session_id",
                 "display_name": "Session ID",
                 "advanced": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "dynamic": false,
                 "info": "Session ID of the chat history.",
                 "load_from_db": false,
@@ -476,7 +529,11 @@
             },
             "description": "Retrieves stored chat messages given a specific Session ID.",
             "icon": "history",
-            "base_classes": ["str", "Text", "object"],
+            "base_classes": [
+              "str",
+              "Text",
+              "object"
+            ],
             "display_name": "Chat Memory",
             "documentation": "",
             "custom_fields": {
@@ -487,7 +544,9 @@
               "order": null,
               "record_template": null
             },
-            "output_types": ["Text"],
+            "output_types": [
+              "Text"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
@@ -549,7 +608,9 @@
                 "name": "template",
                 "display_name": "Template",
                 "advanced": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "dynamic": false,
                 "info": "",
                 "load_from_db": false,
@@ -614,14 +675,23 @@
             "is_input": null,
             "is_output": null,
             "is_composition": null,
-            "base_classes": ["Text", "str", "object"],
+            "base_classes": [
+              "Text",
+              "str",
+              "object"
+            ],
             "name": "",
             "display_name": "Prompt",
             "documentation": "",
             "custom_fields": {
-              "template": ["context", "user_message"]
+              "template": [
+                "context",
+                "user_message"
+              ]
             },
-            "output_types": ["Text"],
+            "output_types": [
+              "Text"
+            ],
             "full_path": null,
             "field_formatters": {},
             "frozen": false,
@@ -670,7 +740,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "code": {
                 "type": "code",
@@ -753,7 +825,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "openai_api_base": {
                 "type": "str",
@@ -772,7 +846,9 @@
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "openai_api_key": {
                 "type": "str",
@@ -791,7 +867,9 @@
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "value": "OPENAI_API_KEY"
               },
               "stream": {
@@ -830,7 +908,9 @@
                 "info": "System message to pass to the model.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "temperature": {
                 "type": "float",
@@ -861,7 +941,11 @@
             },
             "description": "Generates text using OpenAI LLMs.",
             "icon": "OpenAI",
-            "base_classes": ["str", "object", "Text"],
+            "base_classes": [
+              "str",
+              "object",
+              "Text"
+            ],
             "display_name": "OpenAI",
             "documentation": "",
             "custom_fields": {
@@ -875,7 +959,9 @@
               "stream": null,
               "system_message": null
             },
-            "output_types": ["Text"],
+            "output_types": [
+              "Text"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [
@@ -927,7 +1013,10 @@
                 "name": "input_value",
                 "display_name": "Value",
                 "advanced": false,
-                "input_types": ["Record", "Text"],
+                "input_types": [
+                  "Record",
+                  "Text"
+                ],
                 "dynamic": false,
                 "info": "Text or Record to be passed as output.",
                 "load_from_db": false,
@@ -969,20 +1058,28 @@
                 "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "_type": "CustomComponent"
             },
             "description": "Display a text output in the Playground.",
             "icon": "type",
-            "base_classes": ["str", "object", "Text"],
+            "base_classes": [
+              "str",
+              "object",
+              "Text"
+            ],
             "display_name": "Inspect Memory",
             "documentation": "",
             "custom_fields": {
               "input_value": null,
               "record_template": null
             },
-            "output_types": ["Text"],
+            "output_types": [
+              "Text"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
@@ -1011,10 +1108,19 @@
             "fieldName": "context",
             "type": "str",
             "id": "Prompt-ODkUx",
-            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"]
+            "inputTypes": [
+              "Document",
+              "BaseOutputParser",
+              "Record",
+              "Text"
+            ]
           },
           "sourceHandle": {
-            "baseClasses": ["str", "Text", "object"],
+            "baseClasses": [
+              "str",
+              "Text",
+              "object"
+            ],
             "dataType": "MemoryComponent",
             "id": "MemoryComponent-cdA1J"
           }
@@ -1036,10 +1142,20 @@
             "fieldName": "user_message",
             "type": "str",
             "id": "Prompt-ODkUx",
-            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"]
+            "inputTypes": [
+              "Document",
+              "BaseOutputParser",
+              "Record",
+              "Text"
+            ]
           },
           "sourceHandle": {
-            "baseClasses": ["Text", "object", "Record", "str"],
+            "baseClasses": [
+              "Text",
+              "object",
+              "Record",
+              "str"
+            ],
             "dataType": "ChatInput",
             "id": "ChatInput-t7F8v"
           }
@@ -1060,11 +1176,17 @@
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenAIModel-9RykF",
-            "inputTypes": ["Text"],
+            "inputTypes": [
+              "Text"
+            ],
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": ["Text", "str", "object"],
+            "baseClasses": [
+              "Text",
+              "str",
+              "object"
+            ],
             "dataType": "Prompt",
             "id": "Prompt-ODkUx"
           }
@@ -1084,11 +1206,17 @@
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-P1jEe",
-            "inputTypes": ["Text"],
+            "inputTypes": [
+              "Text"
+            ],
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": ["str", "object", "Text"],
+            "baseClasses": [
+              "str",
+              "object",
+              "Text"
+            ],
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-9RykF"
           }
@@ -1108,11 +1236,18 @@
           "targetHandle": {
             "fieldName": "input_value",
             "id": "TextOutput-vrs6T",
-            "inputTypes": ["Record", "Text"],
+            "inputTypes": [
+              "Record",
+              "Text"
+            ],
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": ["str", "Text", "object"],
+            "baseClasses": [
+              "str",
+              "Text",
+              "object"
+            ],
             "dataType": "MemoryComponent",
             "id": "MemoryComponent-cdA1J"
           }
