@@ -81,7 +81,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "name": "sender",
                 "display_name": "Sender Type",
                 "advanced": true,
@@ -89,7 +92,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "sender_name": {
                 "type": "str",
@@ -109,7 +114,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "session_id": {
                 "type": "str",
@@ -128,13 +135,20 @@
                 "info": "If provided, the message will be stored in the memory.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "_type": "CustomComponent"
             },
             "description": "Get chat inputs from the Playground.",
             "icon": "ChatInput",
-            "base_classes": ["Text", "str", "object", "Record"],
+            "base_classes": [
+              "Text",
+              "str",
+              "object",
+              "Record"
+            ],
             "display_name": "Chat Input",
             "documentation": "",
             "custom_fields": {
@@ -144,7 +158,10 @@
               "session_id": null,
               "return_record": null
             },
-            "output_types": ["Text", "Record"],
+            "output_types": [
+              "Text",
+              "Record"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
@@ -181,7 +198,10 @@
                 "name": "input_value",
                 "display_name": "Value",
                 "advanced": false,
-                "input_types": ["Record", "Text"],
+                "input_types": [
+                  "Record",
+                  "Text"
+                ],
                 "dynamic": false,
                 "info": "Text or Record to be passed as output.",
                 "load_from_db": false,
@@ -223,20 +243,28 @@
                 "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "_type": "CustomComponent"
             },
             "description": "Display a text output in the Playground.",
             "icon": "type",
-            "base_classes": ["object", "Text", "str"],
+            "base_classes": [
+              "object",
+              "Text",
+              "str"
+            ],
             "display_name": "Extracted Chunks",
             "documentation": "",
             "custom_fields": {
               "input_value": null,
               "record_template": null
             },
-            "output_types": ["Text"],
+            "output_types": [
+              "Text"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
@@ -282,7 +310,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "chunk_size": {
                 "type": "int",
@@ -394,7 +424,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "disallowed_special": {
                 "type": "str",
@@ -403,7 +435,9 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
-                "value": ["all"],
+                "value": [
+                  "all"
+                ],
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -414,7 +448,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "embedding_ctx_length": {
                 "type": "int",
@@ -477,7 +513,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "model_kwargs": {
                 "type": "NestedDict",
@@ -515,7 +553,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "openai_api_key": {
                 "type": "str",
@@ -534,7 +574,9 @@
                 "info": "",
                 "load_from_db": true,
                 "title_case": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "value": "OPENAI_API_KEY"
               },
               "openai_api_type": {
@@ -554,7 +596,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "openai_api_version": {
                 "type": "str",
@@ -573,7 +617,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "openai_organization": {
                 "type": "str",
@@ -592,7 +638,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "openai_proxy": {
                 "type": "str",
@@ -611,7 +659,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "request_timeout": {
                 "type": "float",
@@ -711,12 +761,16 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "_type": "CustomComponent"
             },
             "description": "Generate embeddings using OpenAI models.",
-            "base_classes": ["Embeddings"],
+            "base_classes": [
+              "Embeddings"
+            ],
             "display_name": "OpenAI Embeddings",
             "documentation": "",
             "custom_fields": {
@@ -743,7 +797,9 @@
               "tiktoken_enable": null,
               "tiktoken_model_name": null
             },
-            "output_types": ["Embeddings"],
+            "output_types": [
+              "Embeddings"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
@@ -784,7 +840,10 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text",
+                  "Record"
+                ]
               },
               "code": {
                 "type": "code",
@@ -793,7 +852,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
-                "value": "from typing import Optional\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import NestedDict, Text\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    field_order = [\n        \"max_tokens\",\n        \"model_kwargs\",\n        \"model_name\",\n        \"openai_api_base\",\n        \"openai_api_key\",\n        \"temperature\",\n        \"input_value\",\n        \"system_message\",\n        \"stream\",\n    ]\n\n    def build_config(self):\n        return {\n            \"input_value\": {\"display_name\": \"Input\"},\n            \"max_tokens\": {\n                \"display_name\": \"Max Tokens\",\n                \"advanced\": True,\n                \"info\": \"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            },\n            \"model_kwargs\": {\n                \"display_name\": \"Model Kwargs\",\n                \"advanced\": True,\n            },\n            \"model_name\": {\n                \"display_name\": \"Model Name\",\n                \"advanced\": False,\n                \"options\": MODEL_NAMES,\n            },\n            \"openai_api_base\": {\n                \"display_name\": \"OpenAI API Base\",\n                \"advanced\": True,\n                \"info\": (\n                    \"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\\n\\n\"\n                    \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\"\n                ),\n            },\n            \"openai_api_key\": {\n                \"display_name\": \"OpenAI API Key\",\n                \"info\": \"The OpenAI API Key to use for the OpenAI model.\",\n                \"advanced\": False,\n                \"password\": True,\n            },\n            \"temperature\": {\n                \"display_name\": \"Temperature\",\n                \"advanced\": False,\n                \"value\": 0.1,\n            },\n            \"stream\": {\n                \"display_name\": \"Stream\",\n                \"info\": STREAM_INFO_TEXT,\n                \"advanced\": True,\n            },\n            \"system_message\": {\n                \"display_name\": \"System Message\",\n                \"info\": \"System message to pass to the model.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        input_value: Text,\n        openai_api_key: str,\n        temperature: float = 0.1,\n        model_name: str = \"gpt-4o\",\n        max_tokens: Optional[int] = 256,\n        model_kwargs: NestedDict = {},\n        openai_api_base: Optional[str] = None,\n        stream: bool = False,\n        system_message: Optional[str] = None,\n    ) -> Text:\n        if not openai_api_base:\n            openai_api_base = \"https://api.openai.com/v1\"\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature,\n        )\n\n        return self.get_chat_result(output, stream, input_value, system_message)\n",
+                "value": "from typing import Optional\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import NestedDict, Text\nfrom langflow.schema.schema import Record\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    field_order = [\n        \"max_tokens\",\n        \"model_kwargs\",\n        \"model_name\",\n        \"openai_api_base\",\n        \"openai_api_key\",\n        \"temperature\",\n        \"input_value\",\n        \"system_message\",\n        \"stream\",\n    ]\n\n    def build_config(self):\n        return {\n            \"input_value\": {\"display_name\": \"Input\", \"input_types\": [\"Text\", \"Record\"]},\n            \"max_tokens\": {\n                \"display_name\": \"Max Tokens\",\n                \"advanced\": True,\n                \"info\": \"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            },\n            \"model_kwargs\": {\n                \"display_name\": \"Model Kwargs\",\n                \"advanced\": True,\n            },\n            \"model_name\": {\n                \"display_name\": \"Model Name\",\n                \"advanced\": False,\n                \"options\": MODEL_NAMES,\n            },\n            \"openai_api_base\": {\n                \"display_name\": \"OpenAI API Base\",\n                \"advanced\": True,\n                \"info\": (\n                    \"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\\n\\n\"\n                    \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\"\n                ),\n            },\n            \"openai_api_key\": {\n                \"display_name\": \"OpenAI API Key\",\n                \"info\": \"The OpenAI API Key to use for the OpenAI model.\",\n                \"advanced\": False,\n                \"password\": True,\n            },\n            \"temperature\": {\n                \"display_name\": \"Temperature\",\n                \"advanced\": False,\n                \"value\": 0.1,\n            },\n            \"stream\": {\n                \"display_name\": \"Stream\",\n                \"info\": STREAM_INFO_TEXT,\n                \"advanced\": True,\n            },\n            \"system_message\": {\n                \"display_name\": \"System Message\",\n                \"info\": \"System message to pass to the model.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        input_value: Text | Record,\n        openai_api_key: str,\n        temperature: float = 0.1,\n        model_name: str = \"gpt-4o\",\n        max_tokens: Optional[int] = 256,\n        model_kwargs: NestedDict = {},\n        openai_api_base: Optional[str] = None,\n        stream: bool = False,\n        system_message: Optional[str] = None,\n    ) -> Text:\n        if not openai_api_base:\n            openai_api_base = \"https://api.openai.com/v1\"\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature,\n        )\n\n        return self.get_chat_result(output, stream, input_value, system_message)\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -867,7 +926,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "openai_api_base": {
                 "type": "str",
@@ -886,7 +947,9 @@
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "openai_api_key": {
                 "type": "str",
@@ -905,7 +968,9 @@
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "load_from_db": true,
                 "title_case": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "value": "OPENAI_API_KEY"
               },
               "stream": {
@@ -944,7 +1009,9 @@
                 "info": "System message to pass to the model.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "temperature": {
                 "type": "float",
@@ -975,7 +1042,11 @@
             },
             "description": "Generates text using OpenAI LLMs.",
             "icon": "OpenAI",
-            "base_classes": ["object", "Text", "str"],
+            "base_classes": [
+              "object",
+              "Text",
+              "str"
+            ],
             "display_name": "OpenAI",
             "documentation": "",
             "custom_fields": {
@@ -989,7 +1060,9 @@
               "stream": null,
               "system_message": null
             },
-            "output_types": ["Text"],
+            "output_types": [
+              "Text"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [
@@ -1034,7 +1107,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
-                "value": "from langchain_core.prompts import PromptTemplate\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Prompt, TemplateField, Text\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Text:\n        from langflow.base.prompts.utils import dict_values_to_string\n\n        prompt_template = PromptTemplate.from_template(Text(template))\n        kwargs = dict_values_to_string(kwargs)\n        kwargs = {k: \"\\n\".join(v) if isinstance(v, list) else v for k, v in kwargs.items()}\n        try:\n            formated_prompt = prompt_template.format(**kwargs)\n        except Exception as exc:\n            raise ValueError(f\"Error formatting prompt: {exc}\") from exc\n        self.status = f'Prompt:\\n\"{formated_prompt}\"'\n        return formated_prompt\n",
+                "value": "from itertools import chain\n\n\nfrom langchain_core.prompts import ChatPromptTemplate\n\nfrom langflow.base.prompts.utils import dict_values_to_string\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Prompt, TemplateField, Text\nfrom langflow.schema.schema import Record\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    async def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Record:\n        prompt_template = ChatPromptTemplate.from_template(Text(template))\n        kwargs = await dict_values_to_string(kwargs)\n        messages = list(kwargs.values())\n        prompt = prompt_template + messages\n        self.status = f'Prompt:\\n\"{template}\"'\n        return Record(data={\"prompt\": prompt.to_json()})\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -1059,7 +1132,9 @@
                 "name": "template",
                 "display_name": "Template",
                 "advanced": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "dynamic": false,
                 "info": "",
                 "load_from_db": false,
@@ -1124,14 +1199,23 @@
             "is_input": null,
             "is_output": null,
             "is_composition": null,
-            "base_classes": ["object", "Text", "str"],
+            "base_classes": [
+              "object",
+              "Text",
+              "str"
+            ],
             "name": "",
             "display_name": "Prompt",
             "documentation": "",
             "custom_fields": {
-              "template": ["context", "question"]
+              "template": [
+                "context",
+                "question"
+              ]
             },
-            "output_types": ["Text"],
+            "output_types": [
+              "Text"
+            ],
             "full_path": null,
             "field_formatters": {},
             "frozen": false,
@@ -1194,7 +1278,9 @@
                 "name": "input_value",
                 "display_name": "Message",
                 "advanced": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "dynamic": false,
                 "info": "",
                 "load_from_db": false,
@@ -1218,7 +1304,9 @@
                 "info": "In case of Message being a Record, this template will be used to convert it to text.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "return_record": {
                 "type": "bool",
@@ -1250,7 +1338,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "name": "sender",
                 "display_name": "Sender Type",
                 "advanced": true,
@@ -1258,7 +1349,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "sender_name": {
                 "type": "str",
@@ -1278,7 +1371,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "session_id": {
                 "type": "str",
@@ -1297,13 +1392,20 @@
                 "info": "If provided, the message will be stored in the memory.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "_type": "CustomComponent"
             },
             "description": "Display a chat message in the Playground.",
             "icon": "ChatOutput",
-            "base_classes": ["object", "Text", "Record", "str"],
+            "base_classes": [
+              "object",
+              "Text",
+              "Record",
+              "str"
+            ],
             "display_name": "Chat Output",
             "documentation": "",
             "custom_fields": {
@@ -1314,7 +1416,10 @@
               "return_record": null,
               "record_template": null
             },
-            "output_types": ["Text", "Record"],
+            "output_types": [
+              "Text",
+              "Record"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
@@ -1421,14 +1526,18 @@
             },
             "description": "A generic file loader.",
             "icon": "file-text",
-            "base_classes": ["Record"],
+            "base_classes": [
+              "Record"
+            ],
             "display_name": "File",
             "documentation": "",
             "custom_fields": {
               "path": null,
               "silent_errors": null
             },
-            "output_types": ["Record"],
+            "output_types": [
+              "Record"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
@@ -1469,7 +1578,10 @@
                 "name": "inputs",
                 "display_name": "Input",
                 "advanced": false,
-                "input_types": ["Document", "Record"],
+                "input_types": [
+                  "Document",
+                  "Record"
+                ],
                 "dynamic": false,
                 "info": "The texts to split.",
                 "load_from_db": false,
@@ -1548,13 +1660,19 @@
                 "info": "The characters to split on.\nIf left empty defaults to [\"\\n\\n\", \"\\n\", \" \", \"\"].",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"],
-                "value": [""]
+                "input_types": [
+                  "Text"
+                ],
+                "value": [
+                  ""
+                ]
               },
               "_type": "CustomComponent"
             },
             "description": "Split text into chunks of a specified length.",
-            "base_classes": ["Record"],
+            "base_classes": [
+              "Record"
+            ],
             "display_name": "Recursive Character Text Splitter",
             "documentation": "https://docs.langflow.org/components/text-splitters#recursivecharactertextsplitter",
             "custom_fields": {
@@ -1563,7 +1681,9 @@
               "chunk_size": null,
               "chunk_overlap": null
             },
-            "output_types": ["Record"],
+            "output_types": [
+              "Record"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
@@ -1626,7 +1746,9 @@
                 "info": "Input value to search",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "api_endpoint": {
                 "type": "str",
@@ -1645,7 +1767,9 @@
                 "info": "API endpoint URL for the Astra DB service.",
                 "load_from_db": true,
                 "title_case": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "value": "ASTRA_DB_API_ENDPOINT"
               },
               "batch_size": {
@@ -1773,7 +1897,9 @@
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "value": "langflow"
               },
               "metadata_indexing_exclude": {
@@ -1793,7 +1919,9 @@
                 "info": "Optional list of metadata fields to exclude from the indexing.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "metadata_indexing_include": {
                 "type": "str",
@@ -1812,7 +1940,9 @@
                 "info": "Optional list of metadata fields to include in the indexing.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "metric": {
                 "type": "str",
@@ -1831,7 +1961,9 @@
                 "info": "Optional distance metric for vector comparisons in the vector store.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "namespace": {
                 "type": "str",
@@ -1850,7 +1982,9 @@
                 "info": "Optional namespace within Astra DB to use for the collection.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "number_of_results": {
                 "type": "int",
@@ -1901,7 +2035,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
-                "options": ["Similarity", "MMR"],
+                "options": [
+                  "Similarity",
+                  "MMR"
+                ],
                 "name": "search_type",
                 "display_name": "Search Type",
                 "advanced": false,
@@ -1909,7 +2046,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "setup_mode": {
                 "type": "str",
@@ -1922,7 +2061,11 @@
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
-                "options": ["Sync", "Async", "Off"],
+                "options": [
+                  "Sync",
+                  "Async",
+                  "Off"
+                ],
                 "name": "setup_mode",
                 "display_name": "Setup Mode",
                 "advanced": true,
@@ -1930,7 +2073,9 @@
                 "info": "Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "token": {
                 "type": "str",
@@ -1949,14 +2094,18 @@
                 "info": "Authentication token for accessing Astra DB.",
                 "load_from_db": true,
                 "title_case": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "value": "ASTRA_DB_APPLICATION_TOKEN"
               },
               "_type": "CustomComponent"
             },
             "description": "Searches an existing Astra DB Vector Store.",
             "icon": "AstraDB",
-            "base_classes": ["Record"],
+            "base_classes": [
+              "Record"
+            ],
             "display_name": "Astra DB Search",
             "documentation": "",
             "custom_fields": {
@@ -1979,7 +2128,9 @@
               "metadata_indexing_exclude": null,
               "collection_indexing_policy": null
             },
-            "output_types": ["Record"],
+            "output_types": [
+              "Record"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [
@@ -2066,7 +2217,9 @@
                 "info": "API endpoint URL for the Astra DB service.",
                 "load_from_db": true,
                 "title_case": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "value": "ASTRA_DB_API_ENDPOINT"
               },
               "batch_size": {
@@ -2194,7 +2347,9 @@
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "value": "langflow"
               },
               "metadata_indexing_exclude": {
@@ -2214,7 +2369,9 @@
                 "info": "Optional list of metadata fields to exclude from the indexing.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "metadata_indexing_include": {
                 "type": "str",
@@ -2233,7 +2390,9 @@
                 "info": "Optional list of metadata fields to include in the indexing.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "metric": {
                 "type": "str",
@@ -2252,7 +2411,9 @@
                 "info": "Optional distance metric for vector comparisons in the vector store.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "namespace": {
                 "type": "str",
@@ -2271,7 +2432,9 @@
                 "info": "Optional namespace within Astra DB to use for the collection.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "pre_delete_collection": {
                 "type": "bool",
@@ -2303,7 +2466,11 @@
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
-                "options": ["Sync", "Async", "Off"],
+                "options": [
+                  "Sync",
+                  "Async",
+                  "Off"
+                ],
                 "name": "setup_mode",
                 "display_name": "Setup Mode",
                 "advanced": true,
@@ -2311,7 +2478,9 @@
                 "info": "Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "token": {
                 "type": "str",
@@ -2330,14 +2499,18 @@
                 "info": "Authentication token for accessing Astra DB.",
                 "load_from_db": true,
                 "title_case": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "value": "ASTRA_DB_APPLICATION_TOKEN"
               },
               "_type": "CustomComponent"
             },
             "description": "Builds or loads an Astra DB Vector Store.",
             "icon": "AstraDB",
-            "base_classes": ["VectorStore"],
+            "base_classes": [
+              "VectorStore"
+            ],
             "display_name": "Astra DB",
             "documentation": "",
             "custom_fields": {
@@ -2358,7 +2531,9 @@
               "metadata_indexing_exclude": null,
               "collection_indexing_policy": null
             },
-            "output_types": ["VectorStore"],
+            "output_types": [
+              "VectorStore"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [
@@ -2410,7 +2585,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "chunk_size": {
                 "type": "int",
@@ -2522,7 +2699,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "disallowed_special": {
                 "type": "str",
@@ -2531,7 +2710,9 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
-                "value": ["all"],
+                "value": [
+                  "all"
+                ],
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -2542,7 +2723,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "embedding_ctx_length": {
                 "type": "int",
@@ -2605,7 +2788,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "model_kwargs": {
                 "type": "NestedDict",
@@ -2643,7 +2828,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "openai_api_key": {
                 "type": "str",
@@ -2662,7 +2849,9 @@
                 "info": "",
                 "load_from_db": true,
                 "title_case": false,
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "value": "OPENAI_API_KEY"
               },
               "openai_api_type": {
@@ -2682,7 +2871,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "openai_api_version": {
                 "type": "str",
@@ -2701,7 +2892,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "openai_organization": {
                 "type": "str",
@@ -2720,7 +2913,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "openai_proxy": {
                 "type": "str",
@@ -2739,7 +2934,9 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "request_timeout": {
                 "type": "float",
@@ -2839,12 +3036,16 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
-                "input_types": ["Text"]
+                "input_types": [
+                  "Text"
+                ]
               },
               "_type": "CustomComponent"
             },
             "description": "Generate embeddings using OpenAI models.",
-            "base_classes": ["Embeddings"],
+            "base_classes": [
+              "Embeddings"
+            ],
             "display_name": "OpenAI Embeddings",
             "documentation": "",
             "custom_fields": {
@@ -2871,7 +3072,9 @@
               "tiktoken_enable": null,
               "tiktoken_model_name": null
             },
-            "output_types": ["Embeddings"],
+            "output_types": [
+              "Embeddings"
+            ],
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
@@ -2900,11 +3103,20 @@
           "targetHandle": {
             "fieldName": "context",
             "id": "Prompt-xeI6K",
-            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"],
+            "inputTypes": [
+              "Document",
+              "BaseOutputParser",
+              "Record",
+              "Text"
+            ],
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": ["object", "Text", "str"],
+            "baseClasses": [
+              "object",
+              "Text",
+              "str"
+            ],
             "dataType": "TextOutput",
             "id": "TextOutput-BDknO"
           }
@@ -2925,11 +3137,21 @@
           "targetHandle": {
             "fieldName": "question",
             "id": "Prompt-xeI6K",
-            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"],
+            "inputTypes": [
+              "Document",
+              "BaseOutputParser",
+              "Record",
+              "Text"
+            ],
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": ["Text", "str", "object", "Record"],
+            "baseClasses": [
+              "Text",
+              "str",
+              "object",
+              "Record"
+            ],
             "dataType": "ChatInput",
             "id": "ChatInput-yxMKE"
           }
@@ -2950,11 +3172,17 @@
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenAIModel-EjXlN",
-            "inputTypes": ["Text"],
+            "inputTypes": [
+              "Text"
+            ],
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": ["object", "Text", "str"],
+            "baseClasses": [
+              "object",
+              "Text",
+              "str"
+            ],
             "dataType": "Prompt",
             "id": "Prompt-xeI6K"
           }
@@ -2975,11 +3203,17 @@
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-Q39I8",
-            "inputTypes": ["Text"],
+            "inputTypes": [
+              "Text"
+            ],
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": ["object", "Text", "str"],
+            "baseClasses": [
+              "object",
+              "Text",
+              "str"
+            ],
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-EjXlN"
           }
@@ -3000,11 +3234,16 @@
           "targetHandle": {
             "fieldName": "inputs",
             "id": "RecursiveCharacterTextSplitter-tR9QM",
-            "inputTypes": ["Document", "Record"],
+            "inputTypes": [
+              "Document",
+              "Record"
+            ],
             "type": "Document"
           },
           "sourceHandle": {
-            "baseClasses": ["Record"],
+            "baseClasses": [
+              "Record"
+            ],
             "dataType": "File",
             "id": "File-t0a6a"
           }
@@ -3028,7 +3267,9 @@
             "type": "Embeddings"
           },
           "sourceHandle": {
-            "baseClasses": ["Embeddings"],
+            "baseClasses": [
+              "Embeddings"
+            ],
             "dataType": "OpenAIEmbeddings",
             "id": "OpenAIEmbeddings-ZlOk1"
           }
@@ -3048,11 +3289,18 @@
           "targetHandle": {
             "fieldName": "input_value",
             "id": "AstraDBSearch-41nRz",
-            "inputTypes": ["Text"],
+            "inputTypes": [
+              "Text"
+            ],
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": ["Text", "str", "object", "Record"],
+            "baseClasses": [
+              "Text",
+              "str",
+              "object",
+              "Record"
+            ],
             "dataType": "ChatInput",
             "id": "ChatInput-yxMKE"
           }
@@ -3076,7 +3324,9 @@
             "type": "Record"
           },
           "sourceHandle": {
-            "baseClasses": ["Record"],
+            "baseClasses": [
+              "Record"
+            ],
             "dataType": "RecursiveCharacterTextSplitter",
             "id": "RecursiveCharacterTextSplitter-tR9QM"
           }
@@ -3101,7 +3351,9 @@
             "type": "Embeddings"
           },
           "sourceHandle": {
-            "baseClasses": ["Embeddings"],
+            "baseClasses": [
+              "Embeddings"
+            ],
             "dataType": "OpenAIEmbeddings",
             "id": "OpenAIEmbeddings-9TPjc"
           }
@@ -3122,11 +3374,16 @@
           "targetHandle": {
             "fieldName": "input_value",
             "id": "TextOutput-BDknO",
-            "inputTypes": ["Record", "Text"],
+            "inputTypes": [
+              "Record",
+              "Text"
+            ],
             "type": "str"
           },
           "sourceHandle": {
-            "baseClasses": ["Record"],
+            "baseClasses": [
+              "Record"
+            ],
             "dataType": "AstraDBSearch",
             "id": "AstraDBSearch-41nRz"
           }
