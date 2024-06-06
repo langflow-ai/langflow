@@ -31,22 +31,22 @@ export default function ComponentsComponent({
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
 
   const flowsFromFolder = useFolderStore(
-    (state) => state.selectedFolder?.flows,
+    (state) => state.selectedFolder?.flows
   );
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openDelete, setOpenDelete] = useState(false);
   const searchFlowsComponents = useFlowsManagerStore(
-    (state) => state.searchFlowsComponents,
+    (state) => state.searchFlowsComponents
   );
 
   const setSelectedFlowsComponentsCards = useFlowsManagerStore(
-    (state) => state.setSelectedFlowsComponentsCards,
+    (state) => state.setSelectedFlowsComponentsCards
   );
 
   const selectedFlowsComponentsCards = useFlowsManagerStore(
-    (state) => state.selectedFlowsComponentsCards,
+    (state) => state.selectedFlowsComponentsCards
   );
 
   const [handleFileDrop] = useFileDrop(uploadFlow, type)!;
@@ -82,7 +82,7 @@ export default function ComponentsComponent({
         f.name.toLowerCase().includes(searchFlowsComponents.toLowerCase()) ||
         f.description
           .toLowerCase()
-          .includes(searchFlowsComponents.toLowerCase()),
+          .includes(searchFlowsComponents.toLowerCase())
     );
 
     if (searchFlowsComponents === "") {
@@ -137,9 +137,9 @@ export default function ComponentsComponent({
       selectedFlowsComponentsCards.map((selectedFlow) =>
         addFlow(
           true,
-          allFlows.find((flow) => flow.id === selectedFlow),
-        ),
-      ),
+          allFlows.find((flow) => flow.id === selectedFlow)
+        )
+      )
     ).then(() => {
       resetFilter();
       getFoldersApi(true);
@@ -180,7 +180,7 @@ export default function ComponentsComponent({
           return true;
         }
         return false;
-      },
+      }
     );
 
     setSelectedFlowsComponentsCards(selectedFlows);
@@ -215,7 +215,7 @@ export default function ComponentsComponent({
     if (type === "all") return allFlows?.length;
 
     return allFlows?.filter(
-      (f) => (f.is_component ?? false) === (type === "component"),
+      (f) => (f.is_component ?? false) === (type === "component")
     )?.length;
   };
 

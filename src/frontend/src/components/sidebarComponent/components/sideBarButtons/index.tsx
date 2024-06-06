@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { cn } from "../../../../utils/utils";
 import { buttonVariants } from "../../../ui/button";
-import ForwardedIconComponent from "../../../genericIconComponent";
 
 type SideBarButtonsComponentProps = {
   items: {

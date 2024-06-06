@@ -7,7 +7,6 @@ import {
 } from "../../components/ui/accordion";
 import { AccordionComponentType } from "../../types/components";
 import { cn } from "../../utils/utils";
-import ShadTooltip from "../shadTooltipComponent";
 
 export default function AccordionComponent({
   trigger,
