@@ -471,17 +471,17 @@ files = [
 
 [[package]]
 name = "boto3"
-version = "1.34.119"
+version = "1.34.120"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3-1.34.119-py3-none-any.whl", hash = "sha256:8f9c43c54b3dfaa36c4a0d7b42c417227a515bc7a2e163e62802780000a5a3e2"},
-    {file = "boto3-1.34.119.tar.gz", hash = "sha256:cea2365a25b2b83a97e77f24ac6f922ef62e20636b42f9f6ee9f97188f9c1c03"},
+    {file = "boto3-1.34.120-py3-none-any.whl", hash = "sha256:3c42bc309246a761413f6e152f307f009e80e7c9fd03dd9e6c0dc8ab8b3a8fc1"},
+    {file = "boto3-1.34.120.tar.gz", hash = "sha256:38893db8269d25b72cc6fbab97633bfc863eefde5456847169d06149a16aa6e0"},
 ]
 
 [package.dependencies]
-botocore = ">=1.34.119,<1.35.0"
+botocore = ">=1.34.120,<1.35.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.10.0,<0.11.0"
 
@@ -490,13 +490,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.34.119"
+version = "1.34.120"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "botocore-1.34.119-py3-none-any.whl", hash = "sha256:4bdf7926a1290b2650d62899ceba65073dd2693e61c35f5cdeb3a286a0aaa27b"},
-    {file = "botocore-1.34.119.tar.gz", hash = "sha256:b253f15b24b87b070e176af48e8ef146516090429d30a7d8b136a4c079b28008"},
+    {file = "botocore-1.34.120-py3-none-any.whl", hash = "sha256:92bd739938078c7a0b110689a3eee21ecb3954d90653da013d9f98ef1165d6f7"},
+    {file = "botocore-1.34.120.tar.gz", hash = "sha256:5cc0fca43cb2aad54917a394a001ac9ba774d21ad6a08828002d54b601776f78"},
 ]
 
 [package.dependencies]
@@ -1277,7 +1277,7 @@ yaml = ["PyYAML"]
 name = "couchbase"
 version = "4.2.1"
 description = "Python Client for Couchbase"
-optional = true
+optional = false
 python-versions = ">=3.7"
 files = [
     {file = "couchbase-4.2.1-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:7ad4c4462879f456a9067ac1788e62d852509439bac3538b9bc459a754666481"},
@@ -2897,13 +2897,13 @@ pydantic = ">=1.10,<3"
 
 [[package]]
 name = "gprof2dot"
-version = "2024.6.5"
+version = "2024.6.6"
 description = "Generate a dot graph from the output of several profilers."
 optional = false
-python-versions = ">=2.7"
+python-versions = ">=3.8"
 files = [
-    {file = "gprof2dot-2024.6.5-py2.py3-none-any.whl", hash = "sha256:0be69ac4f5e0d6f57e0c627fa8f6053bdca6a7a226ea6fd8a74b69c845c7d2df"},
-    {file = "gprof2dot-2024.6.5.tar.gz", hash = "sha256:7564e4483f710d463bca1f27668aa595faaf0beee8ad0461df063a44305122a0"},
+    {file = "gprof2dot-2024.6.6-py2.py3-none-any.whl", hash = "sha256:45b14ad7ce64e299c8f526881007b9eb2c6b75505d5613e96e66ee4d5ab33696"},
+    {file = "gprof2dot-2024.6.6.tar.gz", hash = "sha256:fa1420c60025a9eb7734f65225b4da02a10fc6dd741b37fa129bc6b41951e5ab"},
 ]
 
 [[package]]
@@ -4379,13 +4379,13 @@ url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
-version = "2.34.1"
+version = "2.34.2"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langfuse-2.34.1-py3-none-any.whl", hash = "sha256:2bb76d8ead3837798fc1b43e74b012cfca6cf8f433be36e0d53e7498a8b9ba6f"},
-    {file = "langfuse-2.34.1.tar.gz", hash = "sha256:c40220b66a8ba429a4b23d42e02fcfbbe9bd755615f6410854eef1454c36f6ff"},
+    {file = "langfuse-2.34.2-py3-none-any.whl", hash = "sha256:ae8564f78ee3cdc0bb7535e3b2763fd250b2d73a779ad86e7c329ff2e9562bb0"},
+    {file = "langfuse-2.34.2.tar.gz", hash = "sha256:9c06590d62cab8d7f32a05a086a37e71452af6f1e2e966335192a74664f1d149"},
 ]
 
 [package.dependencies]
@@ -4403,13 +4403,13 @@ openai = ["openai (>=0.27.8)"]
 
 [[package]]
 name = "langsmith"
-version = "0.1.72"
+version = "0.1.74"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.72-py3-none-any.whl", hash = "sha256:a4456707669521bd75b7431b9205a6b99579fb9ff01bd338f52d29df11a7662d"},
-    {file = "langsmith-0.1.72.tar.gz", hash = "sha256:262ae9e8aceaba50f3a0f5b6eb559d6110886f0afc6b0ed5270e7d3d3f1fd8d6"},
+    {file = "langsmith-0.1.74-py3-none-any.whl", hash = "sha256:c47e5f2d7a01939c7e1fb94328759e5d0158f89cbd411fcb185c4176a9a75e44"},
+    {file = "langsmith-0.1.74.tar.gz", hash = "sha256:a9457731caf3001c76b909af8b0649a6bf4f265d5ebdeeb023cd253967ef1de8"},
 ]
 
 [package.dependencies]
@@ -4419,13 +4419,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "litellm"
-version = "1.40.3"
+version = "1.40.4"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.40.3-py3-none-any.whl", hash = "sha256:ebec1645f4064f605ebc94636442d19c57fb8a492188f4bea4e8b8d6724a284d"},
-    {file = "litellm-1.40.3.tar.gz", hash = "sha256:fa4eb5baa77c9518275d8e32b9b0190f01a0f5ab7f300c56b91c8fa9dea36898"},
+    {file = "litellm-1.40.4-py3-none-any.whl", hash = "sha256:b3b8e4401f717c3a18595446bfdb80fc6bb74974aac4eae537fb7b3be37fbf9e"},
+    {file = "litellm-1.40.4.tar.gz", hash = "sha256:3edaa1189742afd7c7df2b122f77373d47154a8fb6df6187ff5875e188baa3e1"},
 ]
 
 [package.dependencies]
@@ -4796,13 +4796,13 @@ files = [
 
 [[package]]
 name = "marshmallow"
-version = "3.21.2"
+version = "3.21.3"
 description = "A lightweight library for converting complex datatypes to and from native Python datatypes."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "marshmallow-3.21.2-py3-none-any.whl", hash = "sha256:70b54a6282f4704d12c0a41599682c5c5450e843b9ec406308653b47c59648a1"},
-    {file = "marshmallow-3.21.2.tar.gz", hash = "sha256:82408deadd8b33d56338d2182d455db632c6313aa2af61916672146bb32edc56"},
+    {file = "marshmallow-3.21.3-py3-none-any.whl", hash = "sha256:86ce7fb914aa865001a4b2092c4c2872d13bc347f3d42673272cabfdbad386f1"},
+    {file = "marshmallow-3.21.3.tar.gz", hash = "sha256:4f57c5e050a54d66361e826f94fba213eb10b67b2fdb02c3e0343ce207ba1662"},
 ]
 
 [package.dependencies]
@@ -8313,13 +8313,13 @@ full = ["httpx (>=0.22.0)", "itsdangerous", "jinja2", "python-multipart (>=0.0.7
 
 [[package]]
 name = "storage3"
-version = "0.7.5"
+version = "0.7.6"
 description = "Supabase Storage client for Python."
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "storage3-0.7.5-py3-none-any.whl", hash = "sha256:a2d9fdacafdcbcdb6776a54987a7d84c3e3195a5e4782955c4ccfb36cb021f14"},
-    {file = "storage3-0.7.5.tar.gz", hash = "sha256:ffe43f3877898b43a94024e68c2aaf4cebb3ad73dbbbd67747041d1d70bbf032"},
+    {file = "storage3-0.7.6-py3-none-any.whl", hash = "sha256:d8c23bf87b3a88cafb03761b7f936e4e49daca67741d571513edf746e0f8ba72"},
+    {file = "storage3-0.7.6.tar.gz", hash = "sha256:0b7781cea7fe6382e6b9349b84395808c5f4203dfcac31478304eedc2f81acf6"},
 ]
 
 [package.dependencies]
@@ -8381,13 +8381,13 @@ supafunc = ">=0.3.1,<0.5.0"
 
 [[package]]
 name = "supafunc"
-version = "0.4.5"
+version = "0.4.6"
 description = "Library for Supabase Functions"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "supafunc-0.4.5-py3-none-any.whl", hash = "sha256:2208045f8f5c797924666f6a332efad75ad368f8030b2e4ceb9d2bf63f329373"},
-    {file = "supafunc-0.4.5.tar.gz", hash = "sha256:a6466d78bdcaa58b7f0303793643103baae8106a87acd5d01e196179a9d0d024"},
+    {file = "supafunc-0.4.6-py3-none-any.whl", hash = "sha256:f7ca7b244365e171da7055a64edb462c2ec449cdaa210fc418cfccd132f4cf98"},
+    {file = "supafunc-0.4.6.tar.gz", hash = "sha256:92db51f8f8568d1430285219c9c0072e44207409c416622d7387f609e31928a6"},
 ]
 
 [package.dependencies]
@@ -10047,11 +10047,10 @@ test = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [extras]
-couchbase = ["couchbase"]
 deploy = ["celery", "flower", "redis"]
 local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "3730cc4b19f11707f842b33a3de60e23a4ac811fcb6f5064965df6211380734a"
+content-hash = "72ba2013463e232660c2ebac5841159e66f21d5bbd50cb79e16578296fa3b7c3"

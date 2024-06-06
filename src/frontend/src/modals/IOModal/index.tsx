@@ -24,6 +24,7 @@ import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
 import ChatView from "./components/chatView";
+import { getSessions } from "../../controllers/API";
 
 export default function IOModal({
   children,
@@ -77,6 +78,7 @@ export default function IOModal({
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setNode = useFlowStore((state) => state.setNode);
+  const [sessions, setSessions] = useState<string[]>([]);
 
   async function updateVertices() {
     return updateVerticesOrder(currentFlow!.id, null);
@@ -113,6 +115,11 @@ export default function IOModal({
 
   useEffect(() => {
     setSelectedViewField(startView());
+    // if (haveChat) {
+    //   getSessions().then((sessions) => {
+    //     setSessions(sessions);
+    //   });
+    // }
   }, [open]);
 
   return (
@@ -161,6 +168,9 @@ export default function IOModal({
                       {outputs.length > 0 && (
                         <TabsTrigger value={"2"}>Outputs</TabsTrigger>
                       )}
+                      {/* {haveChat && (
+                        <TabsTrigger value={"3"}>History</TabsTrigger>
+                      )} */}
                     </TabsList>
                   </div>
 
