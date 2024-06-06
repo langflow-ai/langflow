@@ -270,18 +270,6 @@ export default function ComponentsComponent({
   return (
     <>
       <div className="flex w-full gap-4 pb-5">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleImport}
-          className="flex-shrink-0 text-sm"
-        >
-          <ForwardedIconComponent
-            name="FileUp"
-            className="h-5 w-5 text-primary"
-          />
-          Upload Flow
-        </Button>
         {allFlows?.length > 0 && (
           <HeaderComponent
             handleDelete={() => handleSelectOptionsChange("delete")}
