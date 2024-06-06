@@ -67,7 +67,6 @@ export default function ParameterComponent({
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
