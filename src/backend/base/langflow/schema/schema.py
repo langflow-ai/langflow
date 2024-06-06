@@ -126,33 +126,23 @@ class Record(BaseModel):
             raise ValueError(f"Missing required keys ('text', 'sender') in Record: {self.data}")
         sender = self.data.get("sender", "Machine")
         text = self.data.get("text", "")
-        if sender == "User":
-            return HumanMessage(content=text)
-        return AIMessage(content=text)
-
-    def to_lc_messages(self):
-        """
-        Converts the Record to a list of BaseMessage.
-
-        Returns:
-            list[BaseMessage]: The converted list of BaseMessage.
-        """
-        if not all(key in self.data for key in ["text", "sender"]):
-            raise ValueError(f"Missing required keys ('text', 'sender') in Record: {self.data}")
-        sender = self.data.get("sender", "Machine")
-        text = self.data.get("text", "")
         files = self.data.get("files", [])
         if sender == "User":
             if files:
-                human_messages = [HumanMessage(content=text)]
-                for base64_image in files:
+                contents = [{"type": "text", "text": text}]
+                for file_path in files:
                     image_template = ImagePromptTemplate()
-                    human_message = image_template.invoke(url=f"data:image/png;base64,{base64_image}")
-                    human_messages.append(human_message)
-                return human_messages
+                    image_prompt_value = image_template.invoke(input={"path": file_path})
+                    contents.append({"type": "image_url", "image_url": image_prompt_value.image_url})
+                human_message = HumanMessage(content=contents)
             else:
-                return [HumanMessage(content=text)]
-        return [AIMessage(content=text)]
+                human_message = HumanMessage(
+                    content=[{"type": "text", "text": text}],
+                )
+
+            return human_message
+
+        return AIMessage(content=text)
 
     def __getattr__(self, key):
         """
