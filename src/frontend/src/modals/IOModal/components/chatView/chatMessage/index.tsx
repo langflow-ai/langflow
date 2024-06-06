@@ -17,6 +17,7 @@ import { chatMessagePropsType } from "../../../../../types/components";
 import { classNames, cn } from "../../../../../utils/utils";
 import FileCard from "../fileComponent";
 import formatFileName from "../filePreviewChat/utils/format-file-name";
+import FileCardWrapper from "./components/fileCardWrapper";
 
 export default function ChatMessage({
   chat,
@@ -325,23 +326,12 @@ dark:prose-invert"
                   <div className="my-2 flex  flex-col gap-5">
                     {chat.files.map((file, index) => {
                       return (
-                        <div key={index} className="flex flex-col gap-2">
-                          <span
-                            onClick={() => setShowFile(!showFile)}
-                            className="flex cursor-pointer gap-2 text-sm text-muted-foreground"
-                          >
-                            {formatFileName(file.name, 50)}
-                            <ForwardedIconComponent
-                              name={showFile ? "ChevronDown" : "ChevronRight"}
-                            />
-                          </span>
-                          <FileCard
-                            showFile={showFile}
-                            fileName={file.name}
-                            fileType={file.type}
-                            content={file.path}
-                          />
-                        </div>
+                        <FileCardWrapper
+                          index={index}
+                          name={file.name}
+                          type={file.type}
+                          path={file.path}
+                        />
                       );
                     })}
                   </div>
