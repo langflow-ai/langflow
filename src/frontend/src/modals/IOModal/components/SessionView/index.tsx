@@ -11,17 +11,13 @@ import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
 import useUpdateMessage from "../../../../pages/SettingsPage/pages/messagesPage/hooks/use-updateMessage";
 import useRemoveMessages from "../../../../pages/SettingsPage/pages/messagesPage/hooks/use-remove-messages";
-import useMessagesTable from "../../../../pages/SettingsPage/pages/messagesPage/hooks/use-messages-table";
 import HeaderMessagesComponent from "../../../../pages/SettingsPage/pages/messagesPage/components/headerMessages";
+import { Button } from "../../../../components/ui/button";
+import ForwardedIconComponent from "../../../../components/genericIconComponent";
+import { cn } from "../../../../utils/utils";
 
-export default function SessionView({
-  session,
-  columns,
-}: {
-  session: string;
-  columns: Array<ColDef | ColGroupDef>;
-}) {
-  const messages = useMessagesStore((state) => state.messages);
+export default function SessionView({ rows }: { rows: Array<any> }) {
+  const columns = useMessagesStore((state) => state.columns);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
@@ -48,21 +44,43 @@ export default function SessionView({
   }
 
   return (
-    <TableComponent
-      readOnlyEdit
-      onCellEditRequest={(event) => {
-        handleUpdateMessage(event);
-      }}
-      editable={["Sender Name", "Message"]}
-      overlayNoRowsTemplate="No data available"
-      onSelectionChanged={(event: SelectionChangedEvent) => {
-        setSelectedRows(event.api.getSelectedRows().map((row) => row.index));
-      }}
-      rowSelection="multiple"
-      suppressRowClickSelection={true}
-      pagination={true}
-      columnDefs={columns}
-      rowData={messages.filter((message) => message.session_id === session)}
-    />
+    <div className="flex h-full w-full flex-col justify-between gap-6">
+      <>
+        <div className="flex w-full items-center justify-end gap-4 space-y-0.5">
+          <div className="flex flex-shrink-0 items-center gap-2">
+            <Button
+              data-testid="api-key-button-store"
+              variant="primary"
+              className="group px-2"
+              disabled={selectedRows.length === 0}
+              onClick={handleRemoveMessages}
+            >
+              <ForwardedIconComponent
+                name="Trash2"
+                className={cn(
+                  "h-5 w-5 text-destructive group-disabled:text-primary",
+                )}
+              />
+            </Button>
+          </div>
+        </div>
+      </>
+      <TableComponent
+        readOnlyEdit
+        onCellEditRequest={(event) => {
+          handleUpdateMessage(event);
+        }}
+        editable={["Sender Name", "Message"]}
+        overlayNoRowsTemplate="No data available"
+        onSelectionChanged={(event: SelectionChangedEvent) => {
+          setSelectedRows(event.api.getSelectedRows().map((row) => row.index));
+        }}
+        rowSelection="multiple"
+        suppressRowClickSelection={true}
+        pagination={true}
+        columnDefs={columns}
+        rowData={rows}
+      />
+    </div>
   );
 }

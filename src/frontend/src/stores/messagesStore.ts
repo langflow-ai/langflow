@@ -2,6 +2,18 @@ import { create } from "zustand";
 import { MessagesStoreType } from "../types/zustand/messages";
 
 export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
+  deleteSession: (id) => {
+    set((state) => {
+      const updatedMessages = state.messages.filter(
+        (msg) => msg.session_id !== id,
+      );
+      return { messages: updatedMessages };
+    });
+  },
+  columns: [],
+  setColumns: (columns) => {
+    set(() => ({ columns: columns }));
+  },
   messages: [],
   setMessages: (messages) => {
     set(() => ({ messages: messages }));
