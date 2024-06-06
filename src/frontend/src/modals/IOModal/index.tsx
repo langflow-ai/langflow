@@ -133,12 +133,7 @@ export default function IOModal({
   }, [open]);
 
   return (
-    <BaseModal
-      size={selectedTab === 0 ? "sm-thin" : "md-thin"}
-      open={open}
-      setOpen={setOpen}
-      disable={disable}
-    >
+    <BaseModal size={"md-thin"} open={open} setOpen={setOpen} disable={disable}>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
       <BaseModal.Header description={CHAT_FORM_DIALOG_SUBTITLE}>
@@ -305,31 +300,35 @@ export default function IOModal({
                 <TabsContent value={"0"} className="api-modal-tabs-content">
                   {sessions.map((session, index) => {
                     return (
-                      <div className="flex items-center justify-between border-b px-2 align-middle">
-                        {session}
-                        <div className="flex items-center justify-center gap-2 align-middle">
-                          <Button variant="ghost" onClick={() => {}}>
-                            <ShadTooltip content={"delete"}>
-                              <IconComponent
-                                name="Trash2"
-                                className="h-4 w-4"
-                              ></IconComponent>
-                            </ShadTooltip>
-                          </Button>
-                          <div>
-                            <ShadTooltip content={"hello"}>
-                              <div
-                                className={cn(
-                                  "h-2 w-2 rounded-full",
-                                  flow_sessions.some(
-                                    (f_session) =>
-                                      f_session?.session_id === session,
-                                  )
-                                    ? "bg-status-green"
-                                    : "bg-slate-500",
-                                )}
-                              ></div>
-                            </ShadTooltip>
+                      <div className="file-component-accordion-div">
+                        <div className="flex w-full items-center justify-between border-b px-2 py-1 align-middle">
+                          <Badge variant="gray" size="md">
+                            {session}
+                          </Badge>
+                          <div className="flex items-center justify-center gap-2 align-middle">
+                            <Button variant="ghost" onClick={() => {}}>
+                              <ShadTooltip content={"delete"}>
+                                <IconComponent
+                                  name="Trash2"
+                                  className="h-4 w-4"
+                                ></IconComponent>
+                              </ShadTooltip>
+                            </Button>
+                            <div>
+                              <ShadTooltip content={"hello"}>
+                                <div
+                                  className={cn(
+                                    "h-2 w-2 rounded-full",
+                                    flow_sessions.some(
+                                      (f_session) =>
+                                        f_session?.session_id === session,
+                                    )
+                                      ? "bg-status-green"
+                                      : "bg-slate-500",
+                                  )}
+                                ></div>
+                              </ShadTooltip>
+                            </div>
                           </div>
                         </div>
                       </div>
