@@ -1,4 +1,4 @@
-export type chatInputType = {
+export type ChatInputType = {
   result: string;
 };
 
@@ -12,7 +12,7 @@ export type FlowPoolObjectType = {
   timestamp: string;
   valid: boolean;
   params: any;
-  data: { artifacts: any; results: any | ChatOutputType | chatInputType };
+  data: { artifacts: any; results: any | ChatOutputType | ChatInputType };
   id: string;
 };
 
