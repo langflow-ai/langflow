@@ -1,5 +1,5 @@
-import { cloneDeep } from "lodash";
 import emojiRegex from "emoji-regex";
+import { cloneDeep } from "lodash";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../components/genericIconComponent";
