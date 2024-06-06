@@ -187,4 +187,3 @@ class StreamURL(TypedDict):
 class Log(TypedDict):
     message: str | dict | StreamURL
     type: str
-    type: str

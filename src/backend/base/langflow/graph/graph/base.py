@@ -758,6 +758,7 @@ class Graph:
                 params = f"{vertex._built_object_repr()}{params}"
                 valid = True
                 result_dict = vertex.result
+                artifacts = vertex.artifacts
             else:
                 raise ValueError(f"No result found for vertex {vertex_id}")
             set_cache_coro = partial(chat_service.set_cache, key=self.flow_id)
