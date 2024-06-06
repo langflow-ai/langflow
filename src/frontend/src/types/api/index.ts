@@ -13,7 +13,7 @@ export type CustomFieldsType = {
 };
 
 export type APIClassType = {
-  base_classes: Array<string>;
+  base_classes?: Array<string>;
   description: string;
   template: APITemplateType;
   display_name: string;
@@ -67,6 +67,8 @@ export type OutputFieldType = {
   types: Array<string>;
   selected?: string;
   name: string;
+  displayName?: string;
+  proxy?: { id: string; name: string };
 };
 export type sendAllProps = {
   nodes: Node[];
