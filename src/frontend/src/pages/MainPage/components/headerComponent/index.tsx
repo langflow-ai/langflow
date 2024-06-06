@@ -12,7 +12,6 @@ type HeaderComponentProps = {
   handleDelete: () => void;
   handleDuplicate: () => void;
   handleExport: () => void;
-  handleImport: () => void;
   disableFunctions: boolean;
 };
 
@@ -21,7 +20,6 @@ const HeaderComponent = ({
   handleDelete,
   handleDuplicate,
   handleExport,
-  handleImport,
   disableFunctions,
 }: HeaderComponentProps) => {
   const [shouldSelectAll, setShouldSelectAll] = useState(true);
@@ -33,20 +31,8 @@ const HeaderComponent = ({
 
   return (
     <>
-      <div className="grid grid-cols-3 pb-5">
-        <div className="flex items-center gap-4 justify-self-start">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleImport}
-            className="text-sm"
-          >
-            <ForwardedIconComponent
-              name="FileUp"
-              className="h-5 w-5 text-primary"
-            />
-            Upload Flow
-          </Button>
+      <div className="grid w-full grid-cols-3">
+        <div className="flex items-center justify-self-start">
           <Button
             variant="none"
             size="none"
