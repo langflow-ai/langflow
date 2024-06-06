@@ -8,7 +8,7 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 export default function SettingsPage(): JSX.Element {
   const pathname = location.pathname;
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
   useEffect(() => {
     setCurrentFlowId("");
@@ -59,7 +59,10 @@ export default function SettingsPage(): JSX.Element {
       title: "Messages",
       href: "/settings/messages",
       icon: (
-        <ForwardedIconComponent name="Keyboard" className="w-5 stroke-[1.5]" />
+        <ForwardedIconComponent
+          name="MessagesSquare"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
       ),
     },
   ];
