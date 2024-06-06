@@ -4,7 +4,8 @@ from typing import Literal, Optional, cast
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from pydantic import BaseModel, model_validator
+from langchain_core.prompts.image import ImagePromptTemplate
+from pydantic import BaseModel, model_serializer, model_validator
 
 
 class Record(BaseModel):
@@ -28,6 +29,11 @@ class Record(BaseModel):
             if key not in values["data"] and key not in {"text_key", "data", "default_value"}:
                 values["data"][key] = values[key]
         return values
+
+    @model_serializer(mode="json")
+    def serialize_model(cls, obj):
+        data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in obj.data.items()}
+        return data
 
     def get_text(self):
         """
@@ -102,7 +108,9 @@ class Record(BaseModel):
         text = self.data.pop(self.text_key, self.default_value)
         return Document(page_content=text, metadata=self.data)
 
-    def to_lc_message(self) -> BaseMessage:
+    def to_lc_message(
+        self,
+    ) -> BaseMessage:
         """
         Converts the Record to a BaseMessage.
 
@@ -121,6 +129,30 @@ class Record(BaseModel):
         if sender == "User":
             return HumanMessage(content=text)
         return AIMessage(content=text)
+
+    def to_lc_messages(self):
+        """
+        Converts the Record to a list of BaseMessage.
+
+        Returns:
+            list[BaseMessage]: The converted list of BaseMessage.
+        """
+        if not all(key in self.data for key in ["text", "sender"]):
+            raise ValueError(f"Missing required keys ('text', 'sender') in Record: {self.data}")
+        sender = self.data.get("sender", "Machine")
+        text = self.data.get("text", "")
+        files = self.data.get("files", [])
+        if sender == "User":
+            if files:
+                human_messages = [HumanMessage(content=text)]
+                for base64_image in files:
+                    image_template = ImagePromptTemplate()
+                    human_message = image_template.invoke(url=f"data:image/png;base64,{base64_image}")
+                    human_messages.append(human_message)
+                return human_messages
+            else:
+                return [HumanMessage(content=text)]
+        return [AIMessage(content=text)]
 
     def __getattr__(self, key):
         """
@@ -169,8 +201,14 @@ class Record(BaseModel):
 
     def __str__(self) -> str:
         # return a JSON string representation of the Record atributes
+        try:
+            data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
+            return json.dumps(data, indent=4)
+        except Exception:
+            return str(self.data)
 
-        return json.dumps(self.data)
+    def __contains__(self, key):
+        return key in self.data
 
 
 INPUT_FIELD_NAME = "input_value"
