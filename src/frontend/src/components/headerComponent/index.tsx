@@ -56,7 +56,7 @@ export default function Header(): JSX.Element {
     const lastFlowVisitedIndex = routeHistory
       .reverse()
       .findIndex(
-        (path) => path.includes("/flow/") && path !== location.pathname,
+        (path) => path.includes("/flow/") && path !== location.pathname
       );
 
     const lastFlowVisited = routeHistory[lastFlowVisitedIndex];
@@ -181,18 +181,6 @@ export default function Header(): JSX.Element {
               />
             </div>
           </AlertDropdown>
-          {autoLogin && (
-            <button
-              onClick={() => {
-                navigate("/account/api-keys");
-              }}
-            >
-              <IconComponent
-                name="Key"
-                className="side-bar-button-size text-muted-foreground hover:text-accent-foreground"
-              />
-            </button>
-          )}
 
           <>
             <Separator orientation="vertical" />

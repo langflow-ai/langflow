@@ -90,7 +90,9 @@ async def run_flow(
 
     fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
 
-    return await graph.arun(inputs_list, inputs_components=inputs_components, types=types, fallback_to_env_vars=fallback_to_env_vars)
+    return await graph.arun(
+        inputs_list, inputs_components=inputs_components, types=types, fallback_to_env_vars=fallback_to_env_vars
+    )
 
 
 def generate_function_for_flow(
