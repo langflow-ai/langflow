@@ -4,7 +4,6 @@ import TableAutoCellRender from "../../../components/tableComponent/components/t
 import TableNodeCellRender from "../../../components/tableComponent/components/tableNodeCellRender";
 import TableToggleCellRender from "../../../components/tableComponent/components/tableToggleCellRender";
 import TableTooltipRender from "../../../components/tableComponent/components/tableTooltipRender";
-import TableMultilineCellRender from "../../../components/tableComponent/components/tableMultilineCellRender";
 
 const useColumnDefs = (
   myData: any,
@@ -51,10 +50,10 @@ const useColumnDefs = (
         valueGetter: (params: ValueGetterParams) => {
           return {
             value: params.data.value,
-            nodeClass: myData.current.node,
+            nodeClass: myData.node,
             handleOnNewValue: handleOnNewValue,
             handleOnChangeDb: (value, key) => {
-              myData.current.node!.template[key].load_from_db = value;
+              myData.node!.template[key].load_from_db = value;
             },
           };
         },
@@ -83,7 +82,7 @@ const useColumnDefs = (
         cellClass: "no-border",
       },
     ],
-    [open],
+    [open, myData],
   );
 
   return columnDefs;

@@ -4,9 +4,9 @@ import { TemplateVariableType } from "../../../types/api";
 
 const useRowData = (myData, open) => {
   const rowData = useMemo(() => {
-    return Object.keys(myData.current.node!.template)
+    return Object.keys(myData.node!.template)
       .filter((key: string) => {
-        const templateParam = myData.current.node!.template[
+        const templateParam = myData.node!.template[
           key
         ] as TemplateVariableType;
         return (
@@ -20,7 +20,7 @@ const useRowData = (myData, open) => {
         );
       })
       .map((key: string) => {
-        const templateParam = myData.current.node!.template[
+        const templateParam = myData.node!.template[
           key
         ] as TemplateVariableType;
         return {
@@ -29,7 +29,7 @@ const useRowData = (myData, open) => {
           id: key,
         };
       });
-  }, [open]);
+  }, [open, myData]);
 
   return rowData;
 };
