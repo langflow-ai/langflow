@@ -26,7 +26,7 @@ class TextOutput(TextComponent):
         ),
     ]
     outputs = [
-        Output(name="Text", method="text_response"),
+        Output(display_name="Text", name="text", method="text_response"),
     ]
 
     def text_response(self) -> Text:

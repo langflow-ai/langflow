@@ -11,7 +11,7 @@ class RecordsOutput(Component):
         Input(name="input_value", type=Record, display_name="Record Input"),
     ]
     outputs = [
-        Output(name="Record", method="record_response"),
+        Output(display_name="Record", name="record", method="record_response"),
     ]
 
     def record_response(self) -> Record:
