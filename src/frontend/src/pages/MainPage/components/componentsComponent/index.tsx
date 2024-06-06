@@ -20,6 +20,7 @@ import EmptyComponent from "../emptyComponent";
 import HeaderComponent from "../headerComponent";
 import { downloadFlow, removeApiKeys } from "../../../../utils/reactflowUtils";
 import { useDarkStore } from "../../../../stores/darkStore";
+import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 
 export default function ComponentsComponent({
   type = "all",
@@ -156,6 +157,26 @@ export default function ComponentsComponent({
     });
   };
 
+  const handleImport = () => {
+    uploadFlow({ newProject: true, isComponent: false })
+      .then(() => {
+        resetFilter();
+        getFoldersApi(true);
+        if (!folderId || folderId === myCollectionId) {
+          getFolderById(folderId ? folderId : myCollectionId);
+        }
+        setSelectedFlowsComponentsCards([]);
+
+        setSuccessData({ title: "Flows imported successfully" });
+      })
+      .catch((error) => {
+        setErrorData({
+          title: UPLOAD_ERROR_ALERT,
+          list: [error],
+        });
+      });
+  };
+
   const version = useDarkStore((state) => state.version);
 
   const handleExport = () => {
@@ -252,6 +273,7 @@ export default function ComponentsComponent({
           handleSelectAll={handleSelectAll}
           handleDuplicate={() => handleSelectOptionsChange("duplicate")}
           handleExport={() => handleSelectOptionsChange("export")}
+          handleImport={() => handleImport()}
           disableFunctions={!(selectedFlowsComponentsCards?.length > 0)}
         />
       )}
