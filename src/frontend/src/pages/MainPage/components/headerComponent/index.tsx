@@ -1,17 +1,8 @@
 import { useState } from "react";
 import IconComponent from "../../../../components/genericIconComponent";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../../../components/ui/select";
-import { Checkbox } from "../../../../components/ui/checkbox";
-import { Button } from "../../../../components/ui/button";
-import { cn } from "../../../../utils/utils";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
+import { Checkbox } from "../../../../components/ui/checkbox";
+import { cn } from "../../../../utils/utils";
 
 type HeaderComponentProps = {
   handleSelectAll: (select) => void;
@@ -91,7 +82,7 @@ const HeaderComponent = ({
                   name="Trash2"
                   className={cn(
                     "h-5 w-5 text-primary transition-all",
-                    disableFunctions ? "" : "hover:text-destructive",
+                    disableFunctions ? "" : "hover:text-destructive"
                   )}
                 />
               </button>

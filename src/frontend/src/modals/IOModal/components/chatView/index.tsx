@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../../../components/genericIconComponent";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "../../../../components/ui/select";
+import { Button } from "../../../../components/ui/button";
 import {
   CHAT_FIRST_INITIAL_TEXT,
   CHAT_SECOND_INITIAL_TEXT,
@@ -138,7 +133,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string,
+    stream_url?: string
   ) {
     // if (message === "") return;
     chat.message = message;
@@ -166,19 +161,21 @@ export default function ChatView({
     <div className="eraser-column-arrangement">
       <div className="eraser-size">
         <div className="eraser-position">
-          <button
+          <Button
             className="flex gap-1"
+            size="none"
+            variant="none"
             onClick={() => handleSelectChange("builds")}
           >
             <IconComponent
               name="Eraser"
               className={classNames(
                 "h-5 w-5 transition-all duration-100",
-                lockChat ? "animate-pulse text-primary" : "text-primary",
+                lockChat ? "animate-pulse text-primary" : "text-primary"
               )}
               aria-hidden="true"
             />
-          </button>
+          </Button>
           {/* <Select
             onValueChange={handleSelectChange}
             value=""
