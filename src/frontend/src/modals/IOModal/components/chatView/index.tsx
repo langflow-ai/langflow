@@ -24,6 +24,7 @@ import { chatViewProps } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
+import { Button } from "../../../../components/ui/button";
 
 export default function ChatView({
   sendMessage,
@@ -166,8 +167,10 @@ export default function ChatView({
     <div className="eraser-column-arrangement">
       <div className="eraser-size">
         <div className="eraser-position">
-          <button
+          <Button
             className="flex gap-1"
+            size="none"
+            variant="none"
             onClick={() => handleSelectChange("builds")}
           >
             <IconComponent
@@ -178,7 +181,7 @@ export default function ChatView({
               )}
               aria-hidden="true"
             />
-          </button>
+          </Button>
           {/* <Select
             onValueChange={handleSelectChange}
             value=""
