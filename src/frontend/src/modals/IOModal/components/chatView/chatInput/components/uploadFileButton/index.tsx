@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "../../../../../../../components/genericIconComponent";
+import { Button } from "../../../../../../../components/ui/button";
 
 const UploadFileButton = ({
   fileInputRef,
@@ -13,12 +14,14 @@ const UploadFileButton = ({
         style={{ display: "none" }}
         onChange={handleFileChange}
       />
-      <button
+      <Button
         className="font-bold text-white transition-all hover:text-muted-foreground"
         onClick={handleButtonClick}
+        variant="none"
+        size="none"
       >
         <ForwardedIconComponent name="PaperclipIcon" />
-      </button>
+      </Button>
     </div>
   );
 };
