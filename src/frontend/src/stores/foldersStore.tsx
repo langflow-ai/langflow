@@ -101,7 +101,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   folderIdDragging: "",
   setFolderIdDragging: (id) => set(() => ({ folderIdDragging: id })),
   uploadFolder: () => {
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
       const input = document.createElement("input");
       input.type = "file";
       input.onchange = (event: Event) => {
@@ -120,15 +120,22 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
                 .addFlow(true, data)
                 .then(() => {
                   resolve();
+                })
+                .catch((error) => {
+                  reject(error);
                 });
             } else {
-              uploadFlowsFromFolders(formData).then(() => {
-                get()
-                  .getFoldersApi(true)
-                  .then(() => {
-                    resolve();
-                  });
-              });
+              uploadFlowsFromFolders(formData)
+                .then(() => {
+                  get()
+                    .getFoldersApi(true)
+                    .then(() => {
+                      resolve();
+                    });
+                })
+                .catch((error) => {
+                  reject(error);
+                });
             }
           });
         }
