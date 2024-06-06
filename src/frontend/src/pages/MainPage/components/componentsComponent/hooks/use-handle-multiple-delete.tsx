@@ -1,14 +1,17 @@
+import { useFolderStore } from "../../../../../stores/foldersStore";
+
 const useDeleteMultiple = (
   removeFlow,
   resetFilter,
-  getFoldersApi,
-  getFolderById,
   folderId,
   myCollectionId,
   setSuccessData,
-  setErrorData
+  setErrorData,
 ) => {
   const handleDeleteMultiple = (selectedFlowsComponentsCards) => {
+    const getFolderById = useFolderStore((state) => state.getFolderById);
+    const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
+
     removeFlow(selectedFlowsComponentsCards)
       .then(() => {
         resetFilter();
