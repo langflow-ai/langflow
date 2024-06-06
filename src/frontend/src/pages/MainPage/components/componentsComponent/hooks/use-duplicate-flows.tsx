@@ -1,15 +1,17 @@
+import { useFolderStore } from "../../../../../stores/foldersStore";
+
 const useDuplicateFlows = (
   selectedFlowsComponentsCards,
   allFlows,
   addFlow,
   resetFilter,
-  getFoldersApi,
-  getFolderById,
   setSelectedFlowsComponentsCards,
   folderId,
   myCollectionId,
   setSuccessData
 ) => {
+  const getFolderById = useFolderStore((state) => state.getFolderById);
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const handleDuplicate = () => {
     Promise.all(
       selectedFlowsComponentsCards.map((selectedFlow) =>

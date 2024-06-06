@@ -2,20 +2,21 @@ import { useEffect } from "react";
 
 const useSelectedFlowsComponentsCards = (
   entireFormValues,
-  setSelectedFlowsComponentsCards,
-  selectedFlowsComponentsCards
+  setSelectedFlowsComponentsCards
 ) => {
   useEffect(() => {
     if (!entireFormValues || Object.keys(entireFormValues).length === 0) return;
-
-    const selectedFlows = Object.keys(entireFormValues).filter(
-      (key) => entireFormValues[key] === true
+    const selectedFlows: string[] = Object.keys(entireFormValues).filter(
+      (key) => {
+        if (entireFormValues[key] === true) {
+          return true;
+        }
+        return false;
+      }
     );
 
     setSelectedFlowsComponentsCards(selectedFlows);
   }, [entireFormValues]);
-
-  return selectedFlowsComponentsCards;
 };
 
 export default useSelectedFlowsComponentsCards;

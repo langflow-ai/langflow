@@ -7,10 +7,8 @@ const useFilterFlows = (
   setAllFlows
 ) => {
   useEffect(() => {
-    if (!flowsFromFolder) return;
-
-    const newFlows = cloneDeep(flowsFromFolder);
-    const filteredFlows = newFlows.filter(
+    const newFlows = cloneDeep(flowsFromFolder!);
+    const filteredFlows = newFlows?.filter(
       (f) =>
         f.name.toLowerCase().includes(searchFlowsComponents.toLowerCase()) ||
         f.description
@@ -19,11 +17,11 @@ const useFilterFlows = (
     );
 
     if (searchFlowsComponents === "") {
-      setAllFlows(flowsFromFolder);
-    } else {
-      setAllFlows(filteredFlows);
+      setAllFlows(flowsFromFolder!);
     }
-  }, [searchFlowsComponents, flowsFromFolder, setAllFlows]);
+
+    setAllFlows(filteredFlows);
+  }, [searchFlowsComponents]);
 };
 
 export default useFilterFlows;

@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-
 const useSelectAll = (flowsFromFolder, getValues, setValue) => {
   const handleSelectAll = (select) => {
     const flowsFromFolderIds = flowsFromFolder?.map((f) => f.id);
@@ -15,10 +13,6 @@ const useSelectAll = (flowsFromFolder, getValues, setValue) => {
       setValue(key, false);
     });
   };
-
-  useEffect(() => {
-    handleSelectAll(true); // Select all initially
-  }, [flowsFromFolder, getValues, setValue]);
 
   return handleSelectAll;
 };

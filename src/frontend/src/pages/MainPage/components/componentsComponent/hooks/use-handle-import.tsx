@@ -1,16 +1,17 @@
 import { UPLOAD_ERROR_ALERT } from "../../../../../constants/alerts_constants";
+import { useFolderStore } from "../../../../../stores/foldersStore";
 
 const useImportFlows = (
   uploadFlow,
   resetFilter,
-  getFoldersApi,
-  getFolderById,
   setSelectedFlowsComponentsCards,
   folderId,
   myCollectionId,
   setSuccessData,
   setErrorData
 ) => {
+  const getFolderById = useFolderStore((state) => state.getFolderById);
+  const getFoldersApi = useFolderStore((state) => state.getFoldersApi);
   const handleImport = () => {
     uploadFlow({ newProject: true, isComponent: false })
       .then(() => {
