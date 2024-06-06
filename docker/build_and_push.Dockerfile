@@ -48,8 +48,7 @@ COPY pyproject.toml poetry.lock README.md ./
 COPY src/ ./src
 COPY scripts/ ./scripts
 RUN python -m pip install requests --user && cd ./scripts && python update_dependencies.py
-RUN make build_frontend \
-      && $POETRY_HOME/bin/poetry lock --no-update \
+RUN $POETRY_HOME/bin/poetry lock --no-update \
       && $POETRY_HOME/bin/poetry install --no-interaction --no-ansi -E deploy \
       && $POETRY_HOME/bin/poetry build -f wheel \
       && $POETRY_HOME/bin/poetry run pip install dist/*.whl
