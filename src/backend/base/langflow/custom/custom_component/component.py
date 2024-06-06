@@ -110,6 +110,7 @@ class Component(CustomComponent):
         """
         # This function is similar to build_config, but it will process the inputs
         # and return them as a dict with keys being the Input.name and values being the Input.model_dump()
+        self.inputs = self.template_config.get("inputs", [])
         if not self.inputs:
             return {}
         build_config = {_input.name: _input.model_dump(by_alias=True, exclude_none=True) for _input in self.inputs}

@@ -1,18 +1,16 @@
+from types import GenericAlias
 from typing import Any, Callable, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 
+from langflow.field_typing import Text
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.helpers.custom import format_type
 
 
 class Input(BaseModel):
-    model_config = ConfigDict()
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    field_type: str = Field(
-        default="str",
-        serialization_alias="type",
-    )
+    field_type: str | type | None = Field(default=str, serialization_alias="type")
     """The type of field this is. Default is a string."""
 
     required: bool = False
@@ -86,10 +84,10 @@ class Input(BaseModel):
     def serialize_model(self, handler):
         result = handler(self)
         # If the field is str, we add the Text input type
-        if self.field_type in ["str", "Text"]:
+        if self.field_type in [str, Text]:
             if "input_types" not in result:
                 result["input_types"] = ["Text"]
-        if self.field_type == "Text":
+        if self.field_type == Text:
             result["type"] = "str"
         else:
             result["type"] = self.field_type
@@ -111,15 +109,15 @@ class Input(BaseModel):
         # If the user passes CustomComponent as a type insteado of "CustomComponent" we need to convert it to a string
         # this should be done for all types
         # How to check if v is a type?
-        if isinstance(v, type):
-            return format_type(v)
+        if isinstance(v, (type, GenericAlias)):
+            return str(v)
         elif not isinstance(v, str):
             raise ValueError(f"type must be a string or a type, not {type(v)}")
         return v
 
     @field_serializer("field_type")
     def serialize_field_type(self, value, _info):
-        if value == "float" and self.range_spec is None:
+        if value == float and self.range_spec is None:
             self.range_spec = RangeSpec()
         return value
 
@@ -180,3 +178,9 @@ class Output(BaseModel):
             else:
                 raise ValueError("If display_name is not set, name must be set")
         return v
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        result = handler(self)
+
+        return result

@@ -103,6 +103,8 @@ def extract_type_from_optional(field_type):
     Returns:
     str: The extracted type, or an empty string if no type was found.
     """
+    if "optional" not in field_type.lower():
+        return field_type
     match = re.search(r"\[(.*?)\]$", field_type)
     return match[1] if match else field_type
 
@@ -249,10 +251,16 @@ def get_field_dict(field: Union[Input, dict]):
     return field
 
 
-def run_build_inputs(custom_component: Component, user_id: Optional[Union[str, UUID]] = None):
+def run_build_inputs(
+    frontend_node: ComponentFrontendNode,
+    custom_component: Component,
+    user_id: Optional[Union[str, UUID]] = None,
+):
     """Run the build inputs of a custom component."""
     try:
-        return custom_component.build_inputs(user_id=user_id)
+        field_config = custom_component.build_inputs(user_id=user_id)
+        add_extra_fields(frontend_node, field_config, field_config.values())
+        return field_config
     except Exception as exc:
         logger.error(f"Error running build inputs: {exc}")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -326,14 +334,18 @@ def build_custom_component_template_from_inputs(
     custom_component: Component, user_id: Optional[Union[str, UUID]] = None
 ):
     # The List of Inputs fills the role of the build_config and the entrypoint_args
-    frontend_node = ComponentFrontendNode.from_inputs(**custom_component.template_config)
+    field_config = custom_component.template_config
+    frontend_node = ComponentFrontendNode.from_inputs(**field_config)
     field_config = run_build_inputs(
-        custom_component,
+        frontend_node=frontend_node,
+        custom_component=custom_component,
         user_id=user_id,
     )
     frontend_node = add_code_field(frontend_node, custom_component.code, field_config.get("code", {}))
     # But we now need to calculate the return_type of the methods in the outputs
     for output in frontend_node.outputs:
+        if output.types:
+            continue
         return_types = custom_component.get_method_return_type(output.method)
         return_types = [format_type(return_type) for return_type in return_types]
         output.add_types(return_types)
