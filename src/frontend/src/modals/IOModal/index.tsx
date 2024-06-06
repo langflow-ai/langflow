@@ -25,7 +25,10 @@ import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
 import ChatView from "./components/chatView";
-import { getSessions } from "../../controllers/API";
+import { getMessagesTable } from "../../controllers/API";
+import { useMessagesStore } from "../../stores/messagesStore";
+import { ColDef, ColGroupDef } from "ag-grid-community";
+import SessionView from "./components/SessionView";
 
 export default function IOModal({
   children,
@@ -34,6 +37,7 @@ export default function IOModal({
   disable,
 }: IOModalPropsType): JSX.Element {
   const allNodes = useFlowStore((state) => state.nodes);
+  const setMessages = useMessagesStore((state) => state.setMessages);
   const inputs = useFlowStore((state) => state.inputs).filter(
     (input) => input.type !== "ChatInput",
   );
@@ -80,6 +84,7 @@ export default function IOModal({
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setNode = useFlowStore((state) => state.setNode);
   const [sessions, setSessions] = useState<string[]>([]);
+  const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
 
   async function updateVertices() {
     return updateVerticesOrder(currentFlow!.id, null);
@@ -126,8 +131,10 @@ export default function IOModal({
   useEffect(() => {
     setSelectedViewField(startView());
     if (haveChat) {
-      getSessions().then((sessions) => {
+      getMessagesTable("union").then(({ sessions, rows, columns }) => {
         setSessions(sessions);
+        setMessages(rows);
+        setColumns(columns);
       });
     }
   }, [open]);
@@ -300,7 +307,16 @@ export default function IOModal({
                 <TabsContent value={"0"} className="api-modal-tabs-content">
                   {sessions.map((session, index) => {
                     return (
-                      <div className="file-component-accordion-div">
+                      <div
+                        className="file-component-accordion-div cursor-pointer"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedViewField({
+                            id: session,
+                            type: "Session",
+                          });
+                        }}
+                      >
                         <div className="flex w-full items-center justify-between border-b px-2 py-1 align-middle">
                           <Badge variant="gray" size="md">
                             {session}
@@ -362,19 +378,30 @@ export default function IOModal({
                   <div className="h-full w-full">
                     {inputs.some(
                       (input) => input.id === selectedViewField.id,
-                    ) ? (
+                    ) && (
                       <IOFieldView
                         type={InputOutput.INPUT}
                         left={false}
                         fieldType={selectedViewField.type!}
                         fieldId={selectedViewField.id!}
                       />
-                    ) : (
+                    )}
+                    {outputs.some(
+                      (output) => output.id === selectedViewField.id,
+                    ) && (
                       <IOFieldView
                         type={InputOutput.OUTPUT}
                         left={false}
                         fieldType={selectedViewField.type!}
                         fieldId={selectedViewField.id!}
+                      />
+                    )}
+                    {sessions.some(
+                      (session) => session === selectedViewField.id,
+                    ) && (
+                      <SessionView
+                        columns={columns}
+                        session={selectedViewField.id}
                       />
                     )}
                   </div>
