@@ -100,3 +100,9 @@ select:-webkit-autofill:focus {
 .json-view-dark {
   background-color: #141924 !important;
 }
+
+.ag-row .ag-cell {
+  display: flex;
+  justify-content: center; /* align horizontal */
+  align-items: center;
+}
