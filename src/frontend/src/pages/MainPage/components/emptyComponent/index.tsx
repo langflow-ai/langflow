@@ -1,7 +1,7 @@
-import { useNavigate } from "react-router-dom";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import NewFlowModal from "../../../../modals/newFlowModal";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import NewFlowModal from "../../../../modals/newFlowModal";
+import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 
 type EmptyComponentProps = {};
 

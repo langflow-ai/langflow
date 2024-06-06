@@ -31,11 +31,7 @@ function RefreshButton({
 
   // icon class name should take into account the disabled state and the loading state
   const disabledIconTextClass = disabled ? "text-muted-foreground" : "";
-  const iconClassName = cn(
-    "h-4 w-4",
-    isLoading ? "animate-spin" : "animate-wiggle",
-    disabledIconTextClass
-  );
+  const iconClassName = cn("h-4 w-4 animate-wiggle", disabledIconTextClass);
 
   return (
     <Button
@@ -44,10 +40,11 @@ function RefreshButton({
       className={classNames}
       onClick={handleClick}
       id={id}
+      loading={isLoading}
     >
       {button_text && <span className="mr-1">{button_text}</span>}
       <IconComponent
-        name={isLoading ? "Loader2" : "RefreshCcw"}
+        name={"RefreshCcw"}
         className={iconClassName}
         id={id + "-icon"}
       />

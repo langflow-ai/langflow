@@ -8,7 +8,7 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 export default function SettingsPage(): JSX.Element {
   const pathname = location.pathname;
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
+    (state) => state.setCurrentFlowId
   );
   useEffect(() => {
     setCurrentFlowId("");
@@ -25,13 +25,22 @@ export default function SettingsPage(): JSX.Element {
         />
       ),
     },
-
     {
       title: "Global Variables",
       href: "/settings/global-variables",
       icon: (
         <ForwardedIconComponent
           name="Globe"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
+    {
+      title: "API Keys",
+      href: "/settings/api-keys",
+      icon: (
+        <ForwardedIconComponent
+          name="Key"
           className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),

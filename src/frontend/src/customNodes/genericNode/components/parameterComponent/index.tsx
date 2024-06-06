@@ -98,7 +98,7 @@ export default function ParameterComponent({
     debouncedHandleUpdateValues,
     setNode,
     renderTooltips,
-    setIsLoading,
+    setIsLoading
   );
 
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
@@ -107,7 +107,7 @@ export default function ParameterComponent({
     takeSnapshot,
     setNode,
     updateNodeInternals,
-    renderTooltips,
+    renderTooltips
   );
 
   const { handleRefreshButtonPress: handleRefreshButtonPressHook } =
@@ -116,7 +116,7 @@ export default function ParameterComponent({
   let disabled =
     edges.some(
       (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
+        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
     ) ?? false;
 
   const handleRefreshButtonPress = async (name, data) => {
@@ -129,12 +129,12 @@ export default function ParameterComponent({
     handleUpdateValues,
     setNode,
     renderTooltips,
-    setIsLoading,
+    setIsLoading
   );
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
-    skipSnapshot: boolean | undefined = false,
+    skipSnapshot: boolean | undefined = false
   ): Promise<void> => {
     handleOnNewValueHook(newValue, skipSnapshot);
   };
@@ -216,7 +216,7 @@ export default function ParameterComponent({
               className={classNames(
                 left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
                 "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : "",
+                !showNode ? "mt-0" : ""
               )}
               style={{
                 borderColor: color ?? nodeColors.unknown,
@@ -334,7 +334,7 @@ export default function ParameterComponent({
                   }
                   className={classNames(
                     left ? "-ml-0.5" : "-mr-0.5",
-                    "h-3 w-3 rounded-full border-2 bg-background",
+                    "h-3 w-3 rounded-full border-2 bg-background"
                   )}
                   style={{ borderColor: color ?? nodeColors.unknown }}
                   onClick={() => setFilterEdge(groupedEdge.current)}
@@ -430,7 +430,7 @@ export default function ParameterComponent({
                       });
                     }}
                     name={name}
-                    data={data}
+                    data={data.node?.template[name]}
                   />
                 </div>
                 {data.node?.template[name]?.refresh_button && (
@@ -486,8 +486,8 @@ export default function ParameterComponent({
               data.node?.template[name]?.real_time_refresh)
           }
         >
-          <div className="mt-2 flex w-full items-center">
-            <div className="w-5/6 flex-grow">
+          <div className="mt-2 flex w-full items-center gap-2">
+            <div className="flex-1">
               <Dropdown
                 disabled={disabled}
                 isLoading={isLoading}
@@ -505,7 +505,6 @@ export default function ParameterComponent({
                   name={name}
                   data={data}
                   button_text={data.node?.template[name]?.refresh_button_text}
-                  className="extra-side-bar-buttons ml-2 mt-1"
                   handleUpdateValues={handleRefreshButtonPress}
                   id={"refresh-button-" + name}
                 />

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   CONSOLE_ERROR_MSG,
-  CONSOLE_SUCCESS_MSG,
   INVALID_FILE_ALERT,
 } from "../../constants/alerts_constants";
 import { uploadFile } from "../../controllers/API";
