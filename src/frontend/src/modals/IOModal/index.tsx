@@ -27,8 +27,9 @@ import IOFieldView from "./components/IOFieldView";
 import ChatView from "./components/chatView";
 import { getMessagesTable } from "../../controllers/API";
 import { useMessagesStore } from "../../stores/messagesStore";
-import { ColDef, ColGroupDef } from "ag-grid-community";
 import SessionView from "./components/SessionView";
+import useRemoveSession from "./components/SessionView/hooks";
+import useAlertStore from "../../stores/alertStore";
 
 export default function IOModal({
   children,
@@ -59,6 +60,8 @@ export default function IOModal({
   const [selectedTab, setSelectedTab] = useState(
     inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0,
   );
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   function startView() {
     if (!chatInput && !chatOutput) {
@@ -84,8 +87,8 @@ export default function IOModal({
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setNode = useFlowStore((state) => state.setNode);
   const [sessions, setSessions] = useState<string[]>([]);
-  const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
-
+  const messages = useMessagesStore((state) => state.messages);
+  const setColumns = useMessagesStore((state) => state.setColumns);
   async function updateVertices() {
     return updateVerticesOrder(currentFlow!.id, null);
   }
@@ -114,6 +117,11 @@ export default function IOModal({
     }
   }
 
+  const { handleRemoveSession } = useRemoveSession(
+    setSuccessData,
+    setErrorData,
+  );
+
   useEffect(() => {
     setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);
   }, [allNodes.length]);
@@ -131,13 +139,21 @@ export default function IOModal({
   useEffect(() => {
     setSelectedViewField(startView());
     if (haveChat) {
-      getMessagesTable("union").then(({ sessions, rows, columns }) => {
-        setSessions(sessions);
+      getMessagesTable("union").then(({ rows, columns }) => {
         setMessages(rows);
         setColumns(columns);
       });
     }
   }, [open]);
+
+  useEffect(() => {
+    const sessions = new Set<string>();
+    messages.forEach((row) => {
+      sessions.add(row.session_id);
+    });
+    setSessions(Array.from(sessions));
+    sessions;
+  }, [messages]);
 
   return (
     <BaseModal size={"md-thin"} open={open} setOpen={setOpen} disable={disable}>
@@ -322,7 +338,16 @@ export default function IOModal({
                             {session}
                           </Badge>
                           <div className="flex items-center justify-center gap-2 align-middle">
-                            <Button variant="ghost" onClick={() => {}}>
+                            <Button
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleRemoveSession(session);
+                                if (selectedViewField?.id === session)
+                                  setSelectedViewField(undefined);
+                              }}
+                            >
                               <ShadTooltip content={"delete"}>
                                 <IconComponent
                                   name="Trash2"
@@ -400,8 +425,10 @@ export default function IOModal({
                       (session) => session === selectedViewField.id,
                     ) && (
                       <SessionView
-                        columns={columns}
-                        session={selectedViewField.id}
+                        rows={messages.filter(
+                          (message) =>
+                            message.session_id === selectedViewField.id,
+                        )}
                       />
                     )}
                   </div>

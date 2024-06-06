@@ -1030,7 +1030,6 @@ export async function getMessagesTable(
 ): Promise<{
   rows: Array<Message>;
   columns: Array<ColDef | ColGroupDef>;
-  sessions: Array<string>;
 }> {
   const config = {};
   if (id) {
@@ -1045,7 +1044,7 @@ export async function getMessagesTable(
   rows.data.forEach((row) => {
     sessions.add(row.session_id);
   });
-  return { rows: rows.data, columns, sessions: Array.from(sessions) };
+  return { rows: rows.data, columns };
 }
 
 export async function deleteMessagesFn(ids: number[]) {
