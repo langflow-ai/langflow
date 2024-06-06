@@ -359,7 +359,7 @@
                 "type": "str",
                 "required": false,
                 "placeholder": "",
-                "list": false,
+                "list": true,
                 "show": true,
                 "multiline": false,
                 "value": "",
