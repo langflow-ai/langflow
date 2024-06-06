@@ -139,7 +139,7 @@ export default function IOModal({
   useEffect(() => {
     setSelectedViewField(startView());
     if (haveChat) {
-      getMessagesTable("union").then(({ rows, columns }) => {
+      getMessagesTable("union", currentFlow!.id).then(({ rows, columns }) => {
         setMessages(rows);
         setColumns(columns);
       });
