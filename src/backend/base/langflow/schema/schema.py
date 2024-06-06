@@ -30,9 +30,9 @@ class Record(BaseModel):
                 values["data"][key] = values[key]
         return values
 
-    @model_serializer(mode="json")
-    def serialize_model(cls, obj):
-        data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in obj.data.items()}
+    @model_serializer(mode="plain", when_used="json")
+    def serialize_model(self):
+        data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
         return data
 
     def get_text(self):
