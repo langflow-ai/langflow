@@ -87,7 +87,12 @@ test("should see shortcuts", async ({ page }) => {
   await page.getByText("Delete Component", { exact: true }).isVisible();
   await page.getByText("Open Playground", { exact: true }).isVisible();
   await page.getByText("Undo", { exact: true }).isVisible();
-  await page.getByText("Redo", { exact: true }).isVisible();
+
+  await page.mouse.wheel(0, 10000);
+
+  await page.getByText("Redo", { exact: true }).last().isVisible();
+
+  await page.getByText("Reset Columns").last().isVisible();
 });
 
 test("should interact with API Keys", async ({ page }) => {
