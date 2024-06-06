@@ -103,6 +103,10 @@ select:-webkit-autofill:focus {
 
 .ag-row .ag-cell {
   display: flex;
-  justify-content: center; /* align horizontal */
   align-items: center;
+}
+.ag-cell {
+  line-height: 1.25rem;
+  padding-top: 0.675rem;
+  padding-bottom: 0.675rem;
 }
