@@ -1,5 +1,4 @@
 import { ColDef, GridApi } from "ag-grid-community";
-import { cloneDeep } from "lodash";
 import { forwardRef, useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import TableComponent from "../../components/tableComponent";
@@ -23,7 +22,7 @@ const EditNodeModal = forwardRef(
       setOpen: (open: boolean) => void;
       data: NodeDataType;
     },
-    ref,
+    ref
   ) => {
     const myData = useRef(data);
 
@@ -44,7 +43,7 @@ const EditNodeModal = forwardRef(
       data,
       handleOnNewValue,
       changeAdvanced,
-      open,
+      open
     );
 
     const [gridApi, setGridApi] = useState<GridApi | null>(null);
@@ -108,7 +107,7 @@ const EditNodeModal = forwardRef(
         <BaseModal.Footer submit={{ label: "Save Changes" }} />
       </BaseModal>
     );
-  },
+  }
 );
 
 export default EditNodeModal;

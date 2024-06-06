@@ -32,11 +32,11 @@ export default function HorizontalScrollFadeComponent({
 
       fadeContainerRef.current.classList.toggle(
         "fade-left",
-        isScrollable && !atStart,
+        isScrollable && !atStart
       );
       fadeContainerRef.current.classList.toggle(
         "fade-right",
-        isScrollable && !atEnd,
+        isScrollable && !atEnd
       );
     };
 
