@@ -3,6 +3,7 @@ import IconComponent from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { Checkbox } from "../../../../components/ui/checkbox";
 import { cn } from "../../../../utils/utils";
+import { Button } from "../../../../components/ui/button";
 
 type HeaderComponentProps = {
   handleSelectAll: (select) => void;
@@ -61,12 +62,17 @@ const HeaderComponent = ({
                 )
               }
             >
-              <button onClick={handleExport} disabled={disableFunctions}>
+              <Button
+                variant="none"
+                size="none"
+                onClick={handleExport}
+                disabled={disableFunctions}
+              >
                 <IconComponent
                   name="FileDown"
                   className={cn("h-5 w-5 text-primary transition-all")}
                 />
-              </button>
+              </Button>
             </ShadTooltip>
           </div>
           <div>
@@ -79,12 +85,17 @@ const HeaderComponent = ({
                 )
               }
             >
-              <button onClick={handleDuplicate} disabled={disableFunctions}>
+              <Button
+                variant="none"
+                size="none"
+                onClick={handleDuplicate}
+                disabled={disableFunctions}
+              >
                 <IconComponent
                   name="Copy"
                   className={cn("h-5 w-5 text-primary transition-all")}
                 />
-              </button>
+              </Button>
             </ShadTooltip>
           </div>
           <div>
@@ -97,7 +108,12 @@ const HeaderComponent = ({
                 )
               }
             >
-              <button onClick={handleDelete} disabled={disableFunctions}>
+              <Button
+                variant="none"
+                size="none"
+                onClick={handleDelete}
+                disabled={disableFunctions}
+              >
                 <IconComponent
                   name="Trash2"
                   className={cn(
@@ -105,7 +121,7 @@ const HeaderComponent = ({
                     disableFunctions ? "" : "hover:text-destructive",
                   )}
                 />
-              </button>
+              </Button>
             </ShadTooltip>
           </div>
         </div>
