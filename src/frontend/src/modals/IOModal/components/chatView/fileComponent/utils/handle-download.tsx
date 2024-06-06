@@ -3,6 +3,8 @@ import {
   BASE_URL_API,
 } from "../../../../../../constants/constants";
 
+let isDownloading = false;
+
 export default async function handleDownload({
   fileName,
   content,
@@ -10,10 +12,18 @@ export default async function handleDownload({
   fileName: string;
   content: string;
 }): Promise<void> {
+  if (isDownloading) return;
+
   try {
+    isDownloading = true;
+
     const response = await fetch(
       `${BACKEND_URL.slice(0, BACKEND_URL.length - 1)}${BASE_URL_API}files/download/${content}`,
     );
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
 
@@ -27,5 +37,7 @@ export default async function handleDownload({
     URL.revokeObjectURL(url); // Clean up the URL object
   } catch (error) {
     console.error("Failed to download file:", error);
+  } finally {
+    isDownloading = false;
   }
 }
