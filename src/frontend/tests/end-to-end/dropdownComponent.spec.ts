@@ -170,7 +170,7 @@ test("dropDownComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   value = await page.getByTestId("dropdown-model_id").innerText();
   if (value !== "ai21.j2-mid-v1") {

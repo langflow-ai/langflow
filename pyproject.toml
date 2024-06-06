@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.0a44"
+version = "1.0.0a43"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -140,7 +140,7 @@ testpaths = ["tests", "integration"]
 console_output_style = "progress"
 filterwarnings = ["ignore::DeprecationWarning"]
 log_cli = true
-markers = ["async_test", "api_key_required"]
+markers = ["async_test"]
 
 
 [tool.ruff]
