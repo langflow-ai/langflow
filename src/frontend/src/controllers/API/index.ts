@@ -1,7 +1,7 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { Edge, Node, ReactFlowJsonObject } from "reactflow";
-import { BASE_URL_API } from "../../constants/constants";
+import { BASE_URL_API, MAX_BATCH_SIZE } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
   APIObjectType,
@@ -28,6 +28,7 @@ import {
   UploadFileTypeAPI,
   errorsTypeAPI,
 } from "./../../types/api/index";
+import { Message } from "../../types/messages";
 
 /**
  * Fetches all objects from the API endpoint.
@@ -999,12 +1000,41 @@ export async function deleteFlowPool(
   return await api.delete(`${BASE_URL_API}monitor/builds`, config);
 }
 
+/**
+ * Deletes multiple flow components by their IDs.
+ * @param flowIds - An array of flow IDs to be deleted.
+ * @param token - The authorization token for the API request.
+ * @returns A promise that resolves to an array of AxiosResponse objects representing the delete responses.
+ */
 export async function multipleDeleteFlowsComponents(
   flowIds: string[],
-): Promise<AxiosResponse<any>> {
-  return await api.post(`${BASE_URL_API}flows/multiple_delete/`, {
-    flow_ids: flowIds,
-  });
+): Promise<AxiosResponse<any>[]> {
+  const batches: string[][] = [];
+
+  // Split the flowIds into batches
+  for (let i = 0; i < flowIds.length; i += MAX_BATCH_SIZE) {
+    batches.push(flowIds.slice(i, i + MAX_BATCH_SIZE));
+  }
+
+  // Function to delete a batch of flow IDs
+  const deleteBatch = async (batch: string[]): Promise<AxiosResponse<any>> => {
+    try {
+      return await api.delete(`${BASE_URL_API}flows/`, {
+        data: batch,
+      });
+    } catch (error) {
+      console.error("Error deleting flows:", error);
+      throw error;
+    }
+  };
+
+  // Execute all delete requests
+  const responses: Promise<AxiosResponse<any>>[] = batches.map((batch) =>
+    deleteBatch(batch),
+  );
+
+  // Return the responses after all requests are completed
+  return Promise.all(responses);
 }
 
 export async function getTransactionTable(
@@ -1023,16 +1053,47 @@ export async function getTransactionTable(
 }
 
 export async function getMessagesTable(
-  id: string,
   mode: "intersection" | "union",
+  id?: string,
+  excludedFields?: string[],
   params = {},
-): Promise<{ rows: Array<object>; columns: Array<ColDef | ColGroupDef> }> {
+): Promise<{ rows: Array<Message>; columns: Array<ColDef | ColGroupDef> }> {
   const config = {};
-  config["params"] = { flow_id: id };
+  if (id) {
+    config["params"] = { flow_id: id };
+  }
   if (params) {
     config["params"] = { ...config["params"], ...params };
   }
   const rows = await api.get(`${BASE_URL_API}monitor/messages`, config);
-  const columns = extractColumnsFromRows(rows.data, mode);
+  const columns = extractColumnsFromRows(rows.data, mode, excludedFields);
   return { rows: rows.data, columns };
+}
+
+export async function getSessions(id?: string): Promise<Array<string>> {
+  const config = {};
+  if (id) {
+    config["params"] = { flow_id: id };
+  }
+  const rows = await api.get(`${BASE_URL_API}monitor/messages`, config);
+  const sessions = new Set<string>();
+  rows.data.forEach((row) => {
+    sessions.add(row.session_id);
+  });
+  return Array.from(sessions);
+}
+
+export async function deleteMessagesFn(ids: number[]) {
+  try {
+    return await api.delete(`${BASE_URL_API}monitor/messages`, {
+      data: ids,
+    });
+  } catch (error) {
+    console.error("Error deleting flows:", error);
+    throw error;
+  }
+}
+
+export async function updateMessageApi(data: Message) {
+  return await api.post(`${BASE_URL_API}monitor/messages/${data.index}`, data);
 }

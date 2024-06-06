@@ -86,11 +86,12 @@ from langflow.load import run_flow_from_json
 
 results = run_flow_from_json("path/to/flow.json", input_value="Hello, World!")
 ```
+
 # 部署
 
 ## 在Google Cloud Platform上部署Langflow
 
-请按照我们的分步指南使用 Google Cloud Shell 在 Google Cloud Platform (GCP) 上部署 Langflow。该指南在  [**Langflow in Google Cloud Platform**](GCP_DEPLOYMENT.md)  文档中提供。
+请按照我们的分步指南使用 Google Cloud Shell 在 Google Cloud Platform (GCP) 上部署 Langflow。该指南在 [**Langflow in Google Cloud Platform**](GCP_DEPLOYMENT.md) 文档中提供。
 
 或者，点击下面的 "Open in Cloud Shell" 按钮，启动 Google Cloud Shell，克隆 Langflow 仓库，并开始一个互动教程，该教程将指导您设置必要的资源并在 GCP 项目中部署 Langflow。
 
@@ -168,4 +169,4 @@ langflow run [OPTIONS]
 
 # 📄 许可证
 
-Langflow 以 MIT 许可证发布。有关详细信息，请参阅  [LICENSE](LICENSE)  文件。
+Langflow 以 MIT 许可证发布。有关详细信息，请参阅 [LICENSE](LICENSE) 文件。
