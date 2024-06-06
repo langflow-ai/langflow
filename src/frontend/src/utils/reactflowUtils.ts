@@ -8,7 +8,6 @@ import {
   XYPosition,
 } from "reactflow";
 import ShortUniqueId from "short-unique-id";
-import getFieldTitle from "../CustomNodes/utils/get-field-title";
 import {
   INPUT_TYPES,
   LANGFLOW_SUPPORTED_TYPES,
@@ -17,6 +16,7 @@ import {
   specialCharsRegex,
 } from "../constants/constants";
 import { downloadFlowsFromDatabase } from "../controllers/API";
+import getFieldTitle from "../customNodes/utils/get-field-title";
 import { DESCRIPTIONS } from "../flow_constants";
 import {
   APIClassType,
