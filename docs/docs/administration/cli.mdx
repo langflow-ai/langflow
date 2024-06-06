@@ -35,7 +35,7 @@ python -m langflow
 | Command | Description |
 | ------- | ----------- |
 | `api-key` | Creates an API key for the default superuser if AUTO_LOGIN is enabled. |
-| `copy-db` | Copy the database files to the current directory. |
+| `copy-db` | Copy the database files to the current directory (`which langflow`). |
 | `migration` | Run or test migrations. |
 | `run` | Run the Langflow. |
 | `superuser` | Create a superuser. |
@@ -70,10 +70,9 @@ python -m langflow api-key
 
 ## langflow copy-db
 
-Run the `copy-db` command to copy the cached database files to the current directory.
-If the files exist in the cache directory, they will be copied to the same directory as `__main__.py`, which is `/Users/username/Documents/GitHub/langflow/test-env/lf-rs/lib/python3.10/site-packages/langflow`.
+Run the `copy-db` command to copy the cached `langflow.db` and `langflow-pre.db` database files to the current directory.
 
-This function copies the `langflow.db` and `langflow-pre.db` files from the cache directory to the current directory.
+If the files exist in the cache directory, they will be copied to the same directory as `__main__.py`, which can be found with `which langflow`.
 
 ### Options
 
