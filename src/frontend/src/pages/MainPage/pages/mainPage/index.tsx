@@ -16,7 +16,7 @@ import useDropdownOptions from "../../hooks/use-dropdown-options";
 export default function HomePage(): JSX.Element {
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
+    (state) => state.setCurrentFlowId
   );
 
   const location = useLocation();

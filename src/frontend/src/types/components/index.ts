@@ -38,7 +38,7 @@ export type InputComponentType = {
 export type ToggleComponentType = {
   enabled: boolean;
   setEnabled: (state: boolean) => void;
-  disabled: boolean | undefined;
+  disabled?: boolean | undefined;
   size: "small" | "medium" | "large";
   id?: string;
   editNode?: boolean;
@@ -411,11 +411,7 @@ export type UserInputType = {
 };
 
 export type ApiKeyType = {
-  title: string;
-  cancelText: string;
-  confirmationText: string;
   children: ReactElement;
-  icon: string;
   data?: any;
   onCloseModal: () => void;
 };
@@ -545,7 +541,7 @@ export type nodeToolbarPropsType = {
   updateNodeCode?: (
     newNodeClass: APIClassType,
     code: string,
-    name: string,
+    name: string
   ) => void;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
   isOutdated?: boolean;
@@ -571,7 +567,7 @@ export type iconsType = {
 
 export type modalHeaderType = {
   children: ReactNode;
-  description: string | null;
+  description: string | JSX.Element | null;
 };
 
 export type codeAreaModalPropsType = {
@@ -595,7 +591,7 @@ export type chatMessagePropsType = {
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url?: string,
+    stream_url?: string
   ) => void;
 };
 
@@ -687,12 +683,12 @@ export type codeTabsPropsType = {
       value: string,
       node: NodeType,
       template: TemplateVariableType,
-      tweak: tweakType,
+      tweak: tweakType
     ) => string;
     buildTweakObject?: (
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: TemplateVariableType,
+      template: TemplateVariableType
     ) => Promise<string | void>;
   };
   activeTweaks?: boolean;

@@ -10,24 +10,26 @@ import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
-const ApiKeysPage = lazy(() => import("./pages/ApiKeysPage"));
+const ApiKeysPage = lazy(
+  () => import("./pages/SettingsPage/pages/ApiKeysPage"),
+);
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 const FlowPage = lazy(() => import("./pages/FlowPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const MyCollectionComponent = lazy(
-  () => import("./pages/MainPage/components/myCollectionComponent"),
+  () => import("./pages/MainPage/components/myCollectionComponent")
 );
 const HomePage = lazy(() => import("./pages/MainPage/pages/mainPage"));
 const PlaygroundPage = lazy(() => import("./pages/Playground"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const GeneralPage = lazy(
-  () => import("./pages/SettingsPage/pages/GeneralPage"),
+  () => import("./pages/SettingsPage/pages/GeneralPage")
 );
 const GlobalVariablesPage = lazy(
-  () => import("./pages/SettingsPage/pages/GlobalVariablesPage"),
+  () => import("./pages/SettingsPage/pages/GlobalVariablesPage")
 );
 const ShortcutsPage = lazy(
-  () => import("./pages/SettingsPage/pages/ShortcutsPage"),
+  () => import("./pages/SettingsPage/pages/ShortcutsPage")
 );
 const SignUp = lazy(() => import("./pages/SignUpPage"));
 const StorePage = lazy(() => import("./pages/StorePage"));
@@ -77,6 +79,7 @@ const Router = () => {
         >
           <Route index element={<Navigate replace to={"general"} />} />
           <Route path="global-variables" element={<GlobalVariablesPage />} />
+          <Route path="api-keys" element={<ApiKeysPage />} />
           <Route path="general/:scrollId?" element={<GeneralPage />} />
           <Route path="shortcuts" element={<ShortcutsPage />} />
           <Route path="messages" element={<MessagesPage />} />
@@ -186,14 +189,6 @@ const Router = () => {
             element={
               <ProtectedRoute>
                 <DeleteAccountPage />
-              </ProtectedRoute>
-            }
-          ></Route>
-          <Route
-            path="api-keys"
-            element={
-              <ProtectedRoute>
-                <ApiKeysPage />
               </ProtectedRoute>
             }
           ></Route>

@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { cn } from "../../../../utils/utils";
 import { buttonVariants } from "../../../ui/button";
-import ForwardedIconComponent from "../../../genericIconComponent";
 
 type SideBarButtonsComponentProps = {
   items: {
@@ -28,7 +27,7 @@ const SideBarButtonsComponent = ({
               pathname === item.href
                 ? "border border-border bg-muted hover:bg-muted"
                 : "border border-transparent hover:border-border hover:bg-transparent",
-              "flex w-full shrink-0 justify-start gap-4",
+              "flex w-full shrink-0 justify-start gap-4"
             )}
           >
             {item.icon}

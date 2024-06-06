@@ -29,7 +29,7 @@ export default function DictComponent({
     <div
       className={classNames(
         value.length > 1 && editNode ? "my-1" : "",
-        "flex flex-col gap-3",
+        "flex flex-col gap-3"
       )}
     >
       {

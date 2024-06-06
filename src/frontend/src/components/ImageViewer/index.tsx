@@ -31,14 +31,14 @@ export default function ImageViewer({ image }) {
         const fullPageButton = document.getElementById("full-page-button");
 
         zoomInButton!.addEventListener("click", () =>
-          viewer.viewport.zoomBy(1.2),
+          viewer.viewport.zoomBy(1.2)
         );
         zoomOutButton!.addEventListener("click", () =>
-          viewer.viewport.zoomBy(0.8),
+          viewer.viewport.zoomBy(0.8)
         );
         homeButton!.addEventListener("click", () => viewer.viewport.goHome());
         fullPageButton!.addEventListener("click", () =>
-          viewer.setFullScreen(true),
+          viewer.setFullScreen(true)
         );
 
         // Optionally, you can set additional viewer options here
@@ -47,16 +47,16 @@ export default function ImageViewer({ image }) {
         return () => {
           viewer.destroy();
           zoomInButton!.removeEventListener("click", () =>
-            viewer.viewport.zoomBy(1.2),
+            viewer.viewport.zoomBy(1.2)
           );
           zoomOutButton!.removeEventListener("click", () =>
-            viewer.viewport.zoomBy(0.8),
+            viewer.viewport.zoomBy(0.8)
           );
           homeButton!.removeEventListener("click", () =>
-            viewer.viewport.goHome(),
+            viewer.viewport.goHome()
           );
           fullPageButton!.removeEventListener("click", () =>
-            viewer.setFullScreen(true),
+            viewer.setFullScreen(true)
           );
         };
       }
