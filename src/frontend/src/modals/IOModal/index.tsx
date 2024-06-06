@@ -348,15 +348,30 @@ export default function IOModal({
                                   setSelectedViewField(undefined);
                               }}
                             >
-                              <ShadTooltip content={"delete"}>
-                                <IconComponent
-                                  name="Trash2"
-                                  className="h-4 w-4"
-                                ></IconComponent>
+                              <ShadTooltip
+                                styleClasses="z-50"
+                                content={"delete"}
+                              >
+                                <div>
+                                  <IconComponent
+                                    name="Trash2"
+                                    className="h-4 w-4"
+                                  ></IconComponent>
+                                </div>
                               </ShadTooltip>
                             </Button>
                             <div>
-                              <ShadTooltip content={"hello"}>
+                              <ShadTooltip
+                                styleClasses="z-50"
+                                content={
+                                  flow_sessions.some(
+                                    (f_session) =>
+                                      f_session?.session_id === session,
+                                  )
+                                    ? "Active Session"
+                                    : "Inactive Session"
+                                }
+                              >
                                 <div
                                   className={cn(
                                     "h-2 w-2 rounded-full",
