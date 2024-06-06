@@ -47,7 +47,6 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock README.md ./
 COPY src/ ./src
 COPY scripts/ ./scripts
-
 RUN python -m pip install requests --user && cd ./scripts && python update_dependencies.py
 RUN $POETRY_HOME/bin/poetry lock --no-update \
       && $POETRY_HOME/bin/poetry install --no-interaction --no-ansi -E deploy \

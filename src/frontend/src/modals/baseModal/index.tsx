@@ -103,7 +103,7 @@ interface BaseModalProps {
     React.ReactElement<ContentProps>,
     React.ReactElement<HeaderProps>,
     React.ReactElement<TriggerProps>?,
-    React.ReactElement<FooterProps>?
+    React.ReactElement<FooterProps>?,
   ];
   open?: boolean;
   setOpen?: (open: boolean) => void;
@@ -139,16 +139,16 @@ function BaseModal({
   onSubmit,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Header
+    (child) => (child as React.ReactElement).type === Header,
   );
   const triggerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Trigger
+    (child) => (child as React.ReactElement).type === Trigger,
   );
   const ContentChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Content
+    (child) => (child as React.ReactElement).type === Content,
   );
   const ContentFooter = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Footer
+    (child) => (child as React.ReactElement).type === Footer,
   );
 
   let { minWidth, height } = switchCaseModalSize(size);
@@ -165,17 +165,21 @@ function BaseModal({
       {type === "modal" ? (
         <Modal open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <ModalContent className={cn(minWidth, "duration-300")}>
-            <div className="truncate-doubleline word-break-break-word">
+          <ModalContent
+            className={cn(minWidth, height, "flex flex-col duration-300")}
+          >
+            <div className="flex-shrink-0 truncate-doubleline word-break-break-word">
               {headerChild}
             </div>
             <div
-              className={`flex flex-col ${height} w-full transition-all duration-300`}
+              className={`flex w-full flex-1 flex-col transition-all duration-300`}
             >
               {ContentChild}
             </div>
             {ContentFooter && (
-              <div className="flex flex-row-reverse">{ContentFooter}</div>
+              <div className="flex flex-shrink-0 flex-row-reverse">
+                {ContentFooter}
+              </div>
             )}
           </ModalContent>
         </Modal>
@@ -185,7 +189,7 @@ function BaseModal({
           <DialogContent
             className={cn(minWidth, height, "flex flex-col duration-300")}
           >
-            <div className="truncate-doubleline word-break-break-word">
+            <div className="flex-shrink-0 truncate-doubleline word-break-break-word">
               {headerChild}
             </div>
             {onSubmit ? (
@@ -194,26 +198,30 @@ function BaseModal({
                   event.preventDefault();
                   onSubmit();
                 }}
-                className="flex flex-1 flex-col gap-6"
+                className="flex min-h-0 flex-1 flex-col gap-6"
               >
                 <div
-                  className={`flex w-full flex-1 flex-col transition-all duration-300`}
+                  className={`flex w-full flex-1 flex-col overflow-hidden transition-all duration-300`}
                 >
                   {ContentChild}
                 </div>
                 {ContentFooter && (
-                  <div className="flex flex-row-reverse">{ContentFooter}</div>
+                  <div className="flex flex-shrink-0 flex-row-reverse">
+                    {ContentFooter}
+                  </div>
                 )}
               </Form.Root>
             ) : (
               <>
                 <div
-                  className={`flex w-full flex-1 flex-col transition-all duration-300`}
+                  className={`flex min-h-0 w-full flex-1 flex-col transition-all duration-300`}
                 >
                   {ContentChild}
                 </div>
                 {ContentFooter && (
-                  <div className="flex flex-row-reverse">{ContentFooter}</div>
+                  <div className="flex flex-shrink-0 flex-row-reverse">
+                    {ContentFooter}
+                  </div>
                 )}
               </>
             )}

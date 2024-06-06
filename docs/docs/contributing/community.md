@@ -10,7 +10,7 @@ Langflow [Discord](https://discord.gg/EqksyE2EX9) server.
 
 ---
 
-## 🐦 Stay tunned for **Langflow** on Twitter
+## 🐦 Stay tuned for **Langflow** on Twitter
 
 Follow [@langflow_ai](https://twitter.com/langflow_ai) on **Twitter** to get the latest news about **Langflow**.
 
