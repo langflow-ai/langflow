@@ -88,7 +88,7 @@ Example of using the `StreamlitGetSessionMessages` component in a Langflow flow:
   alt="Streamlit Get Session Messages Flow"
   sources={{
     light: "img/streamlit/StreamlitGetSessionMessages_flow_example.png",
-    dark: "img/streamlit/StreamlitGetSessionMessages_flow_example.png",
+    dark: "img/streamlit/StreamlitGetSessionMessages_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />

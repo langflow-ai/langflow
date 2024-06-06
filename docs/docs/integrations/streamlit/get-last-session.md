@@ -79,7 +79,7 @@ Example of using the `StreamlitGetLastSession` component in a Langflow flow:
   alt="Streamlit Get Last Session Flow"
   sources={{
     light: "img/streamlit/StreamlitGetLastSession_flow_example.png",
-    dark: "img/streamlit/StreamlitGetLastSession_flow_example.png",
+    dark: "img/streamlit/StreamlitGetLastSession_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />

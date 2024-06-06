@@ -88,7 +88,7 @@ Example of using the `StreamlitSendChatMessage` component in a Langflow flow:
   alt="Streamlit Send Chat Message Flow"
   sources={{
     light: "img/streamlit/StreamlitSendChatMessage_flow_example.png",
-    dark: "img/streamlit/StreamlitSendChatMessage_flow_example.png",
+    dark: "img/streamlit/StreamlitSendChatMessage_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />

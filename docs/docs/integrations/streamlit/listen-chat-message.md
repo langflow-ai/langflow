@@ -85,7 +85,7 @@ Example of using the `StreamlitListenChatMessage` component in a Langflow flow:
   alt="Streamlit Get Session Messages Flow"
   sources={{
     light: "img/streamlit/StreamlitListenChatMessage_flow_example.png",
-    dark: "img/streamlit/StreamlitListenChatMessage_flow_example.png",
+    dark: "img/streamlit/StreamlitListenChatMessage_flow_example_dark.png",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />

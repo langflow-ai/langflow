@@ -10,8 +10,8 @@ The Streamlit integration in Langflow enables seamless connectivity with Streaml
 <ZoomableImage
   alt="Streamlit Components in Langflow"
   sources={{
-    light: "img/notion/notion_bundle.jpg",
-    dark: "img/notion/notion_bundle.jpg",
+    light: "img/streamlit/streamlit_bundle.jpg",
+    dark: "img/streamlit/streamlit_bundle.jpg",
   }}
   style={{ width: "100%", margin: "20px 0" }}
 />
