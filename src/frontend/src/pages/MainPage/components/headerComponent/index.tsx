@@ -1,5 +1,7 @@
 import { useState } from "react";
-import IconComponent from "../../../../components/genericIconComponent";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { Checkbox } from "../../../../components/ui/checkbox";
 import { cn } from "../../../../utils/utils";
@@ -30,7 +32,19 @@ const HeaderComponent = ({
   return (
     <>
       <div className="grid grid-cols-3 pb-5">
-        <div className="col-auto grid-cols-1 self-center justify-self-start">
+        <div className="flex items-center gap-4 justify-self-start">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClick}
+            className="text-sm"
+          >
+            <ForwardedIconComponent
+              name="FileUp"
+              className="h-5 w-5 text-primary"
+            />
+            Upload Flow
+          </Button>
           <Button
             variant="none"
             size="none"
