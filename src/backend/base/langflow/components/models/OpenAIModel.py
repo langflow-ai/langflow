@@ -32,6 +32,7 @@ class OpenAIModelComponent(LCModelComponent):
             "max_tokens": {
                 "display_name": "Max Tokens",
                 "advanced": True,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             },
             "model_kwargs": {
                 "display_name": "Model Kwargs",
@@ -77,7 +78,7 @@ class OpenAIModelComponent(LCModelComponent):
         self,
         input_value: Text,
         openai_api_key: str,
-        temperature: float,
+        temperature: float = 0.1,
         model_name: str = "gpt-4o",
         max_tokens: Optional[int] = 256,
         model_kwargs: NestedDict = {},
@@ -93,7 +94,7 @@ class OpenAIModelComponent(LCModelComponent):
             api_key = None
 
         output = ChatOpenAI(
-            max_tokens=max_tokens,
+            max_tokens=max_tokens or None,
             model_kwargs=model_kwargs,
             model=model_name,
             base_url=openai_api_base,

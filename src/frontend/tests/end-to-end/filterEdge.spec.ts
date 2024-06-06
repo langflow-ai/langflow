@@ -148,7 +148,6 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("model_specsChatOllama")).toBeVisible();
   await expect(page.getByTestId("model_specsChatOpenAI")).toBeVisible();
   await expect(page.getByTestId("model_specsChatVertexAI")).toBeVisible();
-  await expect(page.getByTestId("model_specsCohere")).toBeVisible();
   await expect(
     page.getByTestId("model_specsGoogle Generative AI"),
   ).toBeVisible();
@@ -176,7 +175,6 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("model_specsChatOllama")).not.toBeVisible();
   await expect(page.getByTestId("model_specsChatOpenAI")).not.toBeVisible();
   await expect(page.getByTestId("model_specsChatVertexAI")).not.toBeVisible();
-  await expect(page.getByTestId("model_specsCohere")).not.toBeVisible();
 
   await page
     .locator(

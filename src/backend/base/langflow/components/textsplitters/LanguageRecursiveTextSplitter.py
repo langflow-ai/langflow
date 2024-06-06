@@ -1,8 +1,8 @@
 from typing import List, Optional
 
-from langchain.text_splitter import Language
+from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 from langflow.schema.schema import Record
 
 
@@ -61,7 +61,6 @@ class LanguageRecursiveTextSplitterComponent(CustomComponent):
         Returns:
             list[str]: The chunks of text.
         """
-        from langchain.text_splitter import RecursiveCharacterTextSplitter
 
         # Make sure chunk_size and chunk_overlap are ints
         if isinstance(chunk_size, str):

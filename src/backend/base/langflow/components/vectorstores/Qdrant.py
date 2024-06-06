@@ -1,11 +1,11 @@
 from typing import Optional, Union
 
-from langchain.schema import BaseRetriever
-from langchain_community.vectorstores import VectorStore
 from langchain_community.vectorstores.qdrant import Qdrant
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.vectorstores import VectorStore
 
+from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings
-from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema.schema import Record
 
 
@@ -67,22 +67,19 @@ class QdrantComponent(CustomComponent):
                 documents.append(_input.to_lc_document())
             else:
                 documents.append(_input)
-        if documents is None:
+        if not documents:
             from qdrant_client import QdrantClient
 
             client = QdrantClient(
                 location=location,
-                url=host,
+                url=url,
                 port=port,
                 grpc_port=grpc_port,
                 https=https,
                 prefix=prefix,
                 timeout=timeout,
                 prefer_grpc=prefer_grpc,
-                metadata_payload_key=metadata_payload_key,
-                content_payload_key=content_payload_key,
                 api_key=api_key,
-                collection_name=collection_name,
                 host=host,
                 path=path,
             )
@@ -90,6 +87,8 @@ class QdrantComponent(CustomComponent):
                 client=client,
                 collection_name=collection_name,
                 embeddings=embedding,
+                content_payload_key=content_payload_key,
+                metadata_payload_key=metadata_payload_key,
             )
             return vs
         else:

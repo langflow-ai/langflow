@@ -1,6 +1,6 @@
 # from langflow.field_typing import Data
+from langflow.custom import CustomComponent
 from langflow.schema import Record
-from langflow.interface.custom.custom_component import CustomComponent
 
 
 class Component(CustomComponent):

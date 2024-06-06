@@ -6,6 +6,7 @@ import { BuildStatus } from "../../constants/enums";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
+import { checkDuplicateRequestAndStoreRequest } from "./helpers/check-duplicate-requests";
 
 // Create a new Axios instance
 const api: AxiosInstance = axios.create({
@@ -80,21 +81,11 @@ function ApiInterceptor() {
     // Request interceptor to add access token to every request
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
-        const lastUrl = localStorage.getItem("lastUrlCalled");
+        const checkRequest = checkDuplicateRequestAndStoreRequest(config);
 
-        if (
-          config?.url === lastUrl &&
-          config?.url !== "/health" &&
-          config?.method === "get"
-        ) {
-          return Promise.reject(`
-          Duplicate request detected.
-          URL: ${config.url}
-          Method: ${config.method}
-          `);
+        if (!checkRequest) {
+          return Promise.reject("Duplicate request.");
         }
-
-        localStorage.setItem("lastUrlCalled", config.url ?? "");
 
         const accessToken = cookies.get("access_token_lf");
         if (accessToken && !isAuthorizedURL(config?.url)) {

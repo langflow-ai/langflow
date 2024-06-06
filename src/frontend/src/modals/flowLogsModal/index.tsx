@@ -1,43 +1,29 @@
-import { useEffect, useState } from "react";
+import { ColDef, ColGroupDef } from "ag-grid-community";
+import { AxiosError } from "axios";
+import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
+import TableComponent from "../../components/tableComponent";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { getMessagesTable, getTransactionTable } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
+import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
-import { FlowType } from "../../types/flow";
+import { FlowType, NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
-import TableComponent from "../../components/tableComponent";
-import { getMessagesTable, getTransactionTable } from "../../controllers/API";
-import {
-  ColDef,
-  ColGroupDef,
-  SizeColumnsToFitGridStrategy,
-} from "ag-grid-community";
 
 export default function FlowLogsModal({
   open,
   setOpen,
 }: FlowSettingsPropsType): JSX.Element {
-  const saveFlow = useFlowsManagerStore((state) => state.saveFlow);
-  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const nodes = useFlowStore((state) => state.nodes);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const flows = useFlowsManagerStore((state) => state.flows);
-  useEffect(() => {
-    setName(currentFlow!.name);
-    setDescription(currentFlow!.description);
-  }, [currentFlow!.name, currentFlow!.description, open]);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
 
-  const [name, setName] = useState(currentFlow!.name);
-  const [description, setDescription] = useState(currentFlow!.description);
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
   const [activeTab, setActiveTab] = useState("Executions");
-
-  function handleClick(): void {
-    currentFlow!.name = name;
-    currentFlow!.description = description;
-    saveFlow(currentFlow!);
-    setOpen(false);
-  }
+  const noticed = useRef(false);
 
   useEffect(() => {
     if (activeTab === "Executions") {
@@ -47,23 +33,34 @@ export default function FlowLogsModal({
         setRows(rows);
       });
     } else if (activeTab === "Messages") {
-      getMessagesTable(currentFlowId, "union").then((data) => {
-        const { columns, rows } = data;
-        setColumns(columns.map((col) => ({ ...col, editable: true })));
-        setRows(rows);
-      });
+      getMessagesTable("union", currentFlowId, ["index", "flow_id"]).then(
+        (data) => {
+          const { columns, rows } = data;
+          setColumns(columns.map((col) => ({ ...col, editable: true })));
+          setRows(rows);
+        },
+      );
+    }
+
+    if (open && activeTab === "Messages" && !noticed.current) {
+      const haStream = nodes
+        .map((nodes) => (nodes.data as NodeDataType).node!.template)
+        .some((template) => template["stream"] && template["stream"].value);
+      console.log(
+        haStream,
+        nodes.map((nodes) => (nodes.data as NodeDataType).node!.template),
+      );
+      if (haStream) {
+        setNoticeData({
+          title: "Streamed messages will not appear in this table.",
+        });
+        noticed.current = true;
+      }
+    }
+    if (!open) {
+      noticed.current = false;
     }
   }, [open, activeTab]);
-
-  const [nameLists, setNameList] = useState<string[]>([]);
-
-  useEffect(() => {
-    const tempNameList: string[] = [];
-    flows.forEach((flow: FlowType) => {
-      if ((flow.is_component ?? false) === false) tempNameList.push(flow.name);
-    });
-    setNameList(tempNameList.filter((name) => name !== currentFlow!.name));
-  }, [flows]);
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="large">

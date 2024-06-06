@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from langflow.interface.custom.custom_component import CustomComponent
+from langflow.custom import CustomComponent
 from langflow.memory import get_messages, store_message
 from langflow.schema import Record
 

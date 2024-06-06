@@ -2,7 +2,7 @@ import { FolderType } from "../../../pages/MainPage/entities";
 
 export type FoldersStoreType = {
   folders: FolderType[];
-  getFoldersApi: (refetch?: boolean) => void;
+  getFoldersApi: (refetch?: boolean) => Promise<void>;
   setFolders: (folders: FolderType[]) => void;
   loading: boolean;
   setLoading: (loading: boolean) => void;
@@ -23,4 +23,6 @@ export type FoldersStoreType = {
   uploadFolder: (folderId: string) => void;
   folderIdDragging: string;
   setFolderIdDragging: (id: string) => void;
+  starterProjectId: string;
+  setStarterProjectId: (id: string) => void;
 };

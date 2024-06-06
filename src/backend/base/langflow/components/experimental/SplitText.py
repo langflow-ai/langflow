@@ -1,7 +1,7 @@
 from typing import Optional
 
+from langflow.custom import CustomComponent
 from langflow.field_typing import Text
-from langflow.interface.custom.custom_component import CustomComponent
 from langflow.schema import Record
 from langflow.utils.util import unescape_string
 
@@ -43,7 +43,7 @@ class SplitTextComponent(CustomComponent):
                 chunks = [chunk[:truncate_size] for chunk in chunks]
 
             for chunk in chunks:
-                outputs.append(Record(text=chunk, data={"parent": text}))
+                outputs.append(Record(data={"parent": text, "text": chunk}))
 
         self.status = outputs
         return outputs

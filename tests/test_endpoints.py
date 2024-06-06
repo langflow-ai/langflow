@@ -5,9 +5,8 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from langflow.interface.custom.directory_reader.directory_reader import DirectoryReader
+from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
-from langflow.template.frontend_node.chains import TimeTravelGuideChainNode
 
 
 def run_post(client, flow_id, headers, post_data):
@@ -265,13 +264,13 @@ def test_get_all(client: TestClient, logged_in_headers):
     response = client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     settings = get_settings_service().settings
-    dir_reader = DirectoryReader(settings.COMPONENTS_PATH[0])
+    dir_reader = DirectoryReader(settings.components_path[0])
     files = dir_reader.get_files()
     # json_response is a dict of dicts
     all_names = [component_name for _, components in response.json().items() for component_name in components]
     json_response = response.json()
     # We need to test the custom nodes
-    assert len(all_names) > len(files)
+    assert len(all_names) == len(files)
     assert "ChatInput" in json_response["inputs"]
     assert "Prompt" in json_response["inputs"]
     assert "ChatOutput" in json_response["outputs"]
@@ -385,7 +384,6 @@ def test_invalid_prompt(client: TestClient):
     ],
 )
 def test_various_prompts(client, prompt, expected_input_variables):
-    TimeTravelGuideChainNode().to_dict()
     PROMPT_REQUEST["template"] = prompt
     response = client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
     assert response.status_code == 200
@@ -635,6 +633,7 @@ def test_successful_run_with_input_type_any(client, starter_project, created_api
     assert all([output.get("results").get("result") == "value1" for output in any_input_outputs]), any_input_outputs
 
 
+@pytest.mark.api_key_required
 def test_run_with_inputs_and_outputs(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
@@ -654,7 +653,7 @@ def test_invalid_flow_id(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = "invalid-flow-id"
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.text
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = UUID(int=0)
     response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
@@ -662,6 +661,7 @@ def test_invalid_flow_id(client, created_api_key):
     # Check if the error detail is as expected
 
 
+@pytest.mark.api_key_required
 def test_run_flow_with_caching_success(client: TestClient, starter_project, created_api_key):
     flow_id = starter_project["id"]
     headers = {"x-api-key": created_api_key.api_key}
@@ -679,6 +679,7 @@ def test_run_flow_with_caching_success(client: TestClient, starter_project, crea
     assert "session_id" in data
 
 
+@pytest.mark.api_key_required
 def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created_api_key):
     invalid_flow_id = uuid4()
     headers = {"x-api-key": created_api_key.api_key}
@@ -687,9 +688,10 @@ def test_run_flow_with_caching_invalid_flow_id(client: TestClient, created_api_k
     assert response.status_code == status.HTTP_404_NOT_FOUND
     data = response.json()
     assert "detail" in data
-    assert f"Flow {invalid_flow_id} not found" in data["detail"]
+    assert f"Flow identifier {invalid_flow_id} not found" in data["detail"]
 
 
+@pytest.mark.api_key_required
 def test_run_flow_with_caching_invalid_input_format(client: TestClient, starter_project, created_api_key):
     flow_id = starter_project["id"]
     headers = {"x-api-key": created_api_key.api_key}
@@ -698,6 +700,7 @@ def test_run_flow_with_caching_invalid_input_format(client: TestClient, starter_
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
+@pytest.mark.api_key_required
 def test_run_flow_with_session_id(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
@@ -729,6 +732,7 @@ def test_run_flow_with_invalid_session_id(client, starter_project, created_api_k
     assert f"Session {payload['session_id']} not found" in data["detail"]
 
 
+@pytest.mark.api_key_required
 def test_run_flow_with_invalid_tweaks(client, starter_project, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]

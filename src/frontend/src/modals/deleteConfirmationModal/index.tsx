@@ -59,7 +59,7 @@ export default function DeleteConfirmationModal({
           <DialogClose asChild>
             <Button
               onClick={(e) => e.stopPropagation()}
-              className="mr-3"
+              className="mr-1"
               variant="outline"
             >
               Cancel

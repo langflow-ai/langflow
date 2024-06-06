@@ -28,7 +28,7 @@ test("InputListComponent", async ({ page }) => {
 
   await page.waitForTimeout(1000);
   await page
-    .getByTestId("vectorsearchAstra DB Search")
+    .getByTestId("vectorstoresAstra DB")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -68,7 +68,7 @@ test("InputListComponent", async ({ page }) => {
     .getByTestId("input-list-input-edit_metadata_indexing_include-1")
     .fill("test1 test1 test1 test1");
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   await page
     .getByTestId("input-list-input_metadata_indexing_include-0")
