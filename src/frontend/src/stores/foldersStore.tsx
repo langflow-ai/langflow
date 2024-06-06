@@ -112,31 +112,25 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
           const file = (event.target as HTMLInputElement).files![0];
           const formData = new FormData();
           formData.append("file", file);
-          const fileReader = new FileReader();
-          fileReader.readAsText(file, "UTF-8");
-          fileReader.onload = (e) => {
-            if (e && e.target) {
-              const data = JSON.parse(e.target.result as string);
-              if (data.data?.nodes) {
-                uploadFlowsToDatabase(formData).then(() => {
-                  useFlowsManagerStore
-                    .getState()
-                    .refreshFlows()
-                    .then(() => {
-                      resolve();
-                    });
+          file.text().then((text) => {
+            const data = JSON.parse(text);
+            if (data.data?.nodes) {
+              useFlowsManagerStore
+                .getState()
+                .addFlow(true, data)
+                .then(() => {
+                  resolve();
                 });
-              } else {
-                uploadFlowsFromFolders(formData).then(() => {
-                  get()
-                    .getFoldersApi(true)
-                    .then(() => {
-                      resolve();
-                    });
-                });
-              }
+            } else {
+              uploadFlowsFromFolders(formData).then(() => {
+                get()
+                  .getFoldersApi(true)
+                  .then(() => {
+                    resolve();
+                  });
+              });
             }
-          };
+          });
         }
       };
       input.click();
