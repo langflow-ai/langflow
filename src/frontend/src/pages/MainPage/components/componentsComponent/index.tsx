@@ -4,7 +4,9 @@ import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import CollectionCardComponent from "../../../../components/cardComponent";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
-import IconComponent from "../../../../components/genericIconComponent";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../../components/genericIconComponent";
 import PaginatorComponent from "../../../../components/paginatorComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
@@ -267,16 +269,29 @@ export default function ComponentsComponent({
 
   return (
     <>
-      {allFlows?.length > 0 && (
-        <HeaderComponent
-          handleDelete={() => handleSelectOptionsChange("delete")}
-          handleSelectAll={handleSelectAll}
-          handleDuplicate={() => handleSelectOptionsChange("duplicate")}
-          handleExport={() => handleSelectOptionsChange("export")}
-          handleImport={() => handleImport()}
-          disableFunctions={!(selectedFlowsComponentsCards?.length > 0)}
-        />
-      )}
+      <div className="flex w-full gap-4 pb-5">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleImport}
+          className="flex-shrink-0 text-sm"
+        >
+          <ForwardedIconComponent
+            name="FileUp"
+            className="h-5 w-5 text-primary"
+          />
+          Upload Flow
+        </Button>
+        {allFlows?.length > 0 && (
+          <HeaderComponent
+            handleDelete={() => handleSelectOptionsChange("delete")}
+            handleSelectAll={handleSelectAll}
+            handleDuplicate={() => handleSelectOptionsChange("duplicate")}
+            handleExport={() => handleSelectOptionsChange("export")}
+            disableFunctions={!(selectedFlowsComponentsCards?.length > 0)}
+          />
+        )}
+      </div>
 
       <CardsWrapComponent
         onFileDrop={handleFileDrop}
