@@ -27,7 +27,7 @@ export default function MessagesPage() {
     setSelectedRows,
     setSuccessData,
     setErrorData,
-    selectedRows
+    selectedRows,
   );
 
   const { handleUpdate } = useUpdateMessage(setSuccessData, setErrorData);
@@ -52,7 +52,7 @@ export default function MessagesPage() {
         handleRemoveMessages={handleRemoveMessages}
       />
 
-      <div className="flex h-full w-full flex-col justify-between pb-8">
+      <div className="flex h-full w-full flex-col justify-between">
         <Card x-chunk="dashboard-04-chunk-2" className="h-full pt-4">
           <CardContent className="h-full">
             <TableComponent
@@ -64,7 +64,7 @@ export default function MessagesPage() {
               overlayNoRowsTemplate="No data available"
               onSelectionChanged={(event: SelectionChangedEvent) => {
                 setSelectedRows(
-                  event.api.getSelectedRows().map((row) => row.index)
+                  event.api.getSelectedRows().map((row) => row.index),
                 );
               }}
               rowSelection="multiple"
