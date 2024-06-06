@@ -110,7 +110,7 @@ export default function Page({
         getRandomName(),
       );
       const newGroupNode = generateNodeFromFlow(newFlow, getNodeId);
-      const newEdges = reconnectEdges(newGroupNode, removedEdges);
+      // const newEdges = reconnectEdges(newGroupNode, removedEdges);
       setNodes([
         ...clonedNodes.filter(
           (oldNodes) =>
@@ -120,17 +120,17 @@ export default function Page({
         ),
         newGroupNode,
       ]);
-      setEdges([
-        ...clonedEdges.filter(
-          (oldEdge) =>
-            !clonedSelection!.nodes.some(
-              (selectionNode) =>
-                selectionNode.id === oldEdge.target ||
-                selectionNode.id === oldEdge.source,
-            ),
-        ),
-        ...newEdges,
-      ]);
+      // setEdges([
+      //   ...clonedEdges.filter(
+      //     (oldEdge) =>
+      //       !clonedSelection!.nodes.some(
+      //         (selectionNode) =>
+      //           selectionNode.id === oldEdge.target ||
+      //           selectionNode.id === oldEdge.source,
+      //       ),
+      //   ),
+      //   ...newEdges,
+      // ]);
     } else {
       setErrorData({
         title: INVALID_SELECTION_ERROR_ALERT,
