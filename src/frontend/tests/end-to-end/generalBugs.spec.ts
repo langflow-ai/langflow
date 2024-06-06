@@ -94,4 +94,6 @@ test("erase button should clear the chat messages", async ({ page }) => {
   await page.getByText("Hello, how are you?").isHidden();
   await page.getByText("AI", { exact: true }).last().isHidden();
   await page.getByText("User", { exact: true }).last().isHidden();
+  await page.getByText("Start a conversation").isVisible();
+  await page.getByText("Langflow Chat").isVisible();
 });
