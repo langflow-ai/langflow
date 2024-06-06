@@ -133,7 +133,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) {
     // if (message === "") return;
     chat.message = message;
@@ -165,14 +165,12 @@ export default function ChatView({
             className="flex gap-1"
             size="none"
             variant="none"
+            disabled={lockChat}
             onClick={() => handleSelectChange("builds")}
           >
             <IconComponent
               name="Eraser"
-              className={classNames(
-                "h-5 w-5 transition-all duration-100",
-                lockChat ? "animate-pulse text-primary" : "text-primary"
-              )}
+              className={classNames("h-5 w-5 text-primary")}
               aria-hidden="true"
             />
           </Button>
