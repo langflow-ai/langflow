@@ -12,6 +12,7 @@ type HeaderComponentProps = {
   handleDelete: () => void;
   handleDuplicate: () => void;
   handleExport: () => void;
+  handleImport: () => void;
   disableFunctions: boolean;
 };
 
@@ -20,6 +21,7 @@ const HeaderComponent = ({
   handleDelete,
   handleDuplicate,
   handleExport,
+  handleImport,
   disableFunctions,
 }: HeaderComponentProps) => {
   const [shouldSelectAll, setShouldSelectAll] = useState(true);
@@ -36,7 +38,7 @@ const HeaderComponent = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={handleClick}
+            onClick={handleImport}
             className="text-sm"
           >
             <ForwardedIconComponent
