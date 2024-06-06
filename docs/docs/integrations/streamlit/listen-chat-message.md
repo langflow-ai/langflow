@@ -4,7 +4,7 @@ import ThemedImage from "@theme/ThemedImage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
-# Streamlit Get Session Messages
+# Streamlit Listen Chat Message
 
 Langflow enhances its functionality with custom components like `StreamlitListenChatMessage`. This component listen for message of a specified Streamlit application.
 
