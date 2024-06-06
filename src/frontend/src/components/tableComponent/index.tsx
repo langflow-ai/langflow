@@ -1,7 +1,7 @@
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
-import { ElementRef, forwardRef, useEffect, useRef } from "react";
+import { ElementRef, forwardRef, useRef } from "react";
 import {
   DEFAULT_TABLE_ALERT_MSG,
   DEFAULT_TABLE_ALERT_TITLE,
@@ -11,10 +11,8 @@ import "../../style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import { cn, toTitleCase } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { Toggle } from "../ui/toggle";
-import ShadTooltip from "../shadTooltipComponent";
-import resetGrid from "./utils/reset-grid-columns";
 import ResetColumns from "./components/ResetColumns";
+import resetGrid from "./utils/reset-grid-columns";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
@@ -34,7 +32,7 @@ const TableComponent = forwardRef<
       alertDescription = DEFAULT_TABLE_ALERT_MSG,
       ...props
     },
-    ref,
+    ref
   ) => {
     let colDef = props.columnDefs.map((col, index) => {
       let newCol = {
@@ -91,7 +89,7 @@ const TableComponent = forwardRef<
 
     const onColumnMoved = (params) => {
       const updatedColumnDefs = makeLastColumnNonResizable(
-        params.columnApi.getAllGridColumns().map((col) => col.getColDef()),
+        params.columnApi.getAllGridColumns().map((col) => col.getColDef())
       );
       params.api.setColumnDefs(updatedColumnDefs);
       if (props.onColumnMoved) props.onColumnMoved(params);
@@ -116,7 +114,7 @@ const TableComponent = forwardRef<
         className={cn(
           dark ? "ag-theme-quartz-dark" : "ag-theme-quartz",
           "ag-theme-shadcn flex h-full flex-col",
-          "relative",
+          "relative"
         )} // applying the grid theme
       >
         <AgGridReact
@@ -127,6 +125,9 @@ const TableComponent = forwardRef<
           }}
           columnDefs={colDef}
           ref={realRef}
+          getRowId={(params) => {
+            return params.data.id;
+          }}
           pagination={true}
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
@@ -134,7 +135,7 @@ const TableComponent = forwardRef<
         <ResetColumns resetGrid={() => resetGrid(realRef, initialColumnDefs)} />
       </div>
     );
-  },
+  }
 );
 
 export default TableComponent;

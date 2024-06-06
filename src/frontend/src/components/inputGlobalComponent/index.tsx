@@ -19,24 +19,24 @@ export default function InputGlobalComponent({
   editNode = false,
 }: InputGlobalComponentType): JSX.Element {
   const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries,
+    (state) => state.globalVariablesEntries
   );
 
   const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
   const unavaliableFields = useGlobalVariablesStore(
-    (state) => state.unavaliableFields,
+    (state) => state.unavaliableFields
   );
   const removeGlobalVariable = useGlobalVariablesStore(
-    (state) => state.removeGlobalVariable,
+    (state) => state.removeGlobalVariable
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   useEffect(() => {
-    if (data.node?.template[name])
+    if (data)
       if (
         globalVariablesEntries &&
-        !globalVariablesEntries.includes(data.node?.template[name].value) &&
-        data.node?.template[name].load_from_db
+        !globalVariablesEntries.includes(data.value) &&
+        data.load_from_db
       ) {
         setTimeout(() => {
           onChange("", true);
@@ -46,17 +46,11 @@ export default function InputGlobalComponent({
   }, [globalVariablesEntries]);
 
   useEffect(() => {
-    if (
-      !data.node?.template[name].value &&
-      data.node?.template[name].display_name
-    ) {
-      if (
-        unavaliableFields[data.node?.template[name].display_name!] &&
-        !disabled
-      ) {
+    if (!data.value && data.display_name) {
+      if (unavaliableFields[data.display_name!] && !disabled) {
         setTimeout(() => {
           setDb(true);
-          onChange(unavaliableFields[data.node?.template[name].display_name!]);
+          onChange(unavaliableFields[data.display_name!]);
         }, 100);
       }
     }
@@ -68,10 +62,7 @@ export default function InputGlobalComponent({
       await deleteGlobalVariable(id)
         .then(() => {
           removeGlobalVariable(key);
-          if (
-            data?.node?.template[name].value === key &&
-            data?.node?.template[name].load_from_db
-          ) {
+          if (data?.value === key && data?.load_from_db) {
             onChange("");
             setDb(false);
           }
@@ -94,8 +85,8 @@ export default function InputGlobalComponent({
       id={"input-" + name}
       editNode={editNode}
       disabled={disabled}
-      password={data.node?.template[name].password ?? false}
-      value={data.node?.template[name].value ?? ""}
+      password={data.password ?? false}
+      value={data.value ?? ""}
       options={globalVariablesEntries}
       optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
@@ -130,7 +121,7 @@ export default function InputGlobalComponent({
             <ForwardedIconComponent
               name="Trash2"
               className={cn(
-                "h-4 w-4 text-primary opacity-0 hover:text-status-red group-hover:opacity-100",
+                "h-4 w-4 text-primary opacity-0 hover:text-status-red group-hover:opacity-100"
               )}
               aria-hidden="true"
             />
@@ -138,10 +129,10 @@ export default function InputGlobalComponent({
         </DeleteConfirmationModal>
       )}
       selectedOption={
-        data?.node?.template[name].load_from_db &&
+        data?.load_from_db &&
         globalVariablesEntries &&
-        globalVariablesEntries.includes(data?.node?.template[name].value ?? "")
-          ? data?.node?.template[name].value
+        globalVariablesEntries.includes(data?.value ?? "")
+          ? data?.value
           : ""
       }
       setSelectedOption={(value) => {

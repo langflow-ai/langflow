@@ -1,11 +1,11 @@
 import { CustomCellRendererProps } from "ag-grid-react";
-import { cn, isTimeStampString } from "../../utils/utils";
-import ArrayReader from "../arrayReaderComponent";
-import DateReader from "../dateReaderComponent";
-import NumberReader from "../numberReader";
-import ObjectRender from "../objectRender";
-import StringReader from "../stringReaderComponent";
-import { Badge } from "../ui/badge";
+import { cn, isTimeStampString } from "../../../../utils/utils";
+import ArrayReader from "../../../arrayReaderComponent";
+import DateReader from "../../../dateReaderComponent";
+import NumberReader from "../../../numberReader";
+import ObjectRender from "../../../objectRender";
+import StringReader from "../../../stringReaderComponent";
+import { Badge } from "../../../ui/badge";
 
 export default function TableAutoCellRender({
   value,
@@ -34,7 +34,7 @@ export default function TableAutoCellRender({
               variant="outline"
               size="sq"
               className={cn(
-                "min-w-min bg-success-background text-success-foreground hover:bg-success-background",
+                "min-w-min bg-success-background text-success-foreground hover:bg-success-background"
               )}
             >
               {value}
@@ -43,7 +43,6 @@ export default function TableAutoCellRender({
         } else {
           return <StringReader string={value} />;
         }
-        break;
       case "number":
         return <NumberReader number={value} />;
       default:

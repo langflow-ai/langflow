@@ -20,6 +20,7 @@ import { Button } from "../../components/ui/button";
 import { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { switchCaseModalSize } from "./helpers/switch-case-size";
+import * as Form from "@radix-ui/react-form";
 
 type ContentProps = { children: ReactNode };
 type HeaderProps = { children: ReactNode; description: string };
@@ -52,10 +53,10 @@ const Trigger: React.FC<TriggerProps> = ({
   );
 };
 
-const Header: React.FC<{ children: ReactNode; description: string | null }> = ({
-  children,
-  description,
-}: modalHeaderType): JSX.Element => {
+const Header: React.FC<{
+  children: ReactNode;
+  description: string | JSX.Element | null;
+}> = ({ children, description }: modalHeaderType): JSX.Element => {
   return (
     <DialogHeader>
       <DialogTitle className="flex items-center">{children}</DialogTitle>
@@ -102,7 +103,7 @@ interface BaseModalProps {
     React.ReactElement<ContentProps>,
     React.ReactElement<HeaderProps>,
     React.ReactElement<TriggerProps>?,
-    React.ReactElement<FooterProps>?,
+    React.ReactElement<FooterProps>?
   ];
   open?: boolean;
   setOpen?: (open: boolean) => void;
@@ -111,6 +112,7 @@ interface BaseModalProps {
     | "smaller"
     | "small"
     | "medium"
+    | "medium-tall"
     | "large"
     | "three-cards"
     | "large-thin"
@@ -136,16 +138,16 @@ function BaseModal({
   onSubmit,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Header,
+    (child) => (child as React.ReactElement).type === Header
   );
   const triggerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Trigger,
+    (child) => (child as React.ReactElement).type === Trigger
   );
   const ContentChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Content,
+    (child) => (child as React.ReactElement).type === Content
   );
   const ContentFooter = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Footer,
+    (child) => (child as React.ReactElement).type === Footer
   );
 
   let { minWidth, height } = switchCaseModalSize(size);
@@ -179,31 +181,33 @@ function BaseModal({
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <DialogContent className={cn(minWidth, "duration-300")}>
+          <DialogContent
+            className={cn(minWidth, height, "flex flex-col duration-300")}
+          >
             <div className="truncate-doubleline word-break-break-word">
               {headerChild}
             </div>
             {onSubmit ? (
-              <form
+              <Form.Root
                 onSubmit={(event) => {
                   event.preventDefault();
                   onSubmit();
                 }}
-                className="flex flex-col gap-6"
+                className="flex flex-1 flex-col gap-6"
               >
                 <div
-                  className={`flex flex-col ${height} w-full transition-all duration-300`}
+                  className={`flex w-full flex-1 flex-col transition-all duration-300`}
                 >
                   {ContentChild}
                 </div>
                 {ContentFooter && (
                   <div className="flex flex-row-reverse">{ContentFooter}</div>
                 )}
-              </form>
+              </Form.Root>
             ) : (
               <>
                 <div
-                  className={`flex flex-col ${height} w-full transition-all duration-300`}
+                  className={`flex w-full flex-1 flex-col transition-all duration-300`}
                 >
                   {ContentChild}
                 </div>

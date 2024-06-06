@@ -10,7 +10,11 @@ import {
   CommandList,
 } from "../../../ui/command";
 import { Input } from "../../../ui/input";
-import { Popover, PopoverContentWithoutPortal } from "../../../ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverContentWithoutPortal,
+} from "../../../ui/popover";
 const CustomInputPopover = ({
   id,
   refInput,
@@ -39,6 +43,9 @@ const CustomInputPopover = ({
   showOptions,
 }) => {
   const setErrorData = useAlertStore.getState().setErrorData;
+  const PopoverContentInput = editNode
+    ? PopoverContent
+    : PopoverContentWithoutPortal;
 
   const handleInputChange = (e) => {
     if (password) {
@@ -68,9 +75,9 @@ const CustomInputPopover = ({
             (selectedOption !== "" || !onChange) && setSelectedOption
               ? selectedOption
               : (selectedOptions?.length !== 0 || !onChange) &&
-                  setSelectedOptions
-                ? selectedOptions?.join(", ")
-                : value
+                setSelectedOptions
+              ? selectedOptions?.join(", ")
+              : value
           }
           autoFocus={autoFocus}
           disabled={disabled}
@@ -96,7 +103,7 @@ const CustomInputPopover = ({
               (password && !(setSelectedOption || setSelectedOptions))
               ? "pr-8"
               : "",
-            className!,
+            className!
           )}
           placeholder={password && editNode ? "Key" : placeholder}
           onChange={handleInputChange}
@@ -107,7 +114,7 @@ const CustomInputPopover = ({
           data-testid={editNode ? id + "-edit" : id}
         />
       </PopoverAnchor>
-      <PopoverContentWithoutPortal
+      <PopoverContentInput
         className="nocopy nowheel nopan nodelete nodrag noundo p-0"
         style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
         side="bottom"
@@ -134,15 +141,15 @@ const CustomInputPopover = ({
                   onSelect={(currentValue) => {
                     setSelectedOption &&
                       setSelectedOption(
-                        currentValue === selectedOption ? "" : currentValue,
+                        currentValue === selectedOption ? "" : currentValue
                       );
                     setSelectedOptions &&
                       setSelectedOptions(
                         selectedOptions?.includes(currentValue)
                           ? selectedOptions.filter(
-                              (item) => item !== currentValue,
+                              (item) => item !== currentValue
                             )
-                          : [...selectedOptions, currentValue],
+                          : [...selectedOptions, currentValue]
                       );
                     !setSelectedOptions && setShowOptions(false);
                   }}
@@ -155,7 +162,7 @@ const CustomInputPopover = ({
                           selectedOption === option ||
                             selectedOptions?.includes(option)
                             ? "opacity-100"
-                            : "opacity-0",
+                            : "opacity-0"
                         )}
                       >
                         <div className="absolute opacity-100 transition-all group-hover:opacity-0">
@@ -184,7 +191,7 @@ const CustomInputPopover = ({
             </CommandGroup>
           </CommandList>
         </Command>
-      </PopoverContentWithoutPortal>
+      </PopoverContentInput>
     </Popover>
   );
 };
