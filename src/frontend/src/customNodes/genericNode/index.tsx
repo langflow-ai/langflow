@@ -1,4 +1,5 @@
 import { cloneDeep } from "lodash";
+import emojiRegex from "emoji-regex";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../components/genericIconComponent";
@@ -220,8 +221,7 @@ export default function GenericNode({
 
   const nameEditable = true;
 
-  const emojiRegex = /\p{Emoji}/u;
-  const isEmoji = emojiRegex.test(data?.node?.icon!);
+  const isEmoji = emojiRegex().test(data?.node?.icon!);
 
   const iconNodeRender = useCallback(() => {
     const iconElement = data?.node?.icon;

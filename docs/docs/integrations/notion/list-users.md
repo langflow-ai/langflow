@@ -9,7 +9,7 @@ The `NotionUserList` component retrieves users from Notion. It provides a conven
 
 [Notion Reference](https://developers.notion.com/reference/get-users)
 
- The `NotionUserList` component enables you to:
+The `NotionUserList` component enables you to:
 
 - Retrieve user data from Notion
 - Access user information such as ID, type, name, and avatar URL
