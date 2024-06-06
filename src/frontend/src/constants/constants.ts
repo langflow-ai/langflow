@@ -668,7 +668,7 @@ export const ZERO_NOTIFICATIONS = "No new notifications";
 export const SUCCESS_BUILD = "Built sucessfully ✨";
 
 export const ALERT_SAVE_WITH_API =
-  "Caution: Uncheck this box only removes API keys from fields specifically designated for API keys.";
+  "Caution: Unchecking this box only removes API keys from fields specifically designated for API keys.";
 
 export const SAVE_WITH_API_CHECKBOX = "Save with my API keys";
 export const EDIT_TEXT_MODAL_TITLE = "Edit Text";
