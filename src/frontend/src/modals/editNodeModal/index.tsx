@@ -38,10 +38,10 @@ const EditNodeModal = forwardRef(
       myData.current.node!.template[name].value = newValue;
     };
 
-    const rowData = useRowData(myData, open);
+    const rowData = useRowData(data, open);
 
     const columnDefs: ColDef[] = useColumnDefs(
-      myData,
+      data,
       handleOnNewValue,
       changeAdvanced,
       open,
