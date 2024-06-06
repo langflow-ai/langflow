@@ -2,10 +2,6 @@ import { Textarea } from "../../../../../../../components/ui/textarea";
 import { classNames } from "../../../../../../../utils/utils";
 
 const TextAreaWrapper = ({
-  dragOver,
-  dragEnter,
-  dragLeave,
-  onDrop,
   checkSendingOk,
   send,
   lockChat,
@@ -54,10 +50,6 @@ const TextAreaWrapper = ({
         e.target.style.borderTopWidth = "0";
       }}
       onBlur={() => setInputFocus(false)}
-      onDragOver={dragOver}
-      onDragEnter={dragEnter}
-      onDragLeave={dragLeave}
-      onDrop={onDrop}
       onKeyDown={(event) => {
         if (checkSendingOk(event)) {
           send();

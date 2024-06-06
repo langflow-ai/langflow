@@ -485,6 +485,11 @@ export type headerFlowsType = {
 };
 
 export type chatInputType = {
+  isDragging: boolean;
+  files: FilePreviewType[];
+  setFiles: (
+    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
+  ) => void;
   chatValue: string;
   inputRef: {
     current: any;

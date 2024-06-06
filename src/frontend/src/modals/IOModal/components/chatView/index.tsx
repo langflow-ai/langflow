@@ -10,10 +10,11 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { VertexBuildTypeAPI, sendAllProps } from "../../../../types/api";
 import { ChatMessageType, ChatOutputType } from "../../../../types/chat";
-import { chatViewProps } from "../../../../types/components";
+import { chatViewProps, FilePreviewType } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
 import ChatInput from "./chatInput";
 import ChatMessage from "./chatMessage";
+import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 
 export default function ChatView({
   sendMessage,
@@ -141,9 +142,23 @@ export default function ChatView({
     // return newChatHistory;
     // });
   }
+  const [files, setFiles] = useState<FilePreviewType[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const { dragOver, dragEnter, dragLeave, onDrop } = useDragAndDrop(
+    setIsDragging,
+    setFiles,
+    currentFlowId,
+  );
 
   return (
-    <div className="eraser-column-arrangement">
+    <div
+      className="eraser-column-arrangement"
+      onDragOver={dragOver}
+      onDragEnter={dragEnter}
+      onDragLeave={dragLeave}
+      onDrop={onDrop}
+    >
       <div className="eraser-size">
         <div className="eraser-position">
           <button disabled={lockChat} onClick={() => clearChat()}>
@@ -206,6 +221,9 @@ export default function ChatView({
                 setChatValue(value);
               }}
               inputRef={ref}
+              files={files}
+              setFiles={setFiles}
+              isDragging={isDragging}
             />
           </div>
         </div>
