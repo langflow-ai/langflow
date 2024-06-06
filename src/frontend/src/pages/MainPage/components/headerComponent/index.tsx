@@ -31,25 +31,19 @@ const HeaderComponent = ({
     <>
       <div className="grid grid-cols-3 pb-5">
         <div className="col-auto grid-cols-1 self-center justify-self-start">
-          <a onClick={handleClick} className="text-sm">
-            <div className="header-menu-bar-display ">
-              <div
-                className="header-menu-flow-name"
-                data-testid="select_all_collection"
-              >
-                <div className="flex items-center space-x-2">
-                  <Checkbox checked={!shouldSelectAll} id="terms" />
-                  <label
-                    onClick={handleClick}
-                    htmlFor="terms"
-                    className="label cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    {shouldSelectAll ? "Select All" : "Unselect All"}
-                  </label>
-                </div>
-              </div>
+          <Button
+            variant="none"
+            size="none"
+            onClick={handleClick}
+            className="text-sm"
+          >
+            <div className="flex items-center space-x-2">
+              <Checkbox checked={!shouldSelectAll} id="terms" />
+              <span className="label text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                {shouldSelectAll ? "Select All" : "Unselect All"}
+              </span>
             </div>
-          </a>
+          </Button>
         </div>
         <div className="col-span-2 flex grid-cols-1 gap-2 justify-self-end">
           <div>
