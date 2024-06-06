@@ -447,8 +447,8 @@ export default function ParameterComponent({
               data.node?.template[name]?.real_time_refresh)
           }
         >
-          <div className="mt-2 flex w-full items-center">
-            <div className="w-5/6 flex-grow">
+          <div className="mt-2 flex w-full items-center gap-2">
+            <div className="flex-1">
               <Dropdown
                 disabled={disabled}
                 isLoading={isLoading}
@@ -466,7 +466,6 @@ export default function ParameterComponent({
                   name={name}
                   data={data}
                   button_text={data.node?.template[name]?.refresh_button_text}
-                  className="extra-side-bar-buttons ml-2 mt-1"
                   handleUpdateValues={handleRefreshButtonPress}
                   id={"refresh-button-" + name}
                 />
