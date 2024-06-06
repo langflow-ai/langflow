@@ -71,6 +71,19 @@ async def listen_message(timeout: int = 60*2):
         return Response(dumps(result), headers={"Content-Type": "application/json"})
     return Response(None, status_code=204)
 
+def run_flow(api_key: str, flow_id: str):
+    import requests, time
+    headers = {"x-api-key": api_key}
+    time.sleep(2)
+    requests.post(f"http://backend:7860/api/v1/run/{flow_id}", headers=headers)
+
+@router.get("/reflow")
+async def rerun_flow(api_key: str, flow_id: str):
+    from multiprocessing import Process
+    p = Process(target=run_flow, args=(api_key, flow_id))
+    p.start()
+    return Response(None, status_code=204)
+
 
 @router.post("/sessions/{session_id}/messages")
 async def register_chat_message(session_id: str, model: ChatMessageModel):
