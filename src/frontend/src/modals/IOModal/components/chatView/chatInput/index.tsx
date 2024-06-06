@@ -26,12 +26,13 @@ export default function ChatInput({
   setChatValue,
   inputRef,
   noInput,
+  files,
+  setFiles,
+  isDragging,
 }: chatInputType): JSX.Element {
   const [repeat, setRepeat] = useState(1);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const [files, setFiles] = useState<FilePreviewType[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
   const [inputFocus, setInputFocus] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,12 +40,6 @@ export default function ChatInput({
   useAutoResizeTextArea(chatValue, inputRef);
   useUpload(uploadFile, currentFlowId, setFiles);
   const { handleFileChange } = useHandleFileChange(setFiles, currentFlowId);
-
-  const { dragOver, dragEnter, dragLeave, onDrop } = useDragAndDrop(
-    setIsDragging,
-    setFiles,
-    currentFlowId,
-  );
 
   const send = () => {
     sendMessage({
@@ -74,10 +69,6 @@ export default function ChatInput({
     <div className="flex w-full flex-col-reverse">
       <div className="relative w-full">
         <TextAreaWrapper
-          dragOver={dragOver}
-          dragEnter={dragEnter}
-          dragLeave={dragLeave}
-          onDrop={onDrop}
           checkSendingOk={checkSendingOk}
           send={send}
           lockChat={lockChat}
@@ -119,7 +110,9 @@ export default function ChatInput({
               loading={file.loading}
               key={file.id}
               onDelete={() => {
-                setFiles((prev) => prev.filter((f) => f.id !== file.id));
+                setFiles((prev: FilePreviewType[]) =>
+                  prev.filter((f) => f.id !== file.id),
+                );
                 // TODO: delete file on backend
               }}
             />
