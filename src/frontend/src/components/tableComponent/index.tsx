@@ -13,6 +13,7 @@ import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import ResetColumns from "./components/ResetColumns";
 import resetGrid from "./utils/reset-grid-columns";
+import { useParams } from "react-router-dom";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
@@ -32,7 +33,7 @@ const TableComponent = forwardRef<
       alertDescription = DEFAULT_TABLE_ALERT_MSG,
       ...props
     },
-    ref
+    ref,
   ) => {
     let colDef = props.columnDefs.map((col, index) => {
       let newCol = {
@@ -82,16 +83,16 @@ const TableComponent = forwardRef<
       // @ts-ignore
       realRef.current = params;
       const updatedColumnDefs = makeLastColumnNonResizable([...colDef]);
-      params.api.setColumnDefs(updatedColumnDefs);
+      params.api.setGridOption("columnDefs", updatedColumnDefs);
       initialColumnDefs.current = params.api.getColumnDefs();
       if (props.onGridReady) props.onGridReady(params);
     };
 
     const onColumnMoved = (params) => {
       const updatedColumnDefs = makeLastColumnNonResizable(
-        params.columnApi.getAllGridColumns().map((col) => col.getColDef())
+        params.columnApi.getAllGridColumns().map((col) => col.getColDef()),
       );
-      params.api.setColumnDefs(updatedColumnDefs);
+      params.api.setGridOption("columnDefs", updatedColumnDefs);
       if (props.onColumnMoved) props.onColumnMoved(params);
     };
 
@@ -114,7 +115,7 @@ const TableComponent = forwardRef<
         className={cn(
           dark ? "ag-theme-quartz-dark" : "ag-theme-quartz",
           "ag-theme-shadcn flex h-full flex-col",
-          "relative"
+          "relative",
         )} // applying the grid theme
       >
         <AgGridReact
@@ -126,9 +127,6 @@ const TableComponent = forwardRef<
           }}
           columnDefs={colDef}
           ref={realRef}
-          getRowId={(params) => {
-            return params.data.id;
-          }}
           pagination={true}
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
@@ -136,7 +134,7 @@ const TableComponent = forwardRef<
         <ResetColumns resetGrid={() => resetGrid(realRef, initialColumnDefs)} />
       </div>
     );
-  }
+  },
 );
 
 export default TableComponent;
