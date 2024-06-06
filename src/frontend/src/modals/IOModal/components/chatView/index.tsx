@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../../../components/genericIconComponent";
-<<<<<<< HEAD
-=======
 import { Button } from "../../../../components/ui/button";
->>>>>>> dev
 import {
   CHAT_FIRST_INITIAL_TEXT,
   CHAT_SECOND_INITIAL_TEXT,
@@ -185,15 +182,10 @@ export default function ChatView({
             <IconComponent
               name="Eraser"
               className={classNames(
-<<<<<<< HEAD
                 "h-5 w-5",
                 lockChat
                   ? "animate-pulse text-primary"
                   : "text-primary hover:text-gray-600"
-=======
-                "h-5 w-5 transition-all duration-100",
-                lockChat ? "animate-pulse text-primary" : "text-primary"
->>>>>>> dev
               )}
               aria-hidden="true"
             />

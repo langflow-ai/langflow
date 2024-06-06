@@ -16,7 +16,7 @@ import {
 import { BuildStatus } from "../constants/enums";
 import { getFlowPool } from "../controllers/API";
 import { VertexBuildTypeAPI } from "../types/api";
-import { ChatOutputType, chatInputType } from "../types/chat";
+import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
   NodeDataType,
   NodeType,
@@ -73,11 +73,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateFlowPool: (
     nodeId: string,
-<<<<<<< HEAD
-    data: VertexBuildTypeAPI | ChatOutputType | chatInputType,
-=======
-    data: FlowPoolObjectType | ChatOutputType | chatInputType,
->>>>>>> dev
+    data: VertexBuildTypeAPI | ChatOutputType | ChatInputType,
     buildId?: string
   ) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
@@ -96,7 +92,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       else {
         newFlowPool[nodeId][index].data.message = data as
           | ChatOutputType
-          | chatInputType;
+          | ChatInputType;
       }
     }
     get().setFlowPool(newFlowPool);
@@ -492,11 +488,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           (id) => !vertexBuildData.inactivated_vertices?.includes(id)
         );
         const top_level_vertices = vertexBuildData.top_level_vertices.filter(
-<<<<<<< HEAD
           (vertex) => !vertexBuildData.inactivated_vertices?.includes(vertex)
-=======
-          (vertex) => !vertexBuildData.inactivated_vertices?.includes(vertex.id)
->>>>>>> dev
         );
         const nextVertices: VertexLayerElementType[] = zip(
           next_vertices_ids,
@@ -521,11 +513,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       }
 
       get().addDataToFlowPool(
-<<<<<<< HEAD
         { ...vertexBuildData, run_id: runId },
-=======
-        { ...vertexBuildData, buildId: runId },
->>>>>>> dev
         vertexBuildData.id
       );
 

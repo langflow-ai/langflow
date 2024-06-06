@@ -22,7 +22,7 @@ export type ChatOutputType = {
   files?: Array<{ path: string; type: string; name: string }>;
 };
 
-export type chatInputType = {
+export type ChatInputType = {
   message: string;
   sender: string;
   sender_name: string;
@@ -34,7 +34,7 @@ export type FlowPoolObjectType = {
   timestamp: string;
   valid: boolean;
   // list of chat outputs or list of chat inputs
-  messages: Array<ChatOutputType | chatInputType> | [];
-  data: { artifacts: any; results: any | ChatOutputType | chatInputType };
+  messages: Array<ChatOutputType | ChatInputType> | [];
+  data: { artifacts: any; results: any | ChatOutputType | ChatInputType };
   id: string;
 };

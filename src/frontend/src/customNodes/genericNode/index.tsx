@@ -22,7 +22,6 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useTypesStore } from "../../stores/typesStore";
 import { APIClassType, VertexBuildTypeAPI } from "../../types/api";
-import { validationStatusType } from "../../types/components";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
@@ -170,7 +169,7 @@ export default function GenericNode({
 
   // should be empty string if no duration
   // else should be `Duration: ${duration}`
-  const getDurationString = (duration: number | undefined|string): string => {
+  const getDurationString = (duration: number | undefined | string): string => {
     if (duration === undefined) {
       return "";
     } else {
@@ -193,7 +192,7 @@ export default function GenericNode({
         ? flowPool[data.id][flowPool[data.id].length - 1]
         : null;
     if (relevantData) {
-      console.log(relevantData)
+      console.log(relevantData);
       // Extract validation information from relevantData and update the validationStatus state
       setValidationStatus(relevantData);
     } else {
@@ -261,11 +260,7 @@ export default function GenericNode({
   const isDark = useDarkStore((state) => state.dark);
   const renderIconStatus = (
     buildStatus: BuildStatus | undefined,
-<<<<<<< HEAD
     validationStatus: VertexBuildTypeAPI | null
-=======
-    validationStatus: validationStatusType | null
->>>>>>> dev
   ) => {
     if (buildStatus === BuildStatus.BUILDING) {
       return <Loading className="text-medium-indigo" />;
@@ -306,11 +301,7 @@ export default function GenericNode({
   };
   const getSpecificClassFromBuildStatus = (
     buildStatus: BuildStatus | undefined,
-<<<<<<< HEAD
     validationStatus: VertexBuildTypeAPI | null
-=======
-    validationStatus: validationStatusType | null
->>>>>>> dev
   ) => {
     let isInvalid = validationStatus && !validationStatus.valid;
 
@@ -334,11 +325,7 @@ export default function GenericNode({
     selected: boolean,
     showNode: boolean,
     buildStatus: BuildStatus | undefined,
-<<<<<<< HEAD
     validationStatus: VertexBuildTypeAPI | null
-=======
-    validationStatus: validationStatusType | null
->>>>>>> dev
   ) => {
     const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
       buildStatus,

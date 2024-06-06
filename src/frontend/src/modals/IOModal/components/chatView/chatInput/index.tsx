@@ -6,8 +6,8 @@ import {
 import { uploadFile } from "../../../../../controllers/API";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import {
+  ChatInputType,
   FilePreviewType,
-  chatInputType,
 } from "../../../../../types/components";
 import FilePreview from "../filePreviewChat";
 import ButtonSendWrapper from "./components/buttonSendWrapper";
@@ -15,7 +15,6 @@ import TextAreaWrapper from "./components/textAreaWrapper";
 import UploadFileButton from "./components/uploadFileButton";
 import { getClassNamesFilePreview } from "./helpers/get-class-file-preview";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
-import useDragAndDrop from "./hooks/use-drag-and-drop";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
 import useHandleFileChange from "./hooks/use-handle-file-change";
 import useUpload from "./hooks/use-upload";
@@ -29,7 +28,7 @@ export default function ChatInput({
   files,
   setFiles,
   isDragging,
-}: chatInputType): JSX.Element {
+}: ChatInputType): JSX.Element {
   const [repeat, setRepeat] = useState(1);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -111,7 +110,7 @@ export default function ChatInput({
               key={file.id}
               onDelete={() => {
                 setFiles((prev: FilePreviewType[]) =>
-                  prev.filter((f) => f.id !== file.id),
+                  prev.filter((f) => f.id !== file.id)
                 );
                 // TODO: delete file on backend
               }}
