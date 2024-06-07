@@ -9,28 +9,16 @@ import {
 } from "reactflow";
 import { BuildStatus } from "../../../constants/enums";
 import { VertexBuildTypeAPI } from "../../api";
+import { ChatInputType, ChatOutputType } from "../../chat";
 import { FlowState } from "../../tabs";
-
-export type chatInputType = {
-  result: string;
-  files?: string[];
-};
-
-export type ChatOutputType = {
-  message: string;
-  sender: string;
-  sender_name: string;
-  stream_url?: string;
-  files?: string[];
-};
 
 export type FlowPoolObjectType = {
   timestamp: string;
   valid: boolean;
-  messages: Array<ChatOutputType | chatInputType> | [];
+  messages: Array<ChatOutputType | ChatInputType> | [];
   data: {
-    artifacts: any | ChatOutputType | chatInputType;
-    results: any | ChatOutputType | chatInputType;
+    artifacts: any | ChatOutputType | ChatInputType;
+    results: any | ChatOutputType | ChatInputType;
   };
   duration?: string;
   progress?: number;
@@ -45,8 +33,8 @@ export type FlowPoolObjectTypeNew = {
   timestamp: string;
   valid: boolean;
   data: {
-    logs?: any | ChatOutputType | chatInputType;
-    results: any | ChatOutputType | chatInputType;
+    logs?: any | ChatOutputType | ChatInputType;
+    results: any | ChatOutputType | ChatInputType;
   };
   duration?: string;
   progress?: number;
@@ -98,7 +86,7 @@ export type FlowStoreType = {
     state:
       | FlowState
       | undefined
-      | ((oldState: FlowState | undefined) => FlowState),
+      | ((oldState: FlowState | undefined) => FlowState)
   ) => void;
   nodes: Node[];
   edges: Edge[];
@@ -106,11 +94,11 @@ export type FlowStoreType = {
   onEdgesChange: OnEdgesChange;
   setNodes: (
     update: Node[] | ((oldState: Node[]) => Node[]),
-    skipSave?: boolean,
+    skipSave?: boolean
   ) => void;
   setEdges: (
     update: Edge[] | ((oldState: Edge[]) => Edge[]),
-    skipSave?: boolean,
+    skipSave?: boolean
   ) => void;
   setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void;
   getNode: (id: string) => Node | undefined;
@@ -118,12 +106,12 @@ export type FlowStoreType = {
   deleteEdge: (edgeId: string | Array<string>) => void;
   paste: (
     selection: { nodes: any; edges: any },
-    position: { x: number; y: number; paneX?: number; paneY?: number },
+    position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => void;
   lastCopiedSelection: { nodes: any; edges: any } | null;
   setLastCopiedSelection: (
     newSelection: { nodes: any; edges: any } | null,
-    isCrop?: boolean,
+    isCrop?: boolean
   ) => void;
   cleanFlow: () => void;
   setFilterEdge: (newState) => void;
@@ -150,7 +138,7 @@ export type FlowStoreType = {
       verticesLayers: VertexLayerElementType[][];
       runId: string;
       verticesToRun: string[];
-    } | null,
+    } | null
   ) => void;
   addToVerticesBuild: (vertices: string[]) => void;
   removeFromVerticesBuild: (vertices: string[]) => void;
@@ -167,8 +155,8 @@ export type FlowStoreType = {
   };
   updateFlowPool: (
     nodeId: string,
-    data: VertexBuildTypeAPI | ChatOutputType | chatInputType,
-    buildId?: string,
+    data: VertexBuildTypeAPI | ChatOutputType | ChatInputType,
+    buildId?: string
   ) => void;
   getNodePosition: (nodeId: string) => { x: number; y: number };
 };

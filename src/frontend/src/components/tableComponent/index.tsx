@@ -13,6 +13,7 @@ import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import ResetColumns from "./components/ResetColumns";
 import resetGrid from "./utils/reset-grid-columns";
+import { useParams } from "react-router-dom";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
