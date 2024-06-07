@@ -51,6 +51,7 @@ const SideBarFoldersButtonsComponent = ({
   const folderId = location?.state?.folderId ?? myCollectionId;
   const getFolderById = useFolderStore((state) => state.getFolderById);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const handleFolderChange = (folderId: string) => {
     getFolderById(folderId);
@@ -65,6 +66,9 @@ const SideBarFoldersButtonsComponent = ({
     uploadFolder(folderId)
       .then(() => {
         getFolderById(folderId);
+        setSuccessData({
+          title: "Uploaded successfully",
+        });
       })
       .catch((err) => {
         console.log(err);

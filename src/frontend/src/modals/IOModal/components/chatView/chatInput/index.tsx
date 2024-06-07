@@ -60,7 +60,7 @@ export default function ChatInput({
                   setFiles((prev) => {
                     const newFiles = [...prev];
                     const updatedIndex = newFiles.findIndex(
-                      (file) => file.id === id
+                      (file) => file.id === id,
                     );
                     newFiles[updatedIndex].loading = false;
                     newFiles[updatedIndex].path = res.data.file_path;
@@ -71,7 +71,7 @@ export default function ChatInput({
                   setFiles((prev) => {
                     const newFiles = [...prev];
                     const updatedIndex = newFiles.findIndex(
-                      (file) => file.id === id
+                      (file) => file.id === id,
                     );
                     newFiles[updatedIndex].loading = false;
                     newFiles[updatedIndex].error = true;
@@ -135,10 +135,10 @@ export default function ChatInput({
             lockChat || saveLoading
               ? " form-modal-lock-true bg-input"
               : noInput
-              ? "form-modal-no-input bg-input"
-              : " form-modal-lock-false bg-background",
+                ? "form-modal-no-input bg-input"
+                : " form-modal-lock-false bg-background",
 
-            "form-modal-lockchat"
+            "form-modal-lockchat",
           )}
           placeholder={
             noInput ? CHAT_INPUT_PLACEHOLDER : CHAT_INPUT_PLACEHOLDER_SEND
@@ -151,8 +151,8 @@ export default function ChatInput({
               noInput
                 ? "bg-high-indigo text-background"
                 : chatValue === ""
-                ? "text-primary"
-                : "bg-chat-send text-background"
+                  ? "text-primary"
+                  : "bg-chat-send text-background",
             )}
             disabled={lockChat || saveLoading}
             onClick={(): void => send()}

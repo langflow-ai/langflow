@@ -259,3 +259,24 @@ def get_flow_by_id_or_endpoint_name(
         raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
 
     return flow
+
+
+def generate_unique_flow_name(flow_name, user_id, session):
+    original_name = flow_name
+    n = 1
+    while True:
+        # Check if a flow with the given name exists
+        existing_flow = session.exec(
+            select(Flow).where(
+                Flow.name == flow_name,
+                Flow.user_id == user_id,
+            )
+        ).first()
+
+        # If no flow with the given name exists, return the name
+        if not existing_flow:
+            return flow_name
+
+        # If a flow with the name already exists, append (n) to the name and increment n
+        flow_name = f"{original_name} ({n})"
+        n += 1

@@ -67,7 +67,7 @@ function CsvOutputComponent({
     if (file) {
       const { rowData: data, colDefs: columns } = convertCSVToData(
         file,
-        separator
+        separator,
       );
       setRowData(data);
       setColDefs(columns);
