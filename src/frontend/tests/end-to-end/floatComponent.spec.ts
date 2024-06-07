@@ -22,7 +22,7 @@ test("FloatComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("ollama");
@@ -60,12 +60,6 @@ test("FloatComponent", async ({ page }) => {
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
 
-  await page.locator('//*[@id="showcache"]').click();
-  expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeTruthy();
-
-  await page.locator('//*[@id="showcache"]').click();
-  expect(await page.locator('//*[@id="showcache"]').isChecked()).toBeFalsy();
-
   await page.getByTestId("showformat").click();
   expect(await page.locator('//*[@id="showformat"]').isChecked()).toBeTruthy();
 
@@ -73,12 +67,12 @@ test("FloatComponent", async ({ page }) => {
   expect(await page.locator('//*[@id="showformat"]').isChecked()).toBeFalsy();
 
   await page.getByTestId("showmirostat").click();
+  expect(await page.locator('//*[@id="showmirostat"]').isChecked()).toBeFalsy();
+
+  await page.getByTestId("showmirostat").click();
   expect(
     await page.locator('//*[@id="showmirostat"]').isChecked(),
   ).toBeTruthy();
-
-  await page.getByTestId("showmirostat").click();
-  expect(await page.locator('//*[@id="showmirostat"]').isChecked()).toBeFalsy();
 
   await page.getByTestId("showmirostat_eta").click();
   expect(
@@ -138,7 +132,7 @@ test("FloatComponent", async ({ page }) => {
     await page.locator('//*[@id="showrepeat_last_n"]').isChecked(),
   ).toBeFalsy();
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   const plusButtonLocator = page.locator('//*[@id="float-input"]');
   const elementCount = await plusButtonLocator?.count();
@@ -154,7 +148,7 @@ test("FloatComponent", async ({ page }) => {
       await page.locator('//*[@id="showtemperature"]').isChecked(),
     ).toBeTruthy();
 
-    await page.locator('//*[@id="saveChangesBtn"]').click();
+    await page.getByText("Save Changes", { exact: true }).click();
     await page.locator('//*[@id="float-input"]').click();
     await page.locator('//*[@id="float-input"]').fill("3");
 

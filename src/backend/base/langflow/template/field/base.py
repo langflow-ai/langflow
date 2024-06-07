@@ -84,7 +84,7 @@ class Input(BaseModel):
     def serialize_model(self, handler):
         result = handler(self)
         # If the field is str, we add the Text input type
-        if self.field_type in [str, Text]:
+        if self.field_type in ["str", "Text"]:
             if "input_types" not in result:
                 result["input_types"] = ["Text"]
         if self.field_type == Text:
@@ -110,7 +110,10 @@ class Input(BaseModel):
         # this should be done for all types
         # How to check if v is a type?
         if isinstance(v, (type, GenericAlias)):
-            return str(v)
+            if isinstance(v, type):
+                v = v.__name__
+            else:
+                v = str(v)
         elif not isinstance(v, str):
             raise ValueError(f"type must be a string or a type, not {type(v)}")
         return v
@@ -144,19 +147,19 @@ class Input(BaseModel):
 
 
 class Output(BaseModel):
-    types: Optional[list[str]] = Field(default=[], serialization_alias="types")
+    types: Optional[list[str]] = Field(default=[])
     """List of output types for the field."""
 
-    selected: Optional[str] = Field(default=None, serialization_alias="selected")
+    selected: Optional[str] = Field(default=None)
     """The selected output type for the field."""
+
+    name: str = Field(default=None)
+    """The name of the field."""
 
     display_name: Optional[str] = Field(default=None)
     """The display name of the field."""
 
-    name: str = Field(default=None, serialization_alias="name")
-    """The name of the field."""
-
-    method: Optional[str] = Field(default=None, serialization_alias="method")
+    method: Optional[str] = Field(default=None)
     """The method to use for the output."""
 
     def to_dict(self):

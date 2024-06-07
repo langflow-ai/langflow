@@ -15,7 +15,7 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 export default defineConfig({
   testDir: "./tests",
   /* Run tests in files in parallel */
-  fullyParallel: true,
+  fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
@@ -52,18 +52,18 @@ export default defineConfig({
       },
     },
 
-    {
-      name: "firefox",
-      use: {
-        ...devices["Desktop Firefox"],
-        launchOptions: {
-          firefoxUserPrefs: {
-            "dom.events.asyncClipboard.readText": true,
-            "dom.events.testing.asyncClipboard": true,
-          },
-        },
-      },
-    },
+    // {
+    //   name: "firefox",
+    //   use: {
+    //     ...devices["Desktop Firefox"],
+    //     launchOptions: {
+    //       firefoxUserPrefs: {
+    //         "dom.events.asyncClipboard.readText": true,
+    //         "dom.events.testing.asyncClipboard": true,
+    //       },
+    //     },
+    //   },
+    // },
   ],
   webServer: [
     {

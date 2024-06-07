@@ -9,7 +9,11 @@ import {
   CommandList,
 } from "../../../ui/command";
 import { Input } from "../../../ui/input";
-import { Popover, PopoverContentWithoutPortal } from "../../../ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverContentWithoutPortal,
+} from "../../../ui/popover";
 const CustomInputPopoverObject = ({
   id,
   refInput,
@@ -23,6 +27,7 @@ const CustomInputPopoverObject = ({
   disabled,
   setShowOptions,
   required,
+  editNode,
   className,
   placeholder,
   onChange,
@@ -34,6 +39,10 @@ const CustomInputPopoverObject = ({
   handleKeyDown,
   showOptions,
 }) => {
+  const PopoverContentInput = editNode
+    ? PopoverContent
+    : PopoverContentWithoutPortal;
+
   const handleInputChange = (e) => {
     onChange && onChange(e.target.value);
   };
@@ -51,14 +60,14 @@ const CustomInputPopoverObject = ({
               ? options.find((option) => option.id === selectedOption)?.name ||
                 ""
               : (selectedOptions?.length !== 0 || !onChange) &&
-                  setSelectedOptions
-                ? selectedOptions
-                    .map(
-                      (optionId) =>
-                        options.find((option) => option.id === optionId)?.name,
-                    )
-                    .join(", ")
-                : value
+                setSelectedOptions
+              ? selectedOptions
+                  .map(
+                    (optionId) =>
+                      options.find((option) => option.id === optionId)?.name
+                  )
+                  .join(", ")
+              : value
           }
           autoFocus={autoFocus}
           disabled={disabled}
@@ -79,8 +88,8 @@ const CustomInputPopoverObject = ({
           data-testid={id}
         />
       </PopoverAnchor>
-      <PopoverContentWithoutPortal
-        className="nocopy nopan nodelete nodrag noundo p-0"
+      <PopoverContentInput
+        className="nocopy nowheel nopan nodelete nodrag noundo p-0"
         style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
         side="bottom"
         align="center"
@@ -106,15 +115,15 @@ const CustomInputPopoverObject = ({
                   onSelect={(currentValue) => {
                     setSelectedOption &&
                       setSelectedOption(
-                        currentValue === selectedOption ? "" : currentValue,
+                        currentValue === selectedOption ? "" : currentValue
                       );
                     setSelectedOptions &&
                       setSelectedOptions(
                         selectedOptions?.includes(currentValue)
                           ? selectedOptions.filter(
-                              (item) => item !== currentValue,
+                              (item) => item !== currentValue
                             )
-                          : [...selectedOptions, currentValue],
+                          : [...selectedOptions, currentValue]
                       );
                     !setSelectedOptions && setShowOptions(false);
                   }}
@@ -127,7 +136,7 @@ const CustomInputPopoverObject = ({
                           selectedOption === option.id ||
                             selectedOptions?.includes(option.id)
                             ? "opacity-100"
-                            : "opacity-0",
+                            : "opacity-0"
                         )}
                       >
                         <div className="absolute opacity-100 transition-all group-hover:opacity-0">
@@ -159,7 +168,7 @@ const CustomInputPopoverObject = ({
             </CommandGroup>
           </CommandList>
         </Command>
-      </PopoverContentWithoutPortal>
+      </PopoverContentInput>
     </Popover>
   );
 };

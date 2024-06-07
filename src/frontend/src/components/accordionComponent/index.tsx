@@ -6,16 +6,18 @@ import {
   AccordionTrigger,
 } from "../../components/ui/accordion";
 import { AccordionComponentType } from "../../types/components";
+import { cn } from "../../utils/utils";
 
 export default function AccordionComponent({
   trigger,
   children,
+  disabled,
   open = [],
   keyValue,
   sideBar,
 }: AccordionComponentType): JSX.Element {
   const [value, setValue] = useState(
-    open.length === 0 ? "" : getOpenAccordion(),
+    open.length === 0 ? "" : getOpenAccordion()
   );
 
   function getOpenAccordion(): string {
@@ -29,7 +31,9 @@ export default function AccordionComponent({
   }
 
   function handleClick(): void {
-    value === "" ? setValue(keyValue!) : setValue("");
+    if (!disabled) {
+      value === "" ? setValue(keyValue!) : setValue("");
+    }
   }
 
   return (
@@ -38,16 +42,18 @@ export default function AccordionComponent({
         type="single"
         className="w-full"
         value={value}
-        onValueChange={setValue}
+        onValueChange={!disabled ? setValue : () => {}}
       >
         <AccordionItem value={keyValue!} className="border-b">
           <AccordionTrigger
             onClick={() => {
               handleClick();
             }}
-            className={
-              sideBar ? "w-full bg-muted px-[0.75rem] py-[0.5rem]" : "ml-3"
-            }
+            disabled={disabled}
+            className={cn(
+              sideBar ? "w-full bg-muted px-[0.75rem] py-[0.5rem]" : "ml-3",
+              disabled ? "cursor-not-allowed" : "cursor-pointer"
+            )}
           >
             {trigger}
           </AccordionTrigger>

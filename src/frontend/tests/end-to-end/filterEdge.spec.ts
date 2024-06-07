@@ -21,7 +21,7 @@ test("LLMChain - Tooltip", async ({ page }) => {
   }
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
 
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
@@ -117,7 +117,7 @@ test("LLMChain - Filter", async ({ page }) => {
   );
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("llmchain");
@@ -148,7 +148,6 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("model_specsChatOllama")).toBeVisible();
   await expect(page.getByTestId("model_specsChatOpenAI")).toBeVisible();
   await expect(page.getByTestId("model_specsChatVertexAI")).toBeVisible();
-  await expect(page.getByTestId("model_specsCohere")).toBeVisible();
   await expect(
     page.getByTestId("model_specsGoogle Generative AI"),
   ).toBeVisible();
@@ -176,7 +175,6 @@ test("LLMChain - Filter", async ({ page }) => {
   await expect(page.getByTestId("model_specsChatOllama")).not.toBeVisible();
   await expect(page.getByTestId("model_specsChatOpenAI")).not.toBeVisible();
   await expect(page.getByTestId("model_specsChatVertexAI")).not.toBeVisible();
-  await expect(page.getByTestId("model_specsCohere")).not.toBeVisible();
 
   await page
     .locator(

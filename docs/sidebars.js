@@ -49,8 +49,8 @@ module.exports = {
       label: "Core Components",
       collapsed: false,
       items: [
-        "components/inputs",
-        "components/outputs",
+        "components/inputs-and-outputs",
+        "components/text-and-record",
         "components/data",
         "components/models",
         "components/helpers",
@@ -91,15 +91,12 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Migration Guides",
+      label: "Migration",
       collapsed: false,
       items: [
         "migration/possible-installation-issues",
         "migration/migrating-to-one-point-zero",
-        "migration/inputs-and-outputs",
-        "migration/text-and-record",
         "migration/compatibility",
-        "migration/global-variables",
       ],
     },
     {
@@ -116,7 +113,11 @@ module.exports = {
       type: "category",
       label: "Deployment",
       collapsed: true,
-      items: ["deployment/gcp-deployment"],
+      items: [
+        "deployment/docker",
+        "deployment/backend-only",
+        "deployment/gcp-deployment",
+      ],
     },
     {
       type: "category",
