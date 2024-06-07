@@ -56,7 +56,7 @@ export default function Header(): JSX.Element {
     const lastFlowVisitedIndex = routeHistory
       .reverse()
       .findIndex(
-        (path) => path.includes("/flow/") && path !== location.pathname
+        (path) => path.includes("/flow/") && path !== location.pathname,
       );
 
     const lastFlowVisited = routeHistory[lastFlowVisitedIndex];
@@ -200,6 +200,28 @@ export default function Header(): JSX.Element {
                 />
               </DropdownMenuTrigger>
               <DropdownMenuContent>
+                {!autoLogin && (
+                  <>
+                    <DropdownMenuLabel>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={
+                            "h-5 w-5 rounded-full focus-visible:outline-0 " +
+                            (userData?.profile_image ??
+                              (userData?.id
+                                ? gradients[
+                                    parseInt(userData?.id ?? "", 30) %
+                                      gradients.length
+                                  ]
+                                : "bg-gray-500"))
+                          }
+                        />
+                        {userData?.username ?? "User"}
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuLabel>General</DropdownMenuLabel>
                 <DropdownMenuItem
                   className="cursor-pointer"

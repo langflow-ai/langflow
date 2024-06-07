@@ -13,6 +13,7 @@ import IconComponent, {
 import { Button, buttonVariants } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import useFileDrop from "../../hooks/use-on-file-drop";
+import useAlertStore from "../../../../stores/alertStore";
 
 type SideBarFoldersButtonsComponentProps = {
   folders: FolderType[];
@@ -51,6 +52,7 @@ const SideBarFoldersButtonsComponent = ({
   const location = useLocation();
   const folderId = location?.state?.folderId ?? myCollectionId;
   const getFolderById = useFolderStore((state) => state.getFolderById);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const handleFolderChange = (folderId: string) => {
     getFolderById(folderId);
@@ -62,7 +64,17 @@ const SideBarFoldersButtonsComponent = ({
   );
 
   const handleUploadFlowsToFolder = () => {
-    uploadFolder(folderId);
+    uploadFolder(folderId)
+      .then(() => {
+        getFolderById(folderId);
+      })
+      .catch((err) => {
+        console.log(err);
+        setErrorData({
+          title: `Error on upload`,
+          list: [err["response"]["data"]],
+        });
+      });
   };
 
   const handleDownloadFolder = (id: string) => {
