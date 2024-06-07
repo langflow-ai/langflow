@@ -9,28 +9,16 @@ import {
 } from "reactflow";
 import { BuildStatus } from "../../../constants/enums";
 import { VertexBuildTypeAPI } from "../../api";
+import { ChatInputType, ChatOutputType } from "../../chat";
 import { FlowState } from "../../tabs";
-
-export type chatInputType = {
-  result: string;
-  files?: string[];
-};
-
-export type ChatOutputType = {
-  message: string;
-  sender: string;
-  sender_name: string;
-  stream_url?: string;
-  files?: string[];
-};
 
 export type FlowPoolObjectType = {
   timestamp: string;
   valid: boolean;
-  messages: Array<ChatOutputType | chatInputType> | [];
+  messages: Array<ChatOutputType | ChatInputType> | [];
   data: {
-    artifacts: any | ChatOutputType | chatInputType;
-    results: any | ChatOutputType | chatInputType;
+    artifacts: any | ChatOutputType | ChatInputType;
+    results: any | ChatOutputType | ChatInputType;
   };
   duration?: string;
   progress?: number;
@@ -45,8 +33,8 @@ export type FlowPoolObjectTypeNew = {
   timestamp: string;
   valid: boolean;
   data: {
-    logs?: any | ChatOutputType | chatInputType;
-    results: any | ChatOutputType | chatInputType;
+    logs?: any | ChatOutputType | ChatInputType;
+    results: any | ChatOutputType | ChatInputType;
   };
   duration?: string;
   progress?: number;
@@ -167,7 +155,7 @@ export type FlowStoreType = {
   };
   updateFlowPool: (
     nodeId: string,
-    data: VertexBuildTypeAPI | ChatOutputType | chatInputType,
+    data: VertexBuildTypeAPI | ChatOutputType | ChatInputType,
     buildId?: string,
   ) => void;
   getNodePosition: (nodeId: string) => { x: number; y: number };

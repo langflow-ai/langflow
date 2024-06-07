@@ -3,33 +3,29 @@ import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "../../components/ui/tabs";
-import {
-  CHAT_FORM_DIALOG_SUBTITLE,
-  OUTPUTS_MODAL_TITLE,
-  TEXT_INPUT_MODAL_TITLE,
-} from "../../constants/constants";
+import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { InputOutput } from "../../constants/enums";
+import { getMessagesTable } from "../../controllers/API";
+import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useMessagesStore } from "../../stores/messagesStore";
 import { IOModalPropsType } from "../../types/components";
 import { NodeDataType, NodeType } from "../../types/flow";
 import { updateVerticesOrder } from "../../utils/buildUtils";
 import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
-import ChatView from "./components/chatView";
-import { getMessagesTable } from "../../controllers/API";
-import { useMessagesStore } from "../../stores/messagesStore";
 import SessionView from "./components/SessionView";
 import useRemoveSession from "./components/SessionView/hooks";
-import useAlertStore from "../../stores/alertStore";
-import { Button } from "../../components/ui/button";
+import ChatView from "./components/chatView";
 
 export default function IOModal({
   children,
@@ -93,12 +89,6 @@ export default function IOModal({
     return updateVerticesOrder(currentFlow!.id, null);
   }
 
-  // useEffect(() => {
-  //   if (open) {
-  //     updateVertices();
-  //   }
-  // }, [open, currentFlow]);
-
   async function sendMessage({
     repeat = 1,
     files,
@@ -121,10 +111,14 @@ export default function IOModal({
         setLockChat(false);
       });
     }
+    const { rows, columns } = await getMessagesTable("union", currentFlow!.id);
+    setMessages(rows);
+    setColumns(columns);
     setLockChat(false);
     if (chatInput) {
       setNode(chatInput.id, (node: NodeType) => {
         const newNode = { ...node };
+
         newNode.data.node!.template["input_value"].value = chatValue;
         return newNode;
       });

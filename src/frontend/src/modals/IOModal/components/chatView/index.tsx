@@ -11,9 +11,10 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { VertexBuildTypeAPI, sendAllProps } from "../../../../types/api";
 import { ChatMessageType, ChatOutputType } from "../../../../types/chat";
-import { chatViewProps } from "../../../../types/components";
+import { FilePreviewType, chatViewProps } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
 import ChatInput from "./chatInput";
+import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import ChatMessage from "./chatMessage";
 
 export default function ChatView({
@@ -61,13 +62,12 @@ export default function ChatView({
     const chatMessages: ChatMessageType[] = chatOutputResponses
       .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
       //
-      .filter(
-        (output) => output.data.messages && output.data.messages.length > 0,
-      )
+      .filter((output) => output.data.message)
       .map((output, index) => {
         try {
           const { sender, message, sender_name, stream_url, files } = output
-            .data.messages[0] as ChatOutputType;
+            .data.message as ChatOutputType;
+
           const is_ai = sender === "Machine" || sender === null;
           return {
             isSend: !is_ai,
@@ -154,9 +154,23 @@ export default function ChatView({
     // return newChatHistory;
     // });
   }
+  const [files, setFiles] = useState<FilePreviewType[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const { dragOver, dragEnter, dragLeave, onDrop } = useDragAndDrop(
+    setIsDragging,
+    setFiles,
+    currentFlowId,
+  );
 
   return (
-    <div className="eraser-column-arrangement">
+    <div
+      className="eraser-column-arrangement"
+      onDragOver={dragOver}
+      onDragEnter={dragEnter}
+      onDragLeave={dragLeave}
+      onDrop={onDrop}
+    >
       <div className="eraser-size">
         <div className="eraser-position">
           <Button
@@ -258,6 +272,9 @@ export default function ChatView({
                 setChatValue(value);
               }}
               inputRef={ref}
+              files={files}
+              setFiles={setFiles}
+              isDragging={isDragging}
             />
           </div>
         </div>

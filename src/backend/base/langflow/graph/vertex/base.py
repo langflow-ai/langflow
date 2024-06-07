@@ -10,11 +10,11 @@ from loguru import logger
 
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import ArtifactType, UnbuiltObject, UnbuiltResult
-from langflow.graph.vertex.utils import log_transaction
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.deps import get_storage_service
+from langflow.services.monitor.utils import log_transaction
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async, unescape_string
@@ -529,12 +529,13 @@ class Vertex:
         Returns:
             The built result if use_result is True, else the built object.
         """
+        flow_id = self.graph.flow_id
         if not self._built:
-            log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="error")
+            log_transaction(flow_id, vertex=self, target=requester, status="error")
             raise ValueError(f"Component {self.display_name} has not been built yet")
 
         result = self._built_result if self.use_result else self._built_object
-        log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="success")
+        log_transaction(flow_id, vertex=self, target=requester, status="success")
         return result
 
     async def _build_vertex_and_update_params(self, key, vertex: "Vertex"):
@@ -628,9 +629,8 @@ class Vertex:
                 self._built_object, self.artifacts = result
             elif len(result) == 3:
                 self._custom_component, self._built_object, self.artifacts = result
-                self.artifacts_raw = self.artifacts.get("raw")
-                self.artifacts_type = self.artifacts.get("type") or ArtifactType.UNKNOWN.value
-
+                self.artifacts_raw = self.artifacts.get("raw", None)
+                self.artifacts_type = self.artifacts.get("type", None) or ArtifactType.UNKNOWN.value
         else:
             self._built_object = result
 

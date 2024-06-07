@@ -92,6 +92,7 @@ const EditNodeModal = forwardRef(
             <div className="h-full">
               {nodeLength > 0 && (
                 <TableComponent
+                  key={"editNode"}
                   onGridReady={(params) => {
                     setGridApi(params.api);
                   }}

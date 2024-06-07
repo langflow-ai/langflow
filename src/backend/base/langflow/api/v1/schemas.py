@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from typing_extensions import TypedDict
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer
@@ -243,11 +244,11 @@ class VerticesOrderResponse(BaseModel):
     run_id: UUID
     vertices_to_run: List[str]
 
-
 class ResultDataResponse(BaseModel):
     results: Optional[Any] = Field(default_factory=dict)
     logs: List[Log | None] = Field(default_factory=list)
-    messages: List[ChatOutputResponse | None] = Field(default_factory=list)
+    message: Optional[Any] = Field(default_factory=dict)
+    artifacts: Optional[Any] = Field(default_factory=dict)
     timedelta: Optional[float] = None
     duration: Optional[str] = None
     used_frozen_result: Optional[bool] = False
@@ -259,6 +260,8 @@ class VertexBuildResponse(BaseModel):
     next_vertices_ids: Optional[List[str]] = None
     top_level_vertices: Optional[List[str]] = None
     valid: bool
+    params: Optional[Any] = Field(default_factory=dict)
+    """JSON string of the params."""
     data: ResultDataResponse
     """Mapping of vertex ids to result dict containing the param name and result value."""
     timestamp: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))

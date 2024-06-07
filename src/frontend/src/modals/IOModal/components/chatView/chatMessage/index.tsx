@@ -7,13 +7,17 @@ import remarkMath from "remark-math";
 import MaleTechnology from "../../../../../assets/male-technologist.png";
 import Robot from "../../../../../assets/robot.png";
 import CodeTabsComponent from "../../../../../components/codeTabsComponent";
-import IconComponent from "../../../../../components/genericIconComponent";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../../../components/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { classNames, cn } from "../../../../../utils/utils";
 import FileCard from "../fileComponent";
+import formatFileName from "../filePreviewChat/utils/format-file-name";
+import FileCardWrapper from "./components/fileCardWrapper";
 
 export default function ChatMessage({
   chat,
@@ -22,6 +26,7 @@ export default function ChatMessage({
   updateChat,
   setLockChat,
 }: chatMessagePropsType): JSX.Element {
+  const [showFile, setShowFile] = useState<boolean>(true);
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const template = chat.template;
@@ -308,34 +313,35 @@ dark:prose-invert"
                 </span>
               </>
             ) : (
-              <span
-                className="prose text-primary word-break-break-word dark:prose-invert"
-                data-testid={
-                  "chat-message-" + chat.sender_name + "-" + chatMessage
-                }
-              >
-                {chatMessage}
-              </span>
+              <div className="flex flex-col">
+                <span
+                  className="prose text-primary word-break-break-word dark:prose-invert"
+                  data-testid={
+                    "chat-message-" + chat.sender_name + "-" + chatMessage
+                  }
+                >
+                  {chatMessage}
+                </span>
+                {chat.files && (
+                  <div className="my-2 flex  flex-col gap-5">
+                    {chat.files.map((file, index) => {
+                      return (
+                        <FileCardWrapper
+                          index={index}
+                          name={file.name}
+                          type={file.type}
+                          path={file.path}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
       </div>
       <div id={lastMessage ? "last-chat-message" : ""}></div>
-      {chat.files && (
-        <div className="my-2 w-full">
-          {chat.files.map((file, index) => {
-            return (
-              <div key={index} className="my-2 w-full">
-                <FileCard
-                  fileName={file.name}
-                  fileType={file.type}
-                  content={file.path}
-                />
-              </div>
-            );
-          })}
-        </div>
-      )}
     </>
   );
 }

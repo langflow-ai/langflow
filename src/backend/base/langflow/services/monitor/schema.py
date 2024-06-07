@@ -11,25 +11,26 @@ if TYPE_CHECKING:
 class TransactionModel(BaseModel):
     index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
-    flow_id: str
-    source: str
-    target: str
-    target_args: dict
+    vertex_id: str
+    target_id: str | None = None
+    inputs: dict
+    outputs: Optional[dict] = None
     status: str
     error: Optional[str] = None
+    flow_id: Optional[str] = Field(default=None, alias="flow_id")
 
     class Config:
         from_attributes = True
         populate_by_name = True
 
     # validate target_args in case it is a JSON
-    @field_validator("target_args", mode="before")
+    @field_validator("outputs", "inputs", mode="before")
     def validate_target_args(cls, v):
         if isinstance(v, str):
             return json.loads(v)
         return v
 
-    @field_serializer("target_args")
+    @field_serializer("outputs", "inputs")
     def serialize_target_args(v):
         if isinstance(v, dict):
             return json.dumps(v)
@@ -39,19 +40,21 @@ class TransactionModel(BaseModel):
 class TransactionModelResponse(BaseModel):
     index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
-    flow_id: str
-    source: str
-    target: str
-    target_args: dict
+    vertex_id: str
+    inputs: dict
+    outputs: Optional[dict] = None
     status: str
     error: Optional[str] = None
+    flow_id: Optional[str] = Field(default=None, alias="flow_id")
+    source: Optional[str] = None
+    target: Optional[str] = None
 
     class Config:
         from_attributes = True
         populate_by_name = True
 
     # validate target_args in case it is a JSON
-    @field_validator("target_args", mode="before")
+    @field_validator("outputs", "inputs", mode="before")
     def validate_target_args(cls, v):
         if isinstance(v, str):
             return json.loads(v)
@@ -129,15 +132,16 @@ class VertexBuildModel(BaseModel):
     id: Optional[str] = Field(default=None, alias="id")
     flow_id: str
     valid: bool
-    logs: Any
+    params: Any
     data: dict
+    artifacts: dict
     timestamp: datetime = Field(default_factory=datetime.now)
 
     class Config:
         from_attributes = True
         populate_by_name = True
 
-    @field_serializer("data")
+    @field_serializer("data", "artifacts")
     def serialize_dict(v):
         if isinstance(v, dict):
             # check if the value of each key is a BaseModel or a list of BaseModels
@@ -151,8 +155,8 @@ class VertexBuildModel(BaseModel):
             return v.model_dump_json()
         return v
 
-    @field_validator("logs", mode="before")
-    def validate_logs(cls, v):
+    @field_validator("params", mode="before")
+    def validate_params(cls, v):
         if isinstance(v, str):
             try:
                 return json.loads(v)
@@ -160,7 +164,7 @@ class VertexBuildModel(BaseModel):
                 return v
         return v
 
-    @field_serializer("logs")
+    @field_serializer("params")
     def serialize_params(v):
         if isinstance(v, list) and all(isinstance(i, BaseModel) for i in v):
             return json.dumps([i.model_dump() for i in v])
@@ -172,11 +176,17 @@ class VertexBuildModel(BaseModel):
             return json.loads(v)
         return v
 
+    @field_validator("artifacts", mode="before")
+    def validate_artifacts(cls, v):
+        if isinstance(v, str):
+            return json.loads(v)
+        elif isinstance(v, BaseModel):
+            return v.model_dump()
+        return v
+
 
 class VertexBuildResponseModel(VertexBuildModel):
-    messages: list[MessageModel] = []
-
-    @field_serializer("data")
+    @field_serializer("data", "artifacts")
     def serialize_dict(v):
         return v
 
