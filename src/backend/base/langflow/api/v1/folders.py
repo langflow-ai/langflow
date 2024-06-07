@@ -1,5 +1,7 @@
 from typing import List
 
+from langflow.helpers.flow import generate_unique_flow_name
+from langflow.helpers.folders import generate_unique_folder_name
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from sqlalchemy import or_, update
@@ -203,16 +205,9 @@ async def upload_file(
     if not data:
         raise HTTPException(status_code=400, detail="No flows found in the file")
 
-    folder_results = session.exec(
-        select(Folder).where(
-            Folder.name == data["folder_name"],
-            Folder.user_id == current_user.id,
-        )
-    )
-    existing_folder_names = [folder.name for folder in folder_results]
+    folder_name = generate_unique_folder_name(data["folder_name"], current_user.id, session)
 
-    if existing_folder_names:
-        data["folder_name"] = f"{data['folder_name']} ({len(existing_folder_names) + 1})"
+    data["folder_name"] = folder_name
 
     folder = FolderCreate(name=data["folder_name"], description=data["folder_description"])
 
@@ -232,6 +227,8 @@ async def upload_file(
         raise HTTPException(status_code=400, detail="No flows found in the data")
     # Now we set the user_id for all flows
     for flow in flow_list.flows:
+        flow_name = generate_unique_flow_name(flow.name, current_user.id, session)
+        flow.name = flow_name
         flow.user_id = current_user.id
         flow.folder_id = new_folder.id
 

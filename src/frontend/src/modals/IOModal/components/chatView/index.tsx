@@ -62,7 +62,7 @@ export default function ChatView({
       .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
       //
       .filter(
-        (output) => output.data.messages && output.data.messages.length > 0
+        (output) => output.data.messages && output.data.messages.length > 0,
       )
       .map((output, index) => {
         try {
@@ -131,7 +131,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) {
     // if (message === "") return;
     chat.message = message;

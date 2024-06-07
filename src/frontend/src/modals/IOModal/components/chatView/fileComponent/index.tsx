@@ -33,7 +33,7 @@ export default function FileCard({
         <img
           src={`${BACKEND_URL.slice(
             0,
-            BACKEND_URL.length - 1
+            BACKEND_URL.length - 1,
           )}${BASE_URL_API}files/images/${content}`}
           alt="generated image"
           className="h-full  w-full rounded-lg"
@@ -63,7 +63,7 @@ export default function FileCard({
           <img
             src={`${BACKEND_URL.slice(
               0,
-              BACKEND_URL.length - 1
+              BACKEND_URL.length - 1,
             )}${BASE_URL_API}files/images/${content}`}
             alt=""
             className="h-8 w-8"
