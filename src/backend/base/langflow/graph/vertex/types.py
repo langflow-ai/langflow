@@ -111,7 +111,12 @@ class InterfaceVertex(Vertex):
                 message = self._built_object
             artifact_type = ArtifactType.STREAM if stream_url is not None else ArtifactType.OBJECT
             artifacts = ChatOutputResponse(
-                message=message, sender=sender, sender_name=sender_name, stream_url=stream_url, files=files, type=artifact_type,
+                message=message,
+                sender=sender,
+                sender_name=sender_name,
+                stream_url=stream_url,
+                files=files,
+                type=artifact_type,
             )
 
             self.will_stream = stream_url is not None
