@@ -53,7 +53,33 @@
                 "load_from_db": false,
                 "title_case": false
               },
-              "_type": "CustomComponent"
+              "_type": "CustomComponent",
+              "user_input": {
+                "field_type": "str",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "user_input",
+                "display_name": "user_input",
+                "advanced": false,
+                "input_types": [
+                  "Document",
+                  "BaseOutputParser",
+                  "Record",
+                  "Text"
+                ],
+                "dynamic": false,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false,
+                "type": "str"
+              }
             },
             "description": "Create a prompt template with dynamic variables.",
             "icon": "prompts",
