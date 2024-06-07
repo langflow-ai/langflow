@@ -1,8 +1,14 @@
 import { useEffect } from "react";
 import ShortUniqueId from "short-unique-id";
 import useFileUpload from "./use-file-upload";
+import useAlertStore from "../../../../../../stores/alertStore";
+
+const fsErrorText =
+  "Please ensure your file has one of the following extensions:";
+const snErrorTxt = "png, jpg, jpeg, gif, bmp, webp";
 
 const useUpload = (uploadFile, currentFlowId, setFiles, lockChat) => {
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent): void => {
       if (lockChat) {
@@ -15,6 +21,23 @@ const useUpload = (uploadFile, currentFlowId, setFiles, lockChat) => {
           const uid = new ShortUniqueId({ length: 3 });
           const blob = items[i].getAsFile();
           if (blob) {
+            const allowedExtensions = [
+              "png",
+              "jpg",
+              "jpeg",
+              "gif",
+              "bmp",
+              "webp",
+            ];
+            const fileExtension = blob.name.split(".").pop()?.toLowerCase();
+
+            if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+              setErrorData({
+                title: "Error uploading file",
+                list: [fsErrorText, snErrorTxt],
+              });
+              return;
+            }
             const id = uid();
             setFiles((prevFiles) => [
               ...prevFiles,
