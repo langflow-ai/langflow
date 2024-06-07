@@ -139,10 +139,8 @@ const TableComponent = forwardRef<
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
           onStateUpdated={(e) => {
-            if (
-              e.sources.includes("columnVisibility") ||
-              e.sources.includes("columnOrder")
-            ) {
+            console.log(e);
+            if (e.sources.some((source) => source.includes("column"))) {
               setColumnStateChange(true);
             }
           }}
