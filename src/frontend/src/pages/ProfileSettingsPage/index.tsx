@@ -2,7 +2,7 @@ import * as Form from "@radix-ui/react-form";
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
-import GradientChooserComponent from "../../components/gradientChooserComponent";
+import GradientChooserComponent from "../SettingsPage/pages/GeneralPage/components/ProfilePictureForm/components/profilePictureChooserComponent";
 import Header from "../../components/headerComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";
@@ -24,11 +24,11 @@ import {
 import { gradients } from "../../utils/styleUtils";
 export default function ProfileSettingsPage(): JSX.Element {
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
 
   const [inputState, setInputState] = useState<patchUserInputStateType>(
-    CONTROL_PATCH_USER_STATE
+    CONTROL_PATCH_USER_STATE,
   );
 
   // set null id

@@ -10,6 +10,7 @@ import {
   RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
+  TOOLTIP_OUTDATED_NODE,
 } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import { countHandlesFn } from "../helpers/count-handles";
@@ -34,6 +35,8 @@ import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import ParameterComponent from "./components/parameterComponent";
+import { postCustomComponent } from "../../controllers/API";
+import { cloneDeep } from "lodash";
 
 export default function GenericNode({
   data,
@@ -55,10 +58,10 @@ export default function GenericNode({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const isDark = useDarkStore((state) => state.dark);
   const buildStatus = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.status
+    (state) => state.flowBuildStatus[data.id]?.status,
   );
   const lastRunTime = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.timestamp
+    (state) => state.flowBuildStatus[data.id]?.timestamp,
   );
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
@@ -66,7 +69,7 @@ export default function GenericNode({
   const [nodeName, setNodeName] = useState(data.node!.display_name);
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(
-    data.node?.description!
+    data.node?.description!,
   );
   const [isOutdated, setIsOutdated] = useState(false);
   const [validationStatus, setValidationStatus] =
@@ -84,7 +87,7 @@ export default function GenericNode({
     data.node!,
     setNode,
     setIsOutdated,
-    updateNodeInternals
+    updateNodeInternals,
   );
 
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
@@ -115,12 +118,12 @@ export default function GenericNode({
     selected: boolean,
     showNode: boolean,
     buildStatus: BuildStatus | undefined,
-    validationStatus: VertexBuildTypeAPI | null
+    validationStatus: VertexBuildTypeAPI | null,
   ) => {
     const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
       buildStatus,
       validationStatus,
-      isDark
+      isDark,
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
@@ -129,7 +132,7 @@ export default function GenericNode({
       baseBorderClass,
       nodeSizeClass,
       "generic-node-div group/node",
-      specificClassFromBuildStatus
+      specificClassFromBuildStatus,
     );
     return names;
   };
@@ -170,7 +173,7 @@ export default function GenericNode({
     showNode,
     isEmoji,
     nodeIconFragment,
-    checkNodeIconFragment
+    checkNodeIconFragment,
   );
 
   function countHandles(): void {
@@ -201,6 +204,33 @@ export default function GenericNode({
     setShowNode(data.showNode ?? true);
   }, [data.showNode]);
 
+  const [loadingUpdate, setLoadingUpdate] = useState(false);
+
+  const handleUpdateCode = () => {
+    setLoadingUpdate(true);
+    takeSnapshot();
+    // to update we must get the code from the templates in useTypesStore
+    const thisNodeTemplate = templates[data.type]?.template;
+    // if the template does not have a code key
+    // return
+    if (!thisNodeTemplate?.code) return;
+
+    const currentCode = thisNodeTemplate.code.value;
+    if (data.node) {
+      postCustomComponent(currentCode, data.node)
+        .then((apiReturn) => {
+          const { data } = apiReturn;
+          if (data && updateNodeCode) {
+            updateNodeCode(data, currentCode, "code");
+            setLoadingUpdate(false);
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    }
+  };
+
   const memoizedNodeToolbarComponent = useMemo(() => {
     return (
       <NodeToolbar>
@@ -221,8 +251,6 @@ export default function GenericNode({
           showNode={showNode}
           openAdvancedModal={false}
           onCloseAdvancedModal={() => {}}
-          updateNodeCode={updateNodeCode}
-          isOutdated={isOutdated}
           selected={selected}
         />
       </NodeToolbar>
@@ -247,7 +275,7 @@ export default function GenericNode({
           selected,
           showNode,
           buildStatus,
-          validationStatus
+          validationStatus,
         )}
       >
         {data.node?.beta && showNode && (
@@ -378,7 +406,7 @@ export default function GenericNode({
                             }
                             title={getFieldTitle(
                               data.node?.template!,
-                              templateField
+                              templateField,
                             )}
                             info={data.node?.template[templateField].info}
                             name={templateField}
@@ -406,7 +434,7 @@ export default function GenericNode({
                             proxy={data.node?.template[templateField].proxy}
                             showNode={showNode}
                           />
-                        )
+                        ),
                     )}
                   <ParameterComponent
                     key={scapedJSONStringfy({
@@ -437,54 +465,71 @@ export default function GenericNode({
             </div>
             {showNode && (
               <>
-                <ShadTooltip
-                  content={
-                    buildStatus === BuildStatus.BUILDING ? (
-                      <span> {STATUS_BUILDING} </span>
-                    ) : !validationStatus ? (
-                      <span className="flex">{STATUS_BUILD}</span>
-                    ) : (
-                      <div className="max-h-100 p-2">
-                        <div>
-                          {lastRunTime && (
-                            <div className="justify-left flex font-normal text-muted-foreground">
-                              <div>{RUN_TIMESTAMP_PREFIX}</div>
-                              <div className="ml-1 text-status-blue">
-                                {lastRunTime}
+                <div className="flex flex-shrink-0 items-center gap-1">
+                  {isOutdated && (
+                    <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
+                      <Button
+                        onClick={handleUpdateCode}
+                        variant="secondary"
+                        className={"h-9 px-1.5"}
+                        loading={loadingUpdate}
+                      >
+                        <IconComponent
+                          name="AlertTriangle"
+                          className="h-5 w-5 text-status-yellow"
+                        />
+                      </Button>
+                    </ShadTooltip>
+                  )}
+                  <ShadTooltip
+                    content={
+                      buildStatus === BuildStatus.BUILDING ? (
+                        <span> {STATUS_BUILDING} </span>
+                      ) : !validationStatus ? (
+                        <span className="flex">{STATUS_BUILD}</span>
+                      ) : (
+                        <div className="max-h-100 p-2">
+                          <div>
+                            {lastRunTime && (
+                              <div className="justify-left flex font-normal text-muted-foreground">
+                                <div>{RUN_TIMESTAMP_PREFIX}</div>
+                                <div className="ml-1 text-status-blue">
+                                  {lastRunTime}
+                                </div>
                               </div>
+                            )}
+                          </div>
+                          <div className="justify-left flex font-normal text-muted-foreground">
+                            <div>Duration:</div>
+                            <div className="ml-1 text-status-blue">
+                              {validationStatus?.data.duration}
                             </div>
-                          )}
-                        </div>
-                        <div className="justify-left flex font-normal text-muted-foreground">
-                          <div>Duration:</div>
-                          <div className="ml-1 text-status-blue">
-                            {validationStatus?.data.duration}
                           </div>
                         </div>
-                      </div>
-                    )
-                  }
-                  side="bottom"
-                >
-                  <Button
-                    onClick={() => {
-                      if (buildStatus === BuildStatus.BUILDING || isBuilding)
-                        return;
-                      setValidationStatus(null);
-                      buildFlow({ stopNodeId: data.id });
-                    }}
-                    variant="secondary"
-                    className={"group h-9 px-1.5"}
+                      )
+                    }
+                    side="bottom"
                   >
-                    <div
-                      data-testid={
-                        `button_run_` + data?.node?.display_name.toLowerCase()
-                      }
+                    <Button
+                      onClick={() => {
+                        if (buildStatus === BuildStatus.BUILDING || isBuilding)
+                          return;
+                        setValidationStatus(null);
+                        buildFlow({ stopNodeId: data.id });
+                      }}
+                      variant="secondary"
+                      className={"group h-9 px-1.5"}
                     >
-                      {renderIconStatus()}
-                    </div>
-                  </Button>
-                </ShadTooltip>
+                      <div
+                        data-testid={
+                          `button_run_` + data?.node?.display_name.toLowerCase()
+                        }
+                      >
+                        {renderIconStatus()}
+                      </div>
+                    </Button>
+                  </ShadTooltip>
+                </div>
               </>
             )}
           </div>
@@ -552,7 +597,7 @@ export default function GenericNode({
                       !data.node?.description) &&
                       nameEditable
                       ? "font-light italic"
-                      : ""
+                      : "",
                   )}
                   onClick={(e) => {
                     setInputDescription(true);
@@ -614,13 +659,13 @@ export default function GenericNode({
                         }
                         title={getFieldTitle(
                           data.node?.template!,
-                          templateField
+                          templateField,
                         )}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={
                           data.node?.template[templateField].input_types?.join(
-                            "\n"
+                            "\n",
                           ) ?? data.node?.template[templateField].type
                         }
                         required={data.node!.template[templateField].required}
@@ -647,7 +692,7 @@ export default function GenericNode({
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
-                  "flex-max-width justify-center"
+                  "flex-max-width justify-center",
                 )}
               >
                 {" "}
