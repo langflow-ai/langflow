@@ -487,7 +487,12 @@ export type headerFlowsType = {
   style?: FlowStyleType;
 };
 
-export type chatInputType = {
+export type ChatInputType = {
+  isDragging: boolean;
+  files: FilePreviewType[];
+  setFiles: (
+    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[])
+  ) => void;
   chatValue: string;
   inputRef: {
     current: any;
@@ -526,6 +531,7 @@ export type fileCardPropsType = {
   fileName: string;
   content: string;
   fileType: string;
+  showFile?: boolean;
 };
 
 export type nodeToolbarPropsType = {

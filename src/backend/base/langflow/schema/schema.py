@@ -1,11 +1,12 @@
 import copy
 import json
 from typing import Literal, Optional, cast
+from typing_extensions import TypedDict
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from pydantic import BaseModel, model_validator
-from typing_extensions import TypedDict
+from langchain_core.prompts.image import ImagePromptTemplate
+from pydantic import BaseModel, model_serializer, model_validator
 
 
 class Record(BaseModel):
@@ -29,6 +30,11 @@ class Record(BaseModel):
             if key not in values["data"] and key not in {"text_key", "data", "default_value"}:
                 values["data"][key] = values[key]
         return values
+
+    @model_serializer(mode="plain", when_used="json")
+    def serialize_model(self):
+        data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
+        return data
 
     def get_text(self):
         """
@@ -103,7 +109,9 @@ class Record(BaseModel):
         text = self.data.pop(self.text_key, self.default_value)
         return Document(page_content=text, metadata=self.data)
 
-    def to_lc_message(self) -> BaseMessage:
+    def to_lc_message(
+        self,
+    ) -> BaseMessage:
         """
         Converts the Record to a BaseMessage.
 
@@ -119,8 +127,22 @@ class Record(BaseModel):
             raise ValueError(f"Missing required keys ('text', 'sender') in Record: {self.data}")
         sender = self.data.get("sender", "Machine")
         text = self.data.get("text", "")
+        files = self.data.get("files", [])
         if sender == "User":
-            return HumanMessage(content=text)
+            if files:
+                contents = [{"type": "text", "text": text}]
+                for file_path in files:
+                    image_template = ImagePromptTemplate()
+                    image_prompt_value = image_template.invoke(input={"path": file_path})
+                    contents.append({"type": "image_url", "image_url": image_prompt_value.image_url})
+                human_message = HumanMessage(content=contents)
+            else:
+                human_message = HumanMessage(
+                    content=[{"type": "text", "text": text}],
+                )
+
+            return human_message
+
         return AIMessage(content=text)
 
     def __getattr__(self, key):
@@ -170,8 +192,14 @@ class Record(BaseModel):
 
     def __str__(self) -> str:
         # return a JSON string representation of the Record atributes
+        try:
+            data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
+            return json.dumps(data, indent=4)
+        except Exception:
+            return str(self.data)
 
-        return json.dumps(self.data)
+    def __contains__(self, key):
+        return key in self.data
 
 
 INPUT_FIELD_NAME = "input_value"

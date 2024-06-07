@@ -628,9 +628,8 @@ class Vertex:
                 self._built_object, self.artifacts = result
             elif len(result) == 3:
                 self._custom_component, self._built_object, self.artifacts = result
-                self.artifacts_raw = self.artifacts.get("raw")
-                self.artifacts_type = self.artifacts.get("type") or ArtifactType.UNKNOWN.value
-
+                self.artifacts_raw = self.artifacts.pop("raw", None)
+                self.artifacts_type = self.artifacts.pop("type", None) or ArtifactType.UNKNOWN.value
         else:
             self._built_object = result
 

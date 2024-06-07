@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Any, Generator, Union
 
 from langchain_core.documents import Document
+from langflow.schema.schema import Record
 from pydantic import BaseModel
 
 from langflow.interface.utils import extract_input_variables_from_prompt

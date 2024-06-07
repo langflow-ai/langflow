@@ -4,7 +4,7 @@ You can run Langflow in `--backend-only` mode to expose your Langflow app as an 
 
 Start langflow in backend-only mode with `python3 -m langflow run --backend-only`.
 
-The terminal prints `  Welcome to ⛓ Langflow  `, and a blank window opens at `http://127.0.0.1:7864/all`.
+The terminal prints ` Welcome to ⛓ Langflow `, and a blank window opens at `http://127.0.0.1:7864/all`.
 Langflow will now serve requests to its API without the frontend running.
 
 ## Prerequisites
@@ -42,7 +42,7 @@ Note the flow ID of `ef7e0554-69e5-4e3e-ab29-ee83bcd8d9ef`. You can find this ID
 
 1. Stop Langflow with Ctrl+C.
 2. Start langflow in backend-only mode with `python3 -m langflow run --backend-only`.
-   The terminal prints `  Welcome to ⛓ Langflow  `, and a blank window opens at `http://127.0.0.1:7864/all`.
+   The terminal prints ` Welcome to ⛓ Langflow `, and a blank window opens at `http://127.0.0.1:7864/all`.
    Langflow will now serve requests to its API.
 3. Run the curl code you copied from the UI.
    You should get a result like this:
