@@ -3,7 +3,6 @@ from typing import List, Optional
 
 from loguru import logger
 
-from langflow.schema import Record
 from langflow.schema.message import Message
 from langflow.services.deps import get_monitor_service
 from langflow.services.monitor.schema import MessageModel
@@ -40,42 +39,37 @@ def get_messages(
         order=order,
     )
 
-    records: list[Record] = []
+    messages: list[Message] = []
     # messages_df has a timestamp
     # it gets the last 5 messages, for example
     # but now they are ordered from most recent to least recent
     # so we need to reverse the order
     messages_df = messages_df[::-1] if order == "DESC" else messages_df
     for row in messages_df.itertuples():
-        record = Record(
-            data={
-                "text": row.message,
-                "sender": row.sender,
-                "sender_name": row.sender_name,
-                "session_id": row.session_id,
-                "timestamp": row.timestamp,
-            },
-        )
-        records.append(record)
+        msg = Message(text=row.text, sender=row.sender, sender_name=row.sender_name, timestamp=row.timestamp)
 
-    return records
+        messages.append(msg)
+
+    return messages
 
 
-def add_messages(messages: Message, flow_id: Optional[str] = None):
+def add_messages(messages: Message | list[Message], flow_id: Optional[str] = None):
     """
     Add a message to the monitor service.
     """
     try:
         monitor_service = get_monitor_service()
+        if not isinstance(messages, list):
+            messages = [messages]
 
         if not all(isinstance(message, Message) for message in messages):
             types = ", ".join([str(type(message)) for message in messages])
             raise ValueError(f"The messages must be instances of Message. Found: {types}")
 
         messages_models: list[MessageModel] = []
-        for message in messages:
-            message.timestamp = monitor_service.get_timestamp()
-            messages_models.append(MessageModel.from_message(message, flow_id=flow_id))
+        for msg in messages:
+            msg.timestamp = monitor_service.get_timestamp()
+            messages_models.append(MessageModel.from_message(msg, flow_id=flow_id))
 
         for message_model in messages_models:
             try:
@@ -98,7 +92,7 @@ def delete_messages(session_id: str):
         session_id (str): The session ID associated with the messages to delete.
     """
     monitor_service = get_monitor_service()
-    monitor_service.delete_messages(session_id)
+    monitor_service.delete_messages_session(session_id)
 
 
 def store_message(

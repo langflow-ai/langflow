@@ -3,9 +3,10 @@ import json
 from typing import cast, Optional
 
 from langchain_core.documents import Document
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts.image import ImagePromptTemplate
 from pydantic import BaseModel, model_serializer, model_validator
+from langchain_core.prompt_values import ImagePromptValue
 
 
 class Record(BaseModel):
@@ -110,7 +111,7 @@ class Record(BaseModel):
 
     def to_lc_message(
         self,
-    ) -> BaseMessage:
+    ) -> HumanMessage | SystemMessage:
         """
         Converts the Record to a BaseMessage.
 
@@ -132,7 +133,7 @@ class Record(BaseModel):
                 contents = [{"type": "text", "text": text}]
                 for file_path in files:
                     image_template = ImagePromptTemplate()
-                    image_prompt_value = image_template.invoke(input={"path": file_path})
+                    image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file_path})
                     contents.append({"type": "image_url", "image_url": image_prompt_value.image_url})
                 human_message = HumanMessage(content=contents)
             else:

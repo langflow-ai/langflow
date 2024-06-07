@@ -21,13 +21,15 @@ async def get_files(
     convert_to_base64: bool = False,
 ):
     storage_service = get_storage_service()
-    file_objects = []
+    file_objects: list[str | bytes] = []
     for file_path in file_paths:
         flow_id, file_name = file_path.split("/")
         file_object = await storage_service.get_file(flow_id=flow_id, file_name=file_name)
         if convert_to_base64:
-            file_object = base64.b64encode(file_object).decode("utf-8")
-        file_objects.append(file_object)
+            file_base64 = base64.b64encode(file_object).decode("utf-8")
+            file_objects.append(file_base64)
+        else:
+            file_objects.append(file_object)
     return file_objects
 
 
