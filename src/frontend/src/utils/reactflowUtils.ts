@@ -483,6 +483,7 @@ export function updateNewOutput({ nodes, edges }: updateEdgesHandleIdsType) {
             types,
             selected: selected,
             name: types.join(" | "),
+            display_name: types.join(" | "),
           });
         }
       }
@@ -1048,9 +1049,14 @@ function generateNodeOutputs(flow: FlowType) {
           outputs.push(
             cloneDeep({
               ...output,
-              proxy: { id: node.id, name: output.name },
+              proxy: {
+                id: node.id,
+                name: output.name,
+                nodeDisplayName:
+                  node.data.node!.display_name ?? node.data.node!.name,
+              },
               name: node.id + "_" + output.name,
-              displayName: output.displayName,
+              displayName: output.display_name,
             }),
           );
         }

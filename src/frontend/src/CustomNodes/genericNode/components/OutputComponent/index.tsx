@@ -12,6 +12,7 @@ import { outputComponentType } from "../../../../types/components";
 import { NodeDataType } from "../../../../types/flow";
 import { cn } from "../../../../utils/utils";
 import { Button } from "../../../../components/ui/button";
+import ShadTooltip from "../../../../components/shadTooltipComponent";
 
 export default function OutputComponent({
   selected,
@@ -20,6 +21,7 @@ export default function OutputComponent({
   nodeId,
   idx,
   name,
+  proxy,
 }: outputComponentType) {
   const setNode = useFlowStore((state) => state.setNode);
   const updateNodeInternals = useUpdateNodeInternals();
@@ -64,7 +66,13 @@ export default function OutputComponent({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-      <span>{name}</span>
+      {proxy ? (
+        <ShadTooltip content={<span>{proxy.id}</span>}>
+          <span>{name}</span>
+        </ShadTooltip>
+      ) : (
+        <span>{name}</span>
+      )}
     </div>
   );
 }

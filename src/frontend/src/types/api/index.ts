@@ -63,12 +63,19 @@ export type InputFieldType = {
   refresh_button_text?: string;
   [key: string]: any;
 };
+
+export type OutputFieldProxyType = {
+  id: string;
+  name: string;
+  nodeDisplayName: string;
+};
+
 export type OutputFieldType = {
   types: Array<string>;
   selected?: string;
   name: string;
-  displayName?: string;
-  proxy?: { id: string; name: string };
+  display_name: string;
+  proxy?: OutputFieldProxyType;
 };
 export type sendAllProps = {
   nodes: Node[];
