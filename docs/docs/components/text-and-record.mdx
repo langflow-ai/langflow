@@ -1,0 +1,49 @@
+# Text and Record
+
+In Langflow 1.0, we added two main input and output types: `Text` and `Record`.
+
+`Text` is a simple string input and output type, while `Record` is a structure very similar to a dictionary in Python. It is a key-value pair data structure.
+
+We've created a few components to help you work with these types. Let's see how a few of them work.
+
+## Records To Text
+
+This is a component that takes in Records and outputs a `Text`. It does this using a template string and concatenating the values of the `Record`, one per line.
+
+If we have the following Records:
+
+```json
+{
+  "sender_name": "Alice",
+  "message": "Hello!"
+}
+{
+  "sender_name": "John",
+  "message": "Hi!"
+}
+```
+
+And the template string is: _`{sender_name}: {message}`_
+
+The output is:
+
+```
+Alice: Hello!
+John: Hi!
+```
+
+## Create Record
+
+This component allows you to create a `Record` from a number of inputs. You can add as many key-value pairs as you want (as long as it is less than 15). Once you've picked that number you'll need to write the name of the Key and can pass `Text` values from other components to it.
+
+## Documents To Records
+
+This component takes in a LangChain `Document` and outputs a `Record`. It does this by extracting the `page_content` and the `metadata` from the `Document` and adding them to the `Record` as text and data respectively.
+
+## Why is this useful?
+
+The idea was to create a unified way to work with complex data in Langflow and to make it easier to work with data that is not just a simple string. This way you can create more complex workflows and use the data in more ways.
+
+## What's next?
+
+We are planning to integrate an array of modalities to Langflow, such as images, audio, and video. This will allow you to create even more complex workflows and use cases. Stay tuned for more updates! 🚀

@@ -7,6 +7,7 @@ import orjson
 from loguru import logger
 
 from langflow.custom.eval import eval_custom_component_code
+from langflow.graph.utils import get_artifact_type, post_process_raw
 from langflow.schema.schema import Record
 
 if TYPE_CHECKING:
@@ -124,4 +125,15 @@ async def instantiate_custom_component(params, user_id, vertex, fallback_to_env_
         custom_repr = build_result
     if not isinstance(custom_repr, str):
         custom_repr = str(custom_repr)
-    return custom_component, build_result, {"repr": custom_repr}
+
+    raw = custom_component.repr_value
+    if hasattr(raw, "data"):
+        raw = raw.data
+
+    elif hasattr(raw, "model_dump"):
+        raw = raw.model_dump()
+
+    artifact_type = get_artifact_type(custom_component, build_result)
+    raw = post_process_raw(raw, artifact_type)
+    artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
+    return custom_component, build_result, artifact

@@ -1,9 +1,11 @@
-from typing import Any, Union
+from enum import Enum
+from typing import Any, Generator, Union
 
 from langchain_core.documents import Document
 from pydantic import BaseModel
 
 from langflow.interface.utils import extract_input_variables_from_prompt
+from langflow.schema.schema import Record
 
 
 class UnbuiltObject:
@@ -12,6 +14,15 @@ class UnbuiltObject:
 
 class UnbuiltResult:
     pass
+
+
+class ArtifactType(str, Enum):
+    TEXT = "text"
+    RECORD = "record"
+    OBJECT = "object"
+    ARRAY = "array"
+    STREAM = "stream"
+    UNKNOWN = "unknown"
 
 
 def validate_prompt(prompt: str):
@@ -50,3 +61,33 @@ def serialize_field(value):
     elif isinstance(value, str):
         return {"result": value}
     return value
+
+
+def get_artifact_type(custom_component, build_result) -> str:
+    result = ArtifactType.UNKNOWN
+    value = custom_component.repr_value
+    match value:
+        case Record():
+            result = ArtifactType.RECORD
+
+        case str():
+            result = ArtifactType.TEXT
+
+        case dict():
+            result = ArtifactType.OBJECT
+
+        case list():
+            result = ArtifactType.ARRAY
+
+    if result == ArtifactType.UNKNOWN:
+        if isinstance(build_result, Generator):
+            result = ArtifactType.STREAM
+
+    return result.value
+
+
+def post_process_raw(raw, artifact_type: str):
+    if artifact_type == ArtifactType.STREAM.value:
+        raw = ""
+
+    return raw

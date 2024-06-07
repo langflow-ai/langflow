@@ -1,6 +1,6 @@
+import { updateMessageApi } from "../../../../../controllers/API";
 import { useMessagesStore } from "../../../../../stores/messagesStore";
 import { Message } from "../../../../../types/messages";
-import { updateMessageApi } from "../../../../../controllers/API";
 
 const useUpdateMessage = (setSuccessData, setErrorData) => {
   const updateMessage = useMessagesStore((state) => state.updateMessage);

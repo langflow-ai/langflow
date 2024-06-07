@@ -15,8 +15,12 @@ import {
   DialogContent as ModalContent,
 } from "../../components/ui/dialog-with-no-close";
 
+import { DialogClose } from "@radix-ui/react-dialog";
+import * as Form from "@radix-ui/react-form";
+import { Button } from "../../components/ui/button";
 import { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
+import { switchCaseModalSize } from "./helpers/switch-case-size";
 
 type ContentProps = { children: ReactNode };
 type HeaderProps = { children: ReactNode; description: string };
@@ -49,10 +53,10 @@ const Trigger: React.FC<TriggerProps> = ({
   );
 };
 
-const Header: React.FC<{ children: ReactNode; description: string | null }> = ({
-  children,
-  description,
-}: modalHeaderType): JSX.Element => {
+const Header: React.FC<{
+  children: ReactNode;
+  description: string | JSX.Element | null;
+}> = ({ children, description }: modalHeaderType): JSX.Element => {
   return (
     <DialogHeader>
       <DialogTitle className="flex items-center">{children}</DialogTitle>
@@ -61,8 +65,38 @@ const Header: React.FC<{ children: ReactNode; description: string | null }> = ({
   );
 };
 
-const Footer: React.FC<{ children: ReactNode }> = ({ children }) => {
-  return <>{children}</>;
+const Footer: React.FC<{
+  children?: ReactNode;
+  submit?: {
+    label: string;
+    icon?: ReactNode;
+    loading?: boolean;
+    disabled?: boolean;
+    dataTestId?: string;
+  };
+}> = ({ children, submit }) => {
+  return submit ? (
+    <div className="flex w-full items-center justify-between">
+      {children ?? <div />}
+      <div className="flex items-center gap-3">
+        <DialogClose asChild>
+          <Button variant="outline" type="button">
+            Cancel
+          </Button>
+        </DialogClose>
+        <Button
+          data-testid={submit.dataTestId}
+          type="submit"
+          loading={submit.loading}
+        >
+          {submit.icon && submit.icon}
+          {submit.label}
+        </Button>
+      </div>
+    </div>
+  ) : (
+    <>{children && children}</>
+  );
 };
 interface BaseModalProps {
   children: [
@@ -78,6 +112,7 @@ interface BaseModalProps {
     | "smaller"
     | "small"
     | "medium"
+    | "medium-tall"
     | "large"
     | "three-cards"
     | "large-thin"
@@ -86,11 +121,13 @@ interface BaseModalProps {
     | "medium-h-full"
     | "md-thin"
     | "sm-thin"
-    | "smaller-h-full";
+    | "smaller-h-full"
+    | "medium-log";
 
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;
   type?: "modal" | "dialog";
+  onSubmit?: () => void;
 }
 function BaseModal({
   open,
@@ -99,6 +136,7 @@ function BaseModal({
   size = "large",
   onChangeOpenModal,
   type = "dialog",
+  onSubmit,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header,
@@ -113,71 +151,7 @@ function BaseModal({
     (child) => (child as React.ReactElement).type === Footer,
   );
 
-  let minWidth: string;
-  let height: string;
-
-  switch (size) {
-    case "x-small":
-      minWidth = "min-w-[20vw]";
-      height = "h-full";
-      break;
-    case "smaller":
-      minWidth = "min-w-[40vw]";
-      height = "h-[11rem]";
-      break;
-    case "smaller-h-full":
-      minWidth = "min-w-[40vw]";
-      height = "h-full";
-      break;
-    case "small":
-      minWidth = "min-w-[40vw]";
-      height = "h-[40vh]";
-      break;
-    case "small-h-full":
-      minWidth = "min-w-[40vw]";
-      height = "h-full";
-      break;
-    case "medium":
-      minWidth = "min-w-[60vw]";
-      height = "h-[60vh]";
-      break;
-    case "medium-h-full":
-      minWidth = "min-w-[60vw]";
-      height = "h-full";
-
-      break;
-    case "large":
-      minWidth = "min-w-[85vw]";
-      height = "h-[80vh]";
-      break;
-    case "three-cards":
-      minWidth = "min-w-[1066px]";
-      height = "h-fit";
-      break;
-    case "large-thin":
-      minWidth = "min-w-[65vw]";
-      height = "h-[80vh]";
-      break;
-
-    case "md-thin":
-      minWidth = "min-w-[85vw]";
-      height = "h-[70vh]";
-      break;
-
-    case "sm-thin":
-      minWidth = "min-w-[65vw]";
-      height = "h-[70vh]";
-      break;
-
-    case "large-h-full":
-      minWidth = "min-w-[80vw]";
-      height = "h-full";
-      break;
-    default:
-      minWidth = "min-w-[80vw]";
-      height = "h-[80vh]";
-      break;
-  }
+  let { minWidth, height } = switchCaseModalSize(size);
 
   useEffect(() => {
     if (onChangeOpenModal) {
@@ -191,34 +165,65 @@ function BaseModal({
       {type === "modal" ? (
         <Modal open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <ModalContent className={cn(minWidth, "duration-300")}>
-            <div className="truncate-doubleline word-break-break-word">
+          <ModalContent
+            className={cn(minWidth, height, "flex flex-col duration-300")}
+          >
+            <div className="flex-shrink-0 truncate-doubleline word-break-break-word">
               {headerChild}
             </div>
             <div
-              className={`flex flex-col ${height} w-full transition-all duration-300`}
+              className={`flex w-full flex-1 flex-col transition-all duration-300`}
             >
               {ContentChild}
             </div>
             {ContentFooter && (
-              <div className="flex flex-row-reverse">{ContentFooter}</div>
+              <div className="flex flex-shrink-0 flex-row-reverse">
+                {ContentFooter}
+              </div>
             )}
           </ModalContent>
         </Modal>
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <DialogContent className={cn(minWidth, "duration-300")}>
-            <div className="truncate-doubleline word-break-break-word">
+          <DialogContent
+            className={cn(minWidth, height, "flex flex-col duration-300")}
+          >
+            <div className="flex-shrink-0 truncate-doubleline word-break-break-word">
               {headerChild}
             </div>
-            <div
-              className={`flex flex-col ${height} w-full transition-all duration-300`}
-            >
-              {ContentChild}
-            </div>
-            {ContentFooter && (
-              <div className="flex flex-row-reverse">{ContentFooter}</div>
+            {onSubmit ? (
+              <Form.Root
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  onSubmit();
+                }}
+                className="flex min-h-0 flex-1 flex-col gap-6"
+              >
+                <div
+                  className={`flex w-full flex-1 flex-col overflow-hidden transition-all duration-300`}
+                >
+                  {ContentChild}
+                </div>
+                {ContentFooter && (
+                  <div className="flex flex-shrink-0 flex-row-reverse">
+                    {ContentFooter}
+                  </div>
+                )}
+              </Form.Root>
+            ) : (
+              <>
+                <div
+                  className={`flex min-h-0 w-full flex-1 flex-col transition-all duration-300`}
+                >
+                  {ContentChild}
+                </div>
+                {ContentFooter && (
+                  <div className="flex flex-shrink-0 flex-row-reverse">
+                    {ContentFooter}
+                  </div>
+                )}
+              </>
             )}
           </DialogContent>
         </Dialog>

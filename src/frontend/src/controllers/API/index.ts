@@ -1,7 +1,7 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { Edge, Node, ReactFlowJsonObject } from "reactflow";
-import { BASE_URL_API } from "../../constants/constants";
+import { BASE_URL_API, MAX_BATCH_SIZE } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
   APIObjectType,
@@ -17,6 +17,7 @@ import {
 } from "../../types/api/index";
 import { UserInputType } from "../../types/components";
 import { FlowStyleType, FlowType } from "../../types/flow";
+import { Message } from "../../types/messages";
 import { StoreComponentResponse } from "../../types/store";
 import { FlowPoolType } from "../../types/zustand/flow";
 import { extractColumnsFromRows } from "../../utils/utils";
@@ -28,7 +29,6 @@ import {
   UploadFileTypeAPI,
   errorsTypeAPI,
 } from "./../../types/api/index";
-import { Message } from "../../types/messages";
 
 /**
  * Fetches all objects from the API endpoint.
@@ -158,6 +158,7 @@ export async function updateFlowInDatabase(
       data: updatedFlow.data,
       description: updatedFlow.description,
       folder_id: updatedFlow.folder_id === "" ? null : updatedFlow.folder_id,
+      endpoint_name: updatedFlow.endpoint_name,
     });
 
     if (response?.status !== 200) {
@@ -964,11 +965,18 @@ export async function postBuildVertex(
   flowId: string,
   vertexId: string,
   input_value: string,
+  files?: string[],
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
   // input_value is optional and is a query parameter
+  const data = input_value
+    ? { inputs: { input_value: input_value } }
+    : undefined;
+  if (data && files) {
+    data["files"] = files;
+  }
   return await api.post(
     `${BASE_URL_API}build/${flowId}/vertices/${vertexId}`,
-    input_value ? { inputs: { input_value: input_value } } : undefined,
+    data,
   );
 }
 
@@ -999,12 +1007,41 @@ export async function deleteFlowPool(
   return await api.delete(`${BASE_URL_API}monitor/builds`, config);
 }
 
+/**
+ * Deletes multiple flow components by their IDs.
+ * @param flowIds - An array of flow IDs to be deleted.
+ * @param token - The authorization token for the API request.
+ * @returns A promise that resolves to an array of AxiosResponse objects representing the delete responses.
+ */
 export async function multipleDeleteFlowsComponents(
   flowIds: string[],
-): Promise<AxiosResponse<any>> {
-  return await api.post(`${BASE_URL_API}flows/multiple_delete/`, {
-    flow_ids: flowIds,
-  });
+): Promise<AxiosResponse<any>[]> {
+  const batches: string[][] = [];
+
+  // Split the flowIds into batches
+  for (let i = 0; i < flowIds.length; i += MAX_BATCH_SIZE) {
+    batches.push(flowIds.slice(i, i + MAX_BATCH_SIZE));
+  }
+
+  // Function to delete a batch of flow IDs
+  const deleteBatch = async (batch: string[]): Promise<AxiosResponse<any>> => {
+    try {
+      return await api.delete(`${BASE_URL_API}flows/`, {
+        data: batch,
+      });
+    } catch (error) {
+      console.error("Error deleting flows:", error);
+      throw error;
+    }
+  };
+
+  // Execute all delete requests
+  const responses: Promise<AxiosResponse<any>>[] = batches.map((batch) =>
+    deleteBatch(batch),
+  );
+
+  // Return the responses after all requests are completed
+  return Promise.all(responses);
 }
 
 export async function getTransactionTable(
@@ -1027,10 +1064,7 @@ export async function getMessagesTable(
   id?: string,
   excludedFields?: string[],
   params = {},
-): Promise<{
-  rows: Array<Message>;
-  columns: Array<ColDef | ColGroupDef>;
-}> {
+): Promise<{ rows: Array<Message>; columns: Array<ColDef | ColGroupDef> }> {
   const config = {};
   if (id) {
     config["params"] = { flow_id: id };

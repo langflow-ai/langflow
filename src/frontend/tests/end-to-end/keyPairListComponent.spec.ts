@@ -22,7 +22,7 @@ test("KeypairListComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("amazon bedrock");
@@ -83,7 +83,7 @@ test("KeypairListComponent", async ({ page }) => {
   expect(
     await page.locator('//*[@id="showcredentials_profile_name"]').isChecked(),
   ).toBeFalsy();
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   const plusButtonLocator = page.locator('//*[@id="plusbtn0"]');
   const elementCount = await plusButtonLocator?.count();
@@ -108,7 +108,7 @@ test("KeypairListComponent", async ({ page }) => {
     const elementKeyCount = await keyPairVerification?.count();
 
     if (elementKeyCount === 1) {
-      await page.locator('//*[@id="saveChangesBtn"]').click();
+      await page.getByText("Save Changes", { exact: true }).click();
 
       await page.getByTestId("div-generic-node").click();
 

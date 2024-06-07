@@ -7,6 +7,7 @@ port ?= 7860
 env ?= .env
 open_browser ?= true
 path = src/backend/base/langflow/frontend
+workers ?= 1
 
 codespell:
 	@poetry install --with spelling
@@ -47,8 +48,8 @@ coverage:
 
 # allow passing arguments to pytest
 tests:
-	poetry run pytest tests --instafail $(args)
-# Use like:
+	poetry run pytest tests --instafail -ra -n auto -m "not api_key_required" $(args)
+
 
 format:
 	poetry run ruff check . --fix
@@ -144,10 +145,10 @@ backend:
 	@-kill -9 $(lsof -t -i:7860)
 ifdef login
 	@echo "Running backend autologin is $(login)";
-	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio
+	LANGFLOW_AUTO_LOGIN=$(login) poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio --workers $(workers)
 else
 	@echo "Running backend respecting the .env file";
-	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env  --loop asyncio
+	poetry run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env  --loop asyncio --workers $(workers)
 endif
 
 build_and_run:
@@ -167,6 +168,7 @@ build_and_install:
 
 build_frontend:
 	cd src/frontend && CI='' npm run build
+	rm -rf src/backend/base/langflow/frontend
 	cp -r src/frontend/build src/backend/base/langflow/frontend
 
 build:

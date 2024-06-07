@@ -590,6 +590,7 @@ export const CONTROL_PATCH_USER_STATE = {
   password: "",
   cnfPassword: "",
   gradient: "",
+  apikey: "",
 };
 
 export const CONTROL_LOGIN_STATE = {
@@ -606,95 +607,14 @@ export const CONTROL_NEW_USER = {
 
 export const tabsCode = [];
 
-export function tabsArray(codes: string[], method: number) {
-  if (!method) return;
-  if (method === 0) {
-    return [
-      {
-        name: "cURL",
-        mode: "bash",
-        image: "https://curl.se/logo/curl-symbol-transparent.png",
-        language: "sh",
-        code: codes[0],
-      },
-      {
-        name: "Python API",
-        mode: "python",
-        image:
-          "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
-        language: "py",
-        code: codes[1],
-      },
-      {
-        name: "Python Code",
-        mode: "python",
-        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-        language: "py",
-        code: codes[2],
-      },
-      {
-        name: "Chat Widget HTML",
-        description:
-          "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
-        mode: "html",
-        image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-        language: "py",
-        code: codes[3],
-      },
-    ];
-  }
-  return [
-    {
-      name: "cURL",
-      mode: "bash",
-      image: "https://curl.se/logo/curl-symbol-transparent.png",
-      language: "sh",
-      code: codes[0],
-    },
-    {
-      name: "Python API",
-      mode: "python",
-      image:
-        "https://images.squarespace-cdn.com/content/v1/5df3d8c5d2be5962e4f87890/1628015119369-OY4TV3XJJ53ECO0W2OLQ/Python+API+Training+Logo.png?format=1000w",
-      language: "py",
-      code: codes[1],
-    },
-    {
-      name: "Python Code",
-      mode: "python",
-      language: "py",
-      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-      code: codes[2],
-    },
-    {
-      name: "Chat Widget HTML",
-      description:
-        "Insert this code anywhere in your &lt;body&gt; tag. To use with react and other libs, check our <a class='link-color' href='https://langflow.org/guidelines/widget'>documentation</a>.",
-      mode: "html",
-      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-      language: "py",
-      code: codes[3],
-    },
-    {
-      name: "Tweaks",
-      mode: "python",
-      image: "https://cdn-icons-png.flaticon.com/512/5968/5968350.png",
-      language: "py",
-      code: codes[4],
-    },
-  ];
-}
 export const FETCH_ERROR_MESSAGE = "Couldn't establish a connection.";
 export const FETCH_ERROR_DESCRIPION =
   "Check if everything is working properly and try again.";
 
 export const SIGN_UP_SUCCESS = "Account created! Await admin activation. ";
 
-export const API_PAGE_PARAGRAPH_1 =
-  "Your secret API keys are listed below. Please note that we do not display your secret API keys again after you generate them.";
-
-export const API_PAGE_PARAGRAPH_2 =
-  "Do not share your API key with others, or expose it in the browser or other client-side code.";
+export const API_PAGE_PARAGRAPH =
+  "Your secret API keys are listed below. Do not share your API key with others, or expose it in the browser or other client-side code.";
 
 export const API_PAGE_USER_KEYS =
   "This user does not have any keys assigned at the moment.";
@@ -748,7 +668,7 @@ export const ZERO_NOTIFICATIONS = "No new notifications";
 export const SUCCESS_BUILD = "Built sucessfully ✨";
 
 export const ALERT_SAVE_WITH_API =
-  "Caution: Uncheck this box only removes API keys from fields specifically designated for API keys.";
+  "Caution: Unchecking this box only removes API keys from fields specifically designated for API keys.";
 
 export const SAVE_WITH_API_CHECKBOX = "Save with my API keys";
 export const EDIT_TEXT_MODAL_TITLE = "Edit Text";
@@ -816,3 +736,5 @@ export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to displa
 export const DEFAULT_TABLE_ALERT_TITLE = "No Data Available";
 
 export const LOCATIONS_TO_RETURN = ["/flow/", "/settings/"];
+
+export const MAX_BATCH_SIZE = 50;

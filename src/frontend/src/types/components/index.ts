@@ -38,7 +38,7 @@ export type InputComponentType = {
 export type ToggleComponentType = {
   enabled: boolean;
   setEnabled: (state: boolean) => void;
-  disabled: boolean | undefined;
+  disabled?: boolean | undefined;
   size: "small" | "medium" | "large";
   id?: string;
   editNode?: boolean;
@@ -76,6 +76,16 @@ export type InputListComponentType = {
   disabled: boolean;
   editNode?: boolean;
   componentName?: string;
+  playgroundDisabled?: boolean;
+};
+
+export type InputGlobalComponentType = {
+  disabled: boolean;
+  onChange: (value: string) => void;
+  setDb: (value: boolean) => void;
+  name: string;
+  data: NodeDataType;
+  editNode?: boolean;
   playgroundDisabled?: boolean;
 };
 
@@ -188,6 +198,14 @@ export type FloatComponentType = {
   id?: string;
 };
 
+export type FilePreviewType = {
+  loading: boolean;
+  file: File;
+  error: boolean;
+  id: string;
+  path?: string;
+};
+
 export type TooltipComponentType = {
   children: ReactElement;
   title: string | ReactElement;
@@ -221,6 +239,7 @@ export type AccordionComponentType = {
   children?: ReactElement;
   open?: string[];
   trigger?: string | ReactElement;
+  disabled?: boolean;
   keyValue?: string;
   openDisc?: boolean;
   sideBar?: boolean;
@@ -269,9 +288,11 @@ export type IconComponentProps = {
 export type InputProps = {
   name: string | null;
   description: string | null;
+  endpointName?: string;
   maxLength?: number;
   setName?: (name: string) => void;
   setDescription?: (description: string) => void;
+  setEndpointName?: (endpointName: string) => void;
   invalidNameList?: string[];
 };
 
@@ -376,6 +397,7 @@ export type patchUserInputStateType = {
   password: string;
   cnfPassword: string;
   gradient: string;
+  apikey: string;
 };
 
 export type UserInputType = {
@@ -389,11 +411,7 @@ export type UserInputType = {
 };
 
 export type ApiKeyType = {
-  title: string;
-  cancelText: string;
-  confirmationText: string;
   children: ReactElement;
-  icon: string;
   data?: any;
   onCloseModal: () => void;
 };
@@ -476,7 +494,13 @@ export type chatInputType = {
   };
   lockChat: boolean;
   noInput: boolean;
-  sendMessage: (count?: number) => void;
+  sendMessage: ({
+    repeat,
+    files,
+  }: {
+    repeat: number;
+    files?: string[];
+  }) => void;
   setChatValue: (value: string) => void;
 };
 
@@ -543,7 +567,7 @@ export type iconsType = {
 
 export type modalHeaderType = {
   children: ReactNode;
-  description: string | null;
+  description: string | JSX.Element | null;
 };
 
 export type codeAreaModalPropsType = {
@@ -680,10 +704,14 @@ export type crashComponentPropsType = {
   resetErrorBoundary: (args) => void;
 };
 
+export type Log = {
+  message: string;
+};
+
 export type validationStatusType = {
   id: string;
   data: object | any;
-  params: string;
+  logs: Log[];
   progress?: number;
   valid: boolean;
   duration?: string;
@@ -723,7 +751,13 @@ export type IOFieldViewProps = {
 export type UndrawCardComponentProps = { flow: FlowType };
 
 export type chatViewProps = {
-  sendMessage: (count?: number) => void;
+  sendMessage: ({
+    repeat,
+    files,
+  }: {
+    repeat: number;
+    files?: string[];
+  }) => void;
   chatValue: string;
   setChatValue: (value: string) => void;
   lockChat: boolean;

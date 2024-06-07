@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   CONSOLE_ERROR_MSG,
-  CONSOLE_SUCCESS_MSG,
   INVALID_FILE_ALERT,
 } from "../../constants/alerts_constants";
 import { uploadFile } from "../../controllers/API";
@@ -66,10 +65,8 @@ export default function InputFileComponent({
         uploadFile(file, currentFlowId)
           .then((res) => res.data)
           .then((data) => {
-            console.log(CONSOLE_SUCCESS_MSG);
             // Get the file name from the response
             const { file_path } = data;
-            console.log("File name:", file_path);
 
             // sets the value that goes to the backend
             onFileChange(file_path);

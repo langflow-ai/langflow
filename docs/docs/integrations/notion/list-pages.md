@@ -140,16 +140,17 @@ class NotionListPages(CustomComponent):
 <Admonition type="info" title="Example Usage">
 
 ## Example Usage
+
 Here's an example of how you can use the `NotionListPages` component in a Langflow flow and passing to the Prompt component:
 
 <ZoomableImage
-    alt="NotionListPages
-     Flow Example"
-    sources={{
+alt="NotionListPages
+Flow Example"
+sources={{
     light: "img/notion/NotionListPages_flow_example.png",
     dark: "img/notion/NotionListPages_flow_example_dark.png",
     }}
-    style={{ width: "100%", margin: "20px 0" }}
+style={{ width: "100%", margin: "20px 0" }}
 />
 
 In this example, the `NotionListPages` component is used to retrieve specific pages from a Notion database based on the provided filters and sorting options. The retrieved data can then be processed further in the subsequent components of the flow.
@@ -157,7 +158,7 @@ In this example, the `NotionListPages` component is used to retrieve specific pa
 
 ## Best Practices
 
- When using the `NotionListPages
+When using the `NotionListPages
 ` component, consider the following best practices:
 
 - Ensure that you have a valid Notion integration token with the necessary permissions to query the desired database.
@@ -171,7 +172,7 @@ We encourage you to explore the capabilities of the `NotionListPages
 
 ## Troubleshooting
 
- If you encounter any issues while using the `NotionListPages` component, consider the following:
+If you encounter any issues while using the `NotionListPages` component, consider the following:
 
 - Double-check that the `notion_secret` and `database_id` are correct and valid.
 - Verify that the `query_payload` JSON string is properly formatted and contains valid filtering and sorting options.

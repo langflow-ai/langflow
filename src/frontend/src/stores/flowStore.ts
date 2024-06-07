@@ -24,7 +24,6 @@ import {
 } from "../types/flow";
 import {
   ChatOutputType,
-  FlowPoolObjectType,
   FlowStoreType,
   VertexLayerElementType,
   chatInputType,
@@ -64,7 +63,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setFlowPool: (flowPool) => {
     set({ flowPool });
   },
-  addDataToFlowPool: (data: FlowPoolObjectType, nodeId: string) => {
+  addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
     if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
     else {
@@ -78,7 +77,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateFlowPool: (
     nodeId: string,
-    data: FlowPoolObjectType | ChatOutputType | chatInputType,
+    data: VertexBuildTypeAPI | ChatOutputType | chatInputType,
     buildId?: string,
   ) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
@@ -90,12 +89,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         index = newFlowPool[nodeId].findIndex((flow) => flow.id === buildId);
       }
       //check if the data is a flowpool object
-      if ((data as FlowPoolObjectType).data?.artifacts !== undefined) {
-        newFlowPool[nodeId][index] = data as FlowPoolObjectType;
+      if ((data as VertexBuildTypeAPI).valid !== undefined) {
+        newFlowPool[nodeId][index] = data as VertexBuildTypeAPI;
       }
-      //update data artifact
+      //update data results
       else {
-        newFlowPool[nodeId][index].data.artifacts = data;
+        newFlowPool[nodeId][index].data.messages[0] = data as
+          | ChatOutputType
+          | chatInputType;
       }
     }
     get().setFlowPool(newFlowPool);
@@ -430,10 +431,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     startNodeId,
     stopNodeId,
     input_value,
+    files,
+    silent,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
+    files?: string[];
+    silent?: boolean;
   }) => {
     get().setIsBuilding(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
@@ -464,7 +469,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       status: BuildStatus,
       runId: string,
     ) {
-      console.log("handleBuildUpdate", vertexBuildData, status, runId);
       if (vertexBuildData && vertexBuildData.inactivated_vertices) {
         get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
         get().updateBuildStatus(
@@ -533,23 +537,28 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
     await buildVertices({
       input_value,
+      files,
       flowId: currentFlow!.id,
       startNodeId,
       stopNodeId,
       onGetOrderSuccess: () => {
-        setNoticeData({ title: "Running components" });
+        if (!silent) {
+          setNoticeData({ title: "Running components" });
+        }
       },
       onBuildComplete: (allNodesValid) => {
         const nodeId = startNodeId || stopNodeId;
-        if (nodeId && allNodesValid) {
-          setSuccessData({
-            title: `${
-              get().nodes.find((node) => node.id === nodeId)?.data.node
-                ?.display_name
-            } built successfully`,
-          });
-        } else {
-          setSuccessData({ title: FLOW_BUILD_SUCCESS_ALERT });
+        if (!silent) {
+          if (nodeId && allNodesValid) {
+            setSuccessData({
+              title: `${
+                get().nodes.find((node) => node.id === nodeId)?.data.node
+                  ?.display_name
+              } built successfully`,
+            });
+          } else {
+            setSuccessData({ title: FLOW_BUILD_SUCCESS_ALERT });
+          }
         }
         get().setIsBuilding(false);
       },

@@ -18,13 +18,13 @@ import { buildContent } from "../utils/build-content";
 import { buildTweaks } from "../utils/build-tweaks";
 import { checkCanBuildTweakObject } from "../utils/check-can-build-tweak-object";
 import { getChangesType } from "../utils/get-changes-types";
+import { getCurlRunCode, getCurlWebhookCode } from "../utils/get-curl-code";
 import { getNodesWithDefaultValue } from "../utils/get-nodes-with-default-value";
-import { getValue } from "../utils/get-value";
 import getPythonApiCode from "../utils/get-python-api-code";
-import getCurlCode from "../utils/get-curl-code";
 import getPythonCode from "../utils/get-python-code";
+import { getValue } from "../utils/get-value";
 import getWidgetCode from "../utils/get-widget-code";
-import tabsArray from "../utils/tabs-array";
+import { createTabsArray } from "../utils/tabs-array";
 
 const ApiModal = forwardRef(
   (
@@ -46,19 +46,38 @@ const ApiModal = forwardRef(
     const { autoLogin } = useContext(AuthContext);
     const [open, setOpen] = useState(false);
     const [activeTab, setActiveTab] = useState("0");
-    const pythonApiCode = getPythonApiCode(flow?.id, autoLogin, tweak);
-    const curl_code = getCurlCode(flow?.id, autoLogin, tweak);
+    const pythonApiCode = getPythonApiCode(
+      flow?.id,
+      autoLogin,
+      tweak,
+      flow?.endpoint_name,
+    );
+    const curl_run_code = getCurlRunCode(
+      flow?.id,
+      autoLogin,
+      tweak,
+      flow?.endpoint_name,
+    );
+    const curl_webhook_code = getCurlWebhookCode(
+      flow?.id,
+      autoLogin,
+      flow?.endpoint_name,
+    );
     const pythonCode = getPythonCode(flow?.name, tweak);
     const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
+    const includeWebhook = flow.webhook;
     const tweaksCode = buildTweaks(flow);
     const codesArray = [
-      curl_code,
+      curl_run_code,
+      curl_webhook_code,
       pythonApiCode,
       pythonCode,
       widgetCode,
       pythonCode,
     ];
-    const [tabs, setTabs] = useState(tabsArray(codesArray, 0));
+    const [tabs, setTabs] = useState(
+      createTabsArray(codesArray, includeWebhook),
+    );
 
     const canShowTweaks =
       flow &&
@@ -88,9 +107,9 @@ const ApiModal = forwardRef(
 
       if (Object.keys(tweaksCode).length > 0) {
         setActiveTab("0");
-        setTabs(tabsArray(codesArray, 1));
+        setTabs(createTabsArray(codesArray, includeWebhook, true));
       } else {
-        setTabs(tabsArray(codesArray, 1));
+        setTabs(createTabsArray(codesArray, includeWebhook, true));
       }
     }, [flow["data"]!["nodes"], open]);
 
@@ -161,7 +180,12 @@ const ApiModal = forwardRef(
 
     const addCodes = (cloneTweak) => {
       const pythonApiCode = getPythonApiCode(flow?.id, autoLogin, cloneTweak);
-      const curl_code = getCurlCode(flow?.id, autoLogin, cloneTweak);
+      const curl_code = getCurlRunCode(
+        flow?.id,
+        autoLogin,
+        cloneTweak,
+        flow?.endpoint_name,
+      );
       const pythonCode = getPythonCode(flow?.name, cloneTweak);
       const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
 

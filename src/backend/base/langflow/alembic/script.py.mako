@@ -11,6 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 import sqlmodel
 from sqlalchemy.engine.reflection import Inspector
+from langflow.utils import migration
 ${imports if imports else ""}
 
 # revision identifiers, used by Alembic.
@@ -22,13 +23,9 @@ depends_on: Union[str, Sequence[str], None] = ${repr(depends_on)}
 
 def upgrade() -> None:
     conn = op.get_bind()
-    inspector = Inspector.from_engine(conn)  # type: ignore
-    table_names = inspector.get_table_names()
     ${upgrades if upgrades else "pass"}
 
 
 def downgrade() -> None:
     conn = op.get_bind()
-    inspector = Inspector.from_engine(conn)  # type: ignore
-    table_names = inspector.get_table_names()
     ${downgrades if downgrades else "pass"}

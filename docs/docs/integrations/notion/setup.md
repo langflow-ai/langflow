@@ -76,4 +76,3 @@ Refer to the individual component documentation for more details on how to use e
 - [Notion Integration Capabilities](https://developers.notion.com/reference/capabilities)
 
 If you encounter any issues or have questions, please reach out to our support team or consult the Langflow community forums.
-

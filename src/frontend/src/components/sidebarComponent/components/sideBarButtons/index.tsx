@@ -11,9 +11,12 @@ type SideBarButtonsComponentProps = {
   pathname: string;
   handleOpenNewFolderModal?: () => void;
 };
-const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
+const SideBarButtonsComponent = ({
+  items,
+  pathname,
+}: SideBarButtonsComponentProps) => {
   return (
-    <>
+    <div className="flex gap-2 overflow-auto lg:h-[70vh] lg:flex-col">
       {items.map((item) => (
         <Link to={item.href!}>
           <div
@@ -21,14 +24,20 @@ const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
             data-testid={`sidebar-nav-${item.title}`}
             className={cn(
               buttonVariants({ variant: "ghost" }),
-              "!w-[200px] cursor-pointer justify-start gap-2 border border-transparent hover:border-border hover:bg-transparent",
+              pathname === item.href
+                ? "border border-border bg-muted hover:bg-muted"
+                : "border border-transparent hover:border-border hover:bg-transparent",
+              "flex w-full shrink-0 justify-start gap-4",
             )}
           >
-            {item.title}
+            {item.icon}
+            <span className="block max-w-full truncate opacity-100">
+              {item.title}
+            </span>
           </div>
         </Link>
       ))}
-    </>
+    </div>
   );
 };
 export default SideBarButtonsComponent;

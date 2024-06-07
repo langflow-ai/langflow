@@ -10,12 +10,15 @@ This flow extends the [basic prompting flow](./basic-prompting.mdx) to include c
 
 ## Prerequisites
 
-* [Langflow installed and running](../getting-started/install-langflow.mdx)
+- [Langflow installed and running](../getting-started/install-langflow.mdx)
 
-* [OpenAI API key created](https://platform.openai.com)
+- [OpenAI API key created](https://platform.openai.com)
 
 <Admonition type="info">
-  Langflow v1.0 alpha is also available in HuggingFace Spaces. [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true) to create your own Langflow workspace in minutes.
+  Langflow v1.0 alpha is also available in HuggingFace Spaces. [Clone the space
+  using this
+  link](https://huggingface.co/spaces/Langflow/Langflow-Preview?duplicate=true)
+  to create your own Langflow workspace in minutes.
 </Admonition>
 
 ## Create the memory chatbot project
@@ -43,16 +46,16 @@ This chatbot is augmented with the **Chat Memory** component, which stores messa
 The **Chat History** component gives the **OpenAI** component a memory of previous questions.
 
 4. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
-    1. In the **Variable Name** field, enter `openai_api_key`.
-    2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
-    3. Click **Save Variable**.
+   1. In the **Variable Name** field, enter `openai_api_key`.
+   2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
+   3. Click **Save Variable**.
 
 ## Run the memory chatbot flow
 
 1. Click the **Run** button.
-The **Interaction Panel** opens, where you can converse with your bot.
+   The **Interaction Panel** opens, where you can converse with your bot.
 2. Type a message and press Enter.
-The bot will respond according to the template in the **Prompt** component.
+   The bot will respond according to the template in the **Prompt** component.
 3. Type more questions. In the **Outputs** log, your queries are logged in order. Up to 5 queries are stored by default. Try asking `What is the first subject I asked you about?` to see where the LLM's memory disappears.
 
 ## Modify the Session ID field to have multiple conversations
@@ -65,11 +68,11 @@ You can demonstrate this by modifying the **Session ID** value to switch between
 
 1. In the **Session ID** field of the **Chat Memory** and **Chat Input** components, change the **Session ID** value from `MySessionID` to `AnotherSessionID`.
 2. Click the **Run** button to run your flow.
-In the **Interaction Panel**, you will have a new conversation. (You may need to clear the cache with the **Eraser** button).
+   In the **Interaction Panel**, you will have a new conversation. (You may need to clear the cache with the **Eraser** button).
 3. Type a few questions to your bot.
 4. In the **Session ID** field of the **Chat Memory** and **Chat Input** components, change the **Session ID** value back to `MySessionID`.
 5. Run your flow.
-The **Outputs** log of the **Interaction Panel** displays the history from your initial chat with `MySessionID`.
+   The **Outputs** log of the **Interaction Panel** displays the history from your initial chat with `MySessionID`.
 
 ## Store Session ID as a Langflow variable
 
@@ -79,4 +82,3 @@ To store **Session ID** as a Langflow variable, in the **Session ID** field, cli
 2. In the **Value** field, enter a value like `1B5EBD79-6E9C-4533-B2C8-7E4FF29E983B`.
 3. Click **Save Variable**.
 4. Apply this variable to **Chat Input**.
-

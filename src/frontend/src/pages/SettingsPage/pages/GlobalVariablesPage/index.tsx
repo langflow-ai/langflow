@@ -8,7 +8,6 @@ import Dropdown from "../../../../components/dropdownComponent";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
 import { Badge } from "../../../../components/ui/badge";
-import { Card, CardContent } from "../../../../components/ui/card";
 import { deleteGlobalVariable } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../../../stores/globalVariablesStore/globalVariables";
@@ -167,24 +166,18 @@ export default function GlobalVariablesPage() {
         </div>
       </div>
 
-      <div className="flex h-full w-full flex-col justify-between pb-8">
-        <Card x-chunk="dashboard-04-chunk-2" className="h-full pt-4">
-          <CardContent className="h-full">
-            <TableComponent
-              overlayNoRowsTemplate="No data available"
-              onSelectionChanged={(event: SelectionChangedEvent) => {
-                setSelectedRows(
-                  event.api.getSelectedRows().map((row) => row.name),
-                );
-              }}
-              rowSelection="multiple"
-              suppressRowClickSelection={true}
-              pagination={true}
-              columnDefs={colDefs}
-              rowData={rowData}
-            />
-          </CardContent>
-        </Card>
+      <div className="flex h-full w-full flex-col justify-between">
+        <TableComponent
+          overlayNoRowsTemplate="No data available"
+          onSelectionChanged={(event: SelectionChangedEvent) => {
+            setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
+          }}
+          rowSelection="multiple"
+          suppressRowClickSelection={true}
+          pagination={true}
+          columnDefs={colDefs}
+          rowData={rowData}
+        />
       </div>
     </div>
   );

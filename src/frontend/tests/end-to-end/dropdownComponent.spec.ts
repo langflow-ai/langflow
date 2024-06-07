@@ -22,7 +22,7 @@ test("dropDownComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
 
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
@@ -61,6 +61,8 @@ test("dropDownComponent", async ({ page }) => {
   if (value !== "anthropic.claude-v2:1") {
     expect(false).toBeTruthy();
   }
+
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("edit-button-modal").click();
@@ -170,7 +172,7 @@ test("dropDownComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   value = await page.getByTestId("dropdown-model_id").innerText();
   if (value !== "ai21.j2-mid-v1") {

@@ -1,4 +1,6 @@
 import json
+import os.path
+import shutil
 
 # we need to import tmpdir
 import tempfile
@@ -8,6 +10,7 @@ from typing import TYPE_CHECKING, AsyncGenerator
 
 import orjson
 import pytest
+from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from langflow.graph.graph.base import Graph
@@ -25,6 +28,9 @@ from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
+
+
+load_dotenv()
 
 
 def pytest_configure(config):
@@ -90,6 +96,12 @@ def session_fixture():
 class Config:
     broker_url = "redis://localhost:6379/0"
     result_backend = "redis://localhost:6379/0"
+
+
+@pytest.fixture(name="load_flows_dir")
+def load_flows_dir():
+    tempdir = tempfile.TemporaryDirectory()
+    yield tempdir.name
 
 
 @pytest.fixture(name="distributed_env")
@@ -209,7 +221,7 @@ def json_vector_store():
 
 
 @pytest.fixture(name="client", autouse=True)
-def client_fixture(session: Session, monkeypatch, request):
+def client_fixture(session: Session, monkeypatch, request, load_flows_dir):
     # Set the database url to a test database
     if "noclient" in request.keywords:
         yield
@@ -218,6 +230,12 @@ def client_fixture(session: Session, monkeypatch, request):
         db_path = Path(db_dir) / "test.db"
         monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
         monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+        if "load_flows" in request.keywords:
+            shutil.copyfile(
+                pytest.BASIC_EXAMPLE_PATH, os.path.join(load_flows_dir, "c54f9130-f2fa-4a3e-b22a-3856d946351b.json")
+            )
+            monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
+            monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
 
         from langflow.main import create_app
 

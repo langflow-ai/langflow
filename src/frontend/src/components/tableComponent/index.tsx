@@ -1,7 +1,7 @@
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
-import { ElementRef, forwardRef, useEffect, useRef } from "react";
+import { ElementRef, forwardRef, useRef } from "react";
 import {
   DEFAULT_TABLE_ALERT_MSG,
   DEFAULT_TABLE_ALERT_TITLE,
@@ -11,10 +11,8 @@ import "../../style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import { cn, toTitleCase } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { Toggle } from "../ui/toggle";
-import ShadTooltip from "../shadTooltipComponent";
-import resetGrid from "./utils/reset-grid-columns";
 import ResetColumns from "./components/ResetColumns";
+import resetGrid from "./utils/reset-grid-columns";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
@@ -36,38 +34,6 @@ const TableComponent = forwardRef<
     },
     ref,
   ) => {
-    const gridRef = useRef(null);
-    // @ts-ignore
-    const realRef = ref?.current ? ref : gridRef;
-    const dark = useDarkStore((state) => state.dark);
-    const initialColumnDefs = useRef(props.columnDefs);
-
-    const makeLastColumnNonResizable = (columnDefs) => {
-      columnDefs.forEach((colDef, index) => {
-        colDef.resizable = index !== columnDefs.length - 1;
-      });
-      return columnDefs;
-    };
-
-    const onGridReady = (params) => {
-      // @ts-ignore
-      realRef.current = params;
-      const updatedColumnDefs = makeLastColumnNonResizable([
-        ...props.columnDefs,
-      ]);
-      params.api.setColumnDefs(updatedColumnDefs);
-      initialColumnDefs.current = params.api.getColumnDefs();
-      if (props.onGridReady) props.onGridReady(params);
-    };
-
-    const onColumnMoved = (params) => {
-      const updatedColumnDefs = makeLastColumnNonResizable(
-        params.columnApi.getAllGridColumns().map((col) => col.getColDef()),
-      );
-      params.api.setColumnDefs(updatedColumnDefs);
-      if (props.onColumnMoved) props.onColumnMoved(params);
-    };
-
     let colDef = props.columnDefs.map((col, index) => {
       let newCol = {
         ...col,
@@ -99,7 +65,35 @@ const TableComponent = forwardRef<
       }
       return newCol;
     });
-    let rowDef = props.rowData;
+    const gridRef = useRef(null);
+    // @ts-ignore
+    const realRef = ref?.current ? ref : gridRef;
+    const dark = useDarkStore((state) => state.dark);
+    const initialColumnDefs = useRef(colDef);
+
+    const makeLastColumnNonResizable = (columnDefs) => {
+      columnDefs.forEach((colDef, index) => {
+        colDef.resizable = index !== columnDefs.length - 1;
+      });
+      return columnDefs;
+    };
+
+    const onGridReady = (params) => {
+      // @ts-ignore
+      realRef.current = params;
+      const updatedColumnDefs = makeLastColumnNonResizable([...colDef]);
+      params.api.setGridOption("columnDefs", updatedColumnDefs);
+      initialColumnDefs.current = params.api.getColumnDefs();
+      if (props.onGridReady) props.onGridReady(params);
+    };
+
+    const onColumnMoved = (params) => {
+      const updatedColumnDefs = makeLastColumnNonResizable(
+        params.columnApi.getAllGridColumns().map((col) => col.getColDef()),
+      );
+      params.api.setGridOption("columnDefs", updatedColumnDefs);
+      if (props.onColumnMoved) props.onColumnMoved(params);
+    };
 
     if (props.rowData.length === 0) {
       return (
@@ -128,9 +122,9 @@ const TableComponent = forwardRef<
           className={cn(props.className, "custom-scroll")}
           defaultColDef={{
             minWidth: 100,
+            autoHeight: true,
           }}
           columnDefs={colDef}
-          rowData={rowDef}
           ref={realRef}
           pagination={true}
           onGridReady={onGridReady}

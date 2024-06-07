@@ -3,7 +3,7 @@ services:
   - type: web
     name: langflow
     runtime: docker
-    dockerfilePath: ./docker/render.Dockerfile
+    dockerfilePath: ./docker/render.pre-release.Dockerfile
     repo: https://github.com/langflow-ai/langflow
     branch: dev
     healthCheckPath: /health
