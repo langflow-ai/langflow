@@ -20,6 +20,15 @@ You can find out more about Chat Input and other Inputs [here](#chat-input).
 
 This component collects user input from the chat.
 
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/chat-input-expanded.png",
+    dark: "img/chat-input-expanded.png",
+  }}
+  style={{ width: "40%", margin: "20px auto" }}
+/>
+
 **Parameters**
 
 - **Sender Type:** Specifies the sender type. Defaults to `User`. Options are `Machine` and `User`.
@@ -34,29 +43,29 @@ This component collects user input from the chat.
   </p>
 </Admonition>
 
-<ZoomableImage
-  alt="Docusaurus themed image"
-  sources={{
-    light: "img/chat-input-expanded.png",
-    dark: "img/chat-input-expanded.png",
-  }}
-  style={{ width: "40%", margin: "20px auto" }}
-/>
-
 One significant capability of the Chat Input component is its ability to transform the Playground into a chat window. This feature is particularly valuable for scenarios requiring user input to initiate or influence the flow.
 
 <ZoomableImage
   alt="Docusaurus themed image"
   sources={{
-    light: "img/interaction-panel-with-chat-input.png",
-    dark: "img/interaction-panel-with-chat-input.png",
+    light: ("img/playground-chat.png"),
+    dark: ("img/playground-chat.png"),
   }}
-  style={{ width: "50%", margin: "20px auto" }}
+  style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
 />
 
 ### Text Input
 
 The **Text Input** component adds an **Input** field on the Playground. This enables you to define parameters while running and testing your flow.
+
+<ZoomableImage
+  alt="Docusaurus themed image"
+  sources={{
+    light: "img/text-input-expanded.png",
+    dark: "img/text-input-expanded.png",
+  }}
+  style={{ width: "50%", margin: "20px auto" }}
+/>
 
 **Parameters**
 
@@ -78,15 +87,6 @@ For example, if you have a `Record` with the following structure:
 A template with `Name: {name}, Age: {age}` will convert the `Record` into a text string of `Name: John Doe, Age: 30`.
 
 If you pass more than one `Record`, the text will be concatenated with a new line separator.
-
-<ZoomableImage
-  alt="Docusaurus themed image"
-  sources={{
-    light: "img/text-input-expanded.png",
-    dark: "img/text-input-expanded.png",
-  }}
-  style={{ width: "50%", margin: "20px auto" }}
-/>
 
 ## Outputs
 
@@ -135,10 +135,6 @@ A prompt is the input provided to a language model, consisting of multiple compo
 
 This component creates a prompt template with dynamic variables. This is useful for structuring prompts and passing dynamic data to a language model.
 
-**Parameters**
-
-- **Template:** The template for the prompt. This field allows you to create other fields dynamically by using curly brackets `{}`. For example, if you have a template like `Hello {name}, how are you?`, a new field called `name` will be created. Prompt variables can be created with any name inside curly brackets, e.g. `{variable_name}`.
-
 <ZoomableImage
   alt="Docusaurus themed image"
   sources={{
@@ -148,14 +144,14 @@ This component creates a prompt template with dynamic variables. This is useful 
   style={{ width: "50%", margin: "20px auto" }}
 />
 
+**Parameters**
+
+- **Template:** The template for the prompt. This field allows you to create other fields dynamically by using curly brackets `{}`. For example, if you have a template like `Hello {name}, how are you?`, a new field called `name` will be created. Prompt variables can be created with any name inside curly brackets, e.g. `{variable_name}`.
+
 ### PromptTemplate
 
 The `PromptTemplate` component enables users to create prompts and define variables that control how the model is instructed. Users can input a set of variables which the template uses to generate the prompt when a conversation starts.
 
-<Admonition type="info">
-  After defining a variable in the prompt template, it acts as its own component
-  input. See [Prompt Customization](../administration/prompt-customization) for
-  more details.
-</Admonition>
+After defining a variable in the prompt template, it acts as its own component input. See [Prompt Customization](../administration/prompt-customization) for more details.
 
 - **template:** The template used to format an individual request.
