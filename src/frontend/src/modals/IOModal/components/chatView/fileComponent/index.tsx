@@ -8,7 +8,7 @@ import DownloadButton from "./components/downloadButton/downloadButton";
 import getClasses from "./utils/get-classes";
 import handleDownload from "./utils/handle-download";
 
-const imgTypes = new Set(["png", "jpg"]);
+const imgTypes = new Set(["png", "jpg", "jpeg", "gif", "webp", "image"]);
 
 export default function FileCard({
   fileName,

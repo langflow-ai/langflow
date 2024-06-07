@@ -5,17 +5,20 @@ const UploadFileButton = ({
   fileInputRef,
   handleFileChange,
   handleButtonClick,
+  lockChat,
 }) => {
   return (
     <div>
       <input
+        disabled={lockChat}
         type="file"
         ref={fileInputRef}
         style={{ display: "none" }}
         onChange={handleFileChange}
       />
       <Button
-        className="font-bold text-white transition-all hover:text-muted-foreground"
+        disabled={lockChat}
+        className={`font-bold text-white transition-all ${lockChat ? "cursor-not-allowed" : "hover:text-muted-foreground"}`}
         onClick={handleButtonClick}
         variant="none"
         size="none"
