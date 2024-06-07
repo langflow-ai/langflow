@@ -1,13 +1,14 @@
 import json
+import unicodedata
 import xml.etree.ElementTree as ET
 from concurrent import futures
 from pathlib import Path
 from typing import Callable, List, Optional, Text
-import unicodedata
+
 import chardet
 import yaml
 
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
@@ -187,4 +188,5 @@ def parallel_load_records(
             file_paths,
         )
     # loaded_files is an iterator, so we need to convert it to a list
+    return list(loaded_files)
     return list(loaded_files)

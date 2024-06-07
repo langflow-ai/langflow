@@ -1,4 +1,5 @@
 from typing import Union
+
 from langchain_core.documents import Document
 
 from langflow.schema import Record

@@ -4,7 +4,7 @@ from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
 from langflow.helpers.record import records_to_text
 from langflow.memory import get_messages
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 
 class MemoryComponent(BaseMemoryComponent):

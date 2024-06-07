@@ -7,7 +7,7 @@ from langchain_core.load import load
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from langflow.custom import CustomComponent
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 
 class LCModelComponent(CustomComponent):

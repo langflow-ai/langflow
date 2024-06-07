@@ -3,7 +3,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.custom import CustomComponent
 from langflow.field_typing import Prompt, TemplateField, Text
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 
 class PromptComponent(CustomComponent):
