@@ -177,16 +177,12 @@ export default function ChatView({
             className="flex gap-1"
             size="none"
             variant="none"
+            disabled={lockChat}
             onClick={() => handleSelectChange("builds")}
           >
             <IconComponent
               name="Eraser"
-              className={classNames(
-                "h-5 w-5",
-                lockChat
-                  ? "animate-pulse text-primary"
-                  : "text-primary hover:text-gray-600"
-              )}
+              className={classNames("h-5 w-5 text-primary")}
               aria-hidden="true"
             />
           </Button>

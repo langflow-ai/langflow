@@ -1,3 +1,4 @@
+import emojiRegex from "emoji-regex";
 import { cloneDeep } from "lodash";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
@@ -225,8 +226,7 @@ export default function GenericNode({
 
   const nameEditable = true;
 
-  const emojiRegex = /\p{Emoji}/u;
-  const isEmoji = emojiRegex.test(data?.node?.icon!);
+  const isEmoji = emojiRegex().test(data?.node?.icon!);
 
   const iconNodeRender = useCallback(() => {
     const iconElement = data?.node?.icon;
@@ -262,6 +262,15 @@ export default function GenericNode({
     buildStatus: BuildStatus | undefined,
     validationStatus: VertexBuildTypeAPI | null
   ) => {
+    const conditionSuccess = validationStatus && validationStatus.valid;
+    const conditionInactive =
+      validationStatus &&
+      !validationStatus.valid &&
+      buildStatus === BuildStatus.INACTIVE;
+    const conditionError =
+      buildStatus === BuildStatus.ERROR ||
+      (validationStatus && !validationStatus.valid);
+
     if (buildStatus === BuildStatus.BUILDING) {
       return <Loading className="text-medium-indigo" />;
     } else {
@@ -269,31 +278,30 @@ export default function GenericNode({
         <>
           <IconComponent
             name="Play"
-            className="absolute ml-0.5 h-5 fill-current stroke-2 text-medium-indigo opacity-0 transition-all group-hover:opacity-100"
+            className={cn(
+              !conditionSuccess && !conditionInactive && !conditionError
+                ? "opacity-100"
+                : "opacity-0",
+              "absolute ml-0.5 h-5 fill-current stroke-2 text-muted-foreground transition-all group-hover:text-medium-indigo group-hover/node:opacity-100"
+            )}
           />
-          {validationStatus && validationStatus.valid ? (
+          {conditionSuccess ? (
             <Checkmark
-              className="absolute ml-0.5 h-5 stroke-2 text-status-green opacity-100 transition-all group-hover:opacity-0"
+              className="absolute ml-0.5 h-5 stroke-2 text-status-green opacity-100 transition-all group-hover/node:opacity-0"
               isVisible={true}
             />
-          ) : validationStatus &&
-            !validationStatus.valid &&
-            buildStatus === BuildStatus.INACTIVE ? (
+          ) : conditionInactive ? (
             <IconComponent
               name="Play"
-              className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-green opacity-30 transition-all group-hover:opacity-0"
+              className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-gray opacity-30 transition-all group-hover/node:opacity-0"
             />
-          ) : buildStatus === BuildStatus.ERROR ||
-            (validationStatus && !validationStatus.valid) ? (
+          ) : conditionError ? (
             <Xmark
               isVisible={true}
-              className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-red opacity-100 transition-all group-hover:opacity-0"
+              className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-red opacity-100 transition-all group-hover/node:opacity-0"
             />
           ) : (
-            <IconComponent
-              name="Play"
-              className="absolute ml-0.5 h-5 fill-current stroke-2 text-muted-foreground opacity-100 transition-all group-hover:opacity-0"
-            />
+            <></>
           )}
         </>
       );
@@ -337,7 +345,7 @@ export default function GenericNode({
     const names = classNames(
       baseBorderClass,
       nodeSizeClass,
-      "generic-node-div",
+      "generic-node-div group/node",
       specificClassFromBuildStatus
     );
     return names;

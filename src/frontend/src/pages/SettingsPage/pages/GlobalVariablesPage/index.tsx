@@ -16,13 +16,13 @@ import { cn } from "../../../../utils/utils";
 
 export default function GlobalVariablesPage() {
   const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries
+    (state) => state.globalVariablesEntries,
   );
   const removeGlobalVariable = useGlobalVariablesStore(
-    (state) => state.removeGlobalVariable
+    (state) => state.removeGlobalVariable,
   );
   const globalVariables = useGlobalVariablesStore(
-    (state) => state.globalVariables
+    (state) => state.globalVariables,
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
@@ -154,7 +154,7 @@ export default function GlobalVariablesPage() {
             <IconComponent
               name="Trash2"
               className={cn(
-                "h-5 w-5 text-destructive group-disabled:text-primary"
+                "h-5 w-5 text-destructive group-disabled:text-primary",
               )}
             />
           </Button>
@@ -168,23 +168,17 @@ export default function GlobalVariablesPage() {
       </div>
 
       <div className="flex h-full w-full flex-col justify-between">
-        <Card x-chunk="dashboard-04-chunk-2" className="h-full pt-4">
-          <CardContent className="h-full">
-            <TableComponent
-              overlayNoRowsTemplate="No data available"
-              onSelectionChanged={(event: SelectionChangedEvent) => {
-                setSelectedRows(
-                  event.api.getSelectedRows().map((row) => row.name)
-                );
-              }}
-              rowSelection="multiple"
-              suppressRowClickSelection={true}
-              pagination={true}
-              columnDefs={colDefs}
-              rowData={rowData}
-            />
-          </CardContent>
-        </Card>
+        <TableComponent
+          overlayNoRowsTemplate="No data available"
+          onSelectionChanged={(event: SelectionChangedEvent) => {
+            setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
+          }}
+          rowSelection="multiple"
+          suppressRowClickSelection={true}
+          pagination={true}
+          columnDefs={colDefs}
+          rowData={rowData}
+        />
       </div>
     </div>
   );

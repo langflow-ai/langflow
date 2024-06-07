@@ -55,6 +55,7 @@ class ApiKeyRead(ApiKeyBase):
     id: UUID
     api_key: str = Field(schema_extra={"validate_default": True})
     user_id: UUID = Field()
+    created_at: datetime = Field()
 
     @field_validator("api_key")
     @classmethod

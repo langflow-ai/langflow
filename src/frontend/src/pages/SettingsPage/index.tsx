@@ -8,7 +8,7 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 export default function SettingsPage(): JSX.Element {
   const pathname = location.pathname;
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
   useEffect(() => {
     setCurrentFlowId("");
@@ -25,13 +25,22 @@ export default function SettingsPage(): JSX.Element {
         />
       ),
     },
-
     {
       title: "Global Variables",
       href: "/settings/global-variables",
       icon: (
         <ForwardedIconComponent
           name="Globe"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
+    {
+      title: "API Keys",
+      href: "/settings/api-keys",
+      icon: (
+        <ForwardedIconComponent
+          name="Key"
           className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),
@@ -50,7 +59,10 @@ export default function SettingsPage(): JSX.Element {
       title: "Messages",
       href: "/settings/messages",
       icon: (
-        <ForwardedIconComponent name="Keyboard" className="w-5 stroke-[1.5]" />
+        <ForwardedIconComponent
+          name="MessagesSquare"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
       ),
     },
   ];
@@ -63,8 +75,10 @@ export default function SettingsPage(): JSX.Element {
         <aside className="flex h-full shrink-0 flex-col space-y-6 lg:w-[20vw]">
           <SidebarNav items={sidebarNavItems} />
         </aside>
-        <div className="h-full w-full flex-1 pb-8">
-          <Outlet />
+        <div className="flex h-full w-full flex-1 flex-col">
+          <div className="flex-1 pb-8">
+            <Outlet />
+          </div>
         </div>
       </div>
     </PageLayout>
