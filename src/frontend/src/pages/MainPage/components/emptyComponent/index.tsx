@@ -13,7 +13,7 @@ const EmptyComponent = ({}: EmptyComponentProps) => {
 
   return (
     <>
-      <div className="mt-6 flex w-full items-center justify-center text-center">
+      <div className="mt-2 flex w-full items-center justify-center text-center">
         <div className="flex-max-width h-full flex-col">
           <div className="align-center flex w-full justify-center gap-1 ">
             <span className="text-muted-foreground">

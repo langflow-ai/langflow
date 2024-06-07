@@ -80,7 +80,10 @@ jobs:
             langflowai/langflow-frontend:1.0-alpha
 
   restart-space:
+    name: Restart HuggingFace Spaces
+    if: ${{ inputs.release_type == 'main' }}
     runs-on: ubuntu-latest
+    needs: docker_build
     strategy:
       matrix:
         python-version:

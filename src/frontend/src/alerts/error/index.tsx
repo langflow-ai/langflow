@@ -51,13 +51,15 @@ export default function ErrorAlert({
             />
           </div>
           <div className="ml-3">
-            <h3 className="error-build-foreground">{title}</h3>
+            <h3 className="error-build-foreground line-clamp-2">{title}</h3>
             {list?.length !== 0 &&
             list?.some((item) => item !== null && item !== undefined) ? (
               <div className="error-build-message-div">
                 <ul className="error-build-message-list">
                   {list.map((item, index) => (
-                    <li key={index}>{item}</li>
+                    <li key={index} className="line-clamp-5">
+                      {item}
+                    </li>
                   ))}
                 </ul>
               </div>

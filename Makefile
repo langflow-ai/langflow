@@ -168,6 +168,7 @@ build_and_install:
 
 build_frontend:
 	cd src/frontend && CI='' npm run build
+	rm -rf src/backend/base/langflow/frontend
 	cp -r src/frontend/build src/backend/base/langflow/frontend
 
 build:
