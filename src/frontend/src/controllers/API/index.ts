@@ -366,7 +366,7 @@ export async function uploadFile(
 }
 
 export async function getProfilePictures(): Promise<ProfilePicturesTypeAPI> {
-  return await api.get(`${BASE_URL_API}files/list/profile_pictures`);
+  return api.get(`${BASE_URL_API}files/list/profile_pictures`);
 }
 
 export async function postCustomComponent(
