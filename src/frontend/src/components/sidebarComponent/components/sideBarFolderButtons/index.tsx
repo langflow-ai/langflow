@@ -14,19 +14,16 @@ import IconComponent, {
 import { Button, buttonVariants } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import useFileDrop from "../../hooks/use-on-file-drop";
-import useAlertStore from "../../../../stores/alertStore";
 
 type SideBarFoldersButtonsComponentProps = {
   folders: FolderType[];
   pathname: string;
   handleChangeFolder?: (id: string) => void;
-  handleEditFolder?: (item: FolderType) => void;
   handleDeleteFolder?: (item: FolderType) => void;
 };
 const SideBarFoldersButtonsComponent = ({
   pathname,
   handleChangeFolder,
-  handleEditFolder,
   handleDeleteFolder,
 }: SideBarFoldersButtonsComponentProps) => {
   const refInput = useRef<HTMLInputElement>(null);
