@@ -26,7 +26,7 @@ test.describe("save component tests", () => {
 
     // Read your file into a buffer.
     const jsonContent = readFileSync(
-      "tests/end-to-end/assets/flow_group_test.json",
+      "src/frontend/tests/end-to-end/assets/flow_group_test.json",
       "utf-8",
     );
 
@@ -91,6 +91,8 @@ test.describe("save component tests", () => {
     if (replaceButton) {
       await page.getByTestId("replace-button").click();
     }
+    await page.waitForTimeout(3000);
+
     await page.getByTestId("extended-disclosure").click();
     await page.getByPlaceholder("Search").click();
     await page.getByPlaceholder("Search").fill("group");

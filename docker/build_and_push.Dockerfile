@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 # Keep this syntax directive! It's used to enable Docker BuildKit
 
+
 ################################
 # BUILDER-BASE
 # Used to build deps + create our virtual environment
@@ -47,12 +48,10 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock README.md ./
 COPY src/ ./src
 COPY scripts/ ./scripts
-
 RUN python -m pip install requests --user && cd ./scripts && python update_dependencies.py
 RUN $POETRY_HOME/bin/poetry lock --no-update \
-      && $POETRY_HOME/bin/poetry install --no-interaction --no-ansi -E deploy \
       && $POETRY_HOME/bin/poetry build -f wheel \
-      && $POETRY_HOME/bin/poetry run pip install dist/*.whl
+      && $POETRY_HOME/bin/poetry run pip install dist/*.whl --force-reinstall
 
 ################################
 # RUNTIME

@@ -206,7 +206,7 @@ export default function IOFieldView({
                             <SelectItem key={separator} value={separator}>
                               {separator}
                             </SelectItem>
-                          ),
+                          )
                         )}
                       </SelectGroup>
                     </SelectContent>

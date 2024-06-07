@@ -46,7 +46,12 @@ const ApiModal = forwardRef(
     const { autoLogin } = useContext(AuthContext);
     const [open, setOpen] = useState(false);
     const [activeTab, setActiveTab] = useState("0");
-    const pythonApiCode = getPythonApiCode(flow?.id, autoLogin, tweak);
+    const pythonApiCode = getPythonApiCode(
+      flow?.id,
+      autoLogin,
+      tweak,
+      flow?.endpoint_name
+    );
     const curl_run_code = getCurlRunCode(
       flow?.id,
       autoLogin,

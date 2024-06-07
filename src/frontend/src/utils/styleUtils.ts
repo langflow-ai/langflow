@@ -56,6 +56,7 @@ import {
   FolderIcon,
   FolderPlus,
   FolderPlusIcon,
+  FolderUp,
   FormInput,
   Forward,
   Gift,
@@ -103,12 +104,14 @@ import {
   Redo,
   RefreshCcw,
   Repeat,
+  RotateCcw,
   Save,
   SaveAll,
   Scissors,
   ScreenShare,
   ScrollText,
   Search,
+  Settings,
   Settings2,
   Share,
   Share2,
@@ -153,8 +156,8 @@ import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
 import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { ChromaIcon } from "../icons/ChromaIcon";
-import { CouchbaseIcon } from "../icons/Couchbase";
 import { CohereIcon } from "../icons/Cohere";
+import { CouchbaseIcon } from "../icons/Couchbase";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
@@ -185,6 +188,7 @@ import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
+import { Streamlit } from "../icons/Streamlit";
 import { VectaraIcon } from "../icons/VectaraIcon";
 import { VertexAIIcon } from "../icons/VertexAI";
 import { WeaviateIcon } from "../icons/Weaviate";
@@ -428,6 +432,7 @@ export const nodeIconsLucide: iconsType = {
   ChevronLeft,
   SlidersHorizontal,
   Palette,
+  FolderUp,
   Blocks,
   ChevronDown,
   ArrowLeft,
@@ -526,4 +531,7 @@ export const nodeIconsLucide: iconsType = {
   FolderPlusIcon,
   FolderIcon,
   Discord: FaDiscord,
+  RotateCcw,
+  Settings,
+  Streamlit,
 };

@@ -21,7 +21,7 @@ test("InputListComponent", async ({ page }) => {
   }
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("astradb");
@@ -68,7 +68,7 @@ test("InputListComponent", async ({ page }) => {
     .getByTestId("input-list-input-edit_metadata_indexing_include-1")
     .fill("test1 test1 test1 test1");
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   await page
     .getByTestId("input-list-input_metadata_indexing_include-0")
