@@ -5,6 +5,8 @@ import IconComponent, {
 import { Skeleton } from "../../../../../components/ui/skeleton";
 import formatFileName from "./utils/format-file-name";
 
+const supImgFiles = ["png", "jpg", "jpeg", "gif", "bmp", "webp", "image"];
+
 export default function FilePreview({
   error,
   file,
@@ -16,7 +18,8 @@ export default function FilePreview({
   error: boolean;
   onDelete: () => void;
 }) {
-  const isImage = file.type.toLowerCase().includes("image");
+  const fileType = file.type.toLowerCase();
+  const isImage = supImgFiles.some((type) => fileType.includes(type));
 
   const [isHovered, setIsHovered] = useState(false);
 
