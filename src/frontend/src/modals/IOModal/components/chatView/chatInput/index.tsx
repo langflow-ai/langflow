@@ -37,7 +37,7 @@ export default function ChatInput({
 
   useFocusOnUnlock(lockChat, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
-  useUpload(uploadFile, currentFlowId, setFiles);
+  useUpload(uploadFile, currentFlowId, setFiles, lockChat || saveLoading);
   const { handleFileChange } = useHandleFileChange(setFiles, currentFlowId);
 
   const send = () => {

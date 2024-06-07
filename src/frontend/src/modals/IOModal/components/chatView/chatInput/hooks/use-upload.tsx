@@ -2,9 +2,12 @@ import { useEffect } from "react";
 import ShortUniqueId from "short-unique-id";
 import useFileUpload from "./use-file-upload";
 
-const useUpload = (uploadFile, currentFlowId, setFiles) => {
+const useUpload = (uploadFile, currentFlowId, setFiles, lockChat) => {
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent): void => {
+      if (lockChat) {
+        return;
+      }
       const items = event.clipboardData?.items;
       if (items) {
         for (let i = 0; i < items.length; i++) {
@@ -27,7 +30,7 @@ const useUpload = (uploadFile, currentFlowId, setFiles) => {
     return () => {
       document.removeEventListener("paste", handlePaste);
     };
-  }, [uploadFile, currentFlowId]);
+  }, [uploadFile, currentFlowId, lockChat]);
 
   return null;
 };
