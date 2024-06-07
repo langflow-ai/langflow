@@ -105,6 +105,7 @@ module.exports = {
       collapsed: true,
       items: [
         "tutorials/chatprompttemplate_guide",
+        "tutorials/custom_components",
         "tutorials/loading_document",
         "tutorials/rag-with-astradb",
       ],
