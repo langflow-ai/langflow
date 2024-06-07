@@ -168,8 +168,9 @@ class MonitorService(Service):
         order_by: Optional[str] = "timestamp",
         flow_id: Optional[str] = None,
     ):
-
-        query = "SELECT index,flow_id, status, error, timestamp, vertex_id, inputs, outputs, target_id FROM transactions"
+        query = (
+            "SELECT index,flow_id, status, error, timestamp, vertex_id, inputs, outputs, target_id FROM transactions"
+        )
         conditions = []
         if source:
             conditions.append(f"source = '{source}'")

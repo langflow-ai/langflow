@@ -36,6 +36,7 @@ class TransactionModel(BaseModel):
             return json.dumps(v)
         return v
 
+
 class TransactionModelResponse(BaseModel):
     index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
