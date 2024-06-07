@@ -769,11 +769,13 @@ class Graph:
             next_runnable_vertices, top_level_vertices = await self.get_next_and_top_level_vertices(
                 lock, set_cache_coro, vertex
             )
-            log_transaction(vertex, status="success")
+            flow_id = self.flow_id
+            log_transaction(flow_id, vertex, status="success")
             return next_runnable_vertices, top_level_vertices, result_dict, params, valid, artifacts, vertex
         except Exception as exc:
             logger.exception(f"Error building vertex: {exc}")
-            log_transaction(vertex, status="failure", error=str(exc))
+            flow_id = self.flow_id
+            log_transaction(flow_id, vertex, status="failure", error=str(exc))
             raise exc
 
     async def get_next_and_top_level_vertices(

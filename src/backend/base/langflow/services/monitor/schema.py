@@ -14,9 +14,10 @@ class TransactionModel(BaseModel):
     vertex_id: str
     target_id: str | None = None
     inputs: dict
-    outputs: dict
+    outputs: Optional[dict] = None
     status: str
     error: Optional[str] = None
+    flow_id: Optional[str] = Field(default=None, alias="flow_id")
 
     class Config:
         from_attributes = True
@@ -35,15 +36,17 @@ class TransactionModel(BaseModel):
             return json.dumps(v)
         return v
 
-
 class TransactionModelResponse(BaseModel):
     index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
     vertex_id: str
     inputs: dict
-    outputs: dict
+    outputs: Optional[dict] = None
     status: str
     error: Optional[str] = None
+    flow_id: Optional[str] = Field(default=None, alias="flow_id")
+    source: Optional[str] = None
+    target: Optional[str] = None
 
     class Config:
         from_attributes = True
