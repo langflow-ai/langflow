@@ -42,10 +42,10 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
             get().setLoading(false);
             resolve();
           },
-          () => {
+          (error) => {
             set({ folders: [] });
             get().setLoading(false);
-            reject();
+            reject(error);
           },
         );
       }
