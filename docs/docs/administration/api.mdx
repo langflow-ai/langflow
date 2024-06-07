@@ -14,9 +14,11 @@ The default values are `langflow` and `langflow`, respectively.
 
 </Admonition>
 
-## Generate an API Key
+## Generate an API key
 
-### With Langflow UI
+Generate a user-specific token to use with Langflow.
+
+### Generate an API key with the Langflow UI
 
 <ZoomableImage
   alt="Docusaurus themed image"
@@ -33,7 +35,7 @@ The default values are `langflow` and `langflow`, respectively.
 4. Click on "Create secret key".
 5. Copy the API key and store it in a secure location.
 
-### With Langflow CLI
+### Generate an API key with the Langflow CLI
 
 ```bash
 langflow api-key
@@ -51,9 +53,11 @@ python -m langflow api-key
 ╰──────────────────────────────
 ```
 
-## Use the API Key
+## Use the Langflow API key
 
-### Use the `x-api-key` Header
+Include your API key in API requests to authenticate requests to Langflow.
+
+### Use the `x-api-key` header
 
 Include the `x-api-key` in the HTTP header when making API requests:
 
@@ -108,7 +112,7 @@ api_key = "<your api key>"
 print(run_flow(inputs, flow_id=FLOW_ID, tweaks=TWEAKS, apiKey=api_key))
 ```
 
-### Use the Query Parameter
+### Use the query parameter
 
 Include the API key as a query parameter in the URL:
 
