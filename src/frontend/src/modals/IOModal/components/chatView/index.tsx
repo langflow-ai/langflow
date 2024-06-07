@@ -62,14 +62,11 @@ export default function ChatView({
     const chatMessages: ChatMessageType[] = chatOutputResponses
       .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
       //
-      .filter(
-        (output) =>
-          output?.data?.messages && output?.data?.messages?.length > 0,
-      )
+      .filter((output) => output.data.message)
       .map((output, index) => {
         try {
           const { sender, message, sender_name, stream_url, files } = output
-            ?.data?.messages[0] as ChatOutputType;
+            .data.message as ChatOutputType;
 
           const is_ai = sender === "Machine" || sender === null;
           return {
