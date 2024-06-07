@@ -16,12 +16,9 @@ from langflow.interface.types import get_all_components
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder, FolderCreate
-from langflow.services.database.models.user.crud import get_user_by_username
-from langflow.services.deps import get_settings_service, session_scope
-
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
-from langflow.services.deps import get_variable_service
-
+from langflow.services.database.models.user.crud import get_user_by_username
+from langflow.services.deps import get_settings_service, get_variable_service, session_scope
 
 STARTER_FOLDER_NAME = "Starter Projects"
 STARTER_FOLDER_DESCRIPTION = "Starter projects to help you get started in Langflow."
@@ -74,6 +71,10 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                 }
                             )
                             node_data["template"][field_name][attr] = field_dict[attr]
+            # Remove fields that are not in the latest template
+            for field_name in list(node_data["template"].keys()):
+                if field_name not in latest_template:
+                    node_data["template"].pop(field_name)
     log_node_changes(node_changes_log)
     return project_data_copy
 
