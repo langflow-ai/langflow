@@ -81,14 +81,16 @@ export default function Header(): JSX.Element {
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
         {showArrowReturnIcon && (
-          <button
+          <Button
+            variant="none"
+            size="none"
             onClick={() => {
               checkForChanges();
               redirectToLastLocation();
             }}
           >
             <IconComponent name="ChevronLeft" className="w-4" />
-          </button>
+          </Button>
         )}
 
         <MenuBar />
@@ -186,7 +188,9 @@ export default function Header(): JSX.Element {
             <Separator orientation="vertical" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
+                <Button
+                  variant="none"
+                  size="none"
                   data-testid="user-profile-settings"
                   className={
                     "h-7 w-7 rounded-full focus-visible:outline-0 " +

@@ -34,19 +34,14 @@ const HeaderComponent = ({
     <>
       <div className="flex w-full items-center justify-between gap-4">
         <div className="flex items-center justify-self-start">
-          <Button
-            variant="none"
-            size="none"
-            onClick={handleClick}
-            className="text-sm"
-          >
+          <a onClick={handleClick} className="cursor-pointer text-sm">
             <div className="flex items-center space-x-2">
               <Checkbox checked={!shouldSelectAll} id="terms" />
               <span className="label text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 {shouldSelectAll ? "Select All" : "Unselect All"}
               </span>
             </div>
-          </Button>
+          </a>
         </div>
         <div className="flex items-center gap-2">
           <div>
