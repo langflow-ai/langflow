@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useAlertStore from "../../../../../../../../stores/alertStore";
 import { gradients } from "../../../../../../../../utils/styleUtils";
 import useGetProfilePictures from "./hooks/use-get-profile-pictures";
@@ -10,6 +10,8 @@ import {
 import HorizontalScrollFadeComponent from "../../../../../../../../components/horizontalScrollFadeComponent";
 import LoadingComponent from "../../../../../../../../components/loadingComponent";
 import Loading from "../../../../../../../../components/ui/loading";
+import { cn } from "../../../../../../../../utils/utils";
+import { Button } from "../../../../../../../../components/ui/button";
 
 type ProfilePictureChooserComponentProps = {
   profilePictures: { [key: string]: string[] };
@@ -24,35 +26,53 @@ export default function ProfilePictureChooserComponent({
   value,
   onChange,
 }: ProfilePictureChooserComponentProps) {
+  const ref = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (value && ref) {
+      ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [ref]);
+
   return (
     <div className="flex flex-col justify-center gap-2">
       {loading ? (
         <Loading />
       ) : (
         Object.keys(profilePictures).map((folder, idx) => (
-          <Label>
+          <div className="flex flex-col gap-2">
             <div className="edit-flow-arrangement">
-              <span className="font-medium">{folder}</span>
+              <span className="font-normal">{folder}</span>
             </div>
-            <HorizontalScrollFadeComponent>
-              {profilePictures[folder].map((path, idx) => (
-                <img
-                  key={idx}
-                  src={`${BACKEND_URL.slice(
-                    0,
-                    BACKEND_URL.length - 1,
-                  )}${BASE_URL_API}files/images/${folder + "/" + path}`}
-                  className={
-                    "h-12 w-12 rounded-full" +
-                    (value === folder + "/" + path
-                      ? " border-2 border-white"
-                      : "")
-                  }
-                  onClick={() => onChange(folder + "/" + path)}
-                />
-              ))}
-            </HorizontalScrollFadeComponent>
-          </Label>
+            <div className="block overflow-hidden">
+              <div className="flex items-center gap-1 overflow-x-auto rounded-lg bg-background px-1">
+                {profilePictures[folder].map((path, idx) => (
+                  <Button
+                    ref={value === folder + "/" + path ? ref : undefined}
+                    size="none"
+                    variant="none"
+                    onClick={() => onChange(folder + "/" + path)}
+                    className="shrink-0 px-0.5 py-2"
+                  >
+                    <img
+                      key={idx}
+                      src={`${BACKEND_URL.slice(
+                        0,
+                        BACKEND_URL.length - 1,
+                      )}${BASE_URL_API}files/profile_pictures/${folder + "/" + path}`}
+                      style={{
+                        filter:
+                          value === folder + "/" + path
+                            ? "drop-shadow(0 0 0.3rem rgb(255, 255, 255))"
+                            : "",
+                      }}
+                      className={cn("h-12 w-12")}
+                    />
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
         ))
       )}
     </div>
