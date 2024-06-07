@@ -71,13 +71,13 @@ class Component(CustomComponent):
             for output in self.outputs:
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
-                if not vertex.outgoing_edges or output.display_name in vertex.edges_source_names:
+                if not vertex.outgoing_edges or output.name in vertex.edges_source_names:
                     method: Callable | Awaitable = getattr(self, output.method)
                     result = method()
                     # If the method is asynchronous, we need to await it
                     if inspect.iscoroutinefunction(method):
                         result = await result
-                    _results[output.display_name] = result
+                    _results[output.name] = result
         self._results = _results
         return _results
 
