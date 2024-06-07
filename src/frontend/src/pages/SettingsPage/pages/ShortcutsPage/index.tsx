@@ -115,6 +115,7 @@ export default function ShortcutsPage() {
             pagination={false}
             columnDefs={colDefs}
             rowData={nodesRowData}
+            paginationPageSize={8}
           />
         </div>
       </div>
