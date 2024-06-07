@@ -45,7 +45,7 @@ const ExportModal = forwardRef(
                 is_component: false,
               },
               name!,
-              description
+              description,
             );
             setNoticeData({
               title: API_WARNING_NOTICE_ALERT,
@@ -61,7 +61,7 @@ const ExportModal = forwardRef(
                 is_component: false,
               }),
               name!,
-              description
+              description,
             );
           setOpen(false);
         }}
@@ -94,7 +94,7 @@ const ExportModal = forwardRef(
               {SAVE_WITH_API_CHECKBOX}
             </label>
           </div>
-          <span className=" text-xs text-destructive ">
+          <span className="mt-1 text-xs text-destructive ">
             {ALERT_SAVE_WITH_API}
           </span>
         </BaseModal.Content>
@@ -102,6 +102,6 @@ const ExportModal = forwardRef(
         <BaseModal.Footer submit={{ label: "Download Flow" }} />
       </BaseModal>
     );
-  }
+  },
 );
 export default ExportModal;

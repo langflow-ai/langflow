@@ -11,6 +11,8 @@ import {
   STATUS_BUILDING,
 } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
+import { countHandlesFn } from "../../customNodes/helpers/count-handles";
+import { getSpecificClassFromBuildStatus } from "../../customNodes/helpers/get-class-from-build-status";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
@@ -22,8 +24,6 @@ import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn } from "../../utils/utils";
-import { countHandlesFn } from "../helpers/count-handles";
-import { getSpecificClassFromBuildStatus } from "../helpers/get-class-from-build-status";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useIconNodeRender from "../hooks/use-icon-render";
 import useIconStatus from "../hooks/use-icons-status";
@@ -127,7 +127,7 @@ export default function GenericNode({
     const names = classNames(
       baseBorderClass,
       nodeSizeClass,
-      "generic-node-div",
+      "generic-node-div group/node",
       specificClassFromBuildStatus
     );
     return names;

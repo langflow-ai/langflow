@@ -698,13 +698,13 @@ graph = ["gremlinpython (==3.4.6)"]
 
 [[package]]
 name = "cassio"
-version = "0.1.7"
+version = "0.1.8"
 description = "A framework-agnostic Python library to seamlessly integrate Apache Cassandra(R) with ML/LLM/genAI workloads."
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "cassio-0.1.7-py3-none-any.whl", hash = "sha256:08d1028a20d09bd207de0e17eaf7ae821b3c8e4788555e2d337aa440e0846d87"},
-    {file = "cassio-0.1.7.tar.gz", hash = "sha256:44f705dff8a9a1c48527db2c9e968686358c960fa21ba940d9e66de00639ad78"},
+    {file = "cassio-0.1.8-py3-none-any.whl", hash = "sha256:c09e7c884ba7227ff5277c86f3b0f31c523672ea407f56d093c7227e69c54d94"},
+    {file = "cassio-0.1.8.tar.gz", hash = "sha256:4e09929506cb3dd6fad217e89846d0a1a59069afd24b82c72526ef6f2e9271af"},
 ]
 
 [package.dependencies]
@@ -4327,7 +4327,7 @@ types-requests = ">=2.31.0.2,<3.0.0.0"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.58"
+version = "0.0.59"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
@@ -5588,13 +5588,13 @@ sympy = "*"
 
 [[package]]
 name = "openai"
-version = "1.31.2"
+version = "1.32.0"
 description = "The official Python library for the openai API"
 optional = false
 python-versions = ">=3.7.1"
 files = [
-    {file = "openai-1.31.2-py3-none-any.whl", hash = "sha256:203cf21294f347c3d7b591e0ccbe18389d6f8967d4237214b926ea76b1e1781c"},
-    {file = "openai-1.31.2.tar.gz", hash = "sha256:966ab3165b926cb5ec091d2434c90613e2ea8b73ffad984f7fec34bde971725a"},
+    {file = "openai-1.32.0-py3-none-any.whl", hash = "sha256:953d57669f309002044fd2f678aba9f07a43256d74b3b00cd04afb5b185568ea"},
+    {file = "openai-1.32.0.tar.gz", hash = "sha256:a6df15a7ab9344b1bc2bc8d83639f68b7a7e2453c0f5e50c1666547eee86f0bd"},
 ]
 
 [package.dependencies]

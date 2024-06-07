@@ -21,6 +21,7 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   TOOLTIP_EMPTY,
 } from "../../../../constants/constants";
+import OutputModal from "../../../../customNodes/genericNode/components/outputModal";
 import { Case } from "../../../../shared/components/caseComponent";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -44,7 +45,6 @@ import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
-import OutputModal from "../outputModal";
 import TooltipRenderComponent from "../tooltipRenderComponent";
 import { TEXT_FIELD_TYPES } from "./constants";
 
@@ -284,7 +284,7 @@ export default function ParameterComponent({
                         "h-5 w-5 rounded-md",
                         displayOutputPreview && !unknownOutput
                           ? " hover:bg-secondary-foreground/5 hover:text-medium-indigo"
-                          : " cursor-not-allowed text-muted-foreground",
+                          : " cursor-not-allowed text-muted-foreground"
                       )}
                       name={"ScanEye"}
                     />
