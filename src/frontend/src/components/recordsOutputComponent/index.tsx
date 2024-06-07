@@ -23,6 +23,7 @@ function RecordsOutputComponent({
 
   return (
     <TableComponent
+      key={"recordsOutputComponent"}
       overlayNoRowsTemplate="No data available"
       suppressRowClickSelection={true}
       pagination={pagination}

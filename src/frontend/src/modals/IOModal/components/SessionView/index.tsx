@@ -44,43 +44,23 @@ export default function SessionView({ rows }: { rows: Array<any> }) {
   }
 
   return (
-    <div className="flex h-full w-full flex-col justify-between gap-6">
-      <>
-        <div className="flex w-full items-center justify-end gap-4 space-y-0.5">
-          <div className="flex flex-shrink-0 items-center gap-2">
-            <Button
-              data-testid="api-key-button-store"
-              variant="primary"
-              className="group px-2"
-              disabled={selectedRows.length === 0}
-              onClick={handleRemoveMessages}
-            >
-              <ForwardedIconComponent
-                name="Trash2"
-                className={cn(
-                  "h-5 w-5 text-destructive group-disabled:text-primary",
-                )}
-              />
-            </Button>
-          </div>
-        </div>
-      </>
-      <TableComponent
-        readOnlyEdit
-        onCellEditRequest={(event) => {
-          handleUpdateMessage(event);
-        }}
-        editable={["Sender Name", "Message"]}
-        overlayNoRowsTemplate="No data available"
-        onSelectionChanged={(event: SelectionChangedEvent) => {
-          setSelectedRows(event.api.getSelectedRows().map((row) => row.index));
-        }}
-        rowSelection="multiple"
-        suppressRowClickSelection={true}
-        pagination={true}
-        columnDefs={columns}
-        rowData={rows}
-      />
-    </div>
+    <TableComponent
+      key={"sessionView"}
+      onDelete={handleRemoveMessages}
+      readOnlyEdit
+      onCellEditRequest={(event) => {
+        handleUpdateMessage(event);
+      }}
+      editable={["Sender Name", "Message"]}
+      overlayNoRowsTemplate="No data available"
+      onSelectionChanged={(event: SelectionChangedEvent) => {
+        setSelectedRows(event.api.getSelectedRows().map((row) => row.index));
+      }}
+      rowSelection="multiple"
+      suppressRowClickSelection={true}
+      pagination={true}
+      columnDefs={columns}
+      rowData={rows}
+    />
   );
 }

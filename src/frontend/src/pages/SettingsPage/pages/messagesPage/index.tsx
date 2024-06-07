@@ -53,6 +53,8 @@ export default function MessagesPage() {
 
       <div className="flex h-full w-full flex-col justify-between">
         <TableComponent
+          key={"sessionView"}
+          onDelete={handleRemoveMessages}
           readOnlyEdit
           onCellEditRequest={(event) => {
             handleUpdateMessage(event);
