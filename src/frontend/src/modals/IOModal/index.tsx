@@ -29,6 +29,7 @@ import { useMessagesStore } from "../../stores/messagesStore";
 import SessionView from "./components/SessionView";
 import useRemoveSession from "./components/SessionView/hooks";
 import useAlertStore from "../../stores/alertStore";
+import { Button } from "../../components/ui/button";
 
 export default function IOModal({
   children,
@@ -39,25 +40,25 @@ export default function IOModal({
   const allNodes = useFlowStore((state) => state.nodes);
   const setMessages = useMessagesStore((state) => state.setMessages);
   const inputs = useFlowStore((state) => state.inputs).filter(
-    (input) => input.type !== "ChatInput"
+    (input) => input.type !== "ChatInput",
   );
   const chatInput = useFlowStore((state) => state.inputs).find(
-    (input) => input.type === "ChatInput"
+    (input) => input.type === "ChatInput",
   );
   const outputs = useFlowStore((state) => state.outputs).filter(
-    (output) => output.type !== "ChatOutput"
+    (output) => output.type !== "ChatOutput",
   );
   const chatOutput = useFlowStore((state) => state.outputs).find(
-    (output) => output.type === "ChatOutput"
+    (output) => output.type === "ChatOutput",
   );
   const nodes = useFlowStore((state) => state.nodes).filter(
     (node) =>
       inputs.some((input) => input.id === node.id) ||
-      outputs.some((output) => output.id === node.id)
+      outputs.some((output) => output.id === node.id),
   );
   const haveChat = chatInput || chatOutput;
   const [selectedTab, setSelectedTab] = useState(
-    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0
+    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0,
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -170,7 +171,7 @@ export default function IOModal({
 
   return (
     <BaseModal
-      size={selectedTab === 0 ? "sm-thin" : "md-thin"}
+      size={"md-thin"}
       open={open}
       setOpen={setOpen}
       disable={disable}
@@ -232,6 +233,10 @@ export default function IOModal({
                           key={index}
                         >
                           <AccordionComponent
+                            disabled={
+                              node.data.node!.template["input_value"]?.value ===
+                              ""
+                            }
                             trigger={
                               <div className="file-component-badge-div">
                                 <ShadTooltip
@@ -417,7 +422,7 @@ export default function IOModal({
                 <div
                   className={cn(
                     "flex h-full w-full flex-col items-start gap-4 pt-4",
-                    !selectedViewField ? "hidden" : ""
+                    !selectedViewField ? "hidden" : "",
                   )}
                 >
                   <div className="font-xl flex items-center justify-center gap-3 font-semibold">
@@ -471,7 +476,7 @@ export default function IOModal({
               <div
                 className={cn(
                   "flex h-full w-full",
-                  selectedViewField ? "hidden" : ""
+                  selectedViewField ? "hidden" : "",
                 )}
               >
                 {haveChat ? (
@@ -503,7 +508,7 @@ export default function IOModal({
                   "h-4 w-4",
                   isBuilding
                     ? "animate-spin"
-                    : "fill-current text-medium-indigo"
+                    : "fill-current text-medium-indigo",
                 )}
               />
             ),
