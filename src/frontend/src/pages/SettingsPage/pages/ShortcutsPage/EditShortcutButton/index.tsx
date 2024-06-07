@@ -119,9 +119,7 @@ export default function EditShortcutButton({
         if (key.toUpperCase().includes(e.key.toUpperCase())) return;
       }
       if (e.key?.toLowerCase() === "control") {
-        console.log("oi");
         fixedKey = "Ctrl";
-        console.log(fixedKey);
       }
       setKey((oldKey) =>
         getFixedCombination({ oldKey: oldKey!, key: fixedKey }),
