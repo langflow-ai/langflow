@@ -244,12 +244,6 @@ class VerticesOrderResponse(BaseModel):
     run_id: UUID
     vertices_to_run: List[str]
 
-
-class Log(TypedDict):
-    message: Union[dict, str]
-    type: str
-
-
 class ResultDataResponse(BaseModel):
     results: Optional[Any] = Field(default_factory=dict)
     logs: List[Log | None] = Field(default_factory=list)
