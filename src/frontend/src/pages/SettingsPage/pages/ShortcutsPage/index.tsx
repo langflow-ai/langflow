@@ -16,7 +16,7 @@ export default function ShortcutsPage() {
   const setShortcuts = useShortcutsStore((state) => state.setShortcuts);
 
   // Column Definitions: Defines the columns to be displayed.
-  const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
+  const colDefs = [
     {
       headerName: "Functionality",
       field: "name",
@@ -33,7 +33,7 @@ export default function ShortcutsPage() {
       editable: false,
       resizable: false,
     },
-  ]);
+  ];
 
   const [nodesRowData, setNodesRowData] = useState<
     Array<{ name: string; shortcut: string }>

@@ -16,6 +16,7 @@ import {
 } from "../../components/ui/dialog-with-no-close";
 
 import { DialogClose } from "@radix-ui/react-dialog";
+import * as Form from "@radix-ui/react-form";
 import { Button } from "../../components/ui/button";
 import { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
@@ -52,10 +53,10 @@ const Trigger: React.FC<TriggerProps> = ({
   );
 };
 
-const Header: React.FC<{ children: ReactNode; description: string | null }> = ({
-  children,
-  description,
-}: modalHeaderType): JSX.Element => {
+const Header: React.FC<{
+  children: ReactNode;
+  description: string | JSX.Element | null;
+}> = ({ children, description }: modalHeaderType): JSX.Element => {
   return (
     <DialogHeader>
       <DialogTitle className="flex items-center">{children}</DialogTitle>
@@ -111,6 +112,7 @@ interface BaseModalProps {
     | "smaller"
     | "small"
     | "medium"
+    | "medium-tall"
     | "large"
     | "three-cards"
     | "large-thin"
@@ -119,7 +121,8 @@ interface BaseModalProps {
     | "medium-h-full"
     | "md-thin"
     | "sm-thin"
-    | "smaller-h-full";
+    | "smaller-h-full"
+    | "medium-log";
 
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;
@@ -162,53 +165,63 @@ function BaseModal({
       {type === "modal" ? (
         <Modal open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <ModalContent className={cn(minWidth, "duration-300")}>
-            <div className="truncate-doubleline word-break-break-word">
+          <ModalContent
+            className={cn(minWidth, height, "flex flex-col duration-300")}
+          >
+            <div className="flex-shrink-0 truncate-doubleline word-break-break-word">
               {headerChild}
             </div>
             <div
-              className={`flex flex-col ${height} w-full transition-all duration-300`}
+              className={`flex w-full flex-1 flex-col transition-all duration-300`}
             >
               {ContentChild}
             </div>
             {ContentFooter && (
-              <div className="flex flex-row-reverse">{ContentFooter}</div>
+              <div className="flex flex-shrink-0 flex-row-reverse">
+                {ContentFooter}
+              </div>
             )}
           </ModalContent>
         </Modal>
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <DialogContent className={cn(minWidth, "duration-300")}>
-            <div className="truncate-doubleline word-break-break-word">
+          <DialogContent
+            className={cn(minWidth, height, "flex flex-col duration-300")}
+          >
+            <div className="flex-shrink-0 truncate-doubleline word-break-break-word">
               {headerChild}
             </div>
             {onSubmit ? (
-              <form
+              <Form.Root
                 onSubmit={(event) => {
                   event.preventDefault();
                   onSubmit();
                 }}
-                className="flex flex-col gap-6"
+                className="flex min-h-0 flex-1 flex-col gap-6"
               >
                 <div
-                  className={`flex flex-col ${height} w-full transition-all duration-300`}
+                  className={`flex w-full flex-1 flex-col overflow-hidden transition-all duration-300`}
                 >
                   {ContentChild}
                 </div>
                 {ContentFooter && (
-                  <div className="flex flex-row-reverse">{ContentFooter}</div>
+                  <div className="flex flex-shrink-0 flex-row-reverse">
+                    {ContentFooter}
+                  </div>
                 )}
-              </form>
+              </Form.Root>
             ) : (
               <>
                 <div
-                  className={`flex flex-col ${height} w-full transition-all duration-300`}
+                  className={`flex min-h-0 w-full flex-1 flex-col transition-all duration-300`}
                 >
                   {ContentChild}
                 </div>
                 {ContentFooter && (
-                  <div className="flex flex-row-reverse">{ContentFooter}</div>
+                  <div className="flex flex-shrink-0 flex-row-reverse">
+                    {ContentFooter}
+                  </div>
                 )}
               </>
             )}

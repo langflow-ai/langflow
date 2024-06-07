@@ -15,6 +15,10 @@ pre {
   font-family: inherit;
 }
 
+.ag-paging-page-size {
+  display: none;
+}
+
 .react-flow__pane {
   cursor: default;
 }
@@ -95,4 +99,13 @@ select:-webkit-autofill:focus {
 
 .json-view-dark {
   background-color: #141924 !important;
+}
+
+.ag-row .ag-cell {
+  align-content: center !important;
+}
+.ag-cell {
+  line-height: 1.25rem;
+  padding-top: 0.675rem;
+  padding-bottom: 0.675rem;
 }

@@ -1,7 +1,7 @@
 import { ChangeEvent, KeyboardEvent } from "react";
+import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
 import { Input } from "../../../../../../components/ui/input";
 import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
-import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
 
 type InputSearchComponentProps = {
   loading: boolean;

@@ -119,21 +119,16 @@ async def log_message(
     sender_name: str,
     message: str,
     session_id: str,
-    artifacts: Optional[dict] = None,
+    files: Optional[list] = None,
     flow_id: Optional[str] = None,
 ):
     try:
-        from langflow.graph.vertex.base import Vertex
-
-        if isinstance(session_id, Vertex):
-            session_id = await session_id.build()  # type: ignore
-
         monitor_service = get_monitor_service()
         row = {
             "sender": sender,
             "sender_name": sender_name,
             "message": message,
-            "artifacts": artifacts or {},
+            "files": files or [],
             "session_id": session_id,
             "timestamp": monitor_service.get_timestamp(),
             "flow_id": flow_id,
@@ -183,14 +178,15 @@ def build_clean_params(target: "Vertex") -> dict:
     return params
 
 
-def log_transaction(vertex: "Vertex", status, error=None):
+def log_transaction(vertex: "Vertex", status, target: Optional["Vertex"] = None, error=None):
     try:
         monitor_service = get_monitor_service()
         clean_params = build_clean_params(vertex)
         data = {
-            "vertex_id": vertex.id,
+            "vertex_id": str(vertex.id),
+            "target_id": str(target.id) if target else None,
             "inputs": clean_params,
-            "output": str(vertex.result),
+            "outputs": vertex.result.model_dump_json(),
             "timestamp": monitor_service.get_timestamp(),
             "status": status,
             "error": error,

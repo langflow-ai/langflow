@@ -1,5 +1,6 @@
 from typing import Optional, Union
 
+from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from langflow.custom import CustomComponent
 from langflow.field_typing import Text
 from langflow.helpers.record import records_to_text
@@ -40,6 +41,13 @@ class ChatComponent(CustomComponent):
                 "info": "In case of Message being a Record, this template will be used to convert it to text.",
                 "advanced": True,
             },
+            "files": {
+                "field_type": "file",
+                "display_name": "Files",
+                "file_types": TEXT_FILE_TYPES + IMG_FILE_TYPES,
+                "info": "Files to be sent with the message.",
+                "advanced": True,
+            },
         }
 
     def store_message(
@@ -65,6 +73,7 @@ class ChatComponent(CustomComponent):
         sender: Optional[str] = "User",
         sender_name: Optional[str] = "User",
         input_value: Optional[Union[str, Record]] = None,
+        files: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         return_record: Optional[bool] = False,
         record_template: str = "Text: {text}\nData: {data}",
@@ -76,6 +85,7 @@ class ChatComponent(CustomComponent):
                 input_value.data["sender"] = sender
                 input_value.data["sender_name"] = sender_name
                 input_value.data["session_id"] = session_id
+                input_value.data["files"] = files
             else:
                 input_value_record = Record(
                     text=input_value,
@@ -83,6 +93,7 @@ class ChatComponent(CustomComponent):
                         "sender": sender,
                         "sender_name": sender_name,
                         "session_id": session_id,
+                        "files": files,
                     },
                 )
         elif isinstance(input_value, Record):
@@ -103,17 +114,21 @@ class ChatComponent(CustomComponent):
         sender: Optional[str] = "User",
         sender_name: Optional[str] = "User",
         input_value: Optional[str] = None,
+        files: Optional[list[str]] = None,
         session_id: Optional[str] = None,
         return_record: Optional[bool] = False,
         record_template: str = "Text: {text}\nData: {data}",
     ) -> Union[Text, Record]:
         input_value_record: Optional[Record] = None
+        if files and not return_record:
+            raise ValueError("Files can only be provided when Return Record is enabled.")
         if return_record:
             if isinstance(input_value, Record):
                 # Update the data of the record
                 input_value.data["sender"] = sender
                 input_value.data["sender_name"] = sender_name
                 input_value.data["session_id"] = session_id
+                input_value.data["files"] = files
             else:
                 input_value_record = Record(
                     text=input_value,
@@ -121,6 +136,7 @@ class ChatComponent(CustomComponent):
                         "sender": sender,
                         "sender_name": sender_name,
                         "session_id": session_id,
+                        "files": files,
                     },
                 )
         elif isinstance(input_value, Record):

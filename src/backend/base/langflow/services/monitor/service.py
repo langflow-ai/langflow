@@ -32,6 +32,10 @@ class MonitorService(Service):
         except Exception as e:
             logger.exception(f"Error initializing monitor service: {e}")
 
+    def exec_query(self, query: str):
+        with duckdb.connect(str(self.db_path)) as conn:
+            return conn.execute(query).df()
+
     def to_df(self, table_name):
         return self.load_table_as_dataframe(table_name)
 
@@ -69,7 +73,7 @@ class MonitorService(Service):
         valid: Optional[bool] = None,
         order_by: Optional[str] = "timestamp",
     ):
-        query = "SELECT index,flow_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
+        query = "SELECT id, index,flow_id, valid, params, data, artifacts, timestamp FROM vertex_builds"
         conditions = []
         if flow_id:
             conditions.append(f"flow_id = '{flow_id}'")
@@ -88,6 +92,8 @@ class MonitorService(Service):
         with duckdb.connect(str(self.db_path)) as conn:
             df = conn.execute(query).df()
 
+        print(query)
+
         return df.to_dict(orient="records")
 
     def delete_vertex_builds(self, flow_id: Optional[str] = None):
@@ -98,11 +104,22 @@ class MonitorService(Service):
         with duckdb.connect(str(self.db_path)) as conn:
             conn.execute(query)
 
-    def delete_messages(self, session_id: str):
+    def delete_messages_session(self, session_id: str):
         query = f"DELETE FROM messages WHERE session_id = '{session_id}'"
 
-        with duckdb.connect(str(self.db_path)) as conn:
-            conn.execute(query)
+        return self.exec_query(query)
+
+    def delete_messages(self, message_ids: list[int]):
+        query = f"DELETE FROM messages WHERE index IN ({','.join(map(str, message_ids))})"
+
+        return self.exec_query(query)
+
+    def update_message(self, message_id: int, **kwargs):
+        query = (
+            f"""UPDATE messages SET {', '.join(f"{k} = '{v}'" for k, v in kwargs.items())} WHERE index = {message_id}"""
+        )
+
+        return self.exec_query(query)
 
     def add_message(self, message: MessageModel):
         self.add_row("messages", message)
@@ -117,7 +134,7 @@ class MonitorService(Service):
         order: Optional[str] = "DESC",
         limit: Optional[int] = None,
     ):
-        query = "SELECT index, flow_id, sender_name, sender, session_id, message, artifacts, timestamp FROM messages"
+        query = "SELECT index, flow_id, sender_name, sender, session_id, message, timestamp FROM messages"
         conditions = []
         if sender:
             conditions.append(f"sender = '{sender}'")
