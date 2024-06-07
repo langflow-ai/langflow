@@ -4,13 +4,9 @@ This is a list of possible issues that you may encounter when installing Langflo
 
 ## _`No module named 'langflow.__main__'`_
 
-### TL;DR
-
 1. Run _`python -m langflow run`_ instead of _`langflow run`_.
 2. If that doesn't work, reinstall Langflow with _`_python -m pip install langflow --pre -U`_.
 3. If that doesn't work, reinstall Langflow and its dependencies with _`python -m pip install langflow --pre -U --force-reinstall`_.
-
-### Details
 
 When you try to run Langflow using the command `langflow run`, you may encounter the following error:
 
@@ -33,14 +29,11 @@ There are two possible reasons for this error:
 
 ## _`Something went wrong running migrations. Please, run 'langflow migration --fix'`_
 
-### TL;DR
+Clear the cache by deleting the contents of the cache folder.
 
-- Clear the cache by deleting the contents of the cache folder.
-  This folder can be found at:
+This folder can be found at:
   - **Linux or WSL2 on Windows**: `home/<username>/.cache/langflow/`
   - **MacOS**: `/Users/<username>/Library/Caches/langflow/`
-
-### Details
 
 This error can occur during Langflow upgrades when the new version can't override `langflow-pre.db` in `.cache/langflow/`. Clearing the cache removes this file but will also erase your settings.
 
