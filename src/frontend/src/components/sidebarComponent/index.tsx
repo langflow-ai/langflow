@@ -12,7 +12,6 @@ type SidebarNavProps = {
     title: string;
     icon: React.ReactNode;
   }[];
-  handleOpenNewFolderModal?: () => void;
   handleChangeFolder?: (id: string) => void;
   handleEditFolder?: (item: FolderType) => void;
   handleDeleteFolder?: (item: FolderType) => void;
