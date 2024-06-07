@@ -10,6 +10,7 @@ import {
   RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
+  TOOLTIP_OUTDATED_NODE,
 } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import { countHandlesFn } from "../helpers/count-handles";
@@ -34,6 +35,8 @@ import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import ParameterComponent from "./components/parameterComponent";
+import { postCustomComponent } from "../../controllers/API";
+import { cloneDeep } from "lodash";
 
 export default function GenericNode({
   data,
@@ -201,6 +204,37 @@ export default function GenericNode({
     setShowNode(data.showNode ?? true);
   }, [data.showNode]);
 
+  const handleUpdateCode = () => {
+    takeSnapshot();
+    // to update we must get the code from the templates in useTypesStore
+    const thisNodeTemplate = templates[data.type]?.template;
+    // if the template does not have a code key
+    // return
+    if (!thisNodeTemplate?.code) return;
+
+    const currentCode = thisNodeTemplate.code.value;
+    if (data.node) {
+      postCustomComponent(currentCode, data.node)
+        .then((apiReturn) => {
+          const { data } = apiReturn;
+          if (data && updateNodeCode) {
+            updateNodeCode(data, currentCode, "code");
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+      setNode(data.id, (oldNode) => {
+        let newNode = cloneDeep(oldNode);
+        newNode.data = {
+          ...data,
+        };
+        newNode.data.node.template.code.value = currentCode;
+        return newNode;
+      });
+    }
+  };
+
   const memoizedNodeToolbarComponent = useMemo(() => {
     return (
       <NodeToolbar>
@@ -221,8 +255,6 @@ export default function GenericNode({
           showNode={showNode}
           openAdvancedModal={false}
           onCloseAdvancedModal={() => {}}
-          updateNodeCode={updateNodeCode}
-          isOutdated={isOutdated}
           selected={selected}
         />
       </NodeToolbar>
@@ -439,12 +471,18 @@ export default function GenericNode({
               <>
                 <div className="flex flex-shrink-0 items-center gap-1">
                   {isOutdated && (
-                    <Button variant="secondary" className={"h-9 px-1.5"}>
-                      <IconComponent
-                        name="AlertTriangle"
-                        className="h-5 w-5 text-status-yellow"
-                      />
-                    </Button>
+                    <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
+                      <Button
+                        onClick={handleUpdateCode}
+                        variant="secondary"
+                        className={"h-9 px-1.5"}
+                      >
+                        <IconComponent
+                          name="AlertTriangle"
+                          className="h-5 w-5 text-status-yellow"
+                        />
+                      </Button>
+                    </ShadTooltip>
                   )}
                   <ShadTooltip
                     content={
