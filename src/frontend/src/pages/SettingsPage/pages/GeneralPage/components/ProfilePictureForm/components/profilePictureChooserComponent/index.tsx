@@ -1,6 +1,6 @@
-import { gradients } from "../../utils/styleUtils";
+import { gradients } from "../../../../../../../../utils/styleUtils";
 
-export default function GradientChooserComponent({ value, onChange }) {
+export default function ProfilePictureChooserComponent({ value, onChange }) {
   return (
     <div className="flex flex-wrap items-center justify-start gap-2">
       {gradients.map((gradient, idx) => (

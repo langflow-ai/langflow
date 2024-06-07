@@ -589,7 +589,7 @@ export const CONTROL_INPUT_STATE = {
 export const CONTROL_PATCH_USER_STATE = {
   password: "",
   cnfPassword: "",
-  gradient: "",
+  profilePicture: "",
   apikey: "",
 };
 
