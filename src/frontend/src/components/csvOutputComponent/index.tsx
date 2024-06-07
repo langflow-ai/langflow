@@ -115,6 +115,7 @@ function CsvOutputComponent({
           style={{ height: "100%", width: "100%" }}
         >
           <TableComponent
+            key={"csv-output"}
             rowData={rowData}
             columnDefs={colDefs}
             defaultColDef={defaultColDef}

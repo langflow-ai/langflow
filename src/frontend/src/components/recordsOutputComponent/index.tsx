@@ -13,7 +13,9 @@ function RecordsOutputComponent({
   rows: any;
   columnMode?: "intersection" | "union";
 }) {
+  console.log("rows", rows);
   const columns = extractColumnsFromRows(rows, columnMode);
+  console.log("columns", columns);
 
   const columnDefs = columns.map((col, idx) => ({
     ...col,
@@ -23,6 +25,7 @@ function RecordsOutputComponent({
 
   return (
     <TableComponent
+      key={"recordsOutputComponent"}
       overlayNoRowsTemplate="No data available"
       suppressRowClickSelection={true}
       pagination={pagination}

@@ -982,9 +982,7 @@ export async function postBuildVertex(
   files?: string[],
 ): Promise<AxiosResponse<VertexBuildTypeAPI>> {
   // input_value is optional and is a query parameter
-  const data = input_value
-    ? { inputs: { input_value: input_value } }
-    : undefined;
+  const data = { inputs: { input_value: input_value ?? "" } };
   if (data && files) {
     data["files"] = files;
   }

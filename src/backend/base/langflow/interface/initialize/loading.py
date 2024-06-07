@@ -125,7 +125,6 @@ async def instantiate_custom_component(params, user_id, vertex, fallback_to_env_
         custom_repr = build_result
     if not isinstance(custom_repr, str):
         custom_repr = str(custom_repr)
-
     raw = custom_component.repr_value
     if hasattr(raw, "data"):
         raw = raw.data

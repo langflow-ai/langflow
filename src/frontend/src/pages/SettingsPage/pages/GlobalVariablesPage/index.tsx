@@ -143,20 +143,6 @@ export default function GlobalVariablesPage() {
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
-          <Button
-            data-testid="api-key-button-store"
-            variant="primary"
-            className="group px-2"
-            disabled={selectedRows.length === 0}
-            onClick={removeVariables}
-          >
-            <IconComponent
-              name="Trash2"
-              className={cn(
-                "h-5 w-5 text-destructive group-disabled:text-primary",
-              )}
-            />
-          </Button>
           <AddNewVariableButton>
             <Button data-testid="api-key-button-store" variant="primary">
               <IconComponent name="Plus" className="mr-2 w-4" />
@@ -168,6 +154,7 @@ export default function GlobalVariablesPage() {
 
       <div className="flex h-full w-full flex-col justify-between">
         <TableComponent
+          key={"globalVariables"}
           overlayNoRowsTemplate="No data available"
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
@@ -177,6 +164,7 @@ export default function GlobalVariablesPage() {
           pagination={true}
           columnDefs={colDefs}
           rowData={rowData}
+          onDelete={removeVariables}
         />
       </div>
     </div>

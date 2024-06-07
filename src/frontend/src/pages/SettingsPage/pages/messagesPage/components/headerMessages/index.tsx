@@ -8,7 +8,6 @@ type HeaderMessagesComponentProps = {
 };
 const HeaderMessagesComponent = ({
   selectedRows,
-  handleRemoveMessages,
 }: HeaderMessagesComponentProps) => {
   return (
     <>
@@ -25,22 +24,6 @@ const HeaderMessagesComponent = ({
             Inspect, edit and remove messages to explore and refine model
             behaviors.
           </p>
-        </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
-          <Button
-            data-testid="api-key-button-store"
-            variant="primary"
-            className="group px-2"
-            disabled={selectedRows.length === 0}
-            onClick={handleRemoveMessages}
-          >
-            <ForwardedIconComponent
-              name="Trash2"
-              className={cn(
-                "h-5 w-5 text-destructive group-disabled:text-primary",
-              )}
-            />
-          </Button>
         </div>
       </div>
     </>

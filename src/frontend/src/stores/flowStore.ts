@@ -16,18 +16,14 @@ import {
 import { BuildStatus } from "../constants/enums";
 import { getFlowPool } from "../controllers/API";
 import { VertexBuildTypeAPI } from "../types/api";
+import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
   NodeDataType,
   NodeType,
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import {
-  ChatOutputType,
-  FlowStoreType,
-  VertexLayerElementType,
-  chatInputType,
-} from "../types/zustand/flow";
+import { FlowStoreType, VertexLayerElementType } from "../types/zustand/flow";
 import { buildVertices } from "../utils/buildUtils";
 import {
   checkChatInput,
@@ -77,7 +73,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateFlowPool: (
     nodeId: string,
-    data: VertexBuildTypeAPI | ChatOutputType | chatInputType,
+    data: VertexBuildTypeAPI | ChatOutputType | ChatInputType,
     buildId?: string,
   ) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
@@ -94,9 +90,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       }
       //update data results
       else {
-        newFlowPool[nodeId][index].data.messages[0] = data as
+        newFlowPool[nodeId][index].data.message = data as
           | ChatOutputType
-          | chatInputType;
+          | ChatInputType;
       }
     }
     get().setFlowPool(newFlowPool);
@@ -492,8 +488,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           (id) => !vertexBuildData.inactivated_vertices?.includes(id),
         );
         const top_level_vertices = vertexBuildData.top_level_vertices.filter(
-          (vertex) =>
-            !vertexBuildData.inactivated_vertices?.includes(vertex.id),
+          (vertex) => !vertexBuildData.inactivated_vertices?.includes(vertex),
         );
         const nextVertices: VertexLayerElementType[] = zip(
           next_vertices_ids,
@@ -518,7 +513,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       }
 
       get().addDataToFlowPool(
-        { ...vertexBuildData, buildId: runId },
+        { ...vertexBuildData, run_id: runId },
         vertexBuildData.id,
       );
 

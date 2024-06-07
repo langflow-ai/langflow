@@ -31,10 +31,10 @@ class ResultData(BaseModel):
         if not values.get("logs") and values.get("artifacts"):
             # Build the log from the artifacts
             message = values["artifacts"]
-            if "stream_url" in message:
+            if "stream_url" in message and "type" in message:
                 stream_url = StreamURL(location=message["stream_url"])
                 values["logs"] = [Log(message=stream_url, type=message["type"])]
-            else:
+            elif "type" in message:
                 values["logs"] = [Log(message=message, type=message["type"])]
         return values
 

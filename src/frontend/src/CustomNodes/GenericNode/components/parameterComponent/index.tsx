@@ -44,9 +44,9 @@ import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
+import OutputModal from "../outputModal";
 import TooltipRenderComponent from "../tooltipRenderComponent";
 import { TEXT_FIELD_TYPES } from "./constants";
-import OutputModal from "../outputModal";
 
 export default function ParameterComponent({
   left,
@@ -274,7 +274,9 @@ export default function ParameterComponent({
                       : "Please build the component first"
                   }
                 >
-                  <button
+                  <Button
+                    variant="none"
+                    size="none"
                     disabled={!displayOutputPreview || unknownOutput}
                     onClick={() => setOpenOutputModal(true)}
                     data-testid={`output-inspection-${title.toLowerCase()}`}
@@ -288,7 +290,7 @@ export default function ParameterComponent({
                       )}
                       name={"ScanEye"}
                     />
-                  </button>
+                  </Button>
                 </ShadTooltip>
               )}
             </div>
