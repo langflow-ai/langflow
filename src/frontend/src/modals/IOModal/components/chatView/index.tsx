@@ -62,11 +62,14 @@ export default function ChatView({
     const chatMessages: ChatMessageType[] = chatOutputResponses
       .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
       //
-      .filter((output) => output.data.message)
+      .filter(
+        (output) =>
+          output?.data?.messages && output?.data?.messages?.length > 0,
+      )
       .map((output, index) => {
         try {
           const { sender, message, sender_name, stream_url, files } = output
-            .data.message as ChatOutputType;
+            ?.data?.messages[0] as ChatOutputType;
 
           const is_ai = sender === "Machine" || sender === null;
           return {
@@ -131,7 +134,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) {
     // if (message === "") return;
     chat.message = message;
@@ -160,7 +163,7 @@ export default function ChatView({
   const { dragOver, dragEnter, dragLeave, onDrop } = useDragAndDrop(
     setIsDragging,
     setFiles,
-    currentFlowId
+    currentFlowId,
   );
 
   return (

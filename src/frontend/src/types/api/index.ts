@@ -162,7 +162,7 @@ export type VertexBuildTypeAPI = {
 export type VertexDataTypeAPI = {
   results: { [key: string]: string };
   logs: { message: any; type: string }[];
-  message: ChatOutputType | ChatInputType;
+  messages: ChatOutputType[] | ChatInputType[];
   inactive?: boolean;
   timedelta?: number;
   duration?: string;
