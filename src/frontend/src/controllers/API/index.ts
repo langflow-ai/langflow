@@ -365,8 +365,21 @@ export async function uploadFile(
   return await api.post(`${BASE_URL_API}files/upload/${id}`, formData);
 }
 
-export async function getProfilePictures(): Promise<ProfilePicturesTypeAPI> {
-  return api.get(`${BASE_URL_API}files/list/profile_pictures`);
+export async function getProfilePictures(
+  abortSignal,
+): Promise<ProfilePicturesTypeAPI | null> {
+  try {
+    const res = await api.get(`${BASE_URL_API}images/list/profile_pictures`, {
+      signal: abortSignal,
+    });
+
+    if (res.status === 200) {
+      return res.data;
+    }
+  } catch (error) {
+    throw error;
+  }
+  return null;
 }
 
 export async function postCustomComponent(

@@ -11,48 +11,31 @@ import HorizontalScrollFadeComponent from "../../../../../../../../components/ho
 import LoadingComponent from "../../../../../../../../components/loadingComponent";
 import Loading from "../../../../../../../../components/ui/loading";
 
-export default function ProfilePictureChooserComponent({ value, onChange }) {
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-  const getProfilePictures = useGetProfilePictures({ setErrorData });
+type ProfilePictureChooserComponentProps = {
+  profilePictures: { [key: string]: string[] };
+  loading: boolean;
+  value: string;
+  onChange: (value: string) => void;
+};
 
-  const [profilePictures, setProfilePictures] = useState<string[][]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getProfilePictures()
-      .then((data) => {
-        if (data) {
-          data.forEach((profile_picture) => {
-            const [folder, path] = profile_picture.split("/");
-            setProfilePictures((prev) => {
-              if (prev[folder]) {
-                prev[folder].push(path);
-              } else {
-                prev[folder] = [path];
-              }
-              return prev;
-            });
-            setLoading(false);
-          });
-        }
-      })
-      .catch(() => {
-        setLoading(false);
-      });
-  });
-
+export default function ProfilePictureChooserComponent({
+  profilePictures,
+  loading,
+  value,
+  onChange,
+}: ProfilePictureChooserComponentProps) {
   return (
     <div className="flex flex-col justify-center gap-2">
       {loading ? (
         <Loading />
       ) : (
-        profilePictures.map((folder, idx) => (
+        Object.keys(profilePictures).map((folder, idx) => (
           <Label>
             <div className="edit-flow-arrangement">
               <span className="font-medium">{folder}</span>
             </div>
             <HorizontalScrollFadeComponent>
-              {folder.map((path, idx) => (
+              {profilePictures[folder].map((path, idx) => (
                 <img
                   key={idx}
                   src={`${BACKEND_URL.slice(
