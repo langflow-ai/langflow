@@ -17,6 +17,7 @@ import GeneralPageHeaderComponent from "./components/GeneralPageHeader";
 import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
 import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
+import useGetProfilePictures from "./components/ProfilePictureForm/components/profilePictureChooserComponent/hooks/use-get-profile-pictures";
 
 export default function GeneralPage() {
   const setCurrentFlowId = useFlowsManagerStore(
@@ -50,6 +51,8 @@ export default function GeneralPage() {
     setErrorData,
   );
 
+  const { handleGetProfilePictures } = useGetProfilePictures(setErrorData);
+
   const { handlePatchProfilePicture } = usePatchProfilePicture(
     setSuccessData,
     setErrorData,
@@ -82,6 +85,7 @@ export default function GeneralPage() {
           profilePicture={profilePicture}
           handleInput={handleInput}
           handlePatchProfilePicture={handlePatchProfilePicture}
+          handleGetProfilePictures={handleGetProfilePictures}
           userData={userData}
         />
 

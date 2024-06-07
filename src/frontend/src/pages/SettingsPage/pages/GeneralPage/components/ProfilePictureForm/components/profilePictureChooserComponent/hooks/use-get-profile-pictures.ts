@@ -3,11 +3,12 @@ import { PROFILE_PICTURES_GET_ERROR_ALERT } from "../../../../../../../../../con
 import { getProfilePictures } from "../../../../../../../../../controllers/API";
 
 const useGetProfilePictures = (setErrorData) => {
-  const handleGetProfilePictures = async () => {
+  const handleGetProfilePictures = async (abortSignal) => {
     try {
-      const profilePictures = await getProfilePictures();
-      return profilePictures.files;
+      const profilePictures = await getProfilePictures(abortSignal);
+      return profilePictures!.files;
     } catch (error) {
+      console.log(error);
       setErrorData({
         title: PROFILE_PICTURES_GET_ERROR_ALERT,
         list: [(error as any)?.response?.data?.detail],
@@ -16,7 +17,7 @@ const useGetProfilePictures = (setErrorData) => {
     }
   };
 
-  return handleGetProfilePictures;
+  return { handleGetProfilePictures };
 };
 
 export default useGetProfilePictures;
