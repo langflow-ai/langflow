@@ -6,7 +6,7 @@ from langchain.memory.chat_memory import BaseChatMemory
 from langchain_core.document_loaders import BaseLoader
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
-from langchain_core.language_models import BaseLLM, BaseLanguageModel
+from langchain_core.language_models import BaseLanguageModel, BaseLLM
 from langchain_core.memory import BaseMemory
 from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate, PromptTemplate

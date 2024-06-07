@@ -156,7 +156,7 @@ class InterfaceVertex(ComponentVertex):
         if isinstance(message, str):
             message = unescape_string(message)
         stream_url = None
-        text_output = self.results["Message"]
+        text_output = self.results["message"]
         if isinstance(text_output, (AIMessage, AIMessageChunk)):
             artifacts = ChatOutputResponse.from_message(
                 text_output,
@@ -173,8 +173,8 @@ class InterfaceVertex(ComponentVertex):
             elif isinstance(message, (AsyncIterator, Iterator)):
                 stream_url = self.build_stream_url()
                 message = ""
-                self.results["Message"] = message
-                self.results["Record"].message = message
+                self.results["message"] = message
+                self.results["record"].message = message
                 self._built_object = self.results
             elif not isinstance(text_output, str):
                 message = str(text_output)
