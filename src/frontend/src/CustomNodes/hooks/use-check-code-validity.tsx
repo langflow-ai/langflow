@@ -6,7 +6,7 @@ const useCheckCodeValidity = (
   data: NodeDataType,
   templates: { [key: string]: any },
   setIsOutdated: (value: boolean) => void,
-  types,
+  types
 ) => {
   useEffect(() => {
     // This one should run only once

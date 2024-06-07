@@ -1,9 +1,8 @@
-import * as base64js from "base64-js";
 import { useState } from "react";
 import IconComponent from "../../../../../components/genericIconComponent";
-import { fileCardPropsType } from "../../../../../types/components";
-import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { BACKEND_URL, BASE_URL_API } from "../../../../../constants/constants";
+import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
+import { fileCardPropsType } from "../../../../../types/components";
 
 const imgTypes = new Set(["png", "jpg"]);
 
@@ -32,8 +31,11 @@ export default function FileCard({
         onMouseLeave={handleMouseLeave}
       >
         <img
-            src={`${BACKEND_URL.slice(0,BACKEND_URL.length-1)}${BASE_URL_API}files/images/${content}`}
-            alt="generated image"
+          src={`${BACKEND_URL.slice(
+            0,
+            BACKEND_URL.length - 1
+          )}${BASE_URL_API}files/images/${content}`}
+          alt="generated image"
           className="h-full  w-full rounded-lg"
         />
         {isHovered && (
@@ -59,7 +61,10 @@ export default function FileCard({
         {" "}
         {imgTypes.has(fileType) ? (
           <img
-            src={`${BACKEND_URL.slice(0,BACKEND_URL.length-1)}${BASE_URL_API}files/images/${content}`}
+            src={`${BACKEND_URL.slice(
+              0,
+              BACKEND_URL.length - 1
+            )}${BASE_URL_API}files/images/${content}`}
             alt=""
             className="h-8 w-8"
           />

@@ -41,7 +41,7 @@ IMG_FILE_TYPES = [
 
 
 def normalize_text(text):
-    return unicodedata.normalize('NFKD', text)
+    return unicodedata.normalize("NFKD", text)
 
 
 def is_hidden(path: Path) -> bool:
@@ -106,7 +106,7 @@ def read_text_file(file_path: str) -> str:
         result = chardet.detect(raw_data)
         encoding = result["encoding"]
 
-        if encoding in ['Windows-1254', 'MacRoman']:
+        if encoding in ["Windows-1254", "MacRoman"]:
             encoding = "utf-8"
 
     with open(file_path, "r", encoding=encoding) as f:

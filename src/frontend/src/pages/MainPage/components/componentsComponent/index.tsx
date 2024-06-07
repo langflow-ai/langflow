@@ -4,25 +4,23 @@ import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import CollectionCardComponent from "../../../../components/cardComponent";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../../../components/genericIconComponent";
+import IconComponent from "../../../../components/genericIconComponent";
 import PaginatorComponent from "../../../../components/paginatorComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
+import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../stores/alertStore";
+import { useDarkStore } from "../../../../stores/darkStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { FlowType } from "../../../../types/flow";
+import { downloadFlow, removeApiKeys } from "../../../../utils/reactflowUtils";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import { getNameByType } from "../../utils/get-name-by-type";
 import { sortFlows } from "../../utils/sort-flows";
 import EmptyComponent from "../emptyComponent";
 import HeaderComponent from "../headerComponent";
-import { downloadFlow, removeApiKeys } from "../../../../utils/reactflowUtils";
-import { useDarkStore } from "../../../../stores/darkStore";
-import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 
 export default function ComponentsComponent({
   type = "all",
@@ -36,22 +34,22 @@ export default function ComponentsComponent({
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
 
   const flowsFromFolder = useFolderStore(
-    (state) => state.selectedFolder?.flows,
+    (state) => state.selectedFolder?.flows
   );
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openDelete, setOpenDelete] = useState(false);
   const searchFlowsComponents = useFlowsManagerStore(
-    (state) => state.searchFlowsComponents,
+    (state) => state.searchFlowsComponents
   );
 
   const setSelectedFlowsComponentsCards = useFlowsManagerStore(
-    (state) => state.setSelectedFlowsComponentsCards,
+    (state) => state.setSelectedFlowsComponentsCards
   );
 
   const selectedFlowsComponentsCards = useFlowsManagerStore(
-    (state) => state.selectedFlowsComponentsCards,
+    (state) => state.selectedFlowsComponentsCards
   );
 
   const [handleFileDrop] = useFileDrop(uploadFlow, type)!;
@@ -87,7 +85,7 @@ export default function ComponentsComponent({
         f.name.toLowerCase().includes(searchFlowsComponents.toLowerCase()) ||
         f.description
           .toLowerCase()
-          .includes(searchFlowsComponents.toLowerCase()),
+          .includes(searchFlowsComponents.toLowerCase())
     );
 
     if (searchFlowsComponents === "") {
@@ -144,9 +142,9 @@ export default function ComponentsComponent({
       selectedFlowsComponentsCards.map((selectedFlow) =>
         addFlow(
           true,
-          allFlows.find((flow) => flow.id === selectedFlow),
-        ),
-      ),
+          allFlows.find((flow) => flow.id === selectedFlow)
+        )
+      )
     ).then(() => {
       resetFilter();
       getFoldersApi(true);
@@ -194,7 +192,7 @@ export default function ComponentsComponent({
           is_component: false,
         }),
         selectedFlow!.name,
-        selectedFlow!.description,
+        selectedFlow!.description
       );
     });
     setSuccessData({ title: "Flows exported successfully" });
@@ -228,7 +226,7 @@ export default function ComponentsComponent({
           return true;
         }
         return false;
-      },
+      }
     );
 
     setSelectedFlowsComponentsCards(selectedFlows);
@@ -263,7 +261,7 @@ export default function ComponentsComponent({
     if (type === "all") return allFlows?.length;
 
     return allFlows?.filter(
-      (f) => (f.is_component ?? false) === (type === "component"),
+      (f) => (f.is_component ?? false) === (type === "component")
     )?.length;
   };
 

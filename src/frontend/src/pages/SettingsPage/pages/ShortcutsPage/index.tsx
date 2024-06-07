@@ -1,8 +1,5 @@
-import { ColDef, ColGroupDef } from "ag-grid-community";
-import { useState } from "react";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
-import { Card, CardContent } from "../../../../components/ui/card";
 
 export default function ShortcutsPage() {
   const isMac = navigator.userAgent.toUpperCase().includes("MAC");

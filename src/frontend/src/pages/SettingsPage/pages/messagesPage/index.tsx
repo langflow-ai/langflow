@@ -6,7 +6,6 @@ import {
 } from "ag-grid-community";
 import { useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
-import { Card, CardContent } from "../../../../components/ui/card";
 import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
 import HeaderMessagesComponent from "./components/headerMessages";
@@ -27,7 +26,7 @@ export default function MessagesPage() {
     setSelectedRows,
     setSuccessData,
     setErrorData,
-    selectedRows,
+    selectedRows
   );
 
   const { handleUpdate } = useUpdateMessage(setSuccessData, setErrorData);
@@ -62,7 +61,7 @@ export default function MessagesPage() {
           overlayNoRowsTemplate="No data available"
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(
-              event.api.getSelectedRows().map((row) => row.index),
+              event.api.getSelectedRows().map((row) => row.index)
             );
           }}
           rowSelection="multiple"

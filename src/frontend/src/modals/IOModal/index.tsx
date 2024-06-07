@@ -24,7 +24,6 @@ import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
 import ChatView from "./components/chatView";
-import { getSessions } from "../../controllers/API";
 
 export default function IOModal({
   children,
