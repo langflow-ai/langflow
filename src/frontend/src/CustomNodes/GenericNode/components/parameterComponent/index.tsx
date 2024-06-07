@@ -98,7 +98,7 @@ export default function ParameterComponent({
     debouncedHandleUpdateValues,
     setNode,
     renderTooltips,
-    setIsLoading
+    setIsLoading,
   );
 
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
@@ -107,7 +107,7 @@ export default function ParameterComponent({
     takeSnapshot,
     setNode,
     updateNodeInternals,
-    renderTooltips
+    renderTooltips,
   );
 
   const { handleRefreshButtonPress: handleRefreshButtonPressHook } =
@@ -116,7 +116,7 @@ export default function ParameterComponent({
   let disabled =
     edges.some(
       (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
+        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
     ) ?? false;
 
   const handleRefreshButtonPress = async (name, data) => {
@@ -129,12 +129,12 @@ export default function ParameterComponent({
     handleUpdateValues,
     setNode,
     renderTooltips,
-    setIsLoading
+    setIsLoading,
   );
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
-    skipSnapshot: boolean | undefined = false
+    skipSnapshot: boolean | undefined = false,
   ): Promise<void> => {
     handleOnNewValueHook(newValue, skipSnapshot);
   };
@@ -216,7 +216,7 @@ export default function ParameterComponent({
               className={classNames(
                 left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
                 "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : ""
+                !showNode ? "mt-0" : "",
               )}
               style={{
                 borderColor: color ?? nodeColors.unknown,
@@ -274,7 +274,9 @@ export default function ParameterComponent({
                       : "Please build the component first"
                   }
                 >
-                  <button
+                  <Button
+                    variant="none"
+                    size="none"
                     disabled={!displayOutputPreview || unknownOutput}
                     onClick={() => setOpenOutputModal(true)}
                     data-testid={`output-inspection-${title.toLowerCase()}`}
@@ -284,11 +286,11 @@ export default function ParameterComponent({
                         "h-5 w-5 rounded-md",
                         displayOutputPreview && !unknownOutput
                           ? " hover:bg-secondary-foreground/5 hover:text-medium-indigo"
-                          : " cursor-not-allowed text-muted-foreground"
+                          : " cursor-not-allowed text-muted-foreground",
                       )}
                       name={"ScanEye"}
                     />
-                  </button>
+                  </Button>
                 </ShadTooltip>
               )}
             </div>
@@ -334,7 +336,7 @@ export default function ParameterComponent({
                   }
                   className={classNames(
                     left ? "-ml-0.5" : "-mr-0.5",
-                    "h-3 w-3 rounded-full border-2 bg-background"
+                    "h-3 w-3 rounded-full border-2 bg-background",
                   )}
                   style={{ borderColor: color ?? nodeColors.unknown }}
                   onClick={() => setFilterEdge(groupedEdge.current)}
