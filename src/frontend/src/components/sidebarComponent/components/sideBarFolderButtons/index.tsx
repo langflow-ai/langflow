@@ -16,7 +16,6 @@ import { Input } from "../../../ui/input";
 import useFileDrop from "../../hooks/use-on-file-drop";
 
 type SideBarFoldersButtonsComponentProps = {
-  folders: FolderType[];
   pathname: string;
   handleChangeFolder?: (id: string) => void;
   handleDeleteFolder?: (item: FolderType) => void;
