@@ -20,7 +20,11 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
+<<<<<<< HEAD
                 "value": "from langchain_core.prompts import PromptTemplate\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Input, Prompt, Text\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": Input(display_name=\"Template\"),\n            \"code\": Input(advanced=True),\n        }\n\n    def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Text:\n        from langflow.base.prompts.utils import dict_values_to_string\n\n        prompt_template = PromptTemplate.from_template(Text(template))\n        kwargs = dict_values_to_string(kwargs)\n        kwargs = {k: \"\\n\".join(v) if isinstance(v, list) else v for k, v in kwargs.items()}\n        try:\n            formated_prompt = prompt_template.format(**kwargs)\n        except Exception as exc:\n            raise ValueError(f\"Error formatting prompt: {exc}\") from exc\n        self.status = f'Prompt:\\n\"{formated_prompt}\"'\n        return formated_prompt\n",
+=======
+                "value": "from langchain_core.prompts import PromptTemplate\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Prompt, TemplateField, Text\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Text:\n        from langflow.base.prompts.utils import dict_values_to_string\n\n        prompt_template = PromptTemplate.from_template(Text(template))\n        kwargs = dict_values_to_string(kwargs)\n        kwargs = {k: \"\\n\".join(v) if isinstance(v, list) else v for k, v in kwargs.items()}\n        try:\n            formated_prompt = prompt_template.format(**kwargs)\n        except Exception as exc:\n            raise ValueError(f\"Error formatting prompt: {exc}\") from exc\n        self.status = f'Prompt:\\n\"{formated_prompt}\"'\n        return formated_prompt\n",
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -45,9 +49,13 @@
                 "name": "template",
                 "display_name": "Template",
                 "advanced": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ],
+=======
+                "input_types": ["Text"],
+>>>>>>> origin/dev
                 "dynamic": false,
                 "info": "",
                 "load_from_db": false,
@@ -112,15 +120,20 @@
             "is_input": null,
             "is_output": null,
             "is_composition": null,
+<<<<<<< HEAD
             "base_classes": [
               "object",
               "str",
               "Text"
             ],
+=======
+            "base_classes": ["object", "str", "Text"],
+>>>>>>> origin/dev
             "name": "",
             "display_name": "Prompt",
             "documentation": "",
             "custom_fields": {
+<<<<<<< HEAD
               "template": [
                 "Document",
                 "Question"
@@ -129,11 +142,17 @@
             "output_types": [
               "Text"
             ],
+=======
+              "template": ["Document", "Question"]
+            },
+            "output_types": ["Text"],
+>>>>>>> origin/dev
             "full_path": null,
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
             "beta": false,
+<<<<<<< HEAD
             "error": null,
             "outputs": [
               {
@@ -146,6 +165,9 @@
                 "method": null
               }
             ]
+=======
+            "error": null
+>>>>>>> origin/dev
           },
           "id": "Prompt-tHwPf",
           "description": "A component for creating prompt templates using dynamic variables.",
@@ -242,15 +264,20 @@
               "_type": "CustomComponent"
             },
             "description": "A generic file loader.",
+<<<<<<< HEAD
             "base_classes": [
               "Record"
             ],
+=======
+            "base_classes": ["Record"],
+>>>>>>> origin/dev
             "display_name": "Files",
             "documentation": "",
             "custom_fields": {
               "path": null,
               "silent_errors": null
             },
+<<<<<<< HEAD
             "output_types": [
               "Record"
             ],
@@ -267,6 +294,13 @@
                 "name": "Record"
               }
             ]
+=======
+            "output_types": ["Record"],
+            "field_formatters": {},
+            "frozen": false,
+            "field_order": [],
+            "beta": false
+>>>>>>> origin/dev
           },
           "id": "File-6TEsD"
         },
@@ -297,7 +331,11 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
+<<<<<<< HEAD
                 "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\",\n            type=str,\n            display_name=\"Message\",\n            multiline=True,\n            input_types=[],\n            info=\"Message to be passed as input.\",\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"User\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"text_response\"),\n        Output(display_name=\"Record\", name=\"record\", method=\"record_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self) -> Record:\n        record = Record(\n            data={\n                \"text\": self.input_value,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n            },\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n",
+=======
+                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    def build_config(self):\n        build_config = super().build_config()\n        build_config[\"input_value\"] = {\n            \"input_types\": [],\n            \"display_name\": \"Message\",\n            \"multiline\": True,\n        }\n\n        return build_config\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n    ) -> Union[Text, Record]:\n        return super().build_no_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n        )\n",
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -315,7 +353,10 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
+<<<<<<< HEAD
                 "value": "",
+=======
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -324,7 +365,31 @@
                 "advanced": false,
                 "input_types": [],
                 "dynamic": false,
+<<<<<<< HEAD
                 "info": "Message to be passed as input.",
+=======
+                "info": "",
+                "load_from_db": false,
+                "title_case": false,
+                "value": ""
+              },
+              "return_record": {
+                "type": "bool",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "return_record",
+                "display_name": "Return Record",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
+>>>>>>> origin/dev
                 "load_from_db": false,
                 "title_case": false
               },
@@ -335,6 +400,7 @@
                 "list": true,
                 "show": true,
                 "multiline": false,
+<<<<<<< HEAD
                 "value": "",
                 "fileTypes": [],
                 "file_path": "",
@@ -343,16 +409,30 @@
                   "Machine",
                   "User"
                 ],
+=======
+                "value": "User",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "options": ["Machine", "User"],
+>>>>>>> origin/dev
                 "name": "sender",
                 "display_name": "Sender Type",
                 "advanced": true,
                 "dynamic": false,
+<<<<<<< HEAD
                 "info": "Type of sender.",
                 "load_from_db": false,
                 "title_case": false,
                 "input_types": [
                   "Text"
                 ]
+=======
+                "info": "",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "sender_name": {
                 "type": "str",
@@ -361,7 +441,11 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
+<<<<<<< HEAD
                 "value": "",
+=======
+                "value": "User",
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -369,12 +453,19 @@
                 "display_name": "Sender Name",
                 "advanced": false,
                 "dynamic": false,
+<<<<<<< HEAD
                 "info": "Name of the sender.",
                 "load_from_db": false,
                 "title_case": false,
                 "input_types": [
                   "Text"
                 ]
+=======
+                "info": "",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "session_id": {
                 "type": "str",
@@ -383,7 +474,10 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
+<<<<<<< HEAD
                 "value": "",
+=======
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -391,6 +485,7 @@
                 "display_name": "Session ID",
                 "advanced": true,
                 "dynamic": false,
+<<<<<<< HEAD
                 "info": "Session ID for the message.",
                 "load_from_db": false,
                 "title_case": false,
@@ -408,6 +503,18 @@
               "Text",
               "object"
             ],
+=======
+                "info": "If provided, the message will be stored in the memory.",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "_type": "CustomComponent"
+            },
+            "description": "Get chat inputs from the Playground.",
+            "icon": "ChatInput",
+            "base_classes": ["str", "Record", "Text", "object"],
+>>>>>>> origin/dev
             "display_name": "Chat Input",
             "documentation": "",
             "custom_fields": {
@@ -417,6 +524,7 @@
               "session_id": null,
               "return_record": null
             },
+<<<<<<< HEAD
             "output_types": [
               "Text",
               "Record"
@@ -445,6 +553,13 @@
                 "method": "record_response"
               }
             ]
+=======
+            "output_types": ["Text", "Record"],
+            "field_formatters": {},
+            "frozen": false,
+            "field_order": [],
+            "beta": false
+>>>>>>> origin/dev
           },
           "id": "ChatInput-MsSJ9"
         },
@@ -475,7 +590,11 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
+<<<<<<< HEAD
                 "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\", type=str, display_name=\"Message\", multiline=True, info=\"Message to be passed as output.\"\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n        Input(\n            name=\"record_template\",\n            type=str,\n            display_name=\"Record Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"text_response\"),\n        Output(display_name=\"Record\", name=\"record\", method=\"record_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self) -> Record:\n        record = Record(\n            data={\n                \"message\": self.input_value,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n                \"template\": self.record_template or \"\",\n            }\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n",
+=======
+                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n        record_template: Optional[str] = \"{text}\",\n    ) -> Union[Text, Record]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n            record_template=record_template or \"\",\n        )\n",
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -493,13 +612,17 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
+<<<<<<< HEAD
                 "value": "",
+=======
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
                 "name": "input_value",
                 "display_name": "Message",
                 "advanced": false,
+<<<<<<< HEAD
                 "dynamic": false,
                 "info": "Message to be passed as output.",
                 "load_from_db": false,
@@ -510,11 +633,22 @@
               },
               "record_template": {
                 "type": "str",
+=======
+                "input_types": ["Text"],
+                "dynamic": false,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "return_record": {
+                "type": "bool",
+>>>>>>> origin/dev
                 "required": false,
                 "placeholder": "",
                 "list": false,
                 "show": true,
                 "multiline": false,
+<<<<<<< HEAD
                 "value": "",
                 "fileTypes": [],
                 "file_path": "",
@@ -529,6 +663,19 @@
                 "input_types": [
                   "Text"
                 ]
+=======
+                "value": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "return_record",
+                "display_name": "Return Record",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
+                "load_from_db": false,
+                "title_case": false
+>>>>>>> origin/dev
               },
               "sender": {
                 "type": "str",
@@ -537,6 +684,7 @@
                 "list": true,
                 "show": true,
                 "multiline": false,
+<<<<<<< HEAD
                 "value": "",
                 "fileTypes": [],
                 "file_path": "",
@@ -545,16 +693,30 @@
                   "Machine",
                   "User"
                 ],
+=======
+                "value": "Machine",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "options": ["Machine", "User"],
+>>>>>>> origin/dev
                 "name": "sender",
                 "display_name": "Sender Type",
                 "advanced": true,
                 "dynamic": false,
+<<<<<<< HEAD
                 "info": "Type of sender.",
                 "load_from_db": false,
                 "title_case": false,
                 "input_types": [
                   "Text"
                 ]
+=======
+                "info": "",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "sender_name": {
                 "type": "str",
@@ -563,7 +725,11 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
+<<<<<<< HEAD
                 "value": "",
+=======
+                "value": "AI",
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -571,12 +737,19 @@
                 "display_name": "Sender Name",
                 "advanced": false,
                 "dynamic": false,
+<<<<<<< HEAD
                 "info": "Name of the sender.",
                 "load_from_db": false,
                 "title_case": false,
                 "input_types": [
                   "Text"
                 ]
+=======
+                "info": "",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "session_id": {
                 "type": "str",
@@ -585,7 +758,10 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
+<<<<<<< HEAD
                 "value": "",
+=======
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -593,6 +769,7 @@
                 "display_name": "Session ID",
                 "advanced": true,
                 "dynamic": false,
+<<<<<<< HEAD
                 "info": "Session ID for the message.",
                 "load_from_db": false,
                 "title_case": false,
@@ -610,6 +787,18 @@
               "Text",
               "object"
             ],
+=======
+                "info": "If provided, the message will be stored in the memory.",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "_type": "CustomComponent"
+            },
+            "description": "Display a chat message in the Playground.",
+            "icon": "ChatOutput",
+            "base_classes": ["str", "Record", "Text", "object"],
+>>>>>>> origin/dev
             "display_name": "Chat Output",
             "documentation": "",
             "custom_fields": {
@@ -619,6 +808,7 @@
               "session_id": null,
               "return_record": null
             },
+<<<<<<< HEAD
             "output_types": [
               "Text",
               "Record"
@@ -647,6 +837,13 @@
                 "method": "record_response"
               }
             ]
+=======
+            "output_types": ["Text", "Record"],
+            "field_formatters": {},
+            "frozen": false,
+            "field_order": [],
+            "beta": false
+>>>>>>> origin/dev
           },
           "id": "ChatOutput-F5Awj"
         },
@@ -687,9 +884,13 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ]
+=======
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "code": {
                 "type": "code",
@@ -772,9 +973,13 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ]
+=======
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "openai_api_base": {
                 "type": "str",
@@ -793,9 +998,13 @@
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
                 "load_from_db": false,
                 "title_case": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ]
+=======
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "openai_api_key": {
                 "type": "str",
@@ -814,9 +1023,13 @@
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "load_from_db": false,
                 "title_case": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ],
+=======
+                "input_types": ["Text"],
+>>>>>>> origin/dev
                 "value": "OPENAI_API_KEY"
               },
               "stream": {
@@ -832,7 +1045,11 @@
                 "password": false,
                 "name": "stream",
                 "display_name": "Stream",
+<<<<<<< HEAD
                 "advanced": true,
+=======
+                "advanced": false,
+>>>>>>> origin/dev
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
                 "load_from_db": false,
@@ -855,9 +1072,13 @@
                 "info": "System message to pass to the model.",
                 "load_from_db": false,
                 "title_case": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ]
+=======
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "temperature": {
                 "type": "float",
@@ -888,11 +1109,15 @@
             },
             "description": "Generates text using OpenAI LLMs.",
             "icon": "OpenAI",
+<<<<<<< HEAD
             "base_classes": [
               "object",
               "str",
               "Text"
             ],
+=======
+            "base_classes": ["object", "str", "Text"],
+>>>>>>> origin/dev
             "display_name": "OpenAI",
             "documentation": "",
             "custom_fields": {
@@ -906,9 +1131,13 @@
               "stream": null,
               "system_message": null
             },
+<<<<<<< HEAD
             "output_types": [
               "Text"
             ],
+=======
+            "output_types": ["Text"],
+>>>>>>> origin/dev
             "field_formatters": {},
             "frozen": false,
             "field_order": [
@@ -922,6 +1151,7 @@
               "system_message",
               "stream"
             ],
+<<<<<<< HEAD
             "beta": false,
             "outputs": [
               {
@@ -934,6 +1164,9 @@
                 "method": null
               }
             ]
+=======
+            "beta": false
+>>>>>>> origin/dev
           },
           "id": "OpenAIModel-Bt067"
         },
@@ -950,13 +1183,18 @@
     "edges": [
       {
         "source": "ChatInput-MsSJ9",
+<<<<<<< HEAD
         "sourceHandle": "{\"dataType\": \"ChatInput\", \"id\": \"ChatInput-MsSJ9\", \"output_types\": [\"Text\"], \"name\": \"message\"}",
+=======
+        "sourceHandle": "{œbaseClassesœ:[œstrœ,œRecordœ,œTextœ,œobjectœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-MsSJ9œ}",
+>>>>>>> origin/dev
         "target": "Prompt-tHwPf",
         "targetHandle": "{œfieldNameœ:œQuestionœ,œidœ:œPrompt-tHwPfœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "Question",
             "id": "Prompt-tHwPf",
+<<<<<<< HEAD
             "inputTypes": [
               "Document",
               "BaseOutputParser",
@@ -972,6 +1210,15 @@
               "Text"
             ],
             "name": "message"
+=======
+            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "baseClasses": ["str", "Record", "Text", "object"],
+            "dataType": "ChatInput",
+            "id": "ChatInput-MsSJ9"
+>>>>>>> origin/dev
           }
         },
         "style": {
@@ -982,13 +1229,18 @@
       },
       {
         "source": "File-6TEsD",
+<<<<<<< HEAD
         "sourceHandle": "{\"dataType\": \"File\", \"id\": \"File-6TEsD\", \"output_types\": [\"Record\"], \"name\": \"Record\"}",
+=======
+        "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œFileœ,œidœ:œFile-6TEsDœ}",
+>>>>>>> origin/dev
         "target": "Prompt-tHwPf",
         "targetHandle": "{œfieldNameœ:œDocumentœ,œidœ:œPrompt-tHwPfœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "Document",
             "id": "Prompt-tHwPf",
+<<<<<<< HEAD
             "inputTypes": [
               "Document",
               "BaseOutputParser",
@@ -1004,6 +1256,15 @@
               "Record"
             ],
             "name": "Record"
+=======
+            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "baseClasses": ["Record"],
+            "dataType": "File",
+            "id": "File-6TEsD"
+>>>>>>> origin/dev
           }
         },
         "style": {
@@ -1014,13 +1275,18 @@
       },
       {
         "source": "Prompt-tHwPf",
+<<<<<<< HEAD
         "sourceHandle": "{\"dataType\": \"Prompt\", \"id\": \"Prompt-tHwPf\", \"output_types\": [\"Text\"], \"name\": \"Text\"}",
+=======
+        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-tHwPfœ}",
+>>>>>>> origin/dev
         "target": "OpenAIModel-Bt067",
         "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Bt067œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenAIModel-Bt067",
+<<<<<<< HEAD
             "inputTypes": [
               "Text"
             ],
@@ -1033,6 +1299,15 @@
               "Text"
             ],
             "name": "Text"
+=======
+            "inputTypes": ["Text"],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "baseClasses": ["object", "str", "Text"],
+            "dataType": "Prompt",
+            "id": "Prompt-tHwPf"
+>>>>>>> origin/dev
           }
         },
         "style": {
@@ -1043,13 +1318,18 @@
       },
       {
         "source": "OpenAIModel-Bt067",
+<<<<<<< HEAD
         "sourceHandle": "{\"dataType\": \"OpenAIModel\", \"id\": \"OpenAIModel-Bt067\", \"output_types\": [\"Text\"], \"name\": \"Text\"}",
+=======
+        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Bt067œ}",
+>>>>>>> origin/dev
         "target": "ChatOutput-F5Awj",
         "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-F5Awjœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-F5Awj",
+<<<<<<< HEAD
             "inputTypes": [
               "Text"
             ],
@@ -1062,6 +1342,15 @@
               "Text"
             ],
             "name": "Text"
+=======
+            "inputTypes": ["Text"],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "baseClasses": ["object", "str", "Text"],
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-Bt067"
+>>>>>>> origin/dev
           }
         },
         "style": {
@@ -1081,4 +1370,8 @@
   "name": "Document QA",
   "last_tested_version": "1.0.0a0",
   "is_component": false
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/dev

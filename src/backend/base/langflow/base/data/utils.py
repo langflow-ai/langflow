@@ -92,7 +92,7 @@ def read_text_file(file_path: str) -> str:
     with open(file_path, "rb") as f:
         raw_data = f.read()
         result = chardet.detect(raw_data)
-        encoding = result['encoding']
+        encoding = result["encoding"]
 
     with open(file_path, "r", encoding=encoding) as f:
         return f.read()

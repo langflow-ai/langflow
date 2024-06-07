@@ -1,4 +1,3 @@
-import { Loader2 } from "lucide-react";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
@@ -129,14 +128,14 @@ export default function ShareModal({
             title: "Error sharing " + is_component ? "component" : "flow",
             list: [err["response"]["data"]["detail"]],
           });
-        },
+        }
       );
     else
       updateFlowStore(
         flow!,
         getTagsIds(selectedTags, tags),
         sharePublic,
-        unavaliableNames.find((e) => e.name === name)!.id,
+        unavaliableNames.find((e) => e.name === name)!.id
       ).then(successShare, (err) => {
         setErrorData({
           title: "Error sharing " + is_component ? "component" : "flow",
@@ -202,6 +201,18 @@ export default function ShareModal({
         size="smaller-h-full"
         open={(!disabled && open) ?? internalOpen}
         setOpen={setOpen ?? internalSetOpen}
+        onSubmit={() => {
+          const isNameAvailable = !unavaliableNames.some(
+            (element) => element.name === name
+          );
+
+          if (isNameAvailable) {
+            handleShareComponent();
+            (setOpen || internalSetOpen)(false);
+          } else {
+            setOpenConfirmationModal(true);
+          }
+        }}
       >
         <BaseModal.Trigger asChild>
           {children ? children : <></>}
@@ -250,8 +261,13 @@ export default function ShareModal({
           </span>
         </BaseModal.Content>
 
-        <BaseModal.Footer>
-          <div className="flex w-full justify-between gap-2">
+        <BaseModal.Footer
+          submit={{
+            label: `Share ${is_component ? " Component" : " Flow"}`,
+            loading: loadingNames,
+          }}
+        >
+          <>
             {!is_component && (
               <ExportModal>
                 <Button
@@ -281,37 +297,7 @@ export default function ShareModal({
                 Export
               </Button>
             )}
-            <Button
-              disabled={loadingNames}
-              type="button"
-              className={is_component ? "w-40" : "w-28"}
-              onClick={() => {
-                const isNameAvailable = !unavaliableNames.some(
-                  (element) => element.name === name,
-                );
-
-                if (isNameAvailable) {
-                  handleShareComponent();
-                  (setOpen || internalSetOpen)(false);
-                } else {
-                  setOpenConfirmationModal(true);
-                }
-              }}
-            >
-              {loadingNames ? (
-                <>
-                  <div className="center">
-                    <Loader2 className="m-auto h-4 w-4 animate-spin"></Loader2>
-                  </div>
-                </>
-              ) : (
-                <>
-                  Share{" "}
-                  {!loadingNames && (!is_component ? "Flow" : "Component")}
-                </>
-              )}
-            </Button>
-          </div>
+          </>
         </BaseModal.Footer>
       </BaseModal>
       <>{modalConfirmation}</>

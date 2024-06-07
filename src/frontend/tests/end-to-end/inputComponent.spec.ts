@@ -22,7 +22,7 @@ test("InputComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("Chroma");
@@ -73,9 +73,9 @@ test("InputComponent", async ({ page }) => {
     await page.locator('//*[@id="showchroma_server_host"]').isChecked(),
   ).toBeTruthy();
 
-  await page.locator('//*[@id="showchroma_server_port"]').click();
+  await page.locator('//*[@id="showchroma_server_http_port"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_port"]').isChecked(),
+    await page.locator('//*[@id="showchroma_server_http_port"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showchroma_server_ssl_enabled"]').click();
@@ -110,9 +110,9 @@ test("InputComponent", async ({ page }) => {
     await page.locator('//*[@id="showchroma_server_host"]').isChecked(),
   ).toBeFalsy();
 
-  await page.locator('//*[@id="showchroma_server_port"]').click();
+  await page.locator('//*[@id="showchroma_server_http_port"]').click();
   expect(
-    await page.locator('//*[@id="showchroma_server_port"]').isChecked(),
+    await page.locator('//*[@id="showchroma_server_http_port"]').isChecked(),
   ).toBeFalsy();
 
   await page.locator('//*[@id="showchroma_server_ssl_enabled"]').click();
@@ -138,7 +138,7 @@ test("InputComponent", async ({ page }) => {
     .getByTestId("popover-anchor-input-collection_name-edit")
     .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
   const plusButtonLocator = page.getByTestId("input-collection_name");
   const elementCount = await plusButtonLocator?.count();
@@ -155,7 +155,7 @@ test("InputComponent", async ({ page }) => {
       await page.locator('//*[@id="showcollection_name"]').isChecked(),
     ).toBeTruthy();
 
-    await page.locator('//*[@id="saveChangesBtn"]').click();
+    await page.getByText("Save Changes", { exact: true }).click();
 
     let value = await page
       .getByTestId("popover-anchor-input-collection_name")

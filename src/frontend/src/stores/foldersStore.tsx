@@ -7,6 +7,7 @@ import {
 } from "../pages/MainPage/services";
 import { FoldersStoreType } from "../types/zustand/folders";
 import useFlowsManagerStore from "./flowsManagerStore";
+import { uploadFlowsToDatabase } from "../controllers/API";
 
 export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   folders: [],
@@ -41,10 +42,10 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
             get().setLoading(false);
             resolve();
           },
-          () => {
+          (error) => {
             set({ folders: [] });
             get().setLoading(false);
-            reject();
+            reject(error);
           },
         );
       }
@@ -100,7 +101,7 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   folderIdDragging: "",
   setFolderIdDragging: (id) => set(() => ({ folderIdDragging: id })),
   uploadFolder: () => {
-    return new Promise<void>(() => {
+    return new Promise<void>((resolve, reject) => {
       const input = document.createElement("input");
       input.type = "file";
       input.onchange = (event: Event) => {
@@ -111,8 +112,31 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
           const file = (event.target as HTMLInputElement).files![0];
           const formData = new FormData();
           formData.append("file", file);
-          uploadFlowsFromFolders(formData).then(() => {
-            get().getFoldersApi(true);
+          file.text().then((text) => {
+            const data = JSON.parse(text);
+            if (data.data?.nodes) {
+              useFlowsManagerStore
+                .getState()
+                .addFlow(true, data)
+                .then(() => {
+                  resolve();
+                })
+                .catch((error) => {
+                  reject(error);
+                });
+            } else {
+              uploadFlowsFromFolders(formData)
+                .then(() => {
+                  get()
+                    .getFoldersApi(true)
+                    .then(() => {
+                      resolve();
+                    });
+                })
+                .catch((error) => {
+                  reject(error);
+                });
+            }
           });
         }
       };

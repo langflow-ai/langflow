@@ -48,8 +48,16 @@ export type FlowStoreType = {
   onFlowPage: boolean;
   setOnFlowPage: (onFlowPage: boolean) => void;
   flowPool: FlowPoolType;
-  inputs: Array<{ type: string; id: string; displayName: string }>;
-  outputs: Array<{ type: string; id: string; displayName: string }>;
+  inputs: Array<{
+    type: string;
+    id: string;
+    displayName: string;
+  }>;
+  outputs: Array<{
+    type: string;
+    id: string;
+    displayName: string;
+  }>;
   hasIO: boolean;
   setFlowPool: (flowPool: FlowPoolType) => void;
   addDataToFlowPool: (data: FlowPoolObjectType, nodeId: string) => void;
@@ -70,7 +78,7 @@ export type FlowStoreType = {
     state:
       | FlowState
       | undefined
-      | ((oldState: FlowState | undefined) => FlowState),
+      | ((oldState: FlowState | undefined) => FlowState)
   ) => void;
   nodes: Node[];
   edges: Edge[];
@@ -78,11 +86,11 @@ export type FlowStoreType = {
   onEdgesChange: OnEdgesChange;
   setNodes: (
     update: Node[] | ((oldState: Node[]) => Node[]),
-    skipSave?: boolean,
+    skipSave?: boolean
   ) => void;
   setEdges: (
     update: Edge[] | ((oldState: Edge[]) => Edge[]),
-    skipSave?: boolean,
+    skipSave?: boolean
   ) => void;
   setNode: (id: string, update: Node | ((oldState: Node) => Node)) => void;
   getNode: (id: string) => Node | undefined;
@@ -90,12 +98,12 @@ export type FlowStoreType = {
   deleteEdge: (edgeId: string | Array<string>) => void;
   paste: (
     selection: { nodes: any; edges: any },
-    position: { x: number; y: number; paneX?: number; paneY?: number },
+    position: { x: number; y: number; paneX?: number; paneY?: number }
   ) => void;
   lastCopiedSelection: { nodes: any; edges: any } | null;
   setLastCopiedSelection: (
     newSelection: { nodes: any; edges: any } | null,
-    isCrop?: boolean,
+    isCrop?: boolean
   ) => void;
   cleanFlow: () => void;
   setFilterEdge: (newState) => void;
@@ -106,11 +114,12 @@ export type FlowStoreType = {
     startNodeId,
     stopNodeId,
     input_value,
+    silent,
   }: {
-    nodeId?: string;
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
+    silent?: boolean;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
   updateVerticesBuild: (
@@ -119,7 +128,7 @@ export type FlowStoreType = {
       verticesLayers: VertexLayerElementType[][];
       runId: string;
       verticesToRun: string[];
-    } | null,
+    } | null
   ) => void;
   addToVerticesBuild: (vertices: string[]) => void;
   removeFromVerticesBuild: (vertices: string[]) => void;
@@ -137,7 +146,7 @@ export type FlowStoreType = {
   updateFlowPool: (
     nodeId: string,
     data: FlowPoolObjectType | ChatOutputType | chatInputType,
-    buildId?: string,
+    buildId?: string
   ) => void;
   getNodePosition: (nodeId: string) => { x: number; y: number };
 };
