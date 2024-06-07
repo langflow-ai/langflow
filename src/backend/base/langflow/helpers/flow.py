@@ -90,7 +90,9 @@ async def run_flow(
 
     fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
 
-    return await graph.arun(inputs_list, inputs_components=inputs_components, types=types, fallback_to_env_vars=fallback_to_env_vars)
+    return await graph.arun(
+        inputs_list, inputs_components=inputs_components, types=types, fallback_to_env_vars=fallback_to_env_vars
+    )
 
 
 def generate_function_for_flow(
@@ -249,7 +251,7 @@ def get_flow_by_id_or_endpoint_name(
         flow = db.get(Flow, flow_id)
     except ValueError:
         endpoint_name = flow_id_or_name
-        stmt = select(Flow).where(Flow.name == endpoint_name)
+        stmt = select(Flow).where(Flow.endpoint_name == endpoint_name)
         if user_id:
             stmt = stmt.where(Flow.user_id == user_id)
         flow = db.exec(stmt).first()
