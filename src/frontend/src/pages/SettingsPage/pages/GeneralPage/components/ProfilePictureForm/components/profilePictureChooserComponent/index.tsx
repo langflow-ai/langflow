@@ -1,6 +1,11 @@
+import useAlertStore from "../../../../../../../../stores/alertStore";
 import { gradients } from "../../../../../../../../utils/styleUtils";
+import useGetProfilePictures from "./hooks/use-get-profile-pictures";
 
 export default function ProfilePictureChooserComponent({ value, onChange }) {
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const getProfilePictures = useGetProfilePictures({ setErrorData });
+
   return (
     <div className="flex flex-wrap items-center justify-start gap-2">
       {gradients.map((gradient, idx) => (
