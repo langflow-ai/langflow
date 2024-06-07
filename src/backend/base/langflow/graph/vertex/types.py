@@ -9,6 +9,7 @@ from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, Interface
 from langflow.graph.utils import ArtifactType, UnbuiltObject, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.schema import Record
+from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.monitor.utils import log_vertex_build
 from langflow.utils.schemas import ChatOutputResponse, RecordOutputResponse
@@ -98,11 +99,13 @@ class InterfaceVertex(Vertex):
                 # Turn the dict into a pleasing to
                 # read JSON inside a code block
                 message = dict_to_codeblock(self._built_object)
-            elif isinstance(self._built_object, Record):
-                message = self._built_object.text
-            elif isinstance(message, (AsyncIterator, Iterator)):
-                stream_url = self.build_stream_url()
-                message = ""
+            elif isinstance(self._built_object, Message):
+                if isinstance(message, (AsyncIterator, Iterator)):
+                    stream_url = self.build_stream_url()
+                    message = ""
+                    self._built_object.text = message
+                else:
+                    message = self._built_object.text
             elif not isinstance(self._built_object, str):
                 message = str(self._built_object)
             # if the message is a generator or iterator

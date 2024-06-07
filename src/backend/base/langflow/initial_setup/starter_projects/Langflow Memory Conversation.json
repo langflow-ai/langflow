@@ -22,7 +22,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
-                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    def build_config(self):\n        build_config = super().build_config()\n        build_config[\"input_value\"] = {\n            \"input_types\": [],\n            \"display_name\": \"Message\",\n            \"multiline\": True,\n        }\n\n        return build_config\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        files: Optional[list[str]] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n    ) -> Union[Text, Record]:\n        return super().build_no_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            files=files,\n            session_id=session_id,\n            return_record=return_record,\n        )\n",
+                "value": "from typing import Optional\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.schema.message import Message\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    def build_config(self):\n        build_config = super().build_config()\n        build_config[\"input_value\"] = {\n            \"input_types\": [],\n            \"display_name\": \"Message\",\n            \"multiline\": True,\n        }\n\n        return build_config\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        files: Optional[list[str]] = None,\n        session_id: Optional[str] = None,\n    ) -> Message:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            files=files,\n            session_id=session_id,\n        )\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -52,25 +52,6 @@
                 "load_from_db": false,
                 "title_case": false,
                 "value": ""
-              },
-              "return_record": {
-                "type": "bool",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": false,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "return_record",
-                "display_name": "Return Record",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
-                "load_from_db": false,
-                "title_case": false
               },
               "sender": {
                 "type": "str",
@@ -162,8 +143,7 @@
               "return_record": null
             },
             "output_types": [
-              "Text",
-              "Record"
+              "Message"
             ],
             "field_formatters": {},
             "frozen": false,
@@ -199,7 +179,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
-                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n        record_template: Optional[str] = \"{text}\",\n        files: Optional[list[str]] = None,\n    ) -> Union[Text, Record]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n            record_template=record_template or \"\",\n            files=files,\n        )\n",
+                "value": "from typing import Optional\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.schema.message import Message\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        files: Optional[list[str]] = None,\n    ) -> Message:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            files=files,\n        )\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -228,25 +208,6 @@
                 ],
                 "dynamic": false,
                 "info": "",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "return_record": {
-                "type": "bool",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": false,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "return_record",
-                "display_name": "Return Record",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
                 "load_from_db": false,
                 "title_case": false
               },
@@ -340,8 +301,7 @@
               "return_record": null
             },
             "output_types": [
-              "Text",
-              "Record"
+              "Message"
             ],
             "field_formatters": {},
             "frozen": false,
@@ -583,7 +543,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
-                "value": "from langchain_core.prompts import ChatPromptTemplate\n\nfrom langflow.base.prompts.utils import dict_values_to_string\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Prompt, TemplateField, Text\nfrom langflow.schema import Record\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    async def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Record:\n        prompt_template = ChatPromptTemplate.from_template(Text(template))\n        kwargs = await dict_values_to_string(kwargs)\n        messages = list(kwargs.values())\n        prompt = prompt_template + messages\n        self.status = f'Prompt:\\n\"{template}\"'\n        return Record(data={\"prompt\": prompt.to_json()})\n",
+                "value": "from langchain_core.prompts import ChatPromptTemplate\n\nfrom langflow.base.prompts.utils import dict_values_to_string\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Prompt, TemplateField, Text\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    async def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Prompt:\n        prompt_template = ChatPromptTemplate.from_template(Text(template))\n        kwargs = await dict_values_to_string(kwargs)\n        messages = list(kwargs.values())\n        prompt = prompt_template + messages\n        self.status = f'Prompt:\\n\"{template}\"'\n        return Prompt(data={\"prompt\": prompt.to_json()})\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -616,59 +576,7 @@
                 "load_from_db": false,
                 "title_case": false
               },
-              "_type": "CustomComponent",
-              "context": {
-                "field_type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "context",
-                "display_name": "context",
-                "advanced": false,
-                "input_types": [
-                  "Document",
-                  "BaseOutputParser",
-                  "Record",
-                  "Text"
-                ],
-                "dynamic": false,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false,
-                "type": "str"
-              },
-              "user_message": {
-                "field_type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "user_message",
-                "display_name": "user_message",
-                "advanced": false,
-                "input_types": [
-                  "Document",
-                  "BaseOutputParser",
-                  "Record",
-                  "Text"
-                ],
-                "dynamic": false,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false,
-                "type": "str"
-              }
+              "_type": "CustomComponent"
             },
             "description": "Create a prompt template with dynamic variables.",
             "icon": "prompts",
@@ -690,7 +598,7 @@
               ]
             },
             "output_types": [
-              "Text"
+              "Prompt"
             ],
             "full_path": null,
             "field_formatters": {},

@@ -4,6 +4,7 @@ from langchain_core.documents import Document
 
 from langflow.schema import Record
 from langflow.schema.image import get_file_paths
+from langflow.schema.message import Message
 
 
 def record_to_string(record: Record) -> str:
@@ -35,11 +36,11 @@ async def dict_values_to_string(d: dict) -> dict:
         # it could be a list of records or documents or strings
         if isinstance(value, list):
             for i, item in enumerate(value):
-                if isinstance(item, Record):
+                if isinstance(item, Message):
                     d_copy[key][i] = item.to_lc_message()
                 elif isinstance(item, Document):
                     d_copy[key][i] = document_to_string(item)
-        elif isinstance(value, Record):
+        elif isinstance(value, Message):
             if "files" in value and value.files:
                 files = await get_file_paths(value.files)
                 value.files = files

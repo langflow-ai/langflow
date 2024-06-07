@@ -3,6 +3,7 @@ from typing import Union
 from langchain_core.documents import Document
 
 from langflow.schema import Record
+from langflow.schema.message import Message
 
 
 def docs_to_records(documents: list[Document]) -> list[Record]:
@@ -28,7 +29,7 @@ def records_to_text(template: str, records: Union[Record, list[Record]]) -> str:
     Returns:
         list[str]: The converted list of texts.
     """
-    if isinstance(records, Record):
+    if isinstance(records, (Record, Message)):
         records = [records]
     # Check if there are any format strings in the template
     _records = []

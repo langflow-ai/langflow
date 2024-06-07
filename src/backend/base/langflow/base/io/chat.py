@@ -6,6 +6,7 @@ from langflow.field_typing import Text
 from langflow.helpers.record import records_to_text
 from langflow.memory import store_message
 from langflow.schema import Record
+from langflow.schema.message import Message
 
 
 class ChatComponent(CustomComponent):
@@ -52,62 +53,37 @@ class ChatComponent(CustomComponent):
 
     def store_message(
         self,
-        message: Union[str, Text, Record],
-        session_id: Optional[str] = None,
-        sender: Optional[str] = None,
-        sender_name: Optional[str] = None,
+        message: Message,
     ) -> list[Record]:
-        records = store_message(
+        messages = store_message(
             message,
-            session_id=session_id,
-            sender=sender,
-            sender_name=sender_name,
             flow_id=self.graph.flow_id,
         )
 
-        self.status = records
-        return records
+        self.status = messages
+        return messages
 
     def build_with_record(
         self,
         sender: Optional[str] = "User",
         sender_name: Optional[str] = "User",
-        input_value: Optional[Union[str, Record]] = None,
+        input_value: Optional[Union[str, Record, Message]] = None,
         files: Optional[list[str]] = None,
         session_id: Optional[str] = None,
-        return_record: Optional[bool] = False,
-        record_template: str = "Text: {text}\nData: {data}",
-    ) -> Union[Text, Record]:
-        input_value_record: Optional[Record] = None
-        if return_record:
-            if isinstance(input_value, Record):
-                # Update the data of the record
-                input_value.data["sender"] = sender
-                input_value.data["sender_name"] = sender_name
-                input_value.data["session_id"] = session_id
-                input_value.data["files"] = files
-            else:
-                input_value_record = Record(
-                    text=input_value,
-                    data={
-                        "sender": sender,
-                        "sender_name": sender_name,
-                        "session_id": session_id,
-                        "files": files,
-                    },
-                )
-        elif isinstance(input_value, Record):
-            input_value = records_to_text(template=record_template, records=input_value)
-        if not input_value:
-            input_value = ""
-        if return_record and input_value_record:
-            result: Union[Text, Record] = input_value_record
+    ) -> Message:
+        message: Message | None = None
+
+        if isinstance(input_value, Record):
+            # Update the data of the record
+            message = Message.from_record(input_value)
         else:
-            result = input_value
-        self.status = result
-        if session_id and isinstance(result, (Record, str)):
-            self.store_message(result, session_id, sender, sender_name)
-        return result
+            message = Message(
+                text=input_value, sender=sender, sender_name=sender_name, files=files, session_id=session_id
+            )
+        self.status = message
+        if session_id and isinstance(message, Message):
+            self.store_message(message, session_id, sender, sender_name)
+        return message
 
     def build_no_record(
         self,

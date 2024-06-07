@@ -1,11 +1,10 @@
 import json
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
-if TYPE_CHECKING:
-    from langflow.schema import Record
+from langflow.schema.message import Message
 
 
 class TransactionModel(BaseModel):
@@ -87,18 +86,17 @@ class MessageModel(BaseModel):
         return v
 
     @classmethod
-    def from_record(cls, record: "Record", flow_id: Optional[str] = None):
+    def from_message(cls, message: Message, flow_id: Optional[str] = None):
         # first check if the record has all the required fields
-        if not record.data or ("sender" not in record.data and "sender_name" not in record.data):
-            raise ValueError("The record does not have the required fields 'sender' and 'sender_name' in the data.")
+        if not message.text or not message.sender or not message.sender_name:
+            raise ValueError("The message does not have the required fields 'sender' and 'sender_name' in the data.")
         return cls(
-            sender=record.sender,
-            sender_name=record.sender_name,
-            message=record.text,
-            session_id=record.session_id,
-            files=record.files or [],
-            artifacts=record.artifacts or {},
-            timestamp=record.timestamp,
+            sender=message.sender,
+            sender_name=message.sender_name,
+            text=message.text,
+            session_id=message.session_id,
+            files=message.files or [],
+            timestamp=message.timestamp,
             flow_id=flow_id,
         )
 
