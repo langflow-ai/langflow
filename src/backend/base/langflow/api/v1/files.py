@@ -2,6 +2,7 @@ import hashlib
 from http import HTTPStatus
 from io import BytesIO
 from uuid import UUID
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
@@ -97,6 +98,28 @@ async def download_image(file_name: str, flow_id: UUID, storage_service: Storage
         return StreamingResponse(BytesIO(file_content), media_type=content_type)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/profile_pictures/list")
+async def list_profile_pictures(storage_service: StorageService = Depends(get_storage_service)):
+    try:
+        config_dir = get_storage_service().settings_service.settings.config_dir
+        config_path = Path(config_dir)
+
+        people_path = config_path / "profile_pictures/People"
+        space_path = config_path / "profile_pictures/Space"
+
+        people = await storage_service.list_files(flow_id=people_path)
+        space = await storage_service.list_files(flow_id=space_path)
+
+        files = [Path("People") / i for i in people]
+        files += [Path("Space") / i for i in space]
+
+        return {"files": files}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @router.get("/list/{flow_id}")
