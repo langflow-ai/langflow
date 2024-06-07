@@ -7,7 +7,7 @@ export default function cloneFLowWithParent(
   flow: FlowType,
   parent: string,
   is_component: boolean,
-  keepId = false
+  keepId = false,
 ) {
   let childFLow = cloneDeep(flow);
   childFLow.parent = parent;

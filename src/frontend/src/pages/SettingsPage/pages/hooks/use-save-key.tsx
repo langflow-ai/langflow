@@ -11,7 +11,7 @@ const useSaveKey = (
   setErrorData,
   setHasApiKey,
   setValidApiKey,
-  setLoadingApiKey
+  setLoadingApiKey,
 ) => {
   const { storeApiKey } = useContext(AuthContext);
 
@@ -35,7 +35,7 @@ const useSaveKey = (
           setHasApiKey(false);
           setValidApiKey(false);
           setLoadingApiKey(false);
-        }
+        },
       );
     }
   };
