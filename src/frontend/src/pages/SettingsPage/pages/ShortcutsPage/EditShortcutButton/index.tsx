@@ -121,6 +121,9 @@ export default function EditShortcutButton({
       if (e.key?.toLowerCase() === "control") {
         fixedKey = "Ctrl";
       }
+      if (e.key?.toLowerCase() === "meta") {
+        fixedKey = "Command";
+      }
       setKey((oldKey) =>
         getFixedCombination({ oldKey: oldKey!, key: fixedKey }),
       );
@@ -152,7 +155,9 @@ export default function EditShortcutButton({
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>
-        <Button onClick={editCombination}>Edit Combination</Button>
+        <Button variant={"secondary"} onClick={editCombination}>
+          Edit Combination
+        </Button>
         <Button
           className="mr-5"
           variant={"destructive"}
