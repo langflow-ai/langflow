@@ -7,7 +7,7 @@ export default function cloneFLowWithParent(
   flow: FlowType,
   parent: string,
   is_component: boolean,
-  keepId = false,
+  keepId = false
 ) {
   let childFLow = cloneDeep(flow);
   childFLow.parent = parent;
@@ -21,8 +21,16 @@ export default function cloneFLowWithParent(
 }
 
 export function getInputsAndOutputs(nodes: Node[]) {
-  let inputs: { type: string; id: string; displayName: string }[] = [];
-  let outputs: { type: string; id: string; displayName: string }[] = [];
+  let inputs: {
+    type: string;
+    id: string;
+    displayName: string;
+  }[] = [];
+  let outputs: {
+    type: string;
+    id: string;
+    displayName: string;
+  }[] = [];
   nodes.forEach((node) => {
     const nodeData: NodeDataType = node.data as NodeDataType;
     if (isOutputNode(nodeData)) {

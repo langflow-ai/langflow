@@ -78,9 +78,6 @@ export default function GlobalVariablesPage() {
   // Column Definitions: Defines the columns to be displayed.
   const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
     {
-      headerCheckboxSelection: true,
-      checkboxSelection: true,
-      showDisabledCheckboxes: true,
       headerName: "Variable Name",
       field: "name",
       flex: 2,
@@ -170,24 +167,18 @@ export default function GlobalVariablesPage() {
         </div>
       </div>
 
-      <div className="flex h-full w-full flex-col justify-between pb-8">
-        <Card x-chunk="dashboard-04-chunk-2" className="h-full pt-4">
-          <CardContent className="h-full">
-            <TableComponent
-              overlayNoRowsTemplate="No data available"
-              onSelectionChanged={(event: SelectionChangedEvent) => {
-                setSelectedRows(
-                  event.api.getSelectedRows().map((row) => row.name),
-                );
-              }}
-              rowSelection="multiple"
-              suppressRowClickSelection={true}
-              pagination={true}
-              columnDefs={colDefs}
-              rowData={rowData}
-            />
-          </CardContent>
-        </Card>
+      <div className="flex h-full w-full flex-col justify-between">
+        <TableComponent
+          overlayNoRowsTemplate="No data available"
+          onSelectionChanged={(event: SelectionChangedEvent) => {
+            setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
+          }}
+          rowSelection="multiple"
+          suppressRowClickSelection={true}
+          pagination={true}
+          columnDefs={colDefs}
+          rowData={rowData}
+        />
       </div>
     </div>
   );

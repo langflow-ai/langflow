@@ -55,10 +55,11 @@ export default function InputListComponent({
             />
             {idx === value.length - 1 ? (
               <button
-                onClick={() => {
+                onClick={(e) => {
                   let newInputList = _.cloneDeep(value);
                   newInputList.push("");
                   onChange(newInputList);
+                  e.preventDefault();
                 }}
                 data-testid={
                   `input-list-plus-btn${
@@ -79,10 +80,11 @@ export default function InputListComponent({
                     editNode ? "-edit" : ""
                   }_${componentName}-` + idx
                 }
-                onClick={() => {
+                onClick={(e) => {
                   let newInputList = _.cloneDeep(value);
                   newInputList.splice(idx, 1);
                   onChange(newInputList);
+                  e.preventDefault();
                 }}
                 disabled={disabled || playgroundDisabled}
               >

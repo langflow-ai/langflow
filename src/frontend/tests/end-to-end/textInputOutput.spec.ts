@@ -30,7 +30,7 @@ test("TextInputOutputComponent", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("text input");
@@ -132,10 +132,12 @@ test("TextInputOutputComponent", async ({ page }) => {
 
   await page.getByText("Outputs", { exact: true }).nth(1).click();
   await page.getByText("Text Output", { exact: true }).nth(2).click();
-  let contentOutput = await page.getByPlaceholder("Empty").inputValue();
+  let contentOutput = await page.getByPlaceholder("Enter text...").inputValue();
   expect(contentOutput).not.toBe(null);
 
   await page.keyboard.press("Escape");
+
+  await page.getByText("Close", { exact: true }).last().click();
 
   await page
     .getByTestId("popover-anchor-input-input_value")
@@ -151,6 +153,6 @@ test("TextInputOutputComponent", async ({ page }) => {
 
   await page.getByText("Outputs", { exact: true }).nth(1).click();
   await page.getByText("Text Output", { exact: true }).nth(2).click();
-  contentOutput = await page.getByPlaceholder("Empty").inputValue();
+  contentOutput = await page.getByPlaceholder("Enter text...").inputValue();
   expect(contentOutput).not.toBe(null);
 });

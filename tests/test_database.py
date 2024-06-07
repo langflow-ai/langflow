@@ -110,6 +110,21 @@ def test_delete_flow(client: TestClient, json_flow: str, active_user, logged_in_
     assert response.json()["message"] == "Flow deleted successfully"
 
 
+def test_delete_flows(client: TestClient, json_flow: str, active_user, logged_in_headers):
+    # Create ten flows
+    number_of_flows = 10
+    flows = [FlowCreate(name=f"Flow {i}", description="description", data={}) for i in range(number_of_flows)]
+    flow_ids = []
+    for flow in flows:
+        response = client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+        assert response.status_code == 201
+        flow_ids.append(response.json()["id"])
+
+    response = client.request("DELETE", "api/v1/flows/", headers=logged_in_headers, json=flow_ids)
+    assert response.status_code == 200, response.content
+    assert response.json().get("deleted") == number_of_flows
+
+
 def test_create_flows(client: TestClient, session: Session, json_flow: str, logged_in_headers):
     flow = orjson.loads(json_flow)
     data = flow["data"]

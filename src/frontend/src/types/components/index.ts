@@ -38,7 +38,7 @@ export type InputComponentType = {
 export type ToggleComponentType = {
   enabled: boolean;
   setEnabled: (state: boolean) => void;
-  disabled: boolean | undefined;
+  disabled?: boolean | undefined;
   size: "small" | "medium" | "large";
   id?: string;
   editNode?: boolean;
@@ -232,6 +232,7 @@ export type AccordionComponentType = {
   children?: ReactElement;
   open?: string[];
   trigger?: string | ReactElement;
+  disabled?: boolean;
   keyValue?: string;
   openDisc?: boolean;
   sideBar?: boolean;
@@ -389,6 +390,7 @@ export type patchUserInputStateType = {
   password: string;
   cnfPassword: string;
   gradient: string;
+  apikey: string;
 };
 
 export type UserInputType = {
@@ -402,11 +404,7 @@ export type UserInputType = {
 };
 
 export type ApiKeyType = {
-  title: string;
-  cancelText: string;
-  confirmationText: string;
   children: ReactElement;
-  icon: string;
   data?: any;
   onCloseModal: () => void;
 };
@@ -556,7 +554,7 @@ export type iconsType = {
 
 export type modalHeaderType = {
   children: ReactNode;
-  description: string | null;
+  description: string | JSX.Element | null;
 };
 
 export type codeAreaModalPropsType = {
@@ -764,4 +762,18 @@ export type toolbarSelectItemProps = {
   };
   dataTestId: string;
   ping?: boolean;
+};
+
+export type clearChatPropsType = {
+  lockChat: boolean;
+  setLockChat: (lock: boolean) => void;
+  setChatHistory: (chatHistory: ChatMessageType) => void;
+  method: string;
+};
+
+export type handleSelectPropsType = {
+  event: string;
+  lockChat: boolean;
+  setLockChat: (lock: boolean) => void;
+  setChatHistory: (chatHistory: ChatMessageType) => void;
 };

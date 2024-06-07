@@ -3,7 +3,6 @@ import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
 import {
   Tabs,
   TabsContent,
@@ -34,25 +33,25 @@ export default function IOModal({
 }: IOModalPropsType): JSX.Element {
   const allNodes = useFlowStore((state) => state.nodes);
   const inputs = useFlowStore((state) => state.inputs).filter(
-    (input) => input.type !== "ChatInput",
+    (input) => input.type !== "ChatInput"
   );
   const chatInput = useFlowStore((state) => state.inputs).find(
-    (input) => input.type === "ChatInput",
+    (input) => input.type === "ChatInput"
   );
   const outputs = useFlowStore((state) => state.outputs).filter(
-    (output) => output.type !== "ChatOutput",
+    (output) => output.type !== "ChatOutput"
   );
   const chatOutput = useFlowStore((state) => state.outputs).find(
-    (output) => output.type === "ChatOutput",
+    (output) => output.type === "ChatOutput"
   );
   const nodes = useFlowStore((state) => state.nodes).filter(
     (node) =>
       inputs.some((input) => input.id === node.id) ||
-      outputs.some((output) => output.id === node.id),
+      outputs.some((output) => output.id === node.id)
   );
   const haveChat = chatInput || chatOutput;
   const [selectedTab, setSelectedTab] = useState(
-    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0,
+    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0
   );
 
   function startView() {
@@ -78,6 +77,7 @@ export default function IOModal({
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setNode = useFlowStore((state) => state.setNode);
+  const [sessions, setSessions] = useState<string[]>([]);
 
   async function updateVertices() {
     return updateVerticesOrder(currentFlow!.id, null);
@@ -92,6 +92,7 @@ export default function IOModal({
       await buildFlow({
         input_value: chatValue,
         startNodeId: chatInput?.id,
+        silent: true,
       }).catch((err) => {
         console.error(err);
         setLockChat(false);
@@ -113,6 +114,11 @@ export default function IOModal({
 
   useEffect(() => {
     setSelectedViewField(startView());
+    // if (haveChat) {
+    //   getSessions().then((sessions) => {
+    //     setSessions(sessions);
+    //   });
+    // }
   }, [open]);
 
   return (
@@ -121,6 +127,7 @@ export default function IOModal({
       open={open}
       setOpen={setOpen}
       disable={disable}
+      onSubmit={() => sendMessage(1)}
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
@@ -140,7 +147,7 @@ export default function IOModal({
             {selectedTab !== 0 && (
               <div
                 className={cn(
-                  "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start transition-all duration-300",
+                  "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start transition-all duration-300"
                 )}
               >
                 <Tabs
@@ -160,6 +167,9 @@ export default function IOModal({
                       {outputs.length > 0 && (
                         <TabsTrigger value={"2"}>Outputs</TabsTrigger>
                       )}
+                      {/* {haveChat && (
+                        <TabsTrigger value={"3"}>History</TabsTrigger>
+                      )} */}
                     </TabsList>
                   </div>
 
@@ -173,11 +183,11 @@ export default function IOModal({
                     </div>
                     {nodes
                       .filter((node) =>
-                        inputs.some((input) => input.id === node.id),
+                        inputs.some((input) => input.id === node.id)
                       )
                       .map((node, index) => {
                         const input = inputs.find(
-                          (input) => input.id === node.id,
+                          (input) => input.id === node.id
                         )!;
                         return (
                           <div
@@ -241,11 +251,11 @@ export default function IOModal({
                     </div>
                     {nodes
                       .filter((node) =>
-                        outputs.some((output) => output.id === node.id),
+                        outputs.some((output) => output.id === node.id)
                       )
                       .map((node, index) => {
                         const output = outputs.find(
-                          (output) => output.id === node.id,
+                          (output) => output.id === node.id
                         )!;
                         return (
                           <div
@@ -253,6 +263,10 @@ export default function IOModal({
                             key={index}
                           >
                             <AccordionComponent
+                              disabled={
+                                node.data.node!.template["input_value"]
+                                  ?.value === ""
+                              }
                               trigger={
                                 <div className="file-component-badge-div">
                                   <ShadTooltip
@@ -308,7 +322,7 @@ export default function IOModal({
                 <div
                   className={cn(
                     "flex h-full w-full flex-col items-start gap-4 pt-4",
-                    !selectedViewField ? "hidden" : "",
+                    !selectedViewField ? "hidden" : ""
                   )}
                 >
                   <div className="font-xl flex items-center justify-center gap-3 font-semibold">
@@ -327,7 +341,7 @@ export default function IOModal({
                   </div>
                   <div className="h-full w-full">
                     {inputs.some(
-                      (input) => input.id === selectedViewField.id,
+                      (input) => input.id === selectedViewField.id
                     ) ? (
                       <IOFieldView
                         type={InputOutput.INPUT}
@@ -349,7 +363,7 @@ export default function IOModal({
               <div
                 className={cn(
                   "flex h-full w-full",
-                  selectedViewField ? "hidden" : "",
+                  selectedViewField ? "hidden" : ""
                 )}
               >
                 {haveChat ? (
@@ -371,26 +385,22 @@ export default function IOModal({
         </div>
       </BaseModal.Content>
       {!haveChat ? (
-        <BaseModal.Footer>
-          <div className="flex w-full justify-end  pt-2">
-            <Button
-              variant={"outline"}
-              className="flex gap-2 px-3"
-              onClick={() => sendMessage(1)}
-            >
+        <BaseModal.Footer
+          submit={{
+            label: "Run Flow",
+            icon: (
               <IconComponent
                 name={isBuilding ? "Loader2" : "Zap"}
                 className={cn(
                   "h-4 w-4",
                   isBuilding
                     ? "animate-spin"
-                    : "fill-current text-medium-indigo",
+                    : "fill-current text-medium-indigo"
                 )}
               />
-              Run Flow
-            </Button>
-          </div>
-        </BaseModal.Footer>
+            ),
+          }}
+        />
       ) : (
         <></>
       )}

@@ -20,7 +20,11 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
+<<<<<<< HEAD
                 "value": "from langchain_core.prompts import PromptTemplate\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Input, Prompt, Text\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": Input(display_name=\"Template\"),\n            \"code\": Input(advanced=True),\n        }\n\n    def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Text:\n        from langflow.base.prompts.utils import dict_values_to_string\n\n        prompt_template = PromptTemplate.from_template(Text(template))\n        kwargs = dict_values_to_string(kwargs)\n        kwargs = {k: \"\\n\".join(v) if isinstance(v, list) else v for k, v in kwargs.items()}\n        try:\n            formated_prompt = prompt_template.format(**kwargs)\n        except Exception as exc:\n            raise ValueError(f\"Error formatting prompt: {exc}\") from exc\n        self.status = f'Prompt:\\n\"{formated_prompt}\"'\n        return formated_prompt\n",
+=======
+                "value": "from langchain_core.prompts import PromptTemplate\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Prompt, TemplateField, Text\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Text:\n        from langflow.base.prompts.utils import dict_values_to_string\n\n        prompt_template = PromptTemplate.from_template(Text(template))\n        kwargs = dict_values_to_string(kwargs)\n        kwargs = {k: \"\\n\".join(v) if isinstance(v, list) else v for k, v in kwargs.items()}\n        try:\n            formated_prompt = prompt_template.format(**kwargs)\n        except Exception as exc:\n            raise ValueError(f\"Error formatting prompt: {exc}\") from exc\n        self.status = f'Prompt:\\n\"{formated_prompt}\"'\n        return formated_prompt\n",
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -45,9 +49,13 @@
                 "name": "template",
                 "display_name": "Template",
                 "advanced": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ],
+=======
+                "input_types": ["Text"],
+>>>>>>> origin/dev
                 "dynamic": false,
                 "info": "",
                 "load_from_db": false,
@@ -138,15 +146,20 @@
             "is_input": null,
             "is_output": null,
             "is_composition": null,
+<<<<<<< HEAD
             "base_classes": [
               "object",
               "Text",
               "str"
             ],
+=======
+            "base_classes": ["object", "Text", "str"],
+>>>>>>> origin/dev
             "name": "",
             "display_name": "Prompt",
             "documentation": "",
             "custom_fields": {
+<<<<<<< HEAD
               "template": [
                 "reference_1",
                 "reference_2",
@@ -156,11 +169,17 @@
             "output_types": [
               "Text"
             ],
+=======
+              "template": ["reference_1", "reference_2", "instructions"]
+            },
+            "output_types": ["Text"],
+>>>>>>> origin/dev
             "full_path": null,
             "field_formatters": {},
             "frozen": false,
             "field_order": [],
             "beta": false,
+<<<<<<< HEAD
             "error": null,
             "outputs": [
               {
@@ -173,6 +192,9 @@
                 "method": null
               }
             ]
+=======
+            "error": null
+>>>>>>> origin/dev
           },
           "id": "Prompt-Rse03",
           "description": "Create a prompt template with dynamic variables.",
@@ -233,9 +255,13 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ],
+=======
+                "input_types": ["Text"],
+>>>>>>> origin/dev
                 "value": [
                   "https://www.promptingguide.ai/techniques/prompt_chaining"
                 ]
@@ -244,14 +270,19 @@
             },
             "description": "Fetch content from one or more URLs.",
             "icon": "layout-template",
+<<<<<<< HEAD
             "base_classes": [
               "Record"
             ],
+=======
+            "base_classes": ["Record"],
+>>>>>>> origin/dev
             "display_name": "URL",
             "documentation": "",
             "custom_fields": {
               "urls": null
             },
+<<<<<<< HEAD
             "output_types": [
               "Record"
             ],
@@ -270,6 +301,13 @@
                 "method": null
               }
             ]
+=======
+            "output_types": ["Record"],
+            "field_formatters": {},
+            "frozen": false,
+            "field_order": [],
+            "beta": false
+>>>>>>> origin/dev
           },
           "id": "URL-HYPkR"
         },
@@ -300,7 +338,11 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
+<<<<<<< HEAD
                 "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\", type=str, display_name=\"Message\", multiline=True, info=\"Message to be passed as output.\"\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n        Input(\n            name=\"record_template\",\n            type=str,\n            display_name=\"Record Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"text_response\"),\n        Output(display_name=\"Record\", name=\"record\", method=\"record_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self) -> Record:\n        record = Record(\n            data={\n                \"message\": self.input_value,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n                \"template\": self.record_template or \"\",\n            }\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n",
+=======
+                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        return_record: Optional[bool] = False,\n        record_template: Optional[str] = \"{text}\",\n    ) -> Union[Text, Record]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            return_record=return_record,\n            record_template=record_template or \"\",\n        )\n",
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -318,13 +360,17 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
+<<<<<<< HEAD
                 "value": "",
+=======
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
                 "name": "input_value",
                 "display_name": "Message",
                 "advanced": false,
+<<<<<<< HEAD
                 "dynamic": false,
                 "info": "Message to be passed as output.",
                 "load_from_db": false,
@@ -332,6 +378,13 @@
                 "input_types": [
                   "Text"
                 ]
+=======
+                "input_types": ["Text"],
+                "dynamic": false,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+>>>>>>> origin/dev
               },
               "record_template": {
                 "type": "str",
@@ -339,8 +392,13 @@
                 "placeholder": "",
                 "list": false,
                 "show": true,
+<<<<<<< HEAD
                 "multiline": false,
                 "value": "",
+=======
+                "multiline": true,
+                "value": "{text}",
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -348,12 +406,38 @@
                 "display_name": "Record Template",
                 "advanced": true,
                 "dynamic": false,
+<<<<<<< HEAD
                 "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
                 "load_from_db": false,
                 "title_case": false,
                 "input_types": [
                   "Text"
                 ]
+=======
+                "info": "In case of Message being a Record, this template will be used to convert it to text.",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "return_record": {
+                "type": "bool",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": false,
+                "value": false,
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "return_record",
+                "display_name": "Return Record",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
+                "load_from_db": false,
+                "title_case": false
+>>>>>>> origin/dev
               },
               "sender": {
                 "type": "str",
@@ -362,6 +446,7 @@
                 "list": true,
                 "show": true,
                 "multiline": false,
+<<<<<<< HEAD
                 "value": "",
                 "fileTypes": [],
                 "file_path": "",
@@ -370,16 +455,30 @@
                   "Machine",
                   "User"
                 ],
+=======
+                "value": "Machine",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "options": ["Machine", "User"],
+>>>>>>> origin/dev
                 "name": "sender",
                 "display_name": "Sender Type",
                 "advanced": true,
                 "dynamic": false,
+<<<<<<< HEAD
                 "info": "Type of sender.",
                 "load_from_db": false,
                 "title_case": false,
                 "input_types": [
                   "Text"
                 ]
+=======
+                "info": "",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "sender_name": {
                 "type": "str",
@@ -388,7 +487,11 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
+<<<<<<< HEAD
                 "value": "",
+=======
+                "value": "AI",
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -396,12 +499,19 @@
                 "display_name": "Sender Name",
                 "advanced": false,
                 "dynamic": false,
+<<<<<<< HEAD
                 "info": "Name of the sender.",
                 "load_from_db": false,
                 "title_case": false,
                 "input_types": [
                   "Text"
                 ]
+=======
+                "info": "",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "session_id": {
                 "type": "str",
@@ -410,7 +520,10 @@
                 "list": false,
                 "show": true,
                 "multiline": false,
+<<<<<<< HEAD
                 "value": "",
+=======
+>>>>>>> origin/dev
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -418,6 +531,7 @@
                 "display_name": "Session ID",
                 "advanced": true,
                 "dynamic": false,
+<<<<<<< HEAD
                 "info": "Session ID for the message.",
                 "load_from_db": false,
                 "title_case": false,
@@ -435,6 +549,18 @@
               "object",
               "str"
             ],
+=======
+                "info": "If provided, the message will be stored in the memory.",
+                "load_from_db": false,
+                "title_case": false,
+                "input_types": ["Text"]
+              },
+              "_type": "CustomComponent"
+            },
+            "description": "Display a chat message in the Playground.",
+            "icon": "ChatOutput",
+            "base_classes": ["Text", "Record", "object", "str"],
+>>>>>>> origin/dev
             "display_name": "Chat Output",
             "documentation": "",
             "custom_fields": {
@@ -445,6 +571,7 @@
               "return_record": null,
               "record_template": null
             },
+<<<<<<< HEAD
             "output_types": [
               "Text",
               "Record"
@@ -473,6 +600,13 @@
                 "method": "record_response"
               }
             ]
+=======
+            "output_types": ["Text", "Record"],
+            "field_formatters": {},
+            "frozen": false,
+            "field_order": [],
+            "beta": false
+>>>>>>> origin/dev
           },
           "id": "ChatOutput-JPlxl"
         },
@@ -508,9 +642,13 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ]
+=======
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "code": {
                 "type": "code",
@@ -593,9 +731,13 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ]
+=======
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "openai_api_base": {
                 "type": "str",
@@ -614,9 +756,13 @@
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
                 "load_from_db": false,
                 "title_case": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ]
+=======
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "openai_api_key": {
                 "type": "str",
@@ -635,9 +781,13 @@
                 "info": "The OpenAI API Key to use for the OpenAI model.",
                 "load_from_db": false,
                 "title_case": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ],
+=======
+                "input_types": ["Text"],
+>>>>>>> origin/dev
                 "value": "OPENAI_API_KEY"
               },
               "stream": {
@@ -676,9 +826,13 @@
                 "info": "System message to pass to the model.",
                 "load_from_db": false,
                 "title_case": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ]
+=======
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "temperature": {
                 "type": "float",
@@ -709,11 +863,15 @@
             },
             "description": "Generates text using OpenAI LLMs.",
             "icon": "OpenAI",
+<<<<<<< HEAD
             "base_classes": [
               "str",
               "Text",
               "object"
             ],
+=======
+            "base_classes": ["str", "Text", "object"],
+>>>>>>> origin/dev
             "display_name": "OpenAI",
             "documentation": "",
             "custom_fields": {
@@ -727,9 +885,13 @@
               "stream": null,
               "system_message": null
             },
+<<<<<<< HEAD
             "output_types": [
               "Text"
             ],
+=======
+            "output_types": ["Text"],
+>>>>>>> origin/dev
             "field_formatters": {},
             "frozen": false,
             "field_order": [
@@ -743,6 +905,7 @@
               "system_message",
               "stream"
             ],
+<<<<<<< HEAD
             "beta": false,
             "outputs": [
               {
@@ -755,6 +918,9 @@
                 "method": null
               }
             ]
+=======
+            "beta": false
+>>>>>>> origin/dev
           },
           "id": "OpenAIModel-gi29P"
         },
@@ -813,25 +979,35 @@
                 "info": "",
                 "load_from_db": false,
                 "title_case": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ],
                 "value": [
                   "https://www.promptingguide.ai/introduction/basics"
                 ]
+=======
+                "input_types": ["Text"],
+                "value": ["https://www.promptingguide.ai/introduction/basics"]
+>>>>>>> origin/dev
               },
               "_type": "CustomComponent"
             },
             "description": "Fetch content from one or more URLs.",
             "icon": "layout-template",
+<<<<<<< HEAD
             "base_classes": [
               "Record"
             ],
+=======
+            "base_classes": ["Record"],
+>>>>>>> origin/dev
             "display_name": "URL",
             "documentation": "",
             "custom_fields": {
               "urls": null
             },
+<<<<<<< HEAD
             "output_types": [
               "Record"
             ],
@@ -850,6 +1026,13 @@
                 "method": null
               }
             ]
+=======
+            "output_types": ["Record"],
+            "field_formatters": {},
+            "frozen": false,
+            "field_order": [],
+            "beta": false
+>>>>>>> origin/dev
           },
           "id": "URL-2cX90"
         },
@@ -905,10 +1088,14 @@
                 "name": "input_value",
                 "display_name": "Value",
                 "advanced": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Record",
                   "Text"
                 ],
+=======
+                "input_types": ["Record", "Text"],
+>>>>>>> origin/dev
                 "dynamic": false,
                 "info": "Text or Record to be passed as input.",
                 "load_from_db": false,
@@ -932,25 +1119,34 @@
                 "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
                 "load_from_db": false,
                 "title_case": false,
+<<<<<<< HEAD
                 "input_types": [
                   "Text"
                 ]
+=======
+                "input_types": ["Text"]
+>>>>>>> origin/dev
               },
               "_type": "CustomComponent"
             },
             "description": "Get text inputs from the Playground.",
             "icon": "type",
+<<<<<<< HEAD
             "base_classes": [
               "object",
               "Text",
               "str"
             ],
+=======
+            "base_classes": ["object", "Text", "str"],
+>>>>>>> origin/dev
             "display_name": "Instructions",
             "documentation": "",
             "custom_fields": {
               "input_value": null,
               "record_template": null
             },
+<<<<<<< HEAD
             "output_types": [
               "Text"
             ],
@@ -967,6 +1163,13 @@
                 "name": "Text"
               }
             ]
+=======
+            "output_types": ["Text"],
+            "field_formatters": {},
+            "frozen": false,
+            "field_order": [],
+            "beta": false
+>>>>>>> origin/dev
           },
           "id": "TextInput-og8Or"
         },
@@ -984,13 +1187,18 @@
       {
         "source": "URL-HYPkR",
         "target": "Prompt-Rse03",
+<<<<<<< HEAD
         "sourceHandle": "{\"dataType\": \"URL\", \"id\": \"URL-HYPkR\", \"output_types\": [\"Record\"], \"name\": \"Record\"}",
+=======
+        "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-HYPkRœ}",
+>>>>>>> origin/dev
         "targetHandle": "{œfieldNameœ:œreference_2œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "id": "reactflow__edge-URL-HYPkR{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-HYPkRœ}-Prompt-Rse03{œfieldNameœ:œreference_2œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "reference_2",
             "id": "Prompt-Rse03",
+<<<<<<< HEAD
             "inputTypes": [
               "Document",
               "BaseOutputParser",
@@ -1006,6 +1214,15 @@
               "Record"
             ],
             "name": "Record"
+=======
+            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "baseClasses": ["Record"],
+            "dataType": "URL",
+            "id": "URL-HYPkR"
+>>>>>>> origin/dev
           }
         },
         "style": {
@@ -1016,13 +1233,18 @@
       },
       {
         "source": "OpenAIModel-gi29P",
+<<<<<<< HEAD
         "sourceHandle": "{\"dataType\": \"OpenAIModel\", \"id\": \"OpenAIModel-gi29P\", \"output_types\": [\"Text\"], \"name\": \"Text\"}",
+=======
+        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gi29Pœ}",
+>>>>>>> origin/dev
         "target": "ChatOutput-JPlxl",
         "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JPlxlœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-JPlxl",
+<<<<<<< HEAD
             "inputTypes": [
               "Text"
             ],
@@ -1035,6 +1257,15 @@
               "Text"
             ],
             "name": "Text"
+=======
+            "inputTypes": ["Text"],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "baseClasses": ["str", "Text", "object"],
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-gi29P"
+>>>>>>> origin/dev
           }
         },
         "style": {
@@ -1045,13 +1276,18 @@
       },
       {
         "source": "URL-2cX90",
+<<<<<<< HEAD
         "sourceHandle": "{\"dataType\": \"URL\", \"id\": \"URL-2cX90\", \"output_types\": [\"Record\"], \"name\": \"Record\"}",
+=======
+        "sourceHandle": "{œbaseClassesœ:[œRecordœ],œdataTypeœ:œURLœ,œidœ:œURL-2cX90œ}",
+>>>>>>> origin/dev
         "target": "Prompt-Rse03",
         "targetHandle": "{œfieldNameœ:œreference_1œ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "reference_1",
             "id": "Prompt-Rse03",
+<<<<<<< HEAD
             "inputTypes": [
               "Document",
               "BaseOutputParser",
@@ -1067,6 +1303,15 @@
               "Record"
             ],
             "name": "Record"
+=======
+            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "baseClasses": ["Record"],
+            "dataType": "URL",
+            "id": "URL-2cX90"
+>>>>>>> origin/dev
           }
         },
         "style": {
@@ -1077,13 +1322,18 @@
       },
       {
         "source": "TextInput-og8Or",
+<<<<<<< HEAD
         "sourceHandle": "{\"dataType\": \"TextInput\", \"id\": \"TextInput-og8Or\", \"output_types\": [\"Text\"], \"name\": \"Text\"}",
+=======
+        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-og8Orœ}",
+>>>>>>> origin/dev
         "target": "Prompt-Rse03",
         "targetHandle": "{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-Rse03œ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "instructions",
             "id": "Prompt-Rse03",
+<<<<<<< HEAD
             "inputTypes": [
               "Document",
               "BaseOutputParser",
@@ -1099,6 +1349,15 @@
               "Text"
             ],
             "name": "Text"
+=======
+            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "baseClasses": ["object", "Text", "str"],
+            "dataType": "TextInput",
+            "id": "TextInput-og8Or"
+>>>>>>> origin/dev
           }
         },
         "style": {
@@ -1109,13 +1368,18 @@
       },
       {
         "source": "Prompt-Rse03",
+<<<<<<< HEAD
         "sourceHandle": "{\"dataType\": \"Prompt\", \"id\": \"Prompt-Rse03\", \"output_types\": [\"Text\"], \"name\": \"Text\"}",
+=======
+        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-Rse03œ}",
+>>>>>>> origin/dev
         "target": "OpenAIModel-gi29P",
         "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-gi29Pœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenAIModel-gi29P",
+<<<<<<< HEAD
             "inputTypes": [
               "Text"
             ],
@@ -1128,6 +1392,15 @@
               "Text"
             ],
             "name": "Text"
+=======
+            "inputTypes": ["Text"],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "baseClasses": ["object", "Text", "str"],
+            "dataType": "Prompt",
+            "id": "Prompt-Rse03"
+>>>>>>> origin/dev
           }
         },
         "style": {
@@ -1148,4 +1421,8 @@
   "name": "Blog Writer",
   "last_tested_version": "1.0.0a0",
   "is_component": false
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/dev

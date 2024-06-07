@@ -29,7 +29,7 @@ test("LangflowShortcuts", async ({ page }) => {
   }
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("ollama");
@@ -47,11 +47,11 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
-  await page.getByTestId("title-Ollama").click();
+  await page.getByTestId("generic-node-title-arrangement").click();
   await page.keyboard.press(`${control}+Shift+A`);
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 
-  await page.getByTestId("title-Ollama").click();
+  await page.getByTestId("generic-node-title-arrangement").click();
   await page.keyboard.press(`${control}+d`);
 
   let numberOfNodes = await page.getByTestId("title-Ollama")?.count();
@@ -71,7 +71,7 @@ test("LangflowShortcuts", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("title-Ollama").click();
+  await page.getByTestId("generic-node-title-arrangement").click();
   await page.keyboard.press(`${control}+c`);
 
   await page.getByTestId("title-Ollama").click();

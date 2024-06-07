@@ -7,7 +7,6 @@ import { useTypesStore } from "../../stores/typesStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
 import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
-import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
@@ -24,19 +23,19 @@ export default function AddNewVariableButton({ children }): JSX.Element {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
   const unavaliableFields = new Set(
-    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields)),
+    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields))
   );
 
   const availableFields = () => {
     const fields = Array.from(componentFields).filter(
-      (field) => !unavaliableFields.has(field),
+      (field) => !unavaliableFields.has(field)
     );
 
     return sortByName(fields);
   };
 
   const addGlobalVariable = useGlobalVariablesStore(
-    (state) => state.addGlobalVariable,
+    (state) => state.addGlobalVariable
   );
 
   function handleSaveVariable() {
@@ -65,12 +64,17 @@ export default function AddNewVariableButton({ children }): JSX.Element {
         let responseError = error as ResponseErrorDetailAPI;
         setErrorData({
           title: "Error creating variable",
-          list: [responseError.response.data.detail ?? "Unknown error"],
+          list: [responseError?.response?.data?.detail ?? "Unknown error"],
         });
       });
   }
   return (
-    <BaseModal open={open} setOpen={setOpen} size="x-small">
+    <BaseModal
+      open={open}
+      setOpen={setOpen}
+      size="x-small"
+      onSubmit={handleSaveVariable}
+    >
       <BaseModal.Header
         description={
           "This variable will be encrypted and will be available for you to use in any of your projects."
@@ -137,9 +141,9 @@ export default function AddNewVariableButton({ children }): JSX.Element {
           ></InputComponent>
         </div>
       </BaseModal.Content>
-      <BaseModal.Footer>
-        <Button onClick={handleSaveVariable}>Save Variable</Button>
-      </BaseModal.Footer>
+      <BaseModal.Footer
+        submit={{ label: "Save Variable", dataTestId: "save-variable-btn" }}
+      />
     </BaseModal>
   );
 }

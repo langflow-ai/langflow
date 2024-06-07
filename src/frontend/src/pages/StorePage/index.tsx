@@ -6,7 +6,6 @@ import PageLayout from "../../components/pageLayout";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
 
 import { Link, useNavigate, useParams } from "react-router-dom";
 import PaginatorComponent from "../../components/paginatorComponent";
@@ -29,7 +28,6 @@ import {
 import { STORE_DESC, STORE_TITLE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import { getStoreComponents, getStoreTags } from "../../controllers/API";
-import StoreApiKeyModal from "../../modals/storeApiKeyModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
@@ -48,7 +46,7 @@ export default function StorePage(): JSX.Element {
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId,
+    (state) => state.setCurrentFlowId
   );
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [loading, setLoading] = useState(true);
@@ -145,7 +143,7 @@ export default function StorePage(): JSX.Element {
           setTotalRowsCount(
             filteredCategories?.length === 0
               ? Number(res?.count ?? 0)
-              : res?.results?.length ?? 0,
+              : res?.results?.length ?? 0
           );
         }
       })
@@ -180,24 +178,21 @@ export default function StorePage(): JSX.Element {
       title={STORE_TITLE}
       description={STORE_DESC}
       button={
-        <>
-          {StoreApiKeyModal && (
-            <StoreApiKeyModal disabled={loading}>
-              <Button
-                data-testid="api-key-button-store"
-                disabled={loading}
-                className={cn(
-                  `${!validApiKey ? "animate-pulse border-error" : ""}`,
-                  loading ? "cursor-not-allowed" : "",
-                )}
-                variant="primary"
-              >
-                <IconComponent name="Key" className="mr-2 w-4" />
-                API Key
-              </Button>
-            </StoreApiKeyModal>
+        <Button
+          data-testid="api-key-button-store"
+          disabled={loading}
+          className={cn(
+            `${!validApiKey ? "animate-pulse border-error" : ""}`,
+            loading ? "cursor-not-allowed" : ""
           )}
-        </>
+          variant="primary"
+          onClick={() => {
+            navigate("/settings/general/api");
+          }}
+        >
+          <IconComponent name="Key" className="mr-2 w-4" />
+          API Key
+        </Button>
       }
     >
       <div className="flex h-full w-full flex-col justify-between">
