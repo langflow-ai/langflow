@@ -72,9 +72,10 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                             )
                             node_data["template"][field_name][attr] = field_dict[attr]
             # Remove fields that are not in the latest template
-            for field_name in list(node_data["template"].keys()):
-                if field_name not in latest_template:
-                    node_data["template"].pop(field_name)
+            if node_data.get("display_name") != "Prompt":
+                for field_name in list(node_data["template"].keys()):
+                    if field_name not in latest_template:
+                        node_data["template"].pop(field_name)
     log_node_changes(node_changes_log)
     return project_data_copy
 
