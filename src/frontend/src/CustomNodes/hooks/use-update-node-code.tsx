@@ -19,6 +19,7 @@ const useUpdateNodeCode = (
           node: newNodeClass,
           description: newNodeClass.description ?? dataNode.description,
           display_name: newNodeClass.display_name ?? dataNode.display_name,
+          edited: false,
         };
 
         newNode.data.node.template[name].value = code;

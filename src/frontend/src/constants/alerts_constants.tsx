@@ -31,6 +31,8 @@ export const INVALID_SELECTION_ERROR_ALERT = "Invalid selection";
 export const EDIT_PASSWORD_ERROR_ALERT = "Error changing password";
 export const EDIT_PASSWORD_ALERT_LIST = "Passwords do not match";
 export const SAVE_ERROR_ALERT = "Error saving changes";
+export const PROFILE_PICTURES_GET_ERROR_ALERT =
+  "Error retrieving profile pictures";
 export const SIGNUP_ERROR_ALERT = "Error signing up";
 export const APIKEY_ERROR_ALERT = "API Key Error";
 export const NOAPI_ERROR_ALERT =

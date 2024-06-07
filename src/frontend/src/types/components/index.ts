@@ -396,7 +396,7 @@ export type loginInputStateType = {
 export type patchUserInputStateType = {
   password: string;
   cnfPassword: string;
-  gradient: string;
+  profilePicture: string;
   apikey: string;
 };
 
@@ -491,7 +491,7 @@ export type ChatInputType = {
   isDragging: boolean;
   files: FilePreviewType[];
   setFiles: (
-    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[])
+    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
   ) => void;
   chatValue: string;
   inputRef: {
@@ -544,13 +544,7 @@ export type nodeToolbarPropsType = {
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
   selected: boolean;
-  updateNodeCode?: (
-    newNodeClass: APIClassType,
-    code: string,
-    name: string,
-  ) => void;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
-  isOutdated?: boolean;
 };
 
 export type parsedDataType = {
