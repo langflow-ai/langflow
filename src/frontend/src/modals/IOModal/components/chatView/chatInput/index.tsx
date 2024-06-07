@@ -92,8 +92,11 @@ export default function ChatInput({
           />
         </div>
 
-        <div className="absolute bottom-2 left-4">
+        <div
+          className={`absolute bottom-2 left-4 ${lockChat || saveLoading ? "cursor-not-allowed" : ""}`}
+        >
           <UploadFileButton
+            lockChat={lockChat || saveLoading}
             fileInputRef={fileInputRef}
             handleFileChange={handleFileChange}
             handleButtonClick={handleButtonClick}
@@ -110,7 +113,7 @@ export default function ChatInput({
               key={file.id}
               onDelete={() => {
                 setFiles((prev: FilePreviewType[]) =>
-                  prev.filter((f) => f.id !== file.id)
+                  prev.filter((f) => f.id !== file.id),
                 );
                 // TODO: delete file on backend
               }}
