@@ -40,7 +40,7 @@ const ApiKeyHeaderComponent = ({
             <ForwardedIconComponent
               name="Trash2"
               className={cn(
-                "h-5 w-5 text-destructive group-disabled:text-primary",
+                "h-5 w-5 text-destructive group-disabled:text-primary"
               )}
             />
           </Button>

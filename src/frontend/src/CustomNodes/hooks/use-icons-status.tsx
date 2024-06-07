@@ -7,7 +7,7 @@ import { VertexBuildTypeAPI } from "../../types/api";
 
 const useIconStatus = (
   buildStatus: BuildStatus | undefined,
-  validationStatus: VertexBuildTypeAPI | null,
+  validationStatus: VertexBuildTypeAPI | null
 ) => {
   const renderIconStatus = () => {
     if (buildStatus === BuildStatus.BUILDING) {

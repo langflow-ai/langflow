@@ -1,7 +1,6 @@
 import { SelectionChangedEvent } from "ag-grid-community";
 import { useContext, useEffect, useRef, useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
-import { Card, CardContent } from "../../../../components/ui/card";
 import { AuthContext } from "../../../../contexts/authContext";
 import useAlertStore from "../../../../stores/alertStore";
 import ApiKeyHeaderComponent from "./components/ApiKeyHeader";
@@ -26,7 +25,7 @@ export default function ApiKeysPage() {
     userData,
     setLoadingKeys,
     keysList,
-    setUserId,
+    setUserId
   );
 
   function resetFilter() {
@@ -37,7 +36,7 @@ export default function ApiKeysPage() {
     selectedRows,
     resetFilter,
     setSuccessData,
-    setErrorData,
+    setErrorData
   );
 
   const columnDefs = getColumnDefs();

@@ -1,6 +1,14 @@
 import { CustomCellRendererProps } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useState } from "react";
+import useFlowStore from "../../../../stores/flowStore";
+import {
+  convertObjToArray,
+  convertValuesToNumbers,
+  hasDuplicateKeys,
+  scapedJSONStringfy,
+} from "../../../../utils/reactflowUtils";
+import { classNames } from "../../../../utils/utils";
 import CodeAreaComponent from "../../../codeAreaComponent";
 import DictComponent from "../../../dictComponent";
 import Dropdown from "../../../dropdownComponent";
@@ -13,14 +21,6 @@ import KeypairListComponent from "../../../keypairListComponent";
 import PromptAreaComponent from "../../../promptComponent";
 import TextAreaComponent from "../../../textAreaComponent";
 import ToggleShadComponent from "../../../toggleShadComponent";
-import useFlowStore from "../../../../stores/flowStore";
-import {
-  convertObjToArray,
-  convertValuesToNumbers,
-  hasDuplicateKeys,
-  scapedJSONStringfy,
-} from "../../../../utils/reactflowUtils";
-import { classNames } from "../../../../utils/utils";
 
 export default function TableNodeCellRender({
   node: { data },
@@ -63,8 +63,8 @@ export default function TableNodeCellRender({
                 ...id,
                 proxy: templateData.proxy,
               }
-            : id,
-        ),
+            : id
+        )
     ) ?? false;
   function getCellType() {
     switch (templateData.type) {
@@ -135,7 +135,7 @@ export default function TableNodeCellRender({
           <div
             className={classNames(
               "max-h-48 w-full overflow-auto custom-scroll",
-              templateValue?.length > 1 ? "my-3" : "",
+              templateValue?.length > 1 ? "my-3" : ""
             )}
           >
             <KeypairListComponent
