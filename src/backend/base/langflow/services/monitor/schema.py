@@ -11,10 +11,9 @@ if TYPE_CHECKING:
 class TransactionModel(BaseModel):
     index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
-    flow_id: str
-    source: str
-    target: str
-    target_args: dict
+    vertex_id: str
+    inputs: dict
+    outputs: dict
     status: str
     error: Optional[str] = None
 
@@ -23,13 +22,13 @@ class TransactionModel(BaseModel):
         populate_by_name = True
 
     # validate target_args in case it is a JSON
-    @field_validator("target_args", mode="before")
+    @field_validator("outputs", "inputs", mode="before")
     def validate_target_args(cls, v):
         if isinstance(v, str):
             return json.loads(v)
         return v
 
-    @field_serializer("target_args")
+    @field_serializer("outputs", "inputs")
     def serialize_target_args(v):
         if isinstance(v, dict):
             return json.dumps(v)
@@ -39,10 +38,9 @@ class TransactionModel(BaseModel):
 class TransactionModelResponse(BaseModel):
     index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
-    flow_id: str
-    source: str
-    target: str
-    target_args: dict
+    vertex_id: str
+    inputs: dict
+    outputs: dict
     status: str
     error: Optional[str] = None
 
@@ -51,7 +49,7 @@ class TransactionModelResponse(BaseModel):
         populate_by_name = True
 
     # validate target_args in case it is a JSON
-    @field_validator("target_args", mode="before")
+    @field_validator("outputs", "inputs", mode="before")
     def validate_target_args(cls, v):
         if isinstance(v, str):
             return json.loads(v)
@@ -76,7 +74,6 @@ class MessageModel(BaseModel):
     session_id: str
     message: str
     files: list[str] = []
-    artifacts: dict
 
     class Config:
         from_attributes = True
@@ -84,12 +81,6 @@ class MessageModel(BaseModel):
 
     @field_validator("files", mode="before")
     def validate_files(cls, v):
-        if isinstance(v, str):
-            return json.loads(v)
-        return v
-
-    @field_validator("artifacts", mode="before")
-    def validate_target_args(cls, v):
         if isinstance(v, str):
             return json.loads(v)
         return v
@@ -113,12 +104,6 @@ class MessageModel(BaseModel):
 
 class MessageModelResponse(MessageModel):
     index: Optional[int] = Field(default=None)
-
-    @field_validator("artifacts", mode="before")
-    def serialize_artifacts(v):
-        if isinstance(v, str):
-            return json.loads(v)
-        return v
 
     @field_validator("index", mode="before")
     def validate_id(cls, v):
