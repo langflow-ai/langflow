@@ -56,7 +56,7 @@ export default function Header(): JSX.Element {
     const lastFlowVisitedIndex = routeHistory
       .reverse()
       .findIndex(
-        (path) => path.includes("/flow/") && path !== location.pathname
+        (path) => path.includes("/flow/") && path !== location.pathname,
       );
 
     const lastFlowVisited = routeHistory[lastFlowVisitedIndex];
