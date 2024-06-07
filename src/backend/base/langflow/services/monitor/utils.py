@@ -180,7 +180,6 @@ def build_clean_params(target: "Vertex") -> dict:
 
 def log_transaction(flow_id, vertex: "Vertex", status, target: Optional["Vertex"] = None, error=None):
     try:
-
         monitor_service = get_monitor_service()
         clean_params = build_clean_params(vertex)
         data = {
@@ -191,7 +190,7 @@ def log_transaction(flow_id, vertex: "Vertex", status, target: Optional["Vertex"
             "timestamp": monitor_service.get_timestamp(),
             "status": status,
             "error": error,
-            "flow_id": flow_id
+            "flow_id": flow_id,
         }
         monitor_service.add_row(table_name="transactions", data=data)
     except Exception as e:
