@@ -81,10 +81,10 @@ export type InputListComponentType = {
 
 export type InputGlobalComponentType = {
   disabled: boolean;
-  onChange: (value: string) => void;
+  onChange: (value: string, snapshot?: boolean) => void;
   setDb: (value: boolean) => void;
   name: string;
-  data: NodeDataType;
+  data: TemplateVariableType;
   editNode?: boolean;
   playgroundDisabled?: boolean;
 };

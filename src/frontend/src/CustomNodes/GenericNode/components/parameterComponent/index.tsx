@@ -21,7 +21,6 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   TOOLTIP_EMPTY,
 } from "../../../../constants/constants";
-import OutputModal from "../../../../customNodes/genericNode/components/outputModal";
 import { Case } from "../../../../shared/components/caseComponent";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -47,6 +46,7 @@ import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
 import TooltipRenderComponent from "../tooltipRenderComponent";
 import { TEXT_FIELD_TYPES } from "./constants";
+import OutputModal from "../outputModal";
 
 export default function ParameterComponent({
   left,
@@ -430,7 +430,7 @@ export default function ParameterComponent({
                       });
                     }}
                     name={name}
-                    data={data.node?.template[name]}
+                    data={data.node?.template[name]!}
                   />
                 </div>
                 {data.node?.template[name]?.refresh_button && (
