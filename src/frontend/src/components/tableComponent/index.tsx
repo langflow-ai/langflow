@@ -12,8 +12,8 @@ import { cn, toTitleCase } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import TableOptions from "./components/TableOptions";
-import resetGrid from "./utils/reset-grid-columns";
 import { useParams } from "react-router-dom";
+import resetGrid from "./utils/reset-grid-columns";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
@@ -128,7 +128,7 @@ const TableComponent = forwardRef<
       >
         <AgGridReact
           {...props}
-          className={cn(props.className, "custom-scroll")}
+          className={cn(props.className, "cusm-scroll")}
           defaultColDef={{
             minWidth: 100,
             autoHeight: true,
@@ -153,6 +153,7 @@ const TableComponent = forwardRef<
           duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
           deleteRow={props.onDelete ? props.onDelete : undefined}
           resetGrid={() => {
+            console.log("teste");
             resetGrid(realRef, initialColumnDefs);
             setTimeout(() => {
               setColumnStateChange(false);

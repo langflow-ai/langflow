@@ -8,7 +8,7 @@ const useColumnDefs = (
   myData: any,
   handleOnNewValue: (newValue: any, name: string) => void,
   changeAdvanced: (n: string) => void,
-  open: boolean
+  open: boolean,
 ) => {
   const columnDefs: ColDef[] = useMemo(
     () => [
@@ -23,8 +23,6 @@ const useColumnDefs = (
               : templateParam.name) ?? params.data.key
           );
         },
-        tooltipField: "display_name",
-        tooltipComponent: TableTooltipRender,
         wrapText: true,
         autoHeight: true,
         flex: 1,
@@ -35,7 +33,6 @@ const useColumnDefs = (
         headerName: "Description",
         field: "info",
         tooltipField: "info",
-        tooltipComponent: TableTooltipRender,
         wrapText: true,
         autoHeight: true,
         flex: 2,
@@ -81,7 +78,7 @@ const useColumnDefs = (
         cellClass: "no-border",
       },
     ],
-    [open, myData]
+    [open, myData],
   );
 
   return columnDefs;
