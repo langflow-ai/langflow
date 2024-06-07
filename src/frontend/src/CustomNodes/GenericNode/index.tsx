@@ -12,8 +12,8 @@ import {
   STATUS_BUILDING,
 } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
-import { countHandlesFn } from "../../customNodes/helpers/count-handles";
-import { getSpecificClassFromBuildStatus } from "../../customNodes/helpers/get-class-from-build-status";
+import { countHandlesFn } from "../helpers/count-handles";
+import { getSpecificClassFromBuildStatus } from "../helpers/get-class-from-build-status";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
