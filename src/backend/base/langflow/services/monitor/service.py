@@ -92,8 +92,6 @@ class MonitorService(Service):
         with duckdb.connect(str(self.db_path)) as conn:
             df = conn.execute(query).df()
 
-        print(query)
-
         return df.to_dict(orient="records")
 
     def delete_vertex_builds(self, flow_id: Optional[str] = None):
