@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 from concurrent import futures
 from pathlib import Path
 from typing import Callable, List, Optional, Text
+import unicodedata
 import chardet
 import yaml
 
@@ -30,6 +31,17 @@ TEXT_FILE_TYPES = [
     "ts",
     "tsx",
 ]
+
+IMG_FILE_TYPES = [
+    "jpg",
+    "jpeg",
+    "png",
+    "bmp",
+]
+
+
+def normalize_text(text):
+    return unicodedata.normalize("NFKD", text)
 
 
 def is_hidden(path: Path) -> bool:
@@ -92,7 +104,10 @@ def read_text_file(file_path: str) -> str:
     with open(file_path, "rb") as f:
         raw_data = f.read()
         result = chardet.detect(raw_data)
-        encoding = result['encoding']
+        encoding = result["encoding"]
+
+        if encoding in ["Windows-1254", "MacRoman"]:
+            encoding = "utf-8"
 
     with open(file_path, "r", encoding=encoding) as f:
         return f.read()
@@ -121,9 +136,15 @@ def parse_text_file_to_record(file_path: str, silent_errors: bool) -> Optional[R
             text = read_docx_file(file_path)
         else:
             text = read_text_file(file_path)
+
         # if file is json, yaml, or xml, we can parse it
         if file_path.endswith(".json"):
             text = json.loads(text)
+            if isinstance(text, dict):
+                text = {k: normalize_text(v) if isinstance(v, str) else v for k, v in text.items()}
+            elif isinstance(text, list):
+                text = [normalize_text(item) if isinstance(item, str) else item for item in text]
+
         elif file_path.endswith(".yaml") or file_path.endswith(".yml"):
             text = yaml.safe_load(text)
         elif file_path.endswith(".xml"):

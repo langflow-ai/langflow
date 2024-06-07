@@ -81,14 +81,16 @@ export default function Header(): JSX.Element {
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
         {showArrowReturnIcon && (
-          <button
+          <Button
+            variant="none"
+            size="none"
             onClick={() => {
               checkForChanges();
               redirectToLastLocation();
             }}
           >
             <IconComponent name="ChevronLeft" className="w-4" />
-          </button>
+          </Button>
         )}
 
         <MenuBar />
@@ -181,24 +183,14 @@ export default function Header(): JSX.Element {
               />
             </div>
           </AlertDropdown>
-          {autoLogin && (
-            <button
-              onClick={() => {
-                navigate("/account/api-keys");
-              }}
-            >
-              <IconComponent
-                name="Key"
-                className="side-bar-button-size text-muted-foreground hover:text-accent-foreground"
-              />
-            </button>
-          )}
 
           <>
             <Separator orientation="vertical" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
+                <Button
+                  variant="none"
+                  size="none"
                   data-testid="user-profile-settings"
                   className={
                     "h-7 w-7 rounded-full focus-visible:outline-0 " +
@@ -212,6 +204,28 @@ export default function Header(): JSX.Element {
                 />
               </DropdownMenuTrigger>
               <DropdownMenuContent>
+                {!autoLogin && (
+                  <>
+                    <DropdownMenuLabel>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={
+                            "h-5 w-5 rounded-full focus-visible:outline-0 " +
+                            (userData?.profile_image ??
+                              (userData?.id
+                                ? gradients[
+                                    parseInt(userData?.id ?? "", 30) %
+                                      gradients.length
+                                  ]
+                                : "bg-gray-500"))
+                          }
+                        />
+                        {userData?.username ?? "User"}
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuLabel>General</DropdownMenuLabel>
                 <DropdownMenuItem
                   className="cursor-pointer"

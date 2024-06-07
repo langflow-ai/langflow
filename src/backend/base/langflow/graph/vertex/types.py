@@ -2,11 +2,11 @@ import json
 from typing import AsyncIterator, Dict, Iterator, List
 
 import yaml
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes
-from langflow.graph.utils import UnbuiltObject, serialize_field
+from langflow.graph.utils import ArtifactType, UnbuiltObject, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.schema import Record
 from langflow.schema.schema import INPUT_FIELD_NAME
@@ -83,10 +83,11 @@ class InterfaceVertex(Vertex):
         sender = self.params.get("sender", None)
         sender_name = self.params.get("sender_name", None)
         message = self.params.get(INPUT_FIELD_NAME, None)
+        files = [{"path": file} if isinstance(file, str) else file for file in self.params.get("files", [])]
         if isinstance(message, str):
             message = unescape_string(message)
         stream_url = None
-        if isinstance(self._built_object, AIMessage):
+        if isinstance(self._built_object, (AIMessage, AIMessageChunk)):
             artifacts = ChatOutputResponse.from_message(
                 self._built_object,
                 sender=sender,
@@ -108,12 +109,14 @@ class InterfaceVertex(Vertex):
             # it means that it is a stream of messages
             else:
                 message = self._built_object
-
+            artifact_type = ArtifactType.STREAM if stream_url is not None else ArtifactType.OBJECT
             artifacts = ChatOutputResponse(
                 message=message,
                 sender=sender,
                 sender_name=sender_name,
                 stream_url=stream_url,
+                files=files,
+                type=artifact_type,
             )
 
             self.will_stream = stream_url is not None
@@ -195,6 +198,8 @@ class InterfaceVertex(Vertex):
             message=complete_message,
             sender=self.params.get("sender", ""),
             sender_name=self.params.get("sender_name", ""),
+            files=[{"path": file} if isinstance(file, str) else file for file in self.params.get("files", [])],
+            type=ArtifactType.OBJECT.value,
         ).model_dump()
         self.params[INPUT_FIELD_NAME] = complete_message
         self._built_object = Record(text=complete_message, data=self.artifacts)

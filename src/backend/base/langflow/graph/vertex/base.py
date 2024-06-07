@@ -9,12 +9,12 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, 
 from loguru import logger
 
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, UnbuiltResult
-from langflow.graph.vertex.utils import log_transaction
+from langflow.graph.utils import ArtifactType, UnbuiltObject, UnbuiltResult
 from langflow.interface.initialize import loading
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.deps import get_storage_service
+from langflow.services.monitor.utils import log_transaction
 from langflow.utils.constants import DIRECT_TYPES
 from langflow.utils.schemas import ChatOutputResponse
 from langflow.utils.util import sync_to_async, unescape_string
@@ -63,6 +63,8 @@ class Vertex:
         self._built_result = None
         self._built = False
         self.artifacts: Dict[str, Any] = {}
+        self.artifacts_raw: Any = None
+        self.artifacts_type: Optional[str] = None
         self.steps: List[Callable] = [self._build]
         self.steps_ran: List[Callable] = []
         self.task_id: Optional[str] = None
@@ -371,7 +373,7 @@ class Vertex:
         self.load_from_db_fields = load_from_db_fields
         self._raw_params = params.copy()
 
-    def update_raw_params(self, new_params: Dict[str, str], overwrite: bool = False):
+    def update_raw_params(self, new_params: Dict[str, str | list[str]], overwrite: bool = False):
         """
         Update the raw parameters of the vertex with the given new parameters.
 
@@ -426,7 +428,10 @@ class Vertex:
                     sender=artifacts.get("sender"),
                     sender_name=artifacts.get("sender_name"),
                     session_id=artifacts.get("session_id"),
+                    stream_url=artifacts.get("stream_url"),
+                    files=[{"path": file} if isinstance(file, str) else file for file in artifacts.get("files", [])],
                     component_id=self.id,
+                    type=self.artifacts_type,
                 ).model_dump(exclude_none=True)
             ]
         except KeyError:
@@ -444,7 +449,6 @@ class Vertex:
             messages = self.extract_messages_from_artifacts(artifacts)
         else:
             messages = []
-
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,
@@ -526,11 +530,11 @@ class Vertex:
             The built result if use_result is True, else the built object.
         """
         if not self._built:
-            log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="error")
+            log_transaction(vertex=self, target=requester, status="error")
             raise ValueError(f"Component {self.display_name} has not been built yet")
 
         result = self._built_result if self.use_result else self._built_object
-        log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="success")
+        log_transaction(vertex=self, target=requester, status="success")
         return result
 
     async def _build_vertex_and_update_params(self, key, vertex: "Vertex"):
@@ -624,6 +628,8 @@ class Vertex:
                 self._built_object, self.artifacts = result
             elif len(result) == 3:
                 self._custom_component, self._built_object, self.artifacts = result
+                self.artifacts_raw = self.artifacts.get("raw", None)
+                self.artifacts_type = self.artifacts.get("type", None) or ArtifactType.UNKNOWN.value
         else:
             self._built_object = result
 
@@ -664,6 +670,7 @@ class Vertex:
         self,
         user_id=None,
         inputs: Optional[Dict[str, Any]] = None,
+        files: Optional[list[str]] = None,
         requester: Optional["Vertex"] = None,
         **kwargs,
     ) -> Any:
@@ -681,9 +688,14 @@ class Vertex:
                 return await self.get_requester_result(requester)
             self._reset()
 
-            if self._is_chat_input() and inputs:
-                inputs = {"input_value": inputs.get(INPUT_FIELD_NAME, "")}
-                self.update_raw_params(inputs, overwrite=True)
+            if self._is_chat_input() and (inputs or files):
+                chat_input = {}
+                if inputs:
+                    chat_input.update({"input_value": inputs.get(INPUT_FIELD_NAME, "")})
+                if files:
+                    chat_input.update({"files": files})
+
+                self.update_raw_params(chat_input, overwrite=True)
 
             # Run steps
             for step in self.steps:

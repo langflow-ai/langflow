@@ -6,7 +6,6 @@ import PageLayout from "../../components/pageLayout";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
 
 import { Link, useNavigate, useParams } from "react-router-dom";
 import PaginatorComponent from "../../components/paginatorComponent";

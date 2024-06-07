@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from typing_extensions import TypedDict
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer
@@ -9,11 +10,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serial
 from langflow.graph.schema import RunOutputs
 from langflow.schema import dotdict
 from langflow.schema.graph import Tweaks
-from langflow.schema.schema import InputType, OutputType
+from langflow.schema.schema import InputType, Log, OutputType
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
+from langflow.utils.schemas import ChatOutputResponse
 
 
 class BuildStatus(Enum):
@@ -242,9 +244,10 @@ class VerticesOrderResponse(BaseModel):
     run_id: UUID
     vertices_to_run: List[str]
 
-
 class ResultDataResponse(BaseModel):
     results: Optional[Any] = Field(default_factory=dict)
+    logs: List[Log | None] = Field(default_factory=list)
+    message: Optional[Any] = Field(default_factory=dict)
     artifacts: Optional[Any] = Field(default_factory=dict)
     timedelta: Optional[float] = None
     duration: Optional[str] = None

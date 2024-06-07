@@ -45,6 +45,9 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
+        launchOptions: {
+          // headless: false,
+        },
         contextOptions: {
           // chromium-specific permissions
           permissions: ["clipboard-read", "clipboard-write"],
@@ -57,6 +60,7 @@ export default defineConfig({
     //   use: {
     //     ...devices["Desktop Firefox"],
     //     launchOptions: {
+    //       headless: false,
     //       firefoxUserPrefs: {
     //         "dom.events.asyncClipboard.readText": true,
     //         "dom.events.testing.asyncClipboard": true,
