@@ -1,7 +1,12 @@
 import { ReactElement, ReactNode, SetStateAction } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
-import { APIClassType, APITemplateType, InputFieldType } from "../api";
+import {
+  APIClassType,
+  APITemplateType,
+  InputFieldType,
+  OutputFieldProxyType,
+} from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
@@ -71,6 +76,7 @@ export type ParameterComponentType = {
   index: number;
   onCloseModal?: (close: boolean) => void;
   outputName?: string;
+  outputProxy?: OutputFieldProxyType;
 };
 export type InputListComponentType = {
   value: string[];
@@ -120,6 +126,7 @@ export type outputComponentType = {
   frozen?: boolean;
   idx: number;
   name: string;
+  proxy?: OutputFieldProxyType;
 };
 
 export type PromptAreaComponentType = {
@@ -528,7 +535,7 @@ export type nodeToolbarPropsType = {
   updateNodeCode?: (
     newNodeClass: APIClassType,
     code: string,
-    name: string
+    name: string,
   ) => void;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
   isOutdated?: boolean;
@@ -578,7 +585,7 @@ export type chatMessagePropsType = {
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url?: string
+    stream_url?: string,
   ) => void;
 };
 
@@ -670,12 +677,12 @@ export type codeTabsPropsType = {
       value: string,
       node: NodeType,
       template: InputFieldType,
-      tweak: tweakType
+      tweak: tweakType,
     ) => string;
     buildTweakObject?: (
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: InputFieldType
+      template: InputFieldType,
     ) => Promise<string | void>;
   };
   activeTweaks?: boolean;
