@@ -17,7 +17,7 @@ type ProfilePictureFormComponentProps = {
   profilePicture: string;
   handleInput: (event: any) => void;
   handlePatchProfilePicture: (gradient: string) => void;
-  handleGetProfilePictures: () => Promise<string[]>;
+  handleGetProfilePictures: () => Promise<string[] | undefined>;
   userData: any;
 };
 const ProfilePictureFormComponent = ({
