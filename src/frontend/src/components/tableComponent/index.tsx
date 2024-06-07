@@ -20,6 +20,8 @@ interface TableComponentProps extends AgGridReactProps {
   alertTitle?: string;
   alertDescription?: string;
   editable?: boolean | string[];
+  onDelete?: (selectedRows: any) => void;
+  onDuplicate?: (selectedRows: any) => void;
 }
 
 const TableComponent = forwardRef<
