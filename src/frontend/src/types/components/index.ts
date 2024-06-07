@@ -84,7 +84,7 @@ export type InputGlobalComponentType = {
   onChange: (value: string) => void;
   setDb: (value: boolean) => void;
   name: string;
-  data: NodeDataType;
+  data: TemplateVariableType;
   editNode?: boolean;
   playgroundDisabled?: boolean;
 };

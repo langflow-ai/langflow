@@ -21,7 +21,7 @@ import {
   LANGFLOW_SUPPORTED_TYPES,
   TOOLTIP_EMPTY,
 } from "../../../../constants/constants";
-import OutputModal from "../../../../customNodes/genericNode/components/outputModal";
+import OutputModal from "../outputModal";
 import { Case } from "../../../../shared/components/caseComponent";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
@@ -430,7 +430,7 @@ export default function ParameterComponent({
                       });
                     }}
                     name={name}
-                    data={data.node?.template[name]}
+                    data={data.node?.template[name]!}
                   />
                 </div>
                 {data.node?.template[name]?.refresh_button && (
