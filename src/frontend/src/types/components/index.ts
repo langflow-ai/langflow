@@ -396,7 +396,7 @@ export type loginInputStateType = {
 export type patchUserInputStateType = {
   password: string;
   cnfPassword: string;
-  gradient: string;
+  profilePicture: string;
   apikey: string;
 };
 

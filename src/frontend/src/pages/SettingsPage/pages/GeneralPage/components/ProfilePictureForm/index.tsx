@@ -1,5 +1,4 @@
 import * as Form from "@radix-ui/react-form";
-import GradientChooserComponent from "../../../../../../components/gradientChooserComponent";
 import { Button } from "../../../../../../components/ui/button";
 import {
   Card,
@@ -10,47 +9,48 @@ import {
   CardTitle,
 } from "../../../../../../components/ui/card";
 import { gradients } from "../../../../../../utils/styleUtils";
+import ProfilePictureChooserComponent from "./components/profilePictureChooserComponent";
 
-type ProfileGradientFormComponentProps = {
-  gradient: string;
+type ProfilePictureFormComponentProps = {
+  profilePicture: string;
   handleInput: (event: any) => void;
-  handlePatchGradient: (gradient: string) => void;
+  handlePatchProfilePicture: (gradient: string) => void;
   userData: any;
 };
-const ProfileGradientFormComponent = ({
-  gradient,
+const ProfilePictureFormComponent = ({
+  profilePicture,
   handleInput,
-  handlePatchGradient,
+  handlePatchProfilePicture,
   userData,
-}: ProfileGradientFormComponentProps) => {
+}: ProfilePictureFormComponentProps) => {
   return (
     <>
       <Form.Root
         onSubmit={(event) => {
-          handlePatchGradient(gradient);
+          handlePatchProfilePicture(profilePicture);
           event.preventDefault();
         }}
       >
         <Card x-chunk="dashboard-04-chunk-1">
           <CardHeader>
-            <CardTitle>Profile Gradient</CardTitle>
+            <CardTitle>Profile Picture</CardTitle>
             <CardDescription>
-              Choose the gradient that appears as your profile picture.
+              Choose the image that appears as your profile picture.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="py-2">
-              <GradientChooserComponent
+              <ProfilePictureChooserComponent
                 value={
-                  gradient == ""
+                  profilePicture == ""
                     ? userData?.profile_image ??
                       gradients[
                         parseInt(userData?.id ?? "", 30) % gradients.length
                       ]
-                    : gradient
+                    : profilePicture
                 }
                 onChange={(value) => {
-                  handleInput({ target: { name: "gradient", value } });
+                  handleInput({ target: { name: "profilePicture", value } });
                 }}
               />
             </div>
@@ -65,4 +65,4 @@ const ProfileGradientFormComponent = ({
     </>
   );
 };
-export default ProfileGradientFormComponent;
+export default ProfilePictureFormComponent;
