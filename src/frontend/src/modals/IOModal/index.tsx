@@ -3,7 +3,6 @@ import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
 import {
   Tabs,
   TabsContent,
@@ -40,25 +39,25 @@ export default function IOModal({
   const allNodes = useFlowStore((state) => state.nodes);
   const setMessages = useMessagesStore((state) => state.setMessages);
   const inputs = useFlowStore((state) => state.inputs).filter(
-    (input) => input.type !== "ChatInput",
+    (input) => input.type !== "ChatInput"
   );
   const chatInput = useFlowStore((state) => state.inputs).find(
-    (input) => input.type === "ChatInput",
+    (input) => input.type === "ChatInput"
   );
   const outputs = useFlowStore((state) => state.outputs).filter(
-    (output) => output.type !== "ChatOutput",
+    (output) => output.type !== "ChatOutput"
   );
   const chatOutput = useFlowStore((state) => state.outputs).find(
-    (output) => output.type === "ChatOutput",
+    (output) => output.type === "ChatOutput"
   );
   const nodes = useFlowStore((state) => state.nodes).filter(
     (node) =>
       inputs.some((input) => input.id === node.id) ||
-      outputs.some((output) => output.id === node.id),
+      outputs.some((output) => output.id === node.id)
   );
   const haveChat = chatInput || chatOutput;
   const [selectedTab, setSelectedTab] = useState(
-    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0,
+    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -93,15 +92,29 @@ export default function IOModal({
     return updateVerticesOrder(currentFlow!.id, null);
   }
 
-  async function sendMessage(count = 1): Promise<void> {
+  // useEffect(() => {
+  //   if (open) {
+  //     updateVertices();
+  //   }
+  // }, [open, currentFlow]);
+
+  async function sendMessage({
+    repeat = 1,
+    files,
+  }: {
+    repeat: number;
+    files?: string[];
+  }): Promise<void> {
     if (isBuilding) return;
     setIsBuilding(true);
     setLockChat(true);
     setChatValue("");
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < repeat; i++) {
       await buildFlow({
         input_value: chatValue,
         startNodeId: chatInput?.id,
+        files: files,
+        silent: true,
       }).catch((err) => {
         console.error(err);
         setLockChat(false);
@@ -156,7 +169,13 @@ export default function IOModal({
   }, [messages]);
 
   return (
-    <BaseModal size={"md-thin"} open={open} setOpen={setOpen} disable={disable}>
+    <BaseModal
+      size={selectedTab === 0 ? "sm-thin" : "md-thin"}
+      open={open}
+      setOpen={setOpen}
+      disable={disable}
+      onSubmit={() => sendMessage({ repeat: 1 })}
+    >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
       <BaseModal.Header description={CHAT_FORM_DIALOG_SUBTITLE}>
@@ -398,7 +417,7 @@ export default function IOModal({
                 <div
                   className={cn(
                     "flex h-full w-full flex-col items-start gap-4 pt-4",
-                    !selectedViewField ? "hidden" : "",
+                    !selectedViewField ? "hidden" : ""
                   )}
                 >
                   <div className="font-xl flex items-center justify-center gap-3 font-semibold">
@@ -452,7 +471,7 @@ export default function IOModal({
               <div
                 className={cn(
                   "flex h-full w-full",
-                  selectedViewField ? "hidden" : "",
+                  selectedViewField ? "hidden" : ""
                 )}
               >
                 {haveChat ? (
@@ -474,26 +493,22 @@ export default function IOModal({
         </div>
       </BaseModal.Content>
       {!haveChat ? (
-        <BaseModal.Footer>
-          <div className="flex w-full justify-end  pt-2">
-            <Button
-              variant={"outline"}
-              className="flex gap-2 px-3"
-              onClick={() => sendMessage(1)}
-            >
+        <BaseModal.Footer
+          submit={{
+            label: "Run Flow",
+            icon: (
               <IconComponent
                 name={isBuilding ? "Loader2" : "Zap"}
                 className={cn(
                   "h-4 w-4",
                   isBuilding
                     ? "animate-spin"
-                    : "fill-current text-medium-indigo",
+                    : "fill-current text-medium-indigo"
                 )}
               />
-              Run Flow
-            </Button>
-          </div>
-        </BaseModal.Footer>
+            ),
+          }}
+        />
       ) : (
         <></>
       )}

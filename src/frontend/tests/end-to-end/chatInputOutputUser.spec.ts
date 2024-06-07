@@ -57,8 +57,11 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
     .getByTestId("textarea-input_value")
     .nth(1)
     .fill(
-      "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!"
+      "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",
     );
+  await page.getByTestId("icon-LucideSend").click();
+  await page.getByText("Close", { exact: true }).click();
+
   await page
     .getByTestId("popover-anchor-input-sender_name")
     .nth(1)
@@ -68,7 +71,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
     .nth(0)
     .fill("TestSenderNameAI");
 
-  await page.getByText("Playground", { exact: true }).click();
+  await page.getByText("Playground", { exact: true }).last().click();
   await page.getByTestId("icon-LucideSend").click();
 
   valueUser = await page
@@ -85,8 +88,62 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
     await page
       .getByText(
         "testtesttesttesttesttestte;.;.,;,.;,.;.,;,..,;;;;;;;;;;;;;;;;;;;;;,;.;,.;,.,;.,;.;.,~~çççççççççççççççççççççççççççççççççççççççisdajfdasiopjfaodisjhvoicxjiovjcxizopjviopasjioasfhjaiohf23432432432423423sttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttesttestççççççççççççççççççççççççççççççççç,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,.,!",
-        { exact: true }
+        { exact: true },
       )
-      .isVisible()
+      .isVisible(),
   );
+});
+
+test("user must be able to see output inspection", async ({ page }) => {
+  if (!process.env.CI) {
+    dotenv.config();
+    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+  }
+
+  await page.goto("/");
+
+  await page.waitForTimeout(1000);
+
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
+    }
+  } catch (error) {
+    modalCount = 0;
+  }
+
+  while (modalCount === 0) {
+    await page.getByText("New Project", { exact: true }).click();
+    await page.waitForTimeout(5000);
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
+
+  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+  await page.waitForTimeout(1000);
+
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+  await page.getByTitle("zoom out").click();
+
+  if (!process.env.OPENAI_API_KEY) {
+    //You must set the OPENAI_API_KEY on .env file to run this test
+    expect(false).toBe(true);
+  }
+
+  await page
+    .getByTestId("popover-anchor-input-openai_api_key")
+    .fill(process.env.OPENAI_API_KEY ?? "");
+
+  await page.getByTestId("button_run_chat output").last().click();
+
+  await page.waitForTimeout(2000);
+
+  await page.getByTestId("icon-ScanEye").last().click();
+
+  await page.getByText("Sender", { exact: true }).isVisible();
+  await page.getByText("Type", { exact: true }).isVisible();
+  await page.getByText("User", { exact: true }).last().isVisible();
 });

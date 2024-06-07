@@ -41,7 +41,7 @@ class NotionDatabaseProperties(CustomComponent):
     description = "Retrieve properties of a Notion database."
     documentation: str = "https://docs.langflow.org/integrations/notion/list-database-properties"
     icon = "NotionDirectoryLoader"
-    
+
     def build_config(self):
         return {
             "database_id": {
@@ -80,6 +80,7 @@ class NotionDatabaseProperties(CustomComponent):
 ```
 
 ## Example Usage
+
 <Admonition type="info" title="Example Usage">
 Here's an example of how you can use the `NotionDatabaseProperties` component in a Langflow flow:
 
@@ -110,6 +111,7 @@ Feel free to explore the capabilities of the `NotionDatabaseProperties` componen
 ## Troubleshooting
 
 If you encounter any issues while using the `NotionDatabaseProperties` component, consider the following:
+
 - Verify that the Notion integration token is valid and has the required permissions.
 - Check the database ID to ensure it matches the intended Notion database.
 - Inspect the response from the Notion API for any error messages or status codes that may indicate the cause of the issue.

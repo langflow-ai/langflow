@@ -22,7 +22,7 @@ test("GlobalVariables", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("openai");
@@ -69,7 +69,6 @@ test("GlobalVariables", async ({ page }) => {
   await page.getByText("Save Variable", { exact: true }).click();
   expect(page.getByText(credentialName, { exact: true })).not.toBeNull();
   await page.getByText(credentialName, { exact: true }).isVisible();
-  await page.getByText("Save Variable", { exact: true }).click();
   await page.waitForTimeout(2000);
 
   await page

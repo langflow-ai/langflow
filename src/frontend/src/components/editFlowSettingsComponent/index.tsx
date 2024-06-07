@@ -9,11 +9,14 @@ export const EditFlowSettings: React.FC<InputProps> = ({
   name,
   invalidNameList,
   description,
+  endpointName,
   maxLength = 50,
   setName,
   setDescription,
+  setEndpointName,
 }: InputProps): JSX.Element => {
   const [isMaxLength, setIsMaxLength] = useState(false);
+  const [isEndpointNameValid, setIsEndpointNameValid] = useState(true);
 
   const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { value } = event.target;
@@ -27,6 +30,18 @@ export const EditFlowSettings: React.FC<InputProps> = ({
 
   const handleDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     setDescription!(event.target.value);
+  };
+
+  const handleEndpointNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+    // Validate the endpoint name
+    // use this regex r'^[a-zA-Z0-9_-]+$'
+    const isValid =
+      (/^[a-zA-Z0-9_-]+$/.test(event.target.value) &&
+        event.target.value.length <= maxLength) ||
+      // empty is also valid
+      event.target.value.length === 0;
+    setIsEndpointNameValid(isValid);
+    setEndpointName!(event.target.value);
   };
 
   //this function is necessary to select the text when double clicking, this was not working with the onFocus event
@@ -84,13 +99,39 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           <span
             className={cn(
               "font-normal text-muted-foreground word-break-break-word",
-              description === "" ? "font-light italic" : ""
+              description === "" ? "font-light italic" : "",
             )}
           >
             {description === "" ? "No description" : description}
           </span>
         )}
       </Label>
+      {setEndpointName && (
+        <Label>
+          <div className="edit-flow-arrangement mt-3">
+            <span className="font-medium">Endpoint Name</span>
+            {!isEndpointNameValid && (
+              <span className="edit-flow-span">
+                Invalid endpoint name. Use only letters, numbers, hyphens, and
+                underscores ({maxLength} characters max).
+              </span>
+            )}
+          </div>
+          <Input
+            className="nopan nodelete nodrag noundo nocopy mt-2 font-normal"
+            onChange={handleEndpointNameChange}
+            type="text"
+            name="endpoint_name"
+            value={endpointName ?? ""}
+            placeholder="An alternative name to run the endpoint"
+            maxLength={maxLength}
+            id="endpoint_name"
+            onDoubleClickCapture={(event) => {
+              handleFocus(event);
+            }}
+          />
+        </Label>
+      )}
     </>
   );
 };

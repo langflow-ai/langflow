@@ -29,7 +29,7 @@ export default function DictAreaModal({
 
   useEffect(() => {
     if (value) ref.current = value;
-  }, [ref]);
+  }, [value]);
 
   return (
     <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>

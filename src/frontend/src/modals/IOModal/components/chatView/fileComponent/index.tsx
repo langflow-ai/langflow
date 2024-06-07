@@ -1,7 +1,10 @@
-import * as base64js from "base64-js";
 import { useState } from "react";
 import IconComponent from "../../../../../components/genericIconComponent";
+import { BACKEND_URL, BASE_URL_API } from "../../../../../constants/constants";
+import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { fileCardPropsType } from "../../../../../types/components";
+
+const imgTypes = new Set(["png", "jpg"]);
 
 export default function FileCard({
   fileName,
@@ -9,18 +12,10 @@ export default function FileCard({
   fileType,
 }: fileCardPropsType): JSX.Element {
   const handleDownload = (): void => {
-    const byteArray = new Uint8Array(base64js.toByteArray(content));
-    const blob = new Blob([byteArray], { type: "application/octet-stream" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName + ".png";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    //TODO: update download function
   };
   const [isHovered, setIsHovered] = useState(false);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   function handleMouseEnter(): void {
     setIsHovered(true);
   }
@@ -28,7 +23,7 @@ export default function FileCard({
     setIsHovered(false);
   }
 
-  if (fileType === "image") {
+  if (imgTypes.has(fileType)) {
     return (
       <div
         className="relative h-1/4 w-1/4"
@@ -36,7 +31,10 @@ export default function FileCard({
         onMouseLeave={handleMouseLeave}
       >
         <img
-          src={`data:image/png;base64,${content}`}
+          src={`${BACKEND_URL.slice(
+            0,
+            BACKEND_URL.length - 1,
+          )}${BASE_URL_API}files/images/${content}`}
           alt="generated image"
           className="h-full  w-full rounded-lg"
         />
@@ -60,10 +58,13 @@ export default function FileCard({
   return (
     <button onClick={handleDownload} className="file-card-modal-button">
       <div className="file-card-modal-div">
-        ooooooooooooooo{" "}
-        {fileType === "image" ? (
+        {" "}
+        {imgTypes.has(fileType) ? (
           <img
-            src={`data:image/png;base64,${content}`}
+            src={`${BACKEND_URL.slice(
+              0,
+              BACKEND_URL.length - 1,
+            )}${BASE_URL_API}files/images/${content}`}
             alt=""
             className="h-8 w-8"
           />

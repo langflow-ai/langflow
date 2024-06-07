@@ -5,6 +5,7 @@ from typing import Literal, Optional, cast
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from pydantic import BaseModel, model_validator
+from typing_extensions import TypedDict
 
 
 class Record(BaseModel):
@@ -177,3 +178,12 @@ INPUT_FIELD_NAME = "input_value"
 
 InputType = Literal["chat", "text", "any"]
 OutputType = Literal["chat", "text", "any", "debug"]
+
+
+class StreamURL(TypedDict):
+    location: str
+
+
+class Log(TypedDict):
+    message: str | dict | StreamURL
+    type: str

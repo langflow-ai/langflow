@@ -9,7 +9,11 @@ import {
   CommandList,
 } from "../../../ui/command";
 import { Input } from "../../../ui/input";
-import { Popover, PopoverContentWithoutPortal } from "../../../ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverContentWithoutPortal,
+} from "../../../ui/popover";
 const CustomInputPopoverObject = ({
   id,
   refInput,
@@ -23,6 +27,7 @@ const CustomInputPopoverObject = ({
   disabled,
   setShowOptions,
   required,
+  editNode,
   className,
   placeholder,
   onChange,
@@ -34,6 +39,10 @@ const CustomInputPopoverObject = ({
   handleKeyDown,
   showOptions,
 }) => {
+  const PopoverContentInput = editNode
+    ? PopoverContent
+    : PopoverContentWithoutPortal;
+
   const handleInputChange = (e) => {
     onChange && onChange(e.target.value);
   };
@@ -79,8 +88,8 @@ const CustomInputPopoverObject = ({
           data-testid={id}
         />
       </PopoverAnchor>
-      <PopoverContentWithoutPortal
-        className="nocopy nopan nodelete nodrag noundo p-0"
+      <PopoverContentInput
+        className="nocopy nowheel nopan nodelete nodrag noundo p-0"
         style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
         side="bottom"
         align="center"
@@ -159,7 +168,7 @@ const CustomInputPopoverObject = ({
             </CommandGroup>
           </CommandList>
         </Command>
-      </PopoverContentWithoutPortal>
+      </PopoverContentInput>
     </Popover>
   );
 };

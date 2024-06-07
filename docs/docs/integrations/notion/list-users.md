@@ -9,13 +9,11 @@ The `NotionUserList` component retrieves users from Notion. It provides a conven
 
 [Notion Reference](https://developers.notion.com/reference/get-users)
 
-<Admonition type="tip" title="Component Functionality">
- The `NotionUserList` component enables you to:
+The `NotionUserList` component enables you to:
 
 - Retrieve user data from Notion
 - Access user information such as ID, type, name, and avatar URL
 - Integrate Notion user data seamlessly into your Langflow workflows
-</Admonition>
 
 ## Component Usage
 
@@ -94,33 +92,30 @@ class NotionUserList(CustomComponent):
 ```
 
 ## Example Usage
-<Admonition type="info" title="Example Usage">
+
 Here's an example of how you can use the `NotionUserList` component in a Langflow flow and passing the outputs to the Prompt component:
 
 <ZoomableImage
-    alt="NotionUserList Flow Example"
-    sources={{
+alt="NotionUserList Flow Example"
+sources={{
       light: "img/notion/NotionUserList_flow_example.png",
       dark: "img/notion/NotionUserList_flow_example_dark.png",
   }}
-  style={{ width: "100%", margin: "20px 0" }}
+style={{ width: "100%", margin: "20px 0" }}
 />
-
-</Admonition>
 
 ## Best Practices
 
- When using the `NotionUserList` component, consider the following best practices:
+When using the `NotionUserList` component, consider the following best practices:
 
 - Ensure that you have a valid Notion integration token with the necessary permissions to retrieve user data.
 - Handle the retrieved user data securely and in compliance with Notion's API usage guidelines.
 
 The `NotionUserList` component provides a seamless way to integrate Notion user data into your Langflow workflows. By leveraging this component, you can easily retrieve and utilize user information from Notion, enhancing the capabilities of your Langflow applications. Feel free to explore and experiment with the `NotionUserList` component to unlock new possibilities in your Langflow projects!
 
-
 ## Troubleshooting
 
- If you encounter any issues while using the `NotionUserList` component, consider the following:
+If you encounter any issues while using the `NotionUserList` component, consider the following:
 
 - Double-check that your Notion integration token is valid and has the required permissions.
 - Verify that you have installed the necessary dependencies (`requests`) for the component to function properly.

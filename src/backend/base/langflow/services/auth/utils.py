@@ -76,11 +76,6 @@ async def get_current_user(
     if token:
         return await get_current_user_by_jwt(token, db)
     else:
-        if not query_param and not header_param:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="An API key as query or header, or a JWT token must be passed",
-            )
         user = await api_key_security(query_param, header_param, db)
         if user:
             return user
@@ -216,15 +211,11 @@ def create_super_user(
 
 def create_user_longterm_token(db: Session = Depends(get_session)) -> tuple[UUID, dict]:
     settings_service = get_settings_service()
-    username = settings_service.auth_settings.SUPERUSER
-    password = settings_service.auth_settings.SUPERUSER_PASSWORD
-    if not username or not password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing first superuser credentials",
-        )
-    super_user = create_super_user(db=db, username=username, password=password)
 
+    username = settings_service.auth_settings.SUPERUSER
+    super_user = get_user_by_username(db, username)
+    if not super_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Super user hasn't been created")
     access_token_expires_longterm = timedelta(days=365)
     access_token = create_token(
         data={"sub": str(super_user.id)},

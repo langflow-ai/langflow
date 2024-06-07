@@ -21,7 +21,7 @@ test("NestedComponent", async ({ page }) => {
   }
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(3000);
   await page.getByTestId("extended-disclosure").click();
   await page.getByPlaceholder("Search").click();
   await page.getByPlaceholder("Search").fill("pinecone");
@@ -189,5 +189,5 @@ test("NestedComponent", async ({ page }) => {
     await page.locator('//*[@id="showtext_key"]').isChecked(),
   ).toBeTruthy();
 
-  await page.locator('//*[@id="saveChangesBtn"]').click();
+  await page.getByText("Save Changes", { exact: true }).click();
 });

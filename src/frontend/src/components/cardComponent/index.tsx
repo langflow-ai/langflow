@@ -27,8 +27,8 @@ import {
 import { Checkbox } from "../ui/checkbox";
 import { FormControl, FormField } from "../ui/form";
 import Loading from "../ui/loading";
-import { convertTestName } from "./utils/convert-test-name";
 import DragCardComponent from "./components/dragCardComponent";
+import { convertTestName } from "./utils/convert-test-name";
 
 export default function CollectionCardComponent({
   data,

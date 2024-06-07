@@ -251,21 +251,6 @@ dark:prose-invert"
                       [chat.message, chatMessage],
                     )}
                   </div>
-                  {chat.files && (
-                    <div className="my-2 w-full">
-                      {chat.files.map((file, index) => {
-                        return (
-                          <div key={index} className="my-2 w-full">
-                            <FileCard
-                              fileName={"Generated File"}
-                              fileType={file.data_type}
-                              content={file.data}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -336,6 +321,21 @@ dark:prose-invert"
         )}
       </div>
       <div id={lastMessage ? "last-chat-message" : ""}></div>
+      {chat.files && (
+        <div className="my-2 w-full">
+          {chat.files.map((file, index) => {
+            return (
+              <div key={index} className="my-2 w-full">
+                <FileCard
+                  fileName={file.name}
+                  fileType={file.type}
+                  content={file.path}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }

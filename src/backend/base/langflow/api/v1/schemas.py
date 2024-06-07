@@ -9,11 +9,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serial
 from langflow.graph.schema import RunOutputs
 from langflow.schema import dotdict
 from langflow.schema.graph import Tweaks
-from langflow.schema.schema import InputType, OutputType
+from langflow.schema.schema import InputType, Log, OutputType
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
+from langflow.utils.schemas import ChatOutputResponse
 
 
 class BuildStatus(Enum):
@@ -245,7 +246,8 @@ class VerticesOrderResponse(BaseModel):
 
 class ResultDataResponse(BaseModel):
     results: Optional[Any] = Field(default_factory=dict)
-    artifacts: Optional[Any] = Field(default_factory=dict)
+    logs: List[Log | None] = Field(default_factory=list)
+    messages: List[ChatOutputResponse | None] = Field(default_factory=list)
     timedelta: Optional[float] = None
     duration: Optional[str] = None
     used_frozen_result: Optional[bool] = False
@@ -257,8 +259,6 @@ class VertexBuildResponse(BaseModel):
     next_vertices_ids: Optional[List[str]] = None
     top_level_vertices: Optional[List[str]] = None
     valid: bool
-    params: Optional[Any] = Field(default_factory=dict)
-    """JSON string of the params."""
     data: ResultDataResponse
     """Mapping of vertex ids to result dict containing the param name and result value."""
     timestamp: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
