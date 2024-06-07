@@ -4395,13 +4395,13 @@ url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
-version = "2.35.0"
+version = "2.35.2"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langfuse-2.35.0-py3-none-any.whl", hash = "sha256:e9df2474a01f8e167b7b13674c554915415b27064e48ad207054475f7fa8f82d"},
-    {file = "langfuse-2.35.0.tar.gz", hash = "sha256:b1d4b478233eefbc8a6fc63ca00ca82f6afecf2b0fdc1835ca65e751cf901577"},
+    {file = "langfuse-2.35.2-py3-none-any.whl", hash = "sha256:d01a23842cab484594f03878aacb9732ef8fd361158eb819c7bf43f758a0954b"},
+    {file = "langfuse-2.35.2.tar.gz", hash = "sha256:32b2e6c5bc71b4efdc430c6b964ab1c1e1ba1e105a4a73912c38b3959dc4502d"},
 ]
 
 [package.dependencies]
@@ -10081,4 +10081,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "2ba268be17a69253c9631ec721ece465a85a22949c2df7c712b7aa12d1a002fa"
+content-hash = "d87bda272f67450430630924263690c2ae62416d0b240e029baaa8da07154bec"
