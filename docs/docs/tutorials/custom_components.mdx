@@ -355,7 +355,7 @@ All done! This is what our script and brand-new custom component look like:
 
 ---
 
-## Loading Custom Components
+## Load Custom Components
 
 For advanced customization, Langflow offers the option to create and load custom components outside of the standard interface. This process involves creating the desired components using a text editor and loading them using the Langflow CLI.
 
@@ -380,7 +380,7 @@ Your structure should look something like this:
     └── ...
 ```
 
-### Loading Custom Components
+### Load Custom Components
 
 The recommended way to load custom components is to set the _`LANGFLOW_COMPONENTS_PATH`_ environment variable to the path of your custom components directory. Then, run the Langflow CLI as usual.
 
@@ -397,7 +397,7 @@ langflow run --components-path /path/to/components
 
 Langflow will attempt to load all of the components found in the specified directory. If a component fails to load due to errors in the component's code, Langflow will print an error message to the console but will continue loading the rest of the components.
 
-### Interacting with Custom Components
+### Interact with Custom Components
 
 Once your custom components have been loaded successfully, they will appear in Langflow's sidebar. From there, you can add them to your Langflow canvas for use. However, please note that components with errors will not be available for addition to the canvas. Always ensure your code is error-free before attempting to load components.
 
