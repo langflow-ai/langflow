@@ -204,7 +204,10 @@ export default function GenericNode({
     setShowNode(data.showNode ?? true);
   }, [data.showNode]);
 
+  const [loadingUpdate, setLoadingUpdate] = useState(false);
+
   const handleUpdateCode = () => {
+    setLoadingUpdate(true);
     takeSnapshot();
     // to update we must get the code from the templates in useTypesStore
     const thisNodeTemplate = templates[data.type]?.template;
@@ -219,19 +222,12 @@ export default function GenericNode({
           const { data } = apiReturn;
           if (data && updateNodeCode) {
             updateNodeCode(data, currentCode, "code");
+            setLoadingUpdate(false);
           }
         })
         .catch((err) => {
           console.log(err);
         });
-      setNode(data.id, (oldNode) => {
-        let newNode = cloneDeep(oldNode);
-        newNode.data = {
-          ...data,
-        };
-        newNode.data.node.template.code.value = currentCode;
-        return newNode;
-      });
     }
   };
 
@@ -476,6 +472,7 @@ export default function GenericNode({
                         onClick={handleUpdateCode}
                         variant="secondary"
                         className={"h-9 px-1.5"}
+                        loading={loadingUpdate}
                       >
                         <IconComponent
                           name="AlertTriangle"
