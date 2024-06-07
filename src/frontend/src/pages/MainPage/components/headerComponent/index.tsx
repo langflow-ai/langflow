@@ -1,12 +1,9 @@
 import { useState } from "react";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../../../components/genericIconComponent";
+import IconComponent from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
 import { Checkbox } from "../../../../components/ui/checkbox";
 import { cn } from "../../../../utils/utils";
-import { Button } from "../../../../components/ui/button";
 
 type HeaderComponentProps = {
   handleSelectAll: (select) => void;
