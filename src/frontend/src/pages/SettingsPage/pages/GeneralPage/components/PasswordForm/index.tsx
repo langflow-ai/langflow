@@ -17,7 +17,7 @@ type PasswordFormComponentProps = {
   handlePatchPassword: (
     password: string,
     cnfPassword: string,
-    handleInput: any
+    handleInput: any,
   ) => void;
 };
 const PasswordFormComponent = ({

@@ -103,7 +103,7 @@ interface BaseModalProps {
     React.ReactElement<ContentProps>,
     React.ReactElement<HeaderProps>,
     React.ReactElement<TriggerProps>?,
-    React.ReactElement<FooterProps>?
+    React.ReactElement<FooterProps>?,
   ];
   open?: boolean;
   setOpen?: (open: boolean) => void;
@@ -139,16 +139,16 @@ function BaseModal({
   onSubmit,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Header
+    (child) => (child as React.ReactElement).type === Header,
   );
   const triggerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Trigger
+    (child) => (child as React.ReactElement).type === Trigger,
   );
   const ContentChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Content
+    (child) => (child as React.ReactElement).type === Content,
   );
   const ContentFooter = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Footer
+    (child) => (child as React.ReactElement).type === Footer,
   );
 
   let { minWidth, height } = switchCaseModalSize(size);
