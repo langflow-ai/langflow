@@ -8,6 +8,7 @@ import {
   APITemplateType,
   Component,
   LoginType,
+  ProfilePicturesTypeAPI,
   Users,
   VertexBuildTypeAPI,
   VerticesOrderTypeAPI,
@@ -362,6 +363,10 @@ export async function uploadFile(
   const formData = new FormData();
   formData.append("file", file);
   return await api.post(`${BASE_URL_API}files/upload/${id}`, formData);
+}
+
+export async function getProfilePictures(): Promise<ProfilePicturesTypeAPI> {
+  return await api.get(`${BASE_URL_API}files/list/profile_pictures`);
 }
 
 export async function postCustomComponent(
