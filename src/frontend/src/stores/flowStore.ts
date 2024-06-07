@@ -90,7 +90,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       }
       //update data results
       else {
-        newFlowPool[nodeId][index].data.messages[0] = data as
+        newFlowPool[nodeId][index].data.message = data as
           | ChatOutputType
           | ChatInputType;
       }
