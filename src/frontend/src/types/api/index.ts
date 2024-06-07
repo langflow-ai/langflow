@@ -93,6 +93,10 @@ export type UploadFileTypeAPI = {
   flowId: string;
 };
 
+export type ProfilePicturesTypeAPI = {
+  files: string[];
+};
+
 export type LoginType = {
   grant_type?: string;
   username: string;
