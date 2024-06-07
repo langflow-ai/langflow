@@ -12,6 +12,7 @@ class TransactionModel(BaseModel):
     index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
     vertex_id: str
+    target_id: str | None = None
     inputs: dict
     outputs: dict
     status: str
