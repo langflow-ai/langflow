@@ -17,9 +17,7 @@ type ProfilePictureFormComponentProps = {
   profilePicture: string;
   handleInput: (event: any) => void;
   handlePatchProfilePicture: (gradient: string) => void;
-  handleGetProfilePictures: (
-    abortSignal: GenericAbortSignal | undefined,
-  ) => Promise<string[]>;
+  handleGetProfilePictures: () => Promise<string[]>;
   userData: any;
 };
 const ProfilePictureFormComponent = ({
@@ -37,7 +35,7 @@ const ProfilePictureFormComponent = ({
   useEffect(() => {
     const abortController = new AbortController();
 
-    handleGetProfilePictures(abortController.signal)
+    handleGetProfilePictures()
       .then((data) => {
         if (data) {
           data.forEach((profile_picture) => {

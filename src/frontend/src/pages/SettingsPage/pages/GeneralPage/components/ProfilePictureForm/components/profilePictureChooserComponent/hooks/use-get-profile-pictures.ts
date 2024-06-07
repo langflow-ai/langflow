@@ -1,19 +1,22 @@
 import { reject } from "lodash";
 import { PROFILE_PICTURES_GET_ERROR_ALERT } from "../../../../../../../../../constants/alerts_constants";
 import { getProfilePictures } from "../../../../../../../../../controllers/API";
+import axios from "axios";
 
 const useGetProfilePictures = (setErrorData) => {
-  const handleGetProfilePictures = async (abortSignal) => {
+  const handleGetProfilePictures = async () => {
     try {
-      const profilePictures = await getProfilePictures(abortSignal);
+      const profilePictures = await getProfilePictures();
       return profilePictures!.files;
     } catch (error) {
-      console.log(error);
-      setErrorData({
-        title: PROFILE_PICTURES_GET_ERROR_ALERT,
-        list: [(error as any)?.response?.data?.detail],
-      });
-      throw error;
+      if (axios.isCancel(error)) {
+        console.warn("Request canceled: ", error.message);
+      } else {
+        setErrorData({
+          title: PROFILE_PICTURES_GET_ERROR_ALERT,
+          list: [(error as any)?.response?.data?.detail],
+        });
+      }
     }
   };
 
