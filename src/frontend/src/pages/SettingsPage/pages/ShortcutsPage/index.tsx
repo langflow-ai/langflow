@@ -115,15 +115,11 @@ export default function ShortcutsPage() {
         </div>
       </div>
       <div className="flex h-full w-full flex-col justify-between">
-        <Card x-chunk="dashboard-04-chunk-2" className="h-full pt-4">
-          <CardContent className="h-full">
-            <TableComponent
-              pagination={false}
-              columnDefs={colDefs}
-              rowData={nodesRowData}
-            />
-          </CardContent>
-        </Card>
+        <TableComponent
+          pagination={false}
+          columnDefs={colDefs}
+          rowData={nodesRowData}
+        />
       </div>
     </div>
   );
