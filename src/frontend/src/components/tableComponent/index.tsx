@@ -1,7 +1,7 @@
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
-import { ElementRef, forwardRef, useRef } from "react";
+import { ElementRef, forwardRef, useRef, useState } from "react";
 import {
   DEFAULT_TABLE_ALERT_MSG,
   DEFAULT_TABLE_ALERT_TITLE,
@@ -11,7 +11,7 @@ import "../../style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import { cn, toTitleCase } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import ResetColumns from "./components/ResetColumns";
+import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
 import { useParams } from "react-router-dom";
 
@@ -21,8 +21,8 @@ interface TableComponentProps extends AgGridReactProps {
   alertTitle?: string;
   alertDescription?: string;
   editable?: boolean | string[];
-  onDelete?: (selectedRows: any) => void;
-  onDuplicate?: (selectedRows: any) => void;
+  onDelete?: () => void;
+  onDuplicate?: () => void;
 }
 
 const TableComponent = forwardRef<
@@ -70,9 +70,12 @@ const TableComponent = forwardRef<
     });
     const gridRef = useRef(null);
     // @ts-ignore
-    const realRef = ref?.current ? ref : gridRef;
+    const realRef: React.MutableRefObject<AgGridReact> = ref?.current
+      ? ref
+      : gridRef;
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
+    const [columnStateChange, setColumnStateChange] = useState(false);
 
     const makeLastColumnNonResizable = (columnDefs) => {
       columnDefs.forEach((colDef, index) => {
@@ -88,6 +91,9 @@ const TableComponent = forwardRef<
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       initialColumnDefs.current = params.api.getColumnDefs();
       if (props.onGridReady) props.onGridReady(params);
+      setTimeout(() => {
+        setColumnStateChange(false);
+      }, 50);
     };
 
     const onColumnMoved = (params) => {
@@ -132,8 +138,27 @@ const TableComponent = forwardRef<
           pagination={true}
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
+          onStateUpdated={(e) => {
+            if (
+              e.sources.includes("columnVisibility") ||
+              e.sources.includes("columnOrder")
+            ) {
+              setColumnStateChange(true);
+            }
+          }}
         />
-        <ResetColumns resetGrid={() => resetGrid(realRef, initialColumnDefs)} />
+        <TableOptions
+          stateChange={columnStateChange}
+          hasSelection={realRef.current?.api.getSelectedRows().length > 0}
+          duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
+          deleteRow={props.onDelete ? props.onDelete : undefined}
+          resetGrid={() => {
+            resetGrid(realRef, initialColumnDefs);
+            setTimeout(() => {
+              setColumnStateChange(false);
+            }, 100);
+          }}
+        />
       </div>
     );
   },

@@ -113,6 +113,7 @@ export default function ShortcutsPage() {
       </div>
       <div className="flex h-full w-full flex-col justify-between">
         <TableComponent
+          key={"shortcuts"}
           pagination={false}
           columnDefs={colDefs}
           rowData={nodesRowData}

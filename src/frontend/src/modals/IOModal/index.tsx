@@ -36,25 +36,25 @@ export default function IOModal({
   const allNodes = useFlowStore((state) => state.nodes);
   const setMessages = useMessagesStore((state) => state.setMessages);
   const inputs = useFlowStore((state) => state.inputs).filter(
-    (input) => input.type !== "ChatInput"
+    (input) => input.type !== "ChatInput",
   );
   const chatInput = useFlowStore((state) => state.inputs).find(
-    (input) => input.type === "ChatInput"
+    (input) => input.type === "ChatInput",
   );
   const outputs = useFlowStore((state) => state.outputs).filter(
-    (output) => output.type !== "ChatOutput"
+    (output) => output.type !== "ChatOutput",
   );
   const chatOutput = useFlowStore((state) => state.outputs).find(
-    (output) => output.type === "ChatOutput"
+    (output) => output.type === "ChatOutput",
   );
   const nodes = useFlowStore((state) => state.nodes).filter(
     (node) =>
       inputs.some((input) => input.id === node.id) ||
-      outputs.some((output) => output.id === node.id)
+      outputs.some((output) => output.id === node.id),
   );
   const haveChat = chatInput || chatOutput;
   const [selectedTab, setSelectedTab] = useState(
-    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0
+    inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0,
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -111,6 +111,9 @@ export default function IOModal({
         setLockChat(false);
       });
     }
+    const { rows, columns } = await getMessagesTable("union", currentFlow!.id);
+    setMessages(rows);
+    setColumns(columns);
     setLockChat(false);
     if (chatInput) {
       setNode(chatInput.id, (node: NodeType) => {
@@ -124,7 +127,7 @@ export default function IOModal({
 
   const { handleRemoveSession } = useRemoveSession(
     setSuccessData,
-    setErrorData
+    setErrorData,
   );
 
   useEffect(() => {
@@ -185,7 +188,7 @@ export default function IOModal({
           <div className="flex-max-width h-full">
             <div
               className={cn(
-                "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start transition-all duration-300"
+                "mr-6 flex h-full w-2/6 flex-shrink-0 flex-col justify-start transition-all duration-300",
               )}
             >
               <Tabs
@@ -212,11 +215,11 @@ export default function IOModal({
                 <TabsContent value={"1"} className="api-modal-tabs-content">
                   {nodes
                     .filter((node) =>
-                      inputs.some((input) => input.id === node.id)
+                      inputs.some((input) => input.id === node.id),
                     )
                     .map((node, index) => {
                       const input = inputs.find(
-                        (input) => input.id === node.id
+                        (input) => input.id === node.id,
                       )!;
                       return (
                         <div
@@ -277,11 +280,11 @@ export default function IOModal({
                 <TabsContent value={"2"} className="api-modal-tabs-content">
                   {nodes
                     .filter((node) =>
-                      outputs.some((output) => output.id === node.id)
+                      outputs.some((output) => output.id === node.id),
                     )
                     .map((node, index) => {
                       const output = outputs.find(
-                        (output) => output.id === node.id
+                        (output) => output.id === node.id,
                       )!;
                       return (
                         <div
@@ -381,7 +384,7 @@ export default function IOModal({
                                 content={
                                   flow_sessions.some(
                                     (f_session) =>
-                                      f_session?.session_id === session
+                                      f_session?.session_id === session,
                                   )
                                     ? "Active Session"
                                     : "Inactive Session"
@@ -392,10 +395,10 @@ export default function IOModal({
                                     "h-2 w-2 rounded-full",
                                     flow_sessions.some(
                                       (f_session) =>
-                                        f_session?.session_id === session
+                                        f_session?.session_id === session,
                                     )
                                       ? "bg-status-green"
-                                      : "bg-slate-500"
+                                      : "bg-slate-500",
                                   )}
                                 ></div>
                               </ShadTooltip>
@@ -413,7 +416,7 @@ export default function IOModal({
                 <div
                   className={cn(
                     "flex h-full w-full flex-col items-start gap-4 pt-4",
-                    !selectedViewField ? "hidden" : ""
+                    !selectedViewField ? "hidden" : "",
                   )}
                 >
                   <div className="font-xl flex items-center justify-center gap-3 font-semibold">
@@ -432,7 +435,7 @@ export default function IOModal({
                   </div>
                   <div className="h-full w-full">
                     {inputs.some(
-                      (input) => input.id === selectedViewField.id
+                      (input) => input.id === selectedViewField.id,
                     ) && (
                       <IOFieldView
                         type={InputOutput.INPUT}
@@ -442,7 +445,7 @@ export default function IOModal({
                       />
                     )}
                     {outputs.some(
-                      (output) => output.id === selectedViewField.id
+                      (output) => output.id === selectedViewField.id,
                     ) && (
                       <IOFieldView
                         type={InputOutput.OUTPUT}
@@ -452,12 +455,12 @@ export default function IOModal({
                       />
                     )}
                     {sessions.some(
-                      (session) => session === selectedViewField.id
+                      (session) => session === selectedViewField.id,
                     ) && (
                       <SessionView
                         rows={messages.filter(
                           (message) =>
-                            message.session_id === selectedViewField.id
+                            message.session_id === selectedViewField.id,
                         )}
                       />
                     )}
@@ -467,7 +470,7 @@ export default function IOModal({
               <div
                 className={cn(
                   "flex h-full w-full",
-                  selectedViewField ? "hidden" : ""
+                  selectedViewField ? "hidden" : "",
                 )}
               >
                 {haveChat ? (
@@ -499,7 +502,7 @@ export default function IOModal({
                   "h-4 w-4",
                   isBuilding
                     ? "animate-spin"
-                    : "fill-current text-medium-indigo"
+                    : "fill-current text-medium-indigo",
                 )}
               />
             ),
