@@ -67,7 +67,7 @@ export default function OutputComponent({
         </DropdownMenuContent>
       </DropdownMenu>
       {proxy ? (
-        <ShadTooltip content={<span>{proxy.id}</span>}>
+        <ShadTooltip content={<span>{proxy.nodeDisplayName}</span>}>
           <span>{name}</span>
         </ShadTooltip>
       ) : (

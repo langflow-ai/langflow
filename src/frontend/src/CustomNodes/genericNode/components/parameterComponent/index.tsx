@@ -143,7 +143,7 @@ export default function ParameterComponent({
         }
         nodeId={data.id}
         frozen={data.node?.frozen}
-        name={outputName ?? type ?? title}
+        name={title ?? type}
       />
     ) : (
       <span>{title}</span>
