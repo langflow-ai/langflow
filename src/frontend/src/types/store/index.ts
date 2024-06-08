@@ -39,6 +39,7 @@ export type shortcutsStoreType = {
   delete: string;
   update: string;
   download: string;
+  freeze: string;
   shortcuts: Array<{
     name: string;
     shortcut: string;
