@@ -62,12 +62,15 @@ class DatabaseService(Service):
         if isinstance(dbapi_connection, sqliteConnection):
             logger.info("sqlite connect listener, setting pragmas")
             cursor = dbapi_connection.cursor()
-            cursor.execute("PRAGMA synchronous = OFF")
-            cursor.execute("PRAGMA journal_mode = MEMORY")
-            cursor.execute("PRAGMA cache_size = 10000")
-            cursor.execute("PRAGMA temp_store = MEMORY")
-            cursor.execute("PRAGMA locking_mode = EXCLUSIVE")
-            cursor.close()
+            try:
+                cursor.execute("PRAGMA synchronous = NORMAL")
+                cursor.execute("PRAGMA journal_mode = MEMORY")
+                cursor.execute("PRAGMA cache_size = 10000")
+                cursor.execute("PRAGMA temp_store = MEMORY")
+                cursor.execute("PRAGMA locking_mode = EXCLUSIVE")
+                cursor.close()
+            except OperationalError as oe:
+                logger.warning("Failed to set PRAGMA: ", {oe})
 
     def __enter__(self):
         self._session = Session(self.engine)
