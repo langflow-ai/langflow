@@ -148,6 +148,20 @@ export default function NodeToolbarComponent({
     downloadNode(flowComponent!);
   }
 
+  function handleFreeze(e: KeyboardEvent) {
+    e.preventDefault();
+    setNode(data.id, (old) => ({
+      ...old,
+      data: {
+        ...old.data,
+        node: {
+          ...old.data.node,
+          frozen: old.data?.node?.frozen ? false : true,
+        },
+      },
+    }));
+  }
+
   const advanced = useShortcutsStore((state) => state.advanced);
   const minimize = useShortcutsStore((state) => state.minimize);
   const share = useShortcutsStore((state) => state.share);
@@ -157,6 +171,7 @@ export default function NodeToolbarComponent({
   const group = useShortcutsStore((state) => state.group);
   const update = useShortcutsStore((state) => state.update);
   const download = useShortcutsStore((state) => state.download);
+  const freeze = useShortcutsStore((state) => state.freeze);
 
   useHotkeys(minimize, handleMinimizeWShortcut);
   useHotkeys(update, handleUpdateWShortcut);
@@ -167,7 +182,7 @@ export default function NodeToolbarComponent({
   useHotkeys(save, handleSaveWShortcut);
   useHotkeys(docs, handleDocsWShortcut);
   useHotkeys(download, handleDownloadWShortcut);
-  useHotkeys("space", handleCodeWShortcut);
+  useHotkeys(freeze, handleFreeze);
 
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
@@ -232,6 +247,18 @@ export default function NodeToolbarComponent({
           return setShowOverrideModal(true);
         }
         saveComponent(cloneDeep(data), false);
+        break;
+      case "freeze":
+        setNode(data.id, (old) => ({
+          ...old,
+          data: {
+            ...old.data,
+            node: {
+              ...old.data.node,
+              frozen: old.data?.node?.frozen ? false : true,
+            },
+          },
+        }));
         break;
       case "code":
         setOpenModal(!openModal);
@@ -436,36 +463,6 @@ export default function NodeToolbarComponent({
             </button>
           </ShadTooltip>
 
-          <ShadTooltip content="Freeze" side="top">
-            <button
-              className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
-              )}
-              onClick={(event) => {
-                event.preventDefault();
-                setNode(data.id, (old) => ({
-                  ...old,
-                  data: {
-                    ...old.data,
-                    node: {
-                      ...old.data.node,
-                      frozen: old.data?.node?.frozen ? false : true,
-                    },
-                  },
-                }));
-              }}
-            >
-              <IconComponent
-                name="Snowflake"
-                className={cn(
-                  "h-4 w-4 transition-all",
-                  // TODO UPDATE THIS COLOR TO BE A VARIABLE
-                  frozen ? "animate-wiggle text-ice" : "",
-                )}
-              />
-            </button>
-          </ShadTooltip>
-
           <Select onValueChange={handleSelectChange} value="">
             <ShadTooltip content="More" side="top">
               <SelectTrigger>
@@ -630,7 +627,18 @@ export default function NodeToolbarComponent({
                   />
                 </SelectItem>
               )}
-
+              <SelectItem value="freeze">
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
+                  }
+                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
+                  value={"Freeze"}
+                  icon={"Snowflake"}
+                  dataTestId="group-button-modal"
+                  style={`${frozen ? " text-ice" : ""} transition-all`}
+                />
+              </SelectItem>
               <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
                 <div className="font-red flex text-status-red">
                   <IconComponent

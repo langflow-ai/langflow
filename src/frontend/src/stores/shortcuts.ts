@@ -16,7 +16,7 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   open: "mod+k",
   advanced: "mod+shift+a",
   minimize: "mod+shift+q",
-  code: "mod+shift+u",
+  code: "space",
   copy: "mod+c",
   duplicate: "mod+d",
   share: "mod+shift+s",
@@ -29,6 +29,7 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   api: "mod+r",
   update: "mod+u",
   download: "mod+j",
+  freeze: "mod+f",
   updateUniqueShortcut: (name, combination) => {
     set({
       [name]: combination,

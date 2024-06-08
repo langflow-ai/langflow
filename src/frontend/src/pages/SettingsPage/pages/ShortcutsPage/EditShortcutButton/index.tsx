@@ -26,8 +26,6 @@ export default function EditShortcutButton({
   disable?: boolean;
   setSelected: (selected: string[]) => void;
 }): JSX.Element {
-  const isMac = navigator.userAgent.toUpperCase().includes("MAC");
-  console.log(shortcut[0]?.split(" ")[0].toLowerCase());
   let shortcutInitialValue =
     defaultShortcuts.length > 0
       ? defaultShortcuts.find(
@@ -82,7 +80,6 @@ export default function EditShortcutButton({
           fixCombination[0] = "mod";
         }
         const shortcutName = shortcut[0].split(" ")[0].toLowerCase();
-        console.log(shortcutName);
         setUniqueShortcut(shortcutName, fixCombination.join("").toLowerCase());
         console.log(newCombination);
         setShortcuts(newCombination, unavailable);

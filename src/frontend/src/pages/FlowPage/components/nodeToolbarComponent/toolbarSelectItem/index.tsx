@@ -4,7 +4,7 @@ import { toolbarSelectItemProps } from "../../../../../types/components";
 export default function ToolbarSelectItem({
   value,
   icon,
-  styleObj,
+  style,
   dataTestId,
   ping,
   shortcut,
@@ -24,17 +24,15 @@ export default function ToolbarSelectItem({
   if (!hasShift) shortcutWPlus = filteredShortcut.join("+");
 
   return (
-    <div className="flex" data-testid={dataTestId}>
+    <div className={`flex ${style}`} data-testid={dataTestId}>
       <ForwardedIconComponent
         name={icon}
-        className={`relative top-0.5 mr-2 h-4 w-4 ${styleObj?.iconClasses} ${
+        className={`relative top-0.5 mr-2 h-4 w-4  ${
           ping && "animate-pulse text-green-500"
         }`}
       />
-      <span className={styleObj?.valueClasses}>{value}</span>
-      <span
-        className={`absolute right-2 top-[0.43em] flex ${styleObj?.keyClasses}`}
-      >
+      <span>{value}</span>
+      <span className={`absolute right-2 top-[0.43em] flex `}>
         {hasShift ? (
           <>
             {filteredShortcut[0]}

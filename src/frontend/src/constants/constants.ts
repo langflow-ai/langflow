@@ -804,6 +804,10 @@ export const defaultShortcuts = [
     name: "Update",
     shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + U`,
   },
+  {
+    name: "Freeze",
+    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + F`,
+  },
 ];
 
 export const unavailableShortcutss = [
@@ -825,6 +829,7 @@ export const unavailableShortcutss = [
   "CTRL + Y",
   "CTRL + J",
   "CTRL + U",
+  "CTRL + F",
 ];
 export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
 

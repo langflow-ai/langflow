@@ -781,14 +781,7 @@ export type toolbarSelectItemProps = {
   isMac: boolean;
   value: string;
   icon: string;
-  styleObj?: {
-    iconClasses?: string;
-    commandClasses?: string;
-    shiftClasses?: string;
-    ctrlClasses?: string;
-    keyClasses?: string;
-    valueClasses?: string;
-  };
+  style?: string;
   dataTestId: string;
   ping?: boolean;
   shortcut: string;
