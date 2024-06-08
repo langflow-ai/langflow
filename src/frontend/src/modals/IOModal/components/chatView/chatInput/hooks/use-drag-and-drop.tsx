@@ -1,7 +1,17 @@
 import ShortUniqueId from "short-unique-id";
 import useFileUpload from "./use-file-upload";
+import useAlertStore from "../../../../../../stores/alertStore";
 
-const useDragAndDrop = (setIsDragging, setFiles, currentFlowId) => {
+const fsErrorText =
+  "Please ensure your file has one of the following extensions:";
+const snErrorTxt = "png, jpg, jpeg, gif, bmp, webp";
+
+const useDragAndDrop = (
+  setIsDragging,
+  setFiles,
+  currentFlowId,
+  setErrorData,
+) => {
   const dragOver = (e) => {
     e.preventDefault();
     if (e.dataTransfer.types.some((type) => type === "Files")) {
@@ -24,7 +34,7 @@ const useDragAndDrop = (setIsDragging, setFiles, currentFlowId) => {
   const onDrop = (e) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFiles(e.dataTransfer.files, setFiles, currentFlowId);
+      handleFiles(e.dataTransfer.files, setFiles, currentFlowId, setErrorData);
       e.dataTransfer.clearData();
     }
     setIsDragging(false);
@@ -37,8 +47,19 @@ const useDragAndDrop = (setIsDragging, setFiles, currentFlowId) => {
   };
 };
 
-const handleFiles = (files, setFiles, currentFlowId) => {
+const handleFiles = (files, setFiles, currentFlowId, setErrorData) => {
   if (files) {
+    const allowedExtensions = ["png", "jpg", "jpeg", "gif", "bmp", "webp"];
+    const file = files?.[0];
+    const fileExtension = file.name.split(".").pop()?.toLowerCase();
+    if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+      console.log("Error uploading file");
+      setErrorData({
+        title: "Error uploading file",
+        list: [fsErrorText, snErrorTxt],
+      });
+      return;
+    }
     const uid = new ShortUniqueId({ length: 3 });
     const id = uid();
     const type = files[0].type.split("/")[0];

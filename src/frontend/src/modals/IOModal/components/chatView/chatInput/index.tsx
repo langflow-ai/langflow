@@ -89,6 +89,7 @@ export default function ChatInput({
             noInput={noInput}
             saveLoading={saveLoading}
             chatValue={chatValue}
+            files={files}
           />
         </div>
 
