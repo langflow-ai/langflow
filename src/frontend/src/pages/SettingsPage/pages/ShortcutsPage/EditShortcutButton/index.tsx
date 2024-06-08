@@ -174,7 +174,7 @@ export default function EditShortcutButton({
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>
-        <Button variant={"secondary"} onClick={editCombination}>
+        <Button variant={"default"} onClick={editCombination}>
           Apply
         </Button>
         <Button
