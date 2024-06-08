@@ -25,7 +25,7 @@ export default function ShortcutsPage() {
       resizable: false,
     }, //This column will be twice as wide as the others
     {
-      headerName: "Functionality",
+      headerName: "Keyboard Shortcut",
       field: "shortcut",
       flex: 2,
       editable: false,
