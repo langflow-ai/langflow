@@ -113,8 +113,6 @@ export default function EditShortcutButton({
       setKey(null);
       setSelected([]);
     }
-    console.log(key);
-    console.log(shortcutInitialValue);
   }, [open, setOpen, key]);
 
   function getFixedCombination({
