@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Response
 from asyncio import get_running_loop, Future, wait_for
@@ -21,6 +21,11 @@ class ChatMessageModel(BaseModel):
     role: str
     content: str
     type: str = Field("text", pattern="text|image")
+
+class RunFlowModel(BaseModel):
+    api_key: str
+    flow_id: str
+    tweaks: dict = {}
 
 base_chat = {
     "messages": [],
@@ -71,16 +76,32 @@ async def listen_message(timeout: int = 60*2):
         return Response(dumps(result), headers={"Content-Type": "application/json"})
     return Response(None, status_code=204)
 
-def run_flow(api_key: str, flow_id: str):
+def run_flow(api_key: str, flow_id: str, tweaks: dict = []):
     import requests, time
+    body = {
+        "tweaks":{
+            **tweaks,
+            "api_key": api_key,
+            "flow_id": flow_id
+        }
+    }
     headers = {"x-api-key": api_key}
     time.sleep(2)
-    requests.post(f"http://backend:7860/api/v1/run/{flow_id}", headers=headers)
+    requests.post(f"http://backend:7860/api/v1/run/{flow_id}", json=body, headers=headers)
+
 
 @router.get("/reflow")
 async def rerun_flow(api_key: str, flow_id: str):
     from multiprocessing import Process
     p = Process(target=run_flow, args=(api_key, flow_id))
+    p.start()
+    return Response(None, status_code=204)
+
+
+@router.post("/reflow")
+async def post_rerun_flow(body: RunFlowModel):
+    from multiprocessing import Process
+    p = Process(target=run_flow, args=(body.api_key, body.flow_id, body.tweaks))
     p.start()
     return Response(None, status_code=204)
 
@@ -95,7 +116,8 @@ async def register_chat_message(session_id: str, model: ChatMessageModel):
         if isinstance(pending_message, Future) and not pending_message.done():
             pending_message.set_result({
                 "session_id": session_id,
-                **model.model_dump()
+                **model.model_dump(),
+                "history": chat[session_id]["messages"][:-1]
             })
         return Response(model.model_dump_json(), headers={"Content-Type": "application/json"})
     return Response(None, status_code=204, headers={"Content-Type": "application/json"})
