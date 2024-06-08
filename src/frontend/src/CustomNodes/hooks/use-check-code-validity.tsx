@@ -17,6 +17,7 @@ const useCheckCodeValidity = (
       !data.node?.template?.code?.value
     )
       return;
+    if (data.type === "CustomComponent") return;
     const thisNodeTemplate = templates[data.type].template;
     // if the template does not have a code key
     // return
