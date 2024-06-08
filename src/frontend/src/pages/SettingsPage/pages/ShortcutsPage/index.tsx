@@ -45,13 +45,6 @@ export default function ShortcutsPage() {
 
   const combinationToEdit = shortcuts.filter((s) => s.name === selectedRows[0]);
   const [open, setOpen] = useState(false);
-  useEffect(() => {
-    if (localStorage.getItem("langflow-shortcuts")) {
-      const savedShortcuts = localStorage.getItem("langflow-shortcuts");
-      const savedUShortcuts = localStorage.getItem("langflow-UShortcuts");
-      setShortcuts(JSON.parse(savedShortcuts!), JSON.parse(savedUShortcuts!));
-    }
-  }, []);
 
   function handleRestore() {
     setShortcuts(defaultShortcuts, unavailableShortcutss);
