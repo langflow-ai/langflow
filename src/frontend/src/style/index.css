@@ -22,7 +22,7 @@
     --secondary-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
     --accent: 210 30% 96.1%; /* hsl(210 30% 96%) */
     --accent-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --destructive: 0 100% 50%; /* hsl(0 100% 50%) */
+    --destructive: 0 60% 40%; /* hsl(0 60% 40%) */
     --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
     --radius: 0.5rem;
     --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
@@ -97,7 +97,7 @@
     --accent: 216 24% 20%; /* hsl(216 34% 17%) */
     --accent-foreground: 210 30% 98%; /* hsl(210 40% 98%) */
 
-    --destructive: 0 63% 31%; /* hsl(0 63% 31%) */
+    --destructive: 0 60% 25%; /* hsl(0 60% 25%) */
     --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
 
     --ring: 216 24% 30%; /* hsl(216 24% 30%) */
