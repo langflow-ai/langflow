@@ -128,6 +128,7 @@ const TableComponent = forwardRef<
       >
         <AgGridReact
           {...props}
+          animateRows={false}
           className={cn(props.className, "cusm-scroll")}
           defaultColDef={{
             minWidth: 100,
@@ -147,7 +148,7 @@ const TableComponent = forwardRef<
         />
         <TableOptions
           stateChange={columnStateChange}
-          hasSelection={realRef.current?.api.getSelectedRows().length > 0}
+          hasSelection={realRef.current?.api?.getSelectedRows().length > 0}
           duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
           deleteRow={props.onDelete ? props.onDelete : undefined}
           resetGrid={() => {
