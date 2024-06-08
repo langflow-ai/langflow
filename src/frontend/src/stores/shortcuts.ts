@@ -34,4 +34,16 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
       [name]: combination,
     });
   },
+  getShortcutsFromStorage: () => {
+    if (localStorage.getItem("langflow-shortcuts")) {
+      const savedShortcuts = localStorage.getItem("langflow-shortcuts");
+      const savedUShortcuts = localStorage.getItem("langflow-UShortcuts");
+      get().setShortcuts(
+        JSON.parse(savedShortcuts!),
+        JSON.parse(savedUShortcuts!),
+      );
+    }
+  },
 }));
+
+useShortcutsStore.getState().getShortcutsFromStorage();

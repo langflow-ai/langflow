@@ -31,6 +31,8 @@ export default function EditShortcutButton({
   const unavaliableShortcuts = useShortcutsStore(
     (state) => state.unavailableShortcuts,
   );
+  const a = useShortcutsStore((state) => state.advanced);
+  console.log(a);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   function canEditCombination(newCombination: string): boolean {
@@ -69,6 +71,7 @@ export default function EditShortcutButton({
           fixCombination[0] = "mod";
         }
         const shortcutName = shortcut[0].split(" ")[0].toLowerCase();
+        console.log(shortcutName);
         setUniqueShortcut(shortcutName, fixCombination.join("").toLowerCase());
         console.log(newCombination);
         setShortcuts(newCombination, unavailable);
