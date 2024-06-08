@@ -428,8 +428,21 @@ export default function NodeToolbarComponent({
               </button>
             </ShadTooltip>
           )}
+          {nodeLength > 0 && (
+            <ShadTooltip content="Advanced Settings" side="top">
+              <button
+                className="relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                onClick={() => {
+                  setShowModalAdvanced(true);
+                }}
+                data-testid="code-button-modal"
+              >
+                <IconComponent name="Settings2" className="h-4 w-4" />
+              </button>
+            </ShadTooltip>
+          )}
 
-          <ShadTooltip content={"Save"} side="top">
+          {/*<ShadTooltip content={"Save"} side="top">
             <button
               data-testid="save-button-modal"
               className={classNames(
@@ -446,7 +459,7 @@ export default function NodeToolbarComponent({
             >
               <IconComponent name="SaveAll" className="h-4 w-4" />
             </button>
-          </ShadTooltip>
+          </ShadTooltip>*/}
 
           <ShadTooltip content={"Duplicate"} side="top">
             <button
