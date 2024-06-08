@@ -12,6 +12,7 @@ import LoadingComponent from "../../../../../../../../components/loadingComponen
 import Loading from "../../../../../../../../components/ui/loading";
 import { cn } from "../../../../../../../../utils/utils";
 import { Button } from "../../../../../../../../components/ui/button";
+import { useDarkStore } from "../../../../../../../../stores/darkStore";
 
 type ProfilePictureChooserComponentProps = {
   profilePictures: { [key: string]: string[] };
@@ -27,6 +28,7 @@ export default function ProfilePictureChooserComponent({
   onChange,
 }: ProfilePictureChooserComponentProps) {
   const ref = useRef<HTMLButtonElement>(null);
+  const dark = useDarkStore((state) => state.dark);
 
   useEffect(() => {
     if (value && ref) {
@@ -63,7 +65,9 @@ export default function ProfilePictureChooserComponent({
                       style={{
                         filter:
                           value === folder + "/" + path
-                            ? "drop-shadow(0 0 0.3rem rgb(255, 255, 255))"
+                            ? dark
+                              ? "drop-shadow(0 0 0.3rem rgb(255, 255, 255))"
+                              : "drop-shadow(0 0 0.3rem rgb(0, 0, 0))"
                             : "",
                       }}
                       className={cn("h-12 w-12")}
