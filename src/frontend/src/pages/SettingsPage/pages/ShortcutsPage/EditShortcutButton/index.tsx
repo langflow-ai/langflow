@@ -141,7 +141,7 @@ export default function EditShortcutButton({
         fixedKey = "Ctrl";
       }
       if (e.key?.toLowerCase() === "meta") {
-        fixedKey = "Command";
+        fixedKey = "Cmd";
       }
       setKey((oldKey) =>
         getFixedCombination({ oldKey: oldKey!, key: fixedKey }),
@@ -156,7 +156,7 @@ export default function EditShortcutButton({
   }, [key, setKey]);
 
   return (
-    <BaseModal open={open} setOpen={setOpen} size="smaller" disable={disable}>
+    <BaseModal open={open} setOpen={setOpen} size="x-small" disable={disable}>
       <BaseModal.Header description={"Recording your keyboard"}>
         <span className="pr-2"> Key Combination </span>
         <ForwardedIconComponent
@@ -167,7 +167,7 @@ export default function EditShortcutButton({
       </BaseModal.Header>
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content>
-        <div className="align-center flex h-full w-full justify-center gap-4">
+        <div className="align-center flex h-full w-full justify-center gap-4 rounded-md border border-border py-2">
           <div className="flex items-center justify-center text-center text-lg font-bold">
             {key === null
               ? shortcutInitialValue?.toUpperCase()
