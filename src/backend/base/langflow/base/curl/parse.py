@@ -16,7 +16,7 @@ from collections import OrderedDict, namedtuple
 from http.cookies import SimpleCookie
 
 ParsedArgs = namedtuple(
-    "ParsedContext",
+    "ParsedArgs",
     [
         "command",
         "url",
