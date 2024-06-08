@@ -179,7 +179,7 @@ export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
         ] = cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
         return;
       }
-      if (!skipUpdate) processDataFromFlow(flow, false);
+      processDataFromFlow(flow, !skipUpdate);
     } catch (e) {
       console.log(e);
     }
@@ -345,7 +345,7 @@ export function updateEdges(edges: Edge[]) {
       const targetHandleObject: targetHandleType = scapeJSONParse(
         edge.targetHandle!,
       );
-      edge.className = "stroke-gray-900 stroke-connection";
+      edge.className = "";
     });
 }
 
@@ -1005,11 +1005,6 @@ export function processFlowEdges(flow: FlowType) {
     const newEdges = updateEdgesHandleIds(flow.data);
     flow.data.edges = newEdges;
   }
-  //update edges colors
-  flow.data.edges.forEach((edge) => {
-    edge.className = "";
-    edge.style = { stroke: "#555" };
-  });
 }
 
 export function expandGroupNode(
