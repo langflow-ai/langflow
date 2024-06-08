@@ -460,8 +460,37 @@ export default function NodeToolbarComponent({
               <IconComponent name="SaveAll" className="h-4 w-4" />
             </button>
           </ShadTooltip>*/}
+          <ShadTooltip content="Freeze" side="top">
+            <button
+              className={classNames(
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+              )}
+              onClick={(event) => {
+                event.preventDefault();
+                setNode(data.id, (old) => ({
+                  ...old,
+                  data: {
+                    ...old.data,
+                    node: {
+                      ...old.data.node,
+                      frozen: old.data?.node?.frozen ? false : true,
+                    },
+                  },
+                }));
+              }}
+            >
+              <IconComponent
+                name="Snowflake"
+                className={cn(
+                  "h-4 w-4 transition-all",
+                  // TODO UPDATE THIS COLOR TO BE A VARIABLE
+                  frozen ? "animate-wiggle text-ice" : "",
+                )}
+              />
+            </button>
+          </ShadTooltip>
 
-          <ShadTooltip content={"Duplicate"} side="top">
+          {/*<ShadTooltip content={"Duplicate"} side="top">
             <button
               data-testid="duplicate-button-modal"
               className={classNames(
@@ -474,7 +503,7 @@ export default function NodeToolbarComponent({
             >
               <IconComponent name="Copy" className="h-4 w-4" />
             </button>
-          </ShadTooltip>
+          </ShadTooltip>*/}
 
           <Select onValueChange={handleSelectChange} value="">
             <ShadTooltip content="More" side="top">
