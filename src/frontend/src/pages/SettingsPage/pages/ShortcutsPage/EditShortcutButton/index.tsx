@@ -15,6 +15,7 @@ export default function EditShortcutButton({
   open,
   setOpen,
   disable,
+  setSelected,
 }: {
   children: JSX.Element;
   shortcut: string[];
@@ -23,9 +24,19 @@ export default function EditShortcutButton({
   open: boolean;
   setOpen: (bool: boolean) => void;
   disable?: boolean;
+  setSelected: (selected: string[]) => void;
 }): JSX.Element {
   const isMac = navigator.userAgent.toUpperCase().includes("MAC");
-  const [key, setKey] = useState<string | null>("");
+  console.log(shortcut[0]?.split(" ")[0].toLowerCase());
+  let shortcutInitialValue =
+    defaultShortcuts.length > 0
+      ? defaultShortcuts.find(
+          (s) =>
+            s.name.split(" ")[0].toLowerCase().toLowerCase() ===
+            shortcut[0]?.split(" ")[0].toLowerCase(),
+        )?.shortcut
+      : "";
+  const [key, setKey] = useState<string | null>(null);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setShortcuts = useShortcutsStore((state) => state.setShortcuts);
   const unavaliableShortcuts = useShortcutsStore(
@@ -98,7 +109,12 @@ export default function EditShortcutButton({
   }
 
   useEffect(() => {
-    if (!open) setKey(null);
+    if (!open) {
+      setKey(null);
+      setSelected([]);
+    }
+    console.log(key);
+    console.log(shortcutInitialValue);
   }, [open, setOpen, key]);
 
   function getFixedCombination({
@@ -153,20 +169,22 @@ export default function EditShortcutButton({
       <BaseModal.Content>
         <div className="align-center flex h-full w-full justify-center gap-4">
           <div className="flex items-center justify-center text-center text-lg font-bold">
-            {key && key.toUpperCase()}
+            {key === null
+              ? shortcutInitialValue?.toUpperCase()
+              : key.toUpperCase()}
           </div>
         </div>
       </BaseModal.Content>
       <BaseModal.Footer>
         <Button variant={"secondary"} onClick={editCombination}>
-          Edit Combination
+          Apply
         </Button>
         <Button
           className="mr-5"
           variant={"destructive"}
           onClick={() => setKey(null)}
         >
-          Reset Combination
+          Reset
         </Button>
       </BaseModal.Footer>
     </BaseModal>

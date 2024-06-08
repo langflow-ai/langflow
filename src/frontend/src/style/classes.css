@@ -19,6 +19,10 @@ pre {
   display: none;
 }
 
+.ag-row {
+  cursor: pointer;
+}
+
 .react-flow__pane {
   cursor: default;
 }
