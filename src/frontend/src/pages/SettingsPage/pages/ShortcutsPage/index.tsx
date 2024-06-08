@@ -22,12 +22,10 @@ export default function ShortcutsPage() {
       field: "name",
       flex: 1,
       editable: false,
-      headerCheckboxSelection: true,
-      checkboxSelection: true,
-      showDisabledCheckboxes: true,
       resizable: false,
     }, //This column will be twice as wide as the others
     {
+      headerName: "Functionality",
       field: "shortcut",
       flex: 2,
       editable: false,
@@ -77,11 +75,9 @@ export default function ShortcutsPage() {
                 defaultShortcuts={shortcuts}
                 open={open}
                 setOpen={setOpen}
+                setSelected={setSelectedRows}
               >
-                <Button variant="primary">
-                  <ForwardedIconComponent name="Wrench" className="mr-2 w-4" />
-                  Customize
-                </Button>
+                <div style={{ display: "none" }} />
               </EditShortcutButton>
               <Button
                 variant="primary"
@@ -109,6 +105,10 @@ export default function ShortcutsPage() {
             columnDefs={colDefs}
             rowData={nodesRowData}
             paginationPageSize={8}
+            onCellDoubleClicked={(e) => {
+              setSelectedRows([e.data.name]);
+              setOpen(true);
+            }}
           />
         </div>
       </div>
