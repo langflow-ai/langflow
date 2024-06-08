@@ -46,8 +46,8 @@ export default function NodeToolbarComponent({
   setShowState,
   onCloseAdvancedModal,
   isOutdated,
-  openWDoubleClick,
-  setOpenWDoubleClick,
+  //  openWDoubleClick,
+  //  setOpenWDoubleClick,
 }: nodeToolbarPropsType): JSX.Element {
   const nodeLength = Object.keys(data.node!.template).filter(
     (templateField) =>
@@ -206,9 +206,9 @@ export default function NodeToolbarComponent({
     createFlowComponent(cloneDeep(data), version),
   );
 
-  useEffect(() => {
-    if (openWDoubleClick) setShowModalAdvanced(true);
-  }, [openWDoubleClick, setOpenWDoubleClick]);
+  //  useEffect(() => {
+  //    if (openWDoubleClick) setShowModalAdvanced(true);
+  //  }, [openWDoubleClick, setOpenWDoubleClick]);
 
   const openInNewTab = (url) => {
     window.open(url, "_blank", "noreferrer");
@@ -697,7 +697,7 @@ export default function NodeToolbarComponent({
           </ConfirmationModal>
           {showModalAdvanced && (
             <EditNodeModal
-              setOpenWDoubleClick={setOpenWDoubleClick}
+              //              setOpenWDoubleClick={setOpenWDoubleClick}
               data={data}
               nodeLength={nodeLength}
               open={showModalAdvanced}
