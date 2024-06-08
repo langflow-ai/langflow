@@ -68,17 +68,19 @@ export default function ShortcutsPage() {
         <div>
           <div className="align-end mb-4 flex w-full justify-end">
             <div className="justify center flex items-center">
-              <EditShortcutButton
-                disable={selectedRows.length === 0}
-                defaultCombination={combinationToEdit[0]?.shortcut}
-                shortcut={selectedRows}
-                defaultShortcuts={shortcuts}
-                open={open}
-                setOpen={setOpen}
-                setSelected={setSelectedRows}
-              >
-                <div style={{ display: "none" }} />
-              </EditShortcutButton>
+              {open && (
+                <EditShortcutButton
+                  disable={selectedRows.length === 0}
+                  defaultCombination={combinationToEdit[0]?.shortcut}
+                  shortcut={selectedRows}
+                  defaultShortcuts={shortcuts}
+                  open={open}
+                  setOpen={setOpen}
+                  setSelected={setSelectedRows}
+                >
+                  <div style={{ display: "none" }} />
+                </EditShortcutButton>
+              )}
               <Button
                 variant="primary"
                 className="ml-3"

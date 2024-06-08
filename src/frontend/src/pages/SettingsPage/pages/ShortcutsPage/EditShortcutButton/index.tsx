@@ -40,8 +40,6 @@ export default function EditShortcutButton({
   const unavaliableShortcuts = useShortcutsStore(
     (state) => state.unavailableShortcuts,
   );
-  const a = useShortcutsStore((state) => state.advanced);
-  console.log(a);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   function canEditCombination(newCombination: string): boolean {
@@ -138,6 +136,11 @@ export default function EditShortcutButton({
       if (e.key?.toLowerCase() === "meta") {
         fixedKey = "Cmd";
       }
+      if (e.key?.toLowerCase() === " ") {
+        fixedKey = "Space";
+      }
+      if (shortcutInitialValue?.toUpperCase().includes(fixedKey.toUpperCase()))
+        return;
       setKey((oldKey) =>
         getFixedCombination({ oldKey: oldKey!, key: fixedKey }),
       );
