@@ -201,7 +201,7 @@ export default function Header(): JSX.Element {
                       `${BACKEND_URL.slice(
                         0,
                         BACKEND_URL.length - 1,
-                      )}${BASE_URL_API}files/profile_pictures/${userData?.profile_image}` ??
+                      )}${BASE_URL_API}files/profile_pictures/${userData?.profile_image ?? "Space/046-rocket.png"}` ??
                       profileCircle
                     }
                     className="h-7 w-7 focus-visible:outline-0 "
