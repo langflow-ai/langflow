@@ -17,17 +17,16 @@ const useCheckCodeValidity = (
       !data.node?.template?.code?.value
     )
       return;
-    if (data.type === "CustomComponent") return;
     const thisNodeTemplate = templates[data.type].template;
     // if the template does not have a code key
     // return
     if (!thisNodeTemplate.code) return;
     const currentCode = thisNodeTemplate.code?.value;
     const thisNodesCode = data.node!.template?.code?.value;
-    const componentsToIgnore = ["Custom Component", "Prompt"];
+    const componentsToIgnore = ["CustomComponent", "Prompt"];
     if (
       currentCode !== thisNodesCode &&
-      !componentsToIgnore.includes(data.node!.display_name) &&
+      !componentsToIgnore.includes(data.type) &&
       !(data.node?.edited ?? false)
     ) {
       setIsOutdated(true);
