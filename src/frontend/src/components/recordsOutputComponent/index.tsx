@@ -25,6 +25,8 @@ function RecordsOutputComponent({
 
   return (
     <TableComponent
+      readOnlyEdit
+      editable={true}
       key={"recordsOutputComponent"}
       overlayNoRowsTemplate="No data available"
       suppressRowClickSelection={true}
