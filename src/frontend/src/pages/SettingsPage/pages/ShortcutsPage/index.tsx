@@ -94,17 +94,11 @@ export default function ShortcutsPage() {
       <div className="grid gap-6 pb-8">
         <div>
           <TableComponent
-            onSelectionChanged={(event: SelectionChangedEvent) => {
-              setSelectedRows(
-                event.api.getSelectedRows().map((row) => row.name),
-              );
-            }}
             suppressRowClickSelection={true}
             domLayout="autoHeight"
             pagination={false}
             columnDefs={colDefs}
             rowData={nodesRowData}
-            paginationPageSize={8}
             onCellDoubleClicked={(e) => {
               setSelectedRows([e.data.name]);
               setOpen(true);
