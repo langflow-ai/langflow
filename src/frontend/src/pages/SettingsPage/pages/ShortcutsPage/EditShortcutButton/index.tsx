@@ -123,13 +123,18 @@ export default function EditShortcutButton({
     return `${oldKey.length > 0 ? toTitleCase(oldKey) : oldKey.toUpperCase()} + ${key.length > 0 ? toTitleCase(key) : key.toUpperCase()}`;
   }
 
+  function checkForKeys(keys: string, keyToCompare: string): boolean {
+    const keysArr = keys.split(" ");
+    let hasNewKey = false;
+    return keysArr.some(
+      (k) => k.toLowerCase().trim() === keyToCompare.toLowerCase().trim(),
+    );
+  }
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       e.preventDefault();
       let fixedKey = e.key;
-      if (key) {
-        if (key.toUpperCase().includes(e.key.toUpperCase())) return;
-      }
       if (e.key?.toLowerCase() === "control") {
         fixedKey = "Ctrl";
       }
@@ -139,8 +144,9 @@ export default function EditShortcutButton({
       if (e.key?.toLowerCase() === " ") {
         fixedKey = "Space";
       }
-      if (shortcutInitialValue?.toUpperCase().includes(fixedKey.toUpperCase()))
-        return;
+      if (key) {
+        if (checkForKeys(key, fixedKey)) return;
+      }
       setKey((oldKey) =>
         getFixedCombination({ oldKey: oldKey!, key: fixedKey }),
       );
