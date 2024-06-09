@@ -23,10 +23,11 @@ const useCheckCodeValidity = (
     if (!thisNodeTemplate.code) return;
     const currentCode = thisNodeTemplate.code?.value;
     const thisNodesCode = data.node!.template?.code?.value;
-    const componentsToIgnore = ["Custom Component", "Prompt"];
+    const componentsToIgnore = ["CustomComponent", "Prompt"];
     if (
       currentCode !== thisNodesCode &&
-      !componentsToIgnore.includes(data.node!.display_name)
+      !componentsToIgnore.includes(data.type) &&
+      !(data.node?.edited ?? false)
     ) {
       setIsOutdated(true);
     } else {

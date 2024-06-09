@@ -42,12 +42,8 @@ export default function NodeToolbarComponent({
   showNode,
   name = "code",
   selected,
-  updateNodeCode,
   setShowState,
   onCloseAdvancedModal,
-  isOutdated,
-  //  openWDoubleClick,
-  //  setOpenWDoubleClick,
 }: nodeToolbarPropsType): JSX.Element {
   const nodeLength = Object.keys(data.node!.template).filter(
     (templateField) =>
@@ -323,37 +319,6 @@ export default function NodeToolbarComponent({
           },
         );
         break;
-      case "update":
-        takeSnapshot();
-        // to update we must get the code from the templates in useTypesStore
-        const thisNodeTemplate = templates[data.type]?.template;
-        // if the template does not have a code key
-        // return
-        if (!thisNodeTemplate?.code) return;
-
-        const currentCode = thisNodeTemplate.code.value;
-        if (data.node) {
-          postCustomComponent(currentCode, data.node)
-            .then((apiReturn) => {
-              const { data } = apiReturn;
-              if (data && updateNodeCode) {
-                updateNodeCode(data, currentCode, "code");
-              }
-            })
-            .catch((err) => {
-              console.log(err);
-            });
-          setNode(data.id, (oldNode) => {
-            let newNode = cloneDeep(oldNode);
-            newNode.data = {
-              ...data,
-            };
-            newNode.data.node.template.code.value = currentCode;
-            return newNode;
-          });
-        }
-
-        break;
     }
   };
 
@@ -584,20 +549,6 @@ export default function NodeToolbarComponent({
                   dataTestId="copy-button-modal"
                 />
               </SelectItem>
-              {isOutdated && (
-                <SelectItem value={"update"}>
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Update")?.shortcut!
-                    }
-                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    value={"Update"}
-                    icon={"Code"}
-                    dataTestId="update-button-modal"
-                    ping={isOutdated}
-                  />
-                </SelectItem>
-              )}
               {hasStore && (
                 <SelectItem
                   value={"Share"}

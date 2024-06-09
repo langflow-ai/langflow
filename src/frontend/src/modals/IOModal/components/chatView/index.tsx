@@ -25,7 +25,7 @@ export default function ChatView({
   setLockChat,
 }: chatViewProps): JSX.Element {
   const { flowPool, outputs, inputs, CleanFlowPool } = useFlowStore();
-  const { setNoticeData } = useAlertStore();
+  const { setErrorData } = useAlertStore();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
@@ -161,6 +161,7 @@ export default function ChatView({
     setIsDragging,
     setFiles,
     currentFlowId,
+    setErrorData,
   );
 
   return (

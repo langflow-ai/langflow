@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosInstance } from "axios";
+import axios, { Axios, AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { renewAccessToken } from ".";
@@ -83,8 +83,10 @@ function ApiInterceptor() {
       (config) => {
         const checkRequest = checkDuplicateRequestAndStoreRequest(config);
 
+        const controller = new AbortController();
+
         if (!checkRequest) {
-          return Promise.reject("Duplicate request.");
+          controller.abort("Duplicate Request");
         }
 
         const accessToken = cookies.get("access_token_lf");
@@ -92,7 +94,10 @@ function ApiInterceptor() {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
 
-        return config;
+        return {
+          ...config,
+          signal: controller.signal,
+        };
       },
       (error) => {
         return Promise.reject(error);
