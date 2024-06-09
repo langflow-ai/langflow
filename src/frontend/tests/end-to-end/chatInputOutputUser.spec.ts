@@ -227,4 +227,8 @@ test("user must be able to send an image on chat", async ({ page }) => {
   await page.getByTestId("icon-LucideSend").click();
   await page.waitForTimeout(2000);
   await page.getByText("chain.png").isVisible();
+
+  await page.getByText("Close", { exact: true }).click();
+  await page.getByTestId("icon-ScanEye").last().click();
+  await page.getByText("Restart").isHidden();
 });

@@ -9,20 +9,17 @@ import { Badge } from "../../../ui/badge";
 
 export default function TableAutoCellRender({
   value,
-}: CustomCellRendererProps) {
+}: CustomCellRendererProps | { value: any }) {
   function getCellType() {
     switch (typeof value) {
       case "object":
         if (value === null) {
           return String(value);
         } else if (Array.isArray(value)) {
-          return <ArrayReader array={value} />;
-        } else if (value.definitions) {
-          // use a custom render defined by the sender
+          return <ObjectRender object={value} />;
         } else {
           return <ObjectRender object={value} />;
         }
-        break;
       case "string":
         if (isTimeStampString(value)) {
           return <DateReader date={value} />;

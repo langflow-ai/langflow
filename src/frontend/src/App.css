@@ -174,3 +174,12 @@ body {
   border: none !important;
   outline: none;
 }
+
+/* selected */
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--selected) !important;
+}
+
+.react-flow__edge .react-flow__edge-path {
+  stroke: var(--connection) !important;
+}

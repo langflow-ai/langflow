@@ -274,7 +274,9 @@ export default function ParameterComponent({
                       : "Please build the component first"
                   }
                 >
-                  <button
+                  <Button
+                    variant="none"
+                    size="none"
                     disabled={!displayOutputPreview || unknownOutput}
                     onClick={() => setOpenOutputModal(true)}
                     data-testid={`output-inspection-${title.toLowerCase()}`}
@@ -288,7 +290,7 @@ export default function ParameterComponent({
                       )}
                       name={"ScanEye"}
                     />
-                  </button>
+                  </Button>
                 </ShadTooltip>
               )}
             </div>

@@ -396,7 +396,7 @@ export type loginInputStateType = {
 export type patchUserInputStateType = {
   password: string;
   cnfPassword: string;
-  gradient: string;
+  profilePicture: string;
   apikey: string;
 };
 
@@ -491,7 +491,7 @@ export type ChatInputType = {
   isDragging: boolean;
   files: FilePreviewType[];
   setFiles: (
-    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
+    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[])
   ) => void;
   chatValue: string;
   inputRef: {
@@ -546,13 +546,7 @@ export type nodeToolbarPropsType = {
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
   selected: boolean;
-  updateNodeCode?: (
-    newNodeClass: APIClassType,
-    code: string,
-    name: string,
-  ) => void;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
-  isOutdated?: boolean;
 };
 
 export type parsedDataType = {
@@ -599,7 +593,7 @@ export type chatMessagePropsType = {
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url?: string,
+    stream_url?: string
   ) => void;
 };
 
@@ -691,12 +685,12 @@ export type codeTabsPropsType = {
       value: string,
       node: NodeType,
       template: TemplateVariableType,
-      tweak: tweakType,
+      tweak: tweakType
     ) => string;
     buildTweakObject?: (
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: TemplateVariableType,
+      template: TemplateVariableType
     ) => Promise<string | void>;
   };
   activeTweaks?: boolean;
@@ -778,7 +772,6 @@ export type IOFileInputProps = {
 };
 
 export type toolbarSelectItemProps = {
-  isMac: boolean;
   value: string;
   icon: string;
   style?: string;

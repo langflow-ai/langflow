@@ -589,7 +589,7 @@ export const CONTROL_INPUT_STATE = {
 export const CONTROL_PATCH_USER_STATE = {
   password: "",
   cnfPassword: "",
-  gradient: "",
+  profilePicture: "",
   apikey: "",
 };
 
@@ -661,6 +661,9 @@ export const OUTPUT_TYPES = new Set([
 export const CHAT_FIRST_INITIAL_TEXT =
   "Start a conversation and click the agent's thoughts";
 
+export const TOOLTIP_OUTDATED_NODE =
+  "Your component is outdated. Click to update (data may be lost)";
+
 export const CHAT_SECOND_INITIAL_TEXT = "to inspect the chaining process.";
 
 export const ZERO_NOTIFICATIONS = "No new notifications";
@@ -731,14 +734,16 @@ export const AUTHORIZED_DUPLICATE_REQUESTS = [
 
 export const SAVE_DEBOUNCE_TIME = 300;
 
+export const IS_MAC = navigator.userAgent.toUpperCase().includes("MAC");
+
 export const defaultShortcuts = [
   {
     name: "Advanced Settings",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + Shift + A`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + A`,
   },
   {
     name: "Minimize",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + Q`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Q`,
   },
   {
     name: "Code",
@@ -746,23 +751,23 @@ export const defaultShortcuts = [
   },
   {
     name: "Copy",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + C`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + C`,
   },
   {
     name: "Duplicate",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + D`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + D`,
   },
   {
     name: "Share",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + Shift + S`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + S`,
   },
   {
     name: "Docs",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + Shift + D`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + D`,
   },
   {
     name: "Save",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + S`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + S`,
   },
   {
     name: "Delete",
@@ -770,43 +775,43 @@ export const defaultShortcuts = [
   },
   {
     name: "Open playground",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + K`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + K`,
   },
   {
     name: "Undo",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + Z`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Z`,
   },
   {
     name: "Redo",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + Y`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Y`,
   },
   {
     name: "Group",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + G`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + G`,
   },
   {
     name: "Cut",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + X`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + X`,
   },
   {
     name: "Paste",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + V`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + V`,
   },
   {
     name: "API",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + R`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + R`,
   },
   {
     name: "Download",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + J`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + J`,
   },
   {
     name: "Update",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + U`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + U`,
   },
   {
     name: "Freeze",
-    shortcut: `${navigator.userAgent.toUpperCase().includes("MAC") ? "Cmd" : "Ctrl"} + F`,
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + F`,
   },
 ];
 
