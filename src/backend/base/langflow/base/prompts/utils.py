@@ -3,7 +3,6 @@ from copy import deepcopy
 from langchain_core.documents import Document
 
 from langflow.schema import Record
-from langflow.schema.image import get_file_paths
 from langflow.schema.message import Message
 
 
@@ -20,7 +19,7 @@ def record_to_string(record: Record) -> str:
     return record.get_text()
 
 
-async def dict_values_to_string(d: dict) -> dict:
+def dict_values_to_string(d: dict) -> dict:
     """
     Converts the values of a dictionary to strings.
 
@@ -37,16 +36,13 @@ async def dict_values_to_string(d: dict) -> dict:
         if isinstance(value, list):
             for i, item in enumerate(value):
                 if isinstance(item, Message):
-                    d_copy[key][i] = item.to_lc_message()
+                    d_copy[key][i] = item.text
                 elif isinstance(item, Record):
                     d_copy[key][i] = record_to_string(item)
                 elif isinstance(item, Document):
                     d_copy[key][i] = document_to_string(item)
         elif isinstance(value, Message):
-            if "files" in value and value.files:
-                files = await get_file_paths(value.files)
-                value.files = files
-            d_copy[key] = value.to_lc_message()
+            d_copy[key] = value.text
         elif isinstance(value, Record):
             d_copy[key] = record_to_string(value)
         elif isinstance(value, Document):
