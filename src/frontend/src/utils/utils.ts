@@ -410,6 +410,5 @@ export function extractColumnsFromRows(
 
 export function isThereModal(): boolean {
   const modal = document.body.getElementsByClassName(MODAL_CLASSES);
-  if (modal.length > 0) return true;
-  return false;
+  return modal.length > 0;
 }
