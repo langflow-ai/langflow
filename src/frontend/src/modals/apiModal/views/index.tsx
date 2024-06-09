@@ -36,8 +36,8 @@ const ApiModal = forwardRef(
     }: {
       flow: FlowType;
       children: ReactNode;
-      open: boolean;
-      setOpen: (a: boolean | ((o?: boolean) => boolean)) => void;
+      open?: boolean;
+      setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
     },
     ref,
   ) => {

@@ -15,8 +15,6 @@ import { Separator } from "../ui/separator";
 export default function FlowToolbar(): JSX.Element {
   function handleAPIWShortcut(e: KeyboardEvent) {
     e.preventDefault();
-    console.log("oi");
-    console.log(openCodeModal);
     setOpenCodeModal((oldOpen) => !oldOpen);
   }
 
