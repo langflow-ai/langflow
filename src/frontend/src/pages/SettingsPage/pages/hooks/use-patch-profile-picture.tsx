@@ -5,18 +5,20 @@ import {
 } from "../../../../constants/alerts_constants";
 import { updateUser } from "../../../../controllers/API";
 
-const usePatchGradient = (
+const usePatchProfilePicture = (
   setSuccessData,
   setErrorData,
   currentUserData,
   setUserData,
 ) => {
-  const handlePatchGradient = async (gradient) => {
+  const handlePatchProfilePicture = async (profile_picture) => {
     try {
-      if (gradient !== "") {
-        await updateUser(currentUserData.id, { profile_image: gradient });
+      if (profile_picture !== "") {
+        await updateUser(currentUserData.id, {
+          profile_image: profile_picture,
+        });
         let newUserData = cloneDeep(currentUserData);
-        newUserData.profile_image = gradient;
+        newUserData.profile_image = profile_picture;
         setUserData(newUserData);
       }
       setSuccessData({ title: SAVE_SUCCESS_ALERT });
@@ -30,8 +32,8 @@ const usePatchGradient = (
 
   return {
     currentUserData,
-    handlePatchGradient,
+    handlePatchProfilePicture,
   };
 };
 
-export default usePatchGradient;
+export default usePatchProfilePicture;

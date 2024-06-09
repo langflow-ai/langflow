@@ -8,7 +8,6 @@ export default function ToolbarSelectItem({
   dataTestId,
   ping,
   shortcut,
-  isMac,
 }: toolbarSelectItemProps) {
   let hasShift = false;
   const fixedShortcut = shortcut?.split("+");
@@ -18,7 +17,7 @@ export default function ToolbarSelectItem({
     }
   });
   const filteredShortcut = fixedShortcut.filter(
-    (key) => !key.toLowerCase().includes("shift"),
+    (key) => !key.toLowerCase().includes("shift")
   );
   let shortcutWPlus = "";
   if (!hasShift) shortcutWPlus = filteredShortcut.join("+");

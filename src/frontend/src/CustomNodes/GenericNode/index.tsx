@@ -10,6 +10,7 @@ import {
   RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
+  TOOLTIP_OUTDATED_NODE,
 } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
 import { countHandlesFn } from "../helpers/count-handles";
@@ -35,6 +36,8 @@ import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
 import ParameterComponent from "./components/parameterComponent";
+import { postCustomComponent } from "../../controllers/API";
+import { cloneDeep } from "lodash";
 
 export default function GenericNode({
   data,
@@ -204,6 +207,33 @@ export default function GenericNode({
     setShowNode(data.showNode ?? true);
   }, [data.showNode]);
 
+  const [loadingUpdate, setLoadingUpdate] = useState(false);
+
+  const handleUpdateCode = () => {
+    setLoadingUpdate(true);
+    takeSnapshot();
+    // to update we must get the code from the templates in useTypesStore
+    const thisNodeTemplate = templates[data.type]?.template;
+    // if the template does not have a code key
+    // return
+    if (!thisNodeTemplate?.code) return;
+
+    const currentCode = thisNodeTemplate.code.value;
+    if (data.node) {
+      postCustomComponent(currentCode, data.node)
+        .then((apiReturn) => {
+          const { data } = apiReturn;
+          if (data && updateNodeCode) {
+            updateNodeCode(data, currentCode, "code");
+            setLoadingUpdate(false);
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    }
+  };
+
   const memoizedNodeToolbarComponent = useMemo(() => {
     return (
       <NodeToolbar>
@@ -226,8 +256,6 @@ export default function GenericNode({
           showNode={showNode}
           openAdvancedModal={false}
           onCloseAdvancedModal={() => {}}
-          updateNodeCode={updateNodeCode}
-          isOutdated={isOutdated}
           selected={selected}
         />
       </NodeToolbar>
@@ -448,54 +476,71 @@ export default function GenericNode({
             </div>
             {showNode && (
               <>
-                <ShadTooltip
-                  content={
-                    buildStatus === BuildStatus.BUILDING ? (
-                      <span> {STATUS_BUILDING} </span>
-                    ) : !validationStatus ? (
-                      <span className="flex">{STATUS_BUILD}</span>
-                    ) : (
-                      <div className="max-h-100 p-2">
-                        <div>
-                          {lastRunTime && (
-                            <div className="justify-left flex font-normal text-muted-foreground">
-                              <div>{RUN_TIMESTAMP_PREFIX}</div>
-                              <div className="ml-1 text-status-blue">
-                                {lastRunTime}
+                <div className="flex flex-shrink-0 items-center gap-1">
+                  {isOutdated && (
+                    <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
+                      <Button
+                        onClick={handleUpdateCode}
+                        variant="secondary"
+                        className={"h-9 px-1.5"}
+                        loading={loadingUpdate}
+                      >
+                        <IconComponent
+                          name="AlertTriangle"
+                          className="h-5 w-5 text-status-yellow"
+                        />
+                      </Button>
+                    </ShadTooltip>
+                  )}
+                  <ShadTooltip
+                    content={
+                      buildStatus === BuildStatus.BUILDING ? (
+                        <span> {STATUS_BUILDING} </span>
+                      ) : !validationStatus ? (
+                        <span className="flex">{STATUS_BUILD}</span>
+                      ) : (
+                        <div className="max-h-100 p-2">
+                          <div>
+                            {lastRunTime && (
+                              <div className="justify-left flex font-normal text-muted-foreground">
+                                <div>{RUN_TIMESTAMP_PREFIX}</div>
+                                <div className="ml-1 text-status-blue">
+                                  {lastRunTime}
+                                </div>
                               </div>
+                            )}
+                          </div>
+                          <div className="justify-left flex font-normal text-muted-foreground">
+                            <div>Duration:</div>
+                            <div className="ml-1 text-status-blue">
+                              {validationStatus?.data.duration}
                             </div>
-                          )}
-                        </div>
-                        <div className="justify-left flex font-normal text-muted-foreground">
-                          <div>Duration:</div>
-                          <div className="ml-1 text-status-blue">
-                            {validationStatus?.data.duration}
                           </div>
                         </div>
-                      </div>
-                    )
-                  }
-                  side="bottom"
-                >
-                  <Button
-                    onClick={() => {
-                      if (buildStatus === BuildStatus.BUILDING || isBuilding)
-                        return;
-                      setValidationStatus(null);
-                      buildFlow({ stopNodeId: data.id });
-                    }}
-                    variant="secondary"
-                    className={"group h-9 px-1.5"}
+                      )
+                    }
+                    side="bottom"
                   >
-                    <div
-                      data-testid={
-                        `button_run_` + data?.node?.display_name.toLowerCase()
-                      }
+                    <Button
+                      onClick={() => {
+                        if (buildStatus === BuildStatus.BUILDING || isBuilding)
+                          return;
+                        setValidationStatus(null);
+                        buildFlow({ stopNodeId: data.id });
+                      }}
+                      variant="secondary"
+                      className={"group h-9 px-1.5"}
                     >
-                      {renderIconStatus()}
-                    </div>
-                  </Button>
-                </ShadTooltip>
+                      <div
+                        data-testid={
+                          `button_run_` + data?.node?.display_name.toLowerCase()
+                        }
+                      >
+                        {renderIconStatus()}
+                      </div>
+                    </Button>
+                  </ShadTooltip>
+                </div>
               </>
             )}
           </div>
