@@ -28,7 +28,7 @@ class ChatOpenAIComponent(CustomComponent):
             "model_name": {"display_name": "Model Name", "advanced": False, "options": MODEL_NAMES},
             "openai_api_base": {
                 "display_name": "OpenAI API Base",
-                "advanced": False,
+                "advanced": True,
                 "required": False,
                 "info": (
                     "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\n"
