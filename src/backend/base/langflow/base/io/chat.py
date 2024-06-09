@@ -16,7 +16,7 @@ class ChatComponent(CustomComponent):
         return {
             "input_value": {
                 "input_types": ["Text"],
-                "display_name": "Message",
+                "display_name": "Text",
                 "multiline": True,
             },
             "sender": {
