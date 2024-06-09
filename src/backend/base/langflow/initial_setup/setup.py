@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import shutil
@@ -79,6 +80,75 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                         node_data["template"].pop(field_name)
     log_node_changes(node_changes_log)
     return project_data_copy
+
+
+def update_edges_with_latest_component_versions(project_data):
+    edge_changes_log = defaultdict(list)
+    project_data_copy = deepcopy(project_data)
+    for edge in project_data_copy.get("edges", []):
+        source_handle = edge.get("data").get("sourceHandle")
+        target_handle = edge.get("data").get("targetHandle")
+        # Now find the source and target nodes in the nodes list
+        source_node = next(
+            (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("source")), None
+        )
+        target_node = next(
+            (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("target")), None
+        )
+        if source_node and target_node:
+            source_node_data = source_node.get("data").get("node")
+            target_node_data = target_node.get("data").get("node")
+            new_base_classes = source_node_data.get("base_classes")
+            if source_handle["baseClasses"] != new_base_classes:
+                edge_changes_log[source_node_data["display_name"]].append(
+                    {
+                        "attr": "baseClasses",
+                        "old_value": source_handle["baseClasses"],
+                        "new_value": new_base_classes,
+                    }
+                )
+                source_handle["baseClasses"] = new_base_classes
+
+            field_name = target_handle.get("fieldName")
+            if field_name in target_node_data.get("template"):
+                if target_handle["inputTypes"] != target_node_data.get("template").get(field_name).get("input_types"):
+                    edge_changes_log[target_node_data["display_name"]].append(
+                        {
+                            "attr": "inputTypes",
+                            "old_value": target_handle["inputTypes"],
+                            "new_value": target_node_data.get("template").get(field_name).get("input_types"),
+                        }
+                    )
+                    target_handle["inputTypes"] = target_node_data.get("template").get(field_name).get("input_types")
+            escaped_source_handle = escape_json_dump(source_handle)
+            escaped_target_handle = escape_json_dump(target_handle)
+            if edge["sourceHandle"] != escaped_source_handle:
+                edge_changes_log[source_node_data["display_name"]].append(
+                    {
+                        "attr": "sourceHandle",
+                        "old_value": edge["sourceHandle"],
+                        "new_value": escaped_source_handle,
+                    }
+                )
+                edge["sourceHandle"] = escaped_source_handle
+            if edge["targetHandle"] != escaped_target_handle:
+                edge_changes_log[target_node_data["display_name"]].append(
+                    {
+                        "attr": "targetHandle",
+                        "old_value": edge["targetHandle"],
+                        "new_value": escaped_target_handle,
+                    }
+                )
+                edge["targetHandle"] = escaped_target_handle
+
+        else:
+            logger.error(f"Source or target node not found for edge: {edge}")
+    log_node_changes(edge_changes_log)
+    return project_data_copy
+
+
+def escape_json_dump(edge_dict):
+    return json.dumps(edge_dict).replace('"', "œ")
 
 
 def log_node_changes(node_changes_log):
@@ -322,6 +392,7 @@ def create_or_update_starter_projects():
             updated_project_data = update_projects_components_with_latest_component_versions(
                 project_data, all_types_dict
             )
+            updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
             if updated_project_data != project_data:
                 project_data = updated_project_data
                 # We also need to update the project data in the file
