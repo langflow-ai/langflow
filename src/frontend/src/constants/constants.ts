@@ -813,6 +813,10 @@ export const defaultShortcuts = [
     name: "Freeze",
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + F`,
   },
+  {
+    name: "Flow Share",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + B`,
+  },
 ];
 
 export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
