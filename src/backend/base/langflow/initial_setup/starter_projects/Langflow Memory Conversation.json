@@ -28,12 +28,12 @@
         "id": "reactflow__edge-MemoryComponent-cdA1J{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-cdA1Jœ}-Prompt-ODkUx{œfieldNameœ:œcontextœ,œidœ:œPrompt-ODkUxœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "MemoryComponent-cdA1J",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-cdA1Jœ}",
+        "sourceHandle": "{œbaseClassesœ: [œstrœ, œTextœ, œobjectœ], œdataTypeœ: œMemoryComponentœ, œidœ: œMemoryComponent-cdA1Jœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "Prompt-ODkUx",
-        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-ODkUxœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-ODkUxœ, œinputTypesœ: [œDocumentœ, œBaseOutputParserœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
@@ -63,12 +63,12 @@
         "id": "reactflow__edge-ChatInput-t7F8v{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-t7F8vœ}-Prompt-ODkUx{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-ODkUxœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-t7F8v",
-        "sourceHandle": "{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-t7F8vœ}",
+        "sourceHandle": "{œbaseClassesœ: [œTextœ, œobjectœ, œRecordœ, œstrœ], œdataTypeœ: œChatInputœ, œidœ: œChatInput-t7F8vœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "Prompt-ODkUx",
-        "targetHandle": "{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-ODkUxœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œuser_messageœ, œidœ: œPrompt-ODkUxœ, œinputTypesœ: [œDocumentœ, œBaseOutputParserœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
@@ -86,19 +86,21 @@
             "fieldName": "input_value",
             "id": "OpenAIModel-9RykF",
             "inputTypes": [
-              "Text"
+              "Text",
+              "Record",
+              "Prompt"
             ],
             "type": "str"
           }
         },
         "id": "reactflow__edge-Prompt-ODkUx{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-ODkUxœ}-OpenAIModel-9RykF{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-9RykFœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "Prompt-ODkUx",
-        "sourceHandle": "{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-ODkUxœ}",
+        "sourceHandle": "{œbaseClassesœ: [œTextœ, œstrœ, œobjectœ], œdataTypeœ: œPromptœ, œidœ: œPrompt-ODkUxœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "OpenAIModel-9RykF",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-9RykFœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-9RykFœ, œinputTypesœ: [œTextœ, œRecordœ, œPromptœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
@@ -123,12 +125,12 @@
         },
         "id": "reactflow__edge-OpenAIModel-9RykF{œbaseClassesœ:[œstrœ,œobjectœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-9RykFœ}-ChatOutput-P1jEe{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-P1jEeœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "OpenAIModel-9RykF",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œobjectœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-9RykFœ}",
+        "sourceHandle": "{œbaseClassesœ: [œstrœ, œobjectœ, œTextœ], œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-9RykFœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "ChatOutput-P1jEe",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-P1jEeœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-P1jEeœ, œinputTypesœ: [œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-foreground stroke-connection",
@@ -154,12 +156,12 @@
         },
         "id": "reactflow__edge-MemoryComponent-cdA1J{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-cdA1Jœ}-TextOutput-vrs6T{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-vrs6Tœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "MemoryComponent-cdA1J",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œMemoryComponentœ,œidœ:œMemoryComponent-cdA1Jœ}",
+        "sourceHandle": "{œbaseClassesœ: [œstrœ, œTextœ, œobjectœ], œdataTypeœ: œMemoryComponentœ, œidœ: œMemoryComponent-cdA1Jœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "TextOutput-vrs6T",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-vrs6Tœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œTextOutput-vrs6Tœ, œinputTypesœ: [œRecordœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -736,7 +738,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_core.prompts import ChatPromptTemplate\n\nfrom langflow.base.prompts.utils import dict_values_to_string\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Prompt, TemplateField, Text\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    async def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Prompt:\n        prompt_template = ChatPromptTemplate.from_template(Text(template))\n        kwargs = await dict_values_to_string(kwargs)\n        messages = list(kwargs.values())\n        prompt = prompt_template + messages\n        self.status = f'Prompt:\\n\"{template}\"'\n        return Prompt(data={\"prompt\": prompt.to_json()})\n"
+                "value": "from langflow.custom import CustomComponent\nfrom langflow.field_typing import TemplateField\nfrom langflow.field_typing.prompt import Prompt\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    async def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Prompt:\n        prompt = await Prompt.from_template_and_variables(template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
               },
               "context": {
                 "advanced": false,

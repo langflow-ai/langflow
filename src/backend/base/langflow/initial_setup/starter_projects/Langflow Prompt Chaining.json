@@ -27,12 +27,12 @@
         },
         "id": "reactflow__edge-TextInput-sptaH{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-sptaHœ}-Prompt-amqBu{œfieldNameœ:œdocumentœ,œidœ:œPrompt-amqBuœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "TextInput-sptaH",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œTextInputœ,œidœ:œTextInput-sptaHœ}",
+        "sourceHandle": "{œbaseClassesœ: [œstrœ, œTextœ, œobjectœ], œdataTypeœ: œTextInputœ, œidœ: œTextInput-sptaHœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "Prompt-amqBu",
-        "targetHandle": "{œfieldNameœ:œdocumentœ,œidœ:œPrompt-amqBuœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œdocumentœ, œidœ: œPrompt-amqBuœ, œinputTypesœ: [œDocumentœ, œBaseOutputParserœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
@@ -58,12 +58,12 @@
         },
         "id": "reactflow__edge-Prompt-amqBu{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-amqBuœ}-TextOutput-2MS4a{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-2MS4aœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "Prompt-amqBu",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-amqBuœ}",
+        "sourceHandle": "{œbaseClassesœ: [œobjectœ, œstrœ, œTextœ], œdataTypeœ: œPromptœ, œidœ: œPrompt-amqBuœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "TextOutput-2MS4a",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-2MS4aœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œTextOutput-2MS4aœ, œinputTypesœ: [œRecordœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
@@ -81,19 +81,21 @@
             "fieldName": "input_value",
             "id": "OpenAIModel-uYXZJ",
             "inputTypes": [
-              "Text"
+              "Text",
+              "Record",
+              "Prompt"
             ],
             "type": "str"
           }
         },
         "id": "reactflow__edge-Prompt-amqBu{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-amqBuœ}-OpenAIModel-uYXZJ{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-uYXZJœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "Prompt-amqBu",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-amqBuœ}",
+        "sourceHandle": "{œbaseClassesœ: [œobjectœ, œstrœ, œTextœ], œdataTypeœ: œPromptœ, œidœ: œPrompt-amqBuœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "OpenAIModel-uYXZJ",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-uYXZJœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-uYXZJœ, œinputTypesœ: [œTextœ, œRecordœ, œPromptœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
@@ -121,12 +123,12 @@
         },
         "id": "reactflow__edge-OpenAIModel-uYXZJ{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uYXZJœ}-Prompt-gTNiz{œfieldNameœ:œsummaryœ,œidœ:œPrompt-gTNizœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "OpenAIModel-uYXZJ",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uYXZJœ}",
+        "sourceHandle": "{œbaseClassesœ: [œstrœ, œTextœ, œobjectœ], œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-uYXZJœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "Prompt-gTNiz",
-        "targetHandle": "{œfieldNameœ:œsummaryœ,œidœ:œPrompt-gTNizœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsummaryœ, œidœ: œPrompt-gTNizœ, œinputTypesœ: [œDocumentœ, œBaseOutputParserœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
@@ -151,12 +153,12 @@
         },
         "id": "reactflow__edge-OpenAIModel-uYXZJ{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uYXZJœ}-ChatOutput-EJkG3{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-EJkG3œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "OpenAIModel-uYXZJ",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-uYXZJœ}",
+        "sourceHandle": "{œbaseClassesœ: [œstrœ, œTextœ, œobjectœ], œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-uYXZJœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "ChatOutput-EJkG3",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-EJkG3œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-EJkG3œ, œinputTypesœ: [œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
@@ -182,12 +184,12 @@
         },
         "id": "reactflow__edge-Prompt-gTNiz{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-gTNizœ}-TextOutput-MUDOR{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-MUDORœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "source": "Prompt-gTNiz",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-gTNizœ}",
+        "sourceHandle": "{œbaseClassesœ: [œobjectœ, œstrœ, œTextœ], œdataTypeœ: œPromptœ, œidœ: œPrompt-gTNizœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "TextOutput-MUDOR",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-MUDORœ,œinputTypesœ:[œRecordœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œTextOutput-MUDORœ, œinputTypesœ: [œRecordœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
@@ -205,19 +207,21 @@
             "fieldName": "input_value",
             "id": "OpenAIModel-XawYB",
             "inputTypes": [
-              "Text"
+              "Text",
+              "Record",
+              "Prompt"
             ],
             "type": "str"
           }
         },
         "id": "reactflow__edge-Prompt-gTNiz{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-gTNizœ}-OpenAIModel-XawYB{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-XawYBœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "Prompt-gTNiz",
-        "sourceHandle": "{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-gTNizœ}",
+        "sourceHandle": "{œbaseClassesœ: [œobjectœ, œstrœ, œTextœ], œdataTypeœ: œPromptœ, œidœ: œPrompt-gTNizœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "OpenAIModel-XawYB",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-XawYBœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-XawYBœ, œinputTypesœ: [œTextœ, œRecordœ, œPromptœ], œtypeœ: œstrœ}"
       },
       {
         "className": "stroke-gray-900 stroke-connection",
@@ -242,12 +246,12 @@
         },
         "id": "reactflow__edge-OpenAIModel-XawYB{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-XawYBœ}-ChatOutput-DNmvg{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DNmvgœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "OpenAIModel-XawYB",
-        "sourceHandle": "{œbaseClassesœ:[œstrœ,œTextœ,œobjectœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-XawYBœ}",
+        "sourceHandle": "{œbaseClassesœ: [œstrœ, œTextœ, œobjectœ], œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-XawYBœ}",
         "style": {
           "stroke": "#555"
         },
         "target": "ChatOutput-DNmvg",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DNmvgœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-DNmvgœ, œinputTypesœ: [œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -302,7 +306,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_core.prompts import ChatPromptTemplate\n\nfrom langflow.base.prompts.utils import dict_values_to_string\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Prompt, TemplateField, Text\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    async def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Prompt:\n        prompt_template = ChatPromptTemplate.from_template(Text(template))\n        kwargs = await dict_values_to_string(kwargs)\n        messages = list(kwargs.values())\n        prompt = prompt_template + messages\n        self.status = f'Prompt:\\n\"{template}\"'\n        return Prompt(data={\"prompt\": prompt.to_json()})\n"
+                "value": "from langflow.custom import CustomComponent\nfrom langflow.field_typing import TemplateField\nfrom langflow.field_typing.prompt import Prompt\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    async def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Prompt:\n        prompt = await Prompt.from_template_and_variables(template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
               },
               "document": {
                 "advanced": false,
@@ -422,7 +426,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_core.prompts import ChatPromptTemplate\n\nfrom langflow.base.prompts.utils import dict_values_to_string\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Prompt, TemplateField, Text\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    async def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Prompt:\n        prompt_template = ChatPromptTemplate.from_template(Text(template))\n        kwargs = await dict_values_to_string(kwargs)\n        messages = list(kwargs.values())\n        prompt = prompt_template + messages\n        self.status = f'Prompt:\\n\"{template}\"'\n        return Prompt(data={\"prompt\": prompt.to_json()})\n"
+                "value": "from langflow.custom import CustomComponent\nfrom langflow.field_typing import TemplateField\nfrom langflow.field_typing.prompt import Prompt\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": TemplateField(display_name=\"Template\"),\n            \"code\": TemplateField(advanced=True),\n        }\n\n    async def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Prompt:\n        prompt = await Prompt.from_template_and_variables(template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
               },
               "summary": {
                 "advanced": false,
