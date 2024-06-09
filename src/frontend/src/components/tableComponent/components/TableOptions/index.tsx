@@ -17,7 +17,7 @@ export default function TableOptions({
   stateChange: boolean;
 }): JSX.Element {
   return (
-    <div className={cn("absolute bottom-4 left-6")}>
+    <div className={cn("absolute bottom-3 left-6")}>
       <div className="flex items-center gap-2">
         <div>
           <ShadTooltip content="Reset Columns">

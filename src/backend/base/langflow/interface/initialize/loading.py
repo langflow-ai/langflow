@@ -85,7 +85,9 @@ def update_params_with_load_from_db_fields(
                     logger.info(f"Using environment variable {params[field]} for {field}")
                 if key is None:
                     logger.warning(f"Could not get value for {field}. Setting it to None.")
-                params[field] = key
+
+                if field != "session_id":
+                    params[field] = key
 
             except Exception as exc:
                 logger.error(f"Failed to get value for {field} from custom component. Setting it to None. Error: {exc}")

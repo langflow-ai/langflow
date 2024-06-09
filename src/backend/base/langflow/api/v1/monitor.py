@@ -118,7 +118,22 @@ async def get_transactions(
         dicts = monitor_service.get_transactions(
             source=source, target=target, status=status, order_by=order_by, flow_id=flow_id
         )
-        return [TransactionModelResponse(**d) for d in dicts]
+        result = []
+        for d in dicts:
+            d = TransactionModelResponse(
+                index=d["index"],
+                timestamp=d["timestamp"],
+                vertex_id=d["vertex_id"],
+                inputs=d["inputs"],
+                outputs=d["outputs"],
+                status=d["status"],
+                error=d["error"],
+                flow_id=d["flow_id"],
+                source=d["vertex_id"],
+                target=d["target_id"],
+            )
+            result.append(d)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
         raise HTTPException(status_code=500, detail=str(e))

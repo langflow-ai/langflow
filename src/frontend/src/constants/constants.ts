@@ -589,7 +589,7 @@ export const CONTROL_INPUT_STATE = {
 export const CONTROL_PATCH_USER_STATE = {
   password: "",
   cnfPassword: "",
-  gradient: "",
+  profilePicture: "",
   apikey: "",
 };
 
@@ -660,6 +660,9 @@ export const OUTPUT_TYPES = new Set([
 
 export const CHAT_FIRST_INITIAL_TEXT =
   "Start a conversation and click the agent's thoughts";
+
+export const TOOLTIP_OUTDATED_NODE =
+  "Your component is outdated. Click to update (data may be lost)";
 
 export const CHAT_SECOND_INITIAL_TEXT = "to inspect the chaining process.";
 

@@ -1,7 +1,6 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
 import { APIDataType, TemplateVariableType } from "../types/api";
 import {
   groupedObjType,
@@ -10,6 +9,7 @@ import {
 } from "../types/components";
 import { NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
+import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");

@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -18,7 +19,7 @@ from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder, FolderCreate
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.models.user.crud import get_user_by_username
-from langflow.services.deps import get_settings_service, get_variable_service, session_scope
+from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
 
 STARTER_FOLDER_NAME = "Starter Projects"
 STARTER_FOLDER_DESCRIPTION = "Starter projects to help you get started in Langflow."
@@ -104,6 +105,25 @@ def load_starter_projects() -> list[tuple[Path, dict]]:
         starter_projects.append((file, project))
         logger.info(f"Loaded starter project {file}")
     return starter_projects
+
+
+def copy_profile_pictures():
+    config_dir = get_storage_service().settings_service.settings.config_dir
+    origin = Path(__file__).parent / "profile_pictures"
+    target = Path(config_dir) / "profile_pictures"
+
+    if not os.path.exists(origin):
+        raise ValueError(f"The source folder '{origin}' does not exist.")
+
+    if not os.path.exists(target):
+        os.makedirs(target)
+
+    try:
+        shutil.copytree(origin, target, dirs_exist_ok=True)
+        logger.debug(f"Folder copied from '{origin}' to '{target}'")
+
+    except Exception as e:
+        logger.error(f"Error copying the folder: {e}")
 
 
 def get_project_data(project):
@@ -288,6 +308,7 @@ def create_or_update_starter_projects():
         new_folder = create_starter_folder(session)
         starter_projects = load_starter_projects()
         delete_start_projects(session, new_folder.id)
+        copy_profile_pictures()
         for project_path, project in starter_projects:
             (
                 project_name,
