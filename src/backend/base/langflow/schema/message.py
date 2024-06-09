@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
-from typing import AsyncIterator, Iterator, Optional
+from typing import Any, AsyncIterator, Iterator, Optional
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts.image import ImagePromptTemplate
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
+from langflow.schema.image import Image, get_file_paths, is_image_file
 from langflow.schema.record import Record
 
 
@@ -15,10 +16,19 @@ class Message(BaseModel):
     text: Optional[str | AsyncIterator | Iterator] = Field(default="")
     sender: str
     sender_name: str
-    files: Optional[list[str]] = Field(default=[])
+    files: Optional[list[str | Image]] = Field(default=[])
     session_id: Optional[str] = Field(default="")
     timestamp: str = Field(default=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"))
     flow_id: Optional[str] = None
+
+    def model_post_init(self, __context: Any) -> None:
+        new_files = []
+        for file in self.files or []:
+            if is_image_file(file):
+                new_files.append(Image(path=file))
+            else:
+                new_files.append(file)
+        self.files = new_files
 
     def to_lc_message(
         self,
@@ -40,10 +50,7 @@ class Message(BaseModel):
         if self.sender == "User":
             if self.files:
                 contents = [{"type": "text", "text": self.text}]
-                for file_path in self.files:
-                    image_template = ImagePromptTemplate()
-                    image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file_path})
-                    contents.append({"type": "image_url", "image_url": image_prompt_value.image_url})
+                contents.extend(self.get_file_content_dicts())
                 human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(
@@ -65,6 +72,7 @@ class Message(BaseModel):
         Returns:
             Record: The converted Record.
         """
+
         return cls(
             text=record.text,
             sender=record.sender,
@@ -82,3 +90,16 @@ class Message(BaseModel):
         elif isinstance(value, Iterator):
             return ""
         return value
+
+    async def get_file_content_dicts(self):
+        content_dicts = []
+        files = await get_file_paths(self.files)
+
+        for file in files:
+            if isinstance(file, Image):
+                content_dicts.append(file.to_content_dict())
+            else:
+                image_template = ImagePromptTemplate()
+                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})
+                content_dicts.append({"type": "image_url", "image_url": image_prompt_value.image_url})
+        return content_dicts
