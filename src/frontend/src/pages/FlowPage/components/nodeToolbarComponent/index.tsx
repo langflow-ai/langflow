@@ -47,6 +47,7 @@ export default function NodeToolbarComponent({
   setShowState,
   onCloseAdvancedModal,
 }: nodeToolbarPropsType): JSX.Element {
+  const preventDefault = true;
   const isMac = navigator.platform.toUpperCase().includes("MAC");
   const nodeLength = Object.keys(data.node!.template).filter(
     (templateField) =>
@@ -170,16 +171,16 @@ export default function NodeToolbarComponent({
   const download = useShortcutsStore((state) => state.download);
   const freeze = useShortcutsStore((state) => state.freeze);
 
-  useHotkeys(minimize, handleMinimizeWShortcut);
-  useHotkeys(update, handleUpdateWShortcut);
-  useHotkeys(group, handleGroupWShortcut);
-  useHotkeys(share, handleShareWShortcut);
-  useHotkeys(code, handleCodeWShortcut);
-  useHotkeys(advanced, handleAdvancedWShortcut);
-  useHotkeys(save, handleSaveWShortcut);
-  useHotkeys(docs, handleDocsWShortcut);
-  useHotkeys(download, handleDownloadWShortcut);
-  useHotkeys(freeze, handleFreeze);
+  useHotkeys(minimize, handleMinimizeWShortcut, { preventDefault });
+  useHotkeys(update, handleUpdateWShortcut, { preventDefault });
+  useHotkeys(group, handleGroupWShortcut, { preventDefault });
+  useHotkeys(share, handleShareWShortcut, { preventDefault });
+  useHotkeys(code, handleCodeWShortcut, { preventDefault });
+  useHotkeys(advanced, handleAdvancedWShortcut, { preventDefault });
+  useHotkeys(save, handleSaveWShortcut, { preventDefault });
+  useHotkeys(docs, handleDocsWShortcut, { preventDefault });
+  useHotkeys(download, handleDownloadWShortcut, { preventDefault });
+  useHotkeys(freeze, handleFreeze, { preventDefault });
 
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
