@@ -3,10 +3,7 @@ import { useEffect, useState } from "react";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
 import { Button } from "../../../../components/ui/button";
-import {
-  defaultShortcuts,
-  unavailableShortcutss,
-} from "../../../../constants/constants";
+import { defaultShortcuts } from "../../../../constants/constants";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import EditShortcutButton from "./EditShortcutButton";
 
@@ -45,9 +42,8 @@ export default function ShortcutsPage() {
   const [open, setOpen] = useState(false);
 
   function handleRestore() {
-    setShortcuts(defaultShortcuts, unavailableShortcutss);
+    setShortcuts(defaultShortcuts);
     localStorage.removeItem("langflow-shortcuts");
-    localStorage.removeItem("langflow-UShortcuts");
   }
 
   return (

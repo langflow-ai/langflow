@@ -37,15 +37,12 @@ export default function EditShortcutButton({
   const [key, setKey] = useState<string | null>(null);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setShortcuts = useShortcutsStore((state) => state.setShortcuts);
-  const unavaliableShortcuts = useShortcutsStore(
-    (state) => state.unavailableShortcuts,
-  );
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   function canEditCombination(newCombination: string): boolean {
     let canSave = true;
-    unavaliableShortcuts.forEach((s) => {
-      if (s.toLowerCase() === newCombination.toLowerCase()) {
+    defaultShortcuts.forEach(({ shortcut }) => {
+      if (shortcut.toLowerCase() === newCombination.toLowerCase()) {
         canSave = false;
       }
     });
@@ -65,11 +62,6 @@ export default function EditShortcutButton({
           }
           return { name: s.name, shortcut: s.shortcut };
         });
-        const unavailable = unavaliableShortcuts.map((s) => {
-          if (s.toLowerCase() === defaultCombination.toLowerCase())
-            return (s = key.toUpperCase());
-          return s;
-        });
         const fixCombination = key.split(" ");
         if (
           fixCombination[0].toLowerCase().includes("ctrl") ||
@@ -79,23 +71,16 @@ export default function EditShortcutButton({
         }
         const shortcutName = shortcut[0].split(" ")[0].toLowerCase();
         setUniqueShortcut(shortcutName, fixCombination.join("").toLowerCase());
-        console.log(newCombination);
-        setShortcuts(newCombination, unavailable);
-        setOpen(false);
-        setSuccessData({
-          title: `${shortcut[0]} shortcut successfully changed`,
-        });
-        setKey(null);
-        localStorage.removeItem("langflow-shortcuts");
-        localStorage.removeItem("langflow-UShortcuts");
+        setShortcuts(newCombination);
         localStorage.setItem(
           "langflow-shortcuts",
           JSON.stringify(newCombination),
         );
-        localStorage.setItem(
-          "langflow-UShortcuts",
-          JSON.stringify(unavailable),
-        );
+        setKey(null);
+        setOpen(false);
+        setSuccessData({
+          title: `${shortcut[0]} shortcut successfully changed`,
+        });
         return;
       }
     }
