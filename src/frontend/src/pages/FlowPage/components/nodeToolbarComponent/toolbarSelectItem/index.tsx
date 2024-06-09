@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "../../../../../components/genericIconComponent";
+import RenderIcons from "../../../../../components/renderIconComponent";
 import { toolbarSelectItemProps } from "../../../../../types/components";
 
 export default function ToolbarSelectItem({
@@ -9,6 +10,7 @@ export default function ToolbarSelectItem({
   ping,
   shortcut,
 }: toolbarSelectItemProps) {
+  const isMac = navigator.platform.toUpperCase().includes("MAC");
   let hasShift = false;
   const fixedShortcut = shortcut?.split("+");
   fixedShortcut.forEach((key) => {
@@ -19,8 +21,8 @@ export default function ToolbarSelectItem({
   const filteredShortcut = fixedShortcut.filter(
     (key) => !key.toLowerCase().includes("shift"),
   );
-  let shortcutWPlus = "";
-  if (!hasShift) shortcutWPlus = filteredShortcut.join("+");
+  let shortcutWPlus: string[] = [];
+  if (!hasShift) shortcutWPlus = filteredShortcut.join("+").split(" ");
 
   return (
     <div className={`flex ${style}`} data-testid={dataTestId}>
@@ -34,22 +36,12 @@ export default function ToolbarSelectItem({
         {value}
       </span>
       <span className={`absolute right-2 top-[0.43em] flex `}>
-        {hasShift ? (
-          <>
-            {filteredShortcut[0]}
-            <ForwardedIconComponent
-              name="ArrowBigUp"
-              className="ml-1 h-5 w-5"
-            />
-            {filteredShortcut.map((key, idx) => {
-              if (idx > 0) {
-                return <span className="ml-1"> {key.toUpperCase()} </span>;
-              }
-            })}
-          </>
-        ) : (
-          shortcutWPlus
-        )}
+        <RenderIcons
+          isMac={isMac}
+          hasShift={hasShift}
+          filteredShortcut={filteredShortcut}
+          shortcutWPlus={shortcutWPlus}
+        />
       </span>
     </div>
   );

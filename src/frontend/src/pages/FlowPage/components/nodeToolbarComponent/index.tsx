@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useUpdateNodeInternals } from "reactflow";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
-import IconComponent from "../../../../components/genericIconComponent";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
   Select,
@@ -32,6 +34,7 @@ import {
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
+import RenderIcons from "../../../../components/renderIconComponent";
 
 export default function NodeToolbarComponent({
   data,
@@ -44,6 +47,7 @@ export default function NodeToolbarComponent({
   setShowState,
   onCloseAdvancedModal,
 }: nodeToolbarPropsType): JSX.Element {
+  const isMac = navigator.platform.toUpperCase().includes("MAC");
   const nodeLength = Object.keys(data.node!.template).filter(
     (templateField) =>
       templateField.charAt(0) !== "_" &&
@@ -57,7 +61,7 @@ export default function NodeToolbarComponent({
         data.node.template[templateField].type === "Any" ||
         data.node.template[templateField].type === "int" ||
         data.node.template[templateField].type === "dict" ||
-        data.node.template[templateField].type === "NestedDict")
+        data.node.template[templateField].type === "NestedDict"),
   ).length;
 
   const hasStore = useStoreStore((state) => state.hasStore);
@@ -196,7 +200,7 @@ export default function NodeToolbarComponent({
   const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [flowComponent, setFlowComponent] = useState<FlowType>(
-    createFlowComponent(cloneDeep(data), version)
+    createFlowComponent(cloneDeep(data), version),
   );
 
   //  useEffect(() => {
@@ -215,7 +219,7 @@ export default function NodeToolbarComponent({
   const updateNodeInternals = useUpdateNodeInternals();
 
   const setLastCopiedSelection = useFlowStore(
-    (state) => state.setLastCopiedSelection
+    (state) => state.setLastCopiedSelection,
   );
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -289,7 +293,7 @@ export default function NodeToolbarComponent({
           nodes,
           edges,
           setNodes,
-          setEdges
+          setEdges,
         );
         break;
       case "override":
@@ -313,20 +317,56 @@ export default function NodeToolbarComponent({
             y: 10,
             paneX: nodes.find((node) => node.id === data.id)?.position.x,
             paneY: nodes.find((node) => node.id === data.id)?.position.y,
-          }
+          },
         );
         break;
     }
   };
 
   const isSaved = flows.some((flow) =>
-    Object.values(flow).includes(data.node?.display_name!)
+    Object.values(flow).includes(data.node?.display_name!),
   );
+
+  function displayShortcut({
+    name,
+    shortcut,
+  }: {
+    name: string;
+    shortcut: string;
+  }): JSX.Element {
+    let hasShift: boolean = false;
+    const fixedShortcut = shortcut?.split("+");
+    fixedShortcut.forEach((key) => {
+      if (key.toLowerCase().includes("shift")) {
+        hasShift = true;
+      }
+    });
+    const filteredShortcut = fixedShortcut.filter(
+      (key) => !key.toLowerCase().includes("shift"),
+    );
+    let shortcutWPlus: string[] = [];
+    if (!hasShift) shortcutWPlus = filteredShortcut.join("+").split(" ");
+    return (
+      <div className="flex justify-center">
+        <span> {name} </span>
+        <span
+          className={`ml-3 flex items-center rounded-sm bg-muted px-1 py-[0.2] text-muted-foreground`}
+        >
+          <RenderIcons
+            isMac={isMac}
+            hasShift={hasShift}
+            filteredShortcut={filteredShortcut}
+            shortcutWPlus={shortcutWPlus}
+          />
+        </span>
+      </div>
+    );
+  }
 
   const setNode = useFlowStore((state) => state.setNode);
 
   const handleOnNewValue = (
-    newValue: string | string[] | boolean | Object[]
+    newValue: string | string[] | boolean | Object[],
   ): void => {
     if (data.node!.template[name].value !== newValue) {
       takeSnapshot();
@@ -378,7 +418,14 @@ export default function NodeToolbarComponent({
       <div className="w-26 nocopy nowheel nopan nodelete nodrag noundo h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
           {hasCode && (
-            <ShadTooltip content="Code" side="top">
+            <ShadTooltip
+              content={displayShortcut(
+                shortcuts.find(
+                  ({ name }) => name.split(" ")[0].toLowerCase() === "code",
+                )!,
+              )}
+              side="top"
+            >
               <button
                 className="relative inline-flex items-center rounded-l-md  bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
                 onClick={() => {
@@ -391,7 +438,14 @@ export default function NodeToolbarComponent({
             </ShadTooltip>
           )}
           {nodeLength > 0 && (
-            <ShadTooltip content="Advanced Settings" side="top">
+            <ShadTooltip
+              content={displayShortcut(
+                shortcuts.find(
+                  ({ name }) => name.split(" ")[0].toLowerCase() === "advanced",
+                )!,
+              )}
+              side="top"
+            >
               <button
                 className="relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
                 onClick={() => {
@@ -422,10 +476,17 @@ export default function NodeToolbarComponent({
               <IconComponent name="SaveAll" className="h-4 w-4" />
             </button>
           </ShadTooltip>*/}
-          <ShadTooltip content="Freeze" side="top">
+          <ShadTooltip
+            content={displayShortcut(
+              shortcuts.find(
+                ({ name }) => name.split(" ")[0].toLowerCase() === "freeze",
+              )!,
+            )}
+            side="top"
+          >
             <button
               className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -446,7 +507,7 @@ export default function NodeToolbarComponent({
                 className={cn(
                   "h-4 w-4 transition-all",
                   // TODO UPDATE THIS COLOR TO BE A VARIABLE
-                  frozen ? "animate-wiggle text-ice" : ""
+                  frozen ? "animate-wiggle text-ice" : "",
                 )}
               />
             </button>
@@ -468,13 +529,13 @@ export default function NodeToolbarComponent({
           </ShadTooltip>*/}
 
           <Select onValueChange={handleSelectChange} value="">
-            <ShadTooltip content="More" side="top">
+            <ShadTooltip content="All" side="top">
               <SelectTrigger>
                 <div>
                   <div
                     data-testid="more-options-modal"
                     className={classNames(
-                      "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground  shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                      "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground  shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
                     )}
                   >
                     <IconComponent
