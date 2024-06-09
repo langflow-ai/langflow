@@ -59,6 +59,7 @@ export default function Page({
   flow: FlowType;
   view?: boolean;
 }): JSX.Element {
+  const preventDefault = true;
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const autoSaveCurrentFlow = useFlowsManagerStore(
     (state) => state.autoSaveCurrentFlow,
@@ -199,8 +200,9 @@ export default function Page({
   }
 
   function handleDuplicate(e: KeyboardEvent) {
-    const selectedNode = nodes.filter((obj) => obj.selected);
     e.preventDefault();
+    e.stopPropagation();
+    const selectedNode = nodes.filter((obj) => obj.selected);
     if (selectedNode.length > 0) {
       paste(
         { nodes: selectedNode, edges: [] },
@@ -267,23 +269,23 @@ export default function Page({
   const cutAction = useShortcutsStore((state) => state.cut);
   const pasteAction = useShortcutsStore((state) => state.paste);
   //@ts-ignore
-  useHotkeys(undoAction, handleUndo);
+  useHotkeys(undoAction, handleUndo, { preventDefault });
   //@ts-ignore
-  useHotkeys(redoAction, handleRedo);
+  useHotkeys(redoAction, handleRedo, { preventDefault });
   //@ts-ignore
-  useHotkeys(groupAction, handleGroup);
+  useHotkeys(groupAction, handleGroup, { preventDefault });
   //@ts-ignore
-  useHotkeys(duplicate, handleDuplicate);
+  useHotkeys(duplicate, handleDuplicate, { preventDefault });
   //@ts-ignore
-  useHotkeys(copyAction, handleCopy);
+  useHotkeys(copyAction, handleCopy, { preventDefault });
   //@ts-ignore
-  useHotkeys(cutAction, handleCut);
+  useHotkeys(cutAction, handleCut, { preventDefault });
   //@ts-ignore
-  useHotkeys(pasteAction, handlePaste);
+  useHotkeys(pasteAction, handlePaste, { preventDefault });
   //@ts-ignore
-  useHotkeys(deleteAction, handleDelete);
+  useHotkeys(deleteAction, handleDelete, { preventDefault });
   //@ts-ignore
-  useHotkeys("delete", handleDelete);
+  useHotkeys("delete", handleDelete, { preventDefault });
 
   useEffect(() => {
     setSHowCanvas(

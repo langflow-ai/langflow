@@ -35,7 +35,9 @@ export default function ToolbarSelectItem({
       <span className={`${icon === "Share3" ? "ml-[1.8em]" : " "}`}>
         {value}
       </span>
-      <span className={`absolute right-2 top-[0.43em] flex `}>
+      <span
+        className={`absolute right-2 top-[0.43em] flex items-center rounded-sm bg-muted px-1 py-[0.2] text-muted-foreground `}
+      >
         <RenderIcons
           isMac={isMac}
           hasShift={hasShift}
