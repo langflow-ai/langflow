@@ -1,8 +1,6 @@
-from langchain_core.prompts import ChatPromptTemplate
-
-from langflow.base.prompts.utils import dict_values_to_string
 from langflow.custom import CustomComponent
-from langflow.field_typing import Prompt, TemplateField, Text
+from langflow.field_typing import TemplateField
+from langflow.field_typing.prompt import Prompt
 
 
 class PromptComponent(CustomComponent):
@@ -21,9 +19,6 @@ class PromptComponent(CustomComponent):
         template: Prompt,
         **kwargs,
     ) -> Prompt:
-        prompt_template = ChatPromptTemplate.from_template(Text(template))
-        kwargs = await dict_values_to_string(kwargs)
-        messages = list(kwargs.values())
-        prompt = prompt_template + messages
-        self.status = f'Prompt:\n"{template}"'
-        return Prompt(data={"prompt": prompt.to_json()})
+        prompt = await Prompt.from_template_and_variables(template, kwargs)
+        self.status = prompt.format_text()
+        return prompt
