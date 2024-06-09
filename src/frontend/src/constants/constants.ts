@@ -815,27 +815,6 @@ export const defaultShortcuts = [
   },
 ];
 
-export const unavailableShortcutss = [
-  "CTRL + R",
-  "CTRL + V",
-  "CTRL + X",
-  "CTRL + G",
-  "CTRL + SHIFT + A",
-  "CTRL + Q",
-  "CTRL + SHIFT + U",
-  "CTRL + C",
-  "CTRL + D",
-  "CTRL + SHIFT + S",
-  "CTRL + SHIFT + D",
-  "CTRL + S",
-  "BACKSPACE",
-  "CTRL + K",
-  "CTRL + Z",
-  "CTRL + Y",
-  "CTRL + J",
-  "CTRL + U",
-  "CTRL + F",
-];
 export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
 
 export const DEFAULT_TABLE_ALERT_TITLE = "No Data Available";

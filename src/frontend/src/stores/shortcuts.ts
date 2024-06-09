@@ -1,15 +1,11 @@
 import { create } from "zustand";
-import {
-  defaultShortcuts,
-  unavailableShortcutss,
-} from "../constants/constants";
+import { defaultShortcuts } from "../constants/constants";
 import { shortcutsStoreType } from "../types/store";
 
 export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
-  unavailableShortcuts: unavailableShortcutss,
   shortcuts: defaultShortcuts,
-  setShortcuts: (newShortcuts, unavailable) => {
-    set({ shortcuts: newShortcuts, unavailableShortcuts: unavailable });
+  setShortcuts: (newShortcuts) => {
+    set({ shortcuts: newShortcuts });
   },
   undo: "mod+z",
   redo: "mod+y",
@@ -38,7 +34,6 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   getShortcutsFromStorage: () => {
     if (localStorage.getItem("langflow-shortcuts")) {
       const savedShortcuts = localStorage.getItem("langflow-shortcuts");
-      const savedUShortcuts = localStorage.getItem("langflow-UShortcuts");
       const savedArr = JSON.parse(savedShortcuts!);
       savedArr.forEach(({ name, shortcut }) => {
         let shortcutName = name.split(" ")[0].toLowerCase();
@@ -46,10 +41,7 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
           [shortcutName]: shortcut,
         });
       });
-      get().setShortcuts(
-        JSON.parse(savedShortcuts!),
-        JSON.parse(savedUShortcuts!),
-      );
+      get().setShortcuts(JSON.parse(savedShortcuts!));
     }
   },
 }));

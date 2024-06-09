@@ -541,7 +541,6 @@ export const nodeIconsLucide: iconsType = {
   FolderIcon,
   Discord: FaDiscord,
   PaperclipIcon,
-  RotateCcw,
   Settings,
   Streamlit,
 };

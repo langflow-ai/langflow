@@ -44,10 +44,8 @@ export type shortcutsStoreType = {
     name: string;
     shortcut: string;
   }>;
-  unavailableShortcuts: string[];
   setShortcuts: (
     newShortcuts: Array<{ name: string; shortcut: string }>,
-    unavailable: string[],
   ) => void;
   getShortcutsFromStorage: () => void;
 };
