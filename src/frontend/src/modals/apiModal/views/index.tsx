@@ -31,9 +31,13 @@ const ApiModal = forwardRef(
     {
       flow,
       children,
+      open: myOpen,
+      setOpen: mySetOpen,
     }: {
       flow: FlowType;
       children: ReactNode;
+      open: boolean;
+      setOpen: (a: boolean | ((o?: boolean) => boolean)) => void;
     },
     ref,
   ) => {
@@ -44,7 +48,10 @@ const ApiModal = forwardRef(
 
     const [activeTweaks, setActiveTweaks] = useState(false);
     const { autoLogin } = useContext(AuthContext);
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] =
+      mySetOpen !== undefined && myOpen !== undefined
+        ? [myOpen, mySetOpen]
+        : useState(false);
     const [activeTab, setActiveTab] = useState("0");
     const pythonApiCode = getPythonApiCode(
       flow?.id,
