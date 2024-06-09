@@ -23,8 +23,6 @@ const useColumnDefs = (
               : templateParam.name) ?? params.data.key
           );
         },
-        tooltipField: "display_name",
-        tooltipComponent: TableTooltipRender,
         wrapText: true,
         autoHeight: true,
         flex: 1,
@@ -35,7 +33,6 @@ const useColumnDefs = (
         headerName: "Description",
         field: "info",
         tooltipField: "info",
-        tooltipComponent: TableTooltipRender,
         wrapText: true,
         autoHeight: true,
         flex: 2,
