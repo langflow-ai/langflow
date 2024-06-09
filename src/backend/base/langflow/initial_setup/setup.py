@@ -12,7 +12,7 @@ from emoji import demojize, purely_emoji  # type: ignore
 from loguru import logger
 from sqlmodel import select
 
-from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES
+from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
 from langflow.interface.types import get_all_components
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -157,7 +157,7 @@ def get_project_data(project):
 def update_project_file(project_path, project, updated_project_data):
     project["data"] = updated_project_data
     with open(project_path, "w", encoding="utf-8") as f:
-        f.write(orjson.dumps(project, option=orjson.OPT_INDENT_2).decode())
+        f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
     logger.info(f"Updated starter project {project['name']} file")
 
 
