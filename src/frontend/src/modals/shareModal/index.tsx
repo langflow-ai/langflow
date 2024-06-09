@@ -42,23 +42,18 @@ export default function ShareModal({
   setOpen?: (open: boolean) => void;
   disabled?: boolean;
 }): JSX.Element {
-  function handleOpenWShortcut(e: KeyboardEvent) {
-    if (hasApiKey || hasStore) {
-      e.preventDefault();
-      internalSetOpen((state) => !state);
-    }
-  }
   const version = useDarkStore((state) => state.version);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const [internalOpen, internalSetOpen] = useState(children ? false : true);
+  const [internalOpen, internalSetOpen] =
+    setOpen !== undefined && open !== undefined
+      ? [open, setOpen]
+      : useState(children ? false : true);
   const [openConfirmationModal, setOpenConfirmationModal] = useState(false);
   const nameComponent = is_component ? "component" : "workflow";
-
-  useHotkeys("mod+alt+s", handleOpenWShortcut);
 
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [loadingTags, setLoadingTags] = useState<boolean>(false);
@@ -75,13 +70,13 @@ export default function ShareModal({
   const description = component?.description ?? "";
 
   useEffect(() => {
-    if (open || internalOpen) {
+    if (internalOpen) {
       if (hasApiKey && hasStore) {
         handleGetTags();
         handleGetNames();
       }
     }
-  }, [open, internalOpen, hasApiKey, hasStore]);
+  }, [internalOpen, hasApiKey, hasStore]);
 
   function handleGetTags() {
     setLoadingTags(true);
@@ -155,8 +150,7 @@ export default function ShareModal({
 
   const handleUpdateComponent = () => {
     handleShareComponent(true);
-    if (setOpen) setOpen(false);
-    else internalSetOpen(false);
+    internalSetOpen(false);
   };
 
   const handleExportComponent = () => {
@@ -208,8 +202,8 @@ export default function ShareModal({
     <>
       <BaseModal
         size="smaller-h-full"
-        open={(!disabled && open) ?? internalOpen}
-        setOpen={setOpen ?? internalSetOpen}
+        open={!disabled && internalOpen}
+        setOpen={internalSetOpen}
         onSubmit={() => {
           const isNameAvailable = !unavaliableNames.some(
             (element) => element.name === name,
@@ -217,7 +211,7 @@ export default function ShareModal({
 
           if (isNameAvailable) {
             handleShareComponent();
-            (setOpen || internalSetOpen)(false);
+            internalSetOpen(false);
           } else {
             setOpenConfirmationModal(true);
           }
@@ -298,7 +292,7 @@ export default function ShareModal({
                 variant="outline"
                 className="gap-2"
                 onClick={() => {
-                  (setOpen || internalSetOpen)(false);
+                  internalSetOpen(false);
                   handleExportComponent();
                 }}
               >

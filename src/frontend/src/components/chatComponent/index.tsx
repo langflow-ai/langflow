@@ -30,11 +30,11 @@ export default function FlowToolbar(): JSX.Element {
 
   const openPlayground = useShortcutsStore((state) => state.open);
   const api = useShortcutsStore((state) => state.api);
-  const share = useShortcutsStore((state) => state.share);
+  const flow = useShortcutsStore((state) => state.flow);
 
   useHotkeys(openPlayground, handleChatWShortcut, { preventDefault });
   useHotkeys(api, handleAPIWShortcut, { preventDefault });
-  useHotkeys(share, handleShareWShortcut, { preventDefault });
+  useHotkeys(flow, handleShareWShortcut, { preventDefault });
 
   const [open, setOpen] = useState<boolean>(false);
   const [openCodeModal, setOpenCodeModal] = useState<boolean>(false);
@@ -55,7 +55,7 @@ export default function FlowToolbar(): JSX.Element {
         component={currentFlow!}
         disabled={!hasApiKey || !validApiKey || !hasStore}
         open={openShareModal}
-        setOpen={setOpen}
+        setOpen={setOpenShareModal}
       >
         <button
           disabled={!hasApiKey || !validApiKey || !hasStore}
@@ -79,7 +79,14 @@ export default function FlowToolbar(): JSX.Element {
         </button>
       </ShareModal>
     ),
-    [hasApiKey, validApiKey, currentFlow, hasStore, openShareModal, setOpen],
+    [
+      hasApiKey,
+      validApiKey,
+      currentFlow,
+      hasStore,
+      openShareModal,
+      setOpenShareModal,
+    ],
   );
 
   return (
