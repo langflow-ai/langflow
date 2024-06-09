@@ -10,6 +10,7 @@ import {
 import { NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
 import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
+import { MODAL_CLASSES } from "../constants/constants";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -408,10 +409,7 @@ export function extractColumnsFromRows(
 }
 
 export function isThereModal(): boolean {
-  const modal = document.body.getElementsByClassName(
-    "nopan nodelete nodrag noundo nocopy fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-blur-shared backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-  );
-  console.log(modal);
+  const modal = document.body.getElementsByClassName(MODAL_CLASSES);
   if (modal.length > 0) return true;
   return false;
 }
