@@ -20,8 +20,10 @@ import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import ShadTooltip from "../../../shadTooltipComponent";
 import { Button } from "../../../ui/button";
+import { useShortcutsStore } from "../../../../stores/shortcuts";
 
 export const MenuBar = ({}: {}): JSX.Element => {
+  const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -144,10 +146,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 />
               ) : (
                 <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">
-                  Ctrl +{" "}
+                  {
+                    shortcuts.find((s) => s.name.toLowerCase() === "undo")
+                      ?.shortcut
+                  }
                 </span>
               )}
-              <span className="absolute right-2 top-[0.4em]">Z</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
@@ -164,10 +168,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 />
               ) : (
                 <span className="absolute right-[1.15rem] top-[0.40em] stroke-2">
-                  Ctrl +{" "}
+                  {
+                    shortcuts.find((s) => s.name.toLowerCase() === "redo")
+                      ?.shortcut
+                  }
                 </span>
               )}
-              <span className="absolute right-2 top-[0.4em]">Y</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

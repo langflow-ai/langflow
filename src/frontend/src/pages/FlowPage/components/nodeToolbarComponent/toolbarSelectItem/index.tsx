@@ -27,11 +27,13 @@ export default function ToolbarSelectItem({
     <div className={`flex ${style}`} data-testid={dataTestId}>
       <ForwardedIconComponent
         name={icon}
-        className={`relative top-0.5 mr-2 h-4 w-4  ${
+        className={` top-0.5  mr-2  ${icon === "Share3" ? "absolute left-2  top-[0.2em] h-6 w-6" : "h-4 w-4"}   ${
           ping && "animate-pulse text-green-500"
         }`}
       />
-      <span>{value}</span>
+      <span className={`${icon === "Share3" ? "ml-[1.8em]" : " "}`}>
+        {value}
+      </span>
       <span className={`absolute right-2 top-[0.43em] flex `}>
         {hasShift ? (
           <>
