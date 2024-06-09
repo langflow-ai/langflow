@@ -54,11 +54,19 @@ class VariableService(Service):
         self,
         user_id: Union[UUID, str],
         name: str,
+        field: str,
         session: Session = Depends(get_session),
     ) -> str:
         # we get the credential from the database
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
         variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
+
+        if variable.type == "Credential" and field == "session_id":
+            raise TypeError(
+                f"variable {name} of type 'Credential' cannot be used in a Session ID field "
+                "because its purpose is to prevent the exposure of values."
+            )
+
         # we decrypt the value
         if not variable or not variable.value:
             raise ValueError(f"{name} variable not found.")

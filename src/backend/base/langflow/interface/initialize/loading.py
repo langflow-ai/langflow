@@ -71,7 +71,7 @@ def update_params_with_load_from_db_fields(
             try:
                 key = None
                 try:
-                    key = custom_component.variables(params[field])
+                    key = custom_component.variables(params[field], field)
                 except ValueError as e:
                     # check if "User id is not set" is in the error message
                     if "User id is not set" in str(e) and not fallback_to_env_vars:
@@ -86,8 +86,10 @@ def update_params_with_load_from_db_fields(
                 if key is None:
                     logger.warning(f"Could not get value for {field}. Setting it to None.")
 
-                if field != "session_id":
-                    params[field] = key
+                params[field] = key
+
+            except TypeError as exc:
+                raise exc
 
             except Exception as exc:
                 logger.error(f"Failed to get value for {field} from custom component. Setting it to None. Error: {exc}")
