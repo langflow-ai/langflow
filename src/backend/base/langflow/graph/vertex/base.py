@@ -424,7 +424,7 @@ class Vertex:
         try:
             messages = [
                 ChatOutputResponse(
-                    message=artifacts["message"],
+                    message=artifacts["text"],
                     sender=artifacts.get("sender"),
                     sender_name=artifacts.get("sender_name"),
                     session_id=artifacts.get("session_id"),
@@ -444,7 +444,7 @@ class Vertex:
         # We need to set the artifacts to pass information
         # to the frontend
         self.set_artifacts()
-        artifacts = self.artifacts
+        artifacts = self.artifacts_raw
         if isinstance(artifacts, dict):
             messages = self.extract_messages_from_artifacts(artifacts)
         else:
