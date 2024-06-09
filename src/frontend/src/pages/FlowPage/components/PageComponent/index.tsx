@@ -484,6 +484,7 @@ export default function Page({
             zoomOnScroll={!view}
             zoomOnPinch={!view}
             panOnDrag={!view}
+            panActivationKeyCode={""}
             proOptions={{ hideAttribution: true }}
             onPaneClick={onPaneClick}
           >
