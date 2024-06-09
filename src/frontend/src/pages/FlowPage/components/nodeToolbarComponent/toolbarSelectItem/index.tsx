@@ -17,7 +17,7 @@ export default function ToolbarSelectItem({
     }
   });
   const filteredShortcut = fixedShortcut.filter(
-    (key) => !key.toLowerCase().includes("shift")
+    (key) => !key.toLowerCase().includes("shift"),
   );
   let shortcutWPlus = "";
   if (!hasShift) shortcutWPlus = filteredShortcut.join("+");
@@ -26,7 +26,7 @@ export default function ToolbarSelectItem({
     <div className={`flex ${style}`} data-testid={dataTestId}>
       <ForwardedIconComponent
         name={icon}
-        className={` top-0.5  mr-2  ${icon === "Share3" ? "absolute left-2  top-[0.2em] h-6 w-6" : "h-4 w-4"}   ${
+        className={`   mr-2  ${icon === "Share3" ? "absolute left-2  top-[0.25em] h-6 w-6" : "mt-[0.15em] h-4 w-4"}   ${
           ping && "animate-pulse text-green-500"
         }`}
       />
