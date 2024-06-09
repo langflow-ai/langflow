@@ -104,11 +104,11 @@ def load_starter_projects() -> list[tuple[Path, dict]]:
         logger.info(f"Loaded starter project {file}")
     return starter_projects
 
+
 def copy_profile_pictures():
     config_dir = get_storage_service().settings_service.settings.config_dir
     origin = Path(__file__).parent / "profile_pictures"
     target = Path(config_dir) / "profile_pictures"
-    import pdb; pdb.set_trace
 
     if not os.path.exists(origin):
         raise ValueError(f"The source folder '{origin}' does not exist.")
@@ -122,7 +122,6 @@ def copy_profile_pictures():
 
     except Exception as e:
         logger.error(f"Error copying the folder: {e}")
-
 
 
 def get_project_data(project):
