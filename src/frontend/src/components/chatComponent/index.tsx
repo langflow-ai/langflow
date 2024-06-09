@@ -13,25 +13,32 @@ import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
 
 export default function FlowToolbar(): JSX.Element {
+  const preventDefault = true;
   function handleAPIWShortcut(e: KeyboardEvent) {
-    e.preventDefault();
     setOpenCodeModal((oldOpen) => !oldOpen);
   }
 
   function handleChatWShortcut(e: KeyboardEvent) {
     if (useFlowStore.getState().hasIO) {
-      e.preventDefault();
       setOpen((oldState) => !oldState);
     }
   }
 
+  function handleShareWShortcut(e: KeyboardEvent) {
+    setOpenShareModal((oldState) => !oldState);
+  }
+
   const openPlayground = useShortcutsStore((state) => state.open);
   const api = useShortcutsStore((state) => state.api);
+  const share = useShortcutsStore((state) => state.share);
 
-  useHotkeys(openPlayground, handleChatWShortcut);
-  useHotkeys(api, handleAPIWShortcut);
-  const [open, setOpen] = useState(false);
+  useHotkeys(openPlayground, handleChatWShortcut, { preventDefault });
+  useHotkeys(api, handleAPIWShortcut, { preventDefault });
+  useHotkeys(share, handleShareWShortcut, { preventDefault });
+
+  const [open, setOpen] = useState<boolean>(false);
   const [openCodeModal, setOpenCodeModal] = useState<boolean>(false);
+  const [openShareModal, setOpenShareModal] = useState<boolean>(false);
 
   const hasIO = useFlowStore((state) => state.hasIO);
   const hasStore = useStoreStore((state) => state.hasStore);
@@ -47,6 +54,8 @@ export default function FlowToolbar(): JSX.Element {
         is_component={false}
         component={currentFlow!}
         disabled={!hasApiKey || !validApiKey || !hasStore}
+        open={openShareModal}
+        setOpen={setOpen}
       >
         <button
           disabled={!hasApiKey || !validApiKey || !hasStore}
@@ -70,7 +79,7 @@ export default function FlowToolbar(): JSX.Element {
         </button>
       </ShareModal>
     ),
-    [hasApiKey, validApiKey, currentFlow, hasStore],
+    [hasApiKey, validApiKey, currentFlow, hasStore, openShareModal, setOpen],
   );
 
   return (
