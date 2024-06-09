@@ -86,6 +86,8 @@ export default function EditShortcutButton({
           title: `${shortcut[0]} shortcut successfully changed`,
         });
         setKey(null);
+        localStorage.removeItem("langflow-shortcuts");
+        localStorage.removeItem("langflow-UShortcuts");
         localStorage.setItem(
           "langflow-shortcuts",
           JSON.stringify(newCombination),
