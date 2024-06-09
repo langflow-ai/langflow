@@ -1,5 +1,4 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
 import EditFlowSettings from "../../components/editFlowSettingsComponent";
 import IconComponent from "../../components/genericIconComponent";
 import { TagsSelector } from "../../components/tagsSelectorComponent";

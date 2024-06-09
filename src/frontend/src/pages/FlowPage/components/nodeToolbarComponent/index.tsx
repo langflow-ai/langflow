@@ -32,7 +32,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { classNames, cn } from "../../../../utils/utils";
+import { classNames, cn, isThereModal } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
 import RenderIcons from "../../../../components/renderIconComponent";
 
@@ -47,6 +47,13 @@ export default function NodeToolbarComponent({
   setShowState,
   onCloseAdvancedModal,
 }: nodeToolbarPropsType): JSX.Element {
+  const version = useDarkStore((state) => state.version);
+  const [showModalAdvanced, setShowModalAdvanced] = useState(false);
+  const [showconfirmShare, setShowconfirmShare] = useState(false);
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [flowComponent, setFlowComponent] = useState<FlowType>(
+    createFlowComponent(cloneDeep(data), version),
+  );
   const preventDefault = true;
   const isMac = navigator.platform.toUpperCase().includes("MAC");
   const nodeLength = Object.keys(data.node!.template).filter(
@@ -99,20 +106,23 @@ export default function NodeToolbarComponent({
   }
 
   function handleShareWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (isThereModal() && !showOverrideModal) return;
     if (hasApiKey || hasStore) {
-      e.preventDefault();
       setShowconfirmShare((state) => !state);
     }
   }
 
   function handleCodeWShortcut(e: KeyboardEvent) {
     e.preventDefault();
+    if (isThereModal() && !openModal) return;
     if (hasCode) return setOpenModal((state) => !state);
     setNoticeData({ title: `You can not access ${data.id} code` });
   }
 
   function handleAdvancedWShortcut(e: KeyboardEvent) {
     e.preventDefault();
+    if (isThereModal() && !showModalAdvanced) return;
     if (!isGroup) {
       setShowModalAdvanced((state) => !state);
     }
@@ -120,11 +130,12 @@ export default function NodeToolbarComponent({
 
   function handleSaveWShortcut(e: KeyboardEvent) {
     e.preventDefault();
+    if (isThereModal() && !showOverrideModal) return;
     if (isSaved) {
       setShowOverrideModal((state) => !state);
       return;
     }
-    if (hasCode) {
+    if (hasCode && !isSaved) {
       saveComponent(cloneDeep(data), false);
       setSuccessData({ title: `${data.id} saved successfully` });
       return;
@@ -195,14 +206,7 @@ export default function NodeToolbarComponent({
   const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
   const getNodePosition = useFlowStore((state) => state.getNodePosition);
   const flows = useFlowsManagerStore((state) => state.flows);
-  const version = useDarkStore((state) => state.version);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
-  const [showModalAdvanced, setShowModalAdvanced] = useState(false);
-  const [showconfirmShare, setShowconfirmShare] = useState(false);
-  const [showOverrideModal, setShowOverrideModal] = useState(false);
-  const [flowComponent, setFlowComponent] = useState<FlowType>(
-    createFlowComponent(cloneDeep(data), version),
-  );
 
   //  useEffect(() => {
   //    if (openWDoubleClick) setShowModalAdvanced(true);
@@ -428,7 +432,7 @@ export default function NodeToolbarComponent({
               side="top"
             >
               <button
-                className="relative inline-flex items-center rounded-l-md  bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                className="relative inline-flex items-center rounded-l-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
                 onClick={() => {
                   setOpenModal(!openModal);
                 }}
@@ -448,7 +452,7 @@ export default function NodeToolbarComponent({
               side="top"
             >
               <button
-                className="relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                className={`${isGroup ? "rounded-l-md" : ""} relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
                 onClick={() => {
                   setShowModalAdvanced(true);
                 }}

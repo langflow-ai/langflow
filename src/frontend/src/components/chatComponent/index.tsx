@@ -8,23 +8,29 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useStoreStore } from "../../stores/storeStore";
-import { classNames } from "../../utils/utils";
+import { classNames, isThereModal } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Separator } from "../ui/separator";
 
 export default function FlowToolbar(): JSX.Element {
   const preventDefault = true;
+  const [open, setOpen] = useState<boolean>(false);
+  const [openCodeModal, setOpenCodeModal] = useState<boolean>(false);
+  const [openShareModal, setOpenShareModal] = useState<boolean>(false);
   function handleAPIWShortcut(e: KeyboardEvent) {
+    if (isThereModal() && !openCodeModal) return;
     setOpenCodeModal((oldOpen) => !oldOpen);
   }
 
   function handleChatWShortcut(e: KeyboardEvent) {
+    if (isThereModal() && !open) return;
     if (useFlowStore.getState().hasIO) {
       setOpen((oldState) => !oldState);
     }
   }
 
   function handleShareWShortcut(e: KeyboardEvent) {
+    if (isThereModal() && !openShareModal) return;
     setOpenShareModal((oldState) => !oldState);
   }
 
@@ -35,10 +41,6 @@ export default function FlowToolbar(): JSX.Element {
   useHotkeys(openPlayground, handleChatWShortcut, { preventDefault });
   useHotkeys(api, handleAPIWShortcut, { preventDefault });
   useHotkeys(flow, handleShareWShortcut, { preventDefault });
-
-  const [open, setOpen] = useState<boolean>(false);
-  const [openCodeModal, setOpenCodeModal] = useState<boolean>(false);
-  const [openShareModal, setOpenShareModal] = useState<boolean>(false);
 
   const hasIO = useFlowStore((state) => state.hasIO);
   const hasStore = useStoreStore((state) => state.hasStore);
