@@ -150,7 +150,6 @@ const TableComponent = forwardRef<
           duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
           deleteRow={props.onDelete ? props.onDelete : undefined}
           resetGrid={() => {
-            console.log("teste");
             resetGrid(realRef, initialColumnDefs);
             setTimeout(() => {
               setColumnStateChange(false);
