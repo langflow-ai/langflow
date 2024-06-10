@@ -12,6 +12,9 @@ export default function getPythonApiCode(
   endpointName?: string
 ): string {
   const tweaksObject = tweaksBuildedObject[0];
+  const tweaksString = JSON.stringify(tweaksObject, null, 2)
+    .replace(/true/g, "True")
+    .replace(/false/g, "False");
   return `import argparse
 import json
 from argparse import RawTextHelpFormatter
@@ -34,7 +37,7 @@ ENDPOINT = "${endpointName || ""}" ${
 
 # You can tweak the flow by adding a tweaks dictionary
 # e.g {"OpenAI-XXXXX": {"model_name": "gpt-4"}}
-TWEAKS = ${JSON.stringify(tweaksObject, null, 2)}
+TWEAKS = ${tweaksString}
 
 def run_flow(message: str,
   endpoint: str,
