@@ -734,6 +734,91 @@ export const AUTHORIZED_DUPLICATE_REQUESTS = [
 
 export const SAVE_DEBOUNCE_TIME = 300;
 
+export const IS_MAC = navigator.userAgent.toUpperCase().includes("MAC");
+
+export const defaultShortcuts = [
+  {
+    name: "Advanced Settings",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + A`,
+  },
+  {
+    name: "Minimize",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Q`,
+  },
+  {
+    name: "Code",
+    shortcut: `Space`,
+  },
+  {
+    name: "Copy",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + C`,
+  },
+  {
+    name: "Duplicate",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + D`,
+  },
+  {
+    name: "Share",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + S`,
+  },
+  {
+    name: "Docs",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + D`,
+  },
+  {
+    name: "Save",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + S`,
+  },
+  {
+    name: "Delete",
+    shortcut: "Backspace",
+  },
+  {
+    name: "Open playground",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + K`,
+  },
+  {
+    name: "Undo",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Z`,
+  },
+  {
+    name: "Redo",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Y`,
+  },
+  {
+    name: "Group",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + G`,
+  },
+  {
+    name: "Cut",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + X`,
+  },
+  {
+    name: "Paste",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + V`,
+  },
+  {
+    name: "API",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + R`,
+  },
+  {
+    name: "Download",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + J`,
+  },
+  {
+    name: "Update",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + U`,
+  },
+  {
+    name: "Freeze",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + F`,
+  },
+  {
+    name: "Flow Share",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + B`,
+  },
+];
+
 export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
 
 export const DEFAULT_TABLE_ALERT_TITLE = "No Data Available";
@@ -741,3 +826,6 @@ export const DEFAULT_TABLE_ALERT_TITLE = "No Data Available";
 export const LOCATIONS_TO_RETURN = ["/flow/", "/settings/"];
 
 export const MAX_BATCH_SIZE = 50;
+
+export const MODAL_CLASSES =
+  "nopan nodelete nodrag noundo nocopy fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-blur-shared backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";

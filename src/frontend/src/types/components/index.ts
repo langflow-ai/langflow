@@ -491,7 +491,7 @@ export type ChatInputType = {
   isDragging: boolean;
   files: FilePreviewType[];
   setFiles: (
-    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
+    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[])
   ) => void;
   chatValue: string;
   inputRef: {
@@ -535,6 +535,8 @@ export type fileCardPropsType = {
 };
 
 export type nodeToolbarPropsType = {
+  //  openWDoubleClick: boolean;
+  //  setOpenWDoubleClick: (open: boolean) => void;
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setShowNode: (boolean: any) => void;
@@ -591,7 +593,7 @@ export type chatMessagePropsType = {
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url?: string,
+    stream_url?: string
   ) => void;
 };
 
@@ -683,12 +685,12 @@ export type codeTabsPropsType = {
       value: string,
       node: NodeType,
       template: TemplateVariableType,
-      tweak: tweakType,
+      tweak: tweakType
     ) => string;
     buildTweakObject?: (
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: TemplateVariableType,
+      template: TemplateVariableType
     ) => Promise<string | void>;
   };
   activeTweaks?: boolean;
@@ -770,21 +772,12 @@ export type IOFileInputProps = {
 };
 
 export type toolbarSelectItemProps = {
-  isMac: boolean;
-  shift: boolean;
-  keyboardKey: string;
   value: string;
   icon: string;
-  styleObj?: {
-    iconClasses?: string;
-    commandClasses?: string;
-    shiftClasses?: string;
-    ctrlClasses?: string;
-    keyClasses?: string;
-    valueClasses?: string;
-  };
+  style?: string;
   dataTestId: string;
   ping?: boolean;
+  shortcut: string;
 };
 
 export type clearChatPropsType = {

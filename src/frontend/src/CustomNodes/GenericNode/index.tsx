@@ -36,7 +36,7 @@ import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import ParameterComponent from "./components/parameterComponent";
 import { postCustomComponent } from "../../controllers/API";
-import { cloneDeep } from "lodash";
+import { useShortcutsStore } from "../../stores/shortcuts";
 
 export default function GenericNode({
   data,
@@ -137,6 +137,8 @@ export default function GenericNode({
     return names;
   };
 
+  //  const [openWDoubleCLick, setOpenWDoubleCLick] = useState(false);
+
   const getBaseBorderClass = (selected) => {
     let className = selected ? "border border-ring" : "border";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
@@ -231,10 +233,14 @@ export default function GenericNode({
     }
   };
 
+  const shortcuts = useShortcutsStore((state) => state.shortcuts);
+
   const memoizedNodeToolbarComponent = useMemo(() => {
     return (
       <NodeToolbar>
         <NodeToolbarComponent
+          //          openWDoubleClick={openWDoubleCLick}
+          //          setOpenWDoubleClick={setOpenWDoubleCLick}
           data={data}
           deleteNode={(id) => {
             takeSnapshot();
@@ -266,11 +272,18 @@ export default function GenericNode({
     updateNodeCode,
     isOutdated,
     selected,
+    shortcuts,
+    //    openWDoubleCLick,
+    //    setOpenWDoubleCLick,
   ]);
   return (
     <>
       {memoizedNodeToolbarComponent}
       <div
+        //        onDoubleClick={(event) => {
+        //          if (!isWrappedWithClass(event, "nodoubleclick"))
+        //            setOpenWDoubleCLick(true);
+        //        }}
         className={getNodeBorderClassName(
           selected,
           showNode,
@@ -344,7 +357,7 @@ export default function GenericNode({
                             event.preventDefault();
                           }}
                           data-testid={"title-" + data.node?.display_name}
-                          className="generic-node-tooltip-div cursor-text text-primary"
+                          className="nodoubleclick generic-node-tooltip-div cursor-text text-primary"
                         >
                           {data.node?.display_name}
                         </div>
@@ -592,7 +605,7 @@ export default function GenericNode({
               ) : (
                 <div
                   className={cn(
-                    "generic-node-desc-text cursor-text truncate-multiline word-break-break-word",
+                    "nodoubleclick generic-node-desc-text cursor-text truncate-multiline word-break-break-word",
                     (data.node?.description === "" ||
                       !data.node?.description) &&
                       nameEditable

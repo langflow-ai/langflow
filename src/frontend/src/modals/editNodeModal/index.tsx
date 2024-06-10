@@ -15,11 +15,13 @@ const EditNodeModal = forwardRef(
       nodeLength,
       open,
       setOpen,
+      //      setOpenWDoubleClick,
       data,
     }: {
       nodeLength: number;
       open: boolean;
       setOpen: (open: boolean) => void;
+      //      setOpenWDoubleClick: (open: boolean) => void;
       data: NodeDataType;
     },
     ref,
@@ -54,6 +56,12 @@ const EditNodeModal = forwardRef(
         gridApi.refreshCells();
       }
     }, [gridApi, open]);
+
+    //    useEffect(() => {
+    //      return () => {
+    //        setOpenWDoubleClick(false);
+    //      };
+    //    }, []);
 
     return (
       <BaseModal
