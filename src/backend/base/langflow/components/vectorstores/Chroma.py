@@ -6,7 +6,7 @@ from langchain_chroma import Chroma
 from langchain_core.embeddings import Embeddings
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.vectorstores import VectorStore
-
+from langflow.base.vectorstores.utils import chroma_collection_to_records
 from langflow.custom import CustomComponent
 from langflow.schema import Record
 
@@ -121,4 +121,7 @@ class ChromaComponent(CustomComponent):
                 client=client,
                 embedding_function=embedding,
             )
+
+        store = chroma.get()
+        self.status = chroma_collection_to_records(store)
         return chroma
