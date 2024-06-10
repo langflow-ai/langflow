@@ -14,7 +14,10 @@ from langflow.custom.code_parser.utils import (
 from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.schema import Record
+from langflow.schema.artifact import get_artifact_type
 from langflow.schema.dotdict import dotdict
+from langflow.schema.message import Message
+from langflow.schema.schema import Log
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
 from langflow.utils import validate
@@ -23,6 +26,9 @@ if TYPE_CHECKING:
     from langflow.graph.graph.base import Graph
     from langflow.graph.vertex.base import Vertex
     from langflow.services.storage.service import StorageService
+
+
+LoggableType = Union[str, dict, list, int, float, bool, None, Record, Message]
 
 
 class CustomComponent(BaseComponent):
@@ -75,6 +81,7 @@ class CustomComponent(BaseComponent):
     status: Optional[Any] = None
     """The status of the component. This is displayed on the frontend. Defaults to None."""
     _flows_records: Optional[List[Record]] = None
+    _logs: Optional[List[Log]] = []
 
     def update_state(self, name: str, value: Any):
         if not self.vertex:
@@ -468,3 +475,13 @@ class CustomComponent(BaseComponent):
             Any: The result of the build process.
         """
         raise NotImplementedError
+
+    def log(self, message: LoggableType | list[LoggableType]):
+        """
+        Logs a message.
+
+        Args:
+            message (LoggableType | list[LoggableType]): The message to log.
+        """
+        log = Log(message=message, type=get_artifact_type(message))
+        self._logs.append(log)
