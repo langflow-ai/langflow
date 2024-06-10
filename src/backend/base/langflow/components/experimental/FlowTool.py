@@ -7,8 +7,8 @@ from langflow.custom import CustomComponent
 from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.helpers.flow import get_flow_inputs
+from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
-from langflow.schema.schema import Record
 
 
 class FlowToolComponent(CustomComponent):

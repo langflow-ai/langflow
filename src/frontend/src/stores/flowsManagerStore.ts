@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash";
-import * as debounce from "debounce-promise";
+import pDebounce from "p-debounce";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
 import { create } from "zustand";
 import { SAVE_DEBOUNCE_TIME } from "../constants/constants";
@@ -128,7 +128,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     set({ saveLoading: true }); // set saveLoading true immediately
     return get().saveFlowDebounce(flow, silent); // call the debounced function directly
   },
-  saveFlowDebounce: debounce((flow: FlowType, silent?: boolean) => {
+  saveFlowDebounce: pDebounce((flow: FlowType, silent?: boolean) => {
     set({ saveLoading: true });
     return new Promise<void>((resolve, reject) => {
       updateFlowInDatabase(flow)

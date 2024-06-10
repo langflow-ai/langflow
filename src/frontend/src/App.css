@@ -164,3 +164,22 @@ body {
 .ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb:hover {
   background-color: #bbb;
 }
+
+/* This CSS is to not apply the border for the column having 'no-border' class */
+.no-border.ag-cell:focus {
+  border: none !important;
+  outline: none;
+}
+.no-border.ag-cell {
+  border: none !important;
+  outline: none;
+}
+
+/* selected */
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--selected) !important;
+}
+
+.react-flow__edge .react-flow__edge-path {
+  stroke: var(--connection) !important;
+}

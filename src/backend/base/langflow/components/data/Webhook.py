@@ -3,8 +3,8 @@ import uuid
 from typing import Any, Optional
 
 from langflow.custom import CustomComponent
+from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
-from langflow.schema.schema import Record
 
 
 class WebhookComponent(CustomComponent):

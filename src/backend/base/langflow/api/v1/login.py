@@ -71,9 +71,7 @@ async def login_to_get_access_token(
 
 @router.get("/auto_login")
 async def auto_login(
-    response: Response,
-    db: Session = Depends(get_session),
-    settings_service=Depends(get_settings_service)
+    response: Response, db: Session = Depends(get_session), settings_service=Depends(get_settings_service)
 ):
     auth_settings = settings_service.auth_settings
     if settings_service.auth_settings.AUTO_LOGIN:

@@ -1,5 +1,4 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
-import { AxiosError } from "axios";
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import TableComponent from "../../components/tableComponent";
@@ -9,7 +8,7 @@ import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
-import { FlowType, NodeDataType } from "../../types/flow";
+import { NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
 
 export default function FlowLogsModal({
@@ -33,11 +32,13 @@ export default function FlowLogsModal({
         setRows(rows);
       });
     } else if (activeTab === "Messages") {
-      getMessagesTable(currentFlowId, "union").then((data) => {
-        const { columns, rows } = data;
-        setColumns(columns.map((col) => ({ ...col, editable: true })));
-        setRows(rows);
-      });
+      getMessagesTable("union", currentFlowId, ["index", "flow_id"]).then(
+        (data) => {
+          const { columns, rows } = data;
+          setColumns(columns.map((col) => ({ ...col, editable: true })));
+          setRows(rows);
+        },
+      );
     }
 
     if (open && activeTab === "Messages" && !noticed.current) {
@@ -85,6 +86,7 @@ export default function FlowLogsModal({
           </TabsList>
         </Tabs>
         <TableComponent
+          key={activeTab}
           readOnlyEdit
           className="h-max-full h-full w-full"
           pagination={rows.length === 0 ? false : true}

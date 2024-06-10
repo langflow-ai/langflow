@@ -1,13 +1,11 @@
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
+import useAlertStore from "../../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../../stores/flowsManagerStore";
+import { useFolderStore } from "../../../../../../stores/foldersStore";
+import { handleDownloadFolderFn } from "../../../../utils/handle-download-folder";
 import InputSearchComponent from "../inputSearchComponent";
 import TabsSearchComponent from "../tabsComponent";
-import { Button } from "../../../../../../components/ui/button";
-import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
-import useAlertStore from "../../../../../../stores/alertStore";
-import { handleDownloadFolderFn } from "../../../../utils/handle-download-folder";
-import { useFolderStore } from "../../../../../../stores/foldersStore";
-import { useLocation } from "react-router-dom";
 
 type HeaderTabsSearchComponentProps = {};
 

@@ -1,7 +1,6 @@
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import TableAutoCellRender from "../components/tableAutoCellRender";
 import { APIDataType, TemplateVariableType } from "../types/api";
 import {
   groupedObjType,
@@ -10,6 +9,8 @@ import {
 } from "../types/components";
 import { NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
+import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
+import { MODAL_CLASSES } from "../constants/constants";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -354,19 +355,19 @@ export function isTimeStampString(str: string): boolean {
 export function extractColumnsFromRows(
   rows: object[],
   mode: "intersection" | "union",
+  excludeColumns?: Array<string>,
 ): (ColDef<any> | ColGroupDef<any>)[] {
-  const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
+  let columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
   if (rows.length === 0) {
     return [];
   }
   function intersection() {
     for (const key in rows[0]) {
       columnsKeys[key] = {
-        headerName: key,
+        headerName: toTitleCase(key),
         field: key,
         cellRenderer: TableAutoCellRender,
         filter: true,
-        autoHeight: true,
       };
     }
     for (const row of rows) {
@@ -381,19 +382,33 @@ export function extractColumnsFromRows(
     for (const row of rows) {
       for (const key in row) {
         columnsKeys[key] = {
-          headerName: key,
+          headerName: toTitleCase(key),
           field: key,
           filter: true,
           cellRenderer: TableAutoCellRender,
+          suppressAutoSize: true,
+          tooltipField: key,
         };
       }
     }
   }
+
   if (mode === "intersection") {
     intersection();
   } else {
     union();
   }
 
+  if (excludeColumns) {
+    for (const key of excludeColumns) {
+      delete columnsKeys[key];
+    }
+  }
+
   return Object.values(columnsKeys);
+}
+
+export function isThereModal(): boolean {
+  const modal = document.body.getElementsByClassName(MODAL_CLASSES);
+  return modal.length > 0;
 }

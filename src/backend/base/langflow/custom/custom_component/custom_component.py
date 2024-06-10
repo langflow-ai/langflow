@@ -7,6 +7,7 @@ import yaml
 from cachetools import TTLCache, cachedmethod
 from langchain_core.documents import Document
 from pydantic import BaseModel
+
 from langflow.custom.code_parser.utils import (
     extract_inner_type_from_generic_alias,
     extract_union_types_from_generic_alias,
@@ -378,13 +379,14 @@ class CustomComponent(Component):
             The variable for the current user with the specified name.
         """
 
-        def get_variable(name: str):
+        def get_variable(name: str, field: str):
             if hasattr(self, "_user_id") and not self._user_id:
                 raise ValueError(f"User id is not set for {self.__class__.__name__}")
             variable_service = get_variable_service()  # Get service instance
             # Retrieve and decrypt the variable by name for the current user
             with session_scope() as session:
-                return variable_service.get_variable(user_id=self._user_id or "", name=name, session=session)
+                user_id = self._user_id or ""
+                return variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
 
         return get_variable
 

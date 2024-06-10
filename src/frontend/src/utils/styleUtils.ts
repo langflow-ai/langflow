@@ -56,6 +56,7 @@ import {
   FolderIcon,
   FolderPlus,
   FolderPlusIcon,
+  FolderUp,
   FormInput,
   Forward,
   Gift,
@@ -92,6 +93,7 @@ import {
   Package2,
   Palette,
   Paperclip,
+  PaperclipIcon,
   Pencil,
   PencilLine,
   Pin,
@@ -103,14 +105,18 @@ import {
   Redo,
   RefreshCcw,
   Repeat,
+  RotateCcw,
   Save,
   SaveAll,
+  ScanEye,
   Scissors,
   ScreenShare,
   ScrollText,
   Search,
+  Settings,
   Settings2,
   Share,
+  AlertTriangle,
   Share2,
   Shield,
   Sliders,
@@ -143,6 +149,8 @@ import {
   X,
   XCircle,
   Zap,
+  PlaySquare,
+  Wrench,
 } from "lucide-react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -153,8 +161,8 @@ import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
 import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { ChromaIcon } from "../icons/ChromaIcon";
-import { CouchbaseIcon } from "../icons/Couchbase";
 import { CohereIcon } from "../icons/Cohere";
+import { CouchbaseIcon } from "../icons/Couchbase";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
@@ -185,6 +193,7 @@ import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
+import { Streamlit } from "../icons/Streamlit";
 import { VectaraIcon } from "../icons/VectaraIcon";
 import { VertexAIIcon } from "../icons/VertexAI";
 import { WeaviateIcon } from "../icons/Weaviate";
@@ -397,6 +406,7 @@ export const nodeIconsLucide: iconsType = {
   textsplitters: Scissors,
   wrappers: Gift,
   helpers: Wand2,
+  ScanEye,
   experimental: FlaskConical,
   langchain_utilities: PocketKnife,
   WolframAlphaAPIWrapper: SvgWolfram,
@@ -425,9 +435,11 @@ export const nodeIconsLucide: iconsType = {
   SunIcon,
   MoonIcon,
   Bell,
+  AlertTriangle,
   ChevronLeft,
   SlidersHorizontal,
   Palette,
+  FolderUp,
   Blocks,
   ChevronDown,
   ArrowLeft,
@@ -523,7 +535,12 @@ export const nodeIconsLucide: iconsType = {
   Command,
   ArrowBigUp,
   Dot,
+  RotateCcw,
+  Wrench,
   FolderPlusIcon,
   FolderIcon,
   Discord: FaDiscord,
+  PaperclipIcon,
+  Settings,
+  Streamlit,
 };

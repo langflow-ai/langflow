@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from langflow.services.deps import get_monitor_service
 from langflow.services.monitor.schema import (
+    MessageModelRequest,
     MessageModelResponse,
     TransactionModelResponse,
     VertexBuildMapModel,
@@ -66,6 +67,44 @@ async def get_messages(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.delete("/messages", status_code=204)
+async def delete_messages(
+    message_ids: List[int],
+    monitor_service: MonitorService = Depends(get_monitor_service),
+):
+    try:
+        monitor_service.delete_messages(message_ids=message_ids)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/messages/{message_id}", response_model=MessageModelResponse)
+async def update_message(
+    message_id: int,
+    message: MessageModelRequest,
+    monitor_service: MonitorService = Depends(get_monitor_service),
+):
+    try:
+        message_dict = message.model_dump(exclude_none=True)
+        message_dict.pop("index", None)
+        monitor_service.update_message(message_id=message_id, **message_dict)
+        return MessageModelResponse(index=message_id, **message_dict)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/messages/session/{session_id}", status_code=204)
+async def delete_messages_session(
+    session_id: str,
+    monitor_service: MonitorService = Depends(get_monitor_service),
+):
+    try:
+        monitor_service.delete_messages_session(session_id=session_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/transactions", response_model=List[TransactionModelResponse])
 async def get_transactions(
     source: Optional[str] = Query(None),
@@ -79,6 +118,22 @@ async def get_transactions(
         dicts = monitor_service.get_transactions(
             source=source, target=target, status=status, order_by=order_by, flow_id=flow_id
         )
-        return [TransactionModelResponse(**d) for d in dicts]
+        result = []
+        for d in dicts:
+            d = TransactionModelResponse(
+                index=d["index"],
+                timestamp=d["timestamp"],
+                vertex_id=d["vertex_id"],
+                inputs=d["inputs"],
+                outputs=d["outputs"],
+                status=d["status"],
+                error=d["error"],
+                flow_id=d["flow_id"],
+                source=d["vertex_id"],
+                target=d["target_id"],
+            )
+            result.append(d)
+        return result
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
         raise HTTPException(status_code=500, detail=str(e))

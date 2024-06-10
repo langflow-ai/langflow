@@ -11,12 +11,12 @@
 *.ts text
 *.tsx text
 *.md text
-*.mdx text
+*.mdx text working-tree-encoding = UTF-8
 *.yml text
 *.yaml text
 *.xml text
 *.csv text
-*.json text
+*.json text working-tree-encoding = UTF-8
 *.sh text
 *.Dockerfile text
 Dockerfile text
@@ -32,3 +32,4 @@ Dockerfile text
 *.mp4 binary
 *.svg binary
 *.csv binary
+

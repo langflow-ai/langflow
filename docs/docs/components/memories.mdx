@@ -1,11 +1,13 @@
-import Admonition from '@theme/Admonition';
+import Admonition from "@theme/Admonition";
 
 # Memories
 
 <Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-    <p>
-        Thanks for your patience as we improve our documentation—it might have some rough edges. Share your feedback or report issues to help us enhance it! 🛠️📝
-    </p>
+  <p>
+    Thanks for your patience as we improve our documentation—it might have some
+    rough edges. Share your feedback or report issues to help us enhance it!
+    🛠️📝
+  </p>
 </Admonition>
 
 Memory is a concept in chat-based applications that allows the system to remember previous interactions. This capability helps maintain the context of the conversation and enables the system to understand new messages in light of past messages.
@@ -24,9 +26,13 @@ This component retrieves stored messages using various filters such as sender ty
 - **number_of_messages**: Specifies the number of messages to retrieve. Defaults to `5`. Determines the number of recent messages from the chat history to fetch.
 
 <Admonition type="note" title="Note">
-    <p>
-        The component retrieves messages based on the provided criteria, including the specific file path for stored messages. If no specific criteria are provided, it returns the most recent messages up to the specified limit. This component can be used to review past interactions and analyze conversation flows.
-    </p>
+  <p>
+    The component retrieves messages based on the provided criteria, including
+    the specific file path for stored messages. If no specific criteria are
+    provided, it returns the most recent messages up to the specified limit.
+    This component can be used to review past interactions and analyze
+    conversation flows.
+  </p>
 </Admonition>
 
 ### ConversationBufferMemory
@@ -84,7 +90,8 @@ The `ConversationKGMemory` utilizes a knowledge graph to enhance memory capabili
 - **memory_key**: Specifies the prompt variable name where the memory stores and retrieves chat messages. Defaults to `chat_history`.
 - **output_key**: Identifies the key under which the generated response
 
- is stored, enabling retrieval using this key.
+is stored, enabling retrieval using this key.
+
 - **return_messages**: Controls whether the history is returned as a string or as a list of messages. Defaults to `False`.
 
 ---
