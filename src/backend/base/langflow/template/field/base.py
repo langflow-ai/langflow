@@ -1,3 +1,4 @@
+from enum import Enum
 from types import GenericAlias
 from typing import Any, Callable, Optional, Union
 
@@ -5,6 +6,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_valid
 
 from langflow.field_typing import Text
 from langflow.field_typing.range_spec import RangeSpec
+
+
+class UndefinedType(Enum):
+    undefined = "__UNDEFINED__"
+
+
+UNDEFINED = UndefinedType.undefined
 
 
 class Input(BaseModel):
@@ -162,6 +170,10 @@ class Output(BaseModel):
     method: Optional[str] = Field(default=None)
     """The method to use for the output."""
 
+    value: Optional[Any] = Field(default=UNDEFINED)
+
+    cache: bool = Field(default=True)
+
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)
 
@@ -185,5 +197,13 @@ class Output(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         result = handler(self)
+        if self.value == UNDEFINED:
+            result["value"] = UNDEFINED.value
 
         return result
+
+    @model_validator(mode="after")
+    def validate_model(self):
+        if self.value == UNDEFINED.value:
+            self.value = UNDEFINED
+        return self

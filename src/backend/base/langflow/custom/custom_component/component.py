@@ -18,7 +18,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.schema.record import Record
-from langflow.template.field.base import Input, Output
+from langflow.template.field.base import UNDEFINED, Input, Output
 
 from .custom_component import CustomComponent
 
@@ -73,12 +73,16 @@ class Component(CustomComponent):
                 # or if it's not connected to any vertex
                 if not vertex.outgoing_edges or output.name in vertex.edges_source_names:
                     method: Callable | Awaitable = getattr(self, output.method)
-                    result = method()
-                    # If the method is asynchronous, we need to await it
-                    if inspect.iscoroutinefunction(method):
-                        result = await result
-                    _results[output.name] = result
-        self._results = _results
+                    if output.cache and not isinstance(output.value, UNDEFINED):
+                        _results[output.name] = output.value
+                    else:
+                        result = method()
+                        # If the method is asynchronous, we need to await it
+                        if inspect.iscoroutinefunction(method):
+                            result = await result
+                        _results[output.name] = result
+                        output.value = result
+
         return _results
 
     def custom_repr(self):
