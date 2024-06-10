@@ -44,9 +44,9 @@ import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
-import OutputModal from "../outputModal";
 import TooltipRenderComponent from "../tooltipRenderComponent";
 import { TEXT_FIELD_TYPES } from "./constants";
+import OutputModal from "../outputModal";
 
 export default function ParameterComponent({
   left,
