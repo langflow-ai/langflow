@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useMemo } from "react";
+import { ReactNode, useEffect } from "react";
 
 import React from "react";
 import {
@@ -176,15 +176,12 @@ function BaseModal({
     }
   }, [open]);
 
-  const modalContent = useMemo(
-    () => (
-      <>
-        {headerChild}
-        {ContentChild}
-        {ContentFooter && ContentFooter}
-      </>
-    ),
-    [headerChild, ContentChild, ContentFooter],
+  const modalContent = (
+    <>
+      {headerChild}
+      {ContentChild}
+      {ContentFooter && ContentFooter}
+    </>
   );
 
   const contentClasses = cn(
@@ -211,7 +208,7 @@ function BaseModal({
                   event.preventDefault();
                   onSubmit();
                 }}
-                asChild
+                className="flex h-full flex-col gap-6"
               >
                 {modalContent}
               </Form.Root>

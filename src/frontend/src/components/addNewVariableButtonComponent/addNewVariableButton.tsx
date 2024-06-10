@@ -87,7 +87,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
           aria-hidden="true"
         />
       </BaseModal.Header>
-      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
       <BaseModal.Content>
         <div className="flex h-full w-full flex-col gap-4 align-middle">
           <Label>Variable Name</Label>
