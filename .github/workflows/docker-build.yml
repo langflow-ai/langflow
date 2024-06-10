@@ -30,6 +30,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+        id: qemu
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to Docker Hub
@@ -52,6 +53,7 @@ jobs:
         with:
           context: .
           push: true
+          platforms: ${{ steps.qemu.outputs.platforms }}
           file: ${{ env.DOCKERFILE }}
           tags: ${{ env.TAGS }}
       - name: Wait for Docker Hub to propagate
@@ -62,6 +64,7 @@ jobs:
         with:
           context: .
           push: true
+          platforms: ${{ steps.qemu.outputs.platforms }}
           file: ./docker/build_and_push_backend.Dockerfile
           build-args: |
             LANGFLOW_IMAGE=langflowai/langflow:${{ inputs.version }}
@@ -75,6 +78,7 @@ jobs:
           context: .
           push: true
           file: ./docker/frontend/build_and_push_frontend.Dockerfile
+          platforms: ${{ steps.qemu.outputs.platforms }}
           tags: |
             langflowai/langflow-frontend:${{ inputs.version }}
             langflowai/langflow-frontend:1.0-alpha
