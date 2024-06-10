@@ -1,7 +1,5 @@
 from typing import List
 
-from langflow.helpers.flow import generate_unique_flow_name
-from langflow.helpers.folders import generate_unique_folder_name
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from sqlalchemy import or_, update
@@ -9,6 +7,8 @@ from sqlmodel import Session, select
 
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.schemas import FlowListCreate, FlowListReadWithFolderName
+from langflow.helpers.flow import generate_unique_flow_name
+from langflow.helpers.folders import generate_unique_folder_name
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
@@ -35,17 +35,27 @@ def create_folder(
     try:
         new_folder = Folder.model_validate(folder, from_attributes=True)
         new_folder.user_id = current_user.id
-
-        folder_results = session.exec(
-            select(Folder).where(
-                Folder.name.like(f"{new_folder.name}%"),  # type: ignore
-                Folder.user_id == current_user.id,
+        # First check if the folder.name is unique
+        # there might be flows with name like: "MyFlow", "MyFlow (1)", "MyFlow (2)"
+        # so we need to check if the name is unique with `like` operator
+        # if we find a flow with the same name, we add a number to the end of the name
+        # based on the highest number found
+        if session.exec(
+            statement=select(Folder).where(Folder.name == new_folder.name).where(Folder.user_id == current_user.id)
+        ).first():
+            folder_results = session.exec(
+                select(Folder).where(
+                    Folder.name.like(f"{new_folder.name}%"),  # type: ignore
+                    Folder.user_id == current_user.id,
+                )
             )
-        )
-        existing_folder_names = [folder.name for folder in folder_results]
-
-        if existing_folder_names:
-            new_folder.name = f"{new_folder.name} ({len(existing_folder_names) + 1})"
+            if folder_results:
+                folder_names = [folder.name for folder in folder_results]
+                folder_numbers = [int(name.split("(")[-1].split(")")[0]) for name in folder_names if "(" in name]
+                if folder_numbers:
+                    new_folder.name = f"{new_folder.name} ({max(folder_numbers) + 1})"
+                else:
+                    new_folder.name = f"{new_folder.name} (1)"
 
         session.add(new_folder)
         session.commit()
