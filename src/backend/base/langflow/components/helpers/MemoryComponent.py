@@ -2,9 +2,9 @@ from typing import Optional
 
 from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
-from langflow.helpers.record import records_to_text
+from langflow.helpers.record import messages_to_text
 from langflow.memory import get_messages
-from langflow.schema.schema import Record
+from langflow.schema.message import Message
 
 
 class MemoryComponent(BaseMemoryComponent):
@@ -43,7 +43,7 @@ class MemoryComponent(BaseMemoryComponent):
             },
         }
 
-    def get_messages(self, **kwargs) -> list[Record]:
+    def get_messages(self, **kwargs) -> list[Message]:
         # Validate kwargs by checking if it contains the correct keys
         if "sender" not in kwargs:
             kwargs["sender"] = None
@@ -77,6 +77,6 @@ class MemoryComponent(BaseMemoryComponent):
             limit=n_messages,
             order=order,
         )
-        messages_str = records_to_text(template=record_template or "", records=messages)
+        messages_str = messages_to_text(template=record_template or "", messages=messages)
         self.status = messages_str
         return messages_str

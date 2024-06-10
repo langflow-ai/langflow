@@ -1,3 +1,4 @@
+import warnings
 from typing import Optional, Union
 
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -5,6 +6,7 @@ from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from langflow.custom import CustomComponent
+from langflow.field_typing.prompt import Prompt
 
 
 class LCModelComponent(CustomComponent):
@@ -53,19 +55,28 @@ class LCModelComponent(CustomComponent):
                 key in response_metadata["token_usage"] for key in inner_openai_keys
             ):
                 token_usage = response_metadata["token_usage"]
-                completion_tokens = token_usage["completion_tokens"]
-                prompt_tokens = token_usage["prompt_tokens"]
-                total_tokens = token_usage["total_tokens"]
-                finish_reason = response_metadata["finish_reason"]
-                status_message = f"Tokens:\nInput: {prompt_tokens}\nOutput: {completion_tokens}\nTotal Tokens: {total_tokens}\nStop Reason: {finish_reason}\nResponse: {content}"
+                status_message = {
+                    "tokens": {
+                        "input": token_usage["prompt_tokens"],
+                        "output": token_usage["completion_tokens"],
+                        "total": token_usage["total_tokens"],
+                        "stop_reason": response_metadata["finish_reason"],
+                        "response": content,
+                    }
+                }
+
             elif all(key in response_metadata for key in anthropic_keys) and all(
                 key in response_metadata["usage"] for key in inner_anthropic_keys
             ):
                 usage = response_metadata["usage"]
-                input_tokens = usage["input_tokens"]
-                output_tokens = usage["output_tokens"]
-                stop_reason = response_metadata["stop_reason"]
-                status_message = f"Tokens:\nInput: {input_tokens}\nOutput: {output_tokens}\nStop Reason: {stop_reason}\nResponse: {content}"
+                status_message = {
+                    "tokens": {
+                        "input": usage["input_tokens"],
+                        "output": usage["output_tokens"],
+                        "stop_reason": response_metadata["stop_reason"],
+                        "response": content,
+                    }
+                }
             else:
                 status_message = f"Response: {content}"
         else:
@@ -73,7 +84,7 @@ class LCModelComponent(CustomComponent):
         return status_message
 
     def get_chat_result(
-        self, runnable: BaseChatModel, stream: bool, input_value: str, system_message: Optional[str] = None
+        self, runnable: BaseChatModel, stream: bool, input_value: str | Prompt, system_message: Optional[str] = None
     ):
         messages: list[Union[HumanMessage, SystemMessage]] = []
         if not input_value and not system_message:
@@ -81,11 +92,21 @@ class LCModelComponent(CustomComponent):
         if system_message:
             messages.append(SystemMessage(content=system_message))
         if input_value:
-            messages.append(HumanMessage(content=input_value))
+            if isinstance(input_value, Prompt):
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    if "prompt" in input_value:
+                        prompt = input_value.load_lc_prompt()
+                        runnable = prompt | runnable
+                    else:
+                        messages.append(input_value.to_lc_message())
+            else:
+                messages.append(HumanMessage(content=input_value))
+        inputs = messages or {}
         if stream:
-            return runnable.stream(messages)
+            return runnable.stream(inputs)
         else:
-            message = runnable.invoke(messages)
+            message = runnable.invoke(inputs)
             result = message.content
             if isinstance(message, AIMessage):
                 status_message = self.build_status_message(message)

@@ -27,7 +27,7 @@ class MistralAIModelComponent(LCModelComponent):
 
     def build_config(self):
         return {
-            "input_value": {"display_name": "Input"},
+            "input_value": {"display_name": "Input", "input_types": ["Text", "Record", "Prompt"]},
             "max_tokens": {
                 "display_name": "Max Tokens",
                 "advanced": True,

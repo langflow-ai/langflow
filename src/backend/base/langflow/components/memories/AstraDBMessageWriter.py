@@ -1,11 +1,11 @@
 from typing import Optional
 
+from langchain_astradb import AstraDBChatMessageHistory
+from langchain_core.messages import BaseMessage
+
 from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
-from langflow.schema.schema import Record
-
-from langchain_core.messages import BaseMessage
-from langchain_astradb import AstraDBChatMessageHistory
+from langflow.schema import Record
 
 
 class AstraDBMessageWriterComponent(BaseMemoryComponent):

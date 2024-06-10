@@ -16,19 +16,14 @@ import {
 import { BuildStatus } from "../constants/enums";
 import { getFlowPool } from "../controllers/API";
 import { VertexBuildTypeAPI } from "../types/api";
+import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
   NodeDataType,
   NodeType,
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
-import {
-  ChatOutputType,
-  FlowPoolObjectType,
-  FlowStoreType,
-  VertexLayerElementType,
-  chatInputType,
-} from "../types/zustand/flow";
+import { FlowStoreType, VertexLayerElementType } from "../types/zustand/flow";
 import { buildVertices } from "../utils/buildUtils";
 import {
   checkChatInput,
@@ -64,7 +59,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setFlowPool: (flowPool) => {
     set({ flowPool });
   },
-  addDataToFlowPool: (data: FlowPoolObjectType, nodeId: string) => {
+  addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
     if (!newFlowPool[nodeId]) newFlowPool[nodeId] = [data];
     else {
@@ -78,7 +73,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   updateFlowPool: (
     nodeId: string,
-    data: FlowPoolObjectType | ChatOutputType | chatInputType,
+    data: VertexBuildTypeAPI | ChatOutputType | ChatInputType,
     buildId?: string
   ) => {
     let newFlowPool = cloneDeep({ ...get().flowPool });
@@ -90,12 +85,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         index = newFlowPool[nodeId].findIndex((flow) => flow.id === buildId);
       }
       //check if the data is a flowpool object
-      if ((data as FlowPoolObjectType).data?.artifacts !== undefined) {
-        newFlowPool[nodeId][index] = data as FlowPoolObjectType;
+      if ((data as VertexBuildTypeAPI).valid !== undefined) {
+        newFlowPool[nodeId][index] = data as VertexBuildTypeAPI;
       }
-      //update data artifact
+      //update data results
       else {
-        newFlowPool[nodeId][index].data.artifacts = data;
+        newFlowPool[nodeId][index].data.message = data as
+          | ChatOutputType
+          | ChatInputType;
       }
     }
     get().setFlowPool(newFlowPool);
@@ -318,8 +315,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           targetHandle,
           id,
           data: cloneDeep(edge.data),
-          style: { stroke: "#555" },
-          className: "stroke-gray-900 ",
           selected: false,
         },
         newEdges.map((edge) => ({ ...edge, selected: false }))
@@ -399,8 +394,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             targetHandle: scapeJSONParse(connection.targetHandle!),
             sourceHandle: scapeJSONParse(connection.sourceHandle!),
           },
-          style: { stroke: "#555" },
-          className: "stroke-foreground stroke-connection",
+          // style: { stroke: "#555" },
+          // className: "stroke-foreground stroke-connection",
         },
         oldEdges
       );
@@ -430,11 +425,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     startNodeId,
     stopNodeId,
     input_value,
+    files,
     silent,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
     input_value?: string;
+    files?: string[];
     silent?: boolean;
   }) => {
     get().setIsBuilding(true);
@@ -514,7 +511,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       }
 
       get().addDataToFlowPool(
-        { ...vertexBuildData, buildId: runId },
+        { ...vertexBuildData, run_id: runId },
         vertexBuildData.id
       );
 
@@ -533,6 +530,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
     await buildVertices({
       input_value,
+      files,
       flowId: currentFlow!.id,
       startNodeId,
       stopNodeId,

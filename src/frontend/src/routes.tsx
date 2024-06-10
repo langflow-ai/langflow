@@ -11,7 +11,7 @@ import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
 const ApiKeysPage = lazy(
-  () => import("./pages/SettingsPage/pages/ApiKeysPage"),
+  () => import("./pages/SettingsPage/pages/ApiKeysPage")
 );
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 const FlowPage = lazy(() => import("./pages/FlowPage"));

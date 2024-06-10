@@ -86,6 +86,7 @@ export default function FlowLogsModal({
           </TabsList>
         </Tabs>
         <TableComponent
+          key={activeTab}
           readOnlyEdit
           className="h-max-full h-full w-full"
           pagination={rows.length === 0 ? false : true}

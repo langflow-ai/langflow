@@ -1,5 +1,4 @@
 from .dotdict import dotdict
-from .schema import Record
-from .decision import Decision
+from .record import Record
 
-__all__ = ["Record", "dotdict", "Decision"]
+__all__ = ["Record", "dotdict"]

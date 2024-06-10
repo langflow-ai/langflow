@@ -3,7 +3,7 @@ from typing import Optional
 from langchain_community.utilities.searchapi import SearchApiAPIWrapper
 
 from langflow.custom import CustomComponent
-from langflow.schema.schema import Record
+from langflow.schema import Record
 from langflow.services.database.models.base import orjson_dumps
 
 

@@ -1,10 +1,11 @@
 from typing import Optional
 
+from langchain_cohere import ChatCohere
 from pydantic.v1 import SecretStr
-from langflow.field_typing import Text
+
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
-from langchain_cohere import ChatCohere
+from langflow.field_typing import Text
 
 
 class CohereComponent(LCModelComponent):
@@ -42,7 +43,7 @@ class CohereComponent(LCModelComponent):
                 "type": "float",
                 "show": True,
             },
-            "input_value": {"display_name": "Input"},
+            "input_value": {"display_name": "Input", "input_types": ["Text", "Record", "Prompt"]},
             "stream": {
                 "display_name": "Stream",
                 "info": STREAM_INFO_TEXT,
@@ -68,4 +69,5 @@ class CohereComponent(LCModelComponent):
             cohere_api_key=api_key,
             temperature=temperature,
         )
+        return self.get_chat_result(output, stream, input_value, system_message)
         return self.get_chat_result(output, stream, input_value, system_message)

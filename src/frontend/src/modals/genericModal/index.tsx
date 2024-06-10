@@ -209,7 +209,7 @@ export default function GenericModal({
           <div
             className={classNames(
               !isEdit ? "rounded-lg border" : "",
-              "flex h-full w-full"
+              "flex h-full max-h-[85%] w-full"
             )}
           >
             {type === TypeModal.PROMPT && isEdit && !readonly ? (
@@ -244,7 +244,7 @@ export default function GenericModal({
             ) : type !== TypeModal.PROMPT ? (
               <Textarea
                 ref={textRef}
-                className="form-input h-full w-full rounded-lg focus-visible:ring-1"
+                className="form-input h-full w-full overflow-auto rounded-lg focus-visible:ring-1"
                 value={inputValue}
                 onChange={(event) => {
                   setInputValue(event.target.value);

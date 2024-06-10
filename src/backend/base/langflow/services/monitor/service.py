@@ -132,7 +132,7 @@ class MonitorService(Service):
         order: Optional[str] = "DESC",
         limit: Optional[int] = None,
     ):
-        query = "SELECT index, flow_id, sender_name, sender, session_id, message, artifacts, timestamp FROM messages"
+        query = "SELECT index, flow_id, sender_name, sender, session_id, text, timestamp FROM messages"
         conditions = []
         if sender:
             conditions.append(f"sender = '{sender}'")
@@ -166,7 +166,9 @@ class MonitorService(Service):
         order_by: Optional[str] = "timestamp",
         flow_id: Optional[str] = None,
     ):
-        query = "SELECT index,flow_id, source, target, target_args, status, error, timestamp FROM transactions"
+        query = (
+            "SELECT index,flow_id, status, error, timestamp, vertex_id, inputs, outputs, target_id FROM transactions"
+        )
         conditions = []
         if source:
             conditions.append(f"source = '{source}'")
@@ -181,7 +183,7 @@ class MonitorService(Service):
             query += " WHERE " + " AND ".join(conditions)
 
         if order_by:
-            query += f" ORDER BY {order_by}"
+            query += f" ORDER BY {order_by} DESC"
         with duckdb.connect(str(self.db_path)) as conn:
             df = conn.execute(query).df()
 

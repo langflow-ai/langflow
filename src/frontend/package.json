@@ -6,6 +6,7 @@
     "@headlessui/react": "^1.7.17",
     "@hookform/resolvers": "^3.3.4",
     "@million/lint": "^0.0.73",
+    "react-hotkeys-hook": "^4.5.0",
     "@radix-ui/react-accordion": "^1.1.2",
     "@radix-ui/react-checkbox": "^1.0.4",
     "@radix-ui/react-dialog": "^1.0.4",

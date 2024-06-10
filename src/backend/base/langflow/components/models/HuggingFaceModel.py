@@ -2,9 +2,10 @@ from typing import Optional
 
 from langchain_community.chat_models.huggingface import ChatHuggingFace
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
-from langflow.field_typing import Text
+
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
+from langflow.field_typing import Text
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
@@ -36,7 +37,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
                 "advanced": True,
             },
             "code": {"show": False},
-            "input_value": {"display_name": "Input"},
+            "input_value": {"display_name": "Input", "input_types": ["Text", "Record", "Prompt"]},
             "stream": {
                 "display_name": "Stream",
                 "info": STREAM_INFO_TEXT,
@@ -71,4 +72,5 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         except Exception as e:
             raise ValueError("Could not connect to HuggingFace Endpoints API.") from e
         output = ChatHuggingFace(llm=llm)
+        return self.get_chat_result(output, stream, input_value, system_message)
         return self.get_chat_result(output, stream, input_value, system_message)

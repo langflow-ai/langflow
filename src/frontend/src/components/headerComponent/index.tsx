@@ -3,7 +3,10 @@ import { FaDiscord, FaGithub } from "react-icons/fa";
 import { RiTwitterXFill } from "react-icons/ri";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
+import profileCircle from "../../assets/profile-circle.png";
 import {
+  BACKEND_URL,
+  BASE_URL_API,
   LOCATIONS_TO_RETURN,
   USER_PROJECTS_HEADER,
 } from "../../constants/constants";
@@ -15,7 +18,6 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useLocationStore } from "../../stores/locationStore";
 import { useStoreStore } from "../../stores/storeStore";
-import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import {
@@ -46,6 +48,12 @@ export default function Header(): JSX.Element {
 
   const routeHistory = useLocationStore((state) => state.routeHistory);
 
+  const profileImageUrl =
+    `${BACKEND_URL.slice(
+      0,
+      BACKEND_URL.length - 1
+    )}${BASE_URL_API}files/profile_pictures/${userData?.profile_image}` ??
+    profileCircle;
   async function checkForChanges(): Promise<void> {
     if (nodes.length === 0) {
       await removeFlow(id!);
@@ -56,7 +64,7 @@ export default function Header(): JSX.Element {
     const lastFlowVisitedIndex = routeHistory
       .reverse()
       .findIndex(
-        (path) => path.includes("/flow/") && path !== location.pathname,
+        (path) => path.includes("/flow/") && path !== location.pathname
       );
 
     const lastFlowVisited = routeHistory[lastFlowVisitedIndex];
@@ -192,34 +200,30 @@ export default function Header(): JSX.Element {
                   variant="none"
                   size="none"
                   data-testid="user-profile-settings"
-                  className={
-                    "h-7 w-7 rounded-full focus-visible:outline-0 " +
-                    (userData?.profile_image ??
-                      (userData?.id
-                        ? gradients[
-                            parseInt(userData?.id ?? "", 30) % gradients.length
-                          ]
-                        : "bg-gray-500"))
-                  }
-                />
+                >
+                  <img
+                    src={
+                      `${BACKEND_URL.slice(
+                        0,
+                        BACKEND_URL.length - 1
+                      )}${BASE_URL_API}files/profile_pictures/${
+                        userData?.profile_image ?? "Space/046-rocket.png"
+                      }` ?? profileCircle
+                    }
+                    className="h-7 w-7 focus-visible:outline-0 "
+                  />
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 {!autoLogin && (
                   <>
                     <DropdownMenuLabel>
                       <div className="flex items-center gap-3">
-                        <div
-                          className={
-                            "h-5 w-5 rounded-full focus-visible:outline-0 " +
-                            (userData?.profile_image ??
-                              (userData?.id
-                                ? gradients[
-                                    parseInt(userData?.id ?? "", 30) %
-                                      gradients.length
-                                  ]
-                                : "bg-gray-500"))
-                          }
+                        <img
+                          src={profileImageUrl}
+                          className="h-5 w-5 focus-visible:outline-0 "
                         />
+
                         {userData?.username ?? "User"}
                       </div>
                     </DropdownMenuLabel>
