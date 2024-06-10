@@ -1,47 +1,52 @@
 import emojiRegex from "emoji-regex";
-import { cloneDeep } from "lodash";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
-import Checkmark from "../../components/ui/checkmark";
-import Loading from "../../components/ui/loading";
 import { Textarea } from "../../components/ui/textarea";
-import Xmark from "../../components/ui/xmark";
 import {
   RUN_TIMESTAMP_PREFIX,
   STATUS_BUILD,
   STATUS_BUILDING,
+  TOOLTIP_OUTDATED_NODE,
 } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
+import { postCustomComponent } from "../../controllers/API";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
-import { APIClassType } from "../../types/api";
-import { validationStatusType } from "../../types/components";
+import { VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn } from "../../utils/utils";
+import { countHandlesFn } from "../helpers/count-handles";
+import { getSpecificClassFromBuildStatus } from "../helpers/get-class-from-build-status";
+import useCheckCodeValidity from "../hooks/use-check-code-validity";
+import useIconNodeRender from "../hooks/use-icon-render";
+import useIconStatus from "../hooks/use-icons-status";
+import useUpdateNodeCode from "../hooks/use-update-node-code";
+import useUpdateValidationStatus from "../hooks/use-update-validation-status";
+import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import ParameterComponent from "./components/parameterComponent";
 
 export default function GenericNode({
   data,
-  xPos,
-  yPos,
+
   selected,
 }: {
   data: NodeDataType;
   selected: boolean;
-  xPos: number;
-  yPos: number;
+  xPos?: number;
+  yPos?: number;
 }): JSX.Element {
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
@@ -51,192 +56,47 @@ export default function GenericNode({
   const setNode = useFlowStore((state) => state.setNode);
   const updateNodeInternals = useUpdateNodeInternals();
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
+  const isDark = useDarkStore((state) => state.dark);
+  const buildStatus = useFlowStore(
+    (state) => state.flowBuildStatus[data.id]?.status
+  );
+  const lastRunTime = useFlowStore(
+    (state) => state.flowBuildStatus[data.id]?.timestamp
+  );
+  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(data.node!.display_name);
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(
-    data.node?.description!,
+    data.node?.description!
   );
   const [isOutdated, setIsOutdated] = useState(false);
   const buildStatus = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.status,
+    (state) => state.flowBuildStatus[data.id]?.status
   );
   const lastRunTime = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.timestamp,
+    (state) => state.flowBuildStatus[data.id]?.timestamp
   );
   const [validationStatus, setValidationStatus] =
-    useState<validationStatusType | null>(null);
+    useState<VertexBuildTypeAPI | null>(null);
   const [handles, setHandles] = useState<number>(0);
-
   const [validationString, setValidationString] = useState<string>("");
 
-  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
-
-  useEffect(() => {
-    // This one should run only once
-    // first check if data.type in NATIVE_CATEGORIES
-    // if not return
-    if (!data.node?.template?.code?.value) return;
-    const thisNodeTemplate = templates[data.type]?.template;
-    // if the template does not have a code key
-    // return
-    if (!thisNodeTemplate?.code) return;
-    const currentCode = thisNodeTemplate.code?.value;
-    const thisNodesCode = data.node!.template?.code?.value;
-    const componentsToIgnore = ["Custom Component"];
-    if (
-      currentCode !== thisNodesCode &&
-      !componentsToIgnore.includes(data.node!.display_name)
-    ) {
-      setIsOutdated(true);
-    } else {
-      setIsOutdated(false);
-    }
-    // template.code can be undefined
-  }, [data.node?.template?.code?.value]);
-
-  const updateNodeCode = useCallback(
-    (newNodeClass: APIClassType, code: string, name: string) => {
-      setNode(data.id, (oldNode) => {
-        let newNode = cloneDeep(oldNode);
-
-        newNode.data = {
-          ...newNode.data,
-          node: newNodeClass,
-          description: newNodeClass.description ?? data.node!.description,
-          display_name: newNodeClass.display_name ?? data.node!.display_name,
-        };
-
-        newNode.data.node.template[name].value = code;
-        setIsOutdated(false);
-
-        return newNode;
-      });
-
-      updateNodeInternals(data.id);
-    },
-    [data.id, data.node, setNode, setIsOutdated],
-  );
-
-  if (!data.node!.template) {
-    setErrorData({
-      title: `Error in component ${data.node!.display_name}`,
-      list: [
-        `The component ${data.node!.display_name} has no template.`,
-        `Please contact the developer of the component to fix this issue.`,
-      ],
-    });
-    takeSnapshot();
-    deleteNode(data.id);
-  }
-
-  function countHandles(): void {
-    let count = Object.keys(data.node!.template)
-      .filter((templateField) => templateField.charAt(0) !== "_")
-      .map((templateCamp) => {
-        const { template } = data.node!;
-        if (template[templateCamp].input_types) return true;
-        if (!template[templateCamp].show) return false;
-        switch (template[templateCamp].type) {
-          case "str":
-          case "bool":
-          case "float":
-          case "code":
-          case "prompt":
-          case "file":
-          case "int":
-            return false;
-          default:
-            return true;
-        }
-      })
-      .reduce((total, value) => total + (value ? 1 : 0), 0);
-
-    setHandles(count);
-  }
-  useEffect(() => {
-    countHandles();
-  }, [data, data.node]);
-
-  useEffect(() => {
-    if (!selected) {
-      setInputName(false);
-      setInputDescription(false);
-    }
-  }, [selected]);
-
+  const iconStatus = useIconStatus(buildStatus, validationStatus);
+  const [showNode, setShowNode] = useState(data.showNode ?? true);
   // State for outline color
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
-  // should be empty string if no duration
-  // else should be `Duration: ${duration}`
-  const getDurationString = (duration: number | undefined): string => {
-    if (duration === undefined) {
-      return "";
-    } else {
-      return `${duration}`;
-    }
-  };
-  const durationString = getDurationString(validationStatus?.data.duration);
+  const updateNodeCode = useUpdateNodeCode(
+    data?.id,
+    data.node!,
+    setNode,
+    setIsOutdated,
+    updateNodeInternals
+  );
 
-  useEffect(() => {
-    setNodeDescription(data.node!.description);
-  }, [data.node!.description]);
-
-  useEffect(() => {
-    setNodeName(data.node!.display_name);
-  }, [data.node!.display_name]);
-
-  useEffect(() => {
-    const relevantData =
-      flowPool[data.id] && flowPool[data.id]?.length > 0
-        ? flowPool[data.id][flowPool[data.id].length - 1]
-        : null;
-    if (relevantData) {
-      // Extract validation information from relevantData and update the validationStatus state
-      setValidationStatus(relevantData);
-    } else {
-      setValidationStatus(null);
-    }
-  }, [flowPool[data.id], data.id]);
-
-  useEffect(() => {
-    if (validationStatus?.params) {
-      // if it is not a string turn it into a string
-      let newValidationString = validationStatus.params;
-      if (typeof newValidationString !== "string") {
-        newValidationString = JSON.stringify(validationStatus.params);
-      }
-
-      setValidationString(newValidationString);
-    }
-  }, [validationStatus, validationStatus?.params]);
-
-  const [showNode, setShowNode] = useState(data.showNode ?? true);
-
-  useEffect(() => {
-    setShowNode(data.showNode ?? true);
-  }, [data.showNode]);
-
-  const nameEditable = true;
-
-  const isEmoji = emojiRegex().test(data?.node?.icon!);
-
-  const iconNodeRender = useCallback(() => {
-    const iconElement = data?.node?.icon;
-    const iconColor = nodeColors[types[data.type]];
-    const iconName =
-      iconElement || (data.node?.flow ? "group_components" : name);
-    const iconClassName = `generic-node-icon ${
-      !showNode ? " absolute inset-x-6 h-12 w-12 " : ""
-    }`;
-    if (iconElement && isEmoji) {
-      return nodeIconFragment(iconElement);
-    } else {
-      return checkNodeIconFragment(iconColor, iconName, iconClassName);
-    }
-  }, [data, isEmoji, name, showNode]);
+  const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
 
   const nodeIconFragment = (icon) => {
     return <span className="text-lg">{icon}</span>;
@@ -252,87 +112,24 @@ export default function GenericNode({
     );
   };
 
-  const isDark = useDarkStore((state) => state.dark);
-  const renderIconStatus = (
-    buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null,
-  ) => {
-    const conditionSuccess = validationStatus && validationStatus.valid;
-    const conditionInactive =
-      validationStatus &&
-      !validationStatus.valid &&
-      buildStatus === BuildStatus.INACTIVE;
-    const conditionError =
-      buildStatus === BuildStatus.ERROR ||
-      (validationStatus && !validationStatus.valid);
-
-    if (buildStatus === BuildStatus.BUILDING) {
-      return <Loading className="text-medium-indigo" />;
-    } else {
-      return (
-        <>
-          <IconComponent
-            name="Play"
-            className={cn(
-              !conditionSuccess && !conditionInactive && !conditionError
-                ? "opacity-100"
-                : "opacity-0",
-              "absolute ml-0.5 h-5 fill-current stroke-2 text-muted-foreground transition-all group-hover:text-medium-indigo group-hover/node:opacity-100",
-            )}
-          />
-          {conditionSuccess ? (
-            <Checkmark
-              className="absolute ml-0.5 h-5 stroke-2 text-status-green opacity-100 transition-all group-hover/node:opacity-0"
-              isVisible={true}
-            />
-          ) : conditionInactive ? (
-            <IconComponent
-              name="Play"
-              className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-gray opacity-30 transition-all group-hover/node:opacity-0"
-            />
-          ) : conditionError ? (
-            <Xmark
-              isVisible={true}
-              className="absolute ml-0.5 h-5 fill-current stroke-2 text-status-red opacity-100 transition-all group-hover/node:opacity-0"
-            />
-          ) : (
-            <></>
-          )}
-        </>
-      );
-    }
-  };
-  const getSpecificClassFromBuildStatus = (
-    buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null,
-  ) => {
-    let isInvalid = validationStatus && !validationStatus.valid;
-
-    if (buildStatus === BuildStatus.INACTIVE) {
-      // INACTIVE should have its own class
-      return "inactive-status";
-    }
-    if (
-      (buildStatus === BuildStatus.BUILT && isInvalid) ||
-      buildStatus === BuildStatus.ERROR
-    ) {
-      return isDark ? "built-invalid-status-dark" : "built-invalid-status";
-    } else if (buildStatus === BuildStatus.BUILDING) {
-      return "building-status";
-    } else {
-      return "";
-    }
+  const renderIconStatus = () => {
+    return (
+      <div className="generic-node-status-position flex items-center justify-center">
+        {iconStatus}
+      </div>
+    );
   };
 
   const getNodeBorderClassName = (
     selected: boolean,
     showNode: boolean,
     buildStatus: BuildStatus | undefined,
-    validationStatus: validationStatusType | null,
+    validationStatus: VertexBuildTypeAPI | null
   ) => {
     const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
       buildStatus,
       validationStatus,
+      isDark
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
@@ -341,10 +138,12 @@ export default function GenericNode({
       baseBorderClass,
       nodeSizeClass,
       "generic-node-div group/node",
-      specificClassFromBuildStatus,
+      specificClassFromBuildStatus
     );
     return names;
   };
+
+  //  const [openWDoubleCLick, setOpenWDoubleCLick] = useState(false);
 
   const getBaseBorderClass = (selected) => {
     let className = selected ? "border border-ring" : "border";
@@ -355,10 +154,99 @@ export default function GenericNode({
   const getNodeSizeClass = (showNode) =>
     showNode ? "w-96 rounded-lg" : "w-26 h-26 rounded-full";
 
+  const nameEditable = true;
+  const isEmoji = emojiRegex().test(data?.node?.icon!);
+
+  if (!data.node!.template) {
+    setErrorData({
+      title: `Error in component ${data.node!.display_name}`,
+      list: [
+        `The component ${data.node!.display_name} has no template.`,
+        `Please contact the developer of the component to fix this issue.`,
+      ],
+    });
+    takeSnapshot();
+    deleteNode(data.id);
+  }
+
+  useCheckCodeValidity(data, templates, setIsOutdated, types);
+  useValidationStatusString(validationStatus, setValidationString);
+  useUpdateValidationStatus(data?.id, flowPool, setValidationStatus);
+
+  const iconNodeRender = useIconNodeRender(
+    data,
+    types,
+    nodeColors,
+    name,
+    showNode,
+    isEmoji,
+    nodeIconFragment,
+    checkNodeIconFragment
+  );
+
+  function countHandles(): void {
+    const count = countHandlesFn(data);
+    setHandles(count);
+  }
+
+  useEffect(() => {
+    countHandles();
+  }, [data, data.node]);
+
+  useEffect(() => {
+    if (!selected) {
+      setInputName(false);
+      setInputDescription(false);
+    }
+  }, [selected]);
+
+  useEffect(() => {
+    setNodeDescription(data.node!.description);
+  }, [data.node!.description]);
+
+  useEffect(() => {
+    setNodeName(data.node!.display_name);
+  }, [data.node!.display_name]);
+
+  useEffect(() => {
+    setShowNode(data.showNode ?? true);
+  }, [data.showNode]);
+
+  const [loadingUpdate, setLoadingUpdate] = useState(false);
+
+  const handleUpdateCode = () => {
+    setLoadingUpdate(true);
+    takeSnapshot();
+    // to update we must get the code from the templates in useTypesStore
+    const thisNodeTemplate = templates[data.type]?.template;
+    // if the template does not have a code key
+    // return
+    if (!thisNodeTemplate?.code) return;
+
+    const currentCode = thisNodeTemplate.code.value;
+    if (data.node) {
+      postCustomComponent(currentCode, data.node)
+        .then((apiReturn) => {
+          const { data } = apiReturn;
+          if (data && updateNodeCode) {
+            updateNodeCode(data, currentCode, "code");
+            setLoadingUpdate(false);
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    }
+  };
+
+  const shortcuts = useShortcutsStore((state) => state.shortcuts);
+
   const memoizedNodeToolbarComponent = useMemo(() => {
     return (
       <NodeToolbar>
         <NodeToolbarComponent
+          //          openWDoubleClick={openWDoubleCLick}
+          //          setOpenWDoubleClick={setOpenWDoubleCLick}
           data={data}
           deleteNode={(id) => {
             takeSnapshot();
@@ -375,8 +263,6 @@ export default function GenericNode({
           showNode={showNode}
           openAdvancedModal={false}
           onCloseAdvancedModal={() => {}}
-          updateNodeCode={updateNodeCode}
-          isOutdated={isOutdated}
           selected={selected}
         />
       </NodeToolbar>
@@ -392,16 +278,23 @@ export default function GenericNode({
     updateNodeCode,
     isOutdated,
     selected,
+    shortcuts,
+    //    openWDoubleCLick,
+    //    setOpenWDoubleCLick,
   ]);
   return (
     <>
       {memoizedNodeToolbarComponent}
       <div
+        //        onDoubleClick={(event) => {
+        //          if (!isWrappedWithClass(event, "nodoubleclick"))
+        //            setOpenWDoubleCLick(true);
+        //        }}
         className={getNodeBorderClassName(
           selected,
           showNode,
           buildStatus,
-          validationStatus,
+          validationStatus
         )}
       >
         {data.node?.beta && showNode && (
@@ -470,7 +363,7 @@ export default function GenericNode({
                             event.preventDefault();
                           }}
                           data-testid={"title-" + data.node?.display_name}
-                          className="generic-node-tooltip-div cursor-text text-primary"
+                          className="nodoubleclick generic-node-tooltip-div cursor-text text-primary"
                         >
                           {data.node?.display_name}
                         </div>
@@ -532,7 +425,7 @@ export default function GenericNode({
                             }
                             title={getFieldTitle(
                               data.node?.template!,
-                              templateField,
+                              templateField
                             )}
                             info={data.node?.template[templateField].info}
                             name={templateField}
@@ -560,7 +453,7 @@ export default function GenericNode({
                             proxy={data.node?.template[templateField].proxy}
                             showNode={showNode}
                           />
-                        ),
+                        )
                     )}
                   {/* <ParameterComponent
                     index={0}
@@ -592,67 +485,73 @@ export default function GenericNode({
               )}
             </div>
             {showNode && (
-              <ShadTooltip
-                content={
-                  buildStatus === BuildStatus.BUILDING ? (
-                    <span> {STATUS_BUILDING} </span>
-                  ) : !validationStatus ? (
-                    <span className="flex">{STATUS_BUILD}</span>
-                  ) : (
-                    <div className="max-h-100 p-2">
-                      <div>
-                        {lastRunTime && (
+              <>
+                <div className="flex flex-shrink-0 items-center gap-1">
+                  {isOutdated && (
+                    <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
+                      <Button
+                        onClick={handleUpdateCode}
+                        variant="secondary"
+                        className={"h-9 px-1.5"}
+                        loading={loadingUpdate}
+                      >
+                        <IconComponent
+                          name="AlertTriangle"
+                          className="h-5 w-5 text-status-yellow"
+                        />
+                      </Button>
+                    </ShadTooltip>
+                  )}
+                  <ShadTooltip
+                    content={
+                      buildStatus === BuildStatus.BUILDING ? (
+                        <span> {STATUS_BUILDING} </span>
+                      ) : !validationStatus ? (
+                        <span className="flex">{STATUS_BUILD}</span>
+                      ) : (
+                        <div className="max-h-100 p-2">
+                          <div>
+                            {lastRunTime && (
+                              <div className="justify-left flex font-normal text-muted-foreground">
+                                <div>{RUN_TIMESTAMP_PREFIX}</div>
+                                <div className="ml-1 text-status-blue">
+                                  {lastRunTime}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                           <div className="justify-left flex font-normal text-muted-foreground">
-                            <div>{RUN_TIMESTAMP_PREFIX}</div>
+                            <div>Duration:</div>
                             <div className="ml-1 text-status-blue">
-                              {lastRunTime}
+                              {validationStatus?.data.duration}
                             </div>
                           </div>
-                        )}
-                      </div>
-                      <div className="justify-left flex font-normal text-muted-foreground">
-                        <div>Duration:</div>
-                        <div className="mb-3 ml-1 text-status-blue">
-                          {validationStatus?.data.duration}
                         </div>
-                      </div>
-                      <hr />
-                      <span className="mb-2 mt-2   flex justify-center font-semibold text-muted-foreground">
-                        Output
-                      </span>
-                      <div className="max-h-96 overflow-auto font-normal custom-scroll">
-                        {validationString.split("\n").map((line, index) => (
-                          <div className="font-normal" key={index}>
-                            {line}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                }
-                side="bottom"
-              >
-                <Button
-                  onClick={() => {
-                    if (buildStatus === BuildStatus.BUILDING || isBuilding)
-                      return;
-                    setValidationStatus(null);
-                    buildFlow({ stopNodeId: data.id });
-                  }}
-                  variant="secondary"
-                  className={"group h-9 px-1.5"}
-                >
-                  <div
-                    data-testid={
-                      `button_run_` + data?.node?.display_name.toLowerCase()
+                      )
                     }
+                    side="bottom"
                   >
-                    <div className="generic-node-status-position flex items-center justify-center">
-                      {renderIconStatus(buildStatus, validationStatus)}
-                    </div>
-                  </div>
-                </Button>
-              </ShadTooltip>
+                    <Button
+                      onClick={() => {
+                        if (buildStatus === BuildStatus.BUILDING || isBuilding)
+                          return;
+                        setValidationStatus(null);
+                        buildFlow({ stopNodeId: data.id });
+                      }}
+                      variant="secondary"
+                      className={"group h-9 px-1.5"}
+                    >
+                      <div
+                        data-testid={
+                          `button_run_` + data?.node?.display_name.toLowerCase()
+                        }
+                      >
+                        {renderIconStatus()}
+                      </div>
+                    </Button>
+                  </ShadTooltip>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -714,12 +613,12 @@ export default function GenericNode({
               ) : (
                 <div
                   className={cn(
-                    "generic-node-desc-text cursor-text truncate-multiline word-break-break-word",
+                    "nodoubleclick generic-node-desc-text cursor-text truncate-multiline word-break-break-word",
                     (data.node?.description === "" ||
                       !data.node?.description) &&
                       nameEditable
                       ? "font-light italic"
-                      : "",
+                      : ""
                   )}
                   onClick={(e) => {
                     setInputDescription(true);
@@ -781,13 +680,13 @@ export default function GenericNode({
                         }
                         title={getFieldTitle(
                           data.node?.template!,
-                          templateField,
+                          templateField
                         )}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={
                           data.node?.template[templateField].input_types?.join(
-                            "\n",
+                            "\n"
                           ) ?? data.node?.template[templateField].type
                         }
                         required={data.node!.template[templateField].required}
@@ -814,7 +713,7 @@ export default function GenericNode({
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
-                  "flex-max-width justify-center",
+                  "flex-max-width justify-center"
                 )}
               >
                 {" "}

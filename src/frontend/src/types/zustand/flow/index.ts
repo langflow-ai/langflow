@@ -129,6 +129,7 @@ export type FlowStoreType = {
     stopNodeId?: string;
     input_value?: string;
     files?: string[];
+    silent?: boolean;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
   updateVerticesBuild: (

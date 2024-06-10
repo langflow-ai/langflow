@@ -123,8 +123,11 @@ class CustomComponent(BaseComponent):
     @staticmethod
     def resolve_path(path: str) -> str:
         """Resolves the path to an absolute path."""
+        if not path:
+            return path
         path_object = Path(path)
-        if path_object.parts[0] == "~":
+
+        if path_object.parts and path_object.parts[0] == "~":
             path_object = path_object.expanduser()
         elif path_object.is_relative_to("."):
             path_object = path_object.resolve()

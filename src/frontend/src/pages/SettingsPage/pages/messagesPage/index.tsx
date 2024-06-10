@@ -46,10 +46,7 @@ export default function MessagesPage() {
 
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">
-      <HeaderMessagesComponent
-        selectedRows={selectedRows}
-        handleRemoveMessages={handleRemoveMessages}
-      />
+      <HeaderMessagesComponent />
 
       <div className="flex h-full w-full flex-col justify-between">
         <TableComponent
