@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 import httpx
 import pytest
 import respx
+from dictdiffer import diff
 from httpx import Response
 
 from langflow.components import data
@@ -164,8 +165,8 @@ def test_directory_without_mocks():
     assert len(results) == len(projects)
     # each result is a Record that contains the content attribute
     # each are dict that are exactly the same as one of the projects
-    for result in results:
-        assert result.text in projects, result.file_path
+    for i, result in enumerate(results):
+        assert result.text in projects, list(diff(result.text, projects[i]))
 
     # in ../docs/docs/components there are many mdx files
     # check if the directory component can load them
