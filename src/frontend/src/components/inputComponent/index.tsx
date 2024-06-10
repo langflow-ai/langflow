@@ -24,6 +24,7 @@ export default function InputComponent({
   blurOnEnter = false,
   optionsIcon = "ChevronsUpDown",
   selectedOption,
+
   setSelectedOption,
   selectedOptions = [],
   setSelectedOptions,
@@ -164,7 +165,7 @@ export default function InputComponent({
               e.stopPropagation();
             }}
             className={cn(
-              selectedOption !== ""
+              onChange && setSelectedOption && selectedOption !== ""
                 ? "text-medium-indigo"
                 : "text-muted-foreground",
               "hover:text-accent-foreground",
