@@ -6,6 +6,7 @@ import { ProtectedLoginRoute } from "./components/authLoginGuard";
 import { CatchAllRoute } from "./components/catchAllRoutes";
 import LoadingComponent from "./components/loadingComponent";
 import { StoreGuard } from "./components/storeGuard";
+import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
@@ -81,6 +82,7 @@ const Router = () => {
           <Route path="api-keys" element={<ApiKeysPage />} />
           <Route path="general/:scrollId?" element={<GeneralPage />} />
           <Route path="shortcuts" element={<ShortcutsPage />} />
+          <Route path="messages" element={<MessagesPage />} />
         </Route>
         <Route
           path="/store"

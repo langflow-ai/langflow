@@ -8,15 +8,16 @@ import {
   XYPosition,
 } from "reactflow";
 import ShortUniqueId from "short-unique-id";
+import getFieldTitle from "../CustomNodes/utils/get-field-title";
 import {
   INPUT_TYPES,
+  IS_MAC,
   LANGFLOW_SUPPORTED_TYPES,
   OUTPUT_TYPES,
   SUCCESS_BUILD,
   specialCharsRegex,
 } from "../constants/constants";
 import { downloadFlowsFromDatabase } from "../controllers/API";
-import getFieldTitle from "../customNodes/utils/get-field-title";
 import { DESCRIPTIONS } from "../flow_constants";
 import {
   APIClassType,
@@ -179,7 +180,7 @@ export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
         ] = cloneDeep((flow.data.nodes[0].data as NodeDataType).node!);
         return;
       }
-      if (!skipUpdate) processDataFromFlow(flow, false);
+      processDataFromFlow(flow, !skipUpdate);
     } catch (e) {
       console.log(e);
     }
@@ -345,7 +346,7 @@ export function updateEdges(edges: Edge[]) {
       const targetHandleObject: targetHandleType = scapeJSONParse(
         edge.targetHandle!
       );
-      edge.className = "stroke-gray-900 stroke-connection";
+      edge.className = "";
     });
 }
 
@@ -420,9 +421,7 @@ export function handleKeyDown(
       (inputValue === block ||
         inputValue?.charAt(inputValue?.length - 1) === " " ||
         specialCharsRegex.test(inputValue?.charAt(inputValue?.length - 1)))) ||
-    (navigator.userAgent.toUpperCase().includes("MAC") &&
-      e.ctrlKey === true &&
-      e.key === "Backspace")
+    (IS_MAC && e.ctrlKey === true && e.key === "Backspace")
   ) {
     e.preventDefault();
     e.stopPropagation();
@@ -1005,11 +1004,6 @@ export function processFlowEdges(flow: FlowType) {
     const newEdges = updateEdgesHandleIds(flow.data);
     flow.data.edges = newEdges;
   }
-  //update edges colors
-  flow.data.edges.forEach((edge) => {
-    edge.className = "";
-    edge.style = { stroke: "#555" };
-  });
 }
 
 export function expandGroupNode(

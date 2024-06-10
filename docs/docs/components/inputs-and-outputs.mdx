@@ -1,4 +1,4 @@
-import Admonition from '@theme/Admonition';
+import Admonition from "@theme/Admonition";
 import ZoomableImage from "/src/theme/ZoomableImage.js";
 
 # Inputs and Outputs
@@ -29,9 +29,8 @@ This component collects user input from the chat.
 
 <Admonition type="note" title="Note">
   <p>
-    If `As Record` is `true` and the `Message` is a `Record`, the data
-    of the `Record` will be updated with the `Sender`, `Sender Name`, and
-    `Session ID`.
+    If `As Record` is `true` and the `Message` is a `Record`, the data of the
+    `Record` will be updated with the `Sender`, `Sender Name`, and `Session ID`.
   </p>
 </Admonition>
 
@@ -112,9 +111,10 @@ This component sends a message to the chat.
 - **Message:** Specifies the text of the message.
 
 <Admonition type="note" title="Note">
-    <p>
-        If `As Record` is `true` and the `Message` is a `Record`, the data in the `Record` is updated with the `Sender`, `Sender Name`, and `Session ID`.
-    </p>
+  <p>
+    If `As Record` is `true` and the `Message` is a `Record`, the data in the
+    `Record` is updated with the `Sender`, `Sender Name`, and `Session ID`.
+  </p>
 </Admonition>
 
 ### Text Output
@@ -124,7 +124,6 @@ This component displays text data to the user. It is useful when you want to sho
 **Parameters**
 
 - **Value:** Specifies the text data to be displayed. Defaults to an empty string.
-
 
 The `TextOutput` component provides a simple way to display text data. It allows textual data to be visible in the chat window during your interaction flow.
 
@@ -155,7 +154,8 @@ The `PromptTemplate` component enables users to create prompts and define variab
 
 <Admonition type="info">
   After defining a variable in the prompt template, it acts as its own component
-  input. See [Prompt Customization](../administration/prompt-customization) for more details.
+  input. See [Prompt Customization](../administration/prompt-customization) for
+  more details.
 </Admonition>
 
 - **template:** The template used to format an individual request.

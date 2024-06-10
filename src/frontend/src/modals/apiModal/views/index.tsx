@@ -31,11 +31,15 @@ const ApiModal = forwardRef(
     {
       flow,
       children,
+      open: myOpen,
+      setOpen: mySetOpen,
     }: {
       flow: FlowType;
       children: ReactNode;
+      open?: boolean;
+      setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
     },
-    ref
+    ref,
   ) => {
     const tweak = useTweaksStore((state) => state.tweak);
     const addTweaks = useTweaksStore((state) => state.setTweak);
@@ -44,28 +48,30 @@ const ApiModal = forwardRef(
 
     const [activeTweaks, setActiveTweaks] = useState(false);
     const { autoLogin } = useContext(AuthContext);
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] =
+      mySetOpen !== undefined && myOpen !== undefined
+        ? [myOpen, mySetOpen]
+        : useState(false);
     const [activeTab, setActiveTab] = useState("0");
     const pythonApiCode = getPythonApiCode(
       flow?.id,
       autoLogin,
       tweak,
-      flow?.endpoint_name
+      flow?.endpoint_name,
     );
     const curl_run_code = getCurlRunCode(
       flow?.id,
       autoLogin,
       tweak,
-      flow?.endpoint_name
+      flow?.endpoint_name,
     );
     const curl_webhook_code = getCurlWebhookCode(
       flow?.id,
       autoLogin,
-      flow?.endpoint_name
+      flow?.endpoint_name,
     );
     const pythonCode = getPythonCode(flow?.name, tweak);
     const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
-    console.log("flow", flow);
     const includeWebhook = flow.webhook;
     const tweaksCode = buildTweaks(flow);
     const codesArray = [
@@ -77,7 +83,7 @@ const ApiModal = forwardRef(
       pythonCode,
     ];
     const [tabs, setTabs] = useState(
-      createTabsArray(codesArray, includeWebhook)
+      createTabsArray(codesArray, includeWebhook),
     );
 
     const canShowTweaks =
@@ -126,7 +132,7 @@ const ApiModal = forwardRef(
               buildTweakObject(
                 nodeId,
                 element.data.node.template[templateField].value,
-                element.data.node.template[templateField]
+                element.data.node.template[templateField],
               );
             }
           });
@@ -143,7 +149,7 @@ const ApiModal = forwardRef(
     async function buildTweakObject(
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: TemplateVariableType
+      template: TemplateVariableType,
     ) {
       changes = getChangesType(changes, template);
 
@@ -185,7 +191,7 @@ const ApiModal = forwardRef(
         flow?.id,
         autoLogin,
         cloneTweak,
-        flow?.endpoint_name
+        flow?.endpoint_name,
       );
       const pythonCode = getPythonCode(flow?.name, cloneTweak);
       const widgetCode = getWidgetCode(flow?.id, flow?.name, autoLogin);
@@ -229,7 +235,7 @@ const ApiModal = forwardRef(
         </BaseModal.Content>
       </BaseModal>
     );
-  }
+  },
 );
 
 export default ApiModal;

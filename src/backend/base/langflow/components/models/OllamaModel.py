@@ -194,7 +194,7 @@ class ChatOllamaComponent(LCModelComponent):
                 "info": "Template to use for generating text.",
                 "advanced": True,
             },
-            "input_value": {"display_name": "Input"},
+            "input_value": {"display_name": "Input", "input_types": ["Text", "Record", "Prompt"]},
             "stream": {
                 "display_name": "Stream",
                 "info": STREAM_INFO_TEXT,

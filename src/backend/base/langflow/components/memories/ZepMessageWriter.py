@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Optional
 
 from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 if TYPE_CHECKING:
     from zep_python.langchain import ZepChatMessageHistory

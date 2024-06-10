@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.0a45"
+version = "1.0.0a49"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -66,7 +66,7 @@ qianfan = "0.3.5"
 pgvector = "^0.2.3"
 pyautogen = "^0.2.0"
 langchain-google-genai = "^1.0.1"
-langchain-cohere = "^0.1.0rc1"
+langchain-cohere = "^0.1.5"
 elasticsearch = "^8.12.0"
 pytube = "^15.0.0"
 dspy-ai = "^2.4.0"
@@ -115,6 +115,7 @@ pytest-asyncio = "^0.23.0"
 pytest-profiling = "^1.7.0"
 pre-commit = "^3.7.0"
 vulture = "^2.11"
+dictdiffer = "^0.9.0"
 
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]

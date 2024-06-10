@@ -7,8 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from docstring_parser import parse
 
-
-from langflow.schema.schema import Record
+from langflow.schema import Record
 from langflow.services.deps import get_settings_service
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants

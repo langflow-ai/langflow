@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from langflow.custom import CustomComponent
 from langflow.memory import get_messages, store_message
-from langflow.schema import Record
+from langflow.schema.message import Message
 
 
 class StoreMessageComponent(CustomComponent):
@@ -31,12 +31,11 @@ class StoreMessageComponent(CustomComponent):
         sender_name: Optional[str] = None,
         session_id: Optional[str] = None,
         message: str = "",
-    ) -> List[Record]:
+    ) -> List[Message]:
         store_message(
-            sender=sender,
-            sender_name=sender_name,
-            session_id=session_id,
-            message=message,
+            message=Message(
+                text=message, sender=sender, sender_name=sender_name, flow_id=self.graph.flow_id, session_id=session_id
+            )
         )
 
         self.status = get_messages(session_id=session_id)

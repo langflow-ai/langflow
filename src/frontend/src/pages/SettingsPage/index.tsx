@@ -55,6 +55,16 @@ export default function SettingsPage(): JSX.Element {
         />
       ),
     },
+    {
+      title: "Messages",
+      href: "/settings/messages",
+      icon: (
+        <ForwardedIconComponent
+          name="MessagesSquare"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
   ];
   return (
     <PageLayout
@@ -65,8 +75,10 @@ export default function SettingsPage(): JSX.Element {
         <aside className="flex h-full shrink-0 flex-col space-y-6 lg:w-[20vw]">
           <SidebarNav items={sidebarNavItems} />
         </aside>
-        <div className="h-full w-full flex-1 pb-8">
-          <Outlet />
+        <div className="flex h-full w-full flex-1 flex-col">
+          <div className="flex-1 pb-8">
+            <Outlet />
+          </div>
         </div>
       </div>
     </PageLayout>

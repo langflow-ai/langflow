@@ -6,8 +6,8 @@ from langchain_core.prompts.chat import HumanMessagePromptTemplate, SystemMessag
 from langflow.base.agents.agent import LCAgentComponent
 from langflow.base.agents.utils import AGENTS, AgentSpec, get_agents_list
 from langflow.field_typing import BaseLanguageModel, Text, Tool
+from langflow.schema import Record
 from langflow.schema.dotdict import dotdict
-from langflow.schema.schema import Record
 
 
 class AgentComponent(LCAgentComponent):
