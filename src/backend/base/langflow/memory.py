@@ -46,7 +46,13 @@ def get_messages(
     # so we need to reverse the order
     messages_df = messages_df[::-1] if order == "DESC" else messages_df
     for row in messages_df.itertuples():
-        msg = Message(text=row.text, sender=row.sender, sender_name=row.sender_name, timestamp=row.timestamp)
+        msg = Message(
+            text=row.text,
+            sender=row.sender,
+            session_id=row.session_id,
+            sender_name=row.sender_name,
+            timestamp=row.timestamp,
+        )
 
         messages.append(msg)
 
