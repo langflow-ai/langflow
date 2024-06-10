@@ -7,7 +7,26 @@ from pydantic import BaseModel, Field, field_serializer, field_validator
 from langflow.schema.message import Message
 
 
-class TransactionModel(BaseModel):
+class DefaultModel(BaseModel):
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+        }
+
+    def json(self, **kwargs):
+        # Usa a função de serialização personalizada
+        return super().json(**kwargs, encoder=self.custom_encoder)
+
+    @staticmethod
+    def custom_encoder(obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+
+
+class TransactionModel(DefaultModel):
     index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
     vertex_id: str
