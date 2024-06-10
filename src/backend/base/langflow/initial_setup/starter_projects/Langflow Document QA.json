@@ -1,183 +1,342 @@
 {
-  "id": "fecbce42-6f11-454c-8ab2-db6eddbbbb0f",
   "data": {
+    "edges": [
+      {
+        "className": "stroke-gray-900 stroke-connection",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-MsSJ9",
+            "name": "message",
+            "output_types": []
+          },
+          "targetHandle": {
+            "fieldName": "Question",
+            "id": "Prompt-tHwPf",
+            "inputTypes": [
+              "Document",
+              "BaseOutputParser",
+              "Record",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-MsSJ9{œbaseClassesœ:[œstrœ,œRecordœ,œTextœ,œobjectœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-MsSJ9œ}-Prompt-tHwPf{œfieldNameœ:œQuestionœ,œidœ:œPrompt-tHwPfœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-MsSJ9",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-MsSJ9œ, œoutput_typesœ: [], œnameœ: œmessageœ}",
+        "style": {
+          "stroke": "#555"
+        },
+        "target": "Prompt-tHwPf",
+        "targetHandle": "{œfieldNameœ: œQuestionœ, œidœ: œPrompt-tHwPfœ, œinputTypesœ: [œDocumentœ, œBaseOutputParserœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "stroke-gray-900 stroke-connection",
+        "data": {
+          "sourceHandle": {
+            "dataType": "File",
+            "id": "File-6TEsD",
+            "name": "Record",
+            "output_types": [
+              "Record"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "Document",
+            "id": "Prompt-tHwPf",
+            "inputTypes": [
+              "Document",
+              "BaseOutputParser",
+              "Record",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-File-6TEsD{œbaseClassesœ:[œRecordœ],œdataTypeœ:œFileœ,œidœ:œFile-6TEsDœ}-Prompt-tHwPf{œfieldNameœ:œDocumentœ,œidœ:œPrompt-tHwPfœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "File-6TEsD",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-6TEsDœ, œoutput_typesœ: [œRecordœ], œnameœ: œRecordœ}",
+        "style": {
+          "stroke": "#555"
+        },
+        "target": "Prompt-tHwPf",
+        "targetHandle": "{œfieldNameœ: œDocumentœ, œidœ: œPrompt-tHwPfœ, œinputTypesœ: [œDocumentœ, œBaseOutputParserœ, œRecordœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "stroke-gray-900 stroke-connection",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-tHwPf",
+            "name": "Text",
+            "output_types": [
+              "Prompt"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-Bt067",
+            "inputTypes": [
+              "Text",
+              "Record",
+              "Prompt"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-tHwPf{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-tHwPfœ}-OpenAIModel-Bt067{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Bt067œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "source": "Prompt-tHwPf",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-tHwPfœ, œoutput_typesœ: [œPromptœ], œnameœ: œTextœ}",
+        "style": {
+          "stroke": "#555"
+        },
+        "target": "OpenAIModel-Bt067",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-Bt067œ, œinputTypesœ: [œTextœ, œRecordœ, œPromptœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "stroke-gray-900 stroke-connection",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-Bt067",
+            "name": "Text",
+            "output_types": [
+              "Text"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-F5Awj",
+            "inputTypes": [
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-Bt067{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Bt067œ}-ChatOutput-F5Awj{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-F5Awjœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-Bt067",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-Bt067œ, œoutput_typesœ: [œTextœ], œnameœ: œTextœ}",
+        "style": {
+          "stroke": "#555"
+        },
+        "target": "ChatOutput-F5Awj",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-F5Awjœ, œinputTypesœ: [œTextœ], œtypeœ: œstrœ}"
+      }
+    ],
     "nodes": [
       {
-        "id": "Prompt-tHwPf",
-        "type": "genericNode",
-        "position": {
-          "x": 585.7906101139403,
-          "y": 117.52115876762832
-        },
         "data": {
-          "type": "Prompt",
+          "description": "A component for creating prompt templates using dynamic variables.",
+          "display_name": "Prompt",
+          "id": "Prompt-tHwPf",
           "node": {
-            "template": {
-              "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "from langchain_core.prompts import PromptTemplate\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Input, Prompt, Text\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": Input(display_name=\"Template\"),\n            \"code\": Input(advanced=True),\n        }\n\n    def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Text:\n        from langflow.base.prompts.utils import dict_values_to_string\n\n        prompt_template = PromptTemplate.from_template(Text(template))\n        kwargs = dict_values_to_string(kwargs)\n        kwargs = {k: \"\\n\".join(v) if isinstance(v, list) else v for k, v in kwargs.items()}\n        try:\n            formated_prompt = prompt_template.format(**kwargs)\n        except Exception as exc:\n            raise ValueError(f\"Error formatting prompt: {exc}\") from exc\n        self.status = f'Prompt:\\n\"{formated_prompt}\"'\n        return formated_prompt\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
-                "advanced": true,
-                "dynamic": true,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "template": {
-                "type": "prompt",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": "Answer user's questions based on the document below:\n\n---\n\n{Document}\n\n---\n\nQuestion:\n{Question}\n\nAnswer:\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "template",
-                "display_name": "Template",
-                "advanced": false,
-                "input_types": [
-                  "Text"
-                ],
-                "dynamic": false,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "_type": "CustomComponent",
-              "Document": {
-                "field_type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "Document",
-                "display_name": "Document",
-                "advanced": false,
-                "input_types": [
-                  "Document",
-                  "BaseOutputParser",
-                  "Record",
-                  "Text"
-                ],
-                "dynamic": false,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false,
-                "type": "str"
-              },
-              "Question": {
-                "field_type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "Question",
-                "display_name": "Question",
-                "advanced": false,
-                "input_types": [
-                  "Document",
-                  "BaseOutputParser",
-                  "Record",
-                  "Text"
-                ],
-                "dynamic": false,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false,
-                "type": "str"
-              }
-            },
-            "description": "Create a prompt template with dynamic variables.",
-            "icon": "prompts",
-            "is_input": null,
-            "is_output": null,
-            "is_composition": null,
             "base_classes": [
               "object",
               "str",
               "Text"
             ],
-            "name": "",
-            "display_name": "Prompt",
-            "documentation": "",
+            "beta": false,
             "custom_fields": {
               "template": [
                 "Document",
                 "Question"
               ]
             },
-            "output_types": [
-              "Text"
-            ],
-            "full_path": null,
-            "field_formatters": {},
-            "frozen": false,
-            "field_order": [],
-            "beta": false,
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
             "error": null,
+            "field_formatters": {},
+            "field_order": [],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "name": "",
+            "output_types": [
+              "Prompt"
+            ],
             "outputs": [
               {
+                "display_name": null,
+                "method": null,
+                "name": "Prompt",
+                "selected": null,
                 "types": [
+                  "Prompt"
+                ]
+              }
+            ],
+            "template": {
+              "Document": {
+                "advanced": false,
+                "display_name": "Document",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Document",
+                  "BaseOutputParser",
+                  "Record",
                   "Text"
                 ],
-                "selected": null,
-                "display_name": null,
-                "name": "Text",
-                "method": null
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "Document",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "Question": {
+                "advanced": false,
+                "display_name": "Question",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Document",
+                  "BaseOutputParser",
+                  "Record",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "Question",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "_type": "CustomComponent",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.custom import CustomComponent\nfrom langflow.field_typing import Input\nfrom langflow.field_typing.prompt import Prompt\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": Input(display_name=\"Template\"),\n            \"code\": Input(advanced=True),\n        }\n\n    async def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Prompt:\n        prompt = await Prompt.from_template_and_variables(template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
+              },
+              "template": {
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "template",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "prompt",
+                "value": "Answer user's questions based on the document below:\n\n---\n\n{Document}\n\n---\n\nQuestion:\n{Question}\n\nAnswer:\n"
               }
-            ]
+            }
           },
-          "id": "Prompt-tHwPf",
-          "description": "A component for creating prompt templates using dynamic variables.",
-          "display_name": "Prompt"
+          "type": "Prompt"
         },
-        "selected": false,
-        "width": 384,
+        "dragging": false,
         "height": 479,
+        "id": "Prompt-tHwPf",
+        "position": {
+          "x": 585.7906101139403,
+          "y": 117.52115876762832
+        },
         "positionAbsolute": {
           "x": 585.7906101139403,
           "y": 117.52115876762832
         },
-        "dragging": false
+        "selected": false,
+        "type": "genericNode",
+        "width": 384
       },
       {
-        "id": "File-6TEsD",
-        "type": "genericNode",
-        "position": {
-          "x": -18.636536329280602,
-          "y": 3.951948774836353
-        },
         "data": {
-          "type": "File",
+          "id": "File-6TEsD",
           "node": {
+            "base_classes": [
+              "Record"
+            ],
+            "beta": false,
+            "custom_fields": {
+              "path": null,
+              "silent_errors": null
+            },
+            "description": "A generic file loader.",
+            "display_name": "Files",
+            "documentation": "",
+            "field_formatters": {},
+            "field_order": [],
+            "frozen": false,
+            "output_types": [
+              "Record"
+            ],
+            "outputs": [
+              {
+                "name": "Record",
+                "selected": "Record",
+                "types": [
+                  "Record"
+                ]
+              }
+            ],
             "template": {
-              "path": {
-                "type": "file",
-                "required": true,
-                "placeholder": "",
+              "_type": "CustomComponent",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
                 "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
                 "show": true,
-                "multiline": false,
+                "title_case": false,
+                "type": "code",
+                "value": "from pathlib import Path\nfrom typing import Any, Dict\n\nfrom langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_record\nfrom langflow.interface.custom.custom_component import CustomComponent\nfrom langflow.schema import Record\n\n\nclass FileComponent(CustomComponent):\n    display_name = \"Files\"\n    description = \"A generic file loader.\"\n\n    def build_config(self) -> Dict[str, Any]:\n        return {\n            \"path\": {\n                \"display_name\": \"Path\",\n                \"field_type\": \"file\",\n                \"file_types\": TEXT_FILE_TYPES,\n                \"info\": f\"Supported file types: {', '.join(TEXT_FILE_TYPES)}\",\n            },\n            \"silent_errors\": {\n                \"display_name\": \"Silent Errors\",\n                \"advanced\": True,\n                \"info\": \"If true, errors will not raise an exception.\",\n            },\n        }\n\n    def load_file(self, path: str, silent_errors: bool = False) -> Record:\n        resolved_path = self.resolve_path(path)\n        path_obj = Path(resolved_path)\n        extension = path_obj.suffix[1:].lower()\n        if extension == \"doc\":\n            raise ValueError(\"doc files are not supported. Please save as .docx\")\n        if extension not in TEXT_FILE_TYPES:\n            raise ValueError(f\"Unsupported file type: {extension}\")\n        record = parse_text_file_to_record(resolved_path, silent_errors)\n        self.status = record if record else \"No data\"\n        return record or Record()\n\n    def build(\n        self,\n        path: str,\n        silent_errors: bool = False,\n    ) -> Record:\n        record = self.load_file(path, silent_errors)\n        self.status = record\n        return record\n"
+              },
+              "path": {
+                "advanced": false,
+                "display_name": "Path",
+                "dynamic": false,
                 "fileTypes": [
                   ".txt",
                   ".md",
@@ -192,725 +351,456 @@
                   ".pdf",
                   ".docx"
                 ],
-                "password": false,
-                "name": "path",
-                "display_name": "Path",
-                "advanced": false,
-                "dynamic": false,
                 "info": "Supported file types: txt, md, mdx, csv, json, yaml, yml, xml, html, htm, pdf, docx",
+                "list": false,
                 "load_from_db": false,
+                "multiline": false,
+                "name": "path",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
                 "title_case": false,
+                "type": "file",
                 "value": ""
               },
-              "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "from pathlib import Path\nfrom typing import Any, Dict\n\nfrom langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_record\nfrom langflow.interface.custom.custom_component import CustomComponent\nfrom langflow.schema import Record\n\n\nclass FileComponent(CustomComponent):\n    display_name = \"Files\"\n    description = \"A generic file loader.\"\n\n    def build_config(self) -> Dict[str, Any]:\n        return {\n            \"path\": {\n                \"display_name\": \"Path\",\n                \"field_type\": \"file\",\n                \"file_types\": TEXT_FILE_TYPES,\n                \"info\": f\"Supported file types: {', '.join(TEXT_FILE_TYPES)}\",\n            },\n            \"silent_errors\": {\n                \"display_name\": \"Silent Errors\",\n                \"advanced\": True,\n                \"info\": \"If true, errors will not raise an exception.\",\n            },\n        }\n\n    def load_file(self, path: str, silent_errors: bool = False) -> Record:\n        resolved_path = self.resolve_path(path)\n        path_obj = Path(resolved_path)\n        extension = path_obj.suffix[1:].lower()\n        if extension == \"doc\":\n            raise ValueError(\"doc files are not supported. Please save as .docx\")\n        if extension not in TEXT_FILE_TYPES:\n            raise ValueError(f\"Unsupported file type: {extension}\")\n        record = parse_text_file_to_record(resolved_path, silent_errors)\n        self.status = record if record else \"No data\"\n        return record or Record()\n\n    def build(\n        self,\n        path: str,\n        silent_errors: bool = False,\n    ) -> Record:\n        record = self.load_file(path, silent_errors)\n        self.status = record\n        return record\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
-                "advanced": true,
-                "dynamic": true,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false
-              },
               "silent_errors": {
-                "type": "bool",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": false,
+                "advanced": true,
+                "display_name": "Silent Errors",
+                "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "password": false,
-                "name": "silent_errors",
-                "display_name": "Silent Errors",
-                "advanced": true,
-                "dynamic": false,
                 "info": "If true, errors will not raise an exception.",
+                "list": false,
                 "load_from_db": false,
-                "title_case": false
-              },
-              "_type": "CustomComponent"
-            },
-            "description": "A generic file loader.",
-            "base_classes": [
-              "Record"
-            ],
-            "display_name": "Files",
-            "documentation": "",
-            "custom_fields": {
-              "path": null,
-              "silent_errors": null
-            },
-            "output_types": [
-              "Record"
-            ],
-            "field_formatters": {},
-            "frozen": false,
-            "field_order": [],
-            "beta": false,
-            "outputs": [
-              {
-                "types": [
-                  "Record"
-                ],
-                "selected": "Record",
-                "name": "Record"
+                "multiline": false,
+                "name": "silent_errors",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "bool",
+                "value": false
               }
-            ]
+            }
           },
-          "id": "File-6TEsD"
+          "type": "File"
         },
-        "selected": false,
-        "width": 384,
+        "dragging": false,
         "height": 282,
+        "id": "File-6TEsD",
+        "position": {
+          "x": -18.636536329280602,
+          "y": 3.951948774836353
+        },
         "positionAbsolute": {
           "x": -18.636536329280602,
           "y": 3.951948774836353
         },
-        "dragging": false
+        "selected": false,
+        "type": "genericNode",
+        "width": 384
       },
       {
-        "id": "ChatInput-MsSJ9",
-        "type": "genericNode",
-        "position": {
-          "x": -28.80036300619821,
-          "y": 379.81180230285355
-        },
         "data": {
-          "type": "ChatInput",
+          "id": "ChatInput-MsSJ9",
           "node": {
-            "template": {
-              "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\",\n            type=str,\n            display_name=\"Message\",\n            multiline=True,\n            input_types=[],\n            info=\"Message to be passed as input.\",\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"User\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"text_response\"),\n        Output(display_name=\"Record\", name=\"record\", method=\"record_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self) -> Record:\n        record = Record(\n            data={\n                \"text\": self.input_value,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n            },\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
-                "advanced": true,
-                "dynamic": true,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "input_value": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "input_value",
-                "display_name": "Message",
-                "advanced": false,
-                "input_types": [],
-                "dynamic": false,
-                "info": "Message to be passed as input.",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "sender": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": true,
-                "show": true,
-                "multiline": false,
-                "value": "",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "options": [
-                  "Machine",
-                  "User"
-                ],
-                "name": "sender",
-                "display_name": "Sender Type",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Type of sender.",
-                "load_from_db": false,
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "sender_name": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": "",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "sender_name",
-                "display_name": "Sender Name",
-                "advanced": false,
-                "dynamic": false,
-                "info": "Name of the sender.",
-                "load_from_db": false,
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "session_id": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": "",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "session_id",
-                "display_name": "Session ID",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Session ID for the message.",
-                "load_from_db": false,
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "_type": "Component"
+            "base_classes": [
+              "str",
+              "Record",
+              "Text",
+              "object"
+            ],
+            "beta": false,
+            "custom_fields": {
+              "input_value": null,
+              "return_record": null,
+              "sender": null,
+              "sender_name": null,
+              "session_id": null
             },
             "description": "Get chat inputs from the Playground.",
-            "icon": "ChatInput",
-            "base_classes": [
-              "str",
-              "Record",
-              "Text",
-              "object"
-            ],
             "display_name": "Chat Input",
             "documentation": "",
-            "custom_fields": {
-              "sender": null,
-              "sender_name": null,
-              "input_value": null,
-              "session_id": null,
-              "return_record": null
-            },
-            "output_types": [
-              "Text",
-              "Record"
-            ],
             "field_formatters": {},
-            "frozen": false,
             "field_order": [],
-            "beta": false,
+            "frozen": false,
+            "icon": "ChatInput",
+            "output_types": [],
             "outputs": [
               {
+                "display_name": "Message",
+                "method": "text_response",
+                "name": "message",
+                "selected": "Text",
                 "types": [
                   "Text"
-                ],
-                "selected": "Text",
-                "display_name": "Message",
-                "name": "message",
-                "method": "text_response"
+                ]
               },
               {
+                "display_name": "Record",
+                "method": "record_response",
+                "name": "record",
+                "selected": "Record",
                 "types": [
                   "Record"
-                ],
-                "selected": "Record",
-                "display_name": "Record",
-                "name": "record",
-                "method": "record_response"
+                ]
               }
-            ]
-          },
-          "id": "ChatInput-MsSJ9"
-        },
-        "selected": true,
-        "width": 384,
-        "height": 377,
-        "positionAbsolute": {
-          "x": -28.80036300619821,
-          "y": 379.81180230285355
-        },
-        "dragging": false
-      },
-      {
-        "id": "ChatOutput-F5Awj",
-        "type": "genericNode",
-        "position": {
-          "x": 1733.3012915204283,
-          "y": 168.76098809939327
-        },
-        "data": {
-          "type": "ChatOutput",
-          "node": {
+            ],
             "template": {
+              "_type": "Component",
               "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\", type=str, display_name=\"Message\", multiline=True, info=\"Message to be passed as output.\"\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n        Input(\n            name=\"record_template\",\n            type=str,\n            display_name=\"Record Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"text_response\"),\n        Output(display_name=\"Record\", name=\"record\", method=\"record_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self) -> Record:\n        record = Record(\n            data={\n                \"message\": self.input_value,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n                \"template\": self.record_template or \"\",\n            }\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
                 "advanced": true,
                 "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
                 "info": "",
+                "list": false,
                 "load_from_db": false,
-                "title_case": false
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\",\n            type=str,\n            display_name=\"Message\",\n            multiline=True,\n            input_types=[],\n            info=\"Message to be passed as input.\",\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"User\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"text_response\"),\n        Output(display_name=\"Record\", name=\"record\", method=\"record_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self) -> Record:\n        record = Record(\n            data={\n                \"text\": self.input_value,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n            },\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n"
               },
               "input_value": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "input_value",
-                "display_name": "Message",
                 "advanced": false,
+                "display_name": "Message",
                 "dynamic": false,
-                "info": "Message to be passed as output.",
-                "load_from_db": false,
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "record_template": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": "",
                 "fileTypes": [],
                 "file_path": "",
-                "password": false,
-                "name": "record_template",
-                "display_name": "Record Template",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
+                "info": "Message to be passed as input.",
+                "input_types": [],
+                "list": false,
                 "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
+                "type": "str",
+                "value": ""
               },
               "sender": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": true,
-                "show": true,
-                "multiline": false,
-                "value": "",
+                "advanced": true,
+                "display_name": "Sender Type",
+                "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "password": false,
+                "info": "Type of sender.",
+                "input_types": [
+                  "Text"
+                ],
+                "list": true,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "sender",
                 "options": [
                   "Machine",
                   "User"
                 ],
-                "name": "sender",
-                "display_name": "Sender Type",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Type of sender.",
-                "load_from_db": false,
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
+                "type": "str",
+                "value": ""
               },
               "sender_name": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": "",
+                "advanced": false,
+                "display_name": "Sender Name",
+                "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "password": false,
-                "name": "sender_name",
-                "display_name": "Sender Name",
-                "advanced": false,
-                "dynamic": false,
                 "info": "Name of the sender.",
-                "load_from_db": false,
-                "title_case": false,
                 "input_types": [
                   "Text"
-                ]
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "sender_name",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
               },
               "session_id": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": "",
+                "advanced": true,
+                "display_name": "Session ID",
+                "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
-                "password": false,
-                "name": "session_id",
-                "display_name": "Session ID",
-                "advanced": true,
-                "dynamic": false,
                 "info": "Session ID for the message.",
-                "load_from_db": false,
-                "title_case": false,
                 "input_types": [
                   "Text"
-                ]
-              },
-              "_type": "Component"
-            },
-            "description": "Display a chat message in the Playground.",
-            "icon": "ChatOutput",
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "session_id",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              }
+            }
+          },
+          "type": "ChatInput"
+        },
+        "dragging": false,
+        "height": 377,
+        "id": "ChatInput-MsSJ9",
+        "position": {
+          "x": -28.80036300619821,
+          "y": 379.81180230285355
+        },
+        "positionAbsolute": {
+          "x": -28.80036300619821,
+          "y": 379.81180230285355
+        },
+        "selected": true,
+        "type": "genericNode",
+        "width": 384
+      },
+      {
+        "data": {
+          "id": "ChatOutput-F5Awj",
+          "node": {
             "base_classes": [
               "str",
               "Record",
               "Text",
               "object"
             ],
-            "display_name": "Chat Output",
-            "documentation": "",
+            "beta": false,
             "custom_fields": {
+              "input_value": null,
+              "return_record": null,
               "sender": null,
               "sender_name": null,
-              "input_value": null,
-              "session_id": null,
-              "return_record": null
+              "session_id": null
             },
-            "output_types": [
-              "Text",
-              "Record"
-            ],
+            "description": "Display a chat message in the Playground.",
+            "display_name": "Chat Output",
+            "documentation": "",
             "field_formatters": {},
-            "frozen": false,
             "field_order": [],
-            "beta": false,
+            "frozen": false,
+            "icon": "ChatOutput",
+            "output_types": [],
             "outputs": [
               {
+                "display_name": "Message",
+                "method": "text_response",
+                "name": "message",
+                "selected": "Text",
                 "types": [
                   "Text"
-                ],
-                "selected": "Text",
-                "display_name": "Message",
-                "name": "message",
-                "method": "text_response"
+                ]
               },
               {
+                "display_name": "Record",
+                "method": "record_response",
+                "name": "record",
+                "selected": "Record",
                 "types": [
                   "Record"
-                ],
-                "selected": "Record",
-                "display_name": "Record",
-                "name": "record",
-                "method": "record_response"
+                ]
               }
-            ]
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\", type=str, display_name=\"Message\", multiline=True, info=\"Message to be passed as output.\"\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n        Input(\n            name=\"record_template\",\n            type=str,\n            display_name=\"Record Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"text_response\"),\n        Output(display_name=\"Record\", name=\"record\", method=\"record_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self) -> Record:\n        record = Record(\n            data={\n                \"message\": self.input_value,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n                \"template\": self.record_template or \"\",\n            }\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n"
+              },
+              "input_value": {
+                "advanced": false,
+                "display_name": "Message",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "Message to be passed as output.",
+                "input_types": [
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "record_template": {
+                "advanced": true,
+                "display_name": "Record Template",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.",
+                "input_types": [
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "record_template",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "sender": {
+                "advanced": true,
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "Type of sender.",
+                "input_types": [
+                  "Text"
+                ],
+                "list": true,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "sender_name": {
+                "advanced": false,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "sender_name",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "session_id": {
+                "advanced": true,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "Session ID for the message.",
+                "input_types": [
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "session_id",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              }
+            }
           },
-          "id": "ChatOutput-F5Awj"
+          "type": "ChatOutput"
         },
-        "selected": false,
-        "width": 384,
+        "dragging": false,
         "height": 385,
+        "id": "ChatOutput-F5Awj",
+        "position": {
+          "x": 1733.3012915204283,
+          "y": 168.76098809939327
+        },
         "positionAbsolute": {
           "x": 1733.3012915204283,
           "y": 168.76098809939327
         },
-        "dragging": false
+        "selected": false,
+        "type": "genericNode",
+        "width": 384
       },
       {
-        "id": "OpenAIModel-Bt067",
-        "type": "genericNode",
-        "position": {
-          "x": 1137.6078582863759,
-          "y": -14.41920034020356
-        },
         "data": {
-          "type": "OpenAIModel",
+          "id": "OpenAIModel-Bt067",
           "node": {
-            "template": {
-              "input_value": {
-                "type": "str",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "input_value",
-                "display_name": "Input",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "from typing import Optional\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import NestedDict, Text\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    field_order = [\n        \"max_tokens\",\n        \"model_kwargs\",\n        \"model_name\",\n        \"openai_api_base\",\n        \"openai_api_key\",\n        \"temperature\",\n        \"input_value\",\n        \"system_message\",\n        \"stream\",\n    ]\n\n    def build_config(self):\n        return {\n            \"input_value\": {\"display_name\": \"Input\"},\n            \"max_tokens\": {\n                \"display_name\": \"Max Tokens\",\n                \"advanced\": True,\n                \"info\": \"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            },\n            \"model_kwargs\": {\n                \"display_name\": \"Model Kwargs\",\n                \"advanced\": True,\n            },\n            \"model_name\": {\n                \"display_name\": \"Model Name\",\n                \"advanced\": False,\n                \"options\": MODEL_NAMES,\n            },\n            \"openai_api_base\": {\n                \"display_name\": \"OpenAI API Base\",\n                \"advanced\": True,\n                \"info\": (\n                    \"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\\n\\n\"\n                    \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\"\n                ),\n            },\n            \"openai_api_key\": {\n                \"display_name\": \"OpenAI API Key\",\n                \"info\": \"The OpenAI API Key to use for the OpenAI model.\",\n                \"advanced\": False,\n                \"password\": True,\n            },\n            \"temperature\": {\n                \"display_name\": \"Temperature\",\n                \"advanced\": False,\n                \"value\": 0.1,\n            },\n            \"stream\": {\n                \"display_name\": \"Stream\",\n                \"info\": STREAM_INFO_TEXT,\n                \"advanced\": True,\n            },\n            \"system_message\": {\n                \"display_name\": \"System Message\",\n                \"info\": \"System message to pass to the model.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        input_value: Text,\n        openai_api_key: str,\n        temperature: float = 0.1,\n        model_name: str = \"gpt-4o\",\n        max_tokens: Optional[int] = 256,\n        model_kwargs: NestedDict = {},\n        openai_api_base: Optional[str] = None,\n        stream: bool = False,\n        system_message: Optional[str] = None,\n    ) -> Text:\n        if not openai_api_base:\n            openai_api_base = \"https://api.openai.com/v1\"\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature,\n        )\n\n        return self.get_chat_result(output, stream, input_value, system_message)\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
-                "advanced": true,
-                "dynamic": true,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "max_tokens": {
-                "type": "int",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": 256,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "max_tokens",
-                "display_name": "Max Tokens",
-                "advanced": true,
-                "dynamic": false,
-                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "model_kwargs": {
-                "type": "NestedDict",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": {},
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "model_kwargs",
-                "display_name": "Model Kwargs",
-                "advanced": true,
-                "dynamic": false,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "model_name": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": true,
-                "show": true,
-                "multiline": false,
-                "value": "gpt-4-turbo-preview",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "options": [
-                  "gpt-4o",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-3.5-turbo",
-                  "gpt-3.5-turbo-0125"
-                ],
-                "name": "model_name",
-                "display_name": "Model Name",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "openai_api_base": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "openai_api_base",
-                "display_name": "OpenAI API Base",
-                "advanced": true,
-                "dynamic": false,
-                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "load_from_db": false,
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "openai_api_key": {
-                "type": "str",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "fileTypes": [],
-                "file_path": "",
-                "password": true,
-                "name": "openai_api_key",
-                "display_name": "OpenAI API Key",
-                "advanced": false,
-                "dynamic": false,
-                "info": "The OpenAI API Key to use for the OpenAI model.",
-                "load_from_db": false,
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ],
-                "value": "OPENAI_API_KEY"
-              },
-              "stream": {
-                "type": "bool",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": true,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "stream",
-                "display_name": "Stream",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Stream the response from the model. Streaming works only in Chat.",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "system_message": {
-                "type": "str",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "system_message",
-                "display_name": "System Message",
-                "advanced": true,
-                "dynamic": false,
-                "info": "System message to pass to the model.",
-                "load_from_db": false,
-                "title_case": false,
-                "input_types": [
-                  "Text"
-                ]
-              },
-              "temperature": {
-                "type": "float",
-                "required": false,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": false,
-                "value": 0.1,
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "temperature",
-                "display_name": "Temperature",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "rangeSpec": {
-                  "step_type": "float",
-                  "min": -1,
-                  "max": 1,
-                  "step": 0.1
-                },
-                "load_from_db": false,
-                "title_case": false
-              },
-              "_type": "CustomComponent"
-            },
-            "description": "Generates text using OpenAI LLMs.",
-            "icon": "OpenAI",
             "base_classes": [
               "object",
               "str",
               "Text"
             ],
-            "display_name": "OpenAI",
-            "documentation": "",
+            "beta": false,
             "custom_fields": {
               "input_value": null,
-              "openai_api_key": null,
-              "temperature": null,
-              "model_name": null,
               "max_tokens": null,
               "model_kwargs": null,
+              "model_name": null,
               "openai_api_base": null,
+              "openai_api_key": null,
               "stream": null,
-              "system_message": null
+              "system_message": null,
+              "temperature": null
             },
-            "output_types": [
-              "Text"
-            ],
+            "description": "Generates text using OpenAI LLMs.",
+            "display_name": "OpenAI",
+            "documentation": "",
             "field_formatters": {},
-            "frozen": false,
             "field_order": [
               "max_tokens",
               "model_kwargs",
@@ -922,153 +812,258 @@
               "system_message",
               "stream"
             ],
-            "beta": false,
+            "frozen": false,
+            "icon": "OpenAI",
+            "output_types": [
+              "Text"
+            ],
             "outputs": [
               {
+                "display_name": null,
+                "method": null,
+                "name": "Text",
+                "selected": null,
                 "types": [
                   "Text"
-                ],
-                "selected": null,
-                "display_name": null,
-                "name": "Text",
-                "method": null
+                ]
               }
-            ]
+            ],
+            "template": {
+              "_type": "CustomComponent",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from typing import Optional\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.constants import STREAM_INFO_TEXT\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import MODEL_NAMES\nfrom langflow.field_typing import NestedDict, Text\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n\n    field_order = [\n        \"max_tokens\",\n        \"model_kwargs\",\n        \"model_name\",\n        \"openai_api_base\",\n        \"openai_api_key\",\n        \"temperature\",\n        \"input_value\",\n        \"system_message\",\n        \"stream\",\n    ]\n\n    def build_config(self):\n        return {\n            \"input_value\": {\"display_name\": \"Input\", \"input_types\": [\"Text\", \"Record\", \"Prompt\"]},\n            \"max_tokens\": {\n                \"display_name\": \"Max Tokens\",\n                \"advanced\": True,\n                \"info\": \"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            },\n            \"model_kwargs\": {\n                \"display_name\": \"Model Kwargs\",\n                \"advanced\": True,\n            },\n            \"model_name\": {\n                \"display_name\": \"Model Name\",\n                \"advanced\": False,\n                \"options\": MODEL_NAMES,\n            },\n            \"openai_api_base\": {\n                \"display_name\": \"OpenAI API Base\",\n                \"advanced\": True,\n                \"info\": (\n                    \"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\\n\\n\"\n                    \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\"\n                ),\n            },\n            \"openai_api_key\": {\n                \"display_name\": \"OpenAI API Key\",\n                \"info\": \"The OpenAI API Key to use for the OpenAI model.\",\n                \"advanced\": False,\n                \"password\": True,\n            },\n            \"temperature\": {\n                \"display_name\": \"Temperature\",\n                \"advanced\": False,\n                \"value\": 0.1,\n            },\n            \"stream\": {\n                \"display_name\": \"Stream\",\n                \"info\": STREAM_INFO_TEXT,\n                \"advanced\": True,\n            },\n            \"system_message\": {\n                \"display_name\": \"System Message\",\n                \"info\": \"System message to pass to the model.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        input_value: Text,\n        openai_api_key: str,\n        temperature: float = 0.1,\n        model_name: str = \"gpt-3.5-turbo\",\n        max_tokens: Optional[int] = 256,\n        model_kwargs: NestedDict = {},\n        openai_api_base: Optional[str] = None,\n        stream: bool = False,\n        system_message: Optional[str] = None,\n    ) -> Text:\n        if not openai_api_base:\n            openai_api_base = \"https://api.openai.com/v1\"\n        if openai_api_key:\n            api_key = SecretStr(openai_api_key)\n        else:\n            api_key = None\n\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature,\n        )\n\n        return self.get_chat_result(output, stream, input_value, system_message)\n"
+              },
+              "input_value": {
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Text",
+                  "Record",
+                  "Prompt"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "input_value",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str"
+              },
+              "max_tokens": {
+                "advanced": true,
+                "display_name": "Max Tokens",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "max_tokens",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "int",
+                "value": 256
+              },
+              "model_kwargs": {
+                "advanced": true,
+                "display_name": "Model Kwargs",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "model_kwargs",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "NestedDict",
+                "value": {}
+              },
+              "model_name": {
+                "advanced": false,
+                "display_name": "Model Name",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Text"
+                ],
+                "list": true,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "model_name",
+                "options": [
+                  "gpt-4o",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-3.5-turbo",
+                  "gpt-3.5-turbo-0125"
+                ],
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "gpt-4-turbo-preview"
+              },
+              "openai_api_base": {
+                "advanced": true,
+                "display_name": "OpenAI API Base",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                "input_types": [
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "openai_api_base",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str"
+              },
+              "openai_api_key": {
+                "advanced": false,
+                "display_name": "OpenAI API Key",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "The OpenAI API Key to use for the OpenAI model.",
+                "input_types": [
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "openai_api_key",
+                "password": true,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "OPENAI_API_KEY"
+              },
+              "stream": {
+                "advanced": true,
+                "display_name": "Stream",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "Stream the response from the model. Streaming works only in Chat.",
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "stream",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "bool",
+                "value": true
+              },
+              "system_message": {
+                "advanced": true,
+                "display_name": "System Message",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "System message to pass to the model.",
+                "input_types": [
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "system_message",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str"
+              },
+              "temperature": {
+                "advanced": false,
+                "display_name": "Temperature",
+                "dynamic": false,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": false,
+                "name": "temperature",
+                "password": false,
+                "placeholder": "",
+                "rangeSpec": {
+                  "max": 1,
+                  "min": -1,
+                  "step": 0.1,
+                  "step_type": "float"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "float",
+                "value": 0.1
+              }
+            }
           },
-          "id": "OpenAIModel-Bt067"
+          "type": "OpenAIModel"
         },
-        "selected": false,
-        "width": 384,
+        "dragging": false,
         "height": 642,
+        "id": "OpenAIModel-Bt067",
+        "position": {
+          "x": 1137.6078582863759,
+          "y": -14.41920034020356
+        },
         "positionAbsolute": {
           "x": 1137.6078582863759,
           "y": -14.41920034020356
         },
-        "dragging": false
-      }
-    ],
-    "edges": [
-      {
-        "source": "ChatInput-MsSJ9",
-        "sourceHandle": "{\"dataType\": \"ChatInput\", \"id\": \"ChatInput-MsSJ9\", \"output_types\": [\"Text\"], \"name\": \"message\"}",
-        "target": "Prompt-tHwPf",
-        "targetHandle": "{œfieldNameœ:œQuestionœ,œidœ:œPrompt-tHwPfœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "Question",
-            "id": "Prompt-tHwPf",
-            "inputTypes": [
-              "Document",
-              "BaseOutputParser",
-              "Record",
-              "Text"
-            ],
-            "type": "str"
-          },
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-MsSJ9",
-            "output_types": [
-              "Text"
-            ],
-            "name": "message"
-          }
-        },
-        "style": {
-          "stroke": "#555"
-        },
-        "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-ChatInput-MsSJ9{œbaseClassesœ:[œstrœ,œRecordœ,œTextœ,œobjectœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-MsSJ9œ}-Prompt-tHwPf{œfieldNameœ:œQuestionœ,œidœ:œPrompt-tHwPfœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "source": "File-6TEsD",
-        "sourceHandle": "{\"dataType\": \"File\", \"id\": \"File-6TEsD\", \"output_types\": [\"Record\"], \"name\": \"Record\"}",
-        "target": "Prompt-tHwPf",
-        "targetHandle": "{œfieldNameœ:œDocumentœ,œidœ:œPrompt-tHwPfœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "Document",
-            "id": "Prompt-tHwPf",
-            "inputTypes": [
-              "Document",
-              "BaseOutputParser",
-              "Record",
-              "Text"
-            ],
-            "type": "str"
-          },
-          "sourceHandle": {
-            "dataType": "File",
-            "id": "File-6TEsD",
-            "output_types": [
-              "Record"
-            ],
-            "name": "Record"
-          }
-        },
-        "style": {
-          "stroke": "#555"
-        },
-        "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-File-6TEsD{œbaseClassesœ:[œRecordœ],œdataTypeœ:œFileœ,œidœ:œFile-6TEsDœ}-Prompt-tHwPf{œfieldNameœ:œDocumentœ,œidœ:œPrompt-tHwPfœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "source": "Prompt-tHwPf",
-        "sourceHandle": "{\"dataType\": \"Prompt\", \"id\": \"Prompt-tHwPf\", \"output_types\": [\"Text\"], \"name\": \"Text\"}",
-        "target": "OpenAIModel-Bt067",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Bt067œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-Bt067",
-            "inputTypes": [
-              "Text"
-            ],
-            "type": "str"
-          },
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-tHwPf",
-            "output_types": [
-              "Text"
-            ],
-            "name": "Text"
-          }
-        },
-        "style": {
-          "stroke": "#555"
-        },
-        "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-Prompt-tHwPf{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-tHwPfœ}-OpenAIModel-Bt067{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Bt067œ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "source": "OpenAIModel-Bt067",
-        "sourceHandle": "{\"dataType\": \"OpenAIModel\", \"id\": \"OpenAIModel-Bt067\", \"output_types\": [\"Text\"], \"name\": \"Text\"}",
-        "target": "ChatOutput-F5Awj",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-F5Awjœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-F5Awj",
-            "inputTypes": [
-              "Text"
-            ],
-            "type": "str"
-          },
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-Bt067",
-            "output_types": [
-              "Text"
-            ],
-            "name": "Text"
-          }
-        },
-        "style": {
-          "stroke": "#555"
-        },
-        "className": "stroke-gray-900 stroke-connection",
-        "id": "reactflow__edge-OpenAIModel-Bt067{œbaseClassesœ:[œobjectœ,œstrœ,œTextœ],œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Bt067œ}-ChatOutput-F5Awj{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-F5Awjœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}"
+        "selected": false,
+        "type": "genericNode",
+        "width": 384
       }
     ],
     "viewport": {
@@ -1078,7 +1073,8 @@
     }
   },
   "description": "This flow integrates PDF reading with a language model to answer document-specific questions. Ideal for small-scale texts, it facilitates direct queries with immediate insights.",
-  "name": "Document QA",
+  "id": "fecbce42-6f11-454c-8ab2-db6eddbbbb0f",
+  "is_component": false,
   "last_tested_version": "1.0.0a0",
-  "is_component": false
+  "name": "Document QA"
 }

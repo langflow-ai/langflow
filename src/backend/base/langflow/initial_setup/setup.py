@@ -190,16 +190,16 @@ def update_edges_with_latest_component_versions(project_data):
         if source_node and target_node:
             source_node_data = source_node.get("data").get("node")
             target_node_data = target_node.get("data").get("node")
-            new_base_classes = source_node_data.get("base_classes")
-            if source_handle["baseClasses"] != new_base_classes:
+            new_output_types = source_node_data.get("output_types")
+            if source_handle["output_types"] != new_output_types:
                 edge_changes_log[source_node_data["display_name"]].append(
                     {
-                        "attr": "baseClasses",
-                        "old_value": source_handle["baseClasses"],
-                        "new_value": new_base_classes,
+                        "attr": "output_types",
+                        "old_value": source_handle["output_types"],
+                        "new_value": new_output_types,
                     }
                 )
-                source_handle["baseClasses"] = new_base_classes
+                source_handle["output_types"] = new_output_types
 
             field_name = target_handle.get("fieldName")
             if field_name in target_node_data.get("template"):
