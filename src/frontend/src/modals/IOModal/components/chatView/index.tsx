@@ -65,10 +65,15 @@ export default function ChatView({
       .filter((output) => output.data.message)
       .map((output, index) => {
         try {
-          const { sender, message, sender_name, stream_url, files } = output
-            .data.message as ChatOutputType;
+          console.log("output:", output);
+          const { sender, message, sender_name, stream_url, files } =
+            output.data.message.message !== "" ||
+            (output.data.message.files ?? []).length > 0
+              ? output.data.message
+              : output.data.artifacts;
 
-          const is_ai = sender === "Machine" || sender === null;
+          const is_ai =
+            sender === "Machine" || sender === null || sender === undefined;
           return {
             isSend: !is_ai,
             message: message,
