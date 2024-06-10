@@ -7,7 +7,26 @@ from pydantic import BaseModel, Field, field_serializer, field_validator
 from langflow.schema.message import Message
 
 
-class TransactionModel(BaseModel):
+class DefaultModel(BaseModel):
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+        }
+
+    def json(self, **kwargs):
+        # Usa a função de serialização personalizada
+        return super().json(**kwargs, encoder=self.custom_encoder)
+
+    @staticmethod
+    def custom_encoder(obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+
+
+class TransactionModel(DefaultModel):
     index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
     vertex_id: str
@@ -17,10 +36,6 @@ class TransactionModel(BaseModel):
     status: str
     error: Optional[str] = None
     flow_id: Optional[str] = Field(default=None, alias="flow_id")
-
-    class Config:
-        from_attributes = True
-        populate_by_name = True
 
     # validate target_args in case it is a JSON
     @field_validator("outputs", "inputs", mode="before")
@@ -36,7 +51,7 @@ class TransactionModel(BaseModel):
         return v
 
 
-class TransactionModelResponse(BaseModel):
+class TransactionModelResponse(DefaultModel):
     index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
     vertex_id: str
@@ -47,10 +62,6 @@ class TransactionModelResponse(BaseModel):
     flow_id: Optional[str] = Field(default=None, alias="flow_id")
     source: Optional[str] = None
     target: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-        populate_by_name = True
 
     # validate target_args in case it is a JSON
     @field_validator("outputs", "inputs", mode="before")
@@ -69,7 +80,7 @@ class TransactionModelResponse(BaseModel):
         return v
 
 
-class MessageModel(BaseModel):
+class MessageModel(DefaultModel):
     index: Optional[int] = Field(default=None)
     flow_id: Optional[str] = Field(default=None, alias="flow_id")
     timestamp: datetime = Field(default_factory=datetime.now)
@@ -78,10 +89,6 @@ class MessageModel(BaseModel):
     session_id: str
     text: str
     files: list[str] = []
-
-    class Config:
-        from_attributes = True
-        populate_by_name = True
 
     @field_validator("files", mode="before")
     def validate_files(cls, v):
@@ -125,7 +132,7 @@ class MessageModelRequest(MessageModel):
     session_id: str = Field(default="")
 
 
-class VertexBuildModel(BaseModel):
+class VertexBuildModel(DefaultModel):
     index: Optional[int] = Field(default=None, alias="index", exclude=True)
     id: Optional[str] = Field(default=None, alias="id")
     flow_id: str
@@ -134,10 +141,6 @@ class VertexBuildModel(BaseModel):
     data: dict
     artifacts: dict
     timestamp: datetime = Field(default_factory=datetime.now)
-
-    class Config:
-        from_attributes = True
-        populate_by_name = True
 
     @field_serializer("data", "artifacts")
     def serialize_dict(v):
@@ -148,7 +151,7 @@ class VertexBuildModel(BaseModel):
                     v[key] = value.model_dump()
                 elif isinstance(value, list) and all(isinstance(i, BaseModel) for i in value):
                     v[key] = [i.model_dump() for i in value]
-            return json.dumps(v)
+            return json.dumps(v, default=str)
         elif isinstance(v, BaseModel):
             return v.model_dump_json()
         return v
