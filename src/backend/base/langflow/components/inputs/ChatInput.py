@@ -1,6 +1,6 @@
 from langflow.base.io.chat import ChatComponent
 from langflow.field_typing import Text
-from langflow.schema import Record
+from langflow.schema.message import Message
 from langflow.template import Input, Output
 
 
@@ -13,7 +13,7 @@ class ChatInput(ChatComponent):
         Input(
             name="input_value",
             type=str,
-            display_name="Message",
+            display_name="Text",
             multiline=True,
             input_types=[],
             info="Message to be passed as input.",
@@ -34,24 +34,23 @@ class ChatInput(ChatComponent):
     ]
     outputs = [
         Output(display_name="Message", name="message", method="text_response"),
-        Output(display_name="Record", name="record", method="record_response"),
+        Output(display_name="Record", name="record", method="message_response"),
     ]
 
     def text_response(self) -> Text:
         result = self.input_value
-        if self.session_id and isinstance(result, (Record, str)):
+        if self.session_id and isinstance(result, (Message, str)):
             self.store_message(result, self.session_id, self.sender, self.sender_name)
         return result
 
-    def record_response(self) -> Record:
-        record = Record(
-            data={
-                "text": self.input_value,
-                "sender": self.sender,
-                "sender_name": self.sender_name,
-                "session_id": self.session_id,
-            },
+    def message_response(self) -> Message:
+        message = Message(
+            text=self.input_value,
+            sender=self.sender,
+            sender_name=self.sender_name,
+            session_id=self.session_id,
         )
-        if self.session_id and isinstance(record, (Record, str)):
-            self.store_message(record, self.session_id, self.sender, self.sender_name)
-        return record
+        if self.session_id and isinstance(message, (Message, str)):
+            self.store_message(message)
+        self.status = message
+        return message
