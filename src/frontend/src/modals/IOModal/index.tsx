@@ -371,7 +371,9 @@ export default function IOModal({
                                 size="md"
                                 className="block truncate"
                               >
-                                {session}
+                                {session === currentFlow?.id
+                                  ? "Default Session"
+                                  : session}
                               </Badge>
                             </div>
                           </ShadTooltip>

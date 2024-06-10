@@ -13,6 +13,7 @@ import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
+import Loading from "../ui/loading";
 
 interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<AgGridReactProps["columnDefs"]>;
@@ -76,7 +77,7 @@ const TableComponent = forwardRef<
     const dark = useDarkStore((state) => state.dark);
     const initialColumnDefs = useRef(colDef);
     const [columnStateChange, setColumnStateChange] = useState(false);
-
+    const storeReference = props.columnDefs.map((e) => e.headerName).join("_");
     const makeLastColumnNonResizable = (columnDefs) => {
       columnDefs.forEach((colDef, index) => {
         colDef.resizable = index !== columnDefs.length - 1;
@@ -89,13 +90,26 @@ const TableComponent = forwardRef<
       realRef.current = params;
       const updatedColumnDefs = makeLastColumnNonResizable([...colDef]);
       params.api.setGridOption("columnDefs", updatedColumnDefs);
+      const customInit = localStorage.getItem(storeReference);
       initialColumnDefs.current = params.api.getColumnDefs();
-      if (props.onGridReady) props.onGridReady(params);
+      if (customInit && realRef.current) {
+        realRef.current.api.applyColumnState({
+          state: JSON.parse(customInit),
+          applyOrder: true,
+        });
+      }
       setTimeout(() => {
-        setColumnStateChange(false);
-      }, 200);
+        if (customInit && realRef.current) {
+          setColumnStateChange(true);
+        } else {
+          setColumnStateChange(false);
+        }
+      }, 50);
+      setTimeout(() => {
+        realRef.current.api.hideOverlay();
+      }, 1000);
+      if (props.onGridReady) props.onGridReady(params);
     };
-
     const onColumnMoved = (params) => {
       const updatedColumnDefs = makeLastColumnNonResizable(
         params.columnApi.getAllGridColumns().map((col) => col.getColDef()),
@@ -103,7 +117,6 @@ const TableComponent = forwardRef<
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       if (props.onColumnMoved) props.onColumnMoved(params);
     };
-
     if (props.rowData.length === 0) {
       return (
         <div className="flex h-full w-full items-center justify-center rounded-md border">
@@ -138,6 +151,10 @@ const TableComponent = forwardRef<
           onColumnMoved={onColumnMoved}
           onStateUpdated={(e) => {
             if (e.sources.some((source) => source.includes("column"))) {
+              localStorage.setItem(
+                storeReference,
+                JSON.stringify(realRef.current?.api?.getColumnState()),
+              );
               setColumnStateChange(true);
             }
           }}
@@ -152,6 +169,7 @@ const TableComponent = forwardRef<
               resetGrid(realRef, initialColumnDefs);
               setTimeout(() => {
                 setColumnStateChange(false);
+                localStorage.removeItem(storeReference);
               }, 100);
             }}
           />
