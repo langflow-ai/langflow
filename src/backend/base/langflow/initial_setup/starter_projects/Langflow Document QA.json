@@ -883,7 +883,7 @@
                   "Text"
                 ],
                 "list": false,
-                "load_from_db": false,
+                "load_from_db": true,
                 "multiline": false,
                 "name": "openai_api_key",
                 "password": true,
