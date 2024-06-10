@@ -291,7 +291,7 @@
   }
 
   .main-page-nav-button {
-    @apply mr-2 w-4;
+    @apply w-4;
   }
 
   .main-page-description-text {
