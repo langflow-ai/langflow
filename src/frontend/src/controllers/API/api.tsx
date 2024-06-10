@@ -1,4 +1,4 @@
-import axios, { Axios, AxiosError, AxiosInstance } from "axios";
+import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { renewAccessToken } from ".";

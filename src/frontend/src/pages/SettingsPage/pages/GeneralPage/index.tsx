@@ -9,15 +9,15 @@ import {
   inputHandlerEventType,
   patchUserInputStateType,
 } from "../../../../types/components";
-import usePatchProfilePicture from "../hooks/use-patch-profile-picture";
 import usePatchPassword from "../hooks/use-patch-password";
+import usePatchProfilePicture from "../hooks/use-patch-profile-picture";
 import useSaveKey from "../hooks/use-save-key";
 import useScrollToElement from "../hooks/use-scroll-to-element";
 import GeneralPageHeaderComponent from "./components/GeneralPageHeader";
 import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
-import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
 import useGetProfilePictures from "./components/ProfilePictureForm/components/profilePictureChooserComponent/hooks/use-get-profile-pictures";
+import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
 
 export default function GeneralPage() {
   const setCurrentFlowId = useFlowsManagerStore(

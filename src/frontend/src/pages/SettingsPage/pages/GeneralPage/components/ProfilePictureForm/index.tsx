@@ -1,4 +1,5 @@
 import * as Form from "@radix-ui/react-form";
+import { useEffect, useState } from "react";
 import { Button } from "../../../../../../components/ui/button";
 import {
   Card,
@@ -10,8 +11,6 @@ import {
 } from "../../../../../../components/ui/card";
 import { gradients } from "../../../../../../utils/styleUtils";
 import ProfilePictureChooserComponent from "./components/profilePictureChooserComponent";
-import { useEffect, useState } from "react";
-import { GenericAbortSignal } from "axios";
 
 type ProfilePictureFormComponentProps = {
   profilePicture: string;

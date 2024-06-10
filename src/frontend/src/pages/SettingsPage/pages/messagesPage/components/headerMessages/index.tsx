@@ -1,6 +1,4 @@
 import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
-import { Button } from "../../../../../../components/ui/button";
-import { cn } from "../../../../../../utils/utils";
 
 type HeaderMessagesComponentProps = {
   selectedRows: number[];

@@ -1,9 +1,9 @@
 import { useContext } from "react";
-import profileCircle from "../../assets/profile-circle.png";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import { RiTwitterXFill } from "react-icons/ri";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import AlertDropdown from "../../alerts/alertDropDown";
+import profileCircle from "../../assets/profile-circle.png";
 import {
   BACKEND_URL,
   BASE_URL_API,
@@ -18,7 +18,6 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useLocationStore } from "../../stores/locationStore";
 import { useStoreStore } from "../../stores/storeStore";
-import { gradients } from "../../utils/styleUtils";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import {
@@ -79,7 +78,7 @@ export default function Header(): JSX.Element {
 
   return (
     <div className="header-arrangement">
-      <div className="header-start-display lg:w-[30%]">
+      <div className="header-start-display lg:w-[407px]">
         <Link to="/all" className="cursor-pointer" onClick={checkForChanges}>
           <span className="ml-4 text-2xl">⛓️</span>
         </Link>
@@ -202,8 +201,9 @@ export default function Header(): JSX.Element {
                       `${BACKEND_URL.slice(
                         0,
                         BACKEND_URL.length - 1,
-                      )}${BASE_URL_API}files/profile_pictures/${userData?.profile_image ?? "Space/046-rocket.png"}` ??
-                      profileCircle
+                      )}${BASE_URL_API}files/profile_pictures/${
+                        userData?.profile_image ?? "Space/046-rocket.png"
+                      }` ?? profileCircle
                     }
                     className="h-7 w-7 shrink-0 focus-visible:outline-0"
                   />
@@ -219,8 +219,9 @@ export default function Header(): JSX.Element {
                             `${BACKEND_URL.slice(
                               0,
                               BACKEND_URL.length - 1,
-                            )}${BASE_URL_API}files/profile_pictures/${userData?.profile_image}` ??
-                            profileCircle
+                            )}${BASE_URL_API}files/profile_pictures/${
+                              userData?.profile_image
+                            }` ?? profileCircle
                           }
                           className="h-5 w-5 focus-visible:outline-0 "
                         />
