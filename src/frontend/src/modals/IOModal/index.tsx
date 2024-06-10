@@ -380,7 +380,7 @@ export default function IOModal({
                                 </div>
                               </ShadTooltip>
                             </Button>
-                            <div>
+                            {/* <div>
                               <ShadTooltip
                                 styleClasses="z-50"
                                 content={
@@ -404,7 +404,7 @@ export default function IOModal({
                                   )}
                                 ></div>
                               </ShadTooltip>
-                            </div>
+                            </div> */}
                           </div>
                         </div>
                       </div>
