@@ -81,6 +81,7 @@ export default function GlobalVariablesPage() {
       flex: 2,
     }, //This column will be twice as wide as the others
     {
+      headerName: "Type",
       field: "type",
       cellRenderer: BadgeRenderer,
       cellEditor: DropdownEditor,
