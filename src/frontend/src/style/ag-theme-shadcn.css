@@ -1,7 +1,7 @@
 /* set the background color of many elements across the grid */
 .ag-theme-shadcn {
   --ag-foreground-color: hsl(var(--foreground));
-  --ag-background-color: hsl(var(--background)); 
+  --ag-background-color: hsl(var(--background));
   --ag-secondary-foreground-color: hsl(var(--secondary-foreground));
   --ag-data-color: hsl(var(--foreground));
   --ag-header-foreground-color: hsl(var(--muted-foreground));
@@ -18,4 +18,13 @@
 
 .ag-theme-shadcn .ag-paging-panel {
   height: 3rem;
+}
+
+.ag-row .ag-cell {
+  align-content: center !important;
+}
+.ag-cell {
+  line-height: 1.25rem;
+  padding-top: 0.675rem;
+  padding-bottom: 0.675rem;
 }
