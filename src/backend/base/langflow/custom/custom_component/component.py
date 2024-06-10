@@ -17,7 +17,7 @@ import yaml
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.schema.schema import Record
+from langflow.schema.record import Record
 from langflow.template.field.base import Input, Output
 
 from .custom_component import CustomComponent
