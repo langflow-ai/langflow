@@ -8,6 +8,7 @@ import { NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
 import useColumnDefs from "./hooks/use-column-defs";
 import useRowData from "./hooks/use-row-data";
+import { cloneDeep } from "lodash";
 
 const EditNodeModal = forwardRef(
   (
@@ -26,7 +27,7 @@ const EditNodeModal = forwardRef(
     },
     ref,
   ) => {
-    const myData = useRef(data);
+    const myData = useRef(cloneDeep(data));
 
     const setNode = useFlowStore((state) => state.setNode);
 
@@ -36,6 +37,7 @@ const EditNodeModal = forwardRef(
     }
 
     const handleOnNewValue = (newValue: any, name) => {
+      console.log(newValue);
       myData.current.node!.template[name].value = newValue;
     };
 
@@ -52,7 +54,7 @@ const EditNodeModal = forwardRef(
 
     useEffect(() => {
       if (gridApi && open) {
-        myData.current = data;
+        myData.current = cloneDeep(data);
         gridApi.refreshCells();
       }
     }, [gridApi, open]);
@@ -64,22 +66,7 @@ const EditNodeModal = forwardRef(
     //    }, []);
 
     return (
-      <BaseModal
-        key={data.id}
-        size="medium-tall"
-        open={open}
-        setOpen={setOpen}
-        onSubmit={() => {
-          setNode(data.id, (old) => ({
-            ...old,
-            data: {
-              ...old.data,
-              node: myData.current.node,
-            },
-          }));
-          setOpen(false);
-        }}
-      >
+      <BaseModal key={data.id} size="medium-tall" open={open} setOpen={setOpen}>
         <BaseModal.Trigger>
           <></>
         </BaseModal.Trigger>
@@ -105,7 +92,21 @@ const EditNodeModal = forwardRef(
           </div>
         </BaseModal.Content>
 
-        <BaseModal.Footer submit={{ label: "Save Changes" }} />
+        <BaseModal.Footer
+          submit={{
+            label: "Save Changes",
+            onClick: () => {
+              setNode(data.id, (old) => ({
+                ...old,
+                data: {
+                  ...old.data,
+                  node: myData.current.node,
+                },
+              }));
+              setOpen(false);
+            },
+          }}
+        />
       </BaseModal>
     );
   },

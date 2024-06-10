@@ -86,6 +86,7 @@ const Footer: React.FC<{
     loading?: boolean;
     disabled?: boolean;
     dataTestId?: string;
+    onClick?: () => void;
   };
 }> = ({ children, submit }) => {
   return (
@@ -101,7 +102,8 @@ const Footer: React.FC<{
             </DialogClose>
             <Button
               data-testid={submit.dataTestId}
-              type="submit"
+              type={submit.onClick ? "button" : "submit"}
+              onClick={submit.onClick}
               loading={submit.loading}
             >
               {submit.icon && submit.icon}
