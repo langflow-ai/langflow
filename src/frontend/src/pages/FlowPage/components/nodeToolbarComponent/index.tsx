@@ -49,7 +49,7 @@ export default function NodeToolbarComponent({
   const [showconfirmShare, setShowconfirmShare] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [flowComponent, setFlowComponent] = useState<FlowType>(
-    createFlowComponent(cloneDeep(data), version)
+    createFlowComponent(cloneDeep(data), version),
   );
   const preventDefault = true;
   const isMac = navigator.platform.toUpperCase().includes("MAC");
@@ -66,7 +66,7 @@ export default function NodeToolbarComponent({
         data.node.template[templateField].type === "Any" ||
         data.node.template[templateField].type === "int" ||
         data.node.template[templateField].type === "dict" ||
-        data.node.template[templateField].type === "NestedDict")
+        data.node.template[templateField].type === "NestedDict"),
   ).length;
 
   const hasStore = useStoreStore((state) => state.hasStore);
@@ -221,7 +221,7 @@ export default function NodeToolbarComponent({
   const updateNodeInternals = useUpdateNodeInternals();
 
   const setLastCopiedSelection = useFlowStore(
-    (state) => state.setLastCopiedSelection
+    (state) => state.setLastCopiedSelection,
   );
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -295,7 +295,7 @@ export default function NodeToolbarComponent({
           nodes,
           edges,
           setNodes,
-          setEdges
+          setEdges,
         );
         break;
       case "override":
@@ -319,14 +319,14 @@ export default function NodeToolbarComponent({
             y: 10,
             paneX: nodes.find((node) => node.id === data.id)?.position.x,
             paneY: nodes.find((node) => node.id === data.id)?.position.y,
-          }
+          },
         );
         break;
     }
   };
 
   const isSaved = flows.some((flow) =>
-    Object.values(flow).includes(data.node?.display_name!)
+    Object.values(flow).includes(data.node?.display_name!),
   );
 
   function displayShortcut({
@@ -344,7 +344,7 @@ export default function NodeToolbarComponent({
       }
     });
     const filteredShortcut = fixedShortcut.filter(
-      (key) => !key.toLowerCase().includes("shift")
+      (key) => !key.toLowerCase().includes("shift"),
     );
     let shortcutWPlus: string[] = [];
     if (!hasShift) shortcutWPlus = filteredShortcut.join("+").split(" ");
@@ -368,7 +368,7 @@ export default function NodeToolbarComponent({
   const setNode = useFlowStore((state) => state.setNode);
 
   const handleOnNewValue = (
-    newValue: string | string[] | boolean | Object[]
+    newValue: string | string[] | boolean | Object[],
   ): void => {
     if (data.node!.template[name].value !== newValue) {
       takeSnapshot();
@@ -414,6 +414,7 @@ export default function NodeToolbarComponent({
 
   const [openModal, setOpenModal] = useState(false);
   const hasCode = Object.keys(data.node!.template).includes("code");
+  const [deleteIsFocus, setDeleteIsFocus] = useState(false);
 
   return (
     <>
@@ -423,8 +424,8 @@ export default function NodeToolbarComponent({
             <ShadTooltip
               content={displayShortcut(
                 shortcuts.find(
-                  ({ name }) => name.split(" ")[0].toLowerCase() === "code"
-                )!
+                  ({ name }) => name.split(" ")[0].toLowerCase() === "code",
+                )!,
               )}
               side="top"
             >
@@ -443,8 +444,8 @@ export default function NodeToolbarComponent({
             <ShadTooltip
               content={displayShortcut(
                 shortcuts.find(
-                  ({ name }) => name.split(" ")[0].toLowerCase() === "advanced"
-                )!
+                  ({ name }) => name.split(" ")[0].toLowerCase() === "advanced",
+                )!,
               )}
               side="top"
             >
@@ -483,14 +484,14 @@ export default function NodeToolbarComponent({
           <ShadTooltip
             content={displayShortcut(
               shortcuts.find(
-                ({ name }) => name.split(" ")[0].toLowerCase() === "freeze"
-              )!
+                ({ name }) => name.split(" ")[0].toLowerCase() === "freeze",
+              )!,
             )}
             side="top"
           >
             <button
               className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -511,7 +512,7 @@ export default function NodeToolbarComponent({
                 className={cn(
                   "h-4 w-4 transition-all",
                   // TODO UPDATE THIS COLOR TO BE A VARIABLE
-                  frozen ? "animate-wiggle text-ice" : ""
+                  frozen ? "animate-wiggle text-ice" : "",
                 )}
               />
             </button>
@@ -539,7 +540,7 @@ export default function NodeToolbarComponent({
                   <div
                     data-testid="more-options-modal"
                     className={classNames(
-                      "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground  shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                      "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground  shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
                     )}
                   >
                     <IconComponent
@@ -693,14 +694,21 @@ export default function NodeToolbarComponent({
                   dataTestId="download-button-modal"
                 />
               </SelectItem>
-              <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
+              <SelectItem
+                value={"delete"}
+                className="focus:bg-red-400/[.20]"
+                onFocus={() => setDeleteIsFocus(true)}
+                onBlur={() => setDeleteIsFocus(false)}
+              >
                 <div className="font-red flex text-status-red">
                   <IconComponent
                     name="Trash2"
                     className="relative top-0.5 mr-2 h-4 w-4 "
                   />{" "}
                   <span className="">Delete</span>{" "}
-                  <span className="justify absolute right-2 top-2 flex items-center rounded-sm bg-muted px-1 py-[0.2]">
+                  <span
+                    className={`justify absolute right-2 top-2 flex items-center rounded-sm px-1 py-[0.2] ${deleteIsFocus ? " " : "bg-muted"}`}
+                  >
                     <IconComponent
                       name="Delete"
                       className="h-4 w-4 stroke-2 text-red-400"
