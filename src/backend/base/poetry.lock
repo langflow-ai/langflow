@@ -741,6 +741,20 @@ typer = ">=0.12.3"
 standard = ["fastapi", "uvicorn[standard] (>=0.15.0)"]
 
 [[package]]
+name = "firecrawl-py"
+version = "0.0.14"
+description = "Python SDK for Firecrawl API"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "firecrawl_py-0.0.14-py3-none-any.whl", hash = "sha256:cb29b73a9d3a3042e2b144676c96faff977aae3eacec1ab255eb3313f4d6bee6"},
+    {file = "firecrawl_py-0.0.14.tar.gz", hash = "sha256:a6dc9afb14b1e13e38291b4d67ab98dd9de15762ed8d2c103b1447c6813e25b0"},
+]
+
+[package.dependencies]
+requests = "*"
+
+[[package]]
 name = "frozenlist"
 version = "1.4.1"
 description = "A list-like structure which implements collections.abc.MutableSequence"
@@ -3244,4 +3258,4 @@ local = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "48a7355a7096e763b75315d0704bed8f4d8134a33553e62bc305a686b9e72803"
+content-hash = "f46a07c9bd9dc96714be9a87773f4e23343c62319c78041094426c890305d0ef"

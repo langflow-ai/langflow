@@ -198,6 +198,12 @@ tools:
 utilities:
   BingSearchAPIWrapper:
     documentation: ""
+  FirecrawlCrawlApi:
+    documentation: "https://docs.firecrawl.dev/api-reference/endpoint/crawl"
+  FirecrawlScrapeApi:
+    documentation: "https://docs.firecrawl.dev/api-reference/endpoint/scrape"
+  FirecrawlSearchApi:
+    documentation: "https://docs.firecrawl.dev/api-reference/endpoint/search"
   GoogleSearchAPIWrapper:
     documentation: ""
   GoogleSerperAPIWrapper:

@@ -2072,6 +2072,20 @@ testing = ["covdefaults (>=2.3)", "coverage (>=7.3.2)", "diff-cover (>=8.0.1)", 
 typing = ["typing-extensions (>=4.8)"]
 
 [[package]]
+name = "firecrawl-py"
+version = "0.0.14"
+description = "Python SDK for Firecrawl API"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "firecrawl_py-0.0.14-py3-none-any.whl", hash = "sha256:cb29b73a9d3a3042e2b144676c96faff977aae3eacec1ab255eb3313f4d6bee6"},
+    {file = "firecrawl_py-0.0.14.tar.gz", hash = "sha256:a6dc9afb14b1e13e38291b4d67ab98dd9de15762ed8d2c103b1447c6813e25b0"},
+]
+
+[package.dependencies]
+requests = "*"
+
+[[package]]
 name = "flaml"
 version = "2.1.2"
 description = "A fast library for automated machine learning and tuning"
@@ -4323,6 +4337,7 @@ docstring-parser = "^0.15"
 duckdb = "^0.10.2"
 emoji = "^2.12.0"
 fastapi = "^0.111.0"
+firecrawl-py = "^0.0.14"
 gunicorn = "^22.0.0"
 httpx = "*"
 jq = {version = "^1.7.0", markers = "sys_platform != \"win32\""}
@@ -4363,13 +4378,13 @@ url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
-version = "2.35.0"
+version = "2.35.2"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langfuse-2.35.0-py3-none-any.whl", hash = "sha256:e9df2474a01f8e167b7b13674c554915415b27064e48ad207054475f7fa8f82d"},
-    {file = "langfuse-2.35.0.tar.gz", hash = "sha256:b1d4b478233eefbc8a6fc63ca00ca82f6afecf2b0fdc1835ca65e751cf901577"},
+    {file = "langfuse-2.35.2-py3-none-any.whl", hash = "sha256:d01a23842cab484594f03878aacb9732ef8fd361158eb819c7bf43f758a0954b"},
+    {file = "langfuse-2.35.2.tar.gz", hash = "sha256:32b2e6c5bc71b4efdc430c6b964ab1c1e1ba1e105a4a73912c38b3959dc4502d"},
 ]
 
 [package.dependencies]
@@ -10038,4 +10053,4 @@ local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "2ba268be17a69253c9631ec721ece465a85a22949c2df7c712b7aa12d1a002fa"
+content-hash = "86d77599cbfa676a3500aa76f8a420331e6c5554415ca78ab6c97f60978f495e"
