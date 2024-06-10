@@ -37,10 +37,6 @@ class TransactionModel(DefaultModel):
     error: Optional[str] = None
     flow_id: Optional[str] = Field(default=None, alias="flow_id")
 
-    class Config:
-        from_attributes = True
-        populate_by_name = True
-
     # validate target_args in case it is a JSON
     @field_validator("outputs", "inputs", mode="before")
     def validate_target_args(cls, v):
@@ -55,7 +51,7 @@ class TransactionModel(DefaultModel):
         return v
 
 
-class TransactionModelResponse(BaseModel):
+class TransactionModelResponse(DefaultModel):
     index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
     vertex_id: str
@@ -66,10 +62,6 @@ class TransactionModelResponse(BaseModel):
     flow_id: Optional[str] = Field(default=None, alias="flow_id")
     source: Optional[str] = None
     target: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-        populate_by_name = True
 
     # validate target_args in case it is a JSON
     @field_validator("outputs", "inputs", mode="before")
@@ -88,7 +80,7 @@ class TransactionModelResponse(BaseModel):
         return v
 
 
-class MessageModel(BaseModel):
+class MessageModel(DefaultModel):
     index: Optional[int] = Field(default=None)
     flow_id: Optional[str] = Field(default=None, alias="flow_id")
     timestamp: datetime = Field(default_factory=datetime.now)
@@ -97,10 +89,6 @@ class MessageModel(BaseModel):
     session_id: str
     text: str
     files: list[str] = []
-
-    class Config:
-        from_attributes = True
-        populate_by_name = True
 
     @field_validator("files", mode="before")
     def validate_files(cls, v):
@@ -144,7 +132,7 @@ class MessageModelRequest(MessageModel):
     session_id: str = Field(default="")
 
 
-class VertexBuildModel(BaseModel):
+class VertexBuildModel(DefaultModel):
     index: Optional[int] = Field(default=None, alias="index", exclude=True)
     id: Optional[str] = Field(default=None, alias="id")
     flow_id: str
@@ -153,10 +141,6 @@ class VertexBuildModel(BaseModel):
     data: dict
     artifacts: dict
     timestamp: datetime = Field(default_factory=datetime.now)
-
-    class Config:
-        from_attributes = True
-        populate_by_name = True
 
     @field_serializer("data", "artifacts")
     def serialize_dict(v):
