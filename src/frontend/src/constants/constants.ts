@@ -758,7 +758,7 @@ export const defaultShortcuts = [
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + D`,
   },
   {
-    name: "Share",
+    name: "Component Share",
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + S`,
   },
   {
@@ -799,7 +799,7 @@ export const defaultShortcuts = [
   },
   {
     name: "API",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + R`,
+    shortcut: `R`,
   },
   {
     name: "Download",
