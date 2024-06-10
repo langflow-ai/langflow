@@ -190,7 +190,20 @@ def update_edges_with_latest_component_versions(project_data):
         if source_node and target_node:
             source_node_data = source_node.get("data").get("node")
             target_node_data = target_node.get("data").get("node")
-            new_output_types = source_node_data.get("output_types")
+            output_data = next(
+                (output for output in source_node_data.get("outputs", []) if output["name"] == source_handle["name"]),
+                None,
+            )
+            if output_data:
+                if len(output_data.get("types")) == 1:
+                    new_output_types = output_data.get("types")
+                elif output_data.get("selected"):
+                    new_output_types = [output_data.get("selected")]
+                else:
+                    new_output_types = []
+            else:
+                new_output_types = []
+
             if source_handle["output_types"] != new_output_types:
                 edge_changes_log[source_node_data["display_name"]].append(
                     {
