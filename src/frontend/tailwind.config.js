@@ -213,14 +213,14 @@ module.exports = {
             height: "8px",
           },
           "&::-webkit-scrollbar-track": {
-            backgroundColor: "#f1f1f1",
+            backgroundColor: "hsl(var(--muted))",
           },
           "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "#ccc",
+            backgroundColor: "hsl(var(--border))",
             borderRadius: "999px",
           },
           "&::-webkit-scrollbar-thumb:hover": {
-            backgroundColor: "#bbb",
+            backgroundColor: "hsl(var(--ring))",
           },
           cursor: "auto",
         },

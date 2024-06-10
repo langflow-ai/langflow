@@ -28,3 +28,38 @@
   padding-top: 0.675rem;
   padding-bottom: 0.675rem;
 }
+
+.ag-body-horizontal-scroll-viewport,
+.ag-body-vertical-scroll-viewport {
+  cursor: auto;
+}
+
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-track,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar-track {
+  background-color: hsl(var(--muted));
+}
+
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 999px;
+}
+
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb:hover,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--ring));
+}
+
+.ag-paging-page-size {
+  display: none;
+}
+
+.ag-row {
+  cursor: pointer;
+}
