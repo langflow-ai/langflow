@@ -128,7 +128,6 @@ const TableComponent = forwardRef<
       >
         <AgGridReact
           {...props}
-          animateRows={false}
           defaultColDef={{
             minWidth: 100,
             autoHeight: true,
