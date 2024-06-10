@@ -121,4 +121,8 @@ class ChromaComponent(CustomComponent):
                 client=client,
                 embedding_function=embedding,
             )
+
+        store = chroma.get()
+        self.status = store
+
         return chroma
