@@ -138,7 +138,7 @@ test("PromptTemplateComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showtemplate"]').click();
   expect(
-    await page.locator('//*[@id="showtemplate"]').isChecked(),
+    await page.locator('//*[@id="showtemplate"]').isChecked()
   ).toBeTruthy();
 
   await page.locator('//*[@id="showprompt"]').click();
@@ -158,7 +158,7 @@ test("PromptTemplateComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showtemplate"]').click();
   expect(
-    await page.locator('//*[@id="showtemplate"]').isChecked(),
+    await page.locator('//*[@id="showtemplate"]').isChecked()
   ).toBeTruthy();
 
   await page.locator('//*[@id="showprompt"]').click();
