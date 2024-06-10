@@ -40,9 +40,16 @@ export default function ShortcutsPage() {
 
   const combinationToEdit = shortcuts.filter((s) => s.name === selectedRows[0]);
   const [open, setOpen] = useState(false);
+  const updateUniqueShortcut = useShortcutsStore(
+    (state) => state.updateUniqueShortcut,
+  );
 
   function handleRestore() {
     setShortcuts(defaultShortcuts);
+    defaultShortcuts.forEach(({ name, shortcut }) => {
+      const fixedName = name.split(" ")[0].toLowerCase();
+      updateUniqueShortcut(fixedName, shortcut);
+    });
     localStorage.removeItem("langflow-shortcuts");
   }
 

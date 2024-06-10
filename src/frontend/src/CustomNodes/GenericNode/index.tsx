@@ -34,10 +34,9 @@ import useUpdateValidationStatus from "../hooks/use-update-validation-status";
 import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
-import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
 import ParameterComponent from "./components/parameterComponent";
 import { postCustomComponent } from "../../controllers/API";
-import { cloneDeep } from "lodash";
+import { useShortcutsStore } from "../../stores/shortcuts";
 
 export default function GenericNode({
   data,
@@ -234,6 +233,8 @@ export default function GenericNode({
     }
   };
 
+  const shortcuts = useShortcutsStore((state) => state.shortcuts);
+
   const memoizedNodeToolbarComponent = useMemo(() => {
     return (
       <NodeToolbar>
@@ -271,6 +272,7 @@ export default function GenericNode({
     updateNodeCode,
     isOutdated,
     selected,
+    shortcuts,
     //    openWDoubleCLick,
     //    setOpenWDoubleCLick,
   ]);
