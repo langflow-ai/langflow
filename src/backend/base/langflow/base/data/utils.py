@@ -1,4 +1,3 @@
-import json
 import unicodedata
 import xml.etree.ElementTree as ET
 from concurrent import futures
@@ -6,6 +5,7 @@ from pathlib import Path
 from typing import Callable, List, Optional, Text
 
 import chardet
+import orjson
 import yaml
 
 from langflow.schema import Record
@@ -107,7 +107,7 @@ def read_text_file(file_path: str) -> str:
         result = chardet.detect(raw_data)
         encoding = result["encoding"]
 
-        if encoding in ["Windows-1254", "MacRoman"]:
+        if encoding in ["Windows-1252", "Windows-1254"]:
             encoding = "utf-8"
 
     with open(file_path, "r", encoding=encoding) as f:
@@ -140,7 +140,7 @@ def parse_text_file_to_record(file_path: str, silent_errors: bool) -> Optional[R
 
         # if file is json, yaml, or xml, we can parse it
         if file_path.endswith(".json"):
-            text = json.loads(text)
+            text = orjson.loads(text)
             if isinstance(text, dict):
                 text = {k: normalize_text(v) if isinstance(v, str) else v for k, v in text.items()}
             elif isinstance(text, list):
@@ -188,5 +188,4 @@ def parallel_load_records(
             file_paths,
         )
     # loaded_files is an iterator, so we need to convert it to a list
-    return list(loaded_files)
     return list(loaded_files)
