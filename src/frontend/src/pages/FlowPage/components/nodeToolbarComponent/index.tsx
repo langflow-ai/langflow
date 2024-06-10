@@ -418,6 +418,7 @@ export default function NodeToolbarComponent({
 
   const [openModal, setOpenModal] = useState(false);
   const hasCode = Object.keys(data.node!.template).includes("code");
+  const [deleteIsFocus, setDeleteIsFocus] = useState(false);
 
   return (
     <>
@@ -697,14 +698,21 @@ export default function NodeToolbarComponent({
                   dataTestId="download-button-modal"
                 />
               </SelectItem>
-              <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
+              <SelectItem
+                value={"delete"}
+                className="focus:bg-red-400/[.20]"
+                onFocus={() => setDeleteIsFocus(true)}
+                onBlur={() => setDeleteIsFocus(false)}
+              >
                 <div className="font-red flex text-status-red">
                   <IconComponent
                     name="Trash2"
                     className="relative top-0.5 mr-2 h-4 w-4 "
                   />{" "}
                   <span className="">Delete</span>{" "}
-                  <span className="justify absolute right-2 top-2 flex items-center rounded-sm bg-muted px-1 py-[0.2]">
+                  <span
+                    className={`justify absolute right-2 top-2 flex items-center rounded-sm px-1 py-[0.2] ${deleteIsFocus ? " " : "bg-muted"}`}
+                  >
                     <IconComponent
                       name="Delete"
                       className="h-4 w-4 stroke-2 text-red-400"
