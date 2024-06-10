@@ -53,7 +53,7 @@ const useColumnDefs = (
             },
           };
         },
-        minWidth: 330,
+        minWidth: 340,
         autoHeight: true,
         flex: 1,
         resizable: false,
