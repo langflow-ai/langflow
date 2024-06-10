@@ -140,7 +140,9 @@ export default function GenericNode({
   //  const [openWDoubleCLick, setOpenWDoubleCLick] = useState(false);
 
   const getBaseBorderClass = (selected) => {
-    let className = selected ? "border border-ring" : "border";
+    let className = selected
+      ? "border border-ring hover:shadow-node"
+      : "border hover:shadow-node";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     return data.node?.frozen ? frozenClass : className;
   };
