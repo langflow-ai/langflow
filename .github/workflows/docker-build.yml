@@ -53,7 +53,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: ${{ steps.qemu.outputs.platforms }}
+          platforms: "linux/amd64,linux/arm64/v8,linux/arm/v5,linux/arm/v7"
           file: ${{ env.DOCKERFILE }}
           tags: ${{ env.TAGS }}
       - name: Wait for Docker Hub to propagate
@@ -64,7 +64,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: ${{ steps.qemu.outputs.platforms }}
+          platforms: "linux/amd64,linux/arm64/v8,linux/arm/v5,linux/arm/v7"
           file: ./docker/build_and_push_backend.Dockerfile
           build-args: |
             LANGFLOW_IMAGE=langflowai/langflow:${{ inputs.version }}
@@ -78,7 +78,7 @@ jobs:
           context: .
           push: true
           file: ./docker/frontend/build_and_push_frontend.Dockerfile
-          platforms: ${{ steps.qemu.outputs.platforms }}
+          platforms: "linux/amd64,linux/arm64/v8,linux/arm/v5,linux/arm/v7"
           tags: |
             langflowai/langflow-frontend:${{ inputs.version }}
             langflowai/langflow-frontend:1.0-alpha

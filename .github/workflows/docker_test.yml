@@ -76,5 +76,5 @@ jobs:
           context: .
           push: false
           file: ./docker/build_and_push.Dockerfile
-          platforms: ${{ steps.qemu.outputs.platforms }}
+          platforms: "linux/amd64,linux/arm64/v8,linux/arm/v5,linux/arm/v7"
           tags: langflowai/langflow:latest-dev
