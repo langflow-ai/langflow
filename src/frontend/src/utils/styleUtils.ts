@@ -155,6 +155,7 @@ import { AstraDBIcon } from "../icons/AstraDB";
 import { AzureIcon } from "../icons/Azure";
 import { BingIcon } from "../icons/Bing";
 import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
+import { CassandraIcon } from "../icons/Cassandra";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { CohereIcon } from "../icons/Cohere";
 import { CouchbaseIcon } from "../icons/Couchbase";
@@ -328,6 +329,7 @@ export const nodeIconsLucide: iconsType = {
   Play,
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
+  Cassandra: CassandraIcon,
   Chroma: ChromaIcon,
   Couchbase: CouchbaseIcon,
   AirbyteJSONLoader: AirbyteIcon,

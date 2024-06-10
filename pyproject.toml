@@ -86,6 +86,7 @@ youtube-transcript-api = "^0.6.2"
 markdown = "^3.6"
 langchain-chroma = "^0.1.1"
 upstash-vector = "^0.4.0"
+cassio = "^0.1.7"
 unstructured = {extras = ["docx", "md", "pptx"], version = "^0.14.4"}
 
 
