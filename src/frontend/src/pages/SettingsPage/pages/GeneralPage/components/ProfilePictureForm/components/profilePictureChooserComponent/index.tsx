@@ -1,14 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import useAlertStore from "../../../../../../../../stores/alertStore";
-import { gradients } from "../../../../../../../../utils/styleUtils";
-import useGetProfilePictures from "./hooks/use-get-profile-pictures";
-import { Label } from "../../../../../../../../components/ui/label";
+import { useEffect, useRef } from "react";
 import {
   BACKEND_URL,
   BASE_URL_API,
 } from "../../../../../../../../constants/constants";
-import HorizontalScrollFadeComponent from "../../../../../../../../components/horizontalScrollFadeComponent";
-import LoadingComponent from "../../../../../../../../components/loadingComponent";
 import Loading from "../../../../../../../../components/ui/loading";
 import { cn } from "../../../../../../../../utils/utils";
 import { Button } from "../../../../../../../../components/ui/button";
@@ -34,7 +28,7 @@ export default function ProfilePictureChooserComponent({
     if (value && ref) {
       ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [ref]);
+  }, [ref, value]);
 
   return (
     <div className="flex flex-col justify-center gap-2">
