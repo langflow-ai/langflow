@@ -170,7 +170,7 @@ export default function NodeToolbarComponent({
 
   const advanced = useShortcutsStore((state) => state.advanced);
   const minimize = useShortcutsStore((state) => state.minimize);
-  const share = useShortcutsStore((state) => state.share);
+  const component = useShortcutsStore((state) => state.component);
   const save = useShortcutsStore((state) => state.save);
   const docs = useShortcutsStore((state) => state.docs);
   const code = useShortcutsStore((state) => state.code);
@@ -182,7 +182,7 @@ export default function NodeToolbarComponent({
   useHotkeys(minimize, handleMinimizeWShortcut, { preventDefault });
   useHotkeys(update, handleUpdateWShortcut, { preventDefault });
   useHotkeys(group, handleGroupWShortcut, { preventDefault });
-  useHotkeys(share, handleShareWShortcut, { preventDefault });
+  useHotkeys(component, handleShareWShortcut, { preventDefault });
   useHotkeys(code, handleCodeWShortcut, { preventDefault });
   useHotkeys(advanced, handleAdvancedWShortcut, { preventDefault });
   useHotkeys(save, handleSaveWShortcut, { preventDefault });

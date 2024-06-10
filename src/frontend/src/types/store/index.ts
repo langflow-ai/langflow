@@ -34,7 +34,7 @@ export type shortcutsStoreType = {
   code: string;
   copy: string;
   duplicate: string;
-  share: string;
+  component: string;
   docs: string;
   save: string;
   delete: string;
@@ -46,7 +46,7 @@ export type shortcutsStoreType = {
     shortcut: string;
   }>;
   setShortcuts: (
-    newShortcuts: Array<{ name: string; shortcut: string }>
+    newShortcuts: Array<{ name: string; shortcut: string }>,
   ) => void;
   getShortcutsFromStorage: () => void;
 };
