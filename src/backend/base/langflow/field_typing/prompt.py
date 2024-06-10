@@ -25,6 +25,7 @@ class Prompt(Record):
         prompt_template = PromptTemplate.from_template(self.template)
         variables_with_str_values = dict_values_to_string(self.variables)
         formatted_prompt = prompt_template.format(**variables_with_str_values)
+        self.text = formatted_prompt
         return formatted_prompt
 
     @classmethod
