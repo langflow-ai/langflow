@@ -219,7 +219,7 @@ async def build_and_cache_graph_from_db(flow_id: str, session: Session, chat_ser
         if vertex is None:
             raise ValueError(f"Vertex {vertex_id} not found")
         if not vertex._raw_params.get("session_id"):
-            vertex.update_raw_params({"session_id": flow_id})
+            vertex.update_raw_params({"session_id": flow_id}, overwrite=True)
     await chat_service.set_cache(flow_id, graph)
     return graph
 
