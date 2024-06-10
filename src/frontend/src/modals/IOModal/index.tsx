@@ -288,7 +288,7 @@ export default function IOModal({
                       const textOutputValue =
                         (flowPool[node!.id] ?? [])[
                           (flowPool[node!.id]?.length ?? 1) - 1
-                        ]?.data.results.result ?? "";
+                        ]?.data?.artifacts ?? "";
                       const disabled =
                         textOutputValue === "" ||
                         JSON.stringify(textOutputValue) === "{}";
