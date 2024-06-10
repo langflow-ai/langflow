@@ -69,7 +69,7 @@
   }
 
   .dark {
-    --background: 224 35% 7.5%; /* hsl(224 40% 10%) */
+    --background: 224 28% 7.5%; /* hsl(224 10% 7.5%) */
     --foreground: 213 31% 80%; /* hsl(213 31% 91%) */
     --ice: #60a5fa;
     --hover: #1a202e;
@@ -91,7 +91,7 @@
     --primary: 210 20% 80%; /* hsl(210 20% 80%) */
     --primary-foreground: 222.2 27.4% 1.2%; /* hsl(222 47% 1%) */
 
-    --secondary: 222.2 37.4% 7.2%; /* hsl(222 47% 11%) */
+    --secondary: 222.2 30.4% 7.2%; /* hsl(222 47% 11%) */
     --secondary-foreground: 210 40% 80%; /* hsl(210 40% 80%) */
 
     --accent: 216 24% 20%; /* hsl(216 34% 17%) */
