@@ -57,12 +57,7 @@ export default function GenericNode({
   const updateNodeInternals = useUpdateNodeInternals();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const isDark = useDarkStore((state) => state.dark);
-  const buildStatus = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.status
-  );
-  const lastRunTime = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.timestamp
-  );
+
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   const [inputName, setInputName] = useState(false);
