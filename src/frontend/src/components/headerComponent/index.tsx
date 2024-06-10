@@ -68,8 +68,8 @@ export default function Header(): JSX.Element {
   };
 
   const visitedFlowPathBefore = () => {
-    const lastThreeVisitedPaths = routeHistory.slice(-3);
-    return lastThreeVisitedPaths.some((path) => path.includes("/flow/"));
+    const last100VisitedPaths = routeHistory.slice(-99);
+    return last100VisitedPaths.some((path) => path.includes("/flow/"));
   };
 
   const showArrowReturnIcon =
