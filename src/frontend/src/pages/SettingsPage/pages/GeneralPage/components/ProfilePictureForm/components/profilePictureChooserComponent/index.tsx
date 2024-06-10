@@ -1,12 +1,13 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Button } from "../../../../../../../../components/ui/button";
+import Loading from "../../../../../../../../components/ui/loading";
 import {
   BACKEND_URL,
   BASE_URL_API,
 } from "../../../../../../../../constants/constants";
-import Loading from "../../../../../../../../components/ui/loading";
-import { cn } from "../../../../../../../../utils/utils";
-import { Button } from "../../../../../../../../components/ui/button";
 import { useDarkStore } from "../../../../../../../../stores/darkStore";
+import { cn } from "../../../../../../../../utils/utils";
+import usePreloadImages from "./hooks/use-preload-images";
 
 type ProfilePictureChooserComponentProps = {
   profilePictures: { [key: string]: string[] };
@@ -23,6 +24,7 @@ export default function ProfilePictureChooserComponent({
 }: ProfilePictureChooserComponentProps) {
   const ref = useRef<HTMLButtonElement>(null);
   const dark = useDarkStore((state) => state.dark);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
 
   useEffect(() => {
     if (value && ref) {
@@ -30,9 +32,11 @@ export default function ProfilePictureChooserComponent({
     }
   }, [ref, value]);
 
+  usePreloadImages(profilePictures, setImagesLoaded);
+
   return (
     <div className="flex flex-col justify-center gap-2">
-      {loading ? (
+      {loading || !imagesLoaded ? (
         <Loading />
       ) : (
         Object.keys(profilePictures).map((folder, idx) => (
@@ -41,7 +45,7 @@ export default function ProfilePictureChooserComponent({
               <span className="font-normal">{folder}</span>
             </div>
             <div className="block overflow-hidden">
-              <div className="flex items-center gap-1 overflow-x-auto rounded-lg bg-background px-1 custom-scroll">
+              <div className="flex items-center gap-1 overflow-x-auto rounded-lg bg-muted px-1 custom-scroll">
                 {profilePictures[folder].map((path, idx) => (
                   <Button
                     ref={value === folder + "/" + path ? ref : undefined}
@@ -55,7 +59,9 @@ export default function ProfilePictureChooserComponent({
                       src={`${BACKEND_URL.slice(
                         0,
                         BACKEND_URL.length - 1,
-                      )}${BASE_URL_API}files/profile_pictures/${folder + "/" + path}`}
+                      )}${BASE_URL_API}files/profile_pictures/${
+                        folder + "/" + path
+                      }`}
                       style={{
                         filter:
                           value === folder + "/" + path
