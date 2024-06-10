@@ -4,7 +4,7 @@ import useAlertStore from "../../../../../../stores/alertStore";
 
 const fsErrorText =
   "Please ensure your file has one of the following extensions:";
-const snErrorTxt = "png, jpg, jpeg, gif, bmp, webp";
+const snErrorTxt = "png, jpg, jpeg";
 
 export const useHandleFileChange = (setFiles, currentFlowId) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -14,7 +14,7 @@ export const useHandleFileChange = (setFiles, currentFlowId) => {
     const fileInput = event.target;
     const file = fileInput.files?.[0];
     if (file) {
-      const allowedExtensions = ["png", "jpg", "jpeg", "gif", "bmp", "webp"];
+      const allowedExtensions = ["png", "jpg", "jpeg"];
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
 
       if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
