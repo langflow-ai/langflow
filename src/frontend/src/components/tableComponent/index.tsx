@@ -129,7 +129,6 @@ const TableComponent = forwardRef<
         <AgGridReact
           {...props}
           animateRows={false}
-          className={cn(props.className, "cusm-scroll")}
           defaultColDef={{
             minWidth: 100,
             autoHeight: true,
