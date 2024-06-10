@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from .AstraDBSearch import AstraDBSearchComponent
 from .CassandraSearch import CassandraSearchComponent
 from .ChromaSearch import ChromaSearchComponent
@@ -27,3 +28,5 @@ __all__ = [
     "WeaviateSearchVectorStore",
     "PGVectorSearchComponent",
 ]
+=======
+>>>>>>> upstream/dev

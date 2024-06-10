@@ -6,7 +6,7 @@
 export default function getWidgetCode(
   flowId: string,
   flowName: string,
-  isAuth: boolean,
+  isAuth: boolean
 ): string {
   return `<script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@1.0_alpha/dist/build/static/js/bundle.min.js"></script>
 

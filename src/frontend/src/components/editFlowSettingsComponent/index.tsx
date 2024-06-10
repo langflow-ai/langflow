@@ -99,7 +99,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
           <span
             className={cn(
               "font-normal text-muted-foreground word-break-break-word",
-              description === "" ? "font-light italic" : "",
+              description === "" ? "font-light italic" : ""
             )}
           >
             {description === "" ? "No description" : description}

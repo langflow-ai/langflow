@@ -56,6 +56,7 @@ import {
   FolderIcon,
   FolderPlus,
   FolderPlusIcon,
+  FolderUp,
   FormInput,
   Forward,
   Gift,
@@ -103,12 +104,14 @@ import {
   Redo,
   RefreshCcw,
   Repeat,
+  RotateCcw,
   Save,
   SaveAll,
   Scissors,
   ScreenShare,
   ScrollText,
   Search,
+  Settings,
   Settings2,
   Share,
   Share2,
@@ -143,8 +146,6 @@ import {
   X,
   XCircle,
   Zap,
-  RotateCcw,
-  Settings,
 } from "lucide-react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -156,8 +157,8 @@ import { BingIcon } from "../icons/Bing";
 import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { CassandraIcon } from "../icons/Cassandra";
 import { ChromaIcon } from "../icons/ChromaIcon";
-import { CouchbaseIcon } from "../icons/Couchbase";
 import { CohereIcon } from "../icons/Cohere";
+import { CouchbaseIcon } from "../icons/Couchbase";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
@@ -188,6 +189,7 @@ import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
+import { Streamlit } from "../icons/Streamlit";
 import { VectaraIcon } from "../icons/VectaraIcon";
 import { VertexAIIcon } from "../icons/VertexAI";
 import { WeaviateIcon } from "../icons/Weaviate";
@@ -196,7 +198,6 @@ import SvgWolfram from "../icons/Wolfram/Wolfram";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { SupabaseIcon } from "../icons/supabase";
 import { iconsType } from "../types/components";
-import { Streamlit } from "../icons/Streamlit";
 
 export const gradients = [
   "bg-gradient-to-br from-gray-800 via-rose-700 to-violet-900",
@@ -433,6 +434,7 @@ export const nodeIconsLucide: iconsType = {
   ChevronLeft,
   SlidersHorizontal,
   Palette,
+  FolderUp,
   Blocks,
   ChevronDown,
   ArrowLeft,

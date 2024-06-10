@@ -2,19 +2,11 @@ import Admonition from "@theme/Admonition";
 
 # Text Splitters
 
-<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-  <p>
-    Thank you for your patience as we enhance our documentation. It might
-    currently have some rough edges. Please share your feedback or report any
-    issues to assist us in improving! 🛠️📝
-  </p>
-</Admonition>
-
 A text splitter is a tool that divides a document or text into smaller chunks or segments. This helps make large texts more manageable for analysis or processing.
 
 ---
 
-### CharacterTextSplitter
+## CharacterTextSplitter
 
 The `CharacterTextSplitter` splits a long text into smaller chunks based on a specified character. It aims to keep paragraphs, sentences, and words intact as much as possible since these are semantically related elements of text.
 
@@ -27,7 +19,7 @@ The `CharacterTextSplitter` splits a long text into smaller chunks based on a sp
 
 ---
 
-### RecursiveCharacterTextSplitter
+## RecursiveCharacterTextSplitter
 
 The `RecursiveCharacterTextSplitter` functions similarly to the `CharacterTextSplitter` by trying to keep paragraphs, sentences, and words together. It also recursively splits the text into smaller chunks if the initial chunk size exceeds a specified threshold.
 
@@ -38,7 +30,7 @@ The `RecursiveCharacterTextSplitter` functions similarly to the `CharacterTextSp
 - **chunk_size:** The maximum number of characters in each chunk.
 - **separators:** A list of characters used to split the text into chunks. The splitter first tries to split text using the first character in the `separators` list. If any chunk exceeds the maximum size, it proceeds to the next character in the list and continues splitting. The defaults are ["\n\n", "\n", " ", ""].
 
-### LanguageRecursiveTextSplitter
+## LanguageRecursiveTextSplitter
 
 The `LanguageRecursiveTextSplitter` divides text into smaller chunks based on the programming language of the text.
 

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from .AstraDB import AstraDBVectorStoreComponent
 from .Cassandra import CassandraVectorStoreComponent
 from .Chroma import ChromaComponent
@@ -28,3 +29,5 @@ __all__ = [
     "base",
     "PGVectorComponent",
 ]
+=======
+>>>>>>> upstream/dev

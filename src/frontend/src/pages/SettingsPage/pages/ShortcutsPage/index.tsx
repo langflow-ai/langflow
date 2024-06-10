@@ -20,7 +20,7 @@ export default function ShortcutsPage() {
   const redoShortcut = `${isMac ? "Cmd" : "Ctrl"} + Y`;
 
   // Column Definitions: Defines the columns to be displayed.
-  const [colDefs, setColDefs] = useState<(ColDef<any> | ColGroupDef<any>)[]>([
+  const colDefs = [
     {
       headerName: "Functionality",
       field: "name",
@@ -33,9 +33,9 @@ export default function ShortcutsPage() {
       editable: false,
       resizable: false,
     },
-  ]);
+  ];
 
-  const [nodesRowData, setNodesRowData] = useState([
+  const nodesRowData = [
     {
       name: "Advanced Settings Component",
       shortcut: advancedShortcut,
@@ -96,7 +96,7 @@ export default function ShortcutsPage() {
       shortcut: redoShortcut,
       resizable: false,
     },
-  ]);
+  ];
 
   return (
     <div className="flex h-full w-full flex-col gap-6">
@@ -114,17 +114,12 @@ export default function ShortcutsPage() {
           </p>
         </div>
       </div>
-      <div className="grid gap-6">
-        <Card x-chunk="dashboard-04-chunk-2" className="h-full pt-4">
-          <CardContent className="h-full">
-            <TableComponent
-              domLayout="autoHeight"
-              pagination={false}
-              columnDefs={colDefs}
-              rowData={nodesRowData}
-            />
-          </CardContent>
-        </Card>
+      <div className="flex h-full w-full flex-col justify-between">
+        <TableComponent
+          pagination={false}
+          columnDefs={colDefs}
+          rowData={nodesRowData}
+        />
       </div>
     </div>
   );

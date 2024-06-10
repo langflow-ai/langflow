@@ -1,0 +1,405 @@
+---
+description: Custom Components
+hide_table_of_contents: true
+---
+
+import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
+
+# Custom Components
+
+In Langflow, a Custom Component is a special component type that allows users to extend the platform's functionality by creating their own reusable and configurable components.
+
+A Custom Component is created from a user-defined Python script that uses the _`CustomComponent`_ class provided by the Langflow library. These components can be as simple as a basic function that takes and returns a string or as complex as a combination of multiple sub-components and API calls.
+
+Let's take a look at the basic rules and features. Then we'll go over an example.
+
+**TL;DR**
+
+- Create a class that inherits from _`CustomComponent`_ and contains a _`build`_ method.
+- Use arguments with [Type Annotations (or Type Hints)](https://docs.python.org/3/library/typing.html) of the _`build`_ method to create component fields.
+- Use the _`build_config`_ method to customize how these fields look and behave.
+- Set up a folder with your components to load them up in Langflow's sidebar.
+
+Here is an example:
+
+<div style={{
+        display: "flex",
+        justifyContent: "center",
+    }}>
+    <CH.Code linuNumbers={false}>
+
+```python
+from langflow.custom import CustomComponent
+from langchain.schema import Document
+
+class DocumentProcessor(CustomComponent):
+    display_name = "Document Processor"
+    description = "This component processes a document"
+
+    def build_config(self) -> dict:
+        options = ["Uppercase", "Lowercase", "Titlecase"]
+        return {
+            "function": {"options": options,
+                    "value": options[0]}}
+
+    def build(self, document: Document, function: str) -> Document:
+        if isinstance(document, list):
+            document = document[0]
+        page_content = document.page_content
+        if function == "Uppercase":
+            page_content = page_content.upper()
+        elif function == "Lowercase":
+            page_content = page_content.lower()
+        elif function == "Titlecase":
+            page_content = page_content.title()
+        self.repr_value = f"Result of {function} function: {page_content}"
+        return Document(page_content=page_content)
+```
+
+    </CH.Code>
+
+    <ZoomableImage
+    alt="Document Processor Component"
+    sources={{
+        light: "img/document_processor.png",
+        dark: "img/document_processor.png",
+    }}
+    style={{
+        margin: "0 auto",
+        display: "flex",
+        justifyContent: "center",
+    }}
+    />
+
+</div>
+
+---
+
+## Rules
+
+The Python script for every Custom Component should follow a set of rules. Let's go over them one by one:
+
+<CH.Scrollycoding rows={20} className={""}>
+
+### Rule 1
+
+The script must contain a **single class** that inherits from _`CustomComponent`_.
+
+```python
+from langflow.custom import CustomComponent
+from langchain.schema import Document
+
+class MyComponent(CustomComponent):
+    display_name = "Custom Component"
+    description = "This is a custom component"
+
+    def build_config(self) -> dict:
+        ...
+
+    def build(self, document: Document, function: str) -> Document:
+        ...
+```
+
+---
+
+### Rule 2
+
+This class requires a _`build`_ method used to run the component and define its fields.
+
+```python
+from langflow.custom import CustomComponent
+from langchain.schema import Document
+
+class MyComponent(CustomComponent):
+    display_name = "Custom Component"
+    description = "This is a custom component"
+
+    def build_config(self) -> dict:
+        ...
+
+    # focus
+    # mark
+    def build(self) -> Document:
+        ...
+```
+
+---
+
+The [Return Type Annotation](https://docs.python.org/3/library/typing.html) of the _`build`_ method defines the component type (e.g., Chain, BaseLanguageModel, or basic Python types). Check out all supported types in the [component reference](../components/custom).
+
+```python
+from langflow.custom import CustomComponent
+from langchain.schema import Document
+
+class MyComponent(CustomComponent):
+    display_name = "Custom Component"
+    description = "This is a custom component"
+
+    def build_config(self) -> dict:
+        ...
+
+    # focus[20:31]
+    # mark
+    def build(self) -> Document:
+        ...
+```
+
+---
+
+```python
+from langflow.custom import CustomComponent
+from langchain.schema import Document
+
+class MyComponent(CustomComponent):
+    display_name = "Custom Component"
+    description = "This is a custom component"
+
+    def build_config(self) -> dict:
+        ...
+
+    def build(self) -> Document:
+        ...
+```
+
+### Rule 3
+
+The class can have a [_`build_config`_](focus://8) method, which defines configuration fields for the component. The [_`build_config`_](focus://8) method should always return a dictionary with specific keys representing the field names and their corresponding configurations. It must follow the format described below:
+
+- Top-level keys are field names.
+- Their values are also of type _`dict`_. They specify the behavior of the generated fields.
+
+Check out the [component reference](../components/custom) for more details on the available field configurations.
+
+---
+
+```python
+from langflow.custom import CustomComponent
+from langchain.schema import Document
+
+class MyComponent(CustomComponent):
+    display_name = "Custom Component"
+    description = "This is a custom component"
+
+    def build_config(self) -> dict:
+        ...
+
+    def build(self) -> Document:
+        ...
+```
+
+## Example
+
+Let's create a custom component that processes a document (_`langchain.schema.Document`_) using a simple function.
+
+---
+
+### Pick a display name
+
+To start, let's choose a name for our component by adding a _`display_name`_ attribute. This name will appear on the canvas. The name of the class is not relevant, but let's call it _`DocumentProcessor`_.
+
+```python
+from langflow.custom import CustomComponent
+from langchain.schema import Document
+
+# focus
+class DocumentProcessor(CustomComponent):
+    # focus
+    display_name = "Document Processor"
+    description = "This is a custom component"
+
+    def build_config(self) -> dict:
+        ...
+
+    def build(self) -> Document:
+        ...
+```
+
+---
+
+### Write a description
+
+We can also write a description for it using a _`description`_ attribute.
+
+```python
+from langflow.custom import CustomComponent
+from langchain.schema import Document
+
+class DocumentProcessor(CustomComponent):
+    display_name = "Document Processor"
+    description = "This component processes a document"
+
+    def build_config(self) -> dict:
+        ...
+
+    def build(self) -> Document:
+        ...
+```
+
+---
+
+```python
+from langflow.custom import CustomComponent
+from langchain.schema import Document
+
+class DocumentProcessor(CustomComponent):
+    display_name = "Document Processor"
+    description = "This component processes a document"
+
+    def build_config(self) -> dict:
+        ...
+
+    def build(self, document: Document, function: str) -> Document:
+        if isinstance(document, list):
+            document = document[0]
+        page_content = document.page_content
+        if function == "Uppercase":
+            page_content = page_content.upper()
+        elif function == "Lowercase":
+            page_content = page_content.lower()
+        elif function == "Titlecase":
+            page_content = page_content.title()
+        self.repr_value = f"Result of {function} function: {page_content}"
+        return Document(page_content=page_content)
+```
+
+### Add the build method
+
+Here, the build method takes two input parameters: _`document`_, representing the input document to be processed, and _`function`_, a string representing the selected text transformation to be applied (either "Uppercase," "Lowercase," or "Titlecase"). The method processes the text content of the input Document based on the selected function.
+
+The attribute _`repr_value`_ is used to display the result of the component on the canvas. It is optional and can be used to display any string value.
+
+The return type is _`Document`_.
+
+---
+
+### Customize the component fields
+
+The _`build_config`_ method is here defined to customize the component fields.
+
+- _`options`_ determines that the field will be a dropdown menu. The list values and field type must be _`str`_.
+- _`value`_ is the default value of the field.
+- _`display_name`_ is the name of the field to be displayed.
+
+```python
+from langflow.custom import CustomComponent
+from langchain.schema import Document
+
+class DocumentProcessor(CustomComponent):
+    display_name = "Document Processor"
+    description = "This component processes a document"
+
+    def build_config(self) -> dict:
+        options = ["Uppercase", "Lowercase", "Titlecase"]
+        return {
+            "function": {"options": options,
+                     "value": options[0],
+                     "display_name": "Function"
+                        },
+            "document": {"display_name": "Document"}
+                }
+
+    def build(self, document: Document, function: str) -> Document:
+        if isinstance(document, list):
+            document = document[0]
+        page_content = document.page_content
+        if function == "Uppercase":
+            page_content = page_content.upper()
+        elif function == "Lowercase":
+            page_content = page_content.lower()
+        elif function == "Titlecase":
+            page_content = page_content.title()
+        self.repr_value = f"Result of {function} function: {page_content}"
+        return Document(page_content=page_content)
+```
+
+</CH.Scrollycoding>
+
+All done! This is what our script and brand-new custom component look like:
+
+<div style={{
+        display: "flex",
+        justifyContent: "center",
+    }}>
+
+    <ZoomableImage
+    alt="Document Processor Code"
+    sources={{
+        light: "img/document_processor_code.png",
+        dark: "img/document_processor_code.png",
+    }}
+    style={{
+        maxWidth: "100%",
+        margin: "0 auto",
+        display: "flex",
+        justifyContent: "center",
+    }}
+
+/>
+
+    <ZoomableImage
+    alt="Document Processor Component"
+    sources={{
+        light: "img/document_processor.png",
+        dark: "img/document_processor.png",
+    }}
+    style={{
+        width: "40%",
+        margin: "0 auto",
+        display: "flex",
+        justifyContent: "center",
+    }}
+    />
+
+</div>
+
+---
+
+## Load Custom Components
+
+For advanced customization, Langflow offers the option to create and load custom components outside of the standard interface. This process involves creating the desired components using a text editor and loading them using the Langflow CLI.
+
+### Folder Structure
+
+Create a folder that follows the same structural conventions as the [config.yaml](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/config.yaml) file. Inside this main directory, use a `custom_components` subdirectory for your custom components.
+
+Inside `custom_components`, you can create a Python file for each component. Similarly, any custom agents should be housed in an `agents` subdirectory.
+
+If you use a subdirectory name that is not in our config.yaml file, your component will appear in an `Other` category in the sidebar.
+
+Your structure should look something like this:
+
+```
+.
+└── custom_components
+    ├── document_processor.py
+    └── ...
+└── agents
+    └── ...
+└── my_agents <-- Other category
+    └── ...
+```
+
+### Load Custom Components
+
+The recommended way to load custom components is to set the _`LANGFLOW_COMPONENTS_PATH`_ environment variable to the path of your custom components directory. Then, run the Langflow CLI as usual.
+
+```bash
+export LANGFLOW_COMPONENTS_PATH='["/path/to/components"]'
+langflow run
+```
+
+Alternatively, you can specify the path to your custom components using the _`--components-path`_ argument when running the Langflow CLI, as shown below:
+
+```bash
+langflow run --components-path /path/to/components
+```
+
+Langflow will attempt to load all of the components found in the specified directory. If a component fails to load due to errors in the component's code, Langflow will print an error message to the console but will continue loading the rest of the components.
+
+### Interact with Custom Components
+
+Once your custom components have been loaded successfully, they will appear in Langflow's sidebar. From there, you can add them to your Langflow canvas for use. However, please note that components with errors will not be available for addition to the canvas. Always ensure your code is error-free before attempting to load components.
+
+Remember, creating custom components allows you to extend the functionality of Langflow to better suit your unique needs. Happy coding!import ZoomableImage from "/src/theme/ZoomableImage.js";
+import Admonition from "@theme/Admonition";
