@@ -13,7 +13,6 @@ import {
   TOOLTIP_OUTDATED_NODE,
 } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
-import { countHandlesFn } from "../helpers/count-handles";
 import { getSpecificClassFromBuildStatus } from "../helpers/get-class-from-build-status";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useAlertStore from "../../stores/alertStore";
@@ -37,6 +36,7 @@ import sortFields from "../utils/sort-fields";
 import ParameterComponent from "./components/parameterComponent";
 import { postCustomComponent } from "../../controllers/API";
 import { useShortcutsStore } from "../../stores/shortcuts";
+import { countHandlesFn } from "../helpers/count-handles";
 
 export default function GenericNode({
   data,
