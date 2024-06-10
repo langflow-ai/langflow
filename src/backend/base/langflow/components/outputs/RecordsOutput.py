@@ -16,4 +16,5 @@ class RecordOutput(CustomComponent):
         }
 
     def build(self, input_value: Record) -> Record:
+        self.status = input_value
         return input_value
