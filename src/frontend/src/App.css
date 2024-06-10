@@ -183,3 +183,8 @@ body {
 .react-flow__edge .react-flow__edge-path {
   stroke: var(--connection) !important;
 }
+
+.ag-react-container {
+  width: 100%;
+  height: 100%;
+}
