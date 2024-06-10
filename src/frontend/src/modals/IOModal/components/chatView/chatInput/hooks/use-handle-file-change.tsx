@@ -1,6 +1,6 @@
 import ShortUniqueId from "short-unique-id";
-import useFileUpload from "./use-file-upload";
 import useAlertStore from "../../../../../../stores/alertStore";
+import useFileUpload from "./use-file-upload";
 
 const fsErrorText =
   "Please ensure your file has one of the following extensions:";
@@ -9,7 +9,7 @@ const snErrorTxt = "png, jpg, jpeg";
 export const useHandleFileChange = (setFiles, currentFlowId) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const fileInput = event.target;
     const file = fileInput.files?.[0];

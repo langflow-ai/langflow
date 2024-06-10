@@ -1,6 +1,5 @@
 import { CustomCellRendererProps } from "ag-grid-react";
 import { cn, isTimeStampString } from "../../../../utils/utils";
-import ArrayReader from "../../../arrayReaderComponent";
 import DateReader from "../../../dateReaderComponent";
 import NumberReader from "../../../numberReader";
 import ObjectRender from "../../../objectRender";
@@ -31,7 +30,7 @@ export default function TableAutoCellRender({
               variant="outline"
               size="sq"
               className={cn(
-                "min-w-min bg-success-background text-success-foreground hover:bg-success-background",
+                "min-w-min bg-success-background text-success-foreground hover:bg-success-background"
               )}
             >
               {value}

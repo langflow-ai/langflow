@@ -13,19 +13,21 @@ import {
   TOOLTIP_OUTDATED_NODE,
 } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
-import { countHandlesFn } from "../helpers/count-handles";
-import { getSpecificClassFromBuildStatus } from "../helpers/get-class-from-build-status";
+import { postCustomComponent } from "../../controllers/API";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
 import { VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn } from "../../utils/utils";
+import { countHandlesFn } from "../helpers/count-handles";
+import { getSpecificClassFromBuildStatus } from "../helpers/get-class-from-build-status";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useIconNodeRender from "../hooks/use-icon-render";
 import useIconStatus from "../hooks/use-icons-status";
@@ -35,8 +37,6 @@ import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import ParameterComponent from "./components/parameterComponent";
-import { postCustomComponent } from "../../controllers/API";
-import { useShortcutsStore } from "../../stores/shortcuts";
 
 export default function GenericNode({
   data,
@@ -58,10 +58,10 @@ export default function GenericNode({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const isDark = useDarkStore((state) => state.dark);
   const buildStatus = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.status,
+    (state) => state.flowBuildStatus[data.id]?.status
   );
   const lastRunTime = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.timestamp,
+    (state) => state.flowBuildStatus[data.id]?.timestamp
   );
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
@@ -69,7 +69,7 @@ export default function GenericNode({
   const [nodeName, setNodeName] = useState(data.node!.display_name);
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(
-    data.node?.description!,
+    data.node?.description!
   );
   const [isOutdated, setIsOutdated] = useState(false);
   const [validationStatus, setValidationStatus] =
@@ -87,7 +87,7 @@ export default function GenericNode({
     data.node!,
     setNode,
     setIsOutdated,
-    updateNodeInternals,
+    updateNodeInternals
   );
 
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
@@ -118,12 +118,12 @@ export default function GenericNode({
     selected: boolean,
     showNode: boolean,
     buildStatus: BuildStatus | undefined,
-    validationStatus: VertexBuildTypeAPI | null,
+    validationStatus: VertexBuildTypeAPI | null
   ) => {
     const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
       buildStatus,
       validationStatus,
-      isDark,
+      isDark
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
@@ -132,7 +132,7 @@ export default function GenericNode({
       baseBorderClass,
       nodeSizeClass,
       "generic-node-div group/node",
-      specificClassFromBuildStatus,
+      specificClassFromBuildStatus
     );
     return names;
   };
@@ -175,7 +175,7 @@ export default function GenericNode({
     showNode,
     isEmoji,
     nodeIconFragment,
-    checkNodeIconFragment,
+    checkNodeIconFragment
   );
 
   function countHandles(): void {
@@ -288,7 +288,7 @@ export default function GenericNode({
           selected,
           showNode,
           buildStatus,
-          validationStatus,
+          validationStatus
         )}
       >
         {data.node?.beta && showNode && (
@@ -419,7 +419,7 @@ export default function GenericNode({
                             }
                             title={getFieldTitle(
                               data.node?.template!,
-                              templateField,
+                              templateField
                             )}
                             info={data.node?.template[templateField].info}
                             name={templateField}
@@ -447,7 +447,7 @@ export default function GenericNode({
                             proxy={data.node?.template[templateField].proxy}
                             showNode={showNode}
                           />
-                        ),
+                        )
                     )}
                   <ParameterComponent
                     key={scapedJSONStringfy({
@@ -610,7 +610,7 @@ export default function GenericNode({
                       !data.node?.description) &&
                       nameEditable
                       ? "font-light italic"
-                      : "",
+                      : ""
                   )}
                   onClick={(e) => {
                     setInputDescription(true);
@@ -672,13 +672,13 @@ export default function GenericNode({
                         }
                         title={getFieldTitle(
                           data.node?.template!,
-                          templateField,
+                          templateField
                         )}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={
                           data.node?.template[templateField].input_types?.join(
-                            "\n",
+                            "\n"
                           ) ?? data.node?.template[templateField].type
                         }
                         required={data.node!.template[templateField].required}
@@ -705,7 +705,7 @@ export default function GenericNode({
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
-                  "flex-max-width justify-center",
+                  "flex-max-width justify-center"
                 )}
               >
                 {" "}
