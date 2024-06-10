@@ -123,7 +123,7 @@ const SideBarFoldersButtonsComponent = ({
           onClick={handleUploadFlowsToFolder}
           data-testid="upload-folder-button"
         >
-          <ForwardedIconComponent name="Upload" className="w-4" />
+          <ForwardedIconComponent name="Upload Folder" className="w-4" />
         </Button>
       </div>
 
