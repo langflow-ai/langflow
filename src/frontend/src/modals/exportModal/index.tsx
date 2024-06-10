@@ -99,7 +99,7 @@ const ExportModal = forwardRef(
           </span>
         </BaseModal.Content>
 
-        <BaseModal.Footer submit={{ label: "Download Flow" }} />
+        <BaseModal.Footer submit={{ label: "Export" }} />
       </BaseModal>
     );
   },
