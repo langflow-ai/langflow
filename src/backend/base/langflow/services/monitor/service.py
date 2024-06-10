@@ -132,7 +132,7 @@ class MonitorService(Service):
         order: Optional[str] = "DESC",
         limit: Optional[int] = None,
     ):
-        query = "SELECT index, flow_id, sender_name, sender, session_id, message, timestamp FROM messages"
+        query = "SELECT index, flow_id, sender_name, sender, session_id, text, timestamp FROM messages"
         conditions = []
         if sender:
             conditions.append(f"sender = '{sender}'")

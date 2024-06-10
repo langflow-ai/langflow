@@ -76,7 +76,7 @@ class MessageModel(BaseModel):
     sender: str
     sender_name: str
     session_id: str
-    message: str
+    text: str
     files: list[str] = []
 
     class Config:
@@ -119,7 +119,7 @@ class MessageModelResponse(MessageModel):
 
 
 class MessageModelRequest(MessageModel):
-    message: str = Field(default="")
+    text: str = Field(default="")
     sender: str = Field(default="")
     sender_name: str = Field(default="")
     session_id: str = Field(default="")
