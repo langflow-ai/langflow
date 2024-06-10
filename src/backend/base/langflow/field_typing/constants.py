@@ -15,6 +15,8 @@ from langchain_core.tools import Tool
 from langchain_core.vectorstores import VectorStore
 from langchain_text_splitters import TextSplitter
 
+from langflow.field_typing.prompt import Prompt
+
 # Type alias for more complex dicts
 NestedDict = Dict[str, Union[str, Dict]]
 
@@ -24,10 +26,6 @@ class Object:
 
 
 class Data:
-    pass
-
-
-class Prompt:
     pass
 
 

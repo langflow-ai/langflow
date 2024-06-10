@@ -1,8 +1,10 @@
 import _, { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { useUpdateNodeInternals } from "reactflow";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
 import IconComponent from "../../../../components/genericIconComponent";
+import RenderIcons from "../../../../components/renderIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
   Select,
@@ -10,7 +12,6 @@ import {
   SelectItem,
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
-import { postCustomComponent } from "../../../../controllers/API";
 import ConfirmationModal from "../../../../modals/confirmationModal";
 import EditNodeModal from "../../../../modals/editNodeModal";
 import ShareModal from "../../../../modals/shareModal";
@@ -18,8 +19,8 @@ import useAlertStore from "../../../../stores/alertStore";
 import { useDarkStore } from "../../../../stores/darkStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useStoreStore } from "../../../../stores/storeStore";
-import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { FlowType } from "../../../../types/flow";
@@ -29,7 +30,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import { classNames, cn } from "../../../../utils/utils";
+import { classNames, cn, isThereModal } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
 
 export default function NodeToolbarComponent({
@@ -40,11 +41,18 @@ export default function NodeToolbarComponent({
   showNode,
   name = "code",
   selected,
-  updateNodeCode,
   setShowState,
   onCloseAdvancedModal,
-  isOutdated,
 }: nodeToolbarPropsType): JSX.Element {
+  const version = useDarkStore((state) => state.version);
+  const [showModalAdvanced, setShowModalAdvanced] = useState(false);
+  const [showconfirmShare, setShowconfirmShare] = useState(false);
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [flowComponent, setFlowComponent] = useState<FlowType>(
+    createFlowComponent(cloneDeep(data), version)
+  );
+  const preventDefault = true;
+  const isMac = navigator.platform.toUpperCase().includes("MAC");
   const nodeLength = Object.keys(data.node!.template).filter(
     (templateField) =>
       templateField.charAt(0) !== "_" &&
@@ -58,12 +66,129 @@ export default function NodeToolbarComponent({
         data.node.template[templateField].type === "Any" ||
         data.node.template[templateField].type === "int" ||
         data.node.template[templateField].type === "dict" ||
-        data.node.template[templateField].type === "NestedDict"),
+        data.node.template[templateField].type === "NestedDict")
   ).length;
-  const templates = useTypesStore((state) => state.templates);
+
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
   const validApiKey = useStoreStore((state) => state.validApiKey);
+  const shortcuts = useShortcutsStore((state) => state.shortcuts);
+  const unselectAll = useFlowStore((state) => state.unselectAll);
+  function handleMinimizeWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (isMinimal) {
+      setShowState((show) => !show);
+      setShowNode(data.showNode ?? true ? false : true);
+      return;
+    }
+    setNoticeData({
+      title:
+        "Minimization are only available for nodes with one handle or fewer.",
+    });
+    return;
+  }
+
+  function handleUpdateWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (hasApiKey || hasStore) {
+      handleSelectChange("update");
+    }
+  }
+
+  function handleGroupWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (isGroup) {
+      handleSelectChange("ungroup");
+    }
+  }
+
+  function handleShareWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (isThereModal() && !showOverrideModal) return;
+    if (hasApiKey || hasStore) {
+      setShowconfirmShare((state) => !state);
+    }
+  }
+
+  function handleCodeWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (isThereModal() && !openModal) return;
+    if (hasCode) return setOpenModal((state) => !state);
+    setNoticeData({ title: `You can not access ${data.id} code` });
+  }
+
+  function handleAdvancedWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (isThereModal() && !showModalAdvanced) return;
+    if (!isGroup) {
+      setShowModalAdvanced((state) => !state);
+    }
+  }
+
+  function handleSaveWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (isThereModal() && !showOverrideModal) return;
+    if (isSaved) {
+      setShowOverrideModal((state) => !state);
+      return;
+    }
+    if (hasCode && !isSaved) {
+      saveComponent(cloneDeep(data), false);
+      setSuccessData({ title: `${data.id} saved successfully` });
+      return;
+    }
+  }
+
+  function handleDocsWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    if (data.node?.documentation) {
+      return openInNewTab(data.node?.documentation);
+    }
+    setNoticeData({
+      title: `${data.id} docs is not available at the moment.`,
+    });
+  }
+
+  function handleDownloadWShortcut(e: KeyboardEvent) {
+    e.preventDefault();
+    downloadNode(flowComponent!);
+  }
+
+  function handleFreeze(e: KeyboardEvent) {
+    e.preventDefault();
+    setNode(data.id, (old) => ({
+      ...old,
+      data: {
+        ...old.data,
+        node: {
+          ...old.data.node,
+          frozen: old.data?.node?.frozen ? false : true,
+        },
+      },
+    }));
+  }
+
+  const advanced = useShortcutsStore((state) => state.advanced);
+  const minimize = useShortcutsStore((state) => state.minimize);
+  const share = useShortcutsStore((state) => state.share);
+  const save = useShortcutsStore((state) => state.save);
+  const docs = useShortcutsStore((state) => state.docs);
+  const code = useShortcutsStore((state) => state.code);
+  const group = useShortcutsStore((state) => state.group);
+  const update = useShortcutsStore((state) => state.update);
+  const download = useShortcutsStore((state) => state.download);
+  const freeze = useShortcutsStore((state) => state.freeze);
+
+  useHotkeys(minimize, handleMinimizeWShortcut, { preventDefault });
+  useHotkeys(update, handleUpdateWShortcut, { preventDefault });
+  useHotkeys(group, handleGroupWShortcut, { preventDefault });
+  useHotkeys(share, handleShareWShortcut, { preventDefault });
+  useHotkeys(code, handleCodeWShortcut, { preventDefault });
+  useHotkeys(advanced, handleAdvancedWShortcut, { preventDefault });
+  useHotkeys(save, handleSaveWShortcut, { preventDefault });
+  useHotkeys(docs, handleDocsWShortcut, { preventDefault });
+  useHotkeys(download, handleDownloadWShortcut, { preventDefault });
+  useHotkeys(freeze, handleFreeze, { preventDefault });
 
   const isMinimal = numberOfHandles <= 1;
   const isGroup = data.node?.flow ? true : false;
@@ -75,18 +200,14 @@ export default function NodeToolbarComponent({
   const setNodes = useFlowStore((state) => state.setNodes);
 
   const setEdges = useFlowStore((state) => state.setEdges);
-  const unselectAll = useFlowStore((state) => state.unselectAll);
   const saveComponent = useFlowsManagerStore((state) => state.saveComponent);
   const getNodePosition = useFlowStore((state) => state.getNodePosition);
   const flows = useFlowsManagerStore((state) => state.flows);
-  const version = useDarkStore((state) => state.version);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
-  const [showModalAdvanced, setShowModalAdvanced] = useState(false);
-  const [showconfirmShare, setShowconfirmShare] = useState(false);
-  const [showOverrideModal, setShowOverrideModal] = useState(false);
-  const [flowComponent, setFlowComponent] = useState<FlowType>(
-    createFlowComponent(cloneDeep(data), version),
-  );
+
+  //  useEffect(() => {
+  //    if (openWDoubleClick) setShowModalAdvanced(true);
+  //  }, [openWDoubleClick, setOpenWDoubleClick]);
 
   const openInNewTab = (url) => {
     window.open(url, "_blank", "noreferrer");
@@ -100,7 +221,7 @@ export default function NodeToolbarComponent({
   const updateNodeInternals = useUpdateNodeInternals();
 
   const setLastCopiedSelection = useFlowStore(
-    (state) => state.setLastCopiedSelection,
+    (state) => state.setLastCopiedSelection
   );
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -120,6 +241,27 @@ export default function NodeToolbarComponent({
 
   const handleSelectChange = (event) => {
     switch (event) {
+      case "save":
+        if (isSaved) {
+          return setShowOverrideModal(true);
+        }
+        saveComponent(cloneDeep(data), false);
+        break;
+      case "freeze":
+        setNode(data.id, (old) => ({
+          ...old,
+          data: {
+            ...old.data,
+            node: {
+              ...old.data.node,
+              frozen: old.data?.node?.frozen ? false : true,
+            },
+          },
+        }));
+        break;
+      case "code":
+        setOpenModal(!openModal);
+        break;
       case "advanced":
         setShowModalAdvanced(true);
         break;
@@ -154,7 +296,7 @@ export default function NodeToolbarComponent({
           edges,
           setNodes,
           setEdges,
-          data.node?.outputs,
+          data.node?.outputs
         );
         break;
       case "override":
@@ -178,51 +320,56 @@ export default function NodeToolbarComponent({
             y: 10,
             paneX: nodes.find((node) => node.id === data.id)?.position.x,
             paneY: nodes.find((node) => node.id === data.id)?.position.y,
-          },
+          }
         );
-        break;
-      case "update":
-        takeSnapshot();
-        // to update we must get the code from the templates in useTypesStore
-        const thisNodeTemplate = templates[data.type]?.template;
-        // if the template does not have a code key
-        // return
-        if (!thisNodeTemplate?.code) return;
-
-        const currentCode = thisNodeTemplate.code.value;
-        if (data.node) {
-          postCustomComponent(currentCode, data.node)
-            .then((apiReturn) => {
-              const { data } = apiReturn;
-              if (data && updateNodeCode) {
-                updateNodeCode(data, currentCode, "code");
-              }
-            })
-            .catch((err) => {
-              console.log(err);
-            });
-          setNode(data.id, (oldNode) => {
-            let newNode = cloneDeep(oldNode);
-            newNode.data = {
-              ...data,
-            };
-            newNode.data.node.template.code.value = currentCode;
-            return newNode;
-          });
-        }
-
         break;
     }
   };
 
   const isSaved = flows.some((flow) =>
-    Object.values(flow).includes(data.node?.display_name!),
+    Object.values(flow).includes(data.node?.display_name!)
   );
+
+  function displayShortcut({
+    name,
+    shortcut,
+  }: {
+    name: string;
+    shortcut: string;
+  }): JSX.Element {
+    let hasShift: boolean = false;
+    const fixedShortcut = shortcut?.split("+");
+    fixedShortcut.forEach((key) => {
+      if (key.toLowerCase().includes("shift")) {
+        hasShift = true;
+      }
+    });
+    const filteredShortcut = fixedShortcut.filter(
+      (key) => !key.toLowerCase().includes("shift")
+    );
+    let shortcutWPlus: string[] = [];
+    if (!hasShift) shortcutWPlus = filteredShortcut.join("+").split(" ");
+    return (
+      <div className="flex justify-center">
+        <span> {name} </span>
+        <span
+          className={`ml-3 flex items-center rounded-sm bg-muted px-1 py-[0.2] text-muted-foreground`}
+        >
+          <RenderIcons
+            isMac={isMac}
+            hasShift={hasShift}
+            filteredShortcut={filteredShortcut}
+            shortcutWPlus={shortcutWPlus}
+          />
+        </span>
+      </div>
+    );
+  }
 
   const setNode = useFlowStore((state) => state.setNode);
 
   const handleOnNewValue = (
-    newValue: string | string[] | boolean | Object[],
+    newValue: string | string[] | boolean | Object[]
   ): void => {
     if (data.node!.template[name].value !== newValue) {
       takeSnapshot();
@@ -269,131 +416,21 @@ export default function NodeToolbarComponent({
   const [openModal, setOpenModal] = useState(false);
   const hasCode = Object.keys(data.node!.template).includes("code");
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (
-        selected &&
-        (hasApiKey || hasStore) &&
-        (event.ctrlKey || event.metaKey) &&
-        event.key.toUpperCase() === "U"
-      ) {
-        event.preventDefault();
-        handleSelectChange("update");
-      }
-      if (selected && event.key.toUpperCase() === "ESCAPE") {
-        event.preventDefault();
-        handleSelectChange("unselect");
-      }
-      if (
-        selected &&
-        isGroup &&
-        (event.ctrlKey || event.metaKey) &&
-        event.key.toUpperCase() === "G"
-      ) {
-        event.preventDefault();
-        handleSelectChange("ungroup");
-      }
-      if (
-        selected &&
-        (hasApiKey || hasStore) &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key.toUpperCase() === "S"
-      ) {
-        event.preventDefault();
-        setShowconfirmShare((state) => !state);
-      }
-
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key.toUpperCase() === "Q"
-      ) {
-        event.preventDefault();
-        if (isMinimal) {
-          setShowState((show) => !show);
-          setShowNode(data.showNode ?? true ? false : true);
-          return;
-        }
-        setNoticeData({
-          title:
-            "Minimization are only available for nodes with one handle or fewer.",
-        });
-      }
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key.toUpperCase() === "U"
-      ) {
-        event.preventDefault();
-        if (hasCode) return setOpenModal((state) => !state);
-        setNoticeData({ title: `You can not access ${data.id} code` });
-      }
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key.toUpperCase() === "A"
-      ) {
-        event.preventDefault();
-        setShowModalAdvanced((state) => !state);
-      }
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.key.toUpperCase() === "S"
-      ) {
-        if (isSaved) {
-          event.preventDefault();
-          return setShowOverrideModal((state) => !state);
-        }
-        if (hasCode) {
-          event.preventDefault();
-          saveComponent(cloneDeep(data), false);
-          setSuccessData({ title: `${data.id} saved successfully` });
-        }
-      }
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key.toUpperCase() === "D"
-      ) {
-        event.preventDefault();
-        if (data.node?.documentation) {
-          return openInNewTab(data.node?.documentation);
-        }
-        setNoticeData({
-          title: `${data.id} docs is not available at the moment.`,
-        });
-      }
-      if (
-        selected &&
-        (event.ctrlKey || event.metaKey) &&
-        event.key.toUpperCase() === "J"
-      ) {
-        event.preventDefault();
-        downloadNode(flowComponent!);
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [isSaved, showNode, data.showNode, isMinimal]);
-
   return (
     <>
       <div className="w-26 nocopy nowheel nopan nodelete nodrag noundo h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
           {hasCode && (
-            <ShadTooltip content="Code" side="top">
+            <ShadTooltip
+              content={displayShortcut(
+                shortcuts.find(
+                  ({ name }) => name.split(" ")[0].toLowerCase() === "code"
+                )!
+              )}
+              side="top"
+            >
               <button
-                className="relative inline-flex items-center rounded-l-md  bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                className="relative inline-flex items-center rounded-l-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
                 onClick={() => {
                   setOpenModal(!openModal);
                 }}
@@ -403,8 +440,30 @@ export default function NodeToolbarComponent({
               </button>
             </ShadTooltip>
           )}
+          {nodeLength > 0 && (
+            <ShadTooltip
+              content={displayShortcut(
+                shortcuts.find(
+                  ({ name }) => name.split(" ")[0].toLowerCase() === "advanced"
+                )!
+              )}
+              side="top"
+            >
+              <button
+                className={`${
+                  isGroup ? "rounded-l-md" : ""
+                } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
+                onClick={() => {
+                  setShowModalAdvanced(true);
+                }}
+                data-testid="code-button-modal"
+              >
+                <IconComponent name="Settings2" className="h-4 w-4" />
+              </button>
+            </ShadTooltip>
+          )}
 
-          <ShadTooltip content={"Save"} side="top">
+          {/*<ShadTooltip content={"Save"} side="top">
             <button
               data-testid="save-button-modal"
               className={classNames(
@@ -421,27 +480,18 @@ export default function NodeToolbarComponent({
             >
               <IconComponent name="SaveAll" className="h-4 w-4" />
             </button>
-          </ShadTooltip>
-
-          <ShadTooltip content={"Duplicate"} side="top">
-            <button
-              data-testid="duplicate-button-modal"
-              className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
-              )}
-              onClick={(event) => {
-                event.preventDefault();
-                handleSelectChange("duplicate");
-              }}
-            >
-              <IconComponent name="Copy" className="h-4 w-4" />
-            </button>
-          </ShadTooltip>
-
-          <ShadTooltip content="Freeze" side="top">
+          </ShadTooltip>*/}
+          <ShadTooltip
+            content={displayShortcut(
+              shortcuts.find(
+                ({ name }) => name.split(" ")[0].toLowerCase() === "freeze"
+              )!
+            )}
+            side="top"
+          >
             <button
               className={classNames(
-                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
               )}
               onClick={(event) => {
                 event.preventDefault();
@@ -462,20 +512,35 @@ export default function NodeToolbarComponent({
                 className={cn(
                   "h-4 w-4 transition-all",
                   // TODO UPDATE THIS COLOR TO BE A VARIABLE
-                  frozen ? "animate-wiggle text-ice" : "",
+                  frozen ? "animate-wiggle text-ice" : ""
                 )}
               />
             </button>
           </ShadTooltip>
 
+          {/*<ShadTooltip content={"Duplicate"} side="top">
+            <button
+              data-testid="duplicate-button-modal"
+              className={classNames(
+                "relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+              )}
+              onClick={(event) => {
+                event.preventDefault();
+                handleSelectChange("duplicate");
+              }}
+            >
+              <IconComponent name="Copy" className="h-4 w-4" />
+            </button>
+          </ShadTooltip>*/}
+
           <Select onValueChange={handleSelectChange} value="">
-            <ShadTooltip content="More" side="top">
+            <ShadTooltip content="All" side="top">
               <SelectTrigger>
                 <div>
                   <div
                     data-testid="more-options-modal"
                     className={classNames(
-                      "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground  shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                      "relative -ml-px inline-flex h-8 w-[31px] items-center rounded-r-md bg-background text-foreground  shadow-md ring-1 ring-inset  ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
                     )}
                   >
                     <IconComponent
@@ -487,55 +552,72 @@ export default function NodeToolbarComponent({
               </SelectTrigger>
             </ShadTooltip>
             <SelectContent>
+              {hasCode && (
+                <SelectItem value={"code"}>
+                  <ToolbarSelectItem
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Code")?.shortcut!
+                    }
+                    value={"Code"}
+                    icon={"Code"}
+                    dataTestId="code-button-modal"
+                  />
+                </SelectItem>
+              )}
               {nodeLength > 0 && (
                 <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
                   <ToolbarSelectItem
-                    keyboardKey="A"
-                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={true}
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Advanced Settings")
+                        ?.shortcut!
+                    }
                     value={"Advanced"}
                     icon={"Settings2"}
                     dataTestId="edit-button-modal"
                   />
                 </SelectItem>
               )}
+              <SelectItem value={"save"}>
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Save")?.shortcut!
+                  }
+                  value={"Save"}
+                  icon={"SaveAll"}
+                  dataTestId="save-button-modal"
+                />
+              </SelectItem>
+              <SelectItem value={"duplicate"}>
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Duplicate")?.shortcut!
+                  }
+                  value={"Duplicate"}
+                  icon={"Copy"}
+                  dataTestId="copy-button-modal"
+                />
+              </SelectItem>
               <SelectItem value={"copy"}>
                 <ToolbarSelectItem
-                  keyboardKey="C"
-                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                  shift={false}
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Copy")?.shortcut!
+                  }
                   value={"Copy"}
                   icon={"Clipboard"}
                   dataTestId="copy-button-modal"
                 />
               </SelectItem>
-              {isOutdated && (
-                <SelectItem value={"update"}>
-                  <ToolbarSelectItem
-                    keyboardKey="U"
-                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={false}
-                    value={"Update"}
-                    icon={"Code"}
-                    dataTestId="update-button-modal"
-                    ping={isOutdated}
-                  />
-                </SelectItem>
-              )}
               {hasStore && (
                 <SelectItem
                   value={"Share"}
                   disabled={!hasApiKey || !validApiKey}
                 >
                   <ToolbarSelectItem
-                    keyboardKey="S"
-                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={true}
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Share")?.shortcut!
+                    }
                     value={"Share"}
                     icon={"Share3"}
-                    styleObj={{
-                      iconClasses: "relative top-0.5 -m-1 mr-[0.25rem] h-6 w-6",
-                    }}
                     dataTestId="share-button-modal"
                   />
                 </SelectItem>
@@ -543,13 +625,13 @@ export default function NodeToolbarComponent({
               {(!hasStore || !hasApiKey || !validApiKey) && (
                 <SelectItem value={"Download"}>
                   <ToolbarSelectItem
-                    value="Download"
-                    shift={false}
-                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    icon="Download"
-                    styleObj={{ iconClasses: "relative top-0.5 mr-2 h-4 w-4" }}
-                    keyboardKey={"J"}
-                    dataTestId={"Dowload-button-nodeToolbar"}
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Download")
+                        ?.shortcut!
+                    }
+                    value={"Download"}
+                    icon={"Download"}
+                    dataTestId="Download-button-modal"
                   />
                 </SelectItem>
               )}
@@ -558,9 +640,9 @@ export default function NodeToolbarComponent({
                 disabled={data.node?.documentation === ""}
               >
                 <ToolbarSelectItem
-                  keyboardKey="D"
-                  isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                  shift={true}
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Docs")?.shortcut!
+                  }
                   value={"Docs"}
                   icon={"FileText"}
                   dataTestId="docs-button-modal"
@@ -569,38 +651,49 @@ export default function NodeToolbarComponent({
               {isMinimal && (
                 <SelectItem value={"show"}>
                   <ToolbarSelectItem
-                    icon={showNode ? "Minimize2" : "Maximize2"}
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Minimize")
+                        ?.shortcut!
+                    }
                     value={showNode ? "Minimize" : "Expand"}
-                    isMac={navigator.userAgent.toUpperCase().includes("MAC")}
-                    shift={true}
-                    keyboardKey={"Q"}
-                    dataTestId={"minimize-button-nodeToolbar"}
+                    icon={showNode ? "Minimize2" : "Maximize2"}
+                    dataTestId="minimize-button-modal"
                   />
                 </SelectItem>
               )}
               {isGroup && (
                 <SelectItem value="ungroup">
-                  <div className="flex">
-                    <IconComponent
-                      name="Ungroup"
-                      className="relative top-0.5 mr-2 h-4 w-4 "
-                    />{" "}
-                    <span className="">Ungroup</span>{" "}
-                    {navigator.userAgent.toUpperCase().includes("MAC") ? (
-                      <IconComponent
-                        name="Command"
-                        className="absolute right-[1.15rem] top-[0.65em] h-3.5 w-3.5 stroke-2"
-                      ></IconComponent>
-                    ) : (
-                      <span className="absolute right-[1.30rem] top-[0.40em] stroke-2">
-                        Ctrl +{" "}
-                      </span>
-                    )}
-                    <span className="absolute right-2 top-[0.43em]">G</span>
-                  </div>
+                  <ToolbarSelectItem
+                    shortcut={
+                      shortcuts.find((obj) => obj.name === "Group")?.shortcut!
+                    }
+                    value={"Ungroup"}
+                    icon={"Ungroup"}
+                    dataTestId="group-button-modal"
+                  />
                 </SelectItem>
               )}
-
+              <SelectItem value="freeze">
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
+                  }
+                  value={"Freeze"}
+                  icon={"Snowflake"}
+                  dataTestId="group-button-modal"
+                  style={`${frozen ? " text-ice" : ""} transition-all`}
+                />
+              </SelectItem>
+              <SelectItem value="Download">
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Download")?.shortcut!
+                  }
+                  value={"Download"}
+                  icon={"Download"}
+                  dataTestId="download-button-modal"
+                />
+              </SelectItem>
               <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
                 <div className="font-red flex text-status-red">
                   <IconComponent
@@ -608,10 +701,10 @@ export default function NodeToolbarComponent({
                     className="relative top-0.5 mr-2 h-4 w-4 "
                   />{" "}
                   <span className="">Delete</span>{" "}
-                  <span>
+                  <span className="justify absolute right-2 top-2 flex items-center rounded-sm bg-muted px-1 py-[0.2]">
                     <IconComponent
                       name="Delete"
-                      className="absolute right-2 top-2 h-4 w-4 stroke-2 text-red-400"
+                      className="h-4 w-4 stroke-2 text-red-400"
                     ></IconComponent>
                   </span>
                 </div>
@@ -644,12 +737,15 @@ export default function NodeToolbarComponent({
               </span>
             </ConfirmationModal.Content>
           </ConfirmationModal>
-          <EditNodeModal
-            data={data}
-            nodeLength={nodeLength}
-            open={showModalAdvanced}
-            setOpen={setShowModalAdvanced}
-          />
+          {showModalAdvanced && (
+            <EditNodeModal
+              //              setOpenWDoubleClick={setOpenWDoubleClick}
+              data={data}
+              nodeLength={nodeLength}
+              open={showModalAdvanced}
+              setOpen={setShowModalAdvanced}
+            />
+          )}
           {showconfirmShare && (
             <ShareModal
               open={showconfirmShare}

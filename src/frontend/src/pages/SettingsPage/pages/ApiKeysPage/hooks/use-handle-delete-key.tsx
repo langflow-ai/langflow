@@ -10,7 +10,7 @@ const useDeleteApiKeys = (
   selectedRows,
   resetFilter,
   setSuccessData,
-  setErrorData,
+  setErrorData
 ) => {
   const handleDeleteKey = () => {
     Promise.all(selectedRows.map((selectedRow) => deleteApiKey(selectedRow)))

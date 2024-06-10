@@ -13,7 +13,7 @@ from pydantic import field_serializer, field_validator
 from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 if TYPE_CHECKING:
     from langflow.services.database.models.folder import Folder

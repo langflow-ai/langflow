@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, AsyncGenerator
 
 import orjson
 import pytest
+from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -28,6 +29,9 @@ from langflow.services.deps import get_db_service
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
+
+
+load_dotenv()
 
 
 def pytest_configure(config):

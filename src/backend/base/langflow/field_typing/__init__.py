@@ -19,13 +19,13 @@ from .constants import (
     Embeddings,
     NestedDict,
     Object,
-    Prompt,
     PromptTemplate,
     Text,
     TextSplitter,
     Tool,
     VectorStore,
 )
+from .prompt import Prompt
 from .range_spec import RangeSpec
 
 

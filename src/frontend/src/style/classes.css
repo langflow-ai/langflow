@@ -19,6 +19,10 @@ pre {
   display: none;
 }
 
+.ag-row {
+  cursor: pointer;
+}
+
 .react-flow__pane {
   cursor: default;
 }
@@ -102,8 +106,7 @@ select:-webkit-autofill:focus {
 }
 
 .ag-row .ag-cell {
-  display: flex;
-  align-items: center;
+  align-content: center !important;
 }
 .ag-cell {
   line-height: 1.25rem;

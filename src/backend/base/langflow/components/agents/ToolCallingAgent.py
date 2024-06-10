@@ -5,7 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from langflow.base.agents.agent import LCAgentComponent
 from langflow.field_typing import BaseLanguageModel, Text, Tool
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 
 class ToolCallingAgentComponent(LCAgentComponent):

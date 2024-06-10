@@ -1,7 +1,7 @@
 from typing import Optional
 
 from langflow.custom import CustomComponent
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 
 class BaseMemoryComponent(CustomComponent):

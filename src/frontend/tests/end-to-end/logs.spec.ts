@@ -52,11 +52,13 @@ test("should able to see and interact with logs", async ({ page }) => {
   await page.getByRole("gridcell").first().isVisible();
 
   await page.getByText("Messages", { exact: true }).click();
-  await page.getByText("timestamp").isVisible();
-  await page.getByText("sender", { exact: true }).isVisible();
-  await page.getByText("sender_name").isVisible();
-  await page.getByText("session_id", { exact: true }).isVisible();
-  await page.getByText("message", { exact: true }).isVisible();
-  await page.getByText("artifacts", { exact: true }).isVisible();
+  await page.getByText("Index").isVisible();
+  await page.getByText("Timestamp").isVisible();
+  await page.getByText("Flow Id", { exact: true }).isVisible();
+  await page.getByText("Source").isVisible();
+  await page.getByText("Target", { exact: true }).isVisible();
+  await page.getByText("Target Args", { exact: true }).isVisible();
+  await page.getByText("Status", { exact: true }).isVisible();
+  await page.getByText("Error", { exact: true }).isVisible();
   await page.getByRole("gridcell").first().isVisible();
 });

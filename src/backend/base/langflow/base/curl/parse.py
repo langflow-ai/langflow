@@ -16,7 +16,7 @@ from collections import OrderedDict, namedtuple
 from http.cookies import SimpleCookie
 
 ParsedArgs = namedtuple(
-    "ParsedContext",
+    "ParsedArgs",
     [
         "command",
         "url",
@@ -64,21 +64,20 @@ def parse_curl_command(curl_command):
         "cookies": {},
     }
     args = args_template.copy()
-
+    method_on_curl = None
     i = 0
     while i < len(tokens):
         token = tokens[i]
         if token == "-X":
             i += 1
             args["method"] = tokens[i].lower()
+            method_on_curl = tokens[i].lower()
         elif token in ("-d", "--data"):
             i += 1
             args["data"] = tokens[i]
-            args["method"] = "post"
         elif token in ("-b", "--data-binary", "--data-raw"):
             i += 1
             args["data_binary"] = tokens[i]
-            args["method"] = "post"
         elif token in ("-H", "--header"):
             i += 1
             args["headers"].append(tokens[i])
@@ -105,6 +104,8 @@ def parse_curl_command(curl_command):
             else:
                 args["url"] = token
         i += 1
+
+    args["method"] = method_on_curl or args["method"]
 
     return ParsedArgs(**args)
 

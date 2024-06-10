@@ -1,35 +1,35 @@
 import json
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
-if TYPE_CHECKING:
-    from langflow.schema import Record
+from langflow.schema.message import Message
 
 
 class TransactionModel(BaseModel):
     index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
-    flow_id: str
-    source: str
-    target: str
-    target_args: dict
+    vertex_id: str
+    target_id: str | None = None
+    inputs: dict
+    outputs: Optional[dict] = None
     status: str
     error: Optional[str] = None
+    flow_id: Optional[str] = Field(default=None, alias="flow_id")
 
     class Config:
         from_attributes = True
         populate_by_name = True
 
     # validate target_args in case it is a JSON
-    @field_validator("target_args", mode="before")
+    @field_validator("outputs", "inputs", mode="before")
     def validate_target_args(cls, v):
         if isinstance(v, str):
             return json.loads(v)
         return v
 
-    @field_serializer("target_args")
+    @field_serializer("outputs", "inputs")
     def serialize_target_args(v):
         if isinstance(v, dict):
             return json.dumps(v)
@@ -39,19 +39,21 @@ class TransactionModel(BaseModel):
 class TransactionModelResponse(BaseModel):
     index: Optional[int] = Field(default=None)
     timestamp: Optional[datetime] = Field(default_factory=datetime.now, alias="timestamp")
-    flow_id: str
-    source: str
-    target: str
-    target_args: dict
+    vertex_id: str
+    inputs: dict
+    outputs: Optional[dict] = None
     status: str
     error: Optional[str] = None
+    flow_id: Optional[str] = Field(default=None, alias="flow_id")
+    source: Optional[str] = None
+    target: Optional[str] = None
 
     class Config:
         from_attributes = True
         populate_by_name = True
 
     # validate target_args in case it is a JSON
-    @field_validator("target_args", mode="before")
+    @field_validator("outputs", "inputs", mode="before")
     def validate_target_args(cls, v):
         if isinstance(v, str):
             return json.loads(v)
@@ -74,43 +76,37 @@ class MessageModel(BaseModel):
     sender: str
     sender_name: str
     session_id: str
-    message: str
-    artifacts: dict
+    text: str
+    files: list[str] = []
 
     class Config:
         from_attributes = True
         populate_by_name = True
 
-    @field_validator("artifacts", mode="before")
-    def validate_target_args(cls, v):
+    @field_validator("files", mode="before")
+    def validate_files(cls, v):
         if isinstance(v, str):
             return json.loads(v)
         return v
 
     @classmethod
-    def from_record(cls, record: "Record", flow_id: Optional[str] = None):
+    def from_message(cls, message: Message, flow_id: Optional[str] = None):
         # first check if the record has all the required fields
-        if not record.data or ("sender" not in record.data and "sender_name" not in record.data):
-            raise ValueError("The record does not have the required fields 'sender' and 'sender_name' in the data.")
+        if not message.text or not message.sender or not message.sender_name:
+            raise ValueError("The message does not have the required fields 'sender' and 'sender_name' in the data.")
         return cls(
-            sender=record.sender,
-            sender_name=record.sender_name,
-            message=record.text,
-            session_id=record.session_id,
-            artifacts=record.artifacts or {},
-            timestamp=record.timestamp,
+            sender=message.sender,
+            sender_name=message.sender_name,
+            text=message.text,
+            session_id=message.session_id,
+            files=message.files or [],
+            timestamp=message.timestamp,
             flow_id=flow_id,
         )
 
 
 class MessageModelResponse(MessageModel):
     index: Optional[int] = Field(default=None)
-
-    @field_validator("artifacts", mode="before")
-    def serialize_artifacts(v):
-        if isinstance(v, str):
-            return json.loads(v)
-        return v
 
     @field_validator("index", mode="before")
     def validate_id(cls, v):
@@ -123,7 +119,7 @@ class MessageModelResponse(MessageModel):
 
 
 class MessageModelRequest(MessageModel):
-    message: str = Field(default="")
+    text: str = Field(default="")
     sender: str = Field(default="")
     sender_name: str = Field(default="")
     session_id: str = Field(default="")

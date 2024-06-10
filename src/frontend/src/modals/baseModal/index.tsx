@@ -16,11 +16,11 @@ import {
 } from "../../components/ui/dialog-with-no-close";
 
 import { DialogClose } from "@radix-ui/react-dialog";
+import * as Form from "@radix-ui/react-form";
 import { Button } from "../../components/ui/button";
 import { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { switchCaseModalSize } from "./helpers/switch-case-size";
-import * as Form from "@radix-ui/react-form";
 
 type ContentProps = { children: ReactNode };
 type HeaderProps = { children: ReactNode; description: string };
@@ -103,7 +103,7 @@ interface BaseModalProps {
     React.ReactElement<ContentProps>,
     React.ReactElement<HeaderProps>,
     React.ReactElement<TriggerProps>?,
-    React.ReactElement<FooterProps>?,
+    React.ReactElement<FooterProps>?
   ];
   open?: boolean;
   setOpen?: (open: boolean) => void;
@@ -121,7 +121,8 @@ interface BaseModalProps {
     | "medium-h-full"
     | "md-thin"
     | "sm-thin"
-    | "smaller-h-full";
+    | "smaller-h-full"
+    | "medium-log";
 
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;
@@ -138,16 +139,16 @@ function BaseModal({
   onSubmit,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Header,
+    (child) => (child as React.ReactElement).type === Header
   );
   const triggerChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Trigger,
+    (child) => (child as React.ReactElement).type === Trigger
   );
   const ContentChild = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Content,
+    (child) => (child as React.ReactElement).type === Content
   );
   const ContentFooter = React.Children.toArray(children).find(
-    (child) => (child as React.ReactElement).type === Footer,
+    (child) => (child as React.ReactElement).type === Footer
   );
 
   let { minWidth, height } = switchCaseModalSize(size);

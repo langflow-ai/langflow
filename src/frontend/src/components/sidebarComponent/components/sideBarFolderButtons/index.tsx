@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
 import { addFolder, updateFolder } from "../../../../pages/MainPage/services";
 import { handleDownloadFolderFn } from "../../../../pages/MainPage/utils/handle-download-folder";
+import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { handleKeyDown } from "../../../../utils/reactflowUtils";
@@ -13,19 +14,15 @@ import IconComponent, {
 import { Button, buttonVariants } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import useFileDrop from "../../hooks/use-on-file-drop";
-import useAlertStore from "../../../../stores/alertStore";
 
 type SideBarFoldersButtonsComponentProps = {
-  folders: FolderType[];
   pathname: string;
   handleChangeFolder?: (id: string) => void;
-  handleEditFolder?: (item: FolderType) => void;
   handleDeleteFolder?: (item: FolderType) => void;
 };
 const SideBarFoldersButtonsComponent = ({
   pathname,
   handleChangeFolder,
-  handleEditFolder,
   handleDeleteFolder,
 }: SideBarFoldersButtonsComponentProps) => {
   const refInput = useRef<HTMLInputElement>(null);
@@ -34,7 +31,7 @@ const SideBarFoldersButtonsComponent = ({
   const [foldersNames, setFoldersNames] = useState({});
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const [editFolders, setEditFolderName] = useState(
-    folders.map((obj) => ({ name: obj.name, edit: false })),
+    folders.map((obj) => ({ name: obj.name, edit: false }))
   );
   const uploadFolder = useFolderStore((state) => state.uploadFolder);
   const currentFolder = pathname.split("/");
@@ -53,6 +50,7 @@ const SideBarFoldersButtonsComponent = ({
   const folderId = location?.state?.folderId ?? myCollectionId;
   const getFolderById = useFolderStore((state) => state.getFolderById);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const handleFolderChange = (folderId: string) => {
     getFolderById(folderId);
@@ -60,13 +58,16 @@ const SideBarFoldersButtonsComponent = ({
 
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(
     folderId,
-    handleFolderChange,
+    handleFolderChange
   );
 
   const handleUploadFlowsToFolder = () => {
     uploadFolder(folderId)
       .then(() => {
         getFolderById(folderId);
+        setSuccessData({
+          title: "Uploaded successfully",
+        });
       })
       .catch((err) => {
         console.log(err);
@@ -85,7 +86,7 @@ const SideBarFoldersButtonsComponent = ({
     addFolder({ name: "New Folder", parent_id: null, description: "" }).then(
       (res) => {
         getFoldersApi(true);
-      },
+      }
     );
   }
 
@@ -131,7 +132,7 @@ const SideBarFoldersButtonsComponent = ({
         <>
           {folders.map((item, index) => {
             const editFolderName = editFolders?.filter(
-              (folder) => folder.name === item.name,
+              (folder) => folder.name === item.name
             )[0];
             return (
               <div
@@ -147,7 +148,7 @@ const SideBarFoldersButtonsComponent = ({
                     ? "border border-border bg-muted hover:bg-muted"
                     : "border hover:bg-transparent lg:border-transparent lg:hover:border-border",
                   "group flex w-full shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full",
-                  folderIdDragging === item.id! ? "bg-border" : "",
+                  folderIdDragging === item.id! ? "bg-border" : ""
                 )}
                 onClick={() => handleChangeFolder!(item.id!)}
               >
@@ -217,7 +218,7 @@ const SideBarFoldersButtonsComponent = ({
                               folders.map((obj) => ({
                                 name: obj.name,
                                 edit: false,
-                              })),
+                              }))
                             );
                           }
                           if (e.key === "Enter") {
@@ -250,10 +251,10 @@ const SideBarFoldersButtonsComponent = ({
                             };
                             const updatedFolder = await updateFolder(
                               body,
-                              item.id!,
+                              item.id!
                             );
                             const updateFolders = folders.filter(
-                              (f) => f.name !== item.name,
+                              (f) => f.name !== item.name
                             );
                             setFolders([...updateFolders, updatedFolder]);
                             setFoldersNames({});
@@ -261,7 +262,7 @@ const SideBarFoldersButtonsComponent = ({
                               folders.map((obj) => ({
                                 name: obj.name,
                                 edit: false,
-                              })),
+                              }))
                             );
                           } else {
                             setFoldersNames((old) => ({

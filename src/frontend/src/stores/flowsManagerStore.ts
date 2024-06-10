@@ -1,4 +1,3 @@
-import { AxiosError } from "axios";
 import { cloneDeep } from "lodash";
 import pDebounce from "p-debounce";
 import { Edge, Node, Viewport, XYPosition } from "reactflow";
@@ -272,7 +271,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       useFlowStore
         .getState()
         .paste(
-          { nodes: flowData?.nodes, edges: flowData?.edges },
+          { nodes: flow!.data!.nodes, edges: flow!.data!.edges },
           position ?? { x: 10, y: 10 }
         );
     }

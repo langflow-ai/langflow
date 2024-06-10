@@ -87,6 +87,16 @@ export type InputListComponentType = {
   playgroundDisabled?: boolean;
 };
 
+export type InputGlobalComponentType = {
+  disabled: boolean;
+  onChange: (value: string, snapshot?: boolean) => void;
+  setDb: (value: boolean) => void;
+  name: string;
+  data: InputFieldType;
+  editNode?: boolean;
+  playgroundDisabled?: boolean;
+};
+
 export type KeyPairListComponentType = {
   value: any;
   onChange: (value: Object[]) => void;
@@ -204,6 +214,14 @@ export type FloatComponentType = {
   rangeSpec: RangeSpecType;
   editNode?: boolean;
   id?: string;
+};
+
+export type FilePreviewType = {
+  loading: boolean;
+  file: File;
+  error: boolean;
+  id: string;
+  path?: string;
 };
 
 export type TooltipComponentType = {
@@ -396,7 +414,7 @@ export type loginInputStateType = {
 export type patchUserInputStateType = {
   password: string;
   cnfPassword: string;
-  gradient: string;
+  profilePicture: string;
   apikey: string;
 };
 
@@ -487,14 +505,25 @@ export type headerFlowsType = {
   style?: FlowStyleType;
 };
 
-export type chatInputType = {
+export type ChatInputType = {
+  isDragging: boolean;
+  files: FilePreviewType[];
+  setFiles: (
+    files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[])
+  ) => void;
   chatValue: string;
   inputRef: {
     current: any;
   };
   lockChat: boolean;
   noInput: boolean;
-  sendMessage: (count?: number) => void;
+  sendMessage: ({
+    repeat,
+    files,
+  }: {
+    repeat: number;
+    files?: string[];
+  }) => void;
   setChatValue: (value: string) => void;
 };
 
@@ -520,9 +549,12 @@ export type fileCardPropsType = {
   fileName: string;
   content: string;
   fileType: string;
+  showFile?: boolean;
 };
 
 export type nodeToolbarPropsType = {
+  //  openWDoubleClick: boolean;
+  //  setOpenWDoubleClick: (open: boolean) => void;
   data: NodeDataType;
   deleteNode: (idx: string) => void;
   setShowNode: (boolean: any) => void;
@@ -532,13 +564,7 @@ export type nodeToolbarPropsType = {
   openAdvancedModal?: boolean;
   onCloseAdvancedModal?: (close: boolean) => void;
   selected: boolean;
-  updateNodeCode?: (
-    newNodeClass: APIClassType,
-    code: string,
-    name: string,
-  ) => void;
   setShowState: (show: boolean | SetStateAction<boolean>) => void;
-  isOutdated?: boolean;
 };
 
 export type parsedDataType = {
@@ -585,7 +611,7 @@ export type chatMessagePropsType = {
   updateChat: (
     chat: ChatMessageType,
     message: string,
-    stream_url?: string,
+    stream_url?: string
   ) => void;
 };
 
@@ -677,12 +703,12 @@ export type codeTabsPropsType = {
       value: string,
       node: NodeType,
       template: InputFieldType,
-      tweak: tweakType,
+      tweak: tweakType
     ) => string;
     buildTweakObject?: (
       tw: string,
       changes: string | string[] | boolean | number | Object[] | Object,
-      template: InputFieldType,
+      template: InputFieldType
     ) => Promise<string | void>;
   };
   activeTweaks?: boolean;
@@ -698,10 +724,14 @@ export type crashComponentPropsType = {
   resetErrorBoundary: (args) => void;
 };
 
+export type Log = {
+  message: string;
+};
+
 export type validationStatusType = {
   id: string;
   data: object | any;
-  params: string;
+  logs: Log[];
   progress?: number;
   valid: boolean;
   duration?: string;
@@ -741,7 +771,13 @@ export type IOFieldViewProps = {
 export type UndrawCardComponentProps = { flow: FlowType };
 
 export type chatViewProps = {
-  sendMessage: (count?: number) => void;
+  sendMessage: ({
+    repeat,
+    files,
+  }: {
+    repeat: number;
+    files?: string[];
+  }) => void;
   chatValue: string;
   setChatValue: (value: string) => void;
   lockChat: boolean;
@@ -754,21 +790,12 @@ export type IOFileInputProps = {
 };
 
 export type toolbarSelectItemProps = {
-  isMac: boolean;
-  shift: boolean;
-  keyboardKey: string;
   value: string;
   icon: string;
-  styleObj?: {
-    iconClasses?: string;
-    commandClasses?: string;
-    shiftClasses?: string;
-    ctrlClasses?: string;
-    keyClasses?: string;
-    valueClasses?: string;
-  };
+  style?: string;
   dataTestId: string;
   ping?: boolean;
+  shortcut: string;
 };
 
 export type clearChatPropsType = {

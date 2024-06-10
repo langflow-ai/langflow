@@ -8,21 +8,19 @@ import Dropdown from "../../../../components/dropdownComponent";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";
 import { Badge } from "../../../../components/ui/badge";
-import { Card, CardContent } from "../../../../components/ui/card";
 import { deleteGlobalVariable } from "../../../../controllers/API";
 import useAlertStore from "../../../../stores/alertStore";
 import { useGlobalVariablesStore } from "../../../../stores/globalVariablesStore/globalVariables";
-import { cn } from "../../../../utils/utils";
 
 export default function GlobalVariablesPage() {
   const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries,
+    (state) => state.globalVariablesEntries
   );
   const removeGlobalVariable = useGlobalVariablesStore(
-    (state) => state.removeGlobalVariable,
+    (state) => state.removeGlobalVariable
   );
   const globalVariables = useGlobalVariablesStore(
-    (state) => state.globalVariables,
+    (state) => state.globalVariables
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
@@ -144,20 +142,6 @@ export default function GlobalVariablesPage() {
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
-          <Button
-            data-testid="api-key-button-store"
-            variant="primary"
-            className="group px-2"
-            disabled={selectedRows.length === 0}
-            onClick={removeVariables}
-          >
-            <IconComponent
-              name="Trash2"
-              className={cn(
-                "h-5 w-5 text-destructive group-disabled:text-primary",
-              )}
-            />
-          </Button>
           <AddNewVariableButton>
             <Button data-testid="api-key-button-store" variant="primary">
               <IconComponent name="Plus" className="mr-2 w-4" />
@@ -169,6 +153,7 @@ export default function GlobalVariablesPage() {
 
       <div className="flex h-full w-full flex-col justify-between">
         <TableComponent
+          key={"globalVariables"}
           overlayNoRowsTemplate="No data available"
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(event.api.getSelectedRows().map((row) => row.name));
@@ -178,6 +163,7 @@ export default function GlobalVariablesPage() {
           pagination={true}
           columnDefs={colDefs}
           rowData={rowData}
+          onDelete={removeVariables}
         />
       </div>
     </div>

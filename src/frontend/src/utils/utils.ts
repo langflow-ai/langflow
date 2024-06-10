@@ -2,6 +2,7 @@ import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
+import { MODAL_CLASSES } from "../constants/constants";
 import { APIDataType, InputFieldType } from "../types/api";
 import {
   groupedObjType,
@@ -261,7 +262,7 @@ export function groupByFamily(
           Object.values(nodeData.node!.template).some(checkBaseClass),
         hasBaseClassInBaseClasses:
           foundNode?.hasBaseClassInBaseClasses ||
-          nodeData.node!.base_classes.some((baseClass) =>
+          nodeData.node!.base_classes?.some((baseClass) =>
             baseClassesSet.has(baseClass)
           ), //seta como anterior ou verifica se o node tem base class
         displayName: nodeData.node?.display_name,
@@ -281,7 +282,7 @@ export function groupByFamily(
           hasBaseClassInTemplate: Object.values(node!.template).some(
             checkBaseClass
           ),
-          hasBaseClassInBaseClasses: node!.base_classes.some((baseClass) =>
+          hasBaseClassInBaseClasses: node!.base_classes?.some((baseClass) =>
             baseClassesSet.has(baseClass)
           ),
           displayName: node?.display_name,
@@ -363,11 +364,10 @@ export function extractColumnsFromRows(
   function intersection() {
     for (const key in rows[0]) {
       columnsKeys[key] = {
-        headerName: key,
+        headerName: toTitleCase(key),
         field: key,
         cellRenderer: TableAutoCellRender,
         filter: true,
-        autoHeight: true,
       };
     }
     for (const row of rows) {
@@ -382,14 +382,17 @@ export function extractColumnsFromRows(
     for (const row of rows) {
       for (const key in row) {
         columnsKeys[key] = {
-          headerName: key,
+          headerName: toTitleCase(key),
           field: key,
           filter: true,
           cellRenderer: TableAutoCellRender,
+          suppressAutoSize: true,
+          tooltipField: key,
         };
       }
     }
   }
+
   if (mode === "intersection") {
     intersection();
   } else {
@@ -403,4 +406,9 @@ export function extractColumnsFromRows(
   }
 
   return Object.values(columnsKeys);
+}
+
+export function isThereModal(): boolean {
+  const modal = document.body.getElementsByClassName(MODAL_CLASSES);
+  return modal.length > 0;
 }

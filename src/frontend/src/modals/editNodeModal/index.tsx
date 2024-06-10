@@ -15,11 +15,13 @@ const EditNodeModal = forwardRef(
       nodeLength,
       open,
       setOpen,
+      //      setOpenWDoubleClick,
       data,
     }: {
       nodeLength: number;
       open: boolean;
       setOpen: (open: boolean) => void;
+      //      setOpenWDoubleClick: (open: boolean) => void;
       data: NodeDataType;
     },
     ref
@@ -92,6 +94,7 @@ const EditNodeModal = forwardRef(
             <div className="h-full">
               {nodeLength > 0 && (
                 <TableComponent
+                  key={"editNode"}
                   onGridReady={(params) => {
                     setGridApi(params.api);
                   }}
