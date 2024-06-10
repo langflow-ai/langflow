@@ -97,7 +97,6 @@ const TableComponent = forwardRef<
           applyOrder: true,
         });
       }
-      if (props.onGridReady) props.onGridReady(params);
       setTimeout(() => {
         if (customInit && realRef.current) {
           setColumnStateChange(true);
@@ -108,6 +107,7 @@ const TableComponent = forwardRef<
       setTimeout(() => {
         realRef.current.api.hideOverlay();
       }, 1000);
+      if (props.onGridReady) props.onGridReady(params);
     };
     const onColumnMoved = (params) => {
       const updatedColumnDefs = makeLastColumnNonResizable(
