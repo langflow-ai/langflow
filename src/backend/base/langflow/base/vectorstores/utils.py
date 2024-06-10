@@ -15,7 +15,7 @@ def chroma_collection_to_records(collection_dict: dict):
     for i, doc in enumerate(collection_dict["documents"]):
         record_dict = {
             "id": collection_dict["ids"][i],
-            "document": doc,
+            "text": doc,
         }
         if "metadatas" in collection_dict:
             for key, value in collection_dict["metadatas"][i].items():
