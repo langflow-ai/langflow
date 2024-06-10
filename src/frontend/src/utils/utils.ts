@@ -10,6 +10,7 @@ import {
 import { NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
 import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
+import { MODAL_CLASSES } from "../constants/constants";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -405,4 +406,9 @@ export function extractColumnsFromRows(
   }
 
   return Object.values(columnsKeys);
+}
+
+export function isThereModal(): boolean {
+  const modal = document.body.getElementsByClassName(MODAL_CLASSES);
+  return modal.length > 0;
 }
