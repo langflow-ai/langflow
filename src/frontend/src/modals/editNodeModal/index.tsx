@@ -89,14 +89,6 @@ const EditNodeModal = forwardRef(
         </BaseModal.Header>
         <BaseModal.Content>
           <div className="flex h-full flex-col">
-            <div className="flex pb-2">
-              <IconComponent
-                name="Variable"
-                className="edit-node-modal-variable "
-              />
-              <span className="edit-node-modal-span">Parameters</span>
-            </div>
-
             <div className="h-full">
               {nodeLength > 0 && (
                 <TableComponent
