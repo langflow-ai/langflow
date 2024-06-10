@@ -801,10 +801,6 @@
     @apply flex-max-width mt-2 h-full;
   }
 
-  .button-box-modal-div {
-    @apply flex transform flex-col items-center justify-center rounded-lg border border-ring text-center shadow hover:scale-105 hover:shadow-lg;
-  }
-
   .dialog-header-modal-div {
     @apply absolute left-0 top-2 z-50 hidden pl-4 pt-4 sm:block;
   }

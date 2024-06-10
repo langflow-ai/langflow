@@ -93,7 +93,7 @@ const TableComponent = forwardRef<
       if (props.onGridReady) props.onGridReady(params);
       setTimeout(() => {
         setColumnStateChange(false);
-      }, 50);
+      }, 200);
     };
 
     const onColumnMoved = (params) => {
