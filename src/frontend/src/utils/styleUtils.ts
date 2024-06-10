@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowBigUp,
   ArrowLeft,
   ArrowUpToLine,
@@ -116,7 +117,6 @@ import {
   Settings,
   Settings2,
   Share,
-  AlertTriangle,
   Share2,
   Shield,
   Sliders,
@@ -146,11 +146,10 @@ import {
   Variable,
   Wand2,
   Workflow,
+  Wrench,
   X,
   XCircle,
   Zap,
-  PlaySquare,
-  Wrench,
 } from "lucide-react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -177,6 +176,7 @@ import {
 import { GroqIcon } from "../icons/Groq";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
+import { LangChainIcon } from "../icons/LangChain";
 import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
@@ -325,6 +325,7 @@ export const nodeIconsLucide: iconsType = {
   ChatOllamaModel: OllamaIcon,
   Faiss: MetaIcon,
   FaissSearch: MetaIcon,
+  LangChain: LangChainIcon,
   AzureOpenAiModel: AzureIcon,
   Redis: RedisIcon,
   RedisSearch: RedisIcon,
