@@ -87,7 +87,7 @@ markdown = "^3.6"
 langchain-chroma = "^0.1.1"
 upstash-vector = "^0.4.0"
 firecrawl-py = "^0.0.14"
-
+unstructured = {extras = ["docx", "md", "pptx"], version = "^0.14.4"}
 
 [tool.poetry.group.dev.dependencies]
 types-redis = "^4.6.0.5"
