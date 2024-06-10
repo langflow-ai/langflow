@@ -31,25 +31,60 @@ def create_flow(
     flow: FlowCreate,
     current_user: User = Depends(get_current_active_user),
 ):
-    """Create a new flow."""
-    if flow.user_id is None:
-        flow.user_id = current_user.id
+    try:
+        """Create a new flow."""
+        if flow.user_id is None:
+            flow.user_id = current_user.id
 
-    db_flow = Flow.model_validate(flow, from_attributes=True)
-    db_flow.updated_at = datetime.now(timezone.utc)
+        # First check if the flow.name is unique
+        # there might be flows with name like: "MyFlow", "MyFlow (1)", "MyFlow (2)"
+        # so we need to check if the name is unique with `like` operator
+        # if we find a flow with the same name, we add a number to the end of the name
+        # based on the highest number found
+        if session.exec(select(Flow).where(Flow.name == flow.name).where(Flow.user_id == current_user.id)).first():
+            flows = session.exec(
+                select(Flow).where(Flow.name.like(f"{flow.name} (%")).where(Flow.user_id == current_user.id)
+            ).all()
+            if flows:
+                numbers = [int(flow.name.split("(")[1].split(")")[0]) for flow in flows]
+                flow.name = f"{flow.name} ({max(numbers) + 1})"
+            else:
+                flow.name = f"{flow.name} (1)"
 
-    if db_flow.folder_id is None:
-        # Make sure flows always have a folder
-        default_folder = session.exec(
-            select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME, Folder.user_id == current_user.id)
-        ).first()
-        if default_folder:
-            db_flow.folder_id = default_folder.id
+        db_flow = Flow.model_validate(flow, from_attributes=True)
+        db_flow.updated_at = datetime.now(timezone.utc)
 
-    session.add(db_flow)
-    session.commit()
-    session.refresh(db_flow)
-    return db_flow
+        if db_flow.folder_id is None:
+            # Make sure flows always have a folder
+            default_folder = session.exec(
+                select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME, Folder.user_id == current_user.id)
+            ).first()
+            if default_folder:
+                db_flow.folder_id = default_folder.id
+
+        session.add(db_flow)
+        session.commit()
+        session.refresh(db_flow)
+        return db_flow
+    except Exception as e:
+        # If it is a validation error, return the error message
+        if hasattr(e, "errors"):
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        elif "UNIQUE constraint failed" in str(e):
+            # Get the name of the column that failed
+            columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
+            # UNIQUE constraint failed: flow.user_id, flow.name
+            # or UNIQUE constraint failed: flow.name
+            # if the column has id in it, we want the other column
+            column = columns.split(",")[1] if "id" in columns.split(",")[0] else columns.split(",")[0]
+
+            raise HTTPException(
+                status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
+            ) from e
+        elif isinstance(e, HTTPException):
+            raise e
+        else:
+            raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/", response_model=list[FlowRead], status_code=200)
