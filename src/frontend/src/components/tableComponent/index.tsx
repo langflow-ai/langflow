@@ -139,7 +139,6 @@ const TableComponent = forwardRef<
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
           onStateUpdated={(e) => {
-            console.log(e);
             if (e.sources.some((source) => source.includes("column"))) {
               setColumnStateChange(true);
             }
