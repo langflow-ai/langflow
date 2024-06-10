@@ -112,7 +112,10 @@ export default function IOModal({
         setLockChat(false);
       });
     }
-    const { rows, columns } = await getMessagesTable("union", currentFlow!.id);
+    const { rows, columns } = await getMessagesTable("union", currentFlow!.id, [
+      "index",
+      "flow_id",
+    ]);
     setMessages(rows);
     setColumns(columns);
     setLockChat(false);
@@ -148,10 +151,12 @@ export default function IOModal({
   useEffect(() => {
     setSelectedViewField(startView());
     if (haveChat) {
-      getMessagesTable("union", currentFlow!.id).then(({ rows, columns }) => {
-        setMessages(rows);
-        setColumns(columns);
-      });
+      getMessagesTable("union", currentFlow!.id, ["index", "flow_id"]).then(
+        ({ rows, columns }) => {
+          setMessages(rows);
+          setColumns(columns);
+        },
+      );
     }
   }, [open]);
 

@@ -79,6 +79,6 @@ class ChatComponent(CustomComponent):
                 text=input_value, sender=sender, sender_name=sender_name, files=files, session_id=session_id
             )
         self.status = message
-        if session_id and isinstance(message, Message):
+        if session_id and isinstance(message, Message) and isinstance(message.text, str):
             self.store_message(message)
         return message
