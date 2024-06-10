@@ -892,7 +892,7 @@
     @apply mx-auto mt-4 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-almost-light-blue sm:mx-0 sm:h-10 sm:w-10;
   }
   .prompt-modal-icon {
-    @apply h-6 w-6 text-almost-medium-blue;
+    @apply h-6 w-6 text-primary;
   }
   .prompt-modal-txtarea-arrangement {
     @apply flex-max-width h-full flex-row items-center justify-center gap-4 overflow-auto bg-accent p-4;

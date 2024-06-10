@@ -26,10 +26,8 @@ export default function FetchErrorComponent({
               name="Unplug"
             ></IconComponent>
             <br></br>
-            <span className="text-lg text-almost-medium-blue">{message}</span>
-            <span className="text-lg text-almost-medium-blue">
-              {description}
-            </span>
+            <span className="text-lg text-primary">{message}</span>
+            <span className="text-lg text-primary">{description}</span>
           </div>
         </BaseModal.Content>
 
