@@ -2,7 +2,7 @@ import { Transition } from "@headlessui/react";
 import { useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import IOModal from "../../modals/IOModal";
-import ApiModal from "../../modals/apiModal/views";
+import ApiModal from "../../modals/apiModal";
 import ShareModal from "../../modals/shareModal";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
