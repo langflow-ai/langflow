@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useMemo } from "react";
 
 import React from "react";
 import {
@@ -22,7 +22,7 @@ import { modalHeaderType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import { switchCaseModalSize } from "./helpers/switch-case-size";
 
-type ContentProps = { children: ReactNode };
+type ContentProps = { children: ReactNode; overflowHidden?: boolean };
 type HeaderProps = { children: ReactNode; description: string };
 type FooterProps = { children: ReactNode };
 type TriggerProps = {
@@ -32,8 +32,17 @@ type TriggerProps = {
   className?: string;
 };
 
-const Content: React.FC<ContentProps> = ({ children }) => {
-  return <div className="flex h-full w-full flex-col">{children}</div>;
+const Content: React.FC<ContentProps> = ({ children, overflowHidden }) => {
+  return (
+    <div
+      className={cn(
+        `flex w-full flex-grow flex-col transition-all duration-300`,
+        overflowHidden ? "overflow-hidden" : "overflow-visible",
+      )}
+    >
+      {children}
+    </div>
+  );
 };
 const Trigger: React.FC<TriggerProps> = ({
   children,
@@ -59,8 +68,12 @@ const Header: React.FC<{
 }> = ({ children, description }: modalHeaderType): JSX.Element => {
   return (
     <DialogHeader>
-      <DialogTitle className="flex items-center">{children}</DialogTitle>
-      <DialogDescription>{description}</DialogDescription>
+      <DialogTitle className="line-clamp-1 flex items-center">
+        {children}
+      </DialogTitle>
+      <DialogDescription className="line-clamp-2">
+        {description}
+      </DialogDescription>
     </DialogHeader>
   );
 };
@@ -75,27 +88,31 @@ const Footer: React.FC<{
     dataTestId?: string;
   };
 }> = ({ children, submit }) => {
-  return submit ? (
-    <div className="flex w-full items-center justify-between">
-      {children ?? <div />}
-      <div className="flex items-center gap-3">
-        <DialogClose asChild>
-          <Button variant="outline" type="button">
-            Cancel
-          </Button>
-        </DialogClose>
-        <Button
-          data-testid={submit.dataTestId}
-          type="submit"
-          loading={submit.loading}
-        >
-          {submit.icon && submit.icon}
-          {submit.label}
-        </Button>
-      </div>
+  return (
+    <div className="flex flex-shrink-0 flex-row-reverse">
+      {submit ? (
+        <div className="flex w-full items-center justify-between">
+          {children ?? <div />}
+          <div className="flex items-center gap-3">
+            <DialogClose asChild>
+              <Button variant="outline" type="button">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              data-testid={submit.dataTestId}
+              type="submit"
+              loading={submit.loading}
+            >
+              {submit.icon && submit.icon}
+              {submit.label}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>{children && children}</>
+      )}
     </div>
-  ) : (
-    <>{children && children}</>
   );
 };
 interface BaseModalProps {
@@ -159,71 +176,47 @@ function BaseModal({
     }
   }, [open]);
 
+  const modalContent = useMemo(
+    () => (
+      <>
+        {headerChild}
+        {ContentChild}
+        {ContentFooter && ContentFooter}
+      </>
+    ),
+    [headerChild, ContentChild, ContentFooter],
+  );
+
+  const contentClasses = cn(
+    minWidth,
+    height,
+    "flex flex-col duration-300 overflow-hidden",
+  );
+
   //UPDATE COLORS AND STYLE CLASSSES
   return (
     <>
       {type === "modal" ? (
         <Modal open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <ModalContent
-            className={cn(minWidth, height, "flex flex-col duration-300")}
-          >
-            <div className="flex-shrink-0 truncate-doubleline word-break-break-word">
-              {headerChild}
-            </div>
-            <div
-              className={`flex w-full flex-1 flex-col transition-all duration-300`}
-            >
-              {ContentChild}
-            </div>
-            {ContentFooter && (
-              <div className="flex flex-shrink-0 flex-row-reverse">
-                {ContentFooter}
-              </div>
-            )}
-          </ModalContent>
+          <ModalContent className={contentClasses}>{modalContent}</ModalContent>
         </Modal>
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
-          <DialogContent
-            className={cn(minWidth, height, "flex flex-col duration-300")}
-          >
-            <div className="flex-shrink-0 truncate-doubleline word-break-break-word">
-              {headerChild}
-            </div>
+          <DialogContent className={contentClasses}>
             {onSubmit ? (
               <Form.Root
                 onSubmit={(event) => {
                   event.preventDefault();
                   onSubmit();
                 }}
-                className="flex min-h-0 flex-1 flex-col gap-6"
+                asChild
               >
-                <div
-                  className={`flex w-full flex-1 flex-col overflow-hidden transition-all duration-300`}
-                >
-                  {ContentChild}
-                </div>
-                {ContentFooter && (
-                  <div className="flex flex-shrink-0 flex-row-reverse">
-                    {ContentFooter}
-                  </div>
-                )}
+                {modalContent}
               </Form.Root>
             ) : (
-              <>
-                <div
-                  className={`flex min-h-0 w-full flex-1 flex-col transition-all duration-300`}
-                >
-                  {ContentChild}
-                </div>
-                {ContentFooter && (
-                  <div className="flex flex-shrink-0 flex-row-reverse">
-                    {ContentFooter}
-                  </div>
-                )}
-              </>
+              modalContent
             )}
           </DialogContent>
         </Dialog>
