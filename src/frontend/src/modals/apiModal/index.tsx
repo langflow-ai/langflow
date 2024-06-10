@@ -215,7 +215,7 @@ const ApiModal = forwardRef(
             aria-hidden="true"
           />
         </BaseModal.Header>
-        <BaseModal.Content>
+        <BaseModal.Content overflowHidden>
           <CodeTabsComponent
             flow={flow}
             tabs={tabs!}
