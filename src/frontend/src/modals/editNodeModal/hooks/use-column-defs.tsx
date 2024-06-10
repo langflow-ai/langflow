@@ -6,6 +6,7 @@ import TableToggleCellRender from "../../../components/tableComponent/components
 const useColumnDefs = (
   myData: any,
   handleOnNewValue: (newValue: any, name: string) => void,
+  handleOnChangeDb: (value: boolean, key: string) => void,
   changeAdvanced: (n: string) => void,
   open: boolean,
 ) => {
@@ -47,9 +48,7 @@ const useColumnDefs = (
             value: params.data.value,
             nodeClass: myData.node,
             handleOnNewValue: handleOnNewValue,
-            handleOnChangeDb: (value, key) => {
-              myData.node!.template[key].load_from_db = value;
-            },
+            handleOnChangeDb: handleOnChangeDb,
           };
         },
         minWidth: 340,
