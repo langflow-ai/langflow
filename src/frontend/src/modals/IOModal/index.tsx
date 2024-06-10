@@ -358,13 +358,22 @@ export default function IOModal({
                           });
                         }}
                       >
-                        <div className="flex w-full items-center justify-between border-b px-2 py-1 align-middle">
-                          <Badge variant="gray" size="md">
-                            {session}
-                          </Badge>
-                          <div className="flex items-center justify-center gap-2 align-middle">
+                        <div className="flex w-full items-center justify-between gap-2 overflow-hidden border-b px-2 py-3.5 align-middle">
+                          <ShadTooltip styleClasses="z-50" content={session}>
+                            <div className="flex min-w-0">
+                              <Badge
+                                variant="gray"
+                                size="md"
+                                className="block truncate"
+                              >
+                                {session}
+                              </Badge>
+                            </div>
+                          </ShadTooltip>
+                          <div className="flex shrink-0 items-center justify-center gap-2 align-middle">
                             <Button
-                              variant="ghost"
+                              variant="none"
+                              size="icon"
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -375,7 +384,7 @@ export default function IOModal({
                             >
                               <ShadTooltip
                                 styleClasses="z-50"
-                                content={"delete"}
+                                content={"Delete"}
                               >
                                 <div>
                                   <IconComponent
