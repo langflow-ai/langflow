@@ -132,7 +132,7 @@ export default function Header(): JSX.Element {
           </Link>
         )}
       </div>
-      <div className="header-end-division lg:w-[30%]">
+      <div className="header-end-division lg:w-[407px]">
         <div className="header-end-display">
           <a
             href="https://github.com/langflow-ai/langflow"
@@ -195,6 +195,7 @@ export default function Header(): JSX.Element {
                   variant="none"
                   size="none"
                   data-testid="user-profile-settings"
+                  className="shrink-0"
                 >
                   <img
                     src={
@@ -204,7 +205,7 @@ export default function Header(): JSX.Element {
                       )}${BASE_URL_API}files/profile_pictures/${userData?.profile_image ?? "Space/046-rocket.png"}` ??
                       profileCircle
                     }
-                    className="h-7 w-7 focus-visible:outline-0 "
+                    className="h-7 w-7 shrink-0 focus-visible:outline-0"
                   />
                 </Button>
               </DropdownMenuTrigger>
