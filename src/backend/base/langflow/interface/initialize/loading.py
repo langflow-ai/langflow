@@ -7,8 +7,8 @@ import orjson
 from loguru import logger
 
 from langflow.custom.eval import eval_custom_component_code
-from langflow.graph.utils import get_artifact_type, post_process_raw
 from langflow.schema import Record
+from langflow.schema.artifact import get_artifact_type, post_process_raw
 
 if TYPE_CHECKING:
     from langflow.custom import Component, CustomComponent
@@ -159,7 +159,7 @@ async def build_custom_component(params: dict, custom_component: "CustomComponen
     elif hasattr(raw, "model_dump") and raw is not None:
         raw = raw.model_dump()
 
-    artifact_type = get_artifact_type(custom_component, build_result)
+    artifact_type = get_artifact_type(custom_component.repr_value, build_result)
     raw = post_process_raw(raw, artifact_type)
     artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
     return custom_component, build_result, artifact
