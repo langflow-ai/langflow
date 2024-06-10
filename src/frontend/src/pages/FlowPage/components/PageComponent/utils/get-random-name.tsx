@@ -5,7 +5,7 @@ import { toTitleCase } from "../../../../../utils/utils";
 export default function getRandomName(
   retry: number = 0,
   noSpace: boolean = false,
-  maxRetries: number = 3,
+  maxRetries: number = 3
 ): string {
   const left: string[] = ADJECTIVES;
   const right: string[] = NOUNS;

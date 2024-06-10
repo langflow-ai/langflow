@@ -1,18 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import useAlertStore from "../../../../../../../../stores/alertStore";
-import { gradients } from "../../../../../../../../utils/styleUtils";
-import useGetProfilePictures from "./hooks/use-get-profile-pictures";
-import { Label } from "../../../../../../../../components/ui/label";
+import { useEffect, useRef } from "react";
+import { Button } from "../../../../../../../../components/ui/button";
+import Loading from "../../../../../../../../components/ui/loading";
 import {
   BACKEND_URL,
   BASE_URL_API,
 } from "../../../../../../../../constants/constants";
-import HorizontalScrollFadeComponent from "../../../../../../../../components/horizontalScrollFadeComponent";
-import LoadingComponent from "../../../../../../../../components/loadingComponent";
-import Loading from "../../../../../../../../components/ui/loading";
-import { cn } from "../../../../../../../../utils/utils";
-import { Button } from "../../../../../../../../components/ui/button";
 import { useDarkStore } from "../../../../../../../../stores/darkStore";
+import { cn } from "../../../../../../../../utils/utils";
 
 type ProfilePictureChooserComponentProps = {
   profilePictures: { [key: string]: string[] };
@@ -60,8 +54,10 @@ export default function ProfilePictureChooserComponent({
                       key={idx}
                       src={`${BACKEND_URL.slice(
                         0,
-                        BACKEND_URL.length - 1,
-                      )}${BASE_URL_API}files/profile_pictures/${folder + "/" + path}`}
+                        BACKEND_URL.length - 1
+                      )}${BASE_URL_API}files/profile_pictures/${
+                        folder + "/" + path
+                      }`}
                       style={{
                         filter:
                           value === folder + "/" + path

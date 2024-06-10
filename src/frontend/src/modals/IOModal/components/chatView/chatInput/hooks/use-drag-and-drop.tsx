@@ -1,6 +1,5 @@
 import ShortUniqueId from "short-unique-id";
 import useFileUpload from "./use-file-upload";
-import useAlertStore from "../../../../../../stores/alertStore";
 
 const fsErrorText =
   "Please ensure your file has one of the following extensions:";
@@ -10,7 +9,7 @@ const useDragAndDrop = (
   setIsDragging,
   setFiles,
   currentFlowId,
-  setErrorData,
+  setErrorData
 ) => {
   const dragOver = (e) => {
     e.preventDefault();

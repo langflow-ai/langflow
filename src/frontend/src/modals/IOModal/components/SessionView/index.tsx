@@ -1,20 +1,10 @@
-import {
-  CellEditRequestEvent,
-  ColDef,
-  ColGroupDef,
-  SelectionChangedEvent,
-} from "ag-grid-community";
+import { CellEditRequestEvent, SelectionChangedEvent } from "ag-grid-community";
 import { useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
-import { Card, CardContent } from "../../../../components/ui/card";
+import useRemoveMessages from "../../../../pages/SettingsPage/pages/messagesPage/hooks/use-remove-messages";
+import useUpdateMessage from "../../../../pages/SettingsPage/pages/messagesPage/hooks/use-updateMessage";
 import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
-import useUpdateMessage from "../../../../pages/SettingsPage/pages/messagesPage/hooks/use-updateMessage";
-import useRemoveMessages from "../../../../pages/SettingsPage/pages/messagesPage/hooks/use-remove-messages";
-import HeaderMessagesComponent from "../../../../pages/SettingsPage/pages/messagesPage/components/headerMessages";
-import { Button } from "../../../../components/ui/button";
-import ForwardedIconComponent from "../../../../components/genericIconComponent";
-import { cn } from "../../../../utils/utils";
 
 export default function SessionView({ rows }: { rows: Array<any> }) {
   const columns = useMessagesStore((state) => state.columns);
@@ -27,7 +17,7 @@ export default function SessionView({ rows }: { rows: Array<any> }) {
     setSelectedRows,
     setSuccessData,
     setErrorData,
-    selectedRows,
+    selectedRows
   );
 
   const { handleUpdate } = useUpdateMessage(setSuccessData, setErrorData);

@@ -1,4 +1,4 @@
-import axios, { Axios, AxiosError, AxiosInstance } from "axios";
+import axios, { AxiosError, AxiosInstance } from "axios";
 import { useContext, useEffect } from "react";
 import { Cookies } from "react-cookie";
 import { renewAccessToken } from ".";
@@ -48,7 +48,7 @@ function ApiInterceptor() {
         }
         await clearBuildVerticesState(error);
         return Promise.reject(error);
-      },
+      }
     );
 
     const isAuthorizedURL = (url) => {
@@ -65,10 +65,10 @@ function ApiInterceptor() {
         const parsedURL = new URL(url);
 
         const isDomainAllowed = authorizedDomains.some(
-          (domain) => parsedURL.origin === new URL(domain).origin,
+          (domain) => parsedURL.origin === new URL(domain).origin
         );
         const isEndpointAllowed = authorizedEndpoints.some((endpoint) =>
-          parsedURL.pathname.includes(endpoint),
+          parsedURL.pathname.includes(endpoint)
         );
 
         return isDomainAllowed || isEndpointAllowed;
@@ -101,7 +101,7 @@ function ApiInterceptor() {
       },
       (error) => {
         return Promise.reject(error);
-      },
+      }
     );
 
     return () => {
@@ -133,7 +133,7 @@ function ApiInterceptor() {
       if (error?.config?.headers) {
         delete error.config.headers["Authorization"];
         error.config.headers["Authorization"] = `Bearer ${cookies.get(
-          "access_token_lf",
+          "access_token_lf"
         )}`;
         const response = await axios.request(error.config);
         return response;
