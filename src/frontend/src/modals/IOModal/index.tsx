@@ -183,8 +183,8 @@ export default function IOModal({
           />
         </div>
       </BaseModal.Header>
-      <BaseModal.Content>
-        <div className="flex h-full flex-col ">
+      <BaseModal.Content overflowHidden>
+        <div className="flex h-full flex-col">
           <div className="flex-max-width h-full">
             <div
               className={cn(
