@@ -352,7 +352,7 @@ export default function NodeToolbarComponent({
       <div className="flex justify-center">
         <span> {name} </span>
         <span
-          className={`ml-3 flex items-center rounded-sm bg-muted px-1 py-[0.2] text-muted-foreground`}
+          className={`ml-3 flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-lg text-muted-foreground`}
         >
           <RenderIcons
             isMac={isMac}
@@ -707,7 +707,7 @@ export default function NodeToolbarComponent({
                   />{" "}
                   <span className="">Delete</span>{" "}
                   <span
-                    className={`justify absolute right-2 top-2 flex items-center rounded-sm px-1 py-[0.2] ${deleteIsFocus ? " " : "bg-muted"}`}
+                    className={` absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${deleteIsFocus ? " " : "bg-muted"}`}
                   >
                     <IconComponent
                       name="Delete"
