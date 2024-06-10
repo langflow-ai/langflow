@@ -29,7 +29,7 @@ const ApiKeyHeaderComponent = ({
         <div className="flex flex-shrink-0 items-center gap-2">
           <SecretKeyModal data={userId} onCloseModal={fetchApiKeys}>
             <Button data-testid="api-key-button-store" variant="primary">
-              <ForwardedIconComponent name="Plus" className="mr-2 w-4" />
+              <ForwardedIconComponent name="Plus" className="w-4" />
               Add New
             </Button>
           </SecretKeyModal>

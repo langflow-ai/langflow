@@ -81,6 +81,7 @@ export default function GlobalVariablesPage() {
       flex: 2,
     }, //This column will be twice as wide as the others
     {
+      headerName: "Type",
       field: "type",
       cellRenderer: BadgeRenderer,
       cellEditor: DropdownEditor,
@@ -144,7 +145,7 @@ export default function GlobalVariablesPage() {
         <div className="flex flex-shrink-0 items-center gap-2">
           <AddNewVariableButton>
             <Button data-testid="api-key-button-store" variant="primary">
-              <IconComponent name="Plus" className="mr-2 w-4" />
+              <IconComponent name="Plus" className="w-4" />
               Add New
             </Button>
           </AddNewVariableButton>
