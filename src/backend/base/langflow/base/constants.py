@@ -9,7 +9,6 @@ Constants:
 
 import orjson
 
-
 STREAM_INFO_TEXT = "Stream the response from the model. Streaming works only in Chat."
 
 NODE_FORMAT_ATTRIBUTES = ["beta", "icon", "display_name", "description", "output_types"]
@@ -31,4 +30,4 @@ FIELD_FORMAT_ATTRIBUTES = [
     "options",
 ]
 
-ORJSON_OPTIONS = orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS | orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_OMIT_MICROSECONDS
+ORJSON_OPTIONS = orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS | orjson.OPT_OMIT_MICROSECONDS
