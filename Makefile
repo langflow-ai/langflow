@@ -44,7 +44,8 @@ coverage:
 	poetry run pytest --cov \
 		--cov-config=.coveragerc \
 		--cov-report xml \
-		--cov-report term-missing:skip-covered
+		--cov-report term-missing:skip-covered \
+		--cov-report lcov:coverage/lcov-pytest.info
 
 # allow passing arguments to pytest
 tests:

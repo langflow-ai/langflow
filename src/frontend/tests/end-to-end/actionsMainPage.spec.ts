@@ -90,6 +90,8 @@ test("search components", async ({ page }) => {
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
   await page.getByText("Chat Input").first().click();
+  await page.getByTestId("more-options-modal").click();
+
   await page.getByTestId("icon-SaveAll").first().click();
   await page.keyboard.press("Escape");
   await page
@@ -98,6 +100,8 @@ test("search components", async ({ page }) => {
     })
     .first()
     .click();
+  await page.getByTestId("more-options-modal").click();
+
   await page.getByTestId("icon-SaveAll").first().click();
   await page.keyboard.press("Escape");
 
@@ -107,6 +111,8 @@ test("search components", async ({ page }) => {
     })
     .first()
     .click();
+  await page.getByTestId("more-options-modal").click();
+
   await page.getByTestId("icon-SaveAll").first().click();
   await page.keyboard.press("Escape");
   await page.getByTestId("icon-ChevronLeft").first().click();

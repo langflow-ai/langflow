@@ -49,7 +49,9 @@ export default function IOFieldView({
     (flowPool[node!.id] ?? [])[(flowPool[node!.id]?.length ?? 1) - 1]?.data
       .results.result ?? "";
 
-  console.log(flowPoolNode?.data?.artifacts?.records);
+  console.log(
+    (flowPool[node!.id] ?? [])[(flowPool[node!.id]?.length ?? 1) - 1]?.data,
+  );
 
   function handleOutputType() {
     if (!node) return <>"No node found!"</>;
