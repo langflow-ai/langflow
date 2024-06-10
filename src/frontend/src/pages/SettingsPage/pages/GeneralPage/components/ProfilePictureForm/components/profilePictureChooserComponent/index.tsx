@@ -47,7 +47,7 @@ export default function ProfilePictureChooserComponent({
               <span className="font-normal">{folder}</span>
             </div>
             <div className="block overflow-hidden">
-              <div className="flex items-center gap-1 overflow-x-auto rounded-lg bg-background px-1">
+              <div className="flex items-center gap-1 overflow-x-auto rounded-lg bg-background px-1 custom-scroll">
                 {profilePictures[folder].map((path, idx) => (
                   <Button
                     ref={value === folder + "/" + path ? ref : undefined}
