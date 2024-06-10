@@ -3,9 +3,8 @@ import { useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useUpdateNodeInternals } from "reactflow";
 import CodeAreaComponent from "../../../../components/codeAreaComponent";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../../../components/genericIconComponent";
+import IconComponent from "../../../../components/genericIconComponent";
+import RenderIcons from "../../../../components/renderIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
   Select,
@@ -22,7 +21,6 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useStoreStore } from "../../../../stores/storeStore";
-import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { FlowType } from "../../../../types/flow";
@@ -34,7 +32,6 @@ import {
 } from "../../../../utils/reactflowUtils";
 import { classNames, cn, isThereModal } from "../../../../utils/utils";
 import ToolbarSelectItem from "./toolbarSelectItem";
-import RenderIcons from "../../../../components/renderIconComponent";
 
 export default function NodeToolbarComponent({
   data,
@@ -46,6 +43,7 @@ export default function NodeToolbarComponent({
   selected,
   setShowState,
   onCloseAdvancedModal,
+  updateNode,
 }: nodeToolbarPropsType): JSX.Element {
   const version = useDarkStore((state) => state.version);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
@@ -307,6 +305,9 @@ export default function NodeToolbarComponent({
       case "delete":
         deleteNode(data.id);
         break;
+      case "update":
+        updateNode();
+        break;
       case "copy":
         const node = nodes.filter((node) => node.id === data.id);
         setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
@@ -452,7 +453,9 @@ export default function NodeToolbarComponent({
               side="top"
             >
               <button
-                className={`${isGroup ? "rounded-l-md" : ""} relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
+                className={`${
+                  isGroup ? "rounded-l-md" : ""
+                } relative -ml-px inline-flex items-center bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring  transition-all duration-500 ease-in-out hover:bg-muted focus:z-10`}
                 onClick={() => {
                   setShowModalAdvanced(true);
                 }}

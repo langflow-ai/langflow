@@ -110,7 +110,7 @@ async def download_profile_picture(
         extension = file_name.split(".")[-1]
         config_dir = get_storage_service().settings_service.settings.config_dir
         config_path = Path(config_dir)
-        folder_path = config_path / 'profile_pictures' / folder_name
+        folder_path = config_path / "profile_pictures" / folder_name
         content_type = build_content_type_from_extension(extension)
         file_content = await storage_service.get_file(flow_id=folder_path, file_name=file_name)
         return StreamingResponse(BytesIO(file_content), media_type=content_type)
@@ -138,7 +138,6 @@ async def list_profile_pictures(storage_service: StorageService = Depends(get_st
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 @router.get("/list/{flow_id}")

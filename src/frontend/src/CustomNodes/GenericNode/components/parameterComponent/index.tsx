@@ -82,7 +82,9 @@ export default function ParameterComponent({
   const [openOutputModal, setOpenOutputModal] = useState(false);
   const flowPool = useFlowStore((state) => state.flowPool);
 
-  const displayOutputPreview = !!flowPool[data.id];
+  const displayOutputPreview =
+    !!flowPool[data.id] &&
+    flowPool[data.id][flowPool[data.id].length - 1]?.valid;
 
   const unknownOutput = !!(
     flowPool[data.id] &&

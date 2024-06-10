@@ -18,7 +18,9 @@ const UploadFileButton = ({
       />
       <Button
         disabled={lockChat}
-        className={`font-bold text-white transition-all ${lockChat ? "cursor-not-allowed" : "hover:text-muted-foreground"}`}
+        className={`font-bold text-white transition-all ${
+          lockChat ? "cursor-not-allowed" : "hover:text-muted-foreground"
+        }`}
         onClick={handleButtonClick}
         variant="none"
         size="none"

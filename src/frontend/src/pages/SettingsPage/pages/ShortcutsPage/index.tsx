@@ -1,4 +1,3 @@
-import { ColDef, ColGroupDef, SelectionChangedEvent } from "ag-grid-community";
 import { useEffect, useState } from "react";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
 import TableComponent from "../../../../components/tableComponent";

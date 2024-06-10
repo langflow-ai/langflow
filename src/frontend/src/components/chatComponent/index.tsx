@@ -1,6 +1,6 @@
 import { Transition } from "@headlessui/react";
+import { useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useEffect, useMemo, useRef, useState } from "react";
 import IOModal from "../../modals/IOModal";
 import ApiModal from "../../modals/apiModal/views";
 import ShareModal from "../../modals/shareModal";

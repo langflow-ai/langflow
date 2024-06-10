@@ -1,7 +1,7 @@
 import { cn } from "../../../../utils/utils";
+import IconComponent from "../../../genericIconComponent";
 import ShadTooltip from "../../../shadTooltipComponent";
 import { Button } from "../../../ui/button";
-import IconComponent from "../../../genericIconComponent";
 
 export default function TableOptions({
   resetGrid,
@@ -18,7 +18,7 @@ export default function TableOptions({
 }): JSX.Element {
   return (
     <div className={cn("absolute bottom-3 left-6")}>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <div>
           <ShadTooltip content="Reset Columns">
             <Button
@@ -31,7 +31,10 @@ export default function TableOptions({
             >
               <IconComponent
                 name="RotateCcw"
-                className={cn("h-5 w-5 text-primary transition-all")}
+                strokeWidth={2}
+                className={cn(
+                  "h-5 w-5 text-primary transition-all hover:text-accent-foreground",
+                )}
               />
             </Button>
           </ShadTooltip>
@@ -81,8 +84,8 @@ export default function TableOptions({
                 <IconComponent
                   name="Trash2"
                   className={cn(
-                    "h-5 w-5 text-primary transition-all",
-                    !hasSelection ? "" : "hover:text-destructive",
+                    "h-5 w-5  text-primary transition-all",
+                    !hasSelection ? "" : "hover:text-status-red ",
                   )}
                 />
               </Button>

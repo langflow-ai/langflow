@@ -23,7 +23,7 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   group: "mod+g",
   cut: "mod+x",
   paste: "mod+v",
-  api: "mod+r",
+  api: "mod+shift+r",
   update: "mod+u",
   download: "mod+j",
   freeze: "mod+f",

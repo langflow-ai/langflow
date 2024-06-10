@@ -3,6 +3,7 @@ import { forwardRef, useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import TableComponent from "../../components/tableComponent";
 import { Badge } from "../../components/ui/badge";
+import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import { NodeDataType } from "../../types/flow";
 import BaseModal from "../baseModal";
@@ -28,6 +29,8 @@ const EditNodeModal = forwardRef(
     ref,
   ) => {
     const myData = useRef(cloneDeep(data));
+
+    const isDark = useDarkStore((state) => state.dark);
 
     const setNode = useFlowStore((state) => state.setNode);
 
@@ -66,13 +69,15 @@ const EditNodeModal = forwardRef(
     //    }, []);
 
     return (
-      <BaseModal key={data.id} size="medium-tall" open={open} setOpen={setOpen}>
+      <BaseModal key={data.id} open={open} setOpen={setOpen}>
         <BaseModal.Trigger>
           <></>
         </BaseModal.Trigger>
         <BaseModal.Header description={data.node?.description!}>
           <span className="pr-2">{data.type}</span>
-          <Badge variant="secondary">ID: {data.id}</Badge>
+          <Badge variant={isDark ? "gray" : "secondary"}>
+            <span className="relative top-[0.6px]">ID: {data.id}</span>
+          </Badge>
         </BaseModal.Header>
         <BaseModal.Content>
           <div className="flex h-full flex-col">

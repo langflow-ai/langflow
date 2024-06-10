@@ -94,7 +94,9 @@ export default function ChatInput({
         </div>
 
         <div
-          className={`absolute bottom-2 left-4 ${lockChat || saveLoading ? "cursor-not-allowed" : ""}`}
+          className={`absolute bottom-2 left-4 ${
+            lockChat || saveLoading ? "cursor-not-allowed" : ""
+          }`}
         >
           <UploadFileButton
             lockChat={lockChat || saveLoading}
