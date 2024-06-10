@@ -7,7 +7,7 @@
 # Used to build deps + create our virtual environment
 ################################
 
-# Force platform to current architecture to increase build speed time on multi-platform builds
+# force platform to the current architecture to increase build speed time on multi-platform builds
 FROM --platform=$BUILDPLATFORM python:3.12-slim as builder-base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
