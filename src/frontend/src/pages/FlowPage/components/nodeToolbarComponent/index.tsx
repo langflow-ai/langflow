@@ -684,6 +684,16 @@ export default function NodeToolbarComponent({
                   style={`${frozen ? " text-ice" : ""} transition-all`}
                 />
               </SelectItem>
+              <SelectItem value="Download">
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Download")?.shortcut!
+                  }
+                  value={"Download"}
+                  icon={"Download"}
+                  dataTestId="download-button-modal"
+                />
+              </SelectItem>
               <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
                 <div className="font-red flex text-status-red">
                   <IconComponent
@@ -691,10 +701,10 @@ export default function NodeToolbarComponent({
                     className="relative top-0.5 mr-2 h-4 w-4 "
                   />{" "}
                   <span className="">Delete</span>{" "}
-                  <span>
+                  <span className="justify absolute right-2 top-2 flex items-center rounded-sm bg-muted px-1 py-[0.2]">
                     <IconComponent
                       name="Delete"
-                      className="absolute right-2 top-2 h-4 w-4 stroke-2 text-red-400"
+                      className="h-4 w-4 stroke-2 text-red-400"
                     ></IconComponent>
                   </span>
                 </div>
