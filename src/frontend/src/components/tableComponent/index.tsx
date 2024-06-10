@@ -12,7 +12,6 @@ import { cn, toTitleCase } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import TableOptions from "./components/TableOptions";
-import { useParams } from "react-router-dom";
 import resetGrid from "./utils/reset-grid-columns";
 
 interface TableComponentProps extends AgGridReactProps {
@@ -21,6 +20,7 @@ interface TableComponentProps extends AgGridReactProps {
   alertTitle?: string;
   alertDescription?: string;
   editable?: boolean | string[];
+  pagination?: boolean;
   onDelete?: () => void;
   onDuplicate?: () => void;
 }
@@ -134,7 +134,6 @@ const TableComponent = forwardRef<
           }}
           columnDefs={colDef}
           ref={realRef}
-          pagination={true}
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
           onStateUpdated={(e) => {
@@ -143,18 +142,20 @@ const TableComponent = forwardRef<
             }
           }}
         />
-        <TableOptions
-          stateChange={columnStateChange}
-          hasSelection={realRef.current?.api?.getSelectedRows().length > 0}
-          duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
-          deleteRow={props.onDelete ? props.onDelete : undefined}
-          resetGrid={() => {
-            resetGrid(realRef, initialColumnDefs);
-            setTimeout(() => {
-              setColumnStateChange(false);
-            }, 100);
-          }}
-        />
+        {props.pagination && (
+          <TableOptions
+            stateChange={columnStateChange}
+            hasSelection={realRef.current?.api?.getSelectedRows().length > 0}
+            duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
+            deleteRow={props.onDelete ? props.onDelete : undefined}
+            resetGrid={() => {
+              resetGrid(realRef, initialColumnDefs);
+              setTimeout(() => {
+                setColumnStateChange(false);
+              }, 100);
+            }}
+          />
+        )}
       </div>
     );
   },
