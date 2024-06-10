@@ -46,6 +46,7 @@ export default function NodeToolbarComponent({
   selected,
   setShowState,
   onCloseAdvancedModal,
+  updateNode,
 }: nodeToolbarPropsType): JSX.Element {
   const version = useDarkStore((state) => state.version);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
@@ -306,6 +307,9 @@ export default function NodeToolbarComponent({
         break;
       case "delete":
         deleteNode(data.id);
+        break;
+      case "update":
+        updateNode();
         break;
       case "copy":
         const node = nodes.filter((node) => node.id === data.id);
