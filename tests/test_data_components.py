@@ -165,7 +165,7 @@ def test_directory_without_mocks():
     # each result is a Record that contains the content attribute
     # each are dict that are exactly the same as one of the projects
     for result in results:
-        assert result.text in projects
+        assert result.text in projects, result.file_path
 
     # in ../docs/docs/components there are many mdx files
     # check if the directory component can load them
