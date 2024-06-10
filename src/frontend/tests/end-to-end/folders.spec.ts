@@ -58,7 +58,7 @@ test("add folder by drag and drop", async ({ page }) => {
 
   const jsonContent = readFileSync(
     "src/frontend/tests/end-to-end/assets/collection.json",
-    "utf-8",
+    "utf-8"
   );
 
   // Create the DataTransfer and File
@@ -78,7 +78,7 @@ test("add folder by drag and drop", async ({ page }) => {
     "drop",
     {
       dataTransfer,
-    },
+    }
   );
 
   await page.getByText("Getting Started").first().isVisible();
