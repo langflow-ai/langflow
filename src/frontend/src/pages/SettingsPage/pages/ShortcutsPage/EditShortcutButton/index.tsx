@@ -107,7 +107,9 @@ export default function EditShortcutButton({
     if (oldKey === null) {
       return `${key.length > 0 ? toTitleCase(key) : toTitleCase(key)}`;
     }
-    return `${oldKey.length > 0 ? toTitleCase(oldKey) : oldKey.toUpperCase()} + ${key.length > 0 ? toTitleCase(key) : key.toUpperCase()}`;
+    return `${
+      oldKey.length > 0 ? toTitleCase(oldKey) : oldKey.toUpperCase()
+    } + ${key.length > 0 ? toTitleCase(key) : key.toUpperCase()}`;
   }
 
   function checkForKeys(keys: string, keyToCompare: string): boolean {

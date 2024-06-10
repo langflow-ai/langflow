@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import ShortUniqueId from "short-unique-id";
-import useFileUpload from "./use-file-upload";
 import useAlertStore from "../../../../../../stores/alertStore";
+import useFileUpload from "./use-file-upload";
 
 const fsErrorText =
   "Please ensure your file has one of the following extensions:";

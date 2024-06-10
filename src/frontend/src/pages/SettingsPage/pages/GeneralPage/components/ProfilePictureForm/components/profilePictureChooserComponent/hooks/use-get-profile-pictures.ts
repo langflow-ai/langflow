@@ -1,7 +1,6 @@
-import { reject } from "lodash";
+import axios from "axios";
 import { PROFILE_PICTURES_GET_ERROR_ALERT } from "../../../../../../../../../constants/alerts_constants";
 import { getProfilePictures } from "../../../../../../../../../controllers/API";
-import axios from "axios";
 
 const useGetProfilePictures = (setErrorData) => {
   const handleGetProfilePictures = async () => {

@@ -2,7 +2,6 @@ import ForwardedIconComponent from "../../../../../../components/genericIconComp
 import { Button } from "../../../../../../components/ui/button";
 import { API_PAGE_PARAGRAPH } from "../../../../../../constants/constants";
 import SecretKeyModal from "../../../../../../modals/secretKeyModal";
-import { cn } from "../../../../../../utils/utils";
 
 type ApiKeyHeaderComponentProps = {
   selectedRows: string[];
