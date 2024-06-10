@@ -13,7 +13,7 @@ class ChatInput(ChatComponent):
         build_config = super().build_config()
         build_config["input_value"] = {
             "input_types": [],
-            "display_name": "Message",
+            "display_name": "Text",
             "multiline": True,
         }
 
