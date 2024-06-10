@@ -73,7 +73,7 @@ class ChatVertexAIComponent(LCModelComponent):
                 "value": False,
                 "advanced": True,
             },
-            "input_value": {"display_name": "Input", "input_types": ["Text", "Record"]},
+            "input_value": {"display_name": "Input", "input_types": ["Text", "Record", "Prompt"]},
             "stream": {
                 "display_name": "Stream",
                 "info": STREAM_INFO_TEXT,

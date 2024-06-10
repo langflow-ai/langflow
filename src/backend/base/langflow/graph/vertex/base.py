@@ -4,7 +4,7 @@ import inspect
 import os
 import types
 from enum import Enum
-from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Optional
+from typing import TYPE_CHECKING, Any, AsyncIterator, Callable, Dict, Iterator, List, Mapping, Optional
 
 from loguru import logger
 
@@ -373,7 +373,7 @@ class Vertex:
         self.load_from_db_fields = load_from_db_fields
         self._raw_params = params.copy()
 
-    def update_raw_params(self, new_params: Dict[str, str | list[str]], overwrite: bool = False):
+    def update_raw_params(self, new_params: Mapping[str, str | list[str]], overwrite: bool = False):
         """
         Update the raw parameters of the vertex with the given new parameters.
 
@@ -424,7 +424,7 @@ class Vertex:
         try:
             messages = [
                 ChatOutputResponse(
-                    message=artifacts["message"],
+                    message=artifacts["text"],
                     sender=artifacts.get("sender"),
                     sender_name=artifacts.get("sender_name"),
                     session_id=artifacts.get("session_id"),
@@ -444,7 +444,7 @@ class Vertex:
         # We need to set the artifacts to pass information
         # to the frontend
         self.set_artifacts()
-        artifacts = self.artifacts
+        artifacts = self.artifacts_raw
         if isinstance(artifacts, dict):
             messages = self.extract_messages_from_artifacts(artifacts)
         else:

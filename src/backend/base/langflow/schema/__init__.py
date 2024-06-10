@@ -1,4 +1,4 @@
 from .dotdict import dotdict
-from .schema import Record
+from .record import Record
 
 __all__ = ["Record", "dotdict"]

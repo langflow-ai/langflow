@@ -1,4 +1,5 @@
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from langflow.services.deps import get_monitor_service
@@ -79,7 +80,7 @@ async def delete_messages(
 
 @router.post("/messages/{message_id}", response_model=MessageModelResponse)
 async def update_message(
-    message_id: str,
+    message_id: int,
     message: MessageModelRequest,
     monitor_service: MonitorService = Depends(get_monitor_service),
 ):
@@ -134,4 +135,5 @@ async def get_transactions(
             result.append(d)
         return result
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
         raise HTTPException(status_code=500, detail=str(e))

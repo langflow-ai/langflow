@@ -4,7 +4,7 @@ from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
 
 from langflow.base.memory.memory import BaseMemoryComponent
 from langflow.field_typing import Text
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 
 class AstraDBMessageReaderComponent(BaseMemoryComponent):

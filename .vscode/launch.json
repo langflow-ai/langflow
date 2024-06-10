@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "Debug Backend",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "module": "uvicorn",
       "args": [
@@ -26,7 +26,7 @@
     },
     {
       "name": "Debug CLI",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "module": "langflow",
       "args": [
@@ -43,7 +43,7 @@
     },
     {
       "name": "Python: Remote Attach",
-      "type": "python",
+      "type": "debugpy",
       "request": "attach",
       "justMyCode": true,
       "connect": {
@@ -65,7 +65,7 @@
     },
     {
       "name": "Python: Debug Tests",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "${file}",
       "purpose": ["debug-test"],

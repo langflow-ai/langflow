@@ -92,8 +92,6 @@ class MonitorService(Service):
         with duckdb.connect(str(self.db_path)) as conn:
             df = conn.execute(query).df()
 
-        print(query)
-
         return df.to_dict(orient="records")
 
     def delete_vertex_builds(self, flow_id: Optional[str] = None):
@@ -134,7 +132,7 @@ class MonitorService(Service):
         order: Optional[str] = "DESC",
         limit: Optional[int] = None,
     ):
-        query = "SELECT index, flow_id, sender_name, sender, session_id, message, timestamp FROM messages"
+        query = "SELECT index, flow_id, sender_name, sender, session_id, text, timestamp FROM messages"
         conditions = []
         if sender:
             conditions.append(f"sender = '{sender}'")

@@ -3,11 +3,10 @@ from typing import Optional, Union
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
-from langchain_core.load import load
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from langflow.custom import CustomComponent
-from langflow.schema.schema import Record
+from langflow.field_typing.prompt import Prompt
 
 
 class LCModelComponent(CustomComponent):
@@ -85,7 +84,7 @@ class LCModelComponent(CustomComponent):
         return status_message
 
     def get_chat_result(
-        self, runnable: BaseChatModel, stream: bool, input_value: str | Record, system_message: Optional[str] = None
+        self, runnable: BaseChatModel, stream: bool, input_value: str | Prompt, system_message: Optional[str] = None
     ):
         messages: list[Union[HumanMessage, SystemMessage]] = []
         if not input_value and not system_message:
@@ -93,20 +92,21 @@ class LCModelComponent(CustomComponent):
         if system_message:
             messages.append(SystemMessage(content=system_message))
         if input_value:
-            if isinstance(input_value, Record):
+            if isinstance(input_value, Prompt):
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     if "prompt" in input_value:
-                        prompt = load(input_value.prompt)
+                        prompt = input_value.load_lc_prompt()
                         runnable = prompt | runnable
                     else:
                         messages.append(input_value.to_lc_message())
             else:
                 messages.append(HumanMessage(content=input_value))
+        inputs = messages or {}
         if stream:
-            return runnable.stream(messages)
+            return runnable.stream(inputs)
         else:
-            message = runnable.invoke(messages)
+            message = runnable.invoke(inputs)
             result = message.content
             if isinstance(message, AIMessage):
                 status_message = self.build_status_message(message)

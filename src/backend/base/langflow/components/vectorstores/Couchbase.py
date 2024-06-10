@@ -1,17 +1,15 @@
-from typing import List, Optional, Union
-
-from langchain_community.vectorstores import CouchbaseVectorStore
-
-from langflow.custom import CustomComponent
-from langflow.field_typing import Embeddings, VectorStore
-from langflow.schema import Record
-
 from datetime import timedelta
+from typing import List, Optional, Union
 
 from couchbase.auth import PasswordAuthenticator  # type: ignore
 from couchbase.cluster import Cluster  # type: ignore
 from couchbase.options import ClusterOptions  # type: ignore
+from langchain_community.vectorstores import CouchbaseVectorStore
 from langchain_core.retrievers import BaseRetriever
+
+from langflow.custom import CustomComponent
+from langflow.field_typing import Embeddings, VectorStore
+from langflow.schema import Record
 
 
 class CouchbaseComponent(CustomComponent):

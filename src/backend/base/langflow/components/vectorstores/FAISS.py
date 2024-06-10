@@ -6,7 +6,7 @@ from langchain_core.vectorstores import VectorStore
 
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 
 class FAISSComponent(CustomComponent):
