@@ -236,6 +236,10 @@ module.exports = {
         ".text-align-last-right": {
           "text-align-last": "right",
         },
+        ":focus-visible": {
+          outline: "none  !important",
+          outlineOffset: "0px !important",
+        },
       });
     }),
     require("@tailwindcss/typography"),

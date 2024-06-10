@@ -28,7 +28,7 @@ export default function SwitchOutputView(nodeId): JSX.Element {
   if (resultMessage.raw) {
     resultMessage = resultMessage.raw;
   }
-  console.log("resultType", results);
+
   return (
     <>
       <Case condition={!resultType || resultType === "unknown"}>
