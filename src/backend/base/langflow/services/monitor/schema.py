@@ -151,7 +151,7 @@ class VertexBuildModel(DefaultModel):
                     v[key] = value.model_dump()
                 elif isinstance(value, list) and all(isinstance(i, BaseModel) for i in value):
                     v[key] = [i.model_dump() for i in value]
-            return json.dumps(v)
+            return json.dumps(v, default=str)
         elif isinstance(v, BaseModel):
             return v.model_dump_json()
         return v
