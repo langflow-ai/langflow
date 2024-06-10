@@ -7,7 +7,6 @@ import IconComponent from "../../../../components/genericIconComponent";
 import PaginatorComponent from "../../../../components/paginatorComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
-import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../stores/alertStore";
 import { useDarkStore } from "../../../../stores/darkStore";
@@ -113,104 +112,6 @@ export default function ComponentsComponent({
     setValue
   );
 
-  const handleSelectOptionsChange = (action: string) => {
-    const hasSelected = selectedFlowsComponentsCards?.length > 0;
-    if (!hasSelected) {
-      setErrorData({
-        title: "No items selected",
-        list: ["Please select items to delete"],
-      });
-      return;
-    }
-    if (action === "delete") {
-      setOpenDelete(true);
-    } else if (action === "duplicate") {
-      handleDuplicate();
-    } else if (action === "export") {
-      handleExport();
-    }
-  };
-
-  const handleDuplicate = () => {
-    Promise.all(
-      selectedFlowsComponentsCards.map((selectedFlow) =>
-        addFlow(
-          true,
-          allFlows.find((flow) => flow.id === selectedFlow)
-        )
-      )
-    ).then(() => {
-      resetFilter();
-      getFoldersApi(true);
-      if (!folderId || folderId === myCollectionId) {
-        getFolderById(folderId ? folderId : myCollectionId);
-      }
-      setSelectedFlowsComponentsCards([]);
-
-      setSuccessData({ title: "Flows duplicated successfully" });
-    });
-  };
-
-  const handleImport = () => {
-    uploadFlow({ newProject: true, isComponent: false })
-      .then(() => {
-        resetFilter();
-        getFoldersApi(true);
-        if (!folderId || folderId === myCollectionId) {
-          getFolderById(folderId ? folderId : myCollectionId);
-        }
-        setSelectedFlowsComponentsCards([]);
-
-        setSuccessData({ title: "Flows imported successfully" });
-      })
-      .catch((error) => {
-        setErrorData({
-          title: UPLOAD_ERROR_ALERT,
-          list: [error],
-        });
-      });
-  };
-
-  const version = useDarkStore((state) => state.version);
-
-  const handleExport = () => {
-    selectedFlowsComponentsCards.map((selectedFlowId) => {
-      const selectedFlow = allFlows.find((flow) => flow.id === selectedFlowId);
-      downloadFlow(
-        removeApiKeys({
-          id: selectedFlow!.id,
-          data: selectedFlow!.data!,
-          description: selectedFlow!.description,
-          name: selectedFlow!.name,
-          last_tested_version: version,
-          is_component: false,
-        }),
-        selectedFlow!.name,
-        selectedFlow!.description
-      );
-    });
-    setSuccessData({ title: "Flows exported successfully" });
-  };
-
-  const handleDeleteMultiple = () => {
-    removeFlow(selectedFlowsComponentsCards)
-      .then(() => {
-        resetFilter();
-        getFoldersApi(true);
-        if (!folderId || folderId === myCollectionId) {
-          getFolderById(folderId ? folderId : myCollectionId);
-        }
-        setSuccessData({
-          title: "Selected items deleted successfully",
-        });
-      })
-      .catch(() => {
-        setErrorData({
-          title: "Error deleting items",
-          list: ["Please try again"],
-        });
-      });
-  };
   const { handleDuplicate } = useDuplicateFlows(
     selectedFlowsComponentsCards,
     addFlow,

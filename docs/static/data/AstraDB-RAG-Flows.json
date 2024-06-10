@@ -684,7 +684,6 @@
                   "max": 1,
                   "step": 0.1
                 },
-<<<<<<< HEAD
                 "data": {
                   "type": "Prompt",
                   "node": {
@@ -823,8 +822,7 @@
                   "x": 2969.0261961391298,
                   "y": 442.1613649809069
                 },
-                "dragging": false
-=======
+                "dragging": false,
                 "load_from_db": false,
                 "title_case": false
               },
@@ -907,7 +905,6 @@
                 ]
               },
               "_type": "CustomComponent"
->>>>>>> origin/dev
             },
             "description": "Generate embeddings using OpenAI models.",
             "base_classes": [

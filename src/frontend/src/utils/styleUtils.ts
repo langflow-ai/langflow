@@ -176,6 +176,7 @@ import {
 import { GroqIcon } from "../icons/Groq";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
+import { LangChainIcon } from "../icons/LangChain";
 import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
@@ -324,6 +325,7 @@ export const nodeIconsLucide: iconsType = {
   ChatOllamaModel: OllamaIcon,
   Faiss: MetaIcon,
   FaissSearch: MetaIcon,
+  LangChain: LangChainIcon,
   AzureOpenAiModel: AzureIcon,
   Redis: RedisIcon,
   RedisSearch: RedisIcon,

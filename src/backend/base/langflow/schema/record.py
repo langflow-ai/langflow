@@ -1,12 +1,12 @@
 import copy
 import json
-from typing import cast, Optional
+from typing import Optional, cast
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.prompt_values import ImagePromptValue
 from langchain_core.prompts.image import ImagePromptTemplate
 from pydantic import BaseModel, model_serializer, model_validator
-from langchain_core.prompt_values import ImagePromptValue
 
 
 class Record(BaseModel):
@@ -200,3 +200,6 @@ class Record(BaseModel):
 
     def __contains__(self, key):
         return key in self.data
+
+    def __eq__(self, other):
+        return isinstance(other, Record) and self.data == other.data

@@ -15,4 +15,5 @@ class RecordsOutput(Component):
     ]
 
     def record_response(self) -> Record:
+        self.status = self.input_value
         return self.input_value

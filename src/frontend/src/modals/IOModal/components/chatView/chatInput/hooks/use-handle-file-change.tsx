@@ -1,10 +1,11 @@
 import ShortUniqueId from "short-unique-id";
+import {
+  ALLOWED_IMAGE_INPUT_EXTENSIONS,
+  FS_ERROR_TEXT,
+  SN_ERROR_TEXT,
+} from "../../../../../../constants/constants";
 import useAlertStore from "../../../../../../stores/alertStore";
 import useFileUpload from "./use-file-upload";
-
-const fsErrorText =
-  "Please ensure your file has one of the following extensions:";
-const snErrorTxt = "png, jpg, jpeg, gif, bmp, webp";
 
 export const useHandleFileChange = (setFiles, currentFlowId) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -14,13 +15,15 @@ export const useHandleFileChange = (setFiles, currentFlowId) => {
     const fileInput = event.target;
     const file = fileInput.files?.[0];
     if (file) {
-      const allowedExtensions = ["png", "jpg", "jpeg", "gif", "bmp", "webp"];
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
 
-      if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+      if (
+        !fileExtension ||
+        !ALLOWED_IMAGE_INPUT_EXTENSIONS.includes(fileExtension)
+      ) {
         setErrorData({
           title: "Error uploading file",
-          list: [fsErrorText, snErrorTxt],
+          list: [FS_ERROR_TEXT, SN_ERROR_TEXT],
         });
         return;
       }

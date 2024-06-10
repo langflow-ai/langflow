@@ -2,7 +2,6 @@ import { ColDef, ValueGetterParams } from "ag-grid-community";
 import { useMemo } from "react";
 import TableNodeCellRender from "../../../components/tableComponent/components/tableNodeCellRender";
 import TableToggleCellRender from "../../../components/tableComponent/components/tableToggleCellRender";
-import TableTooltipRender from "../../../components/tableComponent/components/tableTooltipRender";
 
 const useColumnDefs = (
   myData: any,
@@ -23,8 +22,6 @@ const useColumnDefs = (
               : templateParam.name) ?? params.data.key
           );
         },
-        tooltipField: "display_name",
-        tooltipComponent: TableTooltipRender,
         wrapText: true,
         autoHeight: true,
         flex: 1,
@@ -35,7 +32,6 @@ const useColumnDefs = (
         headerName: "Description",
         field: "info",
         tooltipField: "info",
-        tooltipComponent: TableTooltipRender,
         wrapText: true,
         autoHeight: true,
         flex: 2,

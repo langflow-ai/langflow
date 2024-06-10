@@ -43,6 +43,7 @@ import useHandleNodeClass from "../../../hooks/use-handle-node-class";
 import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-buttons";
 import HandleTooltips from "../HandleTooltipComponent";
 import OutputComponent from "../OutputComponent";
+import OutputModal from "../outputModal";
 import { TEXT_FIELD_TYPES } from "./constants";
 
 export default function ParameterComponent({
@@ -64,6 +65,7 @@ export default function ParameterComponent({
   outputProxy,
 }: ParameterComponentType): JSX.Element {
   const infoHtml = useRef<HTMLDivElement & ReactNode>(null);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const setNode = useFlowStore((state) => state.setNode);
@@ -73,6 +75,17 @@ export default function ParameterComponent({
   const updateNodeInternals = useUpdateNodeInternals();
   const [errorDuplicateKey, setErrorDuplicateKey] = useState(false);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
+  const [openOutputModal, setOpenOutputModal] = useState(false);
+  const flowPool = useFlowStore((state) => state.flowPool);
+
+  const displayOutputPreview = !!flowPool[data.id];
+
+  const unknownOutput = !!(
+    flowPool[data.id] &&
+    flowPool[data.id][flowPool[data.id].length - 1]?.data?.logs[0]?.type ===
+      "unknown"
+  );
+
   const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue(
     data,
     name,
@@ -80,7 +93,7 @@ export default function ParameterComponent({
     handleUpdateValues,
     debouncedHandleUpdateValues,
     setNode,
-    setIsLoading,
+    setIsLoading
   );
 
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
@@ -88,7 +101,7 @@ export default function ParameterComponent({
     name,
     takeSnapshot,
     setNode,
-    updateNodeInternals,
+    updateNodeInternals
   );
 
   const { handleRefreshButtonPress: handleRefreshButtonPressHook } =
@@ -97,7 +110,7 @@ export default function ParameterComponent({
   let disabled =
     edges.some(
       (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
+        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
     ) ?? false;
 
   const handleRefreshButtonPress = async (name, data) => {
@@ -108,7 +121,7 @@ export default function ParameterComponent({
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
-    skipSnapshot: boolean | undefined = false,
+    skipSnapshot: boolean | undefined = false
   ): Promise<void> => {
     handleOnNewValueHook(newValue, skipSnapshot);
   };
@@ -195,14 +208,14 @@ export default function ParameterComponent({
               className={classNames(
                 left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
                 "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : "",
+                !showNode ? "mt-0" : ""
               )}
               style={{
                 borderColor: color ?? nodeColors.unknown,
               }}
               onClick={() => {
                 setFilterEdge(
-                  groupByFamily(myData, tooltipTitle!, left, nodes!),
+                  groupByFamily(myData, tooltipTitle!, left, nodes!)
                 );
               }}
             ></Handle>
@@ -238,7 +251,40 @@ export default function ParameterComponent({
               {renderTitle()}
             </ShadTooltip>
           ) : (
-            renderTitle()
+            <div className="flex gap-2">
+              <span className={!left && data.node?.frozen ? " text-ice" : ""}>
+                {renderTitle()}
+              </span>
+              {!left && (
+                <ShadTooltip
+                  content={
+                    displayOutputPreview
+                      ? unknownOutput
+                        ? "Output can't be displayed"
+                        : "Inspect Output"
+                      : "Please build the component first"
+                  }
+                >
+                  <Button
+                    variant="none"
+                    size="none"
+                    disabled={!displayOutputPreview || unknownOutput}
+                    onClick={() => setOpenOutputModal(true)}
+                    data-testid={`output-inspection-${title.toLowerCase()}`}
+                  >
+                    <IconComponent
+                      className={classNames(
+                        "h-5 w-5 rounded-md",
+                        displayOutputPreview && !unknownOutput
+                          ? " hover:bg-secondary-foreground/5 hover:text-medium-indigo"
+                          : " cursor-not-allowed text-muted-foreground"
+                      )}
+                      name={"ScanEye"}
+                    />
+                  </Button>
+                </ShadTooltip>
+              )}
+            </div>
           )}
           <span className={(required ? "ml-2 " : "") + "text-status-red"}>
             {required ? "*" : ""}
@@ -287,12 +333,12 @@ export default function ParameterComponent({
                   }
                   className={classNames(
                     left ? "-ml-0.5" : "-mr-0.5",
-                    "h-3 w-3 rounded-full border-2 bg-background",
+                    "h-3 w-3 rounded-full border-2 bg-background"
                   )}
                   style={{ borderColor: color ?? nodeColors.unknown }}
                   onClick={() => {
                     setFilterEdge(
-                      groupByFamily(myData, tooltipTitle!, left, nodes!),
+                      groupByFamily(myData, tooltipTitle!, left, nodes!)
                     );
                   }}
                 />
@@ -387,7 +433,7 @@ export default function ParameterComponent({
                       });
                     }}
                     name={name}
-                    data={data.node?.template[name]}
+                    data={data.node?.template[name]!}
                   />
                 </div>
                 {data.node?.template[name]?.refresh_button && (
@@ -574,6 +620,13 @@ export default function ParameterComponent({
             />
           </div>
         </Case>
+        {openOutputModal && (
+          <OutputModal
+            open={openOutputModal}
+            nodeId={data.id}
+            setOpen={setOpenOutputModal}
+          />
+        )}
       </>
     </div>
   );

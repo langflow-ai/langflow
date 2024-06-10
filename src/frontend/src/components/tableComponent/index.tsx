@@ -159,6 +159,19 @@ const TableComponent = forwardRef<
             }, 100);
           }}
         />
+        <TableOptions
+          stateChange={columnStateChange}
+          hasSelection={realRef.current?.api?.getSelectedRows().length > 0}
+          duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
+          deleteRow={props.onDelete ? props.onDelete : undefined}
+          resetGrid={() => {
+            console.log("teste");
+            resetGrid(realRef, initialColumnDefs);
+            setTimeout(() => {
+              setColumnStateChange(false);
+            }, 100);
+          }}
+        />
         <ResetColumns resetGrid={() => resetGrid(realRef, initialColumnDefs)} />
       </div>
     );
