@@ -59,6 +59,12 @@ RUN $POETRY_HOME/bin/poetry lock --no-update \
 ################################
 FROM python:3.12-slim as runtime
 
+RUN apt-get -y update \
+    && apt-get install --no-install-recommends -y \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']
 LABEL org.opencontainers.image.licenses=MIT
