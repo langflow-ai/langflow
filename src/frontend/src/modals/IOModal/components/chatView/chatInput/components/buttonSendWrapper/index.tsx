@@ -1,4 +1,5 @@
 import IconComponent from "../../../../../../../components/genericIconComponent";
+import { Button } from "../../../../../../../components/ui/button";
 import { Case } from "../../../../../../../shared/components/caseComponent";
 import { FilePreviewType } from "../../../../../../../types/components";
 import { classNames } from "../../../../../../../utils/utils";
@@ -21,7 +22,7 @@ const ButtonSendWrapper = ({
   files,
 }: ButtonSendWrapperProps) => {
   return (
-    <button
+    <Button
       className={classNames(
         "form-modal-send-button",
         noInput
@@ -32,6 +33,8 @@ const ButtonSendWrapper = ({
       )}
       disabled={lockChat || saveLoading}
       onClick={(): void => send()}
+      variant="none"
+      size="none"
     >
       <Case
         condition={
@@ -45,7 +48,7 @@ const ButtonSendWrapper = ({
         />
       </Case>
 
-      <Case condition={noInput}>
+      <Case condition={noInput && !lockChat}>
         <IconComponent
           name="Zap"
           className="form-modal-play-icon"
@@ -65,7 +68,7 @@ const ButtonSendWrapper = ({
           aria-hidden="true"
         />
       </Case>
-    </button>
+    </Button>
   );
 };
 
