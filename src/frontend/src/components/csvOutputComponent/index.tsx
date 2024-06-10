@@ -7,7 +7,7 @@ import {
   CSVViewErrorTitle,
 } from "../../constants/constants";
 import { useDarkStore } from "../../stores/darkStore";
-import { FlowPoolObjectType } from "../../types/chat";
+import { VertexBuildTypeAPI } from "../../types/api";
 import { NodeType } from "../../types/flow";
 import ForwardedIconComponent from "../genericIconComponent";
 import TableComponent from "../tableComponent";
@@ -19,7 +19,7 @@ function CsvOutputComponent({
   flowPool,
 }: {
   csvNode: NodeType;
-  flowPool: FlowPoolObjectType;
+  flowPool: VertexBuildTypeAPI;
 }) {
   const csvNodeArtifacts = flowPool?.data?.artifacts?.repr;
   const jsonString = csvNodeArtifacts?.replace(/'/g, '"');

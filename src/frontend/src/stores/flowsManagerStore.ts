@@ -85,7 +85,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
       readFlowsFromDatabase()
         .then((dbData) => {
           if (dbData) {
-            const { data, flows } = processFlows(dbData, false);
+            const { data, flows } = processFlows(dbData);
             const examples = flows.filter(
               (flow) => flow.folder_id === starterFolderId,
             );

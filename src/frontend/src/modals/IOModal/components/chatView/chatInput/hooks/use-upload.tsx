@@ -5,7 +5,7 @@ import useAlertStore from "../../../../../../stores/alertStore";
 
 const fsErrorText =
   "Please ensure your file has one of the following extensions:";
-const snErrorTxt = "png, jpg, jpeg, gif, bmp, webp";
+const snErrorTxt = "png, jpg, jpeg";
 
 const useUpload = (uploadFile, currentFlowId, setFiles, lockChat) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -21,14 +21,7 @@ const useUpload = (uploadFile, currentFlowId, setFiles, lockChat) => {
           const uid = new ShortUniqueId({ length: 3 });
           const blob = items[i].getAsFile();
           if (blob) {
-            const allowedExtensions = [
-              "png",
-              "jpg",
-              "jpeg",
-              "gif",
-              "bmp",
-              "webp",
-            ];
+            const allowedExtensions = ["png", "jpg", "jpeg"];
             const fileExtension = blob.name.split(".").pop()?.toLowerCase();
 
             if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
