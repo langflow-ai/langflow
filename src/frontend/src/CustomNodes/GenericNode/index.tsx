@@ -37,6 +37,7 @@ import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import ParameterComponent from "./components/parameterComponent";
+import { useHotkeys } from "react-hotkeys-hook";
 
 export default function GenericNode({
   data,
@@ -48,6 +49,7 @@ export default function GenericNode({
   xPos?: number;
   yPos?: number;
 }): JSX.Element {
+  const preventDefault = true;
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const deleteNode = useFlowStore((state) => state.deleteNode);
@@ -58,10 +60,10 @@ export default function GenericNode({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const isDark = useDarkStore((state) => state.dark);
   const buildStatus = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.status
+    (state) => state.flowBuildStatus[data.id]?.status,
   );
   const lastRunTime = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.timestamp
+    (state) => state.flowBuildStatus[data.id]?.timestamp,
   );
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
@@ -69,7 +71,7 @@ export default function GenericNode({
   const [nodeName, setNodeName] = useState(data.node!.display_name);
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(
-    data.node?.description!
+    data.node?.description!,
   );
   const [isOutdated, setIsOutdated] = useState(false);
   const [validationStatus, setValidationStatus] =
@@ -87,7 +89,7 @@ export default function GenericNode({
     data.node!,
     setNode,
     setIsOutdated,
-    updateNodeInternals
+    updateNodeInternals,
   );
 
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
@@ -118,12 +120,12 @@ export default function GenericNode({
     selected: boolean,
     showNode: boolean,
     buildStatus: BuildStatus | undefined,
-    validationStatus: VertexBuildTypeAPI | null
+    validationStatus: VertexBuildTypeAPI | null,
   ) => {
     const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
       buildStatus,
       validationStatus,
-      isDark
+      isDark,
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
@@ -132,7 +134,7 @@ export default function GenericNode({
       baseBorderClass,
       nodeSizeClass,
       "generic-node-div group/node",
-      specificClassFromBuildStatus
+      specificClassFromBuildStatus,
     );
     return names;
   };
@@ -175,7 +177,7 @@ export default function GenericNode({
     showNode,
     isEmoji,
     nodeIconFragment,
-    checkNodeIconFragment
+    checkNodeIconFragment,
   );
 
   function countHandles(): void {
@@ -233,6 +235,15 @@ export default function GenericNode({
     }
   };
 
+  function handleUpdateCodeWShortcut() {
+    if (isOutdated && selected) {
+      handleUpdateCode();
+    }
+  }
+
+  const update = useShortcutsStore((state) => state.update);
+  useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault });
+
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
   const memoizedNodeToolbarComponent = useMemo(() => {
@@ -288,7 +299,7 @@ export default function GenericNode({
           selected,
           showNode,
           buildStatus,
-          validationStatus
+          validationStatus,
         )}
       >
         {data.node?.beta && showNode && (
@@ -419,7 +430,7 @@ export default function GenericNode({
                             }
                             title={getFieldTitle(
                               data.node?.template!,
-                              templateField
+                              templateField,
                             )}
                             info={data.node?.template[templateField].info}
                             name={templateField}
@@ -447,7 +458,7 @@ export default function GenericNode({
                             proxy={data.node?.template[templateField].proxy}
                             showNode={showNode}
                           />
-                        )
+                        ),
                     )}
                   <ParameterComponent
                     key={scapedJSONStringfy({
@@ -610,7 +621,7 @@ export default function GenericNode({
                       !data.node?.description) &&
                       nameEditable
                       ? "font-light italic"
-                      : ""
+                      : "",
                   )}
                   onClick={(e) => {
                     setInputDescription(true);
@@ -672,13 +683,13 @@ export default function GenericNode({
                         }
                         title={getFieldTitle(
                           data.node?.template!,
-                          templateField
+                          templateField,
                         )}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={
                           data.node?.template[templateField].input_types?.join(
-                            "\n"
+                            "\n",
                           ) ?? data.node?.template[templateField].type
                         }
                         required={data.node!.template[templateField].required}
@@ -705,7 +716,7 @@ export default function GenericNode({
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
-                  "flex-max-width justify-center"
+                  "flex-max-width justify-center",
                 )}
               >
                 {" "}
