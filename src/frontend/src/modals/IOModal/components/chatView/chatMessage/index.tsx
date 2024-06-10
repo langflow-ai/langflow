@@ -7,16 +7,12 @@ import remarkMath from "remark-math";
 import MaleTechnology from "../../../../../assets/male-technologist.png";
 import Robot from "../../../../../assets/robot.png";
 import CodeTabsComponent from "../../../../../components/codeTabsComponent";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../../../../components/genericIconComponent";
+import IconComponent from "../../../../../components/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowStore from "../../../../../stores/flowStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { classNames, cn } from "../../../../../utils/utils";
-import FileCard from "../fileComponent";
-import formatFileName from "../filePreviewChat/utils/format-file-name";
 import FileCardWrapper from "./components/fileCardWrapper";
 
 export default function ChatMessage({

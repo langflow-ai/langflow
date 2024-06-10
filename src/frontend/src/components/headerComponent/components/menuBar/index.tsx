@@ -16,11 +16,11 @@ import FlowSettingsModal from "../../../../modals/flowSettingsModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import ShadTooltip from "../../../shadTooltipComponent";
 import { Button } from "../../../ui/button";
-import { useShortcutsStore } from "../../../../stores/shortcuts";
 
 export const MenuBar = ({}: {}): JSX.Element => {
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
@@ -115,7 +115,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                       title: UPLOAD_ERROR_ALERT,
                       list: [error],
                     });
-                  }
+                  },
                 );
               }}
             >
@@ -201,7 +201,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               name={isBuilding || saveLoading ? "Loader2" : "CheckCircle2"}
               className={cn(
                 "h-4 w-4",
-                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle"
+                isBuilding || saveLoading ? "animate-spin" : "animate-wiggle",
               )}
             />
             {printByBuildStatus()}

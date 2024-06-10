@@ -2,7 +2,6 @@ import { ColDef, ValueGetterParams } from "ag-grid-community";
 import { useMemo } from "react";
 import TableNodeCellRender from "../../../components/tableComponent/components/tableNodeCellRender";
 import TableToggleCellRender from "../../../components/tableComponent/components/tableToggleCellRender";
-import TableTooltipRender from "../../../components/tableComponent/components/tableTooltipRender";
 
 const useColumnDefs = (
   myData: any,

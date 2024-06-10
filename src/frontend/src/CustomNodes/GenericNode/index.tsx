@@ -13,7 +13,7 @@ import {
   TOOLTIP_OUTDATED_NODE,
 } from "../../constants/constants";
 import { BuildStatus } from "../../constants/enums";
-import { getSpecificClassFromBuildStatus } from "../helpers/get-class-from-build-status";
+import { postCustomComponent } from "../../controllers/API";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
@@ -25,6 +25,8 @@ import { NodeDataType } from "../../types/flow";
 import { handleKeyDown, scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { nodeColors, nodeIconsLucide } from "../../utils/styleUtils";
 import { classNames, cn } from "../../utils/utils";
+import { countHandlesFn } from "../helpers/count-handles";
+import { getSpecificClassFromBuildStatus } from "../helpers/get-class-from-build-status";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useIconNodeRender from "../hooks/use-icon-render";
 import useIconStatus from "../hooks/use-icons-status";
@@ -34,9 +36,7 @@ import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import ParameterComponent from "./components/parameterComponent";
-import { postCustomComponent } from "../../controllers/API";
 import { useShortcutsStore } from "../../stores/shortcuts";
-import { countHandlesFn } from "../helpers/count-handles";
 
 export default function GenericNode({
   data,
