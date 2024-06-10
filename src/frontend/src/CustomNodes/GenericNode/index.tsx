@@ -260,6 +260,7 @@ export default function GenericNode({
           openAdvancedModal={false}
           onCloseAdvancedModal={() => {}}
           selected={selected}
+          updateNode={handleUpdateCode}
         />
       </NodeToolbar>
     );
