@@ -69,7 +69,7 @@ const EditNodeModal = forwardRef(
     //    }, []);
 
     return (
-      <BaseModal key={data.id} size="medium-tall" open={open} setOpen={setOpen}>
+      <BaseModal key={data.id} size="default" open={open} setOpen={setOpen}>
         <BaseModal.Trigger>
           <></>
         </BaseModal.Trigger>
