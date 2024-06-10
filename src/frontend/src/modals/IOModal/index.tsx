@@ -85,6 +85,7 @@ export default function IOModal({
   const [sessions, setSessions] = useState<string[]>([]);
   const messages = useMessagesStore((state) => state.messages);
   const setColumns = useMessagesStore((state) => state.setColumns);
+  const flowPool = useFlowStore((state) => state.flowPool);
   async function updateVertices() {
     return updateVerticesOrder(currentFlow!.id, null);
   }
@@ -229,10 +230,6 @@ export default function IOModal({
                           key={index}
                         >
                           <AccordionComponent
-                            disabled={
-                              node.data.node!.template["input_value"]?.value ===
-                              ""
-                            }
                             trigger={
                               <div className="file-component-badge-div">
                                 <ShadTooltip
@@ -288,12 +285,20 @@ export default function IOModal({
                       const output = outputs.find(
                         (output) => output.id === node.id,
                       )!;
+                      const textOutputValue =
+                        (flowPool[node!.id] ?? [])[
+                          (flowPool[node!.id]?.length ?? 1) - 1
+                        ]?.data.results.result ?? "";
+                      const disabled =
+                        textOutputValue === "" ||
+                        JSON.stringify(textOutputValue) === "{}";
                       return (
                         <div
                           className="file-component-accordion-div"
                           key={index}
                         >
                           <AccordionComponent
+                            disabled={disabled}
                             trigger={
                               <div className="file-component-badge-div">
                                 <ShadTooltip
