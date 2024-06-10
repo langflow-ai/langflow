@@ -2,11 +2,11 @@ from enum import Enum
 from typing import Any, Generator, Union
 
 from langchain_core.documents import Document
-from langflow.schema.schema import Record
 from pydantic import BaseModel
 
 from langflow.interface.utils import extract_input_variables_from_prompt
-from langflow.schema.schema import Record
+from langflow.schema import Record
+from langflow.schema.message import Message
 
 
 class UnbuiltObject:
@@ -24,6 +24,7 @@ class ArtifactType(str, Enum):
     ARRAY = "array"
     STREAM = "stream"
     UNKNOWN = "unknown"
+    MESSAGE = "message"
 
 
 def validate_prompt(prompt: str):
@@ -80,8 +81,13 @@ def get_artifact_type(custom_component, build_result) -> str:
         case list():
             result = ArtifactType.ARRAY
 
+        case Message():
+            result = ArtifactType.MESSAGE
+
     if result == ArtifactType.UNKNOWN:
         if isinstance(build_result, Generator):
+            result = ArtifactType.STREAM
+        elif isinstance(value, Message) and isinstance(value.text, Generator):
             result = ArtifactType.STREAM
 
     return result.value

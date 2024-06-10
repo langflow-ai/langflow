@@ -161,7 +161,7 @@ async def build_vertex(
         else:
             graph = cache.get("result")
         vertex = graph.get_vertex(vertex_id)
-        log_object = None
+
         try:
             lock = chat_service._cache_locks[flow_id_str]
             (

@@ -6,7 +6,8 @@ from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import Session, select
 
 from langflow.graph.schema import RunOutputs
-from langflow.schema.schema import INPUT_FIELD_NAME, Record
+from langflow.schema import Record
+from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_session, get_settings_service, session_scope
 

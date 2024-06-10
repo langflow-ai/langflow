@@ -7,9 +7,11 @@ Constants:
 - FIELD_FORMAT_ATTRIBUTES: A list of attributes used for formatting fields.
 """
 
+import orjson
+
 STREAM_INFO_TEXT = "Stream the response from the model. Streaming works only in Chat."
 
-NODE_FORMAT_ATTRIBUTES = ["beta", "icon", "display_name", "description"]
+NODE_FORMAT_ATTRIBUTES = ["beta", "icon", "display_name", "description", "output_types"]
 
 
 FIELD_FORMAT_ATTRIBUTES = [
@@ -27,3 +29,5 @@ FIELD_FORMAT_ATTRIBUTES = [
     "refresh_button_text",
     "options",
 ]
+
+ORJSON_OPTIONS = orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS | orjson.OPT_OMIT_MICROSECONDS

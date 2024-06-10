@@ -24,6 +24,7 @@ export default function SwitchOutputView(nodeId): JSX.Element {
   const results = flowPoolNode?.data?.logs[0] ?? "";
   const resultType = results?.type;
   let resultMessage = results?.message;
+  const RECORD_TYPES = ["record", "object", "array", "message"];
   if (resultMessage.raw) {
     resultMessage = resultMessage.raw;
   }
@@ -41,34 +42,20 @@ export default function SwitchOutputView(nodeId): JSX.Element {
         <TextOutputView left={false} value={resultMessage} />
       </Case>
 
-      <Case condition={resultType === "record"}>
+      <Case condition={RECORD_TYPES.includes(resultType)}>
         <RecordsOutputComponent
-          rows={[resultMessage] ?? []}
+          rows={
+            Array.isArray(resultMessage)
+              ? (resultMessage as Array<any>).every((item) => item.data)
+                ? (resultMessage as Array<any>).map((item) => item.data)
+                : resultMessage
+              : [resultMessage]
+          }
           pagination={true}
           columnMode="union"
         />
       </Case>
 
-      <Case condition={resultType === "object"}>
-        <RecordsOutputComponent
-          rows={[resultMessage]}
-          pagination={true}
-          columnMode="union"
-        />
-      </Case>
-      {Array.isArray(resultMessage) && (
-        <Case condition={resultType === "array"}>
-          <RecordsOutputComponent
-            rows={
-              (resultMessage as Array<any>).every((item) => item.data)
-                ? (resultMessage as Array<any>).map((item) => item.data)
-                : resultMessage
-            }
-            pagination={true}
-            columnMode="union"
-          />
-        </Case>
-      )}
       <Case condition={resultType === "stream"}>
         <div className="flex h-full w-full items-center justify-center align-middle">
           <Alert variant={"default"} className="w-fit">
