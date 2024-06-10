@@ -614,7 +614,8 @@ export default function NodeToolbarComponent({
                 >
                   <ToolbarSelectItem
                     shortcut={
-                      shortcuts.find((obj) => obj.name === "Share")?.shortcut!
+                      shortcuts.find((obj) => obj.name === "Component Share")
+                        ?.shortcut!
                     }
                     value={"Share"}
                     icon={"Share3"}
