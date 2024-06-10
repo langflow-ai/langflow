@@ -348,7 +348,7 @@ export default function GenericNode({
                     <div className="group flex items-start gap-1.5">
                       <ShadTooltip content={data.node?.display_name}>
                         <div
-                          onClick={(event) => {
+                          onDoubleClick={(event) => {
                             if (nameEditable) {
                               setInputName(true);
                             }
@@ -612,7 +612,7 @@ export default function GenericNode({
                       ? "font-light italic"
                       : "",
                   )}
-                  onClick={(e) => {
+                  onDoubleClick={(e) => {
                     setInputDescription(true);
                     takeSnapshot();
                   }}
