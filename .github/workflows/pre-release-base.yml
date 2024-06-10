@@ -74,6 +74,6 @@ jobs:
           context: .
           push: true
           file: ./docker/build_and_push_base.Dockerfile
-          platforms: "linux/amd64,linux/arm64/v8,linux/arm/v5,linux/arm/v7"
+          platforms: "linux/amd64,linux/arm64/v8"
           tags: |
             langflowai/langflow:base-${{ needs.release.outputs.version }}

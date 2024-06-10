@@ -52,7 +52,7 @@ jobs:
           context: .
           push: true
           file: ./docker/build_and_push.Dockerfile
-          platforms: "linux/amd64,linux/arm64/v8,linux/arm/v5,linux/arm/v7"
+          platforms: "linux/amd64,linux/arm64/v8"
           tags: |
             langflowai/langflow:${{ steps.check-version.outputs.version }}
             langflowai/langflow:latest
@@ -64,7 +64,7 @@ jobs:
           context: .
           push: true
           file: ./docker/build_and_push_backend.Dockerfile
-          platforms: "linux/amd64,linux/arm64/v8,linux/arm/v5,linux/arm/v7"
+          platforms: "linux/amd64,linux/arm64/v8"
           build-args: |
             LANGFLOW_IMAGE=langflowai/langflow:${{ steps.check-version.outputs.version }}
           tags: |
@@ -76,7 +76,7 @@ jobs:
           context: .
           push: true
           file: ./docker/frontend/build_and_push_frontend.Dockerfile
-          platforms: "linux/amd64,linux/arm64/v8,linux/arm/v5,linux/arm/v7"
+          platforms: "linux/amd64,linux/arm64/v8"
           tags: |
             langflowai/langflow-frontend:${{ steps.check-version.outputs.version }}
             langflowai/langflow-frontend:latest
