@@ -5,8 +5,35 @@ from astra_assistants import patch
 
 
 class AssistantsRun(CustomComponent):
-    display_name = "Assistant Run"
+    display_name = "Run Assistant"
     description = "Executes an Assistant Run against a thread"
+
+    def build_config(self):
+        return {
+            "assistant_id": {
+                "display_name": "Assistant ID",
+                "advanced": False,
+                "info": (
+                    "The ID of the assistant to run. \n\n"
+                    "Can be retrieved using the List Assistants component or created with the Create Assistant component."
+                ),
+            },
+            "user_message": {
+                "display_name": "User Message",
+                "info": "User message to pass to the run.",
+                "advanced": False,
+            },
+            "thread_id": {
+                "display_name": "Thread ID",
+                "advanced": False,
+                "info": "Thread ID to use with the run. If not provided, a new thread will be created.",
+            },
+            "env_set": {
+                "display_name": "Environment Set",
+                "advanced": False,
+                "info": "Dummy input to allow chaining with Dotenv Component.",
+            },
+        }
 
     def build(self, assistant_id: str, user_message: str, thread_id: str = None, env_set: str = None) -> str:
         text = ""

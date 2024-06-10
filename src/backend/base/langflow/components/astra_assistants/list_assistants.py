@@ -8,6 +8,9 @@ class AssistantsListAssistants(CustomComponent):
     display_name = "List Assistants"
     description = "Returns a list of assistant id's"
 
+    def build_config(self):
+        return {}
+
     def build(self) -> List[str]:
         client = patch(OpenAI())
         assistants = client.beta.assistants.list()
