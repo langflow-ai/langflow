@@ -217,7 +217,7 @@ export default function CollectionCardComponent({
         data-testid={`card-${convertTestName(data.name)}`}
         //TODO check color schema
         className={cn(
-          "group relative flex h-[11rem] flex-col justify-between overflow-hidden transition-all hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#ffffff10]",
+          "group relative flex h-[11rem] flex-col justify-between overflow-hidden hover:bg-muted/50 hover:shadow-md hover:dark:bg-[#5f5f5f0e]",
           disabled ? "pointer-events-none opacity-50" : "",
           onClick ? "cursor-pointer" : "",
           isSelectedCard ? "border border-selected" : "",
