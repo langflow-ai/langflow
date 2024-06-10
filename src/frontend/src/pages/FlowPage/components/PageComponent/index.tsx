@@ -180,6 +180,7 @@ export default function Page({
 
   function handleUndo(e: KeyboardEvent) {
     e.preventDefault();
+    e.stopImmediatePropagation();
     if (!isWrappedWithClass(e, "noundo")) {
       undo();
     }
@@ -187,6 +188,7 @@ export default function Page({
 
   function handleRedo(e: KeyboardEvent) {
     e.preventDefault();
+    e.stopImmediatePropagation();
     if (!isWrappedWithClass(e, "noundo")) {
       redo();
     }
@@ -194,6 +196,7 @@ export default function Page({
 
   function handleGroup(e: KeyboardEvent) {
     e.preventDefault();
+    e.stopImmediatePropagation();
     if (selectionMenuVisible) {
       handleGroupNode();
     }
@@ -202,6 +205,7 @@ export default function Page({
   function handleDuplicate(e: KeyboardEvent) {
     e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation();
     const selectedNode = nodes.filter((obj) => obj.selected);
     if (selectedNode.length > 0) {
       paste(
@@ -216,6 +220,7 @@ export default function Page({
 
   function handleCopy(e: KeyboardEvent) {
     e.preventDefault();
+    e.stopImmediatePropagation();
     if (
       !isWrappedWithClass(e, "nocopy") &&
       window.getSelection()?.toString().length === 0 &&
@@ -227,6 +232,7 @@ export default function Page({
 
   function handleCut(e: KeyboardEvent) {
     e.preventDefault();
+    e.stopImmediatePropagation();
     if (
       !isWrappedWithClass(e, "nocopy") &&
       window.getSelection()?.toString().length === 0 &&
@@ -238,6 +244,7 @@ export default function Page({
 
   function handlePaste(e: KeyboardEvent) {
     e.preventDefault();
+    e.stopImmediatePropagation();
     if (
       !isWrappedWithClass(e, "nocopy") &&
       window.getSelection()?.toString().length === 0 &&
@@ -253,6 +260,7 @@ export default function Page({
 
   function handleDelete(e: KeyboardEvent) {
     e.preventDefault();
+    e.stopImmediatePropagation();
     if (!isWrappedWithClass(e, "nodelete") && lastSelection) {
       takeSnapshot();
       deleteNode(lastSelection.nodes.map((node) => node.id));
