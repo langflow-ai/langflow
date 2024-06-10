@@ -28,7 +28,7 @@ export default function TableNodeCellRender({
     value,
     nodeClass,
     handleOnNewValue: handleOnNewValueNode,
-    handleOnChangeDb,
+    handleOnChangeDb: handleOnChangeDbNode,
   },
 }: CustomCellRendererProps) {
   const handleOnNewValue = (newValue: any, name: string) => {
@@ -39,6 +39,15 @@ export default function TableNodeCellRender({
       return newData;
     });
     setTemplateValue(newValue);
+  };
+
+  const handleOnChangeDb = (newValue: boolean, name: string) => {
+    handleOnChangeDbNode(newValue, name);
+    setTemplateData((old) => {
+      let newData = cloneDeep(old);
+      newData.load_from_db = newValue;
+      return newData;
+    });
   };
 
   const [templateValue, setTemplateValue] = useState(value);

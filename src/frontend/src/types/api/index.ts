@@ -170,7 +170,7 @@ export type VertexDataTypeAPI = {
   inactive?: boolean;
   timedelta?: number;
   duration?: string;
-  artifacts?: any;
+  artifacts?: any | ChatOutputType | ChatInputType;
   message: ChatOutputType | ChatInputType;
 };
 
