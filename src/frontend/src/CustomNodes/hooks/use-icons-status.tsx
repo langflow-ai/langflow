@@ -1,4 +1,7 @@
+import ForwardedIconComponent from "../../components/genericIconComponent";
+import Checkmark from "../../components/ui/checkmark";
 import Loading from "../../components/ui/loading";
+import Xmark from "../../components/ui/xmark";
 import { BuildStatus } from "../../constants/enums";
 import { VertexBuildTypeAPI } from "../../types/api";
 import { cn } from "../../utils/utils";
@@ -21,18 +24,29 @@ const useIconStatus = (
       return <Loading className="text-medium-indigo" />;
     } else {
       return (
-        <div
-          className={cn(
-            "h-4 w-4 shrink-0 cursor-pointer rounded-full",
-            conditionSuccess
-              ? "bg-status-green"
-              : conditionInactive
-                ? "bg-status-gray"
-                : conditionError
-                  ? "bg-status-red"
-                  : "bg-muted-foreground/40",
+        <>
+          {conditionSuccess ? (
+            <Checkmark
+              className="h-6 w-6 stroke-2 text-status-green transition-all"
+              isVisible={true}
+            />
+          ) : conditionInactive ? (
+            <ForwardedIconComponent
+              name="Ellipsis"
+              className="h-6 w-6 fill-current stroke-2 text-status-gray opacity-30"
+            />
+          ) : conditionError ? (
+            <Xmark
+              isVisible={true}
+              className="h-6 w-6 fill-current stroke-2 text-status-red"
+            />
+          ) : (
+            <ForwardedIconComponent
+              name="Ellipsis"
+              className="h-6 w-6 fill-current stroke-2 text-status-gray opacity-70"
+            />
           )}
-        />
+        </>
       );
     }
   };

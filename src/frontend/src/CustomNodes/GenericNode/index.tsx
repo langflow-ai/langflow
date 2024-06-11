@@ -110,7 +110,7 @@ export default function GenericNode({
   };
 
   const renderIconStatus = () => {
-    return iconStatus;
+    return <div className="cursor-help">{iconStatus}</div>;
   };
 
   const getNodeBorderClassName = (
@@ -518,30 +518,6 @@ export default function GenericNode({
             {showNode && (
               <>
                 <div className="flex flex-shrink-0 items-center gap-2">
-                  <Button
-                    onClick={() => {
-                      if (buildStatus === BuildStatus.BUILDING || isBuilding)
-                        return;
-                      setValidationStatus(null);
-                      buildFlow({ stopNodeId: data.id });
-                    }}
-                    variant="none"
-                    size="none"
-                    className="group p-1"
-                  >
-                    <div
-                      data-testid={
-                        `button_run_` + data?.node?.display_name.toLowerCase()
-                      }
-                    >
-                      <IconComponent
-                        name="Play"
-                        className={
-                          "h-5 w-5 fill-current stroke-2 text-muted-foreground transition-all group-hover:text-medium-indigo group-hover/node:opacity-100"
-                        }
-                      />
-                    </div>
-                  </Button>
                   <ShadTooltip
                     content={
                       buildStatus === BuildStatus.BUILDING ? (
@@ -573,6 +549,30 @@ export default function GenericNode({
                   >
                     {renderIconStatus()}
                   </ShadTooltip>
+                  <Button
+                    onClick={() => {
+                      if (buildStatus === BuildStatus.BUILDING || isBuilding)
+                        return;
+                      setValidationStatus(null);
+                      buildFlow({ stopNodeId: data.id });
+                    }}
+                    variant="none"
+                    size="none"
+                    className="group p-1"
+                  >
+                    <div
+                      data-testid={
+                        `button_run_` + data?.node?.display_name.toLowerCase()
+                      }
+                    >
+                      <IconComponent
+                        name="Play"
+                        className={
+                          "h-5 w-5 fill-current stroke-2 text-muted-foreground transition-all group-hover:text-medium-indigo group-hover/node:opacity-100"
+                        }
+                      />
+                    </div>
+                  </Button>
                 </div>
               </>
             )}
