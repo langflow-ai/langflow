@@ -11,17 +11,13 @@ const useIconStatus = (
   validationStatus: VertexBuildTypeAPI | null,
 ) => {
   const conditionSuccess = validationStatus && validationStatus.valid;
-  const conditionInactive =
-    validationStatus &&
-    !validationStatus.valid &&
-    buildStatus === BuildStatus.INACTIVE;
   const conditionError =
     buildStatus === BuildStatus.ERROR ||
     (validationStatus && !validationStatus.valid);
 
   const renderIconStatus = () => {
     if (buildStatus === BuildStatus.BUILDING) {
-      return <Loading className="text-medium-indigo" />;
+      return <Loading className="mr-1 text-medium-indigo" size={20} />;
     } else {
       return (
         <>
@@ -30,21 +26,13 @@ const useIconStatus = (
               className="h-6 w-6 stroke-2 text-status-green transition-all"
               isVisible={true}
             />
-          ) : conditionInactive ? (
-            <ForwardedIconComponent
-              name="Ellipsis"
-              className="h-6 w-6 fill-current stroke-2 text-status-gray opacity-30"
-            />
           ) : conditionError ? (
             <Xmark
               isVisible={true}
               className="h-6 w-6 fill-current stroke-2 text-status-red"
             />
           ) : (
-            <ForwardedIconComponent
-              name="Ellipsis"
-              className="h-6 w-6 fill-current stroke-2 text-status-gray opacity-70"
-            />
+            <></>
           )}
         </>
       );
