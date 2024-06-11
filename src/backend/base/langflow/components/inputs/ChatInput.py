@@ -2,6 +2,8 @@ from typing import Optional
 
 from langflow.base.io.chat import ChatComponent
 from langflow.schema.message import Message
+from langflow.field_typing import Text
+from typing import Union
 
 
 class ChatInput(ChatComponent):
@@ -26,7 +28,7 @@ class ChatInput(ChatComponent):
         input_value: Optional[str] = None,
         files: Optional[list[str]] = None,
         session_id: Optional[str] = None,
-    ) -> Message:
+    ) -> Union[Message, Text]:
         return super().build_with_record(
             sender=sender,
             sender_name=sender_name,
