@@ -41,9 +41,7 @@
             "dataType": "ChatInput",
             "id": "ChatInput-yxMKE",
             "name": "message",
-            "output_types": [
-              "Text"
-            ]
+            "output_types": []
           },
           "targetHandle": {
             "fieldName": "question",
@@ -60,7 +58,7 @@
         "id": "reactflow__edge-ChatInput-yxMKE{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ,œRecordœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-yxMKEœ}-Prompt-xeI6K{œfieldNameœ:œquestionœ,œidœ:œPrompt-xeI6Kœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-yxMKE",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-yxMKEœ, œoutput_typesœ: [œTextœ], œnameœ: œmessageœ}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-yxMKEœ, œoutput_typesœ: [], œnameœ: œmessageœ}",
         "style": {
           "stroke": "#555"
         },
@@ -73,7 +71,7 @@
           "sourceHandle": {
             "dataType": "Prompt",
             "id": "Prompt-xeI6K",
-            "name": "prompt",
+            "name": "Text",
             "output_types": [
               "Prompt"
             ]
@@ -92,7 +90,7 @@
         "id": "reactflow__edge-Prompt-xeI6K{œbaseClassesœ:[œobjectœ,œTextœ,œstrœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-xeI6Kœ}-OpenAIModel-EjXlN{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-EjXlNœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-xeI6K",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-xeI6Kœ, œoutput_typesœ: [œPromptœ], œnameœ: œpromptœ}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-xeI6Kœ, œoutput_typesœ: [œPromptœ], œnameœ: œTextœ}",
         "style": {
           "stroke": "#555"
         },
@@ -194,9 +192,7 @@
             "dataType": "ChatInput",
             "id": "ChatInput-yxMKE",
             "name": "message",
-            "output_types": [
-              "Text"
-            ]
+            "output_types": []
           },
           "targetHandle": {
             "fieldName": "input_value",
@@ -209,7 +205,7 @@
         },
         "id": "reactflow__edge-ChatInput-yxMKE{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ,œRecordœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-yxMKEœ}-AstraDBSearch-41nRz{œfieldNameœ:œinput_valueœ,œidœ:œAstraDBSearch-41nRzœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "ChatInput-yxMKE",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-yxMKEœ, œoutput_typesœ: [œTextœ], œnameœ: œmessageœ}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-yxMKEœ, œoutput_typesœ: [], œnameœ: œmessageœ}",
         "style": {
           "stroke": "#555"
         },
@@ -332,26 +328,22 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
                 "display_name": "Message",
                 "method": "text_response",
                 "name": "message",
                 "selected": "Text",
                 "types": [
                   "Text"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               },
               {
-                "cache": true,
                 "display_name": "Record",
-                "method": "message_response",
+                "method": "record_response",
                 "name": "record",
-                "selected": "Message",
+                "selected": "Record",
                 "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
+                  "Record"
+                ]
               }
             ],
             "template": {
@@ -372,11 +364,11 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema.message import Message\nfrom langflow.template import Input, Output\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\",\n            type=str,\n            display_name=\"Text\",\n            multiline=True,\n            input_types=[],\n            info=\"Message to be passed as input.\",\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"User\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"text_response\"),\n        Output(display_name=\"Record\", name=\"record\", method=\"message_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Message, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, (Message, str)):\n            self.store_message(message)\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\",\n            type=str,\n            display_name=\"Message\",\n            multiline=True,\n            input_types=[],\n            info=\"Message to be passed as input.\",\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"User\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"text_response\"),\n        Output(display_name=\"Record\", name=\"record\", method=\"record_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self) -> Record:\n        record = Record(\n            data={\n                \"text\": self.input_value,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n            },\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n"
               },
               "input_value": {
                 "advanced": false,
-                "display_name": "Text",
+                "display_name": "Message",
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
@@ -638,15 +630,13 @@
             ],
             "outputs": [
               {
-                "cache": true,
                 "display_name": null,
                 "method": null,
                 "name": "Embeddings",
                 "selected": null,
                 "types": [
                   "Embeddings"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               }
             ],
             "template": {
@@ -1164,15 +1154,13 @@
             ],
             "outputs": [
               {
-                "cache": true,
                 "display_name": null,
                 "method": null,
                 "name": "Text",
                 "selected": null,
                 "types": [
                   "Text"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               }
             ],
             "template": {
@@ -1443,33 +1431,22 @@
             "is_input": null,
             "is_output": null,
             "name": "",
-            "output_types": [],
+            "output_types": [
+              "Prompt"
+            ],
             "outputs": [
               {
-                "cache": true,
-                "display_name": "Prompt",
-                "method": "build_prompt",
-                "name": "prompt",
-                "selected": "Prompt",
+                "display_name": null,
+                "method": null,
+                "name": "Prompt",
+                "selected": null,
                 "types": [
                   "Prompt"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
-                "display_name": "Text",
-                "method": "format_prompt",
-                "name": "text",
-                "selected": "Text",
-                "types": [
-                  "Text"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               }
             ],
             "template": {
-              "_type": "Component",
+              "_type": "CustomComponent",
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1486,7 +1463,59 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.field_typing import Input, Output\nfrom langflow.field_typing.prompt import Prompt\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": Input(display_name=\"Template\"),\n        }\n\n    inputs = [\n        Input(name=\"template\", type=Prompt, display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"format_prompt\"),\n    ]\n\n    async def format_prompt(self) -> str:\n        prompt = await self.build_prompt()\n        formatted_text = prompt.format_text()\n        self.status = formatted_text\n        return formatted_text\n\n    async def build_prompt(\n        self,\n    ) -> Prompt:\n        prompt = await Prompt.from_template_and_variables(self.template, self.kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
+                "value": "from langflow.custom import CustomComponent\nfrom langflow.field_typing import Input\nfrom langflow.field_typing.prompt import Prompt\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": Input(display_name=\"Template\"),\n            \"code\": Input(advanced=True),\n        }\n\n    async def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Prompt:\n        prompt = await Prompt.from_template_and_variables(template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
+              },
+              "context": {
+                "advanced": false,
+                "display_name": "context",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Document",
+                  "BaseOutputParser",
+                  "Record",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "context",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "question": {
+                "advanced": false,
+                "display_name": "question",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Document",
+                  "BaseOutputParser",
+                  "Record",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "question",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
               },
               "template": {
                 "advanced": false,
@@ -1507,8 +1536,8 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "type": "str",
-                "value": ""
+                "type": "prompt",
+                "value": "{context}\n\n---\n\nGiven the context above, answer the question as best as possible.\n\nQuestion: {question}\n\nAnswer: "
               }
             }
           },
@@ -1558,26 +1587,22 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
-                "display_name": "Text",
+                "display_name": "Message",
                 "method": "text_response",
-                "name": "text",
+                "name": "message",
                 "selected": "Text",
                 "types": [
                   "Text"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               },
               {
-                "cache": true,
-                "display_name": "Message",
-                "method": "message_response",
-                "name": "message",
-                "selected": "Message",
+                "display_name": "Record",
+                "method": "record_response",
+                "name": "record",
+                "selected": "Record",
                 "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
+                  "Record"
+                ]
               }
             ],
             "template": {
@@ -1598,11 +1623,11 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema.message import Message\nfrom langflow.template import Input, Output\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\", type=str, display_name=\"Text\", multiline=True, info=\"Message to be passed as output.\"\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n        Input(\n            name=\"record_template\",\n            type=str,\n            display_name=\"Record Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Message, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, (Message, str)):\n            self.store_message(message)\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\", type=str, display_name=\"Message\", multiline=True, info=\"Message to be passed as output.\"\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n        Input(\n            name=\"record_template\",\n            type=str,\n            display_name=\"Record Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"text_response\"),\n        Output(display_name=\"Record\", name=\"record\", method=\"record_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self) -> Record:\n        record = Record(\n            data={\n                \"message\": self.input_value,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n                \"template\": self.record_template or \"\",\n            }\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n"
               },
               "input_value": {
                 "advanced": false,
-                "display_name": "Text",
+                "display_name": "Message",
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
@@ -1757,15 +1782,13 @@
             ],
             "outputs": [
               {
-                "cache": true,
                 "display_name": null,
                 "method": null,
                 "name": "Record",
                 "selected": null,
                 "types": [
                   "Record"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               }
             ],
             "template": {
@@ -1889,15 +1912,13 @@
             ],
             "outputs": [
               {
-                "cache": true,
                 "display_name": null,
                 "method": null,
                 "name": "Record",
                 "selected": null,
                 "types": [
                   "Record"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               }
             ],
             "template": {
@@ -2069,15 +2090,13 @@
             ],
             "outputs": [
               {
-                "cache": true,
                 "display_name": null,
                 "method": null,
                 "name": "Record",
                 "selected": null,
                 "types": [
                   "Record"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               }
             ],
             "template": {
@@ -2534,26 +2553,22 @@
             ],
             "outputs": [
               {
-                "cache": true,
                 "display_name": null,
                 "method": null,
                 "name": "VectorStore",
                 "selected": null,
                 "types": [
                   "VectorStore"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               },
               {
-                "cache": true,
                 "display_name": null,
                 "method": null,
                 "name": "BaseRetriever",
                 "selected": null,
                 "types": [
                   "BaseRetriever"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               }
             ],
             "template": {
@@ -2668,7 +2683,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import List, Optional, Union\n\nfrom langchain_core.retrievers import BaseRetriever\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Embeddings, VectorStore\nfrom langflow.schema import Record\n\n\nclass AstraDBVectorStoreComponent(CustomComponent):\n    display_name = \"Astra DB\"\n    description = \"Builds or loads an Astra DB Vector Store.\"\n    icon = \"AstraDB\"\n    field_order = [\"token\", \"api_endpoint\", \"collection_name\", \"inputs\", \"embedding\"]\n\n    def build_config(self):\n        return {\n            \"inputs\": {\n                \"display_name\": \"Inputs\",\n                \"info\": \"Optional list of records to be processed and stored in the vector store.\",\n            },\n            \"embedding\": {\"display_name\": \"Embedding\", \"info\": \"Embedding to use\"},\n            \"collection_name\": {\n                \"display_name\": \"Collection Name\",\n                \"info\": \"The name of the collection within Astra DB where the vectors will be stored.\",\n            },\n            \"token\": {\n                \"display_name\": \"Token\",\n                \"info\": \"Authentication token for accessing Astra DB.\",\n                \"password\": True,\n            },\n            \"api_endpoint\": {\n                \"display_name\": \"API Endpoint\",\n                \"info\": \"API endpoint URL for the Astra DB service.\",\n            },\n            \"namespace\": {\n                \"display_name\": \"Namespace\",\n                \"info\": \"Optional namespace within Astra DB to use for the collection.\",\n                \"advanced\": True,\n            },\n            \"metric\": {\n                \"display_name\": \"Metric\",\n                \"info\": \"Optional distance metric for vector comparisons in the vector store.\",\n                \"advanced\": True,\n            },\n            \"batch_size\": {\n                \"display_name\": \"Batch Size\",\n                \"info\": \"Optional number of records to process in a single batch.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_batch_concurrency\": {\n                \"display_name\": \"Bulk Insert Batch Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_overwrite_concurrency\": {\n                \"display_name\": \"Bulk Insert Overwrite Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations that overwrite existing records.\",\n                \"advanced\": True,\n            },\n            \"bulk_delete_concurrency\": {\n                \"display_name\": \"Bulk Delete Concurrency\",\n                \"info\": \"Optional concurrency level for bulk delete operations.\",\n                \"advanced\": True,\n            },\n            \"setup_mode\": {\n                \"display_name\": \"Setup Mode\",\n                \"info\": \"Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.\",\n                \"options\": [\"Sync\", \"Async\", \"Off\"],\n                \"advanced\": True,\n            },\n            \"pre_delete_collection\": {\n                \"display_name\": \"Pre Delete Collection\",\n                \"info\": \"Boolean flag to determine whether to delete the collection before creating a new one.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_include\": {\n                \"display_name\": \"Metadata Indexing Include\",\n                \"info\": \"Optional list of metadata fields to include in the indexing.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_exclude\": {\n                \"display_name\": \"Metadata Indexing Exclude\",\n                \"info\": \"Optional list of metadata fields to exclude from the indexing.\",\n                \"advanced\": True,\n            },\n            \"collection_indexing_policy\": {\n                \"display_name\": \"Collection Indexing Policy\",\n                \"info\": \"Optional dictionary defining the indexing policy for the collection.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        embedding: Embeddings,\n        token: str,\n        api_endpoint: str,\n        collection_name: str,\n        inputs: Optional[List[Record]] = None,\n        namespace: Optional[str] = None,\n        metric: Optional[str] = None,\n        batch_size: Optional[int] = None,\n        bulk_insert_batch_concurrency: Optional[int] = None,\n        bulk_insert_overwrite_concurrency: Optional[int] = None,\n        bulk_delete_concurrency: Optional[int] = None,\n        setup_mode: str = \"Sync\",\n        pre_delete_collection: bool = False,\n        metadata_indexing_include: Optional[List[str]] = None,\n        metadata_indexing_exclude: Optional[List[str]] = None,\n        collection_indexing_policy: Optional[dict] = None,\n    ) -> Union[VectorStore, BaseRetriever]:\n        try:\n            from langchain_astradb import AstraDBVectorStore\n            from langchain_astradb.utils.astradb import SetupMode\n        except ImportError:\n            raise ImportError(\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n\n        try:\n            setup_mode_value = SetupMode[setup_mode.upper()]\n        except KeyError:\n            raise ValueError(f\"Invalid setup mode: {setup_mode}\")\n        if inputs:\n            documents = [_input.to_lc_document() for _input in inputs]\n\n            vector_store = AstraDBVectorStore.from_documents(\n                documents=documents,\n                embedding=embedding,\n                collection_name=collection_name,\n                token=token,\n                api_endpoint=api_endpoint,\n                namespace=namespace,\n                metric=metric,\n                batch_size=batch_size,\n                bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,\n                bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,\n                bulk_delete_concurrency=bulk_delete_concurrency,\n                setup_mode=setup_mode_value,\n                pre_delete_collection=pre_delete_collection,\n                metadata_indexing_include=metadata_indexing_include,\n                metadata_indexing_exclude=metadata_indexing_exclude,\n                collection_indexing_policy=collection_indexing_policy,\n            )\n        else:\n            vector_store = AstraDBVectorStore(\n                embedding=embedding,\n                collection_name=collection_name,\n                token=token,\n                api_endpoint=api_endpoint,\n                namespace=namespace,\n                metric=metric,\n                batch_size=batch_size,\n                bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,\n                bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,\n                bulk_delete_concurrency=bulk_delete_concurrency,\n                setup_mode=setup_mode_value,\n                pre_delete_collection=pre_delete_collection,\n                metadata_indexing_include=metadata_indexing_include,\n                metadata_indexing_exclude=metadata_indexing_exclude,\n                collection_indexing_policy=collection_indexing_policy,\n            )\n\n        return vector_store\n        return vector_store\n"
+                "value": "from typing import List, Optional, Union\n\nfrom langchain_astradb import AstraDBVectorStore\nfrom langchain_astradb.utils.astradb import SetupMode\nfrom langchain_core.retrievers import BaseRetriever\n\nfrom langflow.custom import CustomComponent\nfrom langflow.field_typing import Embeddings, VectorStore\nfrom langflow.schema import Record\n\n\nclass AstraDBVectorStoreComponent(CustomComponent):\n    display_name = \"Astra DB\"\n    description = \"Builds or loads an Astra DB Vector Store.\"\n    icon = \"AstraDB\"\n    field_order = [\"token\", \"api_endpoint\", \"collection_name\", \"inputs\", \"embedding\"]\n\n    def build_config(self):\n        return {\n            \"inputs\": {\n                \"display_name\": \"Inputs\",\n                \"info\": \"Optional list of records to be processed and stored in the vector store.\",\n            },\n            \"embedding\": {\"display_name\": \"Embedding\", \"info\": \"Embedding to use\"},\n            \"collection_name\": {\n                \"display_name\": \"Collection Name\",\n                \"info\": \"The name of the collection within Astra DB where the vectors will be stored.\",\n            },\n            \"token\": {\n                \"display_name\": \"Token\",\n                \"info\": \"Authentication token for accessing Astra DB.\",\n                \"password\": True,\n            },\n            \"api_endpoint\": {\n                \"display_name\": \"API Endpoint\",\n                \"info\": \"API endpoint URL for the Astra DB service.\",\n            },\n            \"namespace\": {\n                \"display_name\": \"Namespace\",\n                \"info\": \"Optional namespace within Astra DB to use for the collection.\",\n                \"advanced\": True,\n            },\n            \"metric\": {\n                \"display_name\": \"Metric\",\n                \"info\": \"Optional distance metric for vector comparisons in the vector store.\",\n                \"advanced\": True,\n            },\n            \"batch_size\": {\n                \"display_name\": \"Batch Size\",\n                \"info\": \"Optional number of records to process in a single batch.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_batch_concurrency\": {\n                \"display_name\": \"Bulk Insert Batch Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations.\",\n                \"advanced\": True,\n            },\n            \"bulk_insert_overwrite_concurrency\": {\n                \"display_name\": \"Bulk Insert Overwrite Concurrency\",\n                \"info\": \"Optional concurrency level for bulk insert operations that overwrite existing records.\",\n                \"advanced\": True,\n            },\n            \"bulk_delete_concurrency\": {\n                \"display_name\": \"Bulk Delete Concurrency\",\n                \"info\": \"Optional concurrency level for bulk delete operations.\",\n                \"advanced\": True,\n            },\n            \"setup_mode\": {\n                \"display_name\": \"Setup Mode\",\n                \"info\": \"Configuration mode for setting up the vector store, with options like “Sync”, “Async”, or “Off”.\",\n                \"options\": [\"Sync\", \"Async\", \"Off\"],\n                \"advanced\": True,\n            },\n            \"pre_delete_collection\": {\n                \"display_name\": \"Pre Delete Collection\",\n                \"info\": \"Boolean flag to determine whether to delete the collection before creating a new one.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_include\": {\n                \"display_name\": \"Metadata Indexing Include\",\n                \"info\": \"Optional list of metadata fields to include in the indexing.\",\n                \"advanced\": True,\n            },\n            \"metadata_indexing_exclude\": {\n                \"display_name\": \"Metadata Indexing Exclude\",\n                \"info\": \"Optional list of metadata fields to exclude from the indexing.\",\n                \"advanced\": True,\n            },\n            \"collection_indexing_policy\": {\n                \"display_name\": \"Collection Indexing Policy\",\n                \"info\": \"Optional dictionary defining the indexing policy for the collection.\",\n                \"advanced\": True,\n            },\n        }\n\n    def build(\n        self,\n        embedding: Embeddings,\n        token: str,\n        api_endpoint: str,\n        collection_name: str,\n        inputs: Optional[List[Record]] = None,\n        namespace: Optional[str] = None,\n        metric: Optional[str] = None,\n        batch_size: Optional[int] = None,\n        bulk_insert_batch_concurrency: Optional[int] = None,\n        bulk_insert_overwrite_concurrency: Optional[int] = None,\n        bulk_delete_concurrency: Optional[int] = None,\n        setup_mode: str = \"Sync\",\n        pre_delete_collection: bool = False,\n        metadata_indexing_include: Optional[List[str]] = None,\n        metadata_indexing_exclude: Optional[List[str]] = None,\n        collection_indexing_policy: Optional[dict] = None,\n    ) -> Union[VectorStore, BaseRetriever]:\n        try:\n            setup_mode_value = SetupMode[setup_mode.upper()]\n        except KeyError:\n            raise ValueError(f\"Invalid setup mode: {setup_mode}\")\n        if inputs:\n            documents = [_input.to_lc_document() for _input in inputs]\n\n            vector_store = AstraDBVectorStore.from_documents(\n                documents=documents,\n                embedding=embedding,\n                collection_name=collection_name,\n                token=token,\n                api_endpoint=api_endpoint,\n                namespace=namespace,\n                metric=metric,\n                batch_size=batch_size,\n                bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,\n                bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,\n                bulk_delete_concurrency=bulk_delete_concurrency,\n                setup_mode=setup_mode_value,\n                pre_delete_collection=pre_delete_collection,\n                metadata_indexing_include=metadata_indexing_include,\n                metadata_indexing_exclude=metadata_indexing_exclude,\n                collection_indexing_policy=collection_indexing_policy,\n            )\n        else:\n            vector_store = AstraDBVectorStore(\n                embedding=embedding,\n                collection_name=collection_name,\n                token=token,\n                api_endpoint=api_endpoint,\n                namespace=namespace,\n                metric=metric,\n                batch_size=batch_size,\n                bulk_insert_batch_concurrency=bulk_insert_batch_concurrency,\n                bulk_insert_overwrite_concurrency=bulk_insert_overwrite_concurrency,\n                bulk_delete_concurrency=bulk_delete_concurrency,\n                setup_mode=setup_mode_value,\n                pre_delete_collection=pre_delete_collection,\n                metadata_indexing_include=metadata_indexing_include,\n                metadata_indexing_exclude=metadata_indexing_exclude,\n                collection_indexing_policy=collection_indexing_policy,\n            )\n\n        return vector_store\n        return vector_store\n"
               },
               "collection_indexing_policy": {
                 "advanced": true,
@@ -2960,15 +2975,13 @@
             ],
             "outputs": [
               {
-                "cache": true,
                 "display_name": null,
                 "method": null,
                 "name": "Embeddings",
                 "selected": null,
                 "types": [
                   "Embeddings"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               }
             ],
             "template": {
