@@ -23,7 +23,7 @@ class ChatComponent(CustomComponent):
                 "display_name": "Sender Type",
                 "advanced": True,
             },
-            "sender_name": {"display_name": "Sender Name"},
+            "sender_name": {"display_name": "Sender Name", "advanced": True},
             "session_id": {
                 "display_name": "Session ID",
                 "info": "If provided, the message will be stored in the memory.",
