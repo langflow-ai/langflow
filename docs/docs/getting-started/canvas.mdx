@@ -11,15 +11,6 @@ The **Langflow canvas** is the central hub of Langflow, where you'll assemble ne
 To get a feel for the canvas, we'll examine a basic prompting flow.
 You can either build this flow yourself, or select **New Project** > **Basic prompting** to open a canvas with the flow pre-built.
 
-<ZoomableImage
-  alt="Docusaurus themed image"
-  sources={{
-    light: "img/basic-prompting.png",
-    dark: "img/basic-prompting.png",
-  }}
-  style={{ width: "30%", margin: "20px auto" }}
-/>
-
 ## Flows, components, collections, and projects
 
 A [flow](#flow) is a pipeline of components connected together in the Langflow canvas.
@@ -44,7 +35,7 @@ For example, the [Basic prompting](../starter-projects/basic-prompting.mdx) flow
     light: "img/basic-prompting.png",
     dark: "img/basic-prompting.png",
   }}
-  style={{ width: "80%", margin: "20px auto" }}
+  style={{ width: "100%", maxWidth: "800px", margin: "0 auto" }}
 />
 
 In this flow, the **OpenAI LLM component** receives input (left side) and produces output (right side) - in this case, receiving input from the **Chat Input** and **Prompt** components and producing output to the **Chat Output** component.
@@ -77,7 +68,7 @@ Components are the building blocks of flows. They consist of inputs, outputs, an
     light: useBaseUrl("img/single-component.png"),
     dark: useBaseUrl("img/single-component.png"),
   }}
-  style={{ width: "50%", maxWidth: "800px", margin: "20px auto" }}
+  style={{ width: "40%", margin: "20px auto" }}
 />
 
 <div style={{ marginBottom: "20px" }}>
@@ -112,7 +103,7 @@ The menu options are **Code**, **Save**, **Duplicate**, and **More**.
     light: "img/chat-input-with-menu.png",
     dark: "img/chat-input-with-menu.png",
   }}
-  style={{ width: "30%", margin: "20px auto" }}
+  style={{ width: "40%", margin: "20px auto" }}
 />
 
 ### Code menu
@@ -174,13 +165,14 @@ Modify the call's parameters in the **Tweaks** window, click the **Copy Code** o
     light: "img/api-window.png",
     dark: "img/api-window.png",
   }}
-  style={{ width: "50%", margin: "20px auto" }}
+  style={{ width: "60%", margin: "20px auto" }}
 />
 
 ### curl
 
 The **curl** tab displays sample code for posting a query to your flow.
 Modify the `input_value` to change your input message.
+Copy the code and run it to post a query to your flow and get the result.
 
 ```curl
 curl -X POST \

@@ -171,19 +171,17 @@ export default function NodeToolbarComponent({
 
   const advanced = useShortcutsStore((state) => state.advanced);
   const minimize = useShortcutsStore((state) => state.minimize);
-  const share = useShortcutsStore((state) => state.share);
+  const component = useShortcutsStore((state) => state.component);
   const save = useShortcutsStore((state) => state.save);
   const docs = useShortcutsStore((state) => state.docs);
   const code = useShortcutsStore((state) => state.code);
   const group = useShortcutsStore((state) => state.group);
-  const update = useShortcutsStore((state) => state.update);
   const download = useShortcutsStore((state) => state.download);
   const freeze = useShortcutsStore((state) => state.freeze);
 
   useHotkeys(minimize, handleMinimizeWShortcut, { preventDefault });
-  useHotkeys(update, handleUpdateWShortcut, { preventDefault });
   useHotkeys(group, handleGroupWShortcut, { preventDefault });
-  useHotkeys(share, handleShareWShortcut, { preventDefault });
+  useHotkeys(component, handleShareWShortcut, { preventDefault });
   useHotkeys(code, handleCodeWShortcut, { preventDefault });
   useHotkeys(advanced, handleAdvancedWShortcut, { preventDefault });
   useHotkeys(save, handleSaveWShortcut, { preventDefault });
@@ -356,7 +354,7 @@ export default function NodeToolbarComponent({
       <div className="flex justify-center">
         <span> {name} </span>
         <span
-          className={`ml-3 flex items-center rounded-sm bg-muted px-1 py-[0.2] text-muted-foreground`}
+          className={`ml-3 flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-lg text-muted-foreground`}
         >
           <RenderIcons
             isMac={isMac}
@@ -618,7 +616,8 @@ export default function NodeToolbarComponent({
                 >
                   <ToolbarSelectItem
                     shortcut={
-                      shortcuts.find((obj) => obj.name === "Share")?.shortcut!
+                      shortcuts.find((obj) => obj.name === "Component Share")
+                        ?.shortcut!
                     }
                     value={"Share"}
                     icon={"Share3"}
@@ -711,7 +710,7 @@ export default function NodeToolbarComponent({
                   />{" "}
                   <span className="">Delete</span>{" "}
                   <span
-                    className={`justify absolute right-2 top-2 flex items-center rounded-sm px-1 py-[0.2] ${deleteIsFocus ? " " : "bg-muted"}`}
+                    className={` absolute right-2 top-2 flex items-center justify-center rounded-sm px-1 py-[0.2] ${deleteIsFocus ? " " : "bg-muted"}`}
                   >
                     <IconComponent
                       name="Delete"

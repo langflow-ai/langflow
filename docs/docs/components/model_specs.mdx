@@ -2,19 +2,11 @@ import Admonition from "@theme/Admonition";
 
 # Large Language Models (LLMs)
 
-<Admonition type="caution" icon="🚧" title="ZONE UNDER CONSTRUCTION">
-  <p>
-    Thank you for your patience as we refine our documentation. You might
-    encounter some inconsistencies. Please help us improve by sharing your
-    feedback or reporting any issues! 🛠️📝
-  </p>
-</Admonition>
-
 A Large Language Model (LLM) is a foundational component of Langflow. It provides a uniform interface for interacting with LLMs from various providers, including OpenAI, Cohere, and HuggingFace. Langflow extensively uses LLMs across its chains and agents, employing them to generate text based on specific prompts or inputs.
 
 ---
 
-### Anthropic
+## Anthropic
 
 This is a wrapper for Anthropic's large language models. Learn more at [Anthropic](https://www.anthropic.com).
 
@@ -24,7 +16,7 @@ This is a wrapper for Anthropic's large language models. Learn more at [Anthropi
 
 ---
 
-### ChatAnthropic
+## ChatAnthropic
 
 This is a wrapper for Anthropic's large language model designed for chat-based interactions. Learn more at [Anthropic](https://www.anthropic.com).
 
@@ -34,7 +26,7 @@ This is a wrapper for Anthropic's large language model designed for chat-based i
 
 ---
 
-### CTransformers
+## CTransformers
 
 `CTransformers` provides access to Transformer models implemented in C/C++ using the [GGML](https://github.com/ggerganov/ggml) library.
 
@@ -69,7 +61,7 @@ This is a wrapper for Anthropic's large language model designed for chat-based i
 - **model_file**: The specific model file name within the repository or directory.
 - **model_type**: The type of transformer model used. For further information, visit [ctransformers](https://github.com/marella/ctransformers).
 
-### ChatOpenAI Component
+## ChatOpenAI Component
 
 This component interfaces with [OpenAI's](https://openai.com) large language models, supporting a variety of tasks such as chatbots, generative question-answering, and summarization.
 
@@ -80,7 +72,7 @@ This component interfaces with [OpenAI's](https://openai.com) large language mod
 - **openai_api_key**: The API key required for authentication with the OpenAI API.
 - **temperature**: Adjusts the randomness level of the text generation. This should be a non-negative number, defaulting to `0.7`.
 
-### Cohere Component
+## Cohere Component
 
 A wrapper for accessing [Cohere's](https://cohere.com) large language models.
 
@@ -88,7 +80,7 @@ A wrapper for accessing [Cohere's](https://cohere.com) large language models.
 - **max_tokens**: The limit on the number of tokens to generate per request, defaulting to `256`.
 - **temperature**: Adjusts the randomness level in text generations. This should be a non-negative number, defaulting to `0.75`.
 
-### HuggingFaceHub Component
+## HuggingFaceHub Component
 
 A component facilitating access to models hosted on the [HuggingFace Hub](https://www.huggingface.co/models).
 
@@ -97,7 +89,7 @@ A component facilitating access to models hosted on the [HuggingFace Hub](https:
 - **repo_id**: Specifies the model repository, defaulting to `gpt2`.
 - **task**: The specific task to execute with the model, returning either `generated_text` or `summary_text`.
 
-### LlamaCpp Component
+## LlamaCpp Component
 
 This component provides access to `llama.cpp` models, ensuring high performance and flexibility.
 
@@ -126,7 +118,7 @@ This component provides access to `llama.cpp` models, ensuring high performance 
 - **verbose**: Controls the verbosity of output details. When enabled, it provides insights into internal states to aid debugging and understanding, defaulting to `False`.
 - **vocab_only**: Loads only the vocabulary without model weights, defaulting to `False`.
 
-### VertexAI Component
+## VertexAI Component
 
 This component integrates with [Google Vertex AI](https://cloud.google.com/vertex-ai) large language models to enhance AI capabilities.
 
