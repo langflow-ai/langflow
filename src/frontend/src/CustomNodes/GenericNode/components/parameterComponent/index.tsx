@@ -315,7 +315,7 @@ export default function ParameterComponent({
             {info !== "" && (
               <ShadTooltip content={infoHtml.current}>
                 {/* put div to avoid bug that does not display tooltip */}
-                <div>
+                <div className="cursor-help">
                   <IconComponent
                     name="Info"
                     className="relative bottom-px ml-1.5 h-3 w-4"
