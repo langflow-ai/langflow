@@ -1,8 +1,12 @@
-import boto3  # type: ignore
-from botocore.exceptions import ClientError, NoCredentialsError  # type: ignore
 from loguru import logger
-
 from .service import StorageService
+
+try:
+    import boto3
+    from botocore.exceptions import ClientError, NoCredentialsError  # type: ignore
+
+except ImportError:
+    raise ImportError("Please install the boto3 package to use the S3 storage service.")
 
 
 class S3StorageService(StorageService):

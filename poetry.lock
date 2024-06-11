@@ -263,7 +263,7 @@ extras = ["pyaudio (>=0.2.13)"]
 name = "astrapy"
 version = "1.2.1"
 description = "AstraPy is a Pythonic SDK for DataStax Astra and its Data API"
-optional = false
+optional = true
 python-versions = "<4.0.0,>=3.8.0"
 files = [
     {file = "astrapy-1.2.1-py3-none-any.whl", hash = "sha256:0d7ca1e6f18a6a4e9a41ffaf2aa4cc585d36de3e983b5c5ce0bbb30a1595e30b"},
@@ -603,7 +603,7 @@ files = [
 name = "bson"
 version = "0.5.10"
 description = "BSON codec for Python"
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "bson-0.5.10.tar.gz", hash = "sha256:d6511b2ab051139a9123c184de1a04227262173ad593429d21e443d6462d6590"},
@@ -653,7 +653,7 @@ files = [
 name = "cassandra-driver"
 version = "3.29.1"
 description = "DataStax Driver for Apache Cassandra"
-optional = false
+optional = true
 python-versions = "*"
 files = [
     {file = "cassandra-driver-3.29.1.tar.gz", hash = "sha256:38e9c2a2f2a9664bb03f1f852d5fccaeff2163942b5db35dffcf8bf32a51cfe5"},
@@ -700,7 +700,7 @@ graph = ["gremlinpython (==3.4.6)"]
 name = "cassio"
 version = "0.1.8"
 description = "A framework-agnostic Python library to seamlessly integrate Apache Cassandra(R) with ML/LLM/genAI workloads."
-optional = false
+optional = true
 python-versions = "<4.0,>=3.8"
 files = [
     {file = "cassio-0.1.8-py3-none-any.whl", hash = "sha256:c09e7c884ba7227ff5277c86f3b0f31c523672ea407f56d093c7227e69c54d94"},
@@ -1843,7 +1843,7 @@ gmpy2 = ["gmpy2"]
 name = "elastic-transport"
 version = "8.13.1"
 description = "Transport classes and utilities shared among Python Elastic client libraries"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "elastic_transport-8.13.1-py3-none-any.whl", hash = "sha256:5d4bb6b8e9d74a9c16de274e91a5caf65a3a8d12876f1e99152975e15b2746fe"},
@@ -1861,7 +1861,7 @@ develop = ["aiohttp", "furo", "httpx", "mock", "opentelemetry-api", "opentelemet
 name = "elasticsearch"
 version = "8.14.0"
 description = "Python client for Elasticsearch"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "elasticsearch-8.14.0-py3-none-any.whl", hash = "sha256:cef8ef70a81af027f3da74a4f7d9296b390c636903088439087b8262a468c130"},
@@ -2374,7 +2374,7 @@ files = [
 name = "geomet"
 version = "0.2.1.post1"
 description = "GeoJSON <-> WKT/WKB conversion utilities"
-optional = false
+optional = true
 python-versions = ">2.6, !=3.3.*, <4"
 files = [
     {file = "geomet-0.2.1.post1-py3-none-any.whl", hash = "sha256:a41a1e336b381416d6cbed7f1745c848e91defaa4d4c1bdc1312732e46ffad2b"},
@@ -2642,7 +2642,7 @@ httplib2 = ">=0.19.0"
 name = "google-cloud-aiplatform"
 version = "1.54.1"
 description = "Vertex AI API client library"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "google-cloud-aiplatform-1.54.1.tar.gz", hash = "sha256:01c231961cc1a1a3b049ea3ef71fb11e77b2d56d632d020ce09e419b27ff77f2"},
@@ -2689,7 +2689,7 @@ xai = ["tensorflow (>=2.3.0,<3.0.0dev)"]
 name = "google-cloud-bigquery"
 version = "3.24.0"
 description = "Google BigQuery API client library"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "google-cloud-bigquery-3.24.0.tar.gz", hash = "sha256:e95e6f6e0aa32e6c453d44e2b3298931fdd7947c309ea329a31b6ff1f939e17e"},
@@ -2720,7 +2720,7 @@ tqdm = ["tqdm (>=4.7.4,<5.0.0dev)"]
 name = "google-cloud-core"
 version = "2.4.1"
 description = "Google Cloud API client core library"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "google-cloud-core-2.4.1.tar.gz", hash = "sha256:9b7749272a812bde58fff28868d0c5e2f585b82f37e09a1f6ed2d4d10f134073"},
@@ -2738,7 +2738,7 @@ grpc = ["grpcio (>=1.38.0,<2.0dev)", "grpcio-status (>=1.38.0,<2.0.dev0)"]
 name = "google-cloud-resource-manager"
 version = "1.12.3"
 description = "Google Cloud Resource Manager API client library"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "google-cloud-resource-manager-1.12.3.tar.gz", hash = "sha256:809851824119834e4f2310b2c4f38621c1d16b2bb14d5b9f132e69c79d355e7f"},
@@ -2756,7 +2756,7 @@ protobuf = ">=3.19.5,<3.20.0 || >3.20.0,<3.20.1 || >3.20.1,<4.21.0 || >4.21.0,<4
 name = "google-cloud-storage"
 version = "2.17.0"
 description = "Google Cloud Storage API client library"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "google-cloud-storage-2.17.0.tar.gz", hash = "sha256:49378abff54ef656b52dca5ef0f2eba9aa83dc2b2c72c78714b03a1a95fe9388"},
@@ -2778,7 +2778,7 @@ protobuf = ["protobuf (<5.0.0dev)"]
 name = "google-crc32c"
 version = "1.5.0"
 description = "A python wrapper of the C library 'Google CRC32C'"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "google-crc32c-1.5.0.tar.gz", hash = "sha256:89284716bc6a5a415d4eaa11b1726d2d60a0cd12aadf5439828353662ede9dd7"},
@@ -2881,7 +2881,7 @@ dev = ["Pillow", "absl-py", "black", "ipython", "nose2", "pandas", "pytype", "py
 name = "google-resumable-media"
 version = "2.7.1"
 description = "Utilities for Google Media Downloads and Resumable Uploads"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "google-resumable-media-2.7.1.tar.gz", hash = "sha256:eae451a7b2e2cdbaaa0fd2eb00cc8a1ee5e95e16b55597359cbc3d27d7d90e33"},
@@ -3046,7 +3046,7 @@ typing-extensions = ">=4.7,<5"
 name = "grpc-google-iam-v1"
 version = "0.13.0"
 description = "IAM API client library"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "grpc-google-iam-v1-0.13.0.tar.gz", hash = "sha256:fad318608b9e093258fbf12529180f400d1c44453698a33509cc6ecf005b294e"},
@@ -4124,7 +4124,7 @@ langchain-core = ">=0.2.2rc1,<0.3"
 name = "langchain-astradb"
 version = "0.3.3"
 description = "An integration package connecting Astra DB and LangChain"
-optional = false
+optional = true
 python-versions = "<4.0,>=3.8.1"
 files = [
     {file = "langchain_astradb-0.3.3-py3-none-any.whl", hash = "sha256:39deef1253947ef1bfaf3c27881ecdf07621d96c2cf37814aed9e506a9bee217"},
@@ -4250,7 +4250,7 @@ images = ["pillow (>=10.1.0,<11.0.0)"]
 name = "langchain-google-vertexai"
 version = "1.0.5"
 description = "An integration package connecting Google VertexAI and LangChain"
-optional = false
+optional = true
 python-versions = "<4.0,>=3.8.1"
 files = [
     {file = "langchain_google_vertexai-1.0.5-py3-none-any.whl", hash = "sha256:38f4a39bf35927d744d0883907c4d4a59eef059e9b36f28bb5c737c2aae6963b"},
@@ -4380,67 +4380,60 @@ name = "langflow-base"
 version = "0.0.62"
 description = "A Python package with a built-in web application"
 optional = false
-python-versions = ">=3.10,<3.13"
-files = []
-develop = true
+python-versions = "<3.13,>=3.10"
+files = [
+    {file = "langflow_base-0.0.62-py3-none-any.whl", hash = "sha256:a32cd91bd9aa51c357c6de525607a0a4676c6a99922bbd0da8469a58ab28eab1"},
+    {file = "langflow_base-0.0.62.tar.gz", hash = "sha256:d539ed0a0663cb4975b52e52d4ba3e195f3031d0d17f9e872120873f80cf6690"},
+]
 
 [package.dependencies]
-alembic = "^1.13.0"
-asyncer = "^0.0.5"
+alembic = ">=1.13.0,<2.0.0"
+asyncer = ">=0.0.5,<0.0.6"
 bcrypt = "4.0.1"
-cachetools = "^5.3.1"
-cryptography = "^42.0.5"
-docstring-parser = "^0.15"
-duckdb = "^0.10.2"
-emoji = "^2.12.0"
-fastapi = "^0.111.0"
-gunicorn = "^22.0.0"
+cachetools = ">=5.3.1,<6.0.0"
+cryptography = ">=42.0.5,<43.0.0"
+docstring-parser = ">=0.15,<0.16"
+duckdb = ">=0.10.2,<0.11.0"
+emoji = ">=2.12.0,<3.0.0"
+fastapi = ">=0.111.0,<0.112.0"
+gunicorn = ">=22.0.0,<23.0.0"
 httpx = "*"
-jq = {version = "^1.7.0", markers = "sys_platform != \"win32\""}
-langchain = "~0.2.0"
+jq = {version = ">=1.7.0,<2.0.0", markers = "sys_platform != \"win32\""}
+langchain = ">=0.2.0,<0.3.0"
 langchain-experimental = "*"
-langchainhub = "~0.1.15"
-loguru = "^0.7.1"
-multiprocess = "^0.70.14"
-nest-asyncio = "^1.6.0"
+langchainhub = ">=0.1.15,<0.2.0"
+loguru = ">=0.7.1,<0.8.0"
+multiprocess = ">=0.70.14,<0.71.0"
+nest-asyncio = ">=1.6.0,<2.0.0"
 orjson = "3.10.0"
 pandas = "2.2.0"
-passlib = "^1.7.4"
-pillow = "^10.2.0"
-platformdirs = "^4.2.0"
-pydantic = "^2.7.0"
-pydantic-settings = "^2.2.0"
-pypdf = "^4.2.0"
-pyperclip = "^1.8.2"
-python-docx = "^1.1.0"
-python-jose = "^3.3.0"
-python-multipart = "^0.0.7"
-python-socketio = "^5.11.0"
-rich = "^13.7.0"
-sqlmodel = "^0.0.18"
-typer = "^0.12.0"
-uncurl = "^0.0.11"
-uvicorn = "^0.30.0"
+passlib = ">=1.7.4,<2.0.0"
+pillow = ">=10.2.0,<11.0.0"
+platformdirs = ">=4.2.0,<5.0.0"
+pydantic = ">=2.7.0,<3.0.0"
+pydantic-settings = ">=2.2.0,<3.0.0"
+pypdf = ">=4.2.0,<5.0.0"
+pyperclip = ">=1.8.2,<2.0.0"
+python-docx = ">=1.1.0,<2.0.0"
+python-jose = ">=3.3.0,<4.0.0"
+python-multipart = ">=0.0.7,<0.0.8"
+python-socketio = ">=5.11.0,<6.0.0"
+rich = ">=13.7.0,<14.0.0"
+sqlmodel = ">=0.0.18,<0.0.19"
+typer = ">=0.12.0,<0.13.0"
+uncurl = ">=0.0.11,<0.0.12"
+uvicorn = ">=0.30.0,<0.31.0"
 websockets = "*"
-
-[package.extras]
-all = []
-deploy = []
-local = []
-
-[package.source]
-type = "directory"
-url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
-version = "2.36.0"
+version = "2.36.1"
 description = "A client library for accessing langfuse"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langfuse-2.36.0-py3-none-any.whl", hash = "sha256:6991895aa52d4702ab5ee9eb8fd5ebe129862e103db4ba8cd2b34c352e07abc5"},
-    {file = "langfuse-2.36.0.tar.gz", hash = "sha256:51fad5bb20947342d0e49d2c4847221b3d2630b590cf701bcfb07a09918ddc0d"},
+    {file = "langfuse-2.36.1-py3-none-any.whl", hash = "sha256:2cba244024bdf63aa3295bffada6b257497f9d18a3ca09026595470f46e09e5b"},
+    {file = "langfuse-2.36.1.tar.gz", hash = "sha256:5117038d35d4629cfa37e8d89986132c926c52c05631cdfef4f9d54bc05591d8"},
 ]
 
 [package.dependencies]
@@ -6435,7 +6428,7 @@ test = ["enum34", "ipaddress", "mock", "pywin32", "wmi"]
 name = "psycopg"
 version = "3.1.19"
 description = "PostgreSQL database adapter for Python"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "psycopg-3.1.19-py3-none-any.whl", hash = "sha256:dca5e5521c859f6606686432ae1c94e8766d29cc91f2ee595378c510cc5b0731"},
@@ -6458,7 +6451,7 @@ test = ["anyio (>=3.6.2,<4.0)", "mypy (>=1.4.1)", "pproxy (>=2.7)", "pytest (>=6
 name = "psycopg-binary"
 version = "3.1.19"
 description = "PostgreSQL database adapter for Python -- C optimisation distribution"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "psycopg_binary-3.1.19-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:7204818f05151dd08f8f851defb01972ec9d2cc925608eb0de232563f203f354"},
@@ -6530,7 +6523,7 @@ files = [
 name = "psycopg2-binary"
 version = "2.9.9"
 description = "psycopg2 - Python-PostgreSQL Database Adapter"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "psycopg2-binary-2.9.9.tar.gz", hash = "sha256:7f01846810177d829c7692f1f5ada8096762d9172af1b1a28d4ab5b77c923c1c"},
@@ -6969,7 +6962,7 @@ windows-terminal = ["colorama (>=0.4.6)"]
 name = "pymongo"
 version = "4.7.3"
 description = "Python driver for MongoDB <http://www.mongodb.org>"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "pymongo-4.7.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:e9580b4537b3cc5d412070caabd1dabdf73fdce249793598792bac5782ecf2eb"},
@@ -7498,7 +7491,6 @@ files = [
     {file = "PyYAML-6.0.1-cp311-cp311-win_amd64.whl", hash = "sha256:bf07ee2fef7014951eeb99f56f39c9bb4af143d8aa3c21b1677805985307da34"},
     {file = "PyYAML-6.0.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:855fb52b0dc35af121542a76b9a84f8d1cd886ea97c84703eaa6d88e37a2ad28"},
     {file = "PyYAML-6.0.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:40df9b996c2b73138957fe23a16a4f0ba614f4c0efce1e9406a184b6d07fa3a9"},
-    {file = "PyYAML-6.0.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a08c6f0fe150303c1c6b71ebcd7213c2858041a7e01975da3a99aed1e7a378ef"},
     {file = "PyYAML-6.0.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6c22bec3fbe2524cde73d7ada88f6566758a8f7227bfbf93a408a9d86bcc12a0"},
     {file = "PyYAML-6.0.1-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:8d4e9c88387b0f5c7d5f281e55304de64cf7f9c0021a3525bd3b1c542da3b0e4"},
     {file = "PyYAML-6.0.1-cp312-cp312-win32.whl", hash = "sha256:d483d2cdf104e7c9fa60c544d92981f12ad66a457afae824d146093b8c294c54"},
@@ -8316,7 +8308,7 @@ testing = ["build[virtualenv] (>=1.0.3)", "filelock (>=3.4.0)", "importlib-metad
 name = "shapely"
 version = "2.0.4"
 description = "Manipulation and analysis of geometric objects"
-optional = false
+optional = true
 python-versions = ">=3.7"
 files = [
     {file = "shapely-2.0.4-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:011b77153906030b795791f2fdfa2d68f1a8d7e40bce78b029782ade3afe4f2f"},
@@ -8904,7 +8896,7 @@ testing = ["black (==22.3)", "datasets", "numpy", "pytest", "requests", "ruff"]
 name = "toml"
 version = "0.10.2"
 description = "Python Library for Tom's Obvious, Minimal Language"
-optional = false
+optional = true
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 files = [
     {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},
@@ -9628,7 +9620,7 @@ zstd = ["zstandard (>=0.18.0)"]
 name = "uuid6"
 version = "2024.1.12"
 description = "New time-based UUID formats which are suited for use as a database key"
-optional = false
+optional = true
 python-versions = ">=3.8"
 files = [
     {file = "uuid6-2024.1.12-py3-none-any.whl", hash = "sha256:8150093c8d05a331bc0535bc5ef6cf57ac6eceb2404fd319bc10caee2e02c065"},
@@ -10462,12 +10454,18 @@ test = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [extras]
+boto3 = ["boto3"]
 cassio = ["cassio"]
 couchbase = ["couchbase"]
 deploy = ["celery", "flower", "redis"]
+elasticsearch = ["elasticsearch"]
+langchain-astradb = ["langchain-astradb"]
+langchain-google-vertexai = ["langchain-google-vertexai"]
 local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
+psycopg = ["psycopg", "psycopg-binary", "psycopg2-binary"]
+pymongo = ["pymongo"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "6cfa9f164710bf283b50a8e12e9d0c91c58f5d0176bbb277b5f5d3630ec8b2cb"
+content-hash = "f3eb14e6fb94da296e5ba68904ea6a811d1f4dc2821cf0875c9f02d672deb7d6"
