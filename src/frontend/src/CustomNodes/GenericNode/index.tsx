@@ -37,6 +37,7 @@ import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import ParameterComponent from "./components/parameterComponent";
 import { useShortcutsStore } from "../../stores/shortcuts";
+import Markdown from "react-markdown";
 
 export default function GenericNode({
   data,
@@ -561,9 +562,11 @@ export default function GenericNode({
                 : ""
             }
           >
+            {/* increase height!! */}
             <div className="generic-node-desc">
               {showNode && nameEditable && inputDescription ? (
                 <Textarea
+                  className="nowheel min-h-40"
                   autoFocus
                   onBlur={() => {
                     setInputDescription(false);
@@ -608,7 +611,7 @@ export default function GenericNode({
               ) : (
                 <div
                   className={cn(
-                    "nodoubleclick generic-node-desc-text cursor-text truncate-multiline word-break-break-word",
+                    "nodoubleclick generic-node-desc-text cursor-text word-break-break-word",
                     (data.node?.description === "" ||
                       !data.node?.description) &&
                       nameEditable
@@ -621,9 +624,16 @@ export default function GenericNode({
                   }}
                 >
                   {(data.node?.description === "" || !data.node?.description) &&
-                  nameEditable
-                    ? "Double Click to Edit Description"
-                    : data.node?.description}
+                  nameEditable ? (
+                    "Double Click to Edit Description"
+                  ) : (
+                    <Markdown
+                      className="markdown prose flex flex-col text-primary word-break-break-word
+    dark:prose-invert"
+                    >
+                      {String(data.node?.description)}
+                    </Markdown>
+                  )}
                 </div>
               )}
             </div>
