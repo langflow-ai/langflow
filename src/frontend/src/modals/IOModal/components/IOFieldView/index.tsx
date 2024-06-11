@@ -50,7 +50,7 @@ export default function IOFieldView({
       .results.result ?? "";
 
   console.log(
-    (flowPool[node!.id] ?? [])[(flowPool[node!.id]?.length ?? 1) - 1]?.data
+    (flowPool[node!.id] ?? [])[(flowPool[node!.id]?.length ?? 1) - 1]?.data,
   );
 
   function handleOutputType() {
@@ -255,9 +255,11 @@ export default function IOFieldView({
                 <RecordsOutputComponent
                   pagination={!left}
                   rows={
-                    flowPoolNode?.data?.artifacts?.map(
-                      (artifact) => artifact.data
-                    ) ?? []
+                    Array.isArray(flowPoolNode?.data?.artifacts)
+                      ? flowPoolNode?.data?.artifacts?.map(
+                          (artifact) => artifact.data,
+                        ) ?? []
+                      : [flowPoolNode?.data?.artifacts]
                   }
                   columnMode="union"
                 />

@@ -8,7 +8,7 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 export default function SettingsPage(): JSX.Element {
   const pathname = location.pathname;
   const setCurrentFlowId = useFlowsManagerStore(
-    (state) => state.setCurrentFlowId
+    (state) => state.setCurrentFlowId,
   );
   useEffect(() => {
     setCurrentFlowId("");
@@ -36,7 +36,7 @@ export default function SettingsPage(): JSX.Element {
       ),
     },
     {
-      title: "API Keys",
+      title: "Langflow API",
       href: "/settings/api-keys",
       icon: (
         <ForwardedIconComponent

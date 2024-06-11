@@ -51,7 +51,7 @@ test("TextAreaModalComponent", async ({ page }) => {
   await page
     .getByTestId("textarea-text")
     .fill(
-      "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!"
+      "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
     );
 
   await page.getByTestId("textarea-text-ExternalLink").click();

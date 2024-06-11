@@ -85,6 +85,7 @@ export default function IOModal({
   const [sessions, setSessions] = useState<string[]>([]);
   const messages = useMessagesStore((state) => state.messages);
   const setColumns = useMessagesStore((state) => state.setColumns);
+  const flowPool = useFlowStore((state) => state.flowPool);
   async function updateVertices() {
     return updateVerticesOrder(currentFlow!.id, null);
   }
@@ -111,7 +112,10 @@ export default function IOModal({
         setLockChat(false);
       });
     }
-    const { rows, columns } = await getMessagesTable("union", currentFlow!.id);
+    const { rows, columns } = await getMessagesTable("union", currentFlow!.id, [
+      "index",
+      "flow_id",
+    ]);
     setMessages(rows);
     setColumns(columns);
     setLockChat(false);
@@ -147,10 +151,12 @@ export default function IOModal({
   useEffect(() => {
     setSelectedViewField(startView());
     if (haveChat) {
-      getMessagesTable("union", currentFlow!.id).then(({ rows, columns }) => {
-        setMessages(rows);
-        setColumns(columns);
-      });
+      getMessagesTable("union", currentFlow!.id, ["index", "flow_id"]).then(
+        ({ rows, columns }) => {
+          setMessages(rows);
+          setColumns(columns);
+        },
+      );
     }
   }, [open]);
 
@@ -183,8 +189,8 @@ export default function IOModal({
           />
         </div>
       </BaseModal.Header>
-      <BaseModal.Content>
-        <div className="flex h-full flex-col ">
+      <BaseModal.Content overflowHidden>
+        <div className="flex h-full flex-col">
           <div className="flex-max-width h-full">
             <div
               className={cn(
@@ -229,10 +235,6 @@ export default function IOModal({
                           key={index}
                         >
                           <AccordionComponent
-                            disabled={
-                              node.data.node!.template["input_value"]?.value ===
-                              ""
-                            }
                             trigger={
                               <div className="file-component-badge-div">
                                 <ShadTooltip
@@ -288,12 +290,20 @@ export default function IOModal({
                       const output = outputs.find(
                         (output) => output.id === node.id,
                       )!;
+                      const textOutputValue =
+                        (flowPool[node!.id] ?? [])[
+                          (flowPool[node!.id]?.length ?? 1) - 1
+                        ]?.data?.artifacts ?? "";
+                      const disabled =
+                        textOutputValue === "" ||
+                        JSON.stringify(textOutputValue) === "{}";
                       return (
                         <div
                           className="file-component-accordion-div"
                           key={index}
                         >
                           <AccordionComponent
+                            disabled={disabled}
                             trigger={
                               <div className="file-component-badge-div">
                                 <ShadTooltip
@@ -353,17 +363,24 @@ export default function IOModal({
                           });
                         }}
                       >
-                        <div className="flex w-full items-center justify-between border-b px-2 py-1 align-middle">
-                          <Badge variant="gray" size="md">
-                            <span className="truncate">
-                              {session === currentFlow?.id
-                                ? "Default Session"
-                                : session}
-                            </span>
-                          </Badge>
-                          <div className="flex items-center justify-center gap-2 align-middle">
+                        <div className="flex w-full items-center justify-between gap-2 overflow-hidden border-b px-2 py-3.5 align-middle">
+                          <ShadTooltip styleClasses="z-50" content={session}>
+                            <div className="flex min-w-0">
+                              <Badge
+                                variant="gray"
+                                size="md"
+                                className="block truncate"
+                              >
+                                {session === currentFlow?.id
+                                  ? "Default Session"
+                                  : session}
+                              </Badge>
+                            </div>
+                          </ShadTooltip>
+                          <div className="flex shrink-0 items-center justify-center gap-2 align-middle">
                             <Button
-                              variant="ghost"
+                              variant="none"
+                              size="icon"
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -374,7 +391,7 @@ export default function IOModal({
                             >
                               <ShadTooltip
                                 styleClasses="z-50"
-                                content={"delete"}
+                                content={"Delete"}
                               >
                                 <div>
                                   <IconComponent

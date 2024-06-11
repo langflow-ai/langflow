@@ -25,7 +25,7 @@ export default function ApiKeysPage() {
     userData,
     setLoadingKeys,
     keysList,
-    setUserId
+    setUserId,
   );
 
   function resetFilter() {
@@ -36,7 +36,7 @@ export default function ApiKeysPage() {
     selectedRows,
     resetFilter,
     setSuccessData,
-    setErrorData
+    setErrorData,
   );
 
   const columnDefs = getColumnDefs();

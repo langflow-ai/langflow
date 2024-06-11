@@ -14,13 +14,13 @@ import { useGlobalVariablesStore } from "../../../../stores/globalVariablesStore
 
 export default function GlobalVariablesPage() {
   const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries
+    (state) => state.globalVariablesEntries,
   );
   const removeGlobalVariable = useGlobalVariablesStore(
-    (state) => state.removeGlobalVariable
+    (state) => state.removeGlobalVariable,
   );
   const globalVariables = useGlobalVariablesStore(
-    (state) => state.globalVariables
+    (state) => state.globalVariables,
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const getVariableId = useGlobalVariablesStore((state) => state.getVariableId);
@@ -81,6 +81,7 @@ export default function GlobalVariablesPage() {
       flex: 2,
     }, //This column will be twice as wide as the others
     {
+      headerName: "Type",
       field: "type",
       cellRenderer: BadgeRenderer,
       cellEditor: DropdownEditor,
@@ -142,9 +143,9 @@ export default function GlobalVariablesPage() {
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
-          <AddNewVariableButton>
+          <AddNewVariableButton asChild>
             <Button data-testid="api-key-button-store" variant="primary">
-              <IconComponent name="Plus" className="mr-2 w-4" />
+              <IconComponent name="Plus" className="w-4" />
               Add New
             </Button>
           </AddNewVariableButton>

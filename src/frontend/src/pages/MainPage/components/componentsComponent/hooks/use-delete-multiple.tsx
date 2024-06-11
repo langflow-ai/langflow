@@ -9,7 +9,7 @@ const useDeleteMultipleFlows = (
   myCollectionId,
   getFolderById,
   setSuccessData,
-  setErrorData
+  setErrorData,
 ) => {
   const handleDeleteMultiple = useCallback(() => {
     removeFlow(selectedFlowsComponentsCards)

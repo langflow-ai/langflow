@@ -322,7 +322,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any, Dict\n\nfrom langchain_community.document_loaders.web_base import WebBaseLoader\n\nfrom langflow.custom import CustomComponent\nfrom langflow.schema import Record\n\n\nclass URLComponent(CustomComponent):\n    display_name = \"URL\"\n    description = \"Fetch content from one or more URLs.\"\n    icon = \"layout-template\"\n\n    def build_config(self) -> Dict[str, Any]:\n        return {\n            \"urls\": {\"display_name\": \"URL\"},\n        }\n\n    def build(\n        self,\n        urls: list[str],\n    ) -> list[Record]:\n        loader = WebBaseLoader(web_paths=urls)\n        docs = loader.load()\n        records = self.to_records(docs)\n        self.status = records\n        return records\n"
+                "value": "from typing import Any, Dict\n\nfrom langchain_community.document_loaders.web_base import WebBaseLoader\n\nfrom langflow.custom import CustomComponent\nfrom langflow.schema import Record\n\n\nclass URLComponent(CustomComponent):\n    display_name = \"URL\"\n    description = \"Fetch content from one or more URLs.\"\n    icon = \"layout-template\"\n\n    def build_config(self) -> Dict[str, Any]:\n        return {\n            \"urls\": {\"display_name\": \"URL\"},\n        }\n\n    def build(\n        self,\n        urls: list[str],\n    ) -> list[Record]:\n        loader = WebBaseLoader(web_paths=[url for url in urls if url])\n        docs = loader.load()\n        records = self.to_records(docs)\n        self.status = records\n        return records\n"
               },
               "urls": {
                 "advanced": false,
@@ -795,7 +795,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any, Dict\n\nfrom langchain_community.document_loaders.web_base import WebBaseLoader\n\nfrom langflow.custom import CustomComponent\nfrom langflow.schema import Record\n\n\nclass URLComponent(CustomComponent):\n    display_name = \"URL\"\n    description = \"Fetch content from one or more URLs.\"\n    icon = \"layout-template\"\n\n    def build_config(self) -> Dict[str, Any]:\n        return {\n            \"urls\": {\"display_name\": \"URL\"},\n        }\n\n    def build(\n        self,\n        urls: list[str],\n    ) -> list[Record]:\n        loader = WebBaseLoader(web_paths=urls)\n        docs = loader.load()\n        records = self.to_records(docs)\n        self.status = records\n        return records\n"
+                "value": "from typing import Any, Dict\n\nfrom langchain_community.document_loaders.web_base import WebBaseLoader\n\nfrom langflow.custom import CustomComponent\nfrom langflow.schema import Record\n\n\nclass URLComponent(CustomComponent):\n    display_name = \"URL\"\n    description = \"Fetch content from one or more URLs.\"\n    icon = \"layout-template\"\n\n    def build_config(self) -> Dict[str, Any]:\n        return {\n            \"urls\": {\"display_name\": \"URL\"},\n        }\n\n    def build(\n        self,\n        urls: list[str],\n    ) -> list[Record]:\n        loader = WebBaseLoader(web_paths=[url for url in urls if url])\n        docs = loader.load()\n        records = self.to_records(docs)\n        self.status = records\n        return records\n"
               },
               "urls": {
                 "advanced": false,
