@@ -64,10 +64,7 @@ class DatabaseService(Service):
             cursor = dbapi_connection.cursor()
             try:
                 cursor.execute("PRAGMA synchronous = NORMAL")
-                cursor.execute("PRAGMA journal_mode = MEMORY")
-                cursor.execute("PRAGMA cache_size = 10000")
-                cursor.execute("PRAGMA temp_store = MEMORY")
-                cursor.execute("PRAGMA locking_mode = EXCLUSIVE")
+                cursor.execute("PRAGMA journal_mode = WAL")
                 cursor.close()
             except OperationalError as oe:
                 logger.warning("Failed to set PRAGMA: ", {oe})
