@@ -6,7 +6,9 @@
 # BUILDER-BASE
 # Used to build deps + create our virtual environment
 ################################
-FROM python:3.12-slim as builder-base
+
+# force platform to the current architecture to increase build speed time on multi-platform builds
+FROM --platform=$BUILDPLATFORM python:3.12-slim as builder-base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     \
