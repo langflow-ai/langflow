@@ -61,7 +61,7 @@ import Admonition from "@theme/Admonition";
 
 ---
 
-### HTML
+### Embed your flow into HTML
 
 The Chat Widget can be embedded into any HTML page, inside a _`<body>`_ tag, as demonstrated in the video below.
 
@@ -73,15 +73,15 @@ The Chat Widget can be embedded into any HTML page, inside a _`<body>`_ tag, as 
 
 ---
 
-### React
+### Embed your flow with React
 
-To embed the Chat Widget using React, you'll need to insert this _`<script>`_ tag into the React _index.html_ file, inside the _`<body>`_ tag:
+1. To embed the Chat Widget using React, insert this _`<script>`_ tag into the React _index.html_ file, inside the _`<body>`_ tag:
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 ```
 
-Then, declare your Web Component and encapsulate it in a React component.
+2. Declare your Web Component and encapsulate it in a React component.
 
 ```jsx
 declare global {
@@ -106,28 +106,27 @@ export default function ChatWidget({ className }) {
 }
 ```
 
-Finally, you can place the component anywhere in your code to display the Chat Widget.
+3. Finally, you can place the component anywhere in your code to display the Chat Widget.
 
 ---
 
-### Angular
+### Embed your flow with Angular
 
-To use it in Angular, first add this _`<script>`_ tag into the Angular _index.html_ file, inside the _`<body>`_ tag.
+1. To use the chat widget in Angular, first add this _`<script>`_ tag into the Angular _index.html_ file, inside the _`<body>`_ tag.
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 ```
 
-When you use a custom web component in an Angular template, the Angular compiler might show a warning when it doesn't recognize the custom elements by default. To suppress this warning, add _`CUSTOM_ELEMENTS_SCHEMA`_ to the module's _`@NgModule.schemas`_.
-
-- Open the module file (it typically ends with _.module.ts_) where you'd add the _`langflow-chat`_ web component.
-- Import _`CUSTOM_ELEMENTS_SCHEMA`_ at the top of the file:
+2. When you use a custom web component in an Angular template, the Angular compiler might show a warning when it doesn't recognize the custom elements by default. To suppress this warning, add _`CUSTOM_ELEMENTS_SCHEMA`_ to the module's _`@NgModule.schemas`_.
+3. Open the module file (it typically ends with _.module.ts_) where you'd add the _`langflow-chat`_ web component.
+4. Import _`CUSTOM_ELEMENTS_SCHEMA`_ at the top of the file:
 
 ```ts
 import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from "@angular/core";
 ```
 
-- Add _`CUSTOM_ELEMENTS_SCHEMA`_ to the 'schemas' array inside the '@NgModule' decorator:
+5. Add _`CUSTOM_ELEMENTS_SCHEMA`_ to the 'schemas' array inside the '@NgModule' decorator:
 
 ```ts
 @NgModule({
@@ -142,9 +141,7 @@ import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from "@angular/core";
 export class YourModule {}
 ```
 
-In your Angular project, find the component belonging to the module where _`CUSTOM_ELEMENTS_SCHEMA`_ was added.
-
-- Inside the template, add the _`langflow-chat`_ tag to include the Chat Widget in your component's view:
+6. In your Angular project, find the component belonging to the module where _`CUSTOM_ELEMENTS_SCHEMA`_ was added. Inside the template, add the _`langflow-chat`_ tag to include the Chat Widget in your component's view:
 
 ```jsx
 <langflow-chat
@@ -175,7 +172,7 @@ In your Angular project, find the component belonging to the module where _`CUST
 
 ---
 
-## Configuration
+## Chat widget configuration
 
 Use the widget API to customize your Chat Widget:
 
@@ -185,7 +182,7 @@ Use the widget API to customize your Chat Widget:
 </Admonition>
 
 | Prop                  | Type    | Required | Description                                                                                                                                                      |
-| --------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| --------------------- | ------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | bot_message_style     | JSON    | No       | Applies custom formatting to bot messages.                                                                                                                       |
 | chat_input_field      | String  | Yes      | Defines the type of the input field for chat messages.                                                                                                           |
 | chat_inputs           | JSON    | Yes      | Determines the chat input elements and their respective values.                                                                                                  |
@@ -208,4 +205,4 @@ Use the widget API to customize your Chat Widget:
 | tweaks                | JSON    | No       | Applies additional custom adjustments for the associated flow.                                                                                                   |
 | user_message_style    | JSON    | No       | Determines the formatting for user messages in the chat window.                                                                                                  |
 | width                 | Number  | No       | Sets the width of the chat window in pixels.                                                                                                                     |
-| window_title          | String  | No       | Sets the title displayed in the chat window's header or title bar.                                                                                               | import ThemedImage from "@theme/ThemedImage"; |
+| window_title          | String  | No       | Sets the title displayed in the chat window's header or title bar.                                                                                               |
