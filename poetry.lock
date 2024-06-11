@@ -263,7 +263,7 @@ extras = ["pyaudio (>=0.2.13)"]
 name = "astrapy"
 version = "1.2.1"
 description = "AstraPy is a Pythonic SDK for DataStax Astra and its Data API"
-optional = true
+optional = false
 python-versions = "<4.0.0,>=3.8.0"
 files = [
     {file = "astrapy-1.2.1-py3-none-any.whl", hash = "sha256:0d7ca1e6f18a6a4e9a41ffaf2aa4cc585d36de3e983b5c5ce0bbb30a1595e30b"},
@@ -471,17 +471,17 @@ files = [
 
 [[package]]
 name = "boto3"
-version = "1.34.123"
+version = "1.34.124"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3-1.34.123-py3-none-any.whl", hash = "sha256:56bec52d485d5670ce96d53ae7b2cd4ae4e8a705fb2298a21093cdd77d642331"},
-    {file = "boto3-1.34.123.tar.gz", hash = "sha256:42b140fc850cf261ee4b1e8ef527fa071b1f1592a6d6a68d34b29f37cc46b4dd"},
+    {file = "boto3-1.34.124-py3-none-any.whl", hash = "sha256:549d9735bbb7cf8e1a2f4b3b676be32946717c59f33c47234586835dc904d04e"},
+    {file = "boto3-1.34.124.tar.gz", hash = "sha256:a91ee58fa54b170f17b2e144f038e155f92cf515f1c073ac2595e9ee45f125a8"},
 ]
 
 [package.dependencies]
-botocore = ">=1.34.123,<1.35.0"
+botocore = ">=1.34.124,<1.35.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.10.0,<0.11.0"
 
@@ -490,13 +490,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.34.123"
+version = "1.34.124"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "botocore-1.34.123-py3-none-any.whl", hash = "sha256:8c34ada2a708c82e7174bff700611643db7ce2cb18f1130c35045c24310d299d"},
-    {file = "botocore-1.34.123.tar.gz", hash = "sha256:a8577f6574600c4d159b5cd103ee05744a443d77f7778304e17307940b369c4f"},
+    {file = "botocore-1.34.124-py3-none-any.whl", hash = "sha256:fede092c7f8f414f78f3e7991e47cb0cf2279d90c027606ad7cba79fa370b827"},
+    {file = "botocore-1.34.124.tar.gz", hash = "sha256:3f0bf79c17d656acdfdb53581224f6a38867ff2829f7428c586198f67a90ea26"},
 ]
 
 [package.dependencies]
@@ -603,7 +603,7 @@ files = [
 name = "bson"
 version = "0.5.10"
 description = "BSON codec for Python"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "bson-0.5.10.tar.gz", hash = "sha256:d6511b2ab051139a9123c184de1a04227262173ad593429d21e443d6462d6590"},
@@ -653,7 +653,7 @@ files = [
 name = "cassandra-driver"
 version = "3.29.1"
 description = "DataStax Driver for Apache Cassandra"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "cassandra-driver-3.29.1.tar.gz", hash = "sha256:38e9c2a2f2a9664bb03f1f852d5fccaeff2163942b5db35dffcf8bf32a51cfe5"},
@@ -700,7 +700,7 @@ graph = ["gremlinpython (==3.4.6)"]
 name = "cassio"
 version = "0.1.8"
 description = "A framework-agnostic Python library to seamlessly integrate Apache Cassandra(R) with ML/LLM/genAI workloads."
-optional = true
+optional = false
 python-versions = "<4.0,>=3.8"
 files = [
     {file = "cassio-0.1.8-py3-none-any.whl", hash = "sha256:c09e7c884ba7227ff5277c86f3b0f31c523672ea407f56d093c7227e69c54d94"},
@@ -2374,7 +2374,7 @@ files = [
 name = "geomet"
 version = "0.2.1.post1"
 description = "GeoJSON <-> WKT/WKB conversion utilities"
-optional = true
+optional = false
 python-versions = ">2.6, !=3.3.*, <4"
 files = [
     {file = "geomet-0.2.1.post1-py3-none-any.whl", hash = "sha256:a41a1e336b381416d6cbed7f1745c848e91defaa4d4c1bdc1312732e46ffad2b"},
@@ -3025,13 +3025,13 @@ test = ["objgraph", "psutil"]
 
 [[package]]
 name = "groq"
-version = "0.8.0"
+version = "0.9.0"
 description = "The official Python library for the groq API"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "groq-0.8.0-py3-none-any.whl", hash = "sha256:f5e4e892d45001241a930db451e633ca1f0007e3f749deaa5d7360062fcd61e3"},
-    {file = "groq-0.8.0.tar.gz", hash = "sha256:37ceb2f706bd516d0bfcac8e89048a24b375172987a0d6bd9efb521c54f6deff"},
+    {file = "groq-0.9.0-py3-none-any.whl", hash = "sha256:d0e46f4ad645504672bb09c8100af3ced3a7db0d5119dc13e4aca535fc455874"},
+    {file = "groq-0.9.0.tar.gz", hash = "sha256:130ed5e35d3acfaab46b9e7a078eeaebf91052f4a9d71f86f87fb319b5fec332"},
 ]
 
 [package.dependencies]
@@ -4124,7 +4124,7 @@ langchain-core = ">=0.2.2rc1,<0.3"
 name = "langchain-astradb"
 version = "0.3.3"
 description = "An integration package connecting Astra DB and LangChain"
-optional = true
+optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
     {file = "langchain_astradb-0.3.3-py3-none-any.whl", hash = "sha256:39deef1253947ef1bfaf3c27881ecdf07621d96c2cf37814aed9e506a9bee217"},
@@ -4380,56 +4380,63 @@ name = "langflow-base"
 version = "0.0.62"
 description = "A Python package with a built-in web application"
 optional = false
-python-versions = "<3.13,>=3.10"
-files = [
-    {file = "langflow_base-0.0.62-py3-none-any.whl", hash = "sha256:a32cd91bd9aa51c357c6de525607a0a4676c6a99922bbd0da8469a58ab28eab1"},
-    {file = "langflow_base-0.0.62.tar.gz", hash = "sha256:d539ed0a0663cb4975b52e52d4ba3e195f3031d0d17f9e872120873f80cf6690"},
-]
+python-versions = ">=3.10,<3.13"
+files = []
+develop = true
 
 [package.dependencies]
-alembic = ">=1.13.0,<2.0.0"
-asyncer = ">=0.0.5,<0.0.6"
+alembic = "^1.13.0"
+asyncer = "^0.0.5"
 bcrypt = "4.0.1"
-cachetools = ">=5.3.1,<6.0.0"
-cryptography = ">=42.0.5,<43.0.0"
-docstring-parser = ">=0.15,<0.16"
-duckdb = ">=0.10.2,<0.11.0"
-emoji = ">=2.12.0,<3.0.0"
-fastapi = ">=0.111.0,<0.112.0"
-gunicorn = ">=22.0.0,<23.0.0"
+cachetools = "^5.3.1"
+cryptography = "^42.0.5"
+docstring-parser = "^0.15"
+duckdb = "^0.10.2"
+emoji = "^2.12.0"
+fastapi = "^0.111.0"
+gunicorn = "^22.0.0"
 httpx = "*"
-jq = {version = ">=1.7.0,<2.0.0", markers = "sys_platform != \"win32\""}
-langchain = ">=0.2.0,<0.3.0"
+jq = {version = "^1.7.0", markers = "sys_platform != \"win32\""}
+langchain = "~0.2.0"
 langchain-experimental = "*"
-langchainhub = ">=0.1.15,<0.2.0"
-loguru = ">=0.7.1,<0.8.0"
-multiprocess = ">=0.70.14,<0.71.0"
-nest-asyncio = ">=1.6.0,<2.0.0"
+langchainhub = "~0.1.15"
+loguru = "^0.7.1"
+multiprocess = "^0.70.14"
+nest-asyncio = "^1.6.0"
 orjson = "3.10.0"
 pandas = "2.2.0"
-passlib = ">=1.7.4,<2.0.0"
-pillow = ">=10.2.0,<11.0.0"
-platformdirs = ">=4.2.0,<5.0.0"
-pydantic = ">=2.7.0,<3.0.0"
-pydantic-settings = ">=2.2.0,<3.0.0"
-pypdf = ">=4.2.0,<5.0.0"
-pyperclip = ">=1.8.2,<2.0.0"
-python-docx = ">=1.1.0,<2.0.0"
-python-jose = ">=3.3.0,<4.0.0"
-python-multipart = ">=0.0.7,<0.0.8"
-python-socketio = ">=5.11.0,<6.0.0"
-rich = ">=13.7.0,<14.0.0"
-sqlmodel = ">=0.0.18,<0.0.19"
-typer = ">=0.12.0,<0.13.0"
-uncurl = ">=0.0.11,<0.0.12"
-uvicorn = ">=0.30.0,<0.31.0"
+passlib = "^1.7.4"
+pillow = "^10.2.0"
+platformdirs = "^4.2.0"
+pydantic = "^2.7.0"
+pydantic-settings = "^2.2.0"
+pypdf = "^4.2.0"
+pyperclip = "^1.8.2"
+python-docx = "^1.1.0"
+python-jose = "^3.3.0"
+python-multipart = "^0.0.7"
+python-socketio = "^5.11.0"
+rich = "^13.7.0"
+sqlmodel = "^0.0.18"
+typer = "^0.12.0"
+uncurl = "^0.0.11"
+uvicorn = "^0.30.0"
 websockets = "*"
+
+[package.extras]
+all = []
+deploy = []
+local = []
+
+[package.source]
+type = "directory"
+url = "src/backend/base"
 
 [[package]]
 name = "langfuse"
 version = "2.36.1"
 description = "A client library for accessing langfuse"
-optional = false
+optional = true
 python-versions = "<4.0,>=3.8.1"
 files = [
     {file = "langfuse-2.36.1-py3-none-any.whl", hash = "sha256:2cba244024bdf63aa3295bffada6b257497f9d18a3ca09026595470f46e09e5b"},
@@ -7491,6 +7498,7 @@ files = [
     {file = "PyYAML-6.0.1-cp311-cp311-win_amd64.whl", hash = "sha256:bf07ee2fef7014951eeb99f56f39c9bb4af143d8aa3c21b1677805985307da34"},
     {file = "PyYAML-6.0.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:855fb52b0dc35af121542a76b9a84f8d1cd886ea97c84703eaa6d88e37a2ad28"},
     {file = "PyYAML-6.0.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:40df9b996c2b73138957fe23a16a4f0ba614f4c0efce1e9406a184b6d07fa3a9"},
+    {file = "PyYAML-6.0.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a08c6f0fe150303c1c6b71ebcd7213c2858041a7e01975da3a99aed1e7a378ef"},
     {file = "PyYAML-6.0.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6c22bec3fbe2524cde73d7ada88f6566758a8f7227bfbf93a408a9d86bcc12a0"},
     {file = "PyYAML-6.0.1-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:8d4e9c88387b0f5c7d5f281e55304de64cf7f9c0021a3525bd3b1c542da3b0e4"},
     {file = "PyYAML-6.0.1-cp312-cp312-win32.whl", hash = "sha256:d483d2cdf104e7c9fa60c544d92981f12ad66a457afae824d146093b8c294c54"},
@@ -8896,7 +8904,7 @@ testing = ["black (==22.3)", "datasets", "numpy", "pytest", "requests", "ruff"]
 name = "toml"
 version = "0.10.2"
 description = "Python Library for Tom's Obvious, Minimal Language"
-optional = true
+optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 files = [
     {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},
@@ -9620,7 +9628,7 @@ zstd = ["zstandard (>=0.18.0)"]
 name = "uuid6"
 version = "2024.1.12"
 description = "New time-based UUID formats which are suited for use as a database key"
-optional = true
+optional = false
 python-versions = ">=3.8"
 files = [
     {file = "uuid6-2024.1.12-py3-none-any.whl", hash = "sha256:8150093c8d05a331bc0535bc5ef6cf57ac6eceb2404fd319bc10caee2e02c065"},
@@ -10459,8 +10467,8 @@ cassio = ["cassio"]
 couchbase = ["couchbase"]
 deploy = ["celery", "flower", "redis"]
 elasticsearch = ["elasticsearch"]
-langchain-astradb = ["langchain-astradb"]
 langchain-google-vertexai = ["langchain-google-vertexai"]
+langfuse = ["langfuse"]
 local = ["ctransformers", "llama-cpp-python", "sentence-transformers"]
 psycopg = ["psycopg", "psycopg-binary", "psycopg2-binary"]
 pymongo = ["pymongo"]
@@ -10468,4 +10476,4 @@ pymongo = ["pymongo"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "f3eb14e6fb94da296e5ba68904ea6a811d1f4dc2821cf0875c9f02d672deb7d6"
+content-hash = "6e67b1d0c2422ff6a6bdd35a9892e2f86fb601584eb7a8b6f20ef56233423884"
