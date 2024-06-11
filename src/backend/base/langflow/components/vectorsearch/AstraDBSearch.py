@@ -28,7 +28,7 @@ class AstraDBSearchComponent(LCVectorStoreComponent):
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
             },
             "token": {
-                "display_name": "Token",
+                "display_name": "Astra DB Application Token",
                 "info": "Authentication token for accessing Astra DB.",
                 "password": True,
             },
