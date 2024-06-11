@@ -9,19 +9,24 @@ import { Case } from "../../../../../../shared/components/caseComponent";
 import TextOutputView from "../../../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../../../stores/flowStore";
 import ErrorOutput from "./components";
-
-export default function SwitchOutputView(nodeId): JSX.Element {
-  const nodeIdentity = nodeId.nodeId;
-
+// Define the props type
+interface SwitchOutputViewProps {
+  nodeId: string;
+  outputName: string;
+}
+const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
+  nodeId,
+  outputName,
+}) => {
   const nodes = useFlowStore((state) => state.nodes);
   const flowPool = useFlowStore((state) => state.flowPool);
-  const node = nodes.find((node) => node?.id === nodeIdentity);
+  const node = nodes.find((node) => node?.id === nodeId);
 
-  const flowPoolNode = (flowPool[nodeIdentity] ?? [])[
-    (flowPool[nodeIdentity]?.length ?? 1) - 1
+  const flowPoolNode = (flowPool[nodeId] ?? [])[
+    (flowPool[nodeId]?.length ?? 1) - 1
   ];
 
-  const results = flowPoolNode?.data?.logs[0] ?? "";
+  const results = flowPoolNode?.data?.logs[outputName] ?? "";
   const resultType = results?.type;
   let resultMessage = results?.message;
   const RECORD_TYPES = ["record", "object", "array", "message"];
@@ -73,4 +78,6 @@ export default function SwitchOutputView(nodeId): JSX.Element {
       </Case>
     </>
   );
-}
+};
+
+export default SwitchOutputView;
