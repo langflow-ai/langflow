@@ -55,7 +55,7 @@ class CouchbaseComponent(CustomComponent):
             from langchain_community.vectorstores import CouchbaseVectorStore
         except ImportError as e:
             raise ImportError(
-                "Failed to import Couchbase dependencies. Install it using `pip install langflow[couchbase]`"
+                "Failed to import Couchbase dependencies. Install it using `pip install langflow[couchbase] --pre`"
             ) from e
 
         try:
