@@ -25,7 +25,7 @@ export default function SwitchOutputView(nodeId): JSX.Element {
   const resultType = results?.type;
   let resultMessage = results?.message;
   const RECORD_TYPES = ["record", "object", "array", "message"];
-  if (resultMessage.raw) {
+  if (resultMessage?.raw) {
     resultMessage = resultMessage.raw;
   }
   return (
