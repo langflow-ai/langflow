@@ -76,11 +76,10 @@ class FrontendNode(BaseModel):
         name = result.pop("name")
 
         # Migrate base classes to outputs
-        if "output_types" in result:
+        if "output_types" in result and not result.get("outputs"):
             for base_class in result["output_types"]:
                 output = Output(
-                    name=base_class,
-                    types=[base_class],
+                    display_name=base_class, name=base_class.lower(), types=[base_class], selected=base_class
                 )
                 result["outputs"].append(output.model_dump())
 

@@ -15,6 +15,7 @@ from loguru import logger
 from sqlmodel import select
 
 from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
+from langflow.graph.graph.base import Graph
 from langflow.interface.types import aget_all_components
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -48,7 +49,36 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             if "outputs" in latest_node:
                 node_data["outputs"] = latest_node["outputs"]
             if node_data["template"]["_type"] != latest_template["_type"]:
-                node_data["template"] = latest_template
+                node_data["template"]["_type"] = latest_template["_type"]
+                if node_data.get("display_name") != "Prompt":
+                    node_data["template"] = latest_template
+                else:
+                    for key, value in latest_template.items():
+                        if key not in node_data["template"]:
+                            node_changes_log[node_data["display_name"]].append(
+                                {
+                                    "attr": key,
+                                    "old_value": None,
+                                    "new_value": value,
+                                }
+                            )
+                            node_data["template"][key] = value
+                        elif isinstance(value, dict) and value.get("value"):
+                            node_changes_log[node_data["display_name"]].append(
+                                {
+                                    "attr": key,
+                                    "old_value": node_data["template"][key],
+                                    "new_value": value,
+                                }
+                            )
+                            node_data["template"][key]["value"] = value["value"]
+                node_changes_log[node_data["display_name"]].append(
+                    {
+                        "attr": "_type",
+                        "old_value": node_data["template"]["_type"],
+                        "new_value": latest_template["_type"],
+                    }
+                )
             else:
                 for attr in NODE_FORMAT_ATTRIBUTES:
                     if attr in latest_node:
@@ -91,6 +121,8 @@ def update_projects_components_with_latest_component_versions(project_data, all_
 
 
 def scape_json_parse(json_string: str) -> dict:
+    if isinstance(json_string, dict):
+        return json_string
     parsed_string = json_string.replace("œ", '"')
     return json.loads(parsed_string)
 
@@ -149,7 +181,7 @@ def update_new_output(data):
                     deduplicated_outputs.append(output)
             source_node["data"]["node"]["outputs"] = deduplicated_outputs
 
-            edge["sourceHandle"] = json.dumps(new_source_handle)
+            edge["sourceHandle"] = escape_json_dump(new_source_handle)
             edge["data"]["sourceHandle"] = new_source_handle
             edge["data"]["targetHandle"] = new_target_handle
     # The above sets the edges but some of the sourceHandles do not have valid name
@@ -164,8 +196,9 @@ def update_new_output(data):
                     source_handle = scape_json_parse(edge["sourceHandle"])
                     if source_handle["output_types"] == output.get("types") and source_handle["name"] != output["name"]:
                         source_handle["name"] = output["name"]
-
-                        edge["sourceHandle"] = json.dumps(source_handle)
+                        if isinstance(source_handle, str):
+                            source_handle = scape_json_parse(source_handle)
+                        edge["sourceHandle"] = escape_json_dump(source_handle)
                         edge["data"]["sourceHandle"] = source_handle
 
     data_copy = copy.deepcopy(data)
@@ -179,7 +212,9 @@ def update_edges_with_latest_component_versions(project_data):
     project_data_copy = deepcopy(project_data)
     for edge in project_data_copy.get("edges", []):
         source_handle = edge.get("data").get("sourceHandle")
+        source_handle = scape_json_parse(source_handle)
         target_handle = edge.get("data").get("targetHandle")
+        target_handle = scape_json_parse(target_handle)
         # Now find the source and target nodes in the nodes list
         source_node = next(
             (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("source")), None
@@ -194,6 +229,17 @@ def update_edges_with_latest_component_versions(project_data):
                 (output for output in source_node_data.get("outputs", []) if output["name"] == source_handle["name"]),
                 None,
             )
+            if not output_data:
+                output_data = next(
+                    (
+                        output
+                        for output in source_node_data.get("outputs", [])
+                        if output["display_name"] == source_handle["name"]
+                    ),
+                    None,
+                )
+                if output_data:
+                    source_handle["name"] = output_data["name"]
             if output_data:
                 if len(output_data.get("types")) == 1:
                     new_output_types = output_data.get("types")
@@ -227,20 +273,30 @@ def update_edges_with_latest_component_versions(project_data):
                     target_handle["inputTypes"] = target_node_data.get("template").get(field_name).get("input_types")
             escaped_source_handle = escape_json_dump(source_handle)
             escaped_target_handle = escape_json_dump(target_handle)
-            if edge["sourceHandle"] != escaped_source_handle:
+            try:
+                old_escape_source_handle = escape_json_dump(json.loads(edge["sourceHandle"]))
+
+            except json.JSONDecodeError:
+                old_escape_source_handle = edge["sourceHandle"]
+
+            try:
+                old_escape_target_handle = escape_json_dump(json.loads(edge["targetHandle"]))
+            except json.JSONDecodeError:
+                old_escape_target_handle = edge["targetHandle"]
+            if old_escape_source_handle != escaped_source_handle:
                 edge_changes_log[source_node_data["display_name"]].append(
                     {
                         "attr": "sourceHandle",
-                        "old_value": edge["sourceHandle"],
+                        "old_value": old_escape_source_handle,
                         "new_value": escaped_source_handle,
                     }
                 )
                 edge["sourceHandle"] = escaped_source_handle
-            if edge["targetHandle"] != escaped_target_handle:
+            if old_escape_target_handle != escaped_target_handle:
                 edge_changes_log[target_node_data["display_name"]].append(
                     {
                         "attr": "targetHandle",
-                        "old_value": edge["targetHandle"],
+                        "old_value": old_escape_target_handle,
                         "new_value": escaped_target_handle,
                     }
                 )
@@ -498,6 +554,10 @@ async def create_or_update_starter_projects():
                 project_data, all_types_dict
             )
             updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
+            try:
+                Graph.from_payload(updated_project_data)
+            except Exception as e:
+                raise ValueError(f"Error loading graph from project {project_name}: {e}")
             if updated_project_data != project_data:
                 project_data = updated_project_data
                 # We also need to update the project data in the file

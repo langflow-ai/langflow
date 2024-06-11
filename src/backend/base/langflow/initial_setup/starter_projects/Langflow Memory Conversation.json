@@ -41,9 +41,7 @@
             "dataType": "ChatInput",
             "id": "ChatInput-t7F8v",
             "name": "message",
-            "output_types": [
-              "Text"
-            ]
+            "output_types": []
           },
           "targetHandle": {
             "fieldName": "user_message",
@@ -60,7 +58,7 @@
         "id": "reactflow__edge-ChatInput-t7F8v{œbaseClassesœ:[œTextœ,œobjectœ,œRecordœ,œstrœ],œdataTypeœ:œChatInputœ,œidœ:œChatInput-t7F8vœ}-Prompt-ODkUx{œfieldNameœ:œuser_messageœ,œidœ:œPrompt-ODkUxœ,œinputTypesœ:[œDocumentœ,œBaseOutputParserœ,œRecordœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-t7F8v",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-t7F8vœ, œoutput_typesœ: [œTextœ], œnameœ: œmessageœ}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-t7F8vœ, œoutput_typesœ: [], œnameœ: œmessageœ}",
         "style": {
           "stroke": "#555"
         },
@@ -73,7 +71,7 @@
           "sourceHandle": {
             "dataType": "Prompt",
             "id": "Prompt-ODkUx",
-            "name": "prompt",
+            "name": "Text",
             "output_types": [
               "Prompt"
             ]
@@ -91,7 +89,7 @@
         },
         "id": "reactflow__edge-Prompt-ODkUx{œbaseClassesœ:[œTextœ,œstrœ,œobjectœ],œdataTypeœ:œPromptœ,œidœ:œPrompt-ODkUxœ}-OpenAIModel-9RykF{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-9RykFœ,œinputTypesœ:[œTextœ],œtypeœ:œstrœ}",
         "source": "Prompt-ODkUx",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-ODkUxœ, œoutput_typesœ: [œPromptœ], œnameœ: œpromptœ}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-ODkUxœ, œoutput_typesœ: [œPromptœ], œnameœ: œTextœ}",
         "style": {
           "stroke": "#555"
         },
@@ -187,26 +185,22 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
                 "display_name": "Message",
                 "method": "text_response",
                 "name": "message",
                 "selected": "Text",
                 "types": [
                   "Text"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               },
               {
-                "cache": true,
                 "display_name": "Record",
-                "method": "message_response",
+                "method": "record_response",
                 "name": "record",
-                "selected": "Message",
+                "selected": "Record",
                 "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
+                  "Record"
+                ]
               }
             ],
             "template": {
@@ -227,11 +221,11 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema.message import Message\nfrom langflow.template import Input, Output\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\",\n            type=str,\n            display_name=\"Text\",\n            multiline=True,\n            input_types=[],\n            info=\"Message to be passed as input.\",\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"User\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"text_response\"),\n        Output(display_name=\"Record\", name=\"record\", method=\"message_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Message, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, (Message, str)):\n            self.store_message(message)\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\",\n            type=str,\n            display_name=\"Message\",\n            multiline=True,\n            input_types=[],\n            info=\"Message to be passed as input.\",\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"User\",\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"User\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"text_response\"),\n        Output(display_name=\"Record\", name=\"record\", method=\"record_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self) -> Record:\n        record = Record(\n            data={\n                \"text\": self.input_value,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n            },\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n"
               },
               "input_value": {
                 "advanced": false,
-                "display_name": "Text",
+                "display_name": "Message",
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
@@ -366,26 +360,22 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
-                "display_name": "Text",
+                "display_name": "Message",
                 "method": "text_response",
-                "name": "text",
+                "name": "message",
                 "selected": "Text",
                 "types": [
                   "Text"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               },
               {
-                "cache": true,
-                "display_name": "Message",
-                "method": "message_response",
-                "name": "message",
-                "selected": "Message",
+                "display_name": "Record",
+                "method": "record_response",
+                "name": "record",
+                "selected": "Record",
                 "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
+                  "Record"
+                ]
               }
             ],
             "template": {
@@ -406,11 +396,11 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema.message import Message\nfrom langflow.template import Input, Output\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\", type=str, display_name=\"Text\", multiline=True, info=\"Message to be passed as output.\"\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n        Input(\n            name=\"record_template\",\n            type=str,\n            display_name=\"Record Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Message, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if self.session_id and isinstance(message, (Message, str)):\n            self.store_message(message)\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema import Record\nfrom langflow.template import Input, Output\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    inputs = [\n        Input(\n            name=\"input_value\", type=str, display_name=\"Message\", multiline=True, info=\"Message to be passed as output.\"\n        ),\n        Input(\n            name=\"sender\",\n            type=str,\n            display_name=\"Sender Type\",\n            options=[\"Machine\", \"User\"],\n            value=\"Machine\",\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        Input(name=\"sender_name\", type=str, display_name=\"Sender Name\", info=\"Name of the sender.\", value=\"AI\"),\n        Input(\n            name=\"session_id\", type=str, display_name=\"Session ID\", info=\"Session ID for the message.\", advanced=True\n        ),\n        Input(\n            name=\"record_template\",\n            type=str,\n            display_name=\"Record Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Record to Text. If left empty, it will be dynamically set to the Record's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"text_response\"),\n        Output(display_name=\"Record\", name=\"record\", method=\"record_response\"),\n    ]\n\n    def text_response(self) -> Text:\n        result = self.input_value\n        if self.session_id and isinstance(result, (Record, str)):\n            self.store_message(result, self.session_id, self.sender, self.sender_name)\n        return result\n\n    def record_response(self) -> Record:\n        record = Record(\n            data={\n                \"message\": self.input_value,\n                \"sender\": self.sender,\n                \"sender_name\": self.sender_name,\n                \"session_id\": self.session_id,\n                \"template\": self.record_template or \"\",\n            }\n        )\n        if self.session_id and isinstance(record, (Record, str)):\n            self.store_message(record, self.session_id, self.sender, self.sender_name)\n        return record\n"
               },
               "input_value": {
                 "advanced": false,
-                "display_name": "Text",
+                "display_name": "Message",
                 "dynamic": false,
                 "fileTypes": [],
                 "file_path": "",
@@ -573,15 +563,13 @@
             ],
             "outputs": [
               {
-                "cache": true,
                 "display_name": null,
                 "method": null,
                 "name": "Text",
                 "selected": null,
                 "types": [
                   "Text"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               }
             ],
             "template": {
@@ -791,33 +779,22 @@
             "is_input": null,
             "is_output": null,
             "name": "",
-            "output_types": [],
+            "output_types": [
+              "Prompt"
+            ],
             "outputs": [
               {
-                "cache": true,
-                "display_name": "Prompt",
-                "method": "build_prompt",
-                "name": "prompt",
-                "selected": "Prompt",
+                "display_name": null,
+                "method": null,
+                "name": "Prompt",
+                "selected": null,
                 "types": [
                   "Prompt"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
-                "display_name": "Text",
-                "method": "format_prompt",
-                "name": "text",
-                "selected": "Text",
-                "types": [
-                  "Text"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               }
             ],
             "template": {
-              "_type": "Component",
+              "_type": "CustomComponent",
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -834,7 +811,33 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.field_typing import Input, Output\nfrom langflow.field_typing.prompt import Prompt\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": Input(display_name=\"Template\"),\n        }\n\n    inputs = [\n        Input(name=\"template\", type=Prompt, display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt\", name=\"prompt\", method=\"build_prompt\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"format_prompt\"),\n    ]\n\n    async def format_prompt(self) -> str:\n        prompt = await self.build_prompt()\n        formatted_text = prompt.format_text()\n        self.status = formatted_text\n        return formatted_text\n\n    async def build_prompt(\n        self,\n    ) -> Prompt:\n        prompt = await Prompt.from_template_and_variables(self.template, self.kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
+                "value": "from langflow.custom import CustomComponent\nfrom langflow.field_typing import Input\nfrom langflow.field_typing.prompt import Prompt\n\n\nclass PromptComponent(CustomComponent):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n\n    def build_config(self):\n        return {\n            \"template\": Input(display_name=\"Template\"),\n            \"code\": Input(advanced=True),\n        }\n\n    async def build(\n        self,\n        template: Prompt,\n        **kwargs,\n    ) -> Prompt:\n        prompt = await Prompt.from_template_and_variables(template, kwargs)\n        self.status = prompt.format_text()\n        return prompt\n"
+              },
+              "context": {
+                "advanced": false,
+                "display_name": "context",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Document",
+                  "BaseOutputParser",
+                  "Record",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "context",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
               },
               "template": {
                 "advanced": false,
@@ -850,6 +853,32 @@
                 "load_from_db": false,
                 "multiline": false,
                 "name": "template",
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "prompt",
+                "value": "{context}\n\nUser: {user_message}\nAI: "
+              },
+              "user_message": {
+                "advanced": false,
+                "display_name": "user_message",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Document",
+                  "BaseOutputParser",
+                  "Record",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "user_message",
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -920,15 +949,13 @@
             ],
             "outputs": [
               {
-                "cache": true,
                 "display_name": null,
                 "method": null,
                 "name": "Text",
                 "selected": null,
                 "types": [
                   "Text"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               }
             ],
             "template": {
