@@ -10,7 +10,7 @@ import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { VertexBuildTypeAPI, sendAllProps } from "../../../../types/api";
-import { ChatMessageType, ChatOutputType } from "../../../../types/chat";
+import { ChatMessageType } from "../../../../types/chat";
 import { FilePreviewType, chatViewProps } from "../../../../types/components";
 import { classNames } from "../../../../utils/utils";
 import ChatInput from "./chatInput";
@@ -67,11 +67,9 @@ export default function ChatView({
         try {
           console.log("output:", output);
           const { sender, message, sender_name, stream_url, files } =
-            output.data.message.message !== "" ||
-            (output.data.message.files ?? []).length > 0
-              ? output.data.message
-              : output.data.artifacts;
-
+            output.data.message;
+          console.log("output.data.message:", output.data.message);
+          console.log("output.data.message.files:", output.data.message.files);
           const is_ai =
             sender === "Machine" || sender === null || sender === undefined;
           return {
@@ -136,7 +134,7 @@ export default function ChatView({
   function updateChat(
     chat: ChatMessageType,
     message: string,
-    stream_url?: string,
+    stream_url?: string
   ) {
     // if (message === "") return;
     chat.message = message;
@@ -166,7 +164,7 @@ export default function ChatView({
     setIsDragging,
     setFiles,
     currentFlowId,
-    setErrorData,
+    setErrorData
   );
 
   return (
