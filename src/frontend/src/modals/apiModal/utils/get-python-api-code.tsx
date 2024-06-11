@@ -2,19 +2,27 @@
  * Function to get the python code for the API
  * @param {string} flowId - The id of the flow
  * @param {boolean} isAuth - If the API is authenticated
- * @param {any[]} tweak - The tweaks
+ * @param {any[]} tweaksBuildedObject - The tweaks
+ * @param {string} [endpointName] - The optional endpoint name
  * @returns {string} - The python code
  */
 export default function getPythonApiCode(
   flowId: string,
   isAuth: boolean,
-  tweaksBuildedObject,
-  endpointName?: string
+  tweaksBuildedObject: any[],
+  endpointName?: string,
 ): string {
-  const tweaksObject = tweaksBuildedObject[0];
-  const tweaksString = JSON.stringify(tweaksObject, null, 2)
-    .replace(/true/g, "True")
-    .replace(/false/g, "False");
+  let tweaksString = "{}";
+  if (tweaksBuildedObject && tweaksBuildedObject.length > 0) {
+    const tweaksObject = tweaksBuildedObject[0];
+    if (!tweaksObject) {
+      throw new Error("expected tweaks");
+    }
+    tweaksString = JSON.stringify(tweaksObject, null, 2)
+      .replace(/true/g, "True")
+      .replace(/false/g, "False");
+  }
+
   return `import argparse
 import json
 from argparse import RawTextHelpFormatter
