@@ -12,7 +12,7 @@ export default function getPythonApiCode(
   tweaksBuildedObject: any[],
   endpointName?: string,
 ): string {
-  let tweaksString = "";
+  let tweaksString = "{}";
   if (tweaksBuildedObject && tweaksBuildedObject.length > 0) {
     const tweaksObject = tweaksBuildedObject[0];
     if (!tweaksObject) {
