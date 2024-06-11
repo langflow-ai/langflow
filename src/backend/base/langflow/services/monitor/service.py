@@ -112,7 +112,7 @@ class MonitorService(Service):
     def delete_messages(self, message_ids: Union[List[int], str]):
         if isinstance(message_ids, list):
             # If message_ids is a list, join the string representations of the integers
-            ids_str = ','.join(map(str, message_ids))
+            ids_str = ",".join(map(str, message_ids))
         elif isinstance(message_ids, str):
             # If message_ids is already a string, use it directly
             ids_str = message_ids
