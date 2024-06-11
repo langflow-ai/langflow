@@ -60,6 +60,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+        id: qemu
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to Docker Hub
@@ -73,5 +74,6 @@ jobs:
           context: .
           push: true
           file: ./docker/build_and_push_base.Dockerfile
+          platforms: "linux/amd64,linux/arm64/v8"
           tags: |
             langflowai/langflow:base-${{ needs.release.outputs.version }}

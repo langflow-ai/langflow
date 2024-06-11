@@ -4409,7 +4409,7 @@ six = "*"
 
 [[package]]
 name = "langflow-base"
-version = "0.0.60"
+version = "0.0.61"
 description = "A Python package with a built-in web application"
 optional = false
 python-versions = ">=3.10,<3.13"
@@ -4490,13 +4490,13 @@ openai = ["openai (>=0.27.8)"]
 
 [[package]]
 name = "langsmith"
-version = "0.1.75"
+version = "0.1.76"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.75-py3-none-any.whl", hash = "sha256:d08b08dd6b3fa4da170377f95123d77122ef4c52999d10fff4ae08ff70d07aed"},
-    {file = "langsmith-0.1.75.tar.gz", hash = "sha256:61274e144ea94c297dd78ce03e6dfae18459fe9bd8ab5094d61a0c4816561279"},
+    {file = "langsmith-0.1.76-py3-none-any.whl", hash = "sha256:4b8cb14f2233d9673ce9e6e3d545359946d9690a2c1457ab01e7459ec97b964e"},
+    {file = "langsmith-0.1.76.tar.gz", hash = "sha256:5829f997495c0f9a39f91fe0a57e0cb702e8642e6948945f5bb9f46337db7732"},
 ]
 
 [package.dependencies]
@@ -4506,13 +4506,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "litellm"
-version = "1.40.7"
+version = "1.40.8"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.40.7-py3-none-any.whl", hash = "sha256:c98dd8733e632aba16f14bf82e56f7159222097a6d085b242a3140b5d3e7baa4"},
-    {file = "litellm-1.40.7.tar.gz", hash = "sha256:557bb19e8e484d0dfe8e4eaa9ccefc888617852988a46d6e7adc41585a2c0600"},
+    {file = "litellm-1.40.8-py3-none-any.whl", hash = "sha256:cd0c313423dad49224696c45ac02c574abcaed6666c597543c2318b3521f4320"},
+    {file = "litellm-1.40.8.tar.gz", hash = "sha256:8878d2437ac50bcc6f39ded1729e2113eb5fee645fcebcd32fc241c529a21c00"},
 ]
 
 [package.dependencies]
