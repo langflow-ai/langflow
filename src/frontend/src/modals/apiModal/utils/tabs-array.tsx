@@ -1,7 +1,7 @@
 export function createTabsArray(
   codes,
   includeWebhookCurl = false,
-  includeTweaks = false
+  includeTweaks = false,
 ) {
   const tabs = [
     {

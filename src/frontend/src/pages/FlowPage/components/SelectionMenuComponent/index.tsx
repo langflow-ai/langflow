@@ -13,7 +13,7 @@ export default function SelectionMenu({
   const [disable, setDisable] = useState<boolean>(
     lastSelection && edges.length > 0
       ? validateSelection(lastSelection!, edges).length > 0
-      : false
+      : false,
   );
   const [isOpen, setIsOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -65,7 +65,7 @@ export default function SelectionMenu({
             className={`${
               disable
                 ? "flex h-full w-full cursor-not-allowed items-center justify-between text-sm text-muted-foreground"
-                : "flex h-full w-full items-center justify-between text-sm hover:text-indigo-500"
+                : "flex h-full w-full items-center justify-between text-sm"
             }`}
             onClick={onClick}
             disabled={disable}

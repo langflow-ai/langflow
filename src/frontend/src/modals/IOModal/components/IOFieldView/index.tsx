@@ -251,9 +251,11 @@ export default function IOFieldView({
                 <RecordsOutputComponent
                   pagination={!left}
                   rows={
-                    flowPoolNode?.data?.artifacts?.map(
-                      (artifact) => artifact.data
-                    ) ?? []
+                    Array.isArray(flowPoolNode?.data?.artifacts)
+                      ? flowPoolNode?.data?.artifacts?.map(
+                          (artifact) => artifact.data,
+                        ) ?? []
+                      : [flowPoolNode?.data?.artifacts]
                   }
                   columnMode="union"
                 />

@@ -14,7 +14,13 @@ import sortByName from "./utils/sort-by-name";
 
 //TODO IMPLEMENT FORM LOGIC
 
-export default function AddNewVariableButton({ children }): JSX.Element {
+export default function AddNewVariableButton({
+  children,
+  asChild,
+}: {
+  children: JSX.Element;
+  asChild?: boolean;
+}): JSX.Element {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
   const [type, setType] = useState("Generic");
@@ -23,19 +29,19 @@ export default function AddNewVariableButton({ children }): JSX.Element {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const componentFields = useTypesStore((state) => state.ComponentFields);
   const unavaliableFields = new Set(
-    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields))
+    Object.keys(useGlobalVariablesStore((state) => state.unavaliableFields)),
   );
 
   const availableFields = () => {
     const fields = Array.from(componentFields).filter(
-      (field) => !unavaliableFields.has(field)
+      (field) => !unavaliableFields.has(field),
     );
 
     return sortByName(fields);
   };
 
   const addGlobalVariable = useGlobalVariablesStore(
-    (state) => state.addGlobalVariable
+    (state) => state.addGlobalVariable,
   );
 
   function handleSaveVariable() {
@@ -87,7 +93,7 @@ export default function AddNewVariableButton({ children }): JSX.Element {
           aria-hidden="true"
         />
       </BaseModal.Header>
-      <BaseModal.Trigger>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger asChild={asChild}>{children}</BaseModal.Trigger>
       <BaseModal.Content>
         <div className="flex h-full w-full flex-col gap-4 align-middle">
           <Label>Variable Name</Label>

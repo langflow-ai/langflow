@@ -23,15 +23,15 @@ class ChatComponent(Component):
                 "display_name": "Sender Type",
                 "advanced": True,
             },
-            "sender_name": {"display_name": "Sender Name"},
+            "sender_name": {"display_name": "Sender Name", "advanced": True},
             "session_id": {
                 "display_name": "Session ID",
                 "info": "If provided, the message will be stored in the memory.",
                 "advanced": True,
             },
-            "return_record": {
-                "display_name": "Return Record",
-                "info": "Return the message as a record containing the sender, sender_name, and session_id.",
+            "return_message": {
+                "display_name": "Return Message",
+                "info": "Return the message as a Message containing the sender, sender_name, and session_id.",
                 "advanced": True,
             },
             "record_template": {
@@ -68,6 +68,7 @@ class ChatComponent(Component):
         input_value: Optional[Union[str, Record, Message]] = None,
         files: Optional[list[str]] = None,
         session_id: Optional[str] = None,
+        return_message: Optional[bool] = False,
     ) -> Message:
         message: Message | None = None
 
@@ -78,7 +79,12 @@ class ChatComponent(Component):
             message = Message(
                 text=input_value, sender=sender, sender_name=sender_name, files=files, session_id=session_id
             )
-        self.status = message
-        if session_id and isinstance(message, Message):
+        if not return_message:
+            message_text = message.text
+        else:
+            message_text = message
+
+        self.status = message_text
+        if session_id and isinstance(message, Message) and isinstance(message.text, str):
             self.store_message(message)
-        return message
+        return message_text

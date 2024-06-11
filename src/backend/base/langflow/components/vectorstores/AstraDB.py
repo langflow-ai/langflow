@@ -1,10 +1,9 @@
 from typing import List, Optional, Union
 
-from langchain_core.retrievers import BaseRetriever
-
 from langflow.custom import CustomComponent
 from langflow.field_typing import Embeddings, VectorStore
 from langflow.schema import Record
+from langchain_core.retrievers import BaseRetriever
 
 
 class AstraDBVectorStoreComponent(CustomComponent):

@@ -1,5 +1,6 @@
 import emojiRegex from "emoji-regex";
 import { useEffect, useMemo, useState } from "react";
+import Markdown from "react-markdown";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
@@ -37,6 +38,7 @@ import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import ParameterComponent from "./components/parameterComponent";
+import { useHotkeys } from "react-hotkeys-hook";
 
 export default function GenericNode({
   data,
@@ -48,6 +50,7 @@ export default function GenericNode({
   xPos?: number;
   yPos?: number;
 }): JSX.Element {
+  const preventDefault = true;
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const deleteNode = useFlowStore((state) => state.deleteNode);
@@ -64,14 +67,14 @@ export default function GenericNode({
   const [nodeName, setNodeName] = useState(data.node!.display_name);
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState(
-    data.node?.description!
+    data.node?.description!,
   );
   const [isOutdated, setIsOutdated] = useState(false);
   const buildStatus = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.status
+    (state) => state.flowBuildStatus[data.id]?.status,
   );
   const lastRunTime = useFlowStore(
-    (state) => state.flowBuildStatus[data.id]?.timestamp
+    (state) => state.flowBuildStatus[data.id]?.timestamp,
   );
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
@@ -88,7 +91,7 @@ export default function GenericNode({
     data.node!,
     setNode,
     setIsOutdated,
-    updateNodeInternals
+    updateNodeInternals,
   );
 
   const name = nodeIconsLucide[data.type] ? data.type : types[data.type];
@@ -108,23 +111,19 @@ export default function GenericNode({
   };
 
   const renderIconStatus = () => {
-    return (
-      <div className="generic-node-status-position flex items-center justify-center">
-        {iconStatus}
-      </div>
-    );
+    return <div className="cursor-help">{iconStatus}</div>;
   };
 
   const getNodeBorderClassName = (
     selected: boolean,
     showNode: boolean,
     buildStatus: BuildStatus | undefined,
-    validationStatus: VertexBuildTypeAPI | null
+    validationStatus: VertexBuildTypeAPI | null,
   ) => {
     const specificClassFromBuildStatus = getSpecificClassFromBuildStatus(
       buildStatus,
       validationStatus,
-      isDark
+      isDark,
     );
 
     const baseBorderClass = getBaseBorderClass(selected);
@@ -133,7 +132,7 @@ export default function GenericNode({
       baseBorderClass,
       nodeSizeClass,
       "generic-node-div group/node",
-      specificClassFromBuildStatus
+      specificClassFromBuildStatus,
     );
     return names;
   };
@@ -141,7 +140,9 @@ export default function GenericNode({
   //  const [openWDoubleCLick, setOpenWDoubleCLick] = useState(false);
 
   const getBaseBorderClass = (selected) => {
-    let className = selected ? "border border-ring" : "border";
+    let className = selected
+      ? "border border-ring hover:shadow-node"
+      : "border hover:shadow-node";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     return data.node?.frozen ? frozenClass : className;
   };
@@ -176,7 +177,7 @@ export default function GenericNode({
     showNode,
     isEmoji,
     nodeIconFragment,
-    checkNodeIconFragment
+    checkNodeIconFragment,
   );
 
   function countHandles(): void {
@@ -234,6 +235,25 @@ export default function GenericNode({
     }
   };
 
+  function handleUpdateCodeWShortcut() {
+    if (isOutdated && selected) {
+      handleUpdateCode();
+    }
+  }
+
+  function handlePlayWShortcut() {
+    if (buildStatus === BuildStatus.BUILDING || isBuilding || !selected) return;
+    setValidationStatus(null);
+    console.log(data.node?.display_name);
+    buildFlow({ stopNodeId: data.id });
+  }
+
+  const update = useShortcutsStore((state) => state.update);
+  const play = useShortcutsStore((state) => state.play);
+
+  useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault });
+  useHotkeys(play, handlePlayWShortcut, { preventDefault });
+
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
   const memoizedNodeToolbarComponent = useMemo(() => {
@@ -259,6 +279,7 @@ export default function GenericNode({
           openAdvancedModal={false}
           onCloseAdvancedModal={() => {}}
           selected={selected}
+          updateNode={handleUpdateCode}
         />
       </NodeToolbar>
     );
@@ -289,7 +310,7 @@ export default function GenericNode({
           selected,
           showNode,
           buildStatus,
-          validationStatus
+          validationStatus,
         )}
       >
         {data.node?.beta && showNode && (
@@ -346,10 +367,10 @@ export default function GenericNode({
                       />
                     </div>
                   ) : (
-                    <div className="group flex items-start gap-1.5">
+                    <div className="group flex items-center gap-1">
                       <ShadTooltip content={data.node?.display_name}>
                         <div
-                          onClick={(event) => {
+                          onDoubleClick={(event) => {
                             if (nameEditable) {
                               setInputName(true);
                             }
@@ -363,6 +384,22 @@ export default function GenericNode({
                           {data.node?.display_name}
                         </div>
                       </ShadTooltip>
+                      {isOutdated && (
+                        <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
+                          <Button
+                            onClick={handleUpdateCode}
+                            variant="none"
+                            size="none"
+                            className={"group p-1"}
+                            loading={loadingUpdate}
+                          >
+                            <IconComponent
+                              name="AlertTriangle"
+                              className="h-5 w-5 fill-status-yellow text-muted"
+                            />
+                          </Button>
+                        </ShadTooltip>
+                      )}
                     </div>
                   )}
                 </div>
@@ -420,7 +457,7 @@ export default function GenericNode({
                             }
                             title={getFieldTitle(
                               data.node?.template!,
-                              templateField
+                              templateField,
                             )}
                             info={data.node?.template[templateField].info}
                             name={templateField}
@@ -448,7 +485,7 @@ export default function GenericNode({
                             proxy={data.node?.template[templateField].proxy}
                             showNode={showNode}
                           />
-                        )
+                        ),
                     )}
                   {/* <ParameterComponent
                     index={0}
@@ -481,22 +518,7 @@ export default function GenericNode({
             </div>
             {showNode && (
               <>
-                <div className="flex flex-shrink-0 items-center gap-1">
-                  {isOutdated && (
-                    <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
-                      <Button
-                        onClick={handleUpdateCode}
-                        variant="secondary"
-                        className={"h-9 px-1.5"}
-                        loading={loadingUpdate}
-                      >
-                        <IconComponent
-                          name="AlertTriangle"
-                          className="h-5 w-5 text-status-yellow"
-                        />
-                      </Button>
-                    </ShadTooltip>
-                  )}
+                <div className="flex flex-shrink-0 items-center gap-2">
                   <ShadTooltip
                     content={
                       buildStatus === BuildStatus.BUILDING ? (
@@ -526,25 +548,32 @@ export default function GenericNode({
                     }
                     side="bottom"
                   >
-                    <Button
-                      onClick={() => {
-                        if (buildStatus === BuildStatus.BUILDING || isBuilding)
-                          return;
-                        setValidationStatus(null);
-                        buildFlow({ stopNodeId: data.id });
-                      }}
-                      variant="secondary"
-                      className={"group h-9 px-1.5"}
-                    >
-                      <div
-                        data-testid={
-                          `button_run_` + data?.node?.display_name.toLowerCase()
-                        }
-                      >
-                        {renderIconStatus()}
-                      </div>
-                    </Button>
+                    {renderIconStatus()}
                   </ShadTooltip>
+                  <Button
+                    onClick={() => {
+                      if (buildStatus === BuildStatus.BUILDING || isBuilding)
+                        return;
+                      setValidationStatus(null);
+                      buildFlow({ stopNodeId: data.id });
+                    }}
+                    variant="none"
+                    size="none"
+                    className="group p-1"
+                  >
+                    <div
+                      data-testid={
+                        `button_run_` + data?.node?.display_name.toLowerCase()
+                      }
+                    >
+                      <IconComponent
+                        name="Play"
+                        className={
+                          "h-5 w-5 fill-current stroke-2 text-muted-foreground transition-all group-hover:text-medium-indigo group-hover/node:opacity-100"
+                        }
+                      />
+                    </div>
+                  </Button>
                 </div>
               </>
             )}
@@ -561,9 +590,11 @@ export default function GenericNode({
                 : ""
             }
           >
+            {/* increase height!! */}
             <div className="generic-node-desc">
               {showNode && nameEditable && inputDescription ? (
                 <Textarea
+                  className="nowheel min-h-40"
                   autoFocus
                   onBlur={() => {
                     setInputDescription(false);
@@ -608,22 +639,29 @@ export default function GenericNode({
               ) : (
                 <div
                   className={cn(
-                    "nodoubleclick generic-node-desc-text cursor-text truncate-multiline word-break-break-word",
+                    "nodoubleclick generic-node-desc-text cursor-text word-break-break-word",
                     (data.node?.description === "" ||
                       !data.node?.description) &&
                       nameEditable
                       ? "font-light italic"
-                      : ""
+                      : "",
                   )}
-                  onClick={(e) => {
+                  onDoubleClick={(e) => {
                     setInputDescription(true);
                     takeSnapshot();
                   }}
                 >
                   {(data.node?.description === "" || !data.node?.description) &&
-                  nameEditable
-                    ? "Double Click to Edit Description"
-                    : data.node?.description}
+                  nameEditable ? (
+                    "Double Click to Edit Description"
+                  ) : (
+                    <Markdown
+                      className="markdown prose flex flex-col text-primary word-break-break-word
+    dark:prose-invert"
+                    >
+                      {String(data.node?.description)}
+                    </Markdown>
+                  )}
                 </div>
               )}
             </div>
@@ -675,13 +713,13 @@ export default function GenericNode({
                         }
                         title={getFieldTitle(
                           data.node?.template!,
-                          templateField
+                          templateField,
                         )}
                         info={data.node?.template[templateField].info}
                         name={templateField}
                         tooltipTitle={
                           data.node?.template[templateField].input_types?.join(
-                            "\n"
+                            "\n",
                           ) ?? data.node?.template[templateField].type
                         }
                         required={data.node!.template[templateField].required}
@@ -708,7 +746,7 @@ export default function GenericNode({
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
-                  "flex-max-width justify-center"
+                  "flex-max-width justify-center",
                 )}
               >
                 {" "}
