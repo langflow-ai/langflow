@@ -345,7 +345,7 @@ export default function GenericNode({
                       />
                     </div>
                   ) : (
-                    <div className="group flex items-center gap-2">
+                    <div className="group flex items-center gap-1">
                       <ShadTooltip content={data.node?.display_name}>
                         <div
                           onDoubleClick={(event) => {
@@ -368,7 +368,7 @@ export default function GenericNode({
                             onClick={handleUpdateCode}
                             variant="none"
                             size="none"
-                            className={"group"}
+                            className={"group p-1"}
                             loading={loadingUpdate}
                           >
                             <IconComponent
@@ -494,7 +494,7 @@ export default function GenericNode({
             </div>
             {showNode && (
               <>
-                <div className="flex flex-shrink-0 items-center gap-3">
+                <div className="flex flex-shrink-0 items-center gap-2">
                   <Button
                     onClick={() => {
                       if (buildStatus === BuildStatus.BUILDING || isBuilding)
@@ -504,7 +504,7 @@ export default function GenericNode({
                     }}
                     variant="none"
                     size="none"
-                    className="group"
+                    className="group p-1"
                   >
                     <div
                       data-testid={
