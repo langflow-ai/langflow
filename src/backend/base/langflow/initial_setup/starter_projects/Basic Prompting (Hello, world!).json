@@ -5,14 +5,20 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": ["object", "Text", "str"],
+            "baseClasses": [
+              "object",
+              "Text",
+              "str"
+            ],
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-k39HS"
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-njtka",
-            "inputTypes": ["Text"],
+            "inputTypes": [
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -29,14 +35,22 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": ["object", "str", "Text"],
+            "baseClasses": [
+              "object",
+              "str",
+              "Text"
+            ],
             "dataType": "Prompt",
             "id": "Prompt-uxBqP"
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenAIModel-k39HS",
-            "inputTypes": ["Text", "Record", "Prompt"],
+            "inputTypes": [
+              "Text",
+              "Record",
+              "Prompt"
+            ],
             "type": "str"
           }
         },
@@ -53,14 +67,24 @@
         "className": "stroke-gray-900 stroke-connection",
         "data": {
           "sourceHandle": {
-            "baseClasses": ["object", "Record", "str", "Text"],
+            "baseClasses": [
+              "object",
+              "Record",
+              "str",
+              "Text"
+            ],
             "dataType": "ChatInput",
             "id": "ChatInput-P3fgL"
           },
           "targetHandle": {
             "fieldName": "user_input",
             "id": "Prompt-uxBqP",
-            "inputTypes": ["Document", "BaseOutputParser", "Record", "Text"],
+            "inputTypes": [
+              "Document",
+              "BaseOutputParser",
+              "Record",
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -81,10 +105,16 @@
           "display_name": "Prompt",
           "id": "Prompt-uxBqP",
           "node": {
-            "base_classes": ["object", "str", "Text"],
+            "base_classes": [
+              "object",
+              "str",
+              "Text"
+            ],
             "beta": false,
             "custom_fields": {
-              "template": ["user_input"]
+              "template": [
+                "user_input"
+              ]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
@@ -99,7 +129,9 @@
             "is_input": null,
             "is_output": null,
             "name": "",
-            "output_types": ["Prompt"],
+            "output_types": [
+              "Prompt"
+            ],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -127,7 +159,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -191,7 +225,11 @@
           "display_name": "OpenAI",
           "id": "OpenAIModel-k39HS",
           "node": {
-            "base_classes": ["object", "Text", "str"],
+            "base_classes": [
+              "object",
+              "Text",
+              "str"
+            ],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -221,7 +259,9 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
-            "output_types": ["Text"],
+            "output_types": [
+              "Text"
+            ],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -249,7 +289,11 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text", "Record", "Prompt"],
+                "input_types": [
+                  "Text",
+                  "Record",
+                  "Prompt"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -306,7 +350,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
@@ -333,7 +379,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1.\n\nYou can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -352,7 +400,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": true,
                 "multiline": false,
@@ -391,7 +441,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "System message to pass to the model.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -451,7 +503,12 @@
         "data": {
           "id": "ChatOutput-njtka",
           "node": {
-            "base_classes": ["Record", "Text", "str", "object"],
+            "base_classes": [
+              "Record",
+              "Text",
+              "str",
+              "object"
+            ],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -468,7 +525,10 @@
             "field_order": [],
             "frozen": false,
             "icon": "ChatOutput",
-            "output_types": ["Message"],
+            "output_types": [
+              "Message",
+              "Text"
+            ],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -487,7 +547,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Optional\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.schema.message import Message\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        files: Optional[list[str]] = None,\n    ) -> Message:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            files=files,\n        )\n"
+                "value": "from typing import Optional, Union\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.field_typing import Text\nfrom langflow.schema.message import Message\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n\n    def build(\n        self,\n        sender: Optional[str] = \"Machine\",\n        sender_name: Optional[str] = \"AI\",\n        input_value: Optional[str] = None,\n        session_id: Optional[str] = None,\n        files: Optional[list[str]] = None,\n        return_message: Optional[bool] = False,\n    ) -> Union[Message, Text]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            session_id=session_id,\n            files=files,\n            return_message=return_message,\n        )\n"
               },
               "input_value": {
                 "advanced": false,
@@ -496,7 +556,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -515,12 +577,17 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -536,7 +603,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -556,7 +625,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "If provided, the message will be stored in the memory.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -591,7 +662,12 @@
         "data": {
           "id": "ChatInput-P3fgL",
           "node": {
-            "base_classes": ["object", "Record", "str", "Text"],
+            "base_classes": [
+              "object",
+              "Record",
+              "str",
+              "Text"
+            ],
             "beta": false,
             "custom_fields": {
               "input_value": null,
@@ -607,7 +683,10 @@
             "field_order": [],
             "frozen": false,
             "icon": "ChatInput",
-            "output_types": ["Message"],
+            "output_types": [
+              "Message",
+              "Text"
+            ],
             "template": {
               "_type": "CustomComponent",
               "code": {
@@ -626,7 +705,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Optional\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.schema.message import Message\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    def build_config(self):\n        build_config = super().build_config()\n        build_config[\"input_value\"] = {\n            \"input_types\": [],\n            \"display_name\": \"Text\",\n            \"multiline\": True,\n        }\n\n        return build_config\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        files: Optional[list[str]] = None,\n        session_id: Optional[str] = None,\n    ) -> Message:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            files=files,\n            session_id=session_id,\n        )\n"
+                "value": "from typing import Optional\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.schema.message import Message\nfrom langflow.field_typing import Text\nfrom typing import Union\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"ChatInput\"\n\n    def build_config(self):\n        build_config = super().build_config()\n        build_config[\"input_value\"] = {\n            \"input_types\": [],\n            \"display_name\": \"Text\",\n            \"multiline\": True,\n        }\n\n        return build_config\n\n    def build(\n        self,\n        sender: Optional[str] = \"User\",\n        sender_name: Optional[str] = \"User\",\n        input_value: Optional[str] = None,\n        files: Optional[list[str]] = None,\n        session_id: Optional[str] = None,\n        return_message: Optional[bool] = False,\n    ) -> Union[Message, Text]:\n        return super().build_with_record(\n            sender=sender,\n            sender_name=sender_name,\n            input_value=input_value,\n            files=files,\n            session_id=session_id,\n            return_message=return_message,\n        )\n"
               },
               "input_value": {
                 "advanced": false,
@@ -655,12 +734,17 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": true,
                 "load_from_db": false,
                 "multiline": false,
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "password": false,
                 "placeholder": "",
                 "required": false,
@@ -676,7 +760,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
@@ -696,7 +782,9 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "If provided, the message will be stored in the memory.",
-                "input_types": ["Text"],
+                "input_types": [
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": false,
