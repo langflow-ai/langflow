@@ -43,7 +43,7 @@
     "file-saver": "^2.0.5",
     "framer-motion": "^11.0.6",
     "lodash": "^4.17.21",
-    "lucide-react": "^0.331.0",
+    "lucide-react": "^0.394.0",
     "million": "^3.0.6",
     "moment": "^2.29.4",
     "openseadragon": "^4.1.1",
