@@ -30,7 +30,7 @@ def get_flow_id(
     flow = session.get(Flow, flow_id_str)
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
-    if flow.user_id != current_user.id:
+    if flow.user_id != current_user.id and flow.user_id != "":
         raise HTTPException(status_code=403, detail="You don't have access to this flow")
     return flow_id_str
 
