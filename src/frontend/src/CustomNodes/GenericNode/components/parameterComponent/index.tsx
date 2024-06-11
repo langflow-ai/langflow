@@ -39,7 +39,11 @@ import {
   scapedJSONStringfy,
 } from "../../../../utils/reactflowUtils";
 import { nodeColors } from "../../../../utils/styleUtils";
-import { classNames, groupByFamily } from "../../../../utils/utils";
+import {
+  classNames,
+  groupByFamily,
+  isThereModal,
+} from "../../../../utils/utils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
@@ -47,6 +51,8 @@ import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-butto
 import OutputModal from "../outputModal";
 import TooltipRenderComponent from "../tooltipRenderComponent";
 import { TEXT_FIELD_TYPES } from "./constants";
+import { useShortcutsStore } from "../../../../stores/shortcuts";
+import { useHotkeys } from "react-hotkeys-hook";
 
 export default function ParameterComponent({
   left,
@@ -63,6 +69,7 @@ export default function ParameterComponent({
   proxy,
   showNode,
   index = "",
+  selected,
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
@@ -90,6 +97,19 @@ export default function ParameterComponent({
       "unknown"
   );
 
+  const preventDefault = true;
+
+  function handleOutputWShortcut() {
+    if (!displayOutputPreview || unknownOutput) return;
+    if (isThereModal() && !openOutputModal) return;
+    if (selected && !left) {
+      setOpenOutputModal((state) => !state);
+    }
+  }
+
+  const output = useShortcutsStore((state) => state.output);
+  useHotkeys(output, handleOutputWShortcut, { preventDefault });
+
   const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue(
     data,
     name,
@@ -98,7 +118,7 @@ export default function ParameterComponent({
     debouncedHandleUpdateValues,
     setNode,
     renderTooltips,
-    setIsLoading
+    setIsLoading,
   );
 
   const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
@@ -107,7 +127,7 @@ export default function ParameterComponent({
     takeSnapshot,
     setNode,
     updateNodeInternals,
-    renderTooltips
+    renderTooltips,
   );
 
   const { handleRefreshButtonPress: handleRefreshButtonPressHook } =
@@ -116,7 +136,7 @@ export default function ParameterComponent({
   let disabled =
     edges.some(
       (edge) =>
-        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id)
+        edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
     ) ?? false;
 
   const handleRefreshButtonPress = async (name, data) => {
@@ -129,12 +149,12 @@ export default function ParameterComponent({
     handleUpdateValues,
     setNode,
     renderTooltips,
-    setIsLoading
+    setIsLoading,
   );
 
   const handleOnNewValue = async (
     newValue: string | string[] | boolean | Object[],
-    skipSnapshot: boolean | undefined = false
+    skipSnapshot: boolean | undefined = false,
   ): Promise<void> => {
     handleOnNewValueHook(newValue, skipSnapshot);
   };
@@ -216,7 +236,7 @@ export default function ParameterComponent({
               className={classNames(
                 left ? "my-12 -ml-0.5 " : " my-12 -mr-0.5 ",
                 "h-3 w-3 rounded-full border-2 bg-background",
-                !showNode ? "mt-0" : ""
+                !showNode ? "mt-0" : "",
               )}
               style={{
                 borderColor: color ?? nodeColors.unknown,
@@ -286,7 +306,7 @@ export default function ParameterComponent({
                         "h-5 w-5 rounded-md",
                         displayOutputPreview && !unknownOutput
                           ? " hover:bg-secondary-foreground/5 hover:text-medium-indigo"
-                          : " cursor-not-allowed text-muted-foreground"
+                          : " cursor-not-allowed text-muted-foreground",
                       )}
                       name={"ScanEye"}
                     />
@@ -336,7 +356,7 @@ export default function ParameterComponent({
                   }
                   className={classNames(
                     left ? "-ml-0.5" : "-mr-0.5",
-                    "h-3 w-3 rounded-full border-2 bg-background"
+                    "h-3 w-3 rounded-full border-2 bg-background",
                   )}
                   style={{ borderColor: color ?? nodeColors.unknown }}
                   onClick={() => setFilterEdge(groupedEdge.current)}

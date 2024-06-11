@@ -817,6 +817,14 @@ export const defaultShortcuts = [
     name: "Flow Share",
     shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + B`,
   },
+  {
+    name: "Play",
+    shortcut: `P`,
+  },
+  {
+    name: "Output Inspection",
+    shortcut: `O`,
+  },
 ];
 
 export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
