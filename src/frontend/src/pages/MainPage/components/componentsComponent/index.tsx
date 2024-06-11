@@ -1,28 +1,32 @@
-import { cloneDeep } from "lodash";
 import { useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import CollectionCardComponent from "../../../../components/cardComponent";
 import CardsWrapComponent from "../../../../components/cardsWrapComponent";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../../../components/genericIconComponent";
+import IconComponent from "../../../../components/genericIconComponent";
 import PaginatorComponent from "../../../../components/paginatorComponent";
 import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
 import { Button } from "../../../../components/ui/button";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../stores/alertStore";
+import { useDarkStore } from "../../../../stores/darkStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { FlowType } from "../../../../types/flow";
+import { downloadFlow, removeApiKeys } from "../../../../utils/reactflowUtils";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import { getNameByType } from "../../utils/get-name-by-type";
 import { sortFlows } from "../../utils/sort-flows";
 import EmptyComponent from "../emptyComponent";
 import HeaderComponent from "../headerComponent";
-import { downloadFlow, removeApiKeys } from "../../../../utils/reactflowUtils";
-import { useDarkStore } from "../../../../stores/darkStore";
-import { UPLOAD_ERROR_ALERT } from "../../../../constants/alerts_constants";
+import useDeleteMultipleFlows from "./hooks/use-delete-multiple";
+import useDescriptionModal from "./hooks/use-description-modal";
+import useFilteredFlows from "./hooks/use-filtered-flows";
+import useDuplicateFlows from "./hooks/use-handle-duplicate";
+import useExportFlows from "./hooks/use-handle-export";
+import useSelectAll from "./hooks/use-handle-select-all";
+import useSelectOptionsChange from "./hooks/use-select-options-change";
+import useSelectedFlows from "./hooks/use-selected-flows";
 
 export default function ComponentsComponent({
   type = "all",
@@ -73,6 +77,16 @@ export default function ComponentsComponent({
   const setFolderUrl = useFolderStore((state) => state.setFolderUrl);
   const addFlow = useFlowsManagerStore((state) => state.addFlow);
 
+  const cardTypes = useMemo(() => {
+    if (window.location.pathname.includes("components")) {
+      return "Components";
+    }
+    if (window.location.pathname.includes("flows")) {
+      return "Flows";
+    }
+    return "Items";
+  }, [window.location]);
+
   useEffect(() => {
     setFolderUrl(folderId ?? "");
     setSelectedFlowsComponentsCards([]);
@@ -80,22 +94,7 @@ export default function ComponentsComponent({
     getFolderById(folderId ? folderId : myCollectionId);
   }, [location]);
 
-  useEffect(() => {
-    const newFlows = cloneDeep(flowsFromFolder!);
-    const filteredFlows = newFlows?.filter(
-      (f) =>
-        f.name.toLowerCase().includes(searchFlowsComponents.toLowerCase()) ||
-        f.description
-          .toLowerCase()
-          .includes(searchFlowsComponents.toLowerCase()),
-    );
-
-    if (searchFlowsComponents === "") {
-      setAllFlows(flowsFromFolder!);
-    }
-
-    setAllFlows(filteredFlows);
-  }, [searchFlowsComponents]);
+  useFilteredFlows(flowsFromFolder, searchFlowsComponents, setAllFlows);
 
   const resetFilter = () => {
     setPageIndex(1);
@@ -106,158 +105,68 @@ export default function ComponentsComponent({
   const entireFormValues = useWatch({ control });
 
   const methods = useForm();
-  const handleSelectAll = (select) => {
-    const flowsFromFolderIds = flowsFromFolder?.map((f) => f.id);
-    if (select) {
-      Object.keys(getValues()).forEach((key) => {
-        if (!flowsFromFolderIds?.includes(key)) return;
-        setValue(key, true);
-      });
-      return;
-    }
 
-    Object.keys(getValues()).forEach((key) => {
-      setValue(key, false);
-    });
-  };
+  const { handleSelectAll } = useSelectAll(
+    flowsFromFolder,
+    getValues,
+    setValue,
+  );
 
-  const handleSelectOptionsChange = (action: string) => {
-    const hasSelected = selectedFlowsComponentsCards?.length > 0;
-    if (!hasSelected) {
-      setErrorData({
-        title: "No items selected",
-        list: ["Please select items to delete"],
-      });
-      return;
-    }
-    if (action === "delete") {
-      setOpenDelete(true);
-    } else if (action === "duplicate") {
-      handleDuplicate();
-    } else if (action === "export") {
-      handleExport();
-    }
-  };
-
-  const handleDuplicate = () => {
-    Promise.all(
-      selectedFlowsComponentsCards.map((selectedFlow) =>
-        addFlow(
-          true,
-          allFlows.find((flow) => flow.id === selectedFlow),
-        ),
-      ),
-    ).then(() => {
-      resetFilter();
-      getFoldersApi(true);
-      if (!folderId || folderId === myCollectionId) {
-        getFolderById(folderId ? folderId : myCollectionId);
-      }
-      setSelectedFlowsComponentsCards([]);
-
-      setSuccessData({ title: "Flows duplicated successfully" });
-    });
-  };
-
-  const handleImport = () => {
-    uploadFlow({ newProject: true, isComponent: false })
-      .then(() => {
-        resetFilter();
-        getFoldersApi(true);
-        if (!folderId || folderId === myCollectionId) {
-          getFolderById(folderId ? folderId : myCollectionId);
-        }
-        setSelectedFlowsComponentsCards([]);
-
-        setSuccessData({ title: "Flows imported successfully" });
-      })
-      .catch((error) => {
-        setErrorData({
-          title: UPLOAD_ERROR_ALERT,
-          list: [error],
-        });
-      });
-  };
+  const { handleDuplicate } = useDuplicateFlows(
+    selectedFlowsComponentsCards,
+    addFlow,
+    allFlows,
+    resetFilter,
+    getFoldersApi,
+    folderId,
+    myCollectionId,
+    getFolderById,
+    setSuccessData,
+    setSelectedFlowsComponentsCards,
+    handleSelectAll,
+    cardTypes,
+  );
 
   const version = useDarkStore((state) => state.version);
 
-  const handleExport = () => {
-    selectedFlowsComponentsCards.map((selectedFlowId) => {
-      const selectedFlow = allFlows.find((flow) => flow.id === selectedFlowId);
-      downloadFlow(
-        removeApiKeys({
-          id: selectedFlow!.id,
-          data: selectedFlow!.data!,
-          description: selectedFlow!.description,
-          name: selectedFlow!.name,
-          last_tested_version: version,
-          is_component: false,
-        }),
-        selectedFlow!.name,
-        selectedFlow!.description,
-      );
-    });
-    setSuccessData({ title: "Flows exported successfully" });
-  };
+  const { handleExport } = useExportFlows(
+    selectedFlowsComponentsCards,
+    allFlows,
+    downloadFlow,
+    removeApiKeys,
+    version,
+    setSuccessData,
+    setSelectedFlowsComponentsCards,
+    handleSelectAll,
+    cardTypes,
+  );
 
-  const handleDeleteMultiple = () => {
-    removeFlow(selectedFlowsComponentsCards)
-      .then(() => {
-        resetFilter();
-        getFoldersApi(true);
-        if (!folderId || folderId === myCollectionId) {
-          getFolderById(folderId ? folderId : myCollectionId);
-        }
-        setSuccessData({
-          title: "Selected items deleted successfully",
-        });
-      })
-      .catch(() => {
-        setErrorData({
-          title: "Error deleting items",
-          list: ["Please try again"],
-        });
-      });
-  };
+  const { handleSelectOptionsChange } = useSelectOptionsChange(
+    selectedFlowsComponentsCards,
+    setErrorData,
+    setOpenDelete,
+    handleDuplicate,
+    handleExport,
+  );
 
-  useEffect(() => {
-    if (!entireFormValues || Object.keys(entireFormValues).length === 0) return;
-    const selectedFlows: string[] = Object.keys(entireFormValues).filter(
-      (key) => {
-        if (entireFormValues[key] === true) {
-          return true;
-        }
-        return false;
-      },
-    );
+  const { handleDeleteMultiple } = useDeleteMultipleFlows(
+    selectedFlowsComponentsCards,
+    removeFlow,
+    resetFilter,
+    getFoldersApi,
+    folderId,
+    myCollectionId,
+    getFolderById,
+    setSuccessData,
+    setErrorData,
+  );
 
-    setSelectedFlowsComponentsCards(selectedFlows);
-  }, [entireFormValues]);
+  useSelectedFlows(entireFormValues, setSelectedFlowsComponentsCards);
 
-  const getDescriptionModal = useMemo(() => {
-    const getTypeLabel = (type) => {
-      const labels = {
-        all: "item",
-        component: "component",
-        flow: "flow",
-      };
-      return labels[type] || "";
-    };
-
-    const getPluralizedLabel = (type) => {
-      const labels = {
-        all: "items",
-        component: "components",
-        flow: "flows",
-      };
-      return labels[type] || "";
-    };
-
-    if (selectedFlowsComponentsCards?.length === 1) {
-      return getTypeLabel(type);
-    }
-    return getPluralizedLabel(type);
-  }, [selectedFlowsComponentsCards, type]);
+  const descriptionModal = useDescriptionModal(
+    selectedFlowsComponentsCards,
+    type,
+  );
 
   const getTotalRowsCount = () => {
     if (type === "all") return allFlows?.length;
@@ -370,7 +279,7 @@ export default function ComponentsComponent({
           open={openDelete}
           setOpen={setOpenDelete}
           onConfirm={handleDeleteMultiple}
-          description={getDescriptionModal}
+          description={descriptionModal}
         >
           <></>
         </DeleteConfirmationModal>

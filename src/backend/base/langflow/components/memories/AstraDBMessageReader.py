@@ -1,8 +1,7 @@
 from typing import Optional, cast
 
-
 from langflow.base.memory.memory import BaseMemoryComponent
-from langflow.schema.schema import Record
+from langflow.schema.record import Record
 
 
 class AstraDBMessageReaderComponent(BaseMemoryComponent):

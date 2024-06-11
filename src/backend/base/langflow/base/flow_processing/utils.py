@@ -1,7 +1,7 @@
 from typing import List
 
 from langflow.graph.schema import ResultData, RunOutputs
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 
 def build_records_from_run_outputs(run_outputs: RunOutputs) -> List[Record]:

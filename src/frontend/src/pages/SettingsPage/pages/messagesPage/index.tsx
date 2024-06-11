@@ -6,7 +6,6 @@ import {
 } from "ag-grid-community";
 import { useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
-import { Card, CardContent } from "../../../../components/ui/card";
 import useAlertStore from "../../../../stores/alertStore";
 import { useMessagesStore } from "../../../../stores/messagesStore";
 import HeaderMessagesComponent from "./components/headerMessages";
@@ -54,6 +53,8 @@ export default function MessagesPage() {
 
       <div className="flex h-full w-full flex-col justify-between">
         <TableComponent
+          key={"sessionView"}
+          onDelete={handleRemoveMessages}
           readOnlyEdit
           onCellEditRequest={(event) => {
             handleUpdateMessage(event);

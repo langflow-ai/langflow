@@ -13,7 +13,7 @@ from pydantic import field_serializer, field_validator
 from sqlalchemy import UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from langflow.schema.schema import Record
+from langflow.schema import Record
 
 if TYPE_CHECKING:
     from langflow.services.database.models.folder import Folder
@@ -29,6 +29,7 @@ class FlowBase(SQLModel):
     is_component: Optional[bool] = Field(default=False, nullable=True)
     updated_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
     webhook: Optional[bool] = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
+    folder_id: Optional[UUID] = Field(default=None, nullable=True)
     endpoint_name: Optional[str] = Field(default=None, nullable=True, index=True)
 
     @field_validator("endpoint_name")

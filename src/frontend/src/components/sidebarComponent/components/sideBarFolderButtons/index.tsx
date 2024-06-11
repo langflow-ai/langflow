@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { FolderType } from "../../../../pages/MainPage/entities";
 import { addFolder, updateFolder } from "../../../../pages/MainPage/services";
 import { handleDownloadFolderFn } from "../../../../pages/MainPage/utils/handle-download-folder";
+import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { handleKeyDown } from "../../../../utils/reactflowUtils";
@@ -13,19 +14,15 @@ import IconComponent, {
 import { Button, buttonVariants } from "../../../ui/button";
 import { Input } from "../../../ui/input";
 import useFileDrop from "../../hooks/use-on-file-drop";
-import useAlertStore from "../../../../stores/alertStore";
 
 type SideBarFoldersButtonsComponentProps = {
-  folders: FolderType[];
   pathname: string;
   handleChangeFolder?: (id: string) => void;
-  handleEditFolder?: (item: FolderType) => void;
   handleDeleteFolder?: (item: FolderType) => void;
 };
 const SideBarFoldersButtonsComponent = ({
   pathname,
   handleChangeFolder,
-  handleEditFolder,
   handleDeleteFolder,
 }: SideBarFoldersButtonsComponentProps) => {
   const refInput = useRef<HTMLInputElement>(null);
@@ -53,6 +50,7 @@ const SideBarFoldersButtonsComponent = ({
   const folderId = location?.state?.folderId ?? myCollectionId;
   const getFolderById = useFolderStore((state) => state.getFolderById);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const handleFolderChange = (folderId: string) => {
     getFolderById(folderId);
@@ -67,6 +65,9 @@ const SideBarFoldersButtonsComponent = ({
     uploadFolder(folderId)
       .then(() => {
         getFolderById(folderId);
+        setSuccessData({
+          title: "Uploaded successfully",
+        });
       })
       .catch((err) => {
         console.log(err);

@@ -17,6 +17,7 @@ class RecordsToTextComponent(CustomComponent):
             "template": {
                 "display_name": "Template",
                 "info": "The template to use for formatting the records. It can contain the keys {text}, {data} or any other key in the Record.",
+                "multiline": True,
             },
         }
 

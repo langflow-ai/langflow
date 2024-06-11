@@ -291,7 +291,7 @@
   }
 
   .main-page-nav-button {
-    @apply mr-2 w-4;
+    @apply w-4;
   }
 
   .main-page-description-text {
@@ -330,16 +330,16 @@
     @apply grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4;
   }
   .generic-node-div {
-    @apply relative flex flex-col justify-center bg-background;
+    @apply relative flex flex-col justify-center bg-background transition-all;
   }
   .generic-node-div-title {
-    @apply flex w-full items-center gap-2 border-b bg-muted p-4;
+    @apply flex w-full items-center gap-2 border-b bg-muted p-5;
   }
   .generic-node-title-arrangement {
     @apply flex-max-width items-center truncate;
   }
   .generic-node-icon {
-    @apply h-10 w-10 rounded p-1;
+    @apply h-8 w-8 rounded;
   }
   .generic-node-tooltip-div {
     @apply ml-2 max-w-[220px] truncate;
@@ -801,10 +801,6 @@
     @apply flex-max-width mt-2 h-full;
   }
 
-  .button-box-modal-div {
-    @apply flex transform flex-col items-center justify-center rounded-lg border border-ring text-center shadow hover:scale-105 hover:shadow-lg;
-  }
-
   .dialog-header-modal-div {
     @apply absolute left-0 top-2 z-50 hidden pl-4 pt-4 sm:block;
   }
@@ -896,7 +892,7 @@
     @apply mx-auto mt-4 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-almost-light-blue sm:mx-0 sm:h-10 sm:w-10;
   }
   .prompt-modal-icon {
-    @apply h-6 w-6 text-almost-medium-blue;
+    @apply h-6 w-6 text-primary;
   }
   .prompt-modal-txtarea-arrangement {
     @apply flex-max-width h-full flex-row items-center justify-center gap-4 overflow-auto bg-accent p-4;

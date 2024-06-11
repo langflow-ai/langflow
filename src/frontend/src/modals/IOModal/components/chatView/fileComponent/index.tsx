@@ -1,26 +1,23 @@
-import * as base64js from "base64-js";
 import { useState } from "react";
-import IconComponent from "../../../../../components/genericIconComponent";
+import { ForwardedIconComponent } from "../../../../../components/genericIconComponent";
+import { BACKEND_URL, BASE_URL_API } from "../../../../../constants/constants";
+import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { fileCardPropsType } from "../../../../../types/components";
+import formatFileName from "../filePreviewChat/utils/format-file-name";
+import DownloadButton from "./components/downloadButton/downloadButton";
+import getClasses from "./utils/get-classes";
+import handleDownload from "./utils/handle-download";
+
+const imgTypes = new Set(["png", "jpg", "jpeg", "gif", "webp", "image"]);
 
 export default function FileCard({
   fileName,
   content,
   fileType,
-}: fileCardPropsType): JSX.Element {
-  const handleDownload = (): void => {
-    const byteArray = new Uint8Array(base64js.toByteArray(content));
-    const blob = new Blob([byteArray], { type: "application/octet-stream" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName + ".png";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
+  showFile = true,
+}: fileCardPropsType): JSX.Element | undefined {
   const [isHovered, setIsHovered] = useState(false);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   function handleMouseEnter(): void {
     setIsHovered(true);
   }
@@ -28,58 +25,59 @@ export default function FileCard({
     setIsHovered(false);
   }
 
-  if (fileType === "image") {
+  const fileWrapperClasses = getClasses(isHovered);
+
+  const imgSrc = `${BACKEND_URL.slice(
+    0,
+    BACKEND_URL.length - 1,
+  )}${BASE_URL_API}files/images/${content}`;
+
+  console.log(imgSrc);
+
+  if (showFile) {
+    if (imgTypes.has(fileType)) {
+      return (
+        <div
+          className="inline-block w-full rounded-lg transition-all"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          style={{ display: "inline-block" }}
+        >
+          <div className="relative w-[50%] rounded-lg border border-border">
+            <img
+              src={imgSrc}
+              alt="generated image"
+              className="m-0  h-auto w-auto rounded-lg border border-border p-0 transition-all"
+            />
+            <DownloadButton
+              isHovered={isHovered}
+              handleDownload={() => handleDownload({ fileName, content })}
+            />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
-        className="relative h-1/4 w-1/4"
+        className={fileWrapperClasses}
+        onClick={() => handleDownload({ fileName, content })}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <img
-          src={`data:image/png;base64,${content}`}
-          alt="generated image"
-          className="h-full  w-full rounded-lg"
-        />
-        {isHovered && (
-          <div className={`file-card-modal-image-div `}>
-            <button
-              className="file-card-modal-image-button "
-              onClick={handleDownload}
-            >
-              <IconComponent
-                name="DownloadCloud"
-                className="h-5 w-5 text-current hover:scale-110"
-              />
-            </button>
+        <div className="ml-3 flex h-full w-full items-center gap-2 text-sm">
+          <ForwardedIconComponent name="File" className="h-8 w-8" />
+          <div className="flex flex-col">
+            <span className="font-bold">{formatFileName(fileName, 20)}</span>
+            <span>File</span>
           </div>
-        )}
+        </div>
+        <DownloadButton
+          isHovered={isHovered}
+          handleDownload={() => handleDownload({ fileName, content })}
+        />
       </div>
     );
   }
-
-  return (
-    <button onClick={handleDownload} className="file-card-modal-button">
-      <div className="file-card-modal-div">
-        ooooooooooooooo{" "}
-        {fileType === "image" ? (
-          <img
-            src={`data:image/png;base64,${content}`}
-            alt=""
-            className="h-8 w-8"
-          />
-        ) : (
-          <IconComponent name="File" className="h-8 w-8" />
-        )}
-        <div className="file-card-modal-footer">
-          {" "}
-          <div className="file-card-modal-name">{fileName}</div>
-          <div className="file-card-modal-type">{fileType}</div>
-        </div>
-        <IconComponent
-          name="DownloadCloud"
-          className="ml-auto h-6 w-6 text-current"
-        />
-      </div>
-    </button>
-  );
+  return undefined;
 }

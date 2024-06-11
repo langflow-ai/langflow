@@ -78,7 +78,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
                 "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             },
             "code": {"show": False},
-            "input_value": {"display_name": "Input"},
+            "input_value": {"display_name": "Input", "input_types": ["Text", "Record", "Prompt"]},
             "stream": {
                 "display_name": "Stream",
                 "info": STREAM_INFO_TEXT,

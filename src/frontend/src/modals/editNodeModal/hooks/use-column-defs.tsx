@@ -1,20 +1,19 @@
 import { ColDef, ValueGetterParams } from "ag-grid-community";
 import { useMemo } from "react";
-import TableAutoCellRender from "../../../components/tableComponent/components/tableAutoCellRender";
 import TableNodeCellRender from "../../../components/tableComponent/components/tableNodeCellRender";
 import TableToggleCellRender from "../../../components/tableComponent/components/tableToggleCellRender";
-import TableTooltipRender from "../../../components/tableComponent/components/tableTooltipRender";
 
 const useColumnDefs = (
   myData: any,
   handleOnNewValue: (newValue: any, name: string) => void,
+  handleOnChangeDb: (value: boolean, key: string) => void,
   changeAdvanced: (n: string) => void,
   open: boolean,
 ) => {
   const columnDefs: ColDef[] = useMemo(
     () => [
       {
-        headerName: "Name",
+        headerName: "Field Name",
         field: "display_name",
         valueGetter: (params) => {
           const templateParam = params.data;
@@ -24,8 +23,6 @@ const useColumnDefs = (
               : templateParam.name) ?? params.data.key
           );
         },
-        tooltipField: "display_name",
-        tooltipComponent: TableTooltipRender,
         wrapText: true,
         autoHeight: true,
         flex: 1,
@@ -36,7 +33,6 @@ const useColumnDefs = (
         headerName: "Description",
         field: "info",
         tooltipField: "info",
-        tooltipComponent: TableTooltipRender,
         wrapText: true,
         autoHeight: true,
         flex: 2,
@@ -52,12 +48,10 @@ const useColumnDefs = (
             value: params.data.value,
             nodeClass: myData.node,
             handleOnNewValue: handleOnNewValue,
-            handleOnChangeDb: (value, key) => {
-              myData.node!.template[key].load_from_db = value;
-            },
+            handleOnChangeDb: handleOnChangeDb,
           };
         },
-        minWidth: 330,
+        minWidth: 340,
         autoHeight: true,
         flex: 1,
         resizable: false,

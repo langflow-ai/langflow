@@ -114,7 +114,8 @@ module.exports = {
       type: "category",
       label: "Deployment",
       collapsed: true,
-      items: ["deployment/docker",
+      items: [
+        "deployment/docker",
         "deployment/backend-only",
         "deployment/gcp-deployment",
       ],

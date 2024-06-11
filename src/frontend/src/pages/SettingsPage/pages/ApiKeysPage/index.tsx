@@ -1,7 +1,6 @@
 import { SelectionChangedEvent } from "ag-grid-community";
 import { useContext, useEffect, useRef, useState } from "react";
 import TableComponent from "../../../../components/tableComponent";
-import { Card, CardContent } from "../../../../components/ui/card";
 import { AuthContext } from "../../../../contexts/authContext";
 import useAlertStore from "../../../../stores/alertStore";
 import ApiKeyHeaderComponent from "./components/ApiKeyHeader";
@@ -46,13 +45,14 @@ export default function ApiKeysPage() {
     <div className="flex h-full w-full flex-col justify-between gap-6">
       <ApiKeyHeaderComponent
         selectedRows={selectedRows}
-        handleDeleteKey={handleDeleteKey}
         fetchApiKeys={fetchApiKeys}
         userId={userId}
       />
 
       <div className="flex h-full w-full flex-col justify-between">
         <TableComponent
+          key={"apiKeys"}
+          onDelete={handleDeleteKey}
           overlayNoRowsTemplate="No data available"
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedRows(event.api.getSelectedRows().map((row) => row.id));

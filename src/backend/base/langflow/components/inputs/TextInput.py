@@ -12,7 +12,7 @@ class TextInput(TextComponent):
     def build_config(self):
         return {
             "input_value": {
-                "display_name": "Value",
+                "display_name": "Text",
                 "input_types": ["Record", "Text"],
                 "info": "Text or Record to be passed as input.",
             },

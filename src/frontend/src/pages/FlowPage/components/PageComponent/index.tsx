@@ -1,5 +1,13 @@
 import _, { cloneDeep } from "lodash";
-import { MouseEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  KeyboardEvent,
+  MouseEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import ReactFlow, {
   Background,
   Connection,
@@ -21,6 +29,7 @@ import {
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { FlowType, NodeType } from "../../../../types/flow";
@@ -50,21 +59,22 @@ export default function Page({
   flow: FlowType;
   view?: boolean;
 }): JSX.Element {
+  const preventDefault = true;
   const uploadFlow = useFlowsManagerStore((state) => state.uploadFlow);
   const autoSaveCurrentFlow = useFlowsManagerStore(
-    (state) => state.autoSaveCurrentFlow
+    (state) => state.autoSaveCurrentFlow,
   );
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [showCanvas, setSHowCanvas] = useState(
-    Object.keys(templates).length > 0 && Object.keys(types).length > 0
+    Object.keys(templates).length > 0 && Object.keys(types).length > 0,
   );
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
-    (state) => state.setReactFlowInstance
+    (state) => state.setReactFlowInstance,
   );
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
@@ -81,10 +91,10 @@ export default function Page({
   const paste = useFlowStore((state) => state.paste);
   const resetFlow = useFlowStore((state) => state.resetFlow);
   const lastCopiedSelection = useFlowStore(
-    (state) => state.lastCopiedSelection
+    (state) => state.lastCopiedSelection,
   );
   const setLastCopiedSelection = useFlowStore(
-    (state) => state.setLastCopiedSelection
+    (state) => state.setLastCopiedSelection,
   );
   const onConnect = useFlowStore((state) => state.onConnect);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -107,7 +117,7 @@ export default function Page({
         clonedSelection!,
         clonedNodes,
         clonedEdges,
-        getRandomName()
+        getRandomName(),
       );
       const newGroupNode = generateNodeFromFlow(newFlow, getNodeId);
       const newEdges = reconnectEdges(newGroupNode, removedEdges);
@@ -115,8 +125,8 @@ export default function Page({
         ...clonedNodes.filter(
           (oldNodes) =>
             !clonedSelection?.nodes.some(
-              (selectionNode) => selectionNode.id === oldNodes.id
-            )
+              (selectionNode) => selectionNode.id === oldNodes.id,
+            ),
         ),
         newGroupNode,
       ]);
@@ -126,8 +136,8 @@ export default function Page({
             !clonedSelection!.nodes.some(
               (selectionNode) =>
                 selectionNode.id === oldEdge.target ||
-                selectionNode.id === oldEdge.source
-            )
+                selectionNode.id === oldEdge.source,
+            ),
         ),
         ...newEdges,
       ]);
@@ -141,119 +151,13 @@ export default function Page({
 
   const setNode = useFlowStore((state) => state.setNode);
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const selectedNode = lastSelection?.nodes ?? [];
-      const selectedEdges = lastSelection?.edges ?? [];
-      if (
-        selectionMenuVisible &&
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "g"
-      ) {
-        event.preventDefault();
-        handleGroupNode();
-      }
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "p" &&
-        selectedNode.length > 0
-      ) {
-        event.preventDefault();
-        setNode(selectedNode[0].id, (old) => ({
-          ...old,
-          data: {
-            ...old.data,
-            node: {
-              ...old.data.node,
-              frozen: old.data?.node?.frozen ? false : true,
-            },
-          },
-        }));
-      }
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key === "d" &&
-        selectedNode.length > 0
-      ) {
-        event.preventDefault();
-        paste(
-          { nodes: selectedNode, edges: selectedEdges },
-          {
-            x: position.current.x,
-            y: position.current.y,
-          }
-        );
-      }
-      if (!isWrappedWithClass(event, "noundo")) {
-        if (
-          (event.key === "y" || (event.key === "z" && event.shiftKey)) &&
-          (event.ctrlKey || event.metaKey)
-        ) {
-          event.preventDefault(); // prevent the default action
-          redo();
-        } else if (event.key === "z" && (event.ctrlKey || event.metaKey)) {
-          event.preventDefault();
-          undo();
-        }
-      }
-      if (
-        !isWrappedWithClass(event, "nocopy") &&
-        window.getSelection()?.toString().length === 0
-      ) {
-        if (
-          (event.ctrlKey || event.metaKey) &&
-          event.key === "c" &&
-          lastSelection
-        ) {
-          event.preventDefault();
-          setLastCopiedSelection(_.cloneDeep(lastSelection));
-        } else if (
-          (event.ctrlKey || event.metaKey) &&
-          event.key === "x" &&
-          lastSelection
-        ) {
-          event.preventDefault();
-          setLastCopiedSelection(_.cloneDeep(lastSelection), true);
-        } else if (
-          (event.ctrlKey || event.metaKey) &&
-          event.key === "v" &&
-          lastCopiedSelection
-        ) {
-          event.preventDefault();
-          takeSnapshot();
-          paste(lastCopiedSelection, {
-            x: position.current.x,
-            y: position.current.y,
-          });
-        } else if (
-          (event.ctrlKey || event.metaKey) &&
-          event.key === "g" &&
-          lastSelection
-        ) {
-          event.preventDefault();
-        }
-      }
-      if (!isWrappedWithClass(event, "nodelete")) {
-        if (
-          (event.key === "Delete" || event.key === "Backspace") &&
-          lastSelection
-        ) {
-          event.preventDefault();
-          takeSnapshot();
-          deleteNode(lastSelection.nodes.map((node) => node.id));
-          deleteEdge(lastSelection.edges.map((edge) => edge.id));
-        }
-      }
-    };
-
     const handleMouseMove = (event) => {
       position.current = { x: event.clientX, y: event.clientY };
     };
 
-    document.addEventListener("keydown", onKeyDown);
     document.addEventListener("mousemove", handleMouseMove);
 
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("mousemove", handleMouseMove);
     };
   }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
@@ -274,9 +178,126 @@ export default function Page({
     };
   }, []);
 
+  function handleUndo(e: KeyboardEvent) {
+    e.preventDefault();
+    (e as unknown as Event).stopImmediatePropagation();
+    if (!isWrappedWithClass(e, "noundo")) {
+      undo();
+    }
+  }
+
+  function handleRedo(e: KeyboardEvent) {
+    e.preventDefault();
+    (e as unknown as Event).stopImmediatePropagation();
+    if (!isWrappedWithClass(e, "noundo")) {
+      redo();
+    }
+  }
+
+  function handleGroup(e: KeyboardEvent) {
+    e.preventDefault();
+    (e as unknown as Event).stopImmediatePropagation();
+    if (selectionMenuVisible) {
+      handleGroupNode();
+    }
+  }
+
+  function handleDuplicate(e: KeyboardEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    (e as unknown as Event).stopImmediatePropagation();
+    const selectedNode = nodes.filter((obj) => obj.selected);
+    if (selectedNode.length > 0) {
+      paste(
+        { nodes: selectedNode, edges: [] },
+        {
+          x: position.current.x,
+          y: position.current.y,
+        },
+      );
+    }
+  }
+
+  function handleCopy(e: KeyboardEvent) {
+    e.preventDefault();
+    (e as unknown as Event).stopImmediatePropagation();
+    if (
+      !isWrappedWithClass(e, "nocopy") &&
+      window.getSelection()?.toString().length === 0 &&
+      lastSelection
+    ) {
+      setLastCopiedSelection(_.cloneDeep(lastSelection));
+    }
+  }
+
+  function handleCut(e: KeyboardEvent) {
+    e.preventDefault();
+    (e as unknown as Event).stopImmediatePropagation();
+    if (
+      !isWrappedWithClass(e, "nocopy") &&
+      window.getSelection()?.toString().length === 0 &&
+      lastSelection
+    ) {
+      setLastCopiedSelection(_.cloneDeep(lastSelection), true);
+    }
+  }
+
+  function handlePaste(e: KeyboardEvent) {
+    e.preventDefault();
+    (e as unknown as Event).stopImmediatePropagation();
+    if (
+      !isWrappedWithClass(e, "nocopy") &&
+      window.getSelection()?.toString().length === 0 &&
+      lastCopiedSelection
+    ) {
+      takeSnapshot();
+      paste(lastCopiedSelection, {
+        x: position.current.x,
+        y: position.current.y,
+      });
+    }
+  }
+
+  function handleDelete(e: KeyboardEvent) {
+    e.preventDefault();
+    (e as unknown as Event).stopImmediatePropagation();
+    if (!isWrappedWithClass(e, "nodelete") && lastSelection) {
+      takeSnapshot();
+      deleteNode(lastSelection.nodes.map((node) => node.id));
+      deleteEdge(lastSelection.edges.map((edge) => edge.id));
+    }
+  }
+
+  const undoAction = useShortcutsStore((state) => state.undo);
+  const redoAction = useShortcutsStore((state) => state.redo);
+  const copyAction = useShortcutsStore((state) => state.copy);
+  const duplicate = useShortcutsStore((state) => state.duplicate);
+  const deleteAction = useShortcutsStore((state) => state.delete);
+  const groupAction = useShortcutsStore((state) => state.group);
+  const cutAction = useShortcutsStore((state) => state.cut);
+  const pasteAction = useShortcutsStore((state) => state.paste);
+  //@ts-ignore
+  useHotkeys(undoAction, handleUndo, { preventDefault });
+  //@ts-ignore
+  useHotkeys(redoAction, handleRedo, { preventDefault });
+  //@ts-ignore
+  useHotkeys(groupAction, handleGroup, { preventDefault });
+  //@ts-ignore
+  useHotkeys(duplicate, handleDuplicate, { preventDefault });
+  //@ts-ignore
+  useHotkeys(copyAction, handleCopy, { preventDefault });
+  //@ts-ignore
+  useHotkeys(cutAction, handleCut, { preventDefault });
+  //@ts-ignore
+  useHotkeys(pasteAction, handlePaste, { preventDefault });
+  //@ts-ignore
+  useHotkeys(deleteAction, handleDelete, { preventDefault });
+  //@ts-ignore
+  useHotkeys("delete", handleDelete, { preventDefault });
+
   useEffect(() => {
     setSHowCanvas(
-      Object.keys(templates).length > 0 && Object.keys(types).length > 0
+      Object.keys(templates).length > 0 && Object.keys(types).length > 0,
     );
   }, [templates, types]);
 
@@ -285,7 +306,7 @@ export default function Page({
       takeSnapshot();
       onConnect(params);
     },
-    [takeSnapshot, onConnect]
+    [takeSnapshot, onConnect],
   );
 
   const onNodeDragStart: NodeDragHandler = useCallback(() => {
@@ -326,7 +347,7 @@ export default function Page({
 
         // Extract the data from the drag event and parse it as a JSON object
         const data: { type: string; node?: APIClassType } = JSON.parse(
-          event.dataTransfer.getData("nodedata")
+          event.dataTransfer.getData("nodedata"),
         );
 
         const newId = getNodeId(data.type);
@@ -342,7 +363,7 @@ export default function Page({
         };
         paste(
           { nodes: [newNode], edges: [] },
-          { x: event.clientX, y: event.clientY }
+          { x: event.clientX, y: event.clientY },
         );
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
@@ -371,7 +392,7 @@ export default function Page({
       }
     },
     // Specify dependencies for useCallback
-    [getNodeId, setNodes, takeSnapshot, paste]
+    [getNodeId, setNodes, takeSnapshot, paste],
   );
 
   const onEdgeUpdateStart = useCallback(() => {
@@ -387,7 +408,7 @@ export default function Page({
         setEdges((els) => updateEdge(oldEdge, newConnection, els));
       }
     },
-    [setEdges]
+    [setEdges],
   );
 
   const onEdgeUpdateEnd = useCallback((_, edge: Edge): void => {
@@ -420,7 +441,7 @@ export default function Page({
     (flow: OnSelectionChangeParams): void => {
       setLastSelection(flow);
     },
-    []
+    [],
   );
 
   const onPaneClick = useCallback((flow) => {
@@ -473,6 +494,7 @@ export default function Page({
             zoomOnScroll={!view}
             zoomOnPinch={!view}
             panOnDrag={!view}
+            panActivationKeyCode={""}
             proOptions={{ hideAttribution: true }}
             onPaneClick={onPaneClick}
           >

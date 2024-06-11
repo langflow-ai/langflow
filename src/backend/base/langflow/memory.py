@@ -1,9 +1,9 @@
 import warnings
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from loguru import logger
 
-from langflow.schema import Record
+from langflow.schema.message import Message
 from langflow.services.deps import get_monitor_service
 from langflow.services.monitor.schema import MessageModel
 
@@ -39,54 +39,52 @@ def get_messages(
         order=order,
     )
 
-    records: list[Record] = []
+    messages: list[Message] = []
     # messages_df has a timestamp
     # it gets the last 5 messages, for example
     # but now they are ordered from most recent to least recent
     # so we need to reverse the order
     messages_df = messages_df[::-1] if order == "DESC" else messages_df
     for row in messages_df.itertuples():
-        record = Record(
-            data={
-                "text": row.message,
-                "sender": row.sender,
-                "sender_name": row.sender_name,
-                "session_id": row.session_id,
-                "timestamp": row.timestamp,
-            },
+        msg = Message(
+            text=row.text,
+            sender=row.sender,
+            session_id=row.session_id,
+            sender_name=row.sender_name,
+            timestamp=row.timestamp,
         )
-        records.append(record)
 
-    return records
+        messages.append(msg)
+
+    return messages
 
 
-def add_messages(records: Union[list[Record], Record], flow_id: Optional[str] = None):
+def add_messages(messages: Message | list[Message], flow_id: Optional[str] = None):
     """
     Add a message to the monitor service.
     """
     try:
         monitor_service = get_monitor_service()
+        if not isinstance(messages, list):
+            messages = [messages]
 
-        if isinstance(records, Record):
-            records = [records]
+        if not all(isinstance(message, Message) for message in messages):
+            types = ", ".join([str(type(message)) for message in messages])
+            raise ValueError(f"The messages must be instances of Message. Found: {types}")
 
-        if not all(isinstance(record, (Record, str)) for record in records):
-            types = ", ".join([str(type(record)) for record in records])
-            raise ValueError(f"The records must be instances of Record. Found: {types}")
+        messages_models: list[MessageModel] = []
+        for msg in messages:
+            msg.timestamp = monitor_service.get_timestamp()
+            messages_models.append(MessageModel.from_message(msg, flow_id=flow_id))
 
-        messages: list[MessageModel] = []
-        for record in records:
-            record.timestamp = monitor_service.get_timestamp()
-            messages.append(MessageModel.from_record(record, flow_id=flow_id))
-
-        for message in messages:
+        for message_model in messages_models:
             try:
-                monitor_service.add_message(message)
+                monitor_service.add_message(message_model)
             except Exception as e:
                 logger.error(f"Error adding message to monitor service: {e}")
                 logger.exception(e)
                 raise e
-        return records
+        return messages_models
     except Exception as e:
         logger.exception(e)
         raise e
@@ -100,28 +98,22 @@ def delete_messages(session_id: str):
         session_id (str): The session ID associated with the messages to delete.
     """
     monitor_service = get_monitor_service()
-    monitor_service.delete_messages(session_id)
+    monitor_service.delete_messages_session(session_id)
 
 
 def store_message(
-    message: Union[str, Record],
-    session_id: Optional[str] = None,
-    sender: Optional[str] = None,
-    sender_name: Optional[str] = None,
+    message: Message,
     flow_id: Optional[str] = None,
-) -> List[Record]:
+) -> List[Message]:
     """
     Stores a message in the memory.
 
     Args:
-        message (Union[str, Record]): The message to be stored. It can be either a string or a Record object.
-        session_id (Optional[str]): The session ID associated with the message.
-        sender (Optional[str]): The sender ID associated with the message.
-        sender_name (Optional[str]): The name of the sender associated with the message.
+        message (Message): The message to store.
         flow_id (Optional[str]): The flow ID associated with the message. When running from the CustomComponent you can access this using `self.graph.flow_id`.
 
     Returns:
-        List[Record]: A list of records containing the stored message.
+        List[Message]: A list of records containing the stored message.
 
     Raises:
         ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
@@ -130,26 +122,7 @@ def store_message(
         warnings.warn("No message provided.")
         return []
 
-    if not session_id or not sender or not sender_name:
+    if not message.session_id or not message.sender or not message.sender_name:
         raise ValueError("All of session_id, sender, and sender_name must be provided.")
 
-    if isinstance(message, Record):
-        record = message
-        record.data.update(
-            {
-                "session_id": session_id,
-                "sender": sender,
-                "sender_name": sender_name,
-            }
-        )
-    elif isinstance(message, str):
-        record = Record(
-            data={
-                "text": message,
-                "session_id": session_id,
-                "sender": sender,
-                "sender_name": sender_name,
-            },
-        )
-
-    return add_messages([record], flow_id=flow_id)
+    return add_messages([message], flow_id=flow_id)
