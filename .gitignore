@@ -266,3 +266,7 @@ stuff/*
 src/frontend/playwright-report/index.html
 *.bak
 prof/*
+.langchain.db-shm
+.langchain.db-wal
+langflow.db-shm
+langflow.db-wal
