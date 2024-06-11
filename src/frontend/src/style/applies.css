@@ -333,13 +333,13 @@
     @apply relative flex flex-col justify-center bg-background transition-all;
   }
   .generic-node-div-title {
-    @apply flex w-full items-center gap-2 border-b bg-muted p-4;
+    @apply flex w-full items-center gap-2 border-b bg-muted p-5;
   }
   .generic-node-title-arrangement {
     @apply flex-max-width items-center truncate;
   }
   .generic-node-icon {
-    @apply h-10 w-10 rounded p-1;
+    @apply h-8 w-8 rounded;
   }
   .generic-node-tooltip-div {
     @apply ml-2 max-w-[220px] truncate;

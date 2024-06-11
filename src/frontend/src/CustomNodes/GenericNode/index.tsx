@@ -1,5 +1,6 @@
 import emojiRegex from "emoji-regex";
 import { useEffect, useMemo, useState } from "react";
+import Markdown from "react-markdown";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../components/genericIconComponent";
 import InputComponent from "../../components/inputComponent";
@@ -19,6 +20,7 @@ import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
 import { VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
@@ -36,8 +38,6 @@ import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import ParameterComponent from "./components/parameterComponent";
-import { useShortcutsStore } from "../../stores/shortcuts";
-import Markdown from "react-markdown";
 
 export default function GenericNode({
   data,
@@ -108,11 +108,7 @@ export default function GenericNode({
   };
 
   const renderIconStatus = () => {
-    return (
-      <div className="generic-node-status-position flex items-center justify-center">
-        {iconStatus}
-      </div>
-    );
+    return iconStatus;
   };
 
   const getNodeBorderClassName = (
@@ -349,7 +345,7 @@ export default function GenericNode({
                       />
                     </div>
                   ) : (
-                    <div className="group flex items-start gap-1.5">
+                    <div className="group flex items-center gap-2">
                       <ShadTooltip content={data.node?.display_name}>
                         <div
                           onDoubleClick={(event) => {
@@ -366,6 +362,22 @@ export default function GenericNode({
                           {data.node?.display_name}
                         </div>
                       </ShadTooltip>
+                      {isOutdated && (
+                        <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
+                          <Button
+                            onClick={handleUpdateCode}
+                            variant="none"
+                            size="none"
+                            className={"group"}
+                            loading={loadingUpdate}
+                          >
+                            <IconComponent
+                              name="AlertTriangle"
+                              className="h-5 w-5 fill-status-yellow text-muted"
+                            />
+                          </Button>
+                        </ShadTooltip>
+                      )}
                     </div>
                   )}
                 </div>
@@ -482,22 +494,31 @@ export default function GenericNode({
             </div>
             {showNode && (
               <>
-                <div className="flex flex-shrink-0 items-center gap-1">
-                  {isOutdated && (
-                    <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
-                      <Button
-                        onClick={handleUpdateCode}
-                        variant="secondary"
-                        className={"h-9 px-1.5"}
-                        loading={loadingUpdate}
-                      >
-                        <IconComponent
-                          name="AlertTriangle"
-                          className="h-5 w-5 text-status-yellow"
-                        />
-                      </Button>
-                    </ShadTooltip>
-                  )}
+                <div className="flex flex-shrink-0 items-center gap-3">
+                  <Button
+                    onClick={() => {
+                      if (buildStatus === BuildStatus.BUILDING || isBuilding)
+                        return;
+                      setValidationStatus(null);
+                      buildFlow({ stopNodeId: data.id });
+                    }}
+                    variant="none"
+                    size="none"
+                    className="group"
+                  >
+                    <div
+                      data-testid={
+                        `button_run_` + data?.node?.display_name.toLowerCase()
+                      }
+                    >
+                      <IconComponent
+                        name="Play"
+                        className={
+                          "h-5 w-5 fill-current stroke-2 text-muted-foreground transition-all group-hover:text-medium-indigo group-hover/node:opacity-100"
+                        }
+                      />
+                    </div>
+                  </Button>
                   <ShadTooltip
                     content={
                       buildStatus === BuildStatus.BUILDING ? (
@@ -527,24 +548,7 @@ export default function GenericNode({
                     }
                     side="bottom"
                   >
-                    <Button
-                      onClick={() => {
-                        if (buildStatus === BuildStatus.BUILDING || isBuilding)
-                          return;
-                        setValidationStatus(null);
-                        buildFlow({ stopNodeId: data.id });
-                      }}
-                      variant="secondary"
-                      className={"group h-9 px-1.5"}
-                    >
-                      <div
-                        data-testid={
-                          `button_run_` + data?.node?.display_name.toLowerCase()
-                        }
-                      >
-                        {renderIconStatus()}
-                      </div>
-                    </Button>
+                    {renderIconStatus()}
                   </ShadTooltip>
                 </div>
               </>
