@@ -5,12 +5,12 @@ import yaml
 from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
-from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes
+from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, serialize_field
 from langflow.graph.vertex.base import Vertex
 from langflow.schema import Record
 from langflow.schema.artifact import ArtifactType
-from langflow.schema.schema import INPUT_FIELD_NAME
+from langflow.schema.schema import INPUT_FIELD_NAME, Log, build_logs_from_artifacts
 from langflow.services.monitor.utils import log_transaction, log_vertex_build
 from langflow.utils.schemas import ChatOutputResponse, RecordOutputResponse
 from langflow.utils.util import unescape_string
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 class CustomComponentVertex(Vertex):
     def __init__(self, data: Dict, graph):
         super().__init__(data, graph=graph, base_type="custom_components")
+        self.logs: Dict[str, Log] = {}
 
     def _built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
@@ -45,6 +46,10 @@ class ComponentVertex(Vertex):
                 self._built_object, self.artifacts = result
             elif len(result) == 3:
                 self._custom_component, self._built_object, self.artifacts = result
+                for key in self.artifacts:
+                    self.artifacts_raw[key] = self.artifacts[key].get("raw", None)
+                    self.artifacts_type[key] = self.artifacts[key].get("type", None) or ArtifactType.UNKNOWN.value
+                self.logs = build_logs_from_artifacts(self.artifacts)
         else:
             self._built_object = result
 
@@ -91,6 +96,58 @@ class ComponentVertex(Vertex):
 
         log_transaction(source=self, target=requester, flow_id=self.graph.flow_id, status="success")
         return result
+
+    def extract_messages_from_artifacts(self, artifacts: Dict[str, Any]) -> List[dict]:
+        """
+        Extracts messages from the artifacts.
+
+        Args:
+            artifacts (Dict[str, Any]): The artifacts to extract messages from.
+
+        Returns:
+            List[str]: The extracted messages.
+        """
+        messages = []
+        for key in artifacts:
+            artifact = artifacts[key]
+            if any(key not in artifact for key in ["text", "sender", "sender_name", "session_id", "stream_url"]):
+                continue
+            try:
+                messages.append(
+                    ChatOutputResponse(
+                        message=artifacts[key]["text"],
+                        sender=artifacts[key].get("sender"),
+                        sender_name=artifacts[key].get("sender_name"),
+                        session_id=artifacts[key].get("session_id"),
+                        stream_url=artifacts[key].get("stream_url"),
+                        files=[
+                            {"path": file} if isinstance(file, str) else file
+                            for file in artifacts[key].get("files", [])
+                        ],
+                        component_id=self.id,
+                        type=self.artifacts_type[key],
+                    ).model_dump(exclude_none=True)
+                )
+            except KeyError:
+                pass
+        return messages
+
+    def _finalize_build(self):
+        result_dict = self.get_built_result()
+        # We need to set the artifacts to pass information
+        # to the frontend
+        self.set_artifacts()
+        artifacts = self.artifacts_raw
+        messages = self.extract_messages_from_artifacts(artifacts)
+        result_dict = ResultData(
+            results=result_dict,
+            artifacts=artifacts,
+            logs=self.logs,
+            messages=messages,
+            component_display_name=self.display_name,
+            component_id=self.id,
+        )
+        self.set_result(result_dict)
 
 
 class InterfaceVertex(ComponentVertex):

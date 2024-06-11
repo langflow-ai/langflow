@@ -31,6 +31,7 @@ class PromptComponent(Component):
     async def build_prompt(
         self,
     ) -> Prompt:
-        prompt = await Prompt.from_template_and_variables(self.template, self.kwargs)
+        kwargs = {k: v for k, v in self._arguments.items() if k != "template"}
+        prompt = await Prompt.from_template_and_variables(self.template, kwargs)
         self.status = prompt.format_text()
         return prompt
