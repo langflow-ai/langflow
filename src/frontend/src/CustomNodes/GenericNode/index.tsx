@@ -38,6 +38,7 @@ import useValidationStatusString from "../hooks/use-validation-status-string";
 import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import ParameterComponent from "./components/parameterComponent";
+import { useHotkeys } from "react-hotkeys-hook";
 
 export default function GenericNode({
   data,
@@ -49,6 +50,7 @@ export default function GenericNode({
   xPos?: number;
   yPos?: number;
 }): JSX.Element {
+  const preventDefault = true;
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const deleteNode = useFlowStore((state) => state.deleteNode);
@@ -232,6 +234,25 @@ export default function GenericNode({
     }
   };
 
+  function handleUpdateCodeWShortcut() {
+    if (isOutdated && selected) {
+      handleUpdateCode();
+    }
+  }
+
+  function handlePlayWShortcut() {
+    if (buildStatus === BuildStatus.BUILDING || isBuilding || !selected) return;
+    setValidationStatus(null);
+    console.log(data.node?.display_name);
+    buildFlow({ stopNodeId: data.id });
+  }
+
+  const update = useShortcutsStore((state) => state.update);
+  const play = useShortcutsStore((state) => state.play);
+
+  useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault });
+  useHotkeys(play, handlePlayWShortcut, { preventDefault });
+
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
   const memoizedNodeToolbarComponent = useMemo(() => {
@@ -393,6 +414,7 @@ export default function GenericNode({
                         data.node!.template[templateField].show &&
                         !data.node!.template[templateField].advanced && (
                           <ParameterComponent
+                            selected={selected}
                             index={idx.toString()}
                             key={scapedJSONStringfy({
                               inputTypes:
@@ -466,6 +488,7 @@ export default function GenericNode({
                         ),
                     )}
                   <ParameterComponent
+                    selected={selected}
                     key={scapedJSONStringfy({
                       baseClasses: data.node!.base_classes,
                       id: data.id,
@@ -650,6 +673,7 @@ export default function GenericNode({
                     {data.node!.template[templateField].show &&
                     !data.node!.template[templateField].advanced ? (
                       <ParameterComponent
+                        selected={selected}
                         index={idx.toString()}
                         key={scapedJSONStringfy({
                           inputTypes:
@@ -729,6 +753,7 @@ export default function GenericNode({
               </div>
               {data.node!.base_classes.length > 0 && (
                 <ParameterComponent
+                  selected={selected}
                   key={scapedJSONStringfy({
                     baseClasses: data.node!.base_classes,
                     id: data.id,

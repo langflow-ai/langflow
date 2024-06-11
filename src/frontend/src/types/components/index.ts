@@ -54,6 +54,7 @@ export type DropDownComponentType = {
   children?: ReactNode;
 };
 export type ParameterComponentType = {
+  selected: boolean;
   data: NodeDataType;
   title: string;
   id: sourceHandleType | targetHandleType;

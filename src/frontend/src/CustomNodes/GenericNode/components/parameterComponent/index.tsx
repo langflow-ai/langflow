@@ -39,7 +39,11 @@ import {
   scapedJSONStringfy,
 } from "../../../../utils/reactflowUtils";
 import { nodeColors } from "../../../../utils/styleUtils";
-import { classNames, groupByFamily } from "../../../../utils/utils";
+import {
+  classNames,
+  groupByFamily,
+  isThereModal,
+} from "../../../../utils/utils";
 import useFetchDataOnMount from "../../../hooks/use-fetch-data-on-mount";
 import useHandleOnNewValue from "../../../hooks/use-handle-new-value";
 import useHandleNodeClass from "../../../hooks/use-handle-node-class";
@@ -47,6 +51,8 @@ import useHandleRefreshButtonPress from "../../../hooks/use-handle-refresh-butto
 import TooltipRenderComponent from "../tooltipRenderComponent";
 import { TEXT_FIELD_TYPES } from "./constants";
 import OutputModal from "../outputModal";
+import { useShortcutsStore } from "../../../../stores/shortcuts";
+import { useHotkeys } from "react-hotkeys-hook";
 
 export default function ParameterComponent({
   left,
@@ -63,6 +69,7 @@ export default function ParameterComponent({
   proxy,
   showNode,
   index = "",
+  selected,
 }: ParameterComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const refHtml = useRef<HTMLDivElement & ReactNode>(null);
@@ -91,6 +98,19 @@ export default function ParameterComponent({
     flowPool[data.id][flowPool[data.id].length - 1]?.data?.logs[0]?.type ===
       "unknown"
   );
+
+  const preventDefault = true;
+
+  function handleOutputWShortcut() {
+    if (!displayOutputPreview || unknownOutput) return;
+    if (isThereModal() && !openOutputModal) return;
+    if (selected && !left) {
+      setOpenOutputModal((state) => !state);
+    }
+  }
+
+  const output = useShortcutsStore((state) => state.output);
+  useHotkeys(output, handleOutputWShortcut, { preventDefault });
 
   const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue(
     data,
