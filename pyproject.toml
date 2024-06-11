@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "langflow"
-version = "1.0.0a50"
+version = "1.0.0a52"
 description = "A Python package with a built-in web application"
 authors = ["Langflow <contact@langflow.org>"]
 maintainers = [
@@ -87,7 +87,7 @@ markdown = "^3.6"
 langchain-chroma = "^0.1.1"
 upstash-vector = "^0.4.0"
 gitpython = "^3.1.43"
-cassio = "^0.1.7"
+cassio = { extras = ["cassio"], version = "^0.1.7", optional = true }
 unstructured = {extras = ["docx", "md", "pptx"], version = "^0.14.4"}
 
 
@@ -123,6 +123,7 @@ dictdiffer = "^0.9.0"
 [tool.poetry.extras]
 deploy = ["celery", "redis", "flower"]
 couchbase = ["couchbase"]
+cassio = ["cassio"]
 local = ["llama-cpp-python", "sentence-transformers", "ctransformers"]
 
 

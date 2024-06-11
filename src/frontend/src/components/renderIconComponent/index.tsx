@@ -12,35 +12,35 @@ export default function RenderIcons({
   shortcutWPlus: string[];
 }): JSX.Element {
   return hasShift ? (
-    <>
+    <span className="flex gap-0.5 text-xs">
       {isMac ? (
-        <ForwardedIconComponent name="Command" className="h-4 w-4" />
+        <ForwardedIconComponent name="Command" className="h-3 w-3" />
       ) : (
         filteredShortcut[0]
       )}
-      <ForwardedIconComponent name="ArrowBigUp" className="ml-1 h-5 w-5" />
+      <ForwardedIconComponent name="ArrowBigUp" className=" h-4 w-4" />
       {filteredShortcut.map((key, idx) => {
         if (idx > 0) {
-          return <span className="ml-1"> {key.toUpperCase()} </span>;
+          return <span className=""> {key.toUpperCase()} </span>;
         }
       })}
-    </>
+    </span>
   ) : (
-    <>
+    <span className="flex gap-1 text-xs">
       {shortcutWPlus[0].toLowerCase() === "space" ? (
         "Space"
       ) : shortcutWPlus[0].length <= 1 ? (
         shortcutWPlus[0]
       ) : isMac ? (
-        <ForwardedIconComponent name="Command" className="h-4 w-4" />
+        <ForwardedIconComponent name="Command" className="h-3 w-3" />
       ) : (
         shortcutWPlus[0]
       )}
       {shortcutWPlus.map((key, idx) => {
         if (idx > 0) {
-          return <span className="ml-0.5"> {key.toUpperCase()} </span>;
+          return <span className=""> {key.toUpperCase()} </span>;
         }
       })}
-    </>
+    </span>
   );
 }

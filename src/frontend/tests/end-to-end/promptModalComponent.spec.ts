@@ -72,6 +72,8 @@ test("PromptTemplateComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
+  await page.getByTestId("more-options-modal").click();
+
   await page.getByTestId("save-button-modal").click();
 
   const replace = await page.getByTestId("replace-button").isVisible();
@@ -138,7 +140,7 @@ test("PromptTemplateComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showtemplate"]').click();
   expect(
-    await page.locator('//*[@id="showtemplate"]').isChecked()
+    await page.locator('//*[@id="showtemplate"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showprompt"]').click();
@@ -158,7 +160,7 @@ test("PromptTemplateComponent", async ({ page }) => {
 
   await page.locator('//*[@id="showtemplate"]').click();
   expect(
-    await page.locator('//*[@id="showtemplate"]').isChecked()
+    await page.locator('//*[@id="showtemplate"]').isChecked(),
   ).toBeTruthy();
 
   await page.locator('//*[@id="showprompt"]').click();

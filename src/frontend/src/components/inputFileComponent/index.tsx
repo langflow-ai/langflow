@@ -48,12 +48,12 @@ export default function InputFileComponent({
   const handleButtonClick = (): void => {
     // Create a file input element
     const input = document.createElement("input");
+    document.body.appendChild(input);
     input.type = "file";
     input.accept = fileTypes?.join(",");
     input.style.display = "none"; // Hidden from view
     input.multiple = false; // Allow only one file selection
-
-    input.onchange = (event: Event): void => {
+    const onChangeFile = (event: Event): void => {
       setLoading(true);
 
       // Get the selected file
@@ -90,6 +90,8 @@ export default function InputFileComponent({
       }
     };
 
+    input.addEventListener("change", onChangeFile);
+
     // Trigger the file selection dialog
     input.click();
   };
@@ -103,8 +105,8 @@ export default function InputFileComponent({
             editNode
               ? "input-edit-node input-dialog text-muted-foreground"
               : disabled
-              ? "input-disable input-dialog primary-input"
-              : "input-dialog primary-input text-muted-foreground"
+                ? "input-disable input-dialog primary-input"
+                : "input-dialog primary-input text-muted-foreground"
           }
         >
           {myValue !== "" ? myValue : "No file"}

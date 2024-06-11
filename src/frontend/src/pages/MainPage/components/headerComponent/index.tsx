@@ -107,7 +107,7 @@ const HeaderComponent = ({
                   name="Trash2"
                   className={cn(
                     "h-5 w-5 text-primary transition-all",
-                    disableFunctions ? "" : "hover:text-status-red"
+                    disableFunctions ? "" : "hover:text-status-red",
                   )}
                 />
               </Button>

@@ -23,7 +23,7 @@ const InputSearchComponent = ({
   const pagePath = window.location.pathname;
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
   const searchFlowsComponents = useFlowsManagerStore(
-    (state) => state.searchFlowsComponents
+    (state) => state.searchFlowsComponents,
   );
 
   const disableInputSearch =

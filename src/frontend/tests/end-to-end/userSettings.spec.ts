@@ -108,8 +108,8 @@ test("should interact with API Keys", async ({ page }) => {
   await page.waitForTimeout(2000);
   await page.getByTestId("user-profile-settings").click();
   await page.getByText("Settings").click();
-  await page.getByText("API Keys").click();
-  await page.getByText("API Keys", { exact: true }).nth(1).isVisible();
+  await page.getByText("Langflow API").click();
+  await page.getByText("Langflow API", { exact: true }).nth(1).isVisible();
   await page.getByText("Add New").click();
   await page.getByPlaceholder("Insert a name for your API Key").isVisible();
 
