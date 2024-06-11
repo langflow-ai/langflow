@@ -96,3 +96,11 @@ select:-webkit-autofill:focus {
 .json-view-dark {
   background-color: #141924 !important;
 }
+
+.grabbing {
+  cursor: grabbing;
+}
+
+.react-flow__node {
+  cursor: grab;
+}
