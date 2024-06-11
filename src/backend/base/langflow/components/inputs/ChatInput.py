@@ -28,6 +28,7 @@ class ChatInput(ChatComponent):
         input_value: Optional[str] = None,
         files: Optional[list[str]] = None,
         session_id: Optional[str] = None,
+        return_message: Optional[bool] = False,
     ) -> Union[Message, Text]:
         return super().build_with_record(
             sender=sender,
@@ -35,4 +36,5 @@ class ChatInput(ChatComponent):
             input_value=input_value,
             files=files,
             session_id=session_id,
+            return_message=return_message,
         )
