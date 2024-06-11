@@ -153,6 +153,8 @@ test("user should be able to download a flow or a component", async ({
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.getByText("Chat Input", { exact: true }).click();
+  await page.getByTestId("more-options-modal").click();
+
   await page.getByTestId("icon-SaveAll").first().click();
   await page.waitForTimeout(3000);
 
@@ -223,6 +225,8 @@ test("user should be able to duplicate a flow or a component", async ({
 
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.getByText("Chat Input", { exact: true }).click();
+  await page.getByTestId("more-options-modal").click();
+
   await page.getByTestId("icon-SaveAll").first().click();
   await page.waitForTimeout(3000);
 
