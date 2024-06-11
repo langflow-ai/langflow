@@ -1,6 +1,6 @@
 export default function formatFileName(
   name: string,
-  numberToTruncate: number = 25
+  numberToTruncate: number = 25,
 ): string {
   if (name[numberToTruncate] === undefined) {
     return name;

@@ -53,7 +53,6 @@ module.exports = {
         connection: "var(--connection)",
         "almost-dark-gray": "var(--almost-dark-gray)",
         "almost-light-blue": "var(--almost-light-blue)",
-        "almost-medium-blue": "var(--almost-medium-blue)",
         "almost-medium-gray": "var(--almost-medium-gray)",
         "almost-medium-green": "var(--almost-medium-green)",
         "almost-medium-red": "var(--almost-medium-red)",
@@ -213,14 +212,14 @@ module.exports = {
             height: "8px",
           },
           "&::-webkit-scrollbar-track": {
-            backgroundColor: "#f1f1f1",
+            backgroundColor: "hsl(var(--muted))",
           },
           "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "#ccc",
+            backgroundColor: "hsl(var(--border))",
             borderRadius: "999px",
           },
           "&::-webkit-scrollbar-thumb:hover": {
-            backgroundColor: "#bbb",
+            backgroundColor: "hsl(var(--ring))",
           },
           cursor: "auto",
         },

@@ -27,7 +27,7 @@ test.describe("save component tests", () => {
     // Read your file into a buffer.
     const jsonContent = readFileSync(
       "src/frontend/tests/end-to-end/assets/flow_group_test.json",
-      "utf-8"
+      "utf-8",
     );
 
     // Create the DataTransfer and File
@@ -49,7 +49,7 @@ test.describe("save component tests", () => {
       "drop",
       {
         dataTransfer,
-      }
+      },
     );
 
     const genericNoda = page.getByTestId("div-generic-node");
@@ -84,6 +84,8 @@ test.describe("save component tests", () => {
     }
 
     await page.getByTestId("title-Group").click();
+    await page.getByTestId("more-options-modal").click();
+
     await page.getByTestId("icon-SaveAll").click();
 
     const replaceButton = await page.getByTestId("replace-button").isVisible();

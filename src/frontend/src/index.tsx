@@ -11,11 +11,11 @@ import "./style/applies.css";
 import "./style/classes.css";
 
 const root = ReactDOM.createRoot(
-  document.getElementById("root") as HTMLElement
+  document.getElementById("root") as HTMLElement,
 );
 root.render(
   <ContextWrapper>
     <App />
-  </ContextWrapper>
+  </ContextWrapper>,
 );
 reportWebVitals();

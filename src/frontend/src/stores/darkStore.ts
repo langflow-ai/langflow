@@ -36,7 +36,7 @@ export const useDarkStore = create<DarkStoreType>((set, get) => ({
         window.localStorage.setItem("githubStars", res?.toString() ?? "0");
         window.localStorage.setItem(
           "githubStarsLastUpdated",
-          new Date().toString()
+          new Date().toString(),
         );
         set(() => ({ stars: res, lastUpdated: new Date() }));
       });

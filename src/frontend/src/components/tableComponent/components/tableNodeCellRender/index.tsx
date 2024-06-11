@@ -28,7 +28,7 @@ export default function TableNodeCellRender({
     value,
     nodeClass,
     handleOnNewValue: handleOnNewValueNode,
-    handleOnChangeDb,
+    handleOnChangeDb: handleOnChangeDbNode,
   },
 }: CustomCellRendererProps) {
   const handleOnNewValue = (newValue: any, name: string) => {
@@ -39,6 +39,15 @@ export default function TableNodeCellRender({
       return newData;
     });
     setTemplateValue(newValue);
+  };
+
+  const handleOnChangeDb = (newValue: boolean, name: string) => {
+    handleOnChangeDbNode(newValue, name);
+    setTemplateData((old) => {
+      let newData = cloneDeep(old);
+      newData.load_from_db = newValue;
+      return newData;
+    });
   };
 
   const [templateValue, setTemplateValue] = useState(value);
@@ -63,8 +72,8 @@ export default function TableNodeCellRender({
                 ...id,
                 proxy: templateData.proxy,
               }
-            : id
-        )
+            : id,
+        ),
     ) ?? false;
   function getCellType() {
     switch (templateData.type) {
@@ -135,7 +144,7 @@ export default function TableNodeCellRender({
           <div
             className={classNames(
               "max-h-48 w-full overflow-auto custom-scroll",
-              templateValue?.length > 1 ? "my-3" : ""
+              templateValue?.length > 1 ? "my-3" : "",
             )}
           >
             <KeypairListComponent
@@ -259,7 +268,7 @@ export default function TableNodeCellRender({
   }
 
   return (
-    <div className="group flex h-full w-[300px] items-center justify-center py-2.5">
+    <div className="group mx-auto flex h-full w-[300px] items-center justify-center py-2.5">
       {getCellType()}
     </div>
   );

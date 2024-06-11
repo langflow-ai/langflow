@@ -40,22 +40,22 @@ export default function ComponentsComponent({
   const allFlows = useFlowsManagerStore((state) => state.allFlows);
 
   const flowsFromFolder = useFolderStore(
-    (state) => state.selectedFolder?.flows
+    (state) => state.selectedFolder?.flows,
   );
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [openDelete, setOpenDelete] = useState(false);
   const searchFlowsComponents = useFlowsManagerStore(
-    (state) => state.searchFlowsComponents
+    (state) => state.searchFlowsComponents,
   );
 
   const setSelectedFlowsComponentsCards = useFlowsManagerStore(
-    (state) => state.setSelectedFlowsComponentsCards
+    (state) => state.setSelectedFlowsComponentsCards,
   );
 
   const selectedFlowsComponentsCards = useFlowsManagerStore(
-    (state) => state.selectedFlowsComponentsCards
+    (state) => state.selectedFlowsComponentsCards,
   );
 
   const [handleFileDrop] = useFileDrop(uploadFlow, type)!;
@@ -109,7 +109,7 @@ export default function ComponentsComponent({
   const { handleSelectAll } = useSelectAll(
     flowsFromFolder,
     getValues,
-    setValue
+    setValue,
   );
 
   const { handleDuplicate } = useDuplicateFlows(
@@ -124,7 +124,7 @@ export default function ComponentsComponent({
     setSuccessData,
     setSelectedFlowsComponentsCards,
     handleSelectAll,
-    cardTypes
+    cardTypes,
   );
 
   const version = useDarkStore((state) => state.version);
@@ -138,7 +138,7 @@ export default function ComponentsComponent({
     setSuccessData,
     setSelectedFlowsComponentsCards,
     handleSelectAll,
-    cardTypes
+    cardTypes,
   );
 
   const { handleSelectOptionsChange } = useSelectOptionsChange(
@@ -146,7 +146,7 @@ export default function ComponentsComponent({
     setErrorData,
     setOpenDelete,
     handleDuplicate,
-    handleExport
+    handleExport,
   );
 
   const { handleDeleteMultiple } = useDeleteMultipleFlows(
@@ -158,21 +158,21 @@ export default function ComponentsComponent({
     myCollectionId,
     getFolderById,
     setSuccessData,
-    setErrorData
+    setErrorData,
   );
 
   useSelectedFlows(entireFormValues, setSelectedFlowsComponentsCards);
 
   const descriptionModal = useDescriptionModal(
     selectedFlowsComponentsCards,
-    type
+    type,
   );
 
   const getTotalRowsCount = () => {
     if (type === "all") return allFlows?.length;
 
     return allFlows?.filter(
-      (f) => (f.is_component ?? false) === (type === "component")
+      (f) => (f.is_component ?? false) === (type === "component"),
     )?.length;
   };
 

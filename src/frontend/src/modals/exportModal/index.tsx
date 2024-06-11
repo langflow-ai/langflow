@@ -45,7 +45,7 @@ const ExportModal = forwardRef(
                 is_component: false,
               },
               name!,
-              description
+              description,
             );
             setNoticeData({
               title: API_WARNING_NOTICE_ALERT,
@@ -61,7 +61,7 @@ const ExportModal = forwardRef(
                 is_component: false,
               }),
               name!,
-              description
+              description,
             );
           setOpen(false);
         }}
@@ -99,9 +99,9 @@ const ExportModal = forwardRef(
           </span>
         </BaseModal.Content>
 
-        <BaseModal.Footer submit={{ label: "Download Flow" }} />
+        <BaseModal.Footer submit={{ label: "Export" }} />
       </BaseModal>
     );
-  }
+  },
 );
 export default ExportModal;
