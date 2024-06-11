@@ -1,10 +1,11 @@
-from typing import Any, Dict, List, Callable
 import ast
+from typing import Any, Dict, List, Optional
+
 from langchain.agents import Tool
 from langchain.tools import StructuredTool
-from langflow.interface.custom.custom_component import CustomComponent
+
+from langflow.custom import CustomComponent
 from langflow.schema.dotdict import dotdict
-from langchain.pydantic_v1 import BaseModel, Field
 
 
 class PythonCodeStructuredTool(CustomComponent):
@@ -12,8 +13,7 @@ class PythonCodeStructuredTool(CustomComponent):
     description = "structuredtool dataclass code to tool"
     documentation = "https://python.langchain.com/docs/modules/tools/custom_tools/#structuredtool-dataclass"
     icon = "🐍"
-    field_order = ["name", "description", "tool_code",
-                   "return_direct", "tool_function", "tool_class"]
+    field_order = ["name", "description", "tool_code", "return_direct", "tool_function", "tool_class"]
 
     def build_config(self) -> Dict[str, Any]:
         return {
@@ -23,6 +23,7 @@ class PythonCodeStructuredTool(CustomComponent):
                 "placeholder": "def my_function(args):\n    pass",
                 "multiline": True,
                 "refresh_button": True,
+                "field_type": "code",
             },
             "name": {
                 "display_name": "Tool Name",
@@ -53,10 +54,8 @@ class PythonCodeStructuredTool(CustomComponent):
 
     def parse_source_name(self, code: str) -> Dict:
         parsed_code = ast.parse(code)
-        class_names = [
-            node.name for node in parsed_code.body if isinstance(node, ast.ClassDef)]
-        function_names = [
-            node.name for node in parsed_code.body if isinstance(node, ast.FunctionDef)]
+        class_names = [node.name for node in parsed_code.body if isinstance(node, ast.ClassDef)]
+        function_names = [node.name for node in parsed_code.body if isinstance(node, ast.FunctionDef)]
         return {"class": class_names, "function": function_names}
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
@@ -71,8 +70,16 @@ class PythonCodeStructuredTool(CustomComponent):
                 build_config.tool_function.options = []
         return build_config
 
-    async def build(self, tool_code: Code, name: str, description: str, tool_function: List[str], return_direct: bool, tool_class: List[str] = None) -> Tool:
-        local_namespace = {}
+    async def build(
+        self,
+        tool_code: str,
+        name: str,
+        description: str,
+        tool_function: List[str],
+        return_direct: bool,
+        tool_class: Optional[List[str]] = None,
+    ) -> Tool:
+        local_namespace = {}  # type: ignore
         exec(tool_code, globals(), local_namespace)
 
         func = local_namespace[tool_function]
@@ -82,10 +89,6 @@ class PythonCodeStructuredTool(CustomComponent):
             _class = local_namespace[tool_class]
 
         tool = StructuredTool.from_function(
-            func=func,
-            args_schema=_class,
-            name=name,
-            description=description,
-            return_direct=return_direct
+            func=func, args_schema=_class, name=name, description=description, return_direct=return_direct
         )
         return tool
